@@ -30,7 +30,10 @@ export {
   approvalAt,
   classYearOf,
   placeIndex,
+  relationshipOf,
   sampleStudents,
+  semesterOf,
+  socialLife,
   studentCard,
   studentHome,
   studentKey,
@@ -38,11 +41,12 @@ export {
   teachingQuality,
   type Approval,
   type Cause,
+  type Relationship,
   type StudentCard,
   type StudentReason,
   type StudentRef,
 } from './systems/students';
-export type { ArchetypeId, CauseId } from './config/students';
+export type { ArchetypeId, CauseId, RelationshipId } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
 export { calendarAt, eventsAt, nextMilestone, type CalendarEvent, type CalendarPos, type Phase } from './calendar';
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';

@@ -186,18 +186,11 @@ export const GPA_TILT: Partial<Record<ArchetypeId, number>> = {
 /** Classes feel crowded once this share of seats is taken. A full campus loses the whole crowding share. */
 export const SEATS_COMFORTABLE = 0.7;
 export const TEACHING_WEIGHTS = { lots: 0.55, room: 0.45 };
-/** The lowest grade is a D. Nobody on a card is failing. */
-export const GRADE_STEPS: ReadonlyArray<readonly [number, string]> = [
-  [3.85, 'A'],
-  [3.5, 'A-'],
-  [3.15, 'B+'],
-  [2.85, 'B'],
-  [2.5, 'B-'],
-  [2.15, 'C+'],
-  [1.85, 'C'],
-  [1.5, 'C-'],
-  [-Infinity, 'D'],
-];
+/** GPA is on a 4.0 scale and shown to one decimal. Nobody on a card is failing. */
+export const GPA_MIN = 1.5;
+export const GPA_MAX = 4.0;
+/** [T] A little lower in the first year, a little higher by the last. */
+export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
 
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,
@@ -213,6 +206,79 @@ export const TEMPERAMENT_SPREAD = 6;
 export const MOOD_STEPS: readonly number[] = [80, 62, 45, 28];
 /** At or above this face a student names what they like. Below it, what would help most. */
 export const CONTENT_MOOD = 3;
+
+/**
+ * Relationship status: the card's sixth line. A student is single, with
+ * someone, or with someone far away, and on the happy or the unhappy side of
+ * that. Which of the three can change at each intake, by seed alone. Which
+ * side they are on leans with the campus's social life, which is the part the
+ * player can change. It shows on the card only and is never a campus stat.
+ *
+ * Tone: light and neutral. The status and nothing more: never who, never why.
+ */
+export type RelationshipKind = 'single' | 'together' | 'distance';
+export type RelationshipId =
+  | 'singleLooking'
+  | 'singleHappy'
+  | 'togetherHappy'
+  | 'togetherUnhappy'
+  | 'distanceHappy'
+  | 'distanceStruggling';
+
+/** The happy and the unhappy side of each kind. */
+export const RELATIONSHIP_SIDES: Record<RelationshipKind, readonly [RelationshipId, RelationshipId]> = {
+  single: ['singleHappy', 'singleLooking'],
+  together: ['togetherHappy', 'togetherUnhappy'],
+  distance: ['distanceHappy', 'distanceStruggling'],
+};
+export const RELATIONSHIP_NAMES: Record<RelationshipId, string> = {
+  singleLooking: 'Single and looking',
+  singleHappy: 'Happily single',
+  togetherHappy: 'In a happy relationship',
+  togetherUnhappy: 'In an unhappy relationship',
+  distanceHappy: 'Happy long-distance',
+  distanceStruggling: 'Struggling long-distance',
+};
+/** [T] How a new student arrives: plenty still have someone back home. */
+export const KIND_AT_ENTRY: ReadonlyArray<readonly [RelationshipKind, number]> = [
+  ['single', 55],
+  ['together', 12],
+  ['distance', 33],
+];
+/** [T] At each intake most students stay as they are. */
+export const KIND_STAYS = 0.6;
+/** [T] Where the others go. */
+export const KIND_MOVES: Record<RelationshipKind, ReadonlyArray<readonly [RelationshipKind, number]>> = {
+  single: [['together', 85], ['distance', 15]],
+  together: [['single', 70], ['distance', 30]],
+  distance: [['single', 60], ['together', 40]],
+};
+/**
+ * [T] Natures lean toward a kind, never toward a side, so no nature is happier
+ * than another on average. Hopeless Romantic and Heartbroken join here when
+ * they ship, and must keep that balance.
+ */
+export const KIND_LEAN: Partial<Record<ArchetypeId, Partial<Record<RelationshipKind, number>>>> = {
+  charmer: { together: 2 },
+  butterfly: { together: 1.5 },
+  scholar: { single: 1.5 },
+  stressed: { single: 1.3 },
+  party: { single: 1.3 },
+  commuter: { together: 1.4, distance: 0.5 },
+};
+/** [T] With a middling social life half of students are on the happy side. Social life moves that share by up to half of SOCIAL_SWING either way. */
+export const SOCIAL_SWING = 0.4;
+/** [T] Points of happiness a status adds or takes. The same size both ways, so across the campus they cancel. */
+export const RELATIONSHIP_POINTS = 4;
+/** [T] One place to meet for this many students is a middling social life. Twice as many is the best it gets. */
+export const STUDENTS_PER_SOCIAL_SPOT = 40;
+/** [T] Below this, someone single and looking says there is nowhere to meet people. */
+export const SOCIAL_THIN = 0.35;
+export const RELATIONSHIP_NOTES = {
+  happier: 'a little happier',
+  lessHappy: 'a little less happy',
+  thin: 'nowhere to meet people',
+} as const;
 
 /**
  * Thoughts. `{m}` is the walk in minutes. Each names something the player can

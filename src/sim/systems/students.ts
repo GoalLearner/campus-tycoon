@@ -1,4 +1,4 @@
-import { calendarAt } from '../calendar';
+import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
 import { BASE_SCORE, GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
@@ -11,19 +11,32 @@ import {
   COMMUTER_WEIGHT,
   CONTENT_MOOD,
   FIRST_NAMES,
+  GPA_BY_CLASS_YEAR,
   GPA_FLOOR,
+  GPA_MAX,
+  GPA_MIN,
   GPA_SPAN,
   GPA_SPREAD,
   GPA_TILT,
-  GRADE_STEPS,
   HOMESICK_SHARE,
+  KIND_AT_ENTRY,
+  KIND_LEAN,
+  KIND_MOVES,
+  KIND_STAYS,
   LOST_SHARE,
   MAJORS,
   MOOD_STEPS,
   NATURE_WEIGHTS,
   NO_CLUB_SHARE,
   QUIRKS,
+  RELATIONSHIP_NAMES,
+  RELATIONSHIP_NOTES,
+  RELATIONSHIP_POINTS,
+  RELATIONSHIP_SIDES,
   SEATS_COMFORTABLE,
+  SOCIAL_SWING,
+  SOCIAL_THIN,
+  STUDENTS_PER_SOCIAL_SPOT,
   SUPER_SENIOR_SHARE,
   SURNAME_ENDS,
   SURNAME_STARTS,
@@ -32,6 +45,8 @@ import {
   THOUGHTS,
   type ArchetypeId,
   type CauseId,
+  type RelationshipId,
+  type RelationshipKind,
 } from '../config/students';
 import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
@@ -64,11 +79,12 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
-function roll(seed: number, ref: StudentRef, salt: number): number {
-  return hashInts(seed, ref.entryYear, ref.index, salt) / 4294967296;
+function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
+  const hash = semester === undefined ? hashInts(seed, ref.entryYear, ref.index, salt) : hashInts(seed, ref.entryYear, ref.index, salt, semester);
+  return hash / 4294967296;
 }
 
 function pickFrom<T>(items: readonly T[], at: number): T {
@@ -234,10 +250,63 @@ export function teachingQuality(state: GameState): number {
   return TEACHING_WEIGHTS.lots * lots + TEACHING_WEIGHTS.room * room;
 }
 
-function letter(gpa: number): string {
-  for (const [least, grade] of GRADE_STEPS) if (gpa >= least) return grade;
-  return 'D';
+// --------------------------------------------------------- relationship --
+
+/**
+ * How much there is to do with other people, 0 to 1, with 0.5 as middling.
+ * Today it counts quad cells against enrollment. Student Life spots,
+ * recreation and events join the count when they are built.
+ */
+export function socialLife(state: GameState): number {
+  const students = enrollment(state);
+  if (students === 0) return 0.5;
+  let spots = 0;
+  for (const cell of state.map.cells) if (cell.kind === 'quad') spots += 1;
+  const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / students));
+  // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
+  return Math.round(level * 20) / 20;
 }
+
+/** Semesters since the game began: it steps at every fall and spring intake. */
+export function semesterOf(state: GameState): number {
+  const { year, tickInYear } = calendarAt(state.clock.tick);
+  return Math.max(0, (year - 1) * 2 + (tickInYear >= SPRING_INTAKE_TICK_IN_YEAR ? 1 : 0));
+}
+
+export interface Relationship {
+  id: RelationshipId;
+  name: string;
+  /** A short note for the card: its small effect on this student, or a hint when social life is thin. */
+  note: string;
+  /** Points of happiness it adds or takes for this one student. */
+  points: number;
+}
+
+function leaning(odds: ReadonlyArray<readonly [RelationshipKind, number]>, nature: ArchetypeId): Array<readonly [RelationshipKind, number]> {
+  const lean = KIND_LEAN[nature];
+  return odds.map(([kind, weight]) => [kind, weight * (lean?.[kind] ?? 1)] as const);
+}
+
+/**
+ * A student's status in one semester. The kind (single, together, far apart)
+ * follows the student's own seeded story, one step per intake. The side
+ * (happy or not) is rolled each semester against the campus's social life.
+ * Nothing is stored: the story is replayed from the semester they arrived.
+ */
+export function relationshipOf(seed: number, ref: StudentRef, semester: number, nature: ArchetypeId, social: number): Relationship {
+  const arrived = Math.max(0, (ref.entryYear - 1) * 2);
+  let kind = pickWeighted(leaning(KIND_AT_ENTRY, nature), roll(seed, ref, SALT.kind, arrived));
+  for (let s = arrived + 1; s <= semester; s++) {
+    if (roll(seed, ref, SALT.stays, s) < KIND_STAYS) continue;
+    kind = pickWeighted(leaning(KIND_MOVES[kind], nature), roll(seed, ref, SALT.moves, s));
+  }
+  const happy = roll(seed, ref, SALT.side, semester) < 0.5 + SOCIAL_SWING * (social - 0.5);
+  const id = RELATIONSHIP_SIDES[kind][happy ? 0 : 1];
+  let note: string = happy ? RELATIONSHIP_NOTES.happier : RELATIONSHIP_NOTES.lessHappy;
+  if (id === 'singleLooking' && social < SOCIAL_THIN) note = RELATIONSHIP_NOTES.thin;
+  return { id, name: RELATIONSHIP_NAMES[id], note, points: happy ? RELATIONSHIP_POINTS : -RELATIONSHIP_POINTS };
+}
+
 
 // ----------------------------------------------------------------- card --
 
@@ -264,10 +333,13 @@ export interface StudentCard {
   home: number | null;
   /** Where they live, for the card's first line. */
   residence: 'dorm' | 'offCampus';
-  grade: string;
+  /** On a 4.0 scale, to one decimal. */
+  gpa: number;
   /** null for a student in no club. */
   club: string | null;
-  /** 0 to 100, the same scale as approval. */
+  /** The sixth line. Shown on the card only. */
+  relationship: Relationship;
+  /** 0 to 100, the same scale as approval. It includes the small personal push of the relationship status. */
   happiness: number;
   /** 4 is delighted, 0 is miserable. */
   mood: number;
@@ -373,6 +445,8 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
   const archetype = archetypeNow(state, ref, classYear, nature, resident);
 
+  const relationship = relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state));
+
   // Happiness is read where the student spends their days: the dorm, or for a commuter two lecture halls.
   let spots: number[] = [];
   if (home !== null) {
@@ -389,11 +463,18 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   if (spots.length > 0) {
     const approval = approvalOver(state, spots);
     const temperament = (roll(seed, ref, SALT.mood) * 2 - 1) * TEMPERAMENT_SPREAD;
-    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament)));
+    // The status nudges this one student. It is never offered as the reason: that stays something the player can change.
+    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + relationship.points)));
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
-  const gpa = GPA_FLOOR + GPA_SPAN * teachingQuality(state) + (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD + (GPA_TILT[archetype] ?? 0);
+  const raw =
+    GPA_FLOOR +
+    GPA_SPAN * teachingQuality(state) +
+    (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
+    (GPA_TILT[archetype] ?? 0) +
+    (GPA_BY_CLASS_YEAR[classYear] ?? 0);
+  const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw)) * 10) / 10;
 
   return {
     ref,
@@ -406,8 +487,9 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     quirk,
     home,
     residence: resident ? 'dorm' : 'offCampus',
-    grade: letter(gpa),
+    gpa,
     club: clubOf(seed, ref, nature, major.group, quirk),
+    relationship,
     happiness,
     mood: moodOf(happiness),
     reason,

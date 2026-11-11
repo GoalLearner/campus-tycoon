@@ -3,8 +3,9 @@ import { studentCard, studentKey, studentLook, type GameState } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
- * The student card: tap a walking student and five lines say who they are,
- * what they are doing, their grades, their club and how happy they are.
+ * The student card: tap a walking student and six lines say who they are,
+ * what they are doing, their GPA, their club, their relationship status and
+ * how happy they are.
  *
  * Every line is worked out when the card is open, from the student's seeded
  * identity and the campus numbers (src/sim/systems/students.ts). Nothing is
@@ -96,10 +97,15 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
   doing.line.append(follow);
 
   // 3 and 4.
-  const grades = row('Grades');
+  const grades = row('GPA');
   const club = row('Club');
 
-  // 5. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
+  // 5. Relationship: the status, and a short note on what it does for this one student.
+  const relationship = row('Relationship');
+  const relationshipNote = el('span', 'student-note');
+  relationship.value.after(relationshipNote);
+
+  // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
   const mood = el('span', 'student-face');
@@ -110,7 +116,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     if (target) session.focusOn(target.x, target.y);
   });
 
-  node.append(head, doing.line, grades.line, club.line, reason);
+  node.append(head, doing.line, grades.line, club.line, relationship.line, reason);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -164,8 +170,10 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
 
-    setText(grades.value, card.grade);
+    setText(grades.value, card.gpa.toFixed(1));
     setText(club.value, card.club ?? 'None');
+    setText(relationship.value, card.relationship.name);
+    setText(relationshipNote, card.relationship.note);
 
     if (card.mood !== shownMood) {
       shownMood = card.mood;
