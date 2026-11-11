@@ -1,0 +1,11 @@
+{
+  "appId": "com.goallearner.campustycoon",
+  "appName": "Campus Tycoon",
+  "webDir": "dist-ios",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#35523f",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false
+  }
+}

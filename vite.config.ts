@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
-import { buildLabel, finishBuild } from './tools/finish-build';
+import { buildLabel, finishBuild } from './tools/finish-build.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 

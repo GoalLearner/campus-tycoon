@@ -1,0 +1,102 @@
+# Builds the iOS app and uploads it to TestFlight.
+#
+# It runs when a tag that starts with "v" is pushed, for example v0.1.0.
+# The version comes from package.json. The build number is always one above
+# the newest build already in TestFlight.
+#
+# Signing is manual: one uploaded certificate and one uploaded profile, both
+# named below. Nothing secret is in this file or this repository. Codemagic
+# holds these three things, set up once in its dashboard:
+#
+#   1. Teams > Integrations > App Store Connect
+#        an API key connection named "Codemagic"
+#   2. Teams > Code signing identities > iOS certificates
+#        the Apple Distribution certificate, reference name "awakened-distribution"
+#   3. Teams > Code signing identities > iOS provisioning profiles
+#        the App Store profile for com.goallearner.campustycoon,
+#        reference name "campus-tycoon-app-store"
+#
+# The app has no extra capabilities (no push, no HealthKit), so the profile is
+# a plain App Store profile.
+
+workflows:
+  ios-testflight:
+    name: Campus Tycoon iOS to TestFlight
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Codemagic
+
+    environment:
+      ios_signing:
+        provisioning_profiles:
+          - campus-tycoon-app-store
+        certificates:
+          - awakened-distribution
+      vars:
+        # The app's Apple ID number: App Store Connect > the app > App Information.
+        # It is not a secret. The build stops with a clear message while it is empty.
+        APP_STORE_ID: ""
+        # Compiles in the time-skip panel. It stays hidden until the version line in
+        # the Menu is tapped seven times. Leave this out of any App Store release build.
+        TESTER_TOOLS: "1"
+      node: v24.15.0
+      xcode: latest
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Check the game
+        script: |
+          npm run typecheck
+          npm test
+
+      - name: Build the game and copy it into the app
+        script: npm run build:ios
+
+      - name: Check the app carries its own copy of the game
+        script: node scripts/check-ios-bundle.mjs
+
+      - name: Set the version and the next build number
+        script: |
+          if [ -z "$APP_STORE_ID" ]; then
+            echo "APP_STORE_ID is empty in codemagic.yaml."
+            echo "Create the app in App Store Connect, then put its Apple ID number there."
+            exit 1
+          fi
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID" 2>/dev/null || echo 0)
+          case "$LATEST" in
+            '' | *[!0-9]*) LATEST=0 ;;
+          esac
+          node scripts/ios-version.mjs --build "$((LATEST + 1))"
+
+      - name: Apply the signing profile
+        script: xcode-project use-profiles
+
+      - name: Build the app
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --config Release
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Uploading is enough for internal testers. Set this to true only when
+        # outside testers are added, because that sends the build to Apple's beta review.
+        submit_to_testflight: false
+        submit_to_app_store: false
