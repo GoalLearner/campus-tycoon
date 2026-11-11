@@ -281,8 +281,12 @@ describe('upgrading an older save', () => {
     expect(enrollment(state)).toBe(old.cohorts.reduce((a, b) => a + b, 0));
     expect(state.money.cash).toBe(old.money.cash);
     expect(state.map.buildings).toEqual(old.map.buildings);
-    state.map.cells.forEach((cell, i) => {
-      expect(cell.kind).toBe(old.map.cells[i]!.kind);
+    // The map has grown since. Every old cell is where it was, by x and y.
+    old.map.cells.forEach((was, i) => {
+      const x = i % old.map.width;
+      const y = Math.floor(i / old.map.width);
+      const cell = state.map.cells[y * state.map.width + x]!;
+      expect(cell.kind).toBe(was.kind);
       expect(cell.placedId).toBeNull();
     });
     expect(state.map.placed).toEqual([]);

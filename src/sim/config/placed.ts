@@ -8,12 +8,12 @@ import type { PlacedType } from '../types';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'landmark';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'parking' | 'landmark';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Landmarks';
+  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Landmarks';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -31,6 +31,8 @@ export interface PlacedSpec {
   flat: boolean;
   /** False for things that come with the campus and cannot be bought or cleared. */
   buildable: boolean;
+  /** Car parks only: the cars it holds once a road links it to a town street. */
+  cars?: number;
 }
 
 export const PLACED: Record<PlacedType, PlacedSpec> = {
@@ -90,6 +92,14 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Campus Safety', category: 'Safety & health', family: 'safety', w: 2, h: 2, cost: 80_000, upkeepPerYear: 8_000,
     radius: 8, strength: 1, effect: 'Handles mischief within 8 cells', sprite: 'build.safety', flat: false, buildable: true,
   },
+  parking: {
+    name: 'Parking lot', category: 'Roads and parking', family: 'parking', w: 2, h: 1, cost: 20_000, upkeepPerYear: 1_000,
+    radius: 0, strength: 0, effect: 'Lets 20 locals drive in. Needs a road to a town street', sprite: 'build.parking', flat: true, buildable: true, cars: 20,
+  },
+  garage: {
+    name: 'Parking structure', category: 'Roads and parking', family: 'parking', w: 2, h: 2, cost: 160_000, upkeepPerYear: 6_000,
+    radius: 0, strength: 0, effect: 'Lets 100 locals drive in. Needs a road to a town street', sprite: 'build.garage', flat: false, buildable: true, cars: 100,
+  },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Where the university began', sprite: 'build.admin', flat: false, buildable: false,
@@ -98,7 +108,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
 
 /** The order of the Build menu. */
 export const BUILD_ORDER: readonly PlacedType[] = [
-  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety',
+  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage',
 ];
 
 /** A pond cell counts as this share of a quad cell in the one green-space input, which is capped. */

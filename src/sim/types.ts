@@ -6,7 +6,13 @@
 export type Zone = 'housing' | 'academic';
 export const ZONES: readonly Zone[] = ['housing', 'academic'];
 
-export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree' | 'placed';
+/**
+ * 'road' is a road the player laid, and 'crossing' a cell where a road and a
+ * path share the ground. 'street', 'house' and 'town' belong to the town
+ * beside the campus: its streets, its house plots and its gardens. The player
+ * cannot change those.
+ */
+export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree' | 'placed' | 'road' | 'crossing' | 'street' | 'house' | 'town';
 
 export interface Cell {
   kind: CellKind;
@@ -42,6 +48,8 @@ export type PlacedType =
   | 'pondLarge'
   | 'medical'
   | 'safety'
+  | 'parking'
+  | 'garage'
   | 'admin';
 
 /** A hand-placed building. It is whole from the moment it is placed. */
@@ -81,6 +89,45 @@ export interface Building {
   rebuild: Rebuild | null;
 }
 
+/** A piece of land. The campus begins with one and can buy the others. Everything outside every parcel is town. */
+export interface Parcel {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  price: number;
+  owned: boolean;
+}
+
+/** A side street of the town with houses on both sides. Locals live here. */
+export interface Neighbourhood {
+  id: number;
+  /** The street's name. */
+  name: string;
+  /** The row its side street runs along. */
+  row: number;
+  /** House plots, nearest the main street first. `look` picks the house drawn. */
+  plots: Array<{ x: number; y: number; look: number }>;
+}
+
+/** The town beside the campus. Made once from the seed and stored. */
+export interface Town {
+  /** The name of the main street along the campus edge. */
+  street: string;
+  neighbourhoods: Neighbourhood[];
+  /** Worked out after every action, like desirability. */
+  access: {
+    /** The walk from each neighbourhood to class, in minutes. -1 when no path joins it. */
+    walk: number[];
+    /** Parking spaces a road reaches. */
+    spaces: number;
+    /** Ids of the car parks a road links to a town street. */
+    linked: number[];
+  };
+}
+
 export interface MapState {
   width: number;
   height: number;
@@ -90,6 +137,9 @@ export interface MapState {
   buildings: (Building | null)[];
   /** Hand-placed buildings. An id is an index here too, and a cleared one leaves a null. */
   placed: (Placed | null)[];
+  /** The land: what the campus owns and what is for sale. */
+  parcels: Parcel[];
+  town: Town;
   /** Desirability of each cell, read as its own zone. 0 where there is no lot. */
   score: number[];
   /** Walk to the nearest Academic lot along paths, in minutes. -1 when unreachable or unused. */
@@ -154,6 +204,8 @@ export interface Admissions {
   waitlistUntilTick: number;
   /** How many the open waitlist has let in so far. */
   waitlistAdmitted: number;
+  /** How many of those waiting are locals, who need no bed if a place in town opens. */
+  waitlistLocals: number;
   lastIntake: IntakeResult | null;
   /** How the last semester ended: who stayed, who left, and how happy the campus was. */
   lastSemester: { tick: number; stayed: number; left: number; happiness: number } | null;
@@ -187,6 +239,12 @@ export interface GameState {
   map: MapState;
   /** Headcount by class year: freshmen, sophomores, juniors, seniors. */
   cohorts: [number, number, number, number];
+  /**
+   * How many of each class year live off campus, in town. They found a way to
+   * class when they enrolled and keep it until they graduate. Everyone else
+   * needs a bed.
+   */
+  offCampus: [number, number, number, number];
   /** One record per entering class, oldest first. */
   classes: ClassRecord[];
   admissions: Admissions;

@@ -1,5 +1,6 @@
 import { VARIANTS_PER_STAGE } from './config/buildings';
-import { MAP_SIZE, STARTER } from './config/map';
+import { STARTER } from './config/map';
+import { WORLD } from './config/town';
 import { START_CASH } from './config/money';
 import { TICK_MS } from './config/time';
 import { hashInts, seedStreams } from './rng';
@@ -7,6 +8,7 @@ import { SAVE_VERSION } from './save';
 import { recomputeDesirability } from './systems/desirability';
 import { addPlaced } from './systems/placed';
 import { recomputeRates } from './systems/money';
+import { buildTown, startingParcels } from './systems/town';
 import type { Cell, GameState, MapState, Zone } from './types';
 
 export interface NewGameOptions {
@@ -16,18 +18,23 @@ export interface NewGameOptions {
   now: number;
 }
 
-function emptyMap(size: number): MapState {
+/** The whole map, bare: the starting land, the fields for sale, and the town laid in down its east side. */
+function emptyMap(width: number, height: number, seed: number): MapState {
   const cells: Cell[] = [];
-  for (let i = 0; i < size * size; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
-  return {
-    width: size,
-    height: size,
+  for (let i = 0; i < width * height; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
+  const map: MapState = {
+    width,
+    height,
     cells,
     buildings: [],
     placed: [],
-    score: new Array<number>(size * size).fill(0),
-    walkMinutes: new Array<number>(size * size).fill(-1),
+    parcels: startingParcels(),
+    town: { street: '', neighbourhoods: [], access: { walk: [], spaces: 0, linked: [] } },
+    score: new Array<number>(width * height).fill(0),
+    walkMinutes: new Array<number>(width * height).fill(-1),
   };
+  map.town = buildTown(map, seed);
+  return map;
 }
 
 function setKind(map: MapState, x: number, y: number, kind: Cell['kind']): void {
@@ -58,7 +65,7 @@ function placeStarterBuilding(map: MapState, seed: number, zone: Zone, x: number
 function buildStarterCampus(map: MapState, seed: number): void {
   const { quad, ring, spines } = STARTER;
 
-  for (const spine of spines) {
+  for (const spine of [...spines, STARTER.townLink]) {
     for (let x = spine.x0; x <= spine.x1; x++) setKind(map, x, spine.y, 'path');
   }
   for (let y = ring.y; y < ring.y + ring.h; y++) {
@@ -76,7 +83,7 @@ function buildStarterCampus(map: MapState, seed: number): void {
 
 /** A brand-new campus, fifteen minutes before its first class moves in. */
 export function newGame(opts: NewGameOptions): GameState {
-  const map = emptyMap(MAP_SIZE);
+  const map = emptyMap(WORLD.width, WORLD.height, opts.seed >>> 0);
   buildStarterCampus(map, opts.seed);
   recomputeDesirability(map);
 
@@ -103,8 +110,9 @@ export function newGame(opts: NewGameOptions): GameState {
     },
     map,
     cohorts: [0, 0, 0, 0],
+    offCampus: [0, 0, 0, 0],
     classes: [],
-    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, lastIntake: null, lastSemester: null },
+    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null },
     timers: [],
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },

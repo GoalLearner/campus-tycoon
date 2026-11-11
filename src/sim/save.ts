@@ -1,6 +1,9 @@
 import { STARTER } from './config/map';
 import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
-import type { GameState } from './types';
+import { LOCAL_SHARE, WORLD } from './config/town';
+import { recomputeDesirability } from './systems/desirability';
+import { buildTown, startingParcels } from './systems/town';
+import type { GameState, MapState } from './types';
 
 /**
  * Versioned saves. A save file is { v, savedAt, state }. On load it is parsed,
@@ -8,7 +11,7 @@ import type { GameState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface SaveFile {
   v: number;
@@ -100,6 +103,45 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 6 added the town, the land for sale, roads and parking (DESIGN.md 25.4).
+  // The map grows east and south. Every cell keeps its x and y, so nothing the player built moves.
+  5: (state) => {
+    const map = state.map as Record<string, unknown>;
+    const oldWidth = Number(map.width ?? 0);
+    const oldHeight = Number(map.height ?? 0);
+    const oldCells = (map.cells as Array<Record<string, unknown>> | undefined) ?? [];
+    const width = Math.max(WORLD.width, oldWidth);
+    const height = Math.max(WORLD.height, oldHeight);
+    const cells: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < width * height; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
+    for (let y = 0; y < oldHeight; y++) {
+      for (let x = 0; x < oldWidth; x++) {
+        const cell = oldCells[y * oldWidth + x];
+        if (cell) cells[y * width + x] = cell;
+      }
+    }
+    map.width = width;
+    map.height = height;
+    map.cells = cells;
+    map.score = new Array<number>(width * height).fill(0);
+    map.walkMinutes = new Array<number>(width * height).fill(-1);
+    map.parcels = startingParcels();
+    // The town is made from the save's own seed, so the same save always gains the same town.
+    const typed = map as unknown as MapState;
+    typed.town = { street: '', neighbourhoods: [], access: { walk: [], spaces: 0, linked: [] } };
+    typed.town = buildTown(typed, Number(state.seed ?? 0) >>> 0);
+    recomputeDesirability(typed);
+
+    // Four in ten of every class already lived off campus under the old rule. They keep coming until
+    // they graduate, path or no path, so beds wanted and income are what they were and nobody is turned out.
+    const cohorts = Array.isArray(state.cohorts) ? (state.cohorts as number[]) : [0, 0, 0, 0];
+    state.offCampus = [0, 1, 2, 3].map((classYear) => Math.round(Number(cohorts[classYear] ?? 0) * LOCAL_SHARE));
+    const admissions = state.admissions as Record<string, unknown> | undefined;
+    if (admissions) admissions.waitlistLocals = Math.round(Number(admissions.waitlist ?? 0) * LOCAL_SHARE);
+    const money = state.money as Record<string, unknown> | undefined;
+    if (money) money.ratesDirty = true;
+    return state;
+  },
 };
 
 export type LoadResult =
@@ -140,7 +182,7 @@ export function validate(state: unknown): string | null {
   for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
-  for (const key of ['cohorts', 'timers'] as const) {
+  for (const key of ['cohorts', 'timers', 'offCampus'] as const) {
     if (!Array.isArray(state[key])) return `The save is missing "${key}".`;
   }
 
@@ -150,6 +192,9 @@ export function validate(state: unknown): string | null {
   if (!Array.isArray(cells) || cells.length !== width * height) return 'The map is the wrong size.';
   if (!Array.isArray(buildings)) return 'The map has no building list.';
   if (!Array.isArray(map.placed)) return 'The map has no list of placed buildings.';
+  if (!Array.isArray(map.parcels)) return 'The map has no land records.';
+  if (!isObject(map.town) || !Array.isArray(map.town.neighbourhoods) || !isObject(map.town.access)) return 'The map has no town.';
+  if ((state.offCampus as unknown[]).length !== 4) return 'The save has the wrong number of class years living off campus.';
   if (!Array.isArray(state.classes)) return 'The save has no class records.';
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';

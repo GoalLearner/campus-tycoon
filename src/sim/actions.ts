@@ -6,6 +6,7 @@ import { TREE_KINDS } from './config/desirability';
 import { COST } from './config/money';
 import { dollars } from './format';
 import { inBounds } from './selectors';
+import { ownedAt } from './systems/town';
 import { recomputeDesirability } from './systems/desirability';
 import { evaluateGrowth, cancelStrandedBuilds } from './systems/growth';
 import { markRatesDirty } from './systems/money';
@@ -19,14 +20,15 @@ import type { CellKind, GameState, MapState, Zone } from './types';
  */
 
 /** What a drag paints onto the map. */
-export type Tool = Zone | 'path' | 'quad' | 'tree' | 'clear';
+export type Tool = Zone | 'path' | 'road' | 'quad' | 'tree' | 'clear';
 
 export type Point = readonly [number, number];
 
 /** `variant` picks the kind of tree. Other tools ignore it. */
 export type Action =
   | { type: 'paint'; tool: Tool; cells: readonly Point[]; variant?: number }
-  | { type: 'place'; building: PlacedType; x: number; y: number };
+  | { type: 'place'; building: PlacedType; x: number; y: number }
+  | { type: 'buyLand'; parcel: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -52,13 +54,18 @@ const UNIT_COST: Record<Tool, number> = {
   housing: COST.zoneLot,
   academic: COST.zoneLot,
   path: COST.path,
+  road: COST.road,
   quad: COST.quad,
   tree: COST.tree,
   clear: COST.clear,
 };
 
 function canPaint(kind: CellKind, tool: Tool): boolean {
-  return tool === 'clear' ? kind !== 'empty' : kind === 'empty';
+  if (tool === 'clear') return kind !== 'empty';
+  // A road laid over a path, or a path over a road, makes a crossing: both pass through the cell.
+  if (tool === 'road') return kind === 'empty' || kind === 'path';
+  if (tool === 'path') return kind === 'empty' || kind === 'road';
+  return kind === 'empty';
 }
 
 /** Buildings that came with the campus stay where they are. */
@@ -83,7 +90,7 @@ export function refundFor(state: GameState, cost: number, builtTick: number): { 
   return { amount: undo ? cost : Math.floor(cost * REFUND_SHARE), undo };
 }
 
-const PAINT_COST: Partial<Record<CellKind, number>> = { path: COST.path, quad: COST.quad, tree: COST.tree, lot: COST.zoneLot };
+const PAINT_COST: Partial<Record<CellKind, number>> = { path: COST.path, quad: COST.quad, tree: COST.tree, lot: COST.zoneLot, road: COST.road, crossing: COST.road + COST.path };
 
 /** What a paint would do and cost, without doing it. Drives the live preview while dragging. */
 export function previewPaint(state: GameState, tool: Tool, cells: readonly Point[]): PaintPreview {
@@ -99,7 +106,8 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
     const i = y * map.width + x;
     if (seen.has(i)) continue;
     seen.add(i);
-    if (canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(map, i))) valid.push([x, y]);
+    // Only the campus's own land can be changed. The town and the fields for sale are not the player's.
+    if (ownedAt(map, x, y) && canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(map, i))) valid.push([x, y]);
     else skipped += 1;
   }
   let refund = 0;
@@ -167,8 +175,13 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
         clearCell(next, map, x, y);
         break;
       case 'path':
+        cell.kind = cell.kind === 'road' ? 'crossing' : 'path';
+        break;
+      case 'road':
+        cell.kind = cell.kind === 'path' ? 'crossing' : 'road';
+        break;
       case 'quad':
-        cell.kind = tool;
+        cell.kind = 'quad';
         break;
       case 'tree':
         cell.kind = 'tree';
@@ -216,12 +229,28 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   return { ok: true, state: next, cost: spec.cost, changed: 1 };
 }
 
+/** Buy a field. It becomes land the campus can build on. */
+function buyLand(state: GameState, id: number): ActionResult {
+  const parcel = state.map.parcels[id];
+  if (!parcel || parcel.owned) return { ok: false, state, error: 'That land is not for sale.' };
+  if (parcel.price > state.money.cash) {
+    return { ok: false, state, error: `The ${parcel.name} costs ${dollars(parcel.price)}. You have ${dollars(state.money.cash)}.` };
+  }
+  const next = structuredClone(state);
+  next.map.parcels[id]!.owned = true;
+  next.money.cash -= parcel.price;
+  next.money.yearSpent += parcel.price;
+  return { ok: true, state: next, cost: parcel.price, changed: 1 };
+}
+
 export function applyAction(state: GameState, action: Action): ActionResult {
   switch (action.type) {
     case 'paint':
       return paint(state, action.tool, action.cells, action.variant);
     case 'place':
       return place(state, action.building, action.x, action.y);
+    case 'buyLand':
+      return buyLand(state, action.parcel);
   }
 }
 

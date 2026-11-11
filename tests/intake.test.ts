@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   advance,
   applyAction,
-  BED_NEED,
+  dormStudents,
   bottleneck,
   demandBar,
   enrollment,
@@ -76,7 +76,7 @@ describe('the first intake', () => {
     const intake = result.state.admissions.lastIntake!;
     expect(intake.season).toBe('fall');
     expect(intake.expected).toBe(FOUNDING_CLASS);
-    // The starter campus holds 60: 60 seats, and 36 beds at 0.6 beds a student.
+    // The starter campus holds 60: 60 seats, with 36 students in its 36 beds and 24 locals walking in from town.
     expect(intake.admitted).toBe(60);
     expect(enrollment(result.state)).toBe(60);
     expect(intake.turnedAway).toBe(FOUNDING_CLASS - 60);
@@ -88,7 +88,7 @@ describe('the first intake', () => {
   it('never enrols more students than either zone can hold', () => {
     const state = advance(freshGame(), T0, at(FIRST_INTAKE_TICK)).state;
     expect(enrollment(state)).toBeLessThanOrEqual(openCapacity(state, 'academic'));
-    expect(enrollment(state) * BED_NEED).toBeLessThanOrEqual(openCapacity(state, 'housing') + 1e-9);
+    expect(dormStudents(state)).toBeLessThanOrEqual(openCapacity(state, 'housing'));
     expect(roomForNewStudents(state).room).toBe(0);
   });
 });

@@ -2,6 +2,9 @@ import {
   BUILD_ORDER,
   campusHappiness,
   dollars,
+  driversNow,
+  hasRoadAccess,
+  townPlaces,
   dollarsShort,
   fedAt,
   inReach,
@@ -97,6 +100,13 @@ export function placedSummary(state: GameState, placed: Placed): string {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       const job = spec.family === 'medical' ? 'Treats injuries' : 'Handles mischief';
       return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.`;
+    }
+    case 'parking': {
+      const cars = spec.cars ?? 0;
+      if (!hasRoadAccess(state.map, placed)) return 'No road access. It holds no cars until a road links it to a town street.';
+      const places = townPlaces(state.map);
+      const used = places.spaces > 0 ? Math.round((cars * Math.min(places.drive, driversNow(state))) / places.spaces) : 0;
+      return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
     case 'landmark':
       return `${spec.effect}.`;

@@ -1,7 +1,7 @@
 import { STAGES } from '../config/buildings';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
 import { ZONES, type GameState, type Zone } from '../types';
-import { expectedClass, NEED, studentsWanted } from './demand';
+import { bedsForWaitlist, bedsWanted, expectedClass, studentsWanted } from './demand';
 
 /**
  * The answer to "what should I build?". It turns a shortage into a number of
@@ -37,12 +37,15 @@ export function roomPlan(state: GameState): RoomPlan {
   const waiting = waitlistOpen(state);
   const students = waiting ? state.admissions.waitlist : expectedClass(state);
   // With a waitlist open the room is needed now. Otherwise it is needed by the next intake.
-  const everyone = waiting ? enrollment(state) + students : studentsWanted(state);
+  // Beds are for everyone who does not live in town. Seats are for everyone.
+  const wanted: Record<Zone, number> = waiting
+    ? { housing: bedsForWaitlist(state), academic: enrollment(state) + students }
+    : { housing: bedsWanted(state), academic: studentsWanted(state) };
 
   const zones = {} as Record<Zone, ZonePlan>;
   for (const zone of ZONES) {
     const perLot = STAGES[zone][0]!.capacity;
-    const needed = Math.ceil(everyone * NEED[zone] - 1e-9);
+    const needed = wanted[zone];
     const short = Math.max(0, needed - openCapacity(state, zone));
     const building = Math.min(short, pendingCapacity(state, zone));
     zones[zone] = { short, building, lots: Math.ceil((short - building) / perLot), perLot };

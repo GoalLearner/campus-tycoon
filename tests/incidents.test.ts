@@ -11,7 +11,8 @@ import {
   MAX_ACTIVE_INCIDENTS,
   openCapacity,
   parseSave,
-  BED_NEED,
+  dormStudents,
+  offCampusNow,
   safetyAt,
   SAFETY_LEVELS,
   SAVE_VERSION,
@@ -170,15 +171,16 @@ describe('students with no bed', () => {
     const cleared = applyAction(state, { type: 'paint', tool: 'clear', cells: [[10, 13], [11, 13]] });
     if (!cleared.ok) throw new Error(cleared.error);
     state = cleared.state;
-    const room = Math.floor(openCapacity(state, 'housing') / BED_NEED + 1e-9);
-    expect(before).toBeGreaterThan(room);
+    // More students live in dorms than there are beds left.
+    expect(dormStudents(state)).toBeGreaterThan(openCapacity(state, 'housing'));
     // Still enrolled for now: room only limits who is admitted.
     expect(enrollment(state)).toBe(before);
     const result = advance(state, state.clock.lastSimulatedAt, T0 + 3 * DAY + HOUR);
     expect(result.state.admissions.lastSemester).not.toBeNull();
-    // The dorm that was left may have grown meanwhile. Nobody stays beyond the beds there are now.
-    const roomNow = Math.floor(openCapacity(result.state, 'housing') / BED_NEED + 1e-9);
-    expect(result.state.admissions.lastSemester!.stayed).toBeLessThanOrEqual(roomNow);
+    // The dorm that was left may have grown meanwhile. Nobody stays in a dorm beyond the beds there
+    // are now. Those who live in town are not affected.
+    expect(dormStudents(result.state)).toBeLessThanOrEqual(openCapacity(result.state, 'housing'));
+    expect(offCampusNow(result.state)).toBeGreaterThan(0);
     expect(result.state.admissions.lastSemester!.stayed).toBeLessThan(before);
   });
 });

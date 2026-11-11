@@ -14,6 +14,7 @@ import {
   netPerRealHour,
   nextMilestone,
   OPERATING_COST_PER_STUDENT_PER_YEAR,
+  ROOM_FEE_PER_BED_PER_YEAR,
   START_CASH,
   TICKS_PER_DAY,
   TICKS_PER_YEAR,
@@ -21,6 +22,7 @@ import {
   upkeepPerYear,
   validate,
   WAITLIST_TICKS,
+  WORLD,
 } from '../src/sim';
 import { hashInts, nextFloat, nextInt, seedStreams } from '../src/sim/rng';
 import { markRatesDirty, recomputeRates, spend } from '../src/sim/systems/money';
@@ -145,8 +147,10 @@ describe('timers', () => {
 describe('new game', () => {
   it('builds the starter campus at the centre of the starting land', () => {
     const state = freshGame();
-    expect(state.map.width).toBe(MAP_SIZE);
-    expect(state.map.cells.length).toBe(MAP_SIZE * MAP_SIZE);
+    // The map is the starting land, the fields south of it and the town down its east side.
+    expect(state.map.width).toBe(WORLD.width);
+    expect(state.map.cells.length).toBe(WORLD.width * WORLD.height);
+    expect(state.map.parcels[0]).toMatchObject({ x: 0, y: 0, w: MAP_SIZE, h: MAP_SIZE, owned: true });
     expect(cellAt(state.map, 15, 15)?.kind).toBe('quad');
     expect(cellAt(state.map, 14, 14)?.kind).toBe('path');
     expect(buildings(state.map).map((b) => b.zone)).toEqual([
@@ -181,7 +185,8 @@ describe('money', () => {
     const ticks = end.clock.tick;
     expect(ticks).toBe(FIRST_INTAKE_TICK - 1);
     const perTick =
-      (400 * (TUITION_PER_STUDENT_PER_YEAR - OPERATING_COST_PER_STUDENT_PER_YEAR) - upkeepPerYear(state)) /
+      // Every student pays tuition. The 36 beds of the starter dorms are all full, and each pays a room fee.
+      (400 * (TUITION_PER_STUDENT_PER_YEAR - OPERATING_COST_PER_STUDENT_PER_YEAR) + 36 * ROOM_FEE_PER_BED_PER_YEAR - upkeepPerYear(state)) /
       TICKS_PER_YEAR;
     expect(end.money.cash).toBeCloseTo(START_CASH + perTick * ticks, 6);
     expect(end.money.yearEarned - end.money.yearSpent).toBeCloseTo(perTick * ticks, 6);

@@ -18,13 +18,17 @@ export {
   expectedClass,
   fallClassDraw,
   nextIntakeSeason,
+  bedsWanted,
+  dormStudents,
+  localsAmong,
+  localsNeedingBeds,
   shortage,
-  studentsThatFit,
   studentsWanted,
 } from './systems/demand';
 export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCause } from './systems/growth';
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
-export { roomForNewStudents, zoneName } from './systems/admissions';
+export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
+export { occupiedBeds } from './systems/money';
 export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
 export { approvalAt, campusHappiness, partLevel, retentionRate, type Approval, type CampusHappiness, type Cause, type CausePart } from './systems/happiness';
 export {
@@ -42,6 +46,25 @@ export {
   type PlaceProblem,
 } from './systems/placed';
 export * from './config/placed';
+export * from './config/town';
+export {
+  buildTown,
+  driversNow,
+  freeTownPlaces,
+  hasRoadAccess,
+  hoodAdvice,
+  hoodAt,
+  hoodCapacity,
+  hoodWalks,
+  offCampusNow,
+  ownedAt,
+  parcelAt,
+  startingParcels,
+  townLiving,
+  townPlaces,
+  type HoodLiving,
+  type TownPlaces,
+} from './systems/town';
 export { acceptanceRate, classRecord } from './systems/admissions';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
 export * from './config/incidents';

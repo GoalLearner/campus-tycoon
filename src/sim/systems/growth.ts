@@ -1,7 +1,7 @@
 import { MAX_STAGE, stageSpec, VARIANTS_PER_STAGE } from '../config/buildings';
 import { WALK_FREE_MINUTES } from '../config/desirability';
 import { DINING_STAGE } from '../config/placed';
-import { cellAt } from '../selectors';
+import { cellAt, isPathKind } from '../selectors';
 import { ZONES, type Building, type GameState, type MapState, type Zone } from '../types';
 import { cancelTimers } from '../timers';
 import { startBuild } from './construction';
@@ -36,7 +36,7 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
 ];
 
 export function touchesPath(map: MapState, x: number, y: number): boolean {
-  return NEIGHBOURS.some(([dx, dy]) => cellAt(map, x + dx, y + dy)?.kind === 'path');
+  return NEIGHBOURS.some(([dx, dy]) => isPathKind(cellAt(map, x + dx, y + dy)?.kind));
 }
 
 function stageOf(map: MapState, x: number, y: number): { stage: number; building: Building | null } {

@@ -1,6 +1,6 @@
 import type { PlacedType, Zone } from '../types';
 
-/** [T] The first playable uses the starting land only: two parcels by two. */
+/** The side of the starting land, in cells: two parcels by two. The whole map is WORLD in config/town.ts. */
 export const MAP_SIZE = 32;
 
 /**
@@ -15,6 +15,12 @@ export const STARTER = {
     { y: 14, x0: 8, x1: 23 },
     { y: 17, x0: 8, x1: 23 },
   ],
+  /**
+   * A walk from the south spine east to the campus edge, where the town's main
+   * street runs. It joins the campus to the first neighbourhood, so the
+   * founding class's locals can walk in. New campuses only.
+   */
+  townLink: { y: 17, x0: 24, x1: 31 },
   buildings: [
     { zone: 'housing', x: 10, y: 13 },
     { zone: 'housing', x: 11, y: 13 },

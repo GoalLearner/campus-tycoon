@@ -91,6 +91,7 @@ const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]>
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
+  road: ['road cell', 'road cells'],
   quad: ['quad cell', 'quad cells'],
   tree: ['tree', 'trees'],
   clear: ['cell', 'cells'],

@@ -1,6 +1,5 @@
 import { calendarAt, GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import {
-  BED_NEED,
   DESIRABILITY_DRAW_FLOOR,
   DESIRABILITY_DRAW_SPAN,
   FOUNDING_CLASS,
@@ -9,17 +8,20 @@ import {
   WORD_OF_MOUTH,
 } from '../config/demand';
 import { FIRST_INTAKE_TICK } from '../config/time';
+import { LOCAL_SHARE } from '../config/town';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
 import type { GameState, Season, Zone } from '../types';
+import { freeTownPlaces, offCampusNow, townPlaces } from './town';
 
 /**
  * The forecast: who is expected at the next intake, and how much room each
  * zone would need to take them all. Growth chases this number, and the demand
- * bars show it. See DESIGN.md section 7.
+ * bars show it. See DESIGN.md sections 7 and 25.2.
+ *
+ * Every student needs a classroom seat. A bed is needed by everyone except
+ * the locals who live in town and have a way to class: a path short enough to
+ * walk, or a parking space a road reaches.
  */
-
-/** How much of one zone a single student needs. */
-export const NEED: Record<Zone, number> = { housing: BED_NEED, academic: 1 };
 
 /** Average desirability of every lot that has a building, from 0 to 100. */
 export function averageDesirability(state: GameState): number {
@@ -65,15 +67,29 @@ export function expectedClass(state: GameState): number {
   return classSize(state, nextIntakeSeason(state), founding);
 }
 
+/** Of a group of newcomers, how many are locals who would live in town if they had a way to class. */
+export function localsAmong(count: number): number {
+  return Math.round(count * LOCAL_SHARE);
+}
+
+/** Students who live in a dorm now. */
+export function dormStudents(state: GameState): number {
+  return enrollment(state) - offCampusNow(state);
+}
+
+/** True when the seniors graduate before the next intake arrives. */
+function seniorsLeaveFirst(state: GameState): boolean {
+  const tick = state.clock.tick;
+  if (tick < FIRST_INTAKE_TICK) return false;
+  const { tickInYear } = calendarAt(tick);
+  // Graduation falls between the spring intake and the next fall.
+  return tickInYear >= SPRING_INTAKE_TICK_IN_YEAR && tickInYear < GRADUATION_TICK_IN_YEAR;
+}
+
 /** Students who will still be enrolled when the next intake arrives. */
 export function continuingStudents(state: GameState): number {
-  const tick = state.clock.tick;
-  if (tick < FIRST_INTAKE_TICK) return 0;
-  const { tickInYear } = calendarAt(tick);
-  // Seniors leave at graduation, which falls between the spring intake and the next fall.
-  const seniorsLeaveFirst =
-    tickInYear >= SPRING_INTAKE_TICK_IN_YEAR && tickInYear < GRADUATION_TICK_IN_YEAR;
-  return enrollment(state) - (seniorsLeaveFirst ? state.cohorts[3] : 0);
+  if (state.clock.tick < FIRST_INTAKE_TICK) return 0;
+  return enrollment(state) - (seniorsLeaveFirst(state) ? state.cohorts[3] : 0);
 }
 
 /** Everyone the campus would hold right after the next intake, waitlist included. */
@@ -81,9 +97,31 @@ export function studentsWanted(state: GameState): number {
   return continuingStudents(state) + expectedClass(state) + state.admissions.waitlist;
 }
 
+/**
+ * Beds needed to take every student wanted: everyone except those who live in
+ * town. Locals already enrolled keep their place. Locals among the newcomers
+ * take whatever places in town are still free, and the rest need a bed.
+ */
+export function bedsWanted(state: GameState): number {
+  const leaving = seniorsLeaveFirst(state);
+  const offStaying = offCampusNow(state) - (leaving ? state.offCampus[3] : 0);
+  const dormStaying = continuingStudents(state) - offStaying;
+  const free = Math.max(0, townPlaces(state.map).total - offStaying);
+  const expected = expectedClass(state);
+  const newcomers = expected + state.admissions.waitlist;
+  const newLocals = localsAmong(expected) + state.admissions.waitlistLocals;
+  return Math.max(0, dormStaying + newcomers - Math.min(newLocals, free));
+}
+
+/** Beds needed right now to take everyone on the waitlist. */
+export function bedsForWaitlist(state: GameState): number {
+  const a = state.admissions;
+  return dormStudents(state) + a.waitlist - Math.min(a.waitlistLocals, freeTownPlaces(state));
+}
+
 /** Beds or seats needed to take every student wanted. */
 export function capacityWanted(state: GameState, zone: Zone): number {
-  return Math.ceil(studentsWanted(state) * NEED[zone]);
+  return zone === 'housing' ? bedsWanted(state) : studentsWanted(state);
 }
 
 /** Beds or seats still to find, counting what is already under construction. */
@@ -103,16 +141,19 @@ export function demandBar(state: GameState, zone: Zone): number {
   return Math.max(-1, Math.min(1, value));
 }
 
-/** Students who fit in a zone's open capacity. */
-export function studentsThatFit(state: GameState, zone: Zone): number {
-  return Math.floor(openCapacity(state, zone) / NEED[zone] + 1e-9);
+/** The zone that would cap the next class, or null when everyone fits. Each missing bed or seat turns one student away. */
+export function bottleneck(state: GameState): Zone | null {
+  const bedsShort = bedsWanted(state) - openCapacity(state, 'housing');
+  const seatsShort = studentsWanted(state) - openCapacity(state, 'academic');
+  if (bedsShort <= 0 && seatsShort <= 0) return null;
+  return bedsShort >= seatsShort ? 'housing' : 'academic';
 }
 
-/** The zone that would cap the next class, or null when everyone fits. */
-export function bottleneck(state: GameState): Zone | null {
-  const wanted = studentsWanted(state);
-  const housing = studentsThatFit(state, 'housing');
-  const academic = studentsThatFit(state, 'academic');
-  if (Math.min(housing, academic) >= wanted) return null;
-  return housing < academic ? 'housing' : 'academic';
+/** Locals among the students wanted who have no place in town and so need a bed. 0 when the town takes them all. */
+export function localsNeedingBeds(state: GameState): number {
+  const leaving = seniorsLeaveFirst(state);
+  const offStaying = offCampusNow(state) - (leaving ? state.offCampus[3] : 0);
+  const free = Math.max(0, townPlaces(state.map).total - offStaying);
+  const newLocals = localsAmong(expectedClass(state)) + state.admissions.waitlistLocals;
+  return Math.max(0, newLocals - free);
 }

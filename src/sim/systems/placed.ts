@@ -6,7 +6,8 @@ import {
   type PlacedFamily,
 } from '../config/placed';
 import { stageSpec } from '../config/buildings';
-import { enrollment } from '../selectors';
+import { enrollment, isPathKind } from '../selectors';
+import { ownedAt } from './town';
 import type { GameState, MapState, Placed, PlacedType } from '../types';
 
 /**
@@ -45,6 +46,11 @@ export function previewPlace(state: GameState, type: PlacedType, x: number, y: n
   for (let cy = y; cy < y + spec.h; cy++) {
     for (let cx = x; cx < x + spec.w; cx++) {
       if (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height) {
+        problem = 'offMap';
+        continue;
+      }
+      // Land the campus does not own is off the map as far as building goes.
+      if (!ownedAt(map, cx, cy)) {
         problem = 'offMap';
         continue;
       }
@@ -150,7 +156,7 @@ export function nearestSpot(state: GameState, type: PlacedType, x: number, y: nu
         for (const [dx, dy] of NEIGHBOURS) {
           const nx = cx + dx;
           const ny = cy + dy;
-          if (nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx]!.kind === 'path') return true;
+          if (nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && isPathKind(map.cells[ny * map.width + nx]!.kind)) return true;
         }
       }
     }
@@ -202,7 +208,7 @@ export function storePassers(state: GameState, placed: Placed): number {
   const seed = (x: number, y: number): void => {
     if (x < 0 || y < 0 || x >= width || y >= height) return;
     const i = y * width + x;
-    if (cells[i]!.kind === 'path' && depth[i] === -1) {
+    if (isPathKind(cells[i]!.kind) && depth[i] === -1) {
       depth[i] = 0;
       queue.push(i);
     }
@@ -220,7 +226,7 @@ export function storePassers(state: GameState, placed: Placed): number {
       const ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
       const ni = ny * width + nx;
-      if (cells[ni]!.kind === 'path' && depth[ni] === -1) {
+      if (isPathKind(cells[ni]!.kind) && depth[ni] === -1) {
         depth[ni] = depth[i]! + 1;
         queue.push(ni);
       }

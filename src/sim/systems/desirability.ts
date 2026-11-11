@@ -10,8 +10,10 @@ import {
   WALK_PENALTY_PER_MINUTE,
 } from '../config/desirability';
 import { PLACED, POND_GREEN_SHARE } from '../config/placed';
+import { PARKING_NOISE, ROAD_NOISE } from '../config/town';
 import type { MapState, Zone } from '../types';
 import { libraryLift } from './placed';
+import { refreshTownAccess } from './town';
 
 /**
  * Desirability and walk time for every lot. Only player actions change the
@@ -28,8 +30,10 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
 
 /**
  * Steps from each walkable cell to the nearest Academic lot, counted along
- * paths and quads. -1 where no Academic lot can be reached.
+ * paths, quads and crossings. -1 where no Academic lot can be reached.
  */
+const walkable = (kind: string): boolean => kind === 'path' || kind === 'quad' || kind === 'crossing';
+
 function stepsToClass(map: MapState): Int32Array {
   const { width, height, cells } = map;
   const dist = new Int32Array(width * height).fill(-1);
@@ -45,7 +49,7 @@ function stepsToClass(map: MapState): Int32Array {
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         const ni = ny * width + nx;
         const kind = cells[ni]!.kind;
-        if ((kind === 'path' || kind === 'quad') && dist[ni] === -1) {
+        if (walkable(kind) && dist[ni] === -1) {
           dist[ni] = 1;
           queue.push(ni);
         }
@@ -63,7 +67,7 @@ function stepsToClass(map: MapState): Int32Array {
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
       const ni = ny * width + nx;
       const kind = cells[ni]!.kind;
-      if ((kind === 'path' || kind === 'quad') && dist[ni] === -1) {
+      if (walkable(kind) && dist[ni] === -1) {
         dist[ni] = dist[i]! + 1;
         queue.push(ni);
       }
@@ -121,6 +125,31 @@ function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
   return Math.min(GREEN_CAP[zone], lift);
 }
 
+/**
+ * What a lot loses to traffic: a road, crossing or street right beside it, and
+ * a car park within a cell of it. The first piece of the noise input.
+ */
+function noiseAt(map: MapState, x: number, y: number): number {
+  const { width, height, cells } = map;
+  let road = 0;
+  let parking = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const cell = cells[ny * width + nx]!;
+      if ((dx === 0 || dy === 0) && (cell.kind === 'road' || cell.kind === 'crossing' || cell.kind === 'street')) road = ROAD_NOISE;
+      if (cell.kind === 'placed' && cell.placedId !== null) {
+        const placed = map.placed[cell.placedId];
+        if (placed && (placed.type === 'parking' || placed.type === 'garage')) parking = Math.max(parking, PARKING_NOISE[placed.type]);
+      }
+    }
+  }
+  return road + parking;
+}
+
 export function walkPenalty(minutes: number): number {
   if (minutes < 0) return WALK_MAX_PENALTY;
   const over = minutes - WALK_FREE_MINUTES;
@@ -137,6 +166,8 @@ export interface ScoreParts {
   walkPenalty: number;
   /** -1 when there is no route. Housing only. */
   walkMinutes: number;
+  /** Subtracted from the score: a road beside the lot, or a car park within a cell of it. */
+  noise: number;
   total: number;
 }
 
@@ -144,8 +175,9 @@ export function scoreParts(map: MapState, x: number, y: number, zone: Zone, walk
   const green = greenLift(map, x, y, zone);
   const penalty = zone === 'housing' ? walkPenalty(walk) : 0;
   const library = zone === 'academic' ? libraryLift(map, x, y) : 0;
-  const total = Math.max(0, Math.min(100, BASE_SCORE + green + library - penalty));
-  return { base: BASE_SCORE, green, library, walkPenalty: penalty, walkMinutes: walk, total };
+  const noise = noiseAt(map, x, y);
+  const total = Math.max(0, Math.min(100, BASE_SCORE + green + library - penalty - noise));
+  return { base: BASE_SCORE, green, library, walkPenalty: penalty, walkMinutes: walk, noise, total };
 }
 
 /** Refresh map.score and map.walkMinutes for every cell. */
@@ -166,4 +198,6 @@ export function recomputeDesirability(map: MapState): void {
       map.score[i] = scoreParts(map, x, y, cell.zone, walk).total;
     }
   }
+  // Who can walk in from town, and which car parks a road reaches, change with the same actions.
+  refreshTownAccess(map, steps);
 }
