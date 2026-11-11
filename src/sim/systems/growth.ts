@@ -1,10 +1,12 @@
 import { MAX_STAGE, stageSpec, VARIANTS_PER_STAGE } from '../config/buildings';
 import { WALK_FREE_MINUTES } from '../config/desirability';
+import { DINING_STAGE } from '../config/placed';
 import { cellAt } from '../selectors';
 import { ZONES, type Building, type GameState, type MapState, type Zone } from '../types';
 import { startBuild } from './construction';
 import { shortage } from './demand';
 import { scoreParts } from './desirability';
+import { fedAt } from './placed';
 
 /**
  * Organic growth. Inside its density tier a lot grows on its own when demand,
@@ -12,7 +14,12 @@ import { scoreParts } from './desirability';
  * holding it back. See DESIGN.md section 6.
  */
 
-export type StallCause = 'noPath' | 'noDemand' | 'lowDesirability';
+export type StallCause = 'noPath' | 'noDemand' | 'noDining' | 'lowDesirability';
+
+/** A Housing lot needs a dining hall or coffee stand in reach before it grows past its first stage. */
+function needsDining(map: MapState, x: number, y: number, zone: Zone, nextStage: number): boolean {
+  return zone === 'housing' && nextStage >= DINING_STAGE && !fedAt(map, x, y);
+}
 
 export type LotStatus =
   | { kind: 'building'; toStage: number; doneTick: number }
@@ -58,6 +65,7 @@ export function lotStatus(state: GameState, x: number, y: number): LotStatus | n
   const causes: StallCause[] = [];
   if (!touchesPath(map, x, y)) causes.push('noPath');
   if (shortage(state, zone) <= 0) causes.push('noDemand');
+  if (needsDining(map, x, y, zone, nextStage)) causes.push('noDining');
   if (map.score[y * map.width + x]! < needed) causes.push('lowDesirability');
 
   const [cause, ...also] = causes;
@@ -76,7 +84,7 @@ export function desirabilityHint(state: GameState, x: number, y: number): string
   if (cell.zone === 'housing' && parts.walkPenalty >= 6) {
     return `The walk to class is ${Math.round(parts.walkMinutes)} minutes. Students want ${WALK_FREE_MINUTES} or less.`;
   }
-  return 'There is no green space nearby. Place a quad.';
+  return 'There is no green space nearby. Place a quad or plant trees.';
 }
 
 interface Candidate {
@@ -102,6 +110,7 @@ function candidates(state: GameState, zone: Zone): Candidate[] {
       const next = stageSpec(zone, nextStage);
       const score = map.score[i]!;
       if (score < next.desirabilityNeeded || !touchesPath(map, x, y)) continue;
+      if (needsDining(map, x, y, zone, nextStage)) continue;
       const now = stage > 0 ? stageSpec(zone, stage).capacity : 0;
       out.push({ x, y, score, nextStage, gain: next.capacity - now });
     }

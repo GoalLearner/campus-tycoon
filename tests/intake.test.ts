@@ -38,6 +38,12 @@ function wellZoned(): GameState {
   state = paint(state, 'quad', [...rowBetween([4, 15], [9, 15]), ...rowBetween([4, 16], [9, 16]), ...rowBetween([22, 15], [27, 15]), ...rowBetween([22, 16], [27, 16])]);
   state = paint(state, 'academic', [...rowBetween([0, 13], [9, 13]), ...rowBetween([20, 13], [31, 13])]);
   state = paint(state, 'housing', [...rowBetween([0, 18], [18, 18]), ...rowBetween([22, 18], [31, 18])]);
+  // A tended campus feeds its dorms: Housing needs dining in reach to grow past its first stage.
+  for (const [x, y] of [[5, 19], [28, 19]] as const) {
+    const placed = applyAction(state, { type: 'place', building: 'dining', x, y });
+    if (!placed.ok) throw new Error(placed.error);
+    state = placed.state;
+  }
   return state;
 }
 

@@ -1,4 +1,4 @@
-import type { Zone } from '../types';
+import type { PlacedType, Zone } from '../types';
 
 /** [T] The first playable uses the starting land only: two parcels by two. */
 export const MAP_SIZE = 32;
@@ -23,4 +23,13 @@ export const STARTER = {
     { zone: 'academic', x: 20, y: 18 },
     { zone: 'academic', x: 21, y: 18 },
   ] as ReadonlyArray<{ zone: Zone; x: number; y: number }>,
+  /**
+   * Hand-placed buildings the campus begins with: a dining hall behind the
+   * first dorms, so they can grow, and the Administration building between
+   * the two walks east of the quad. Both leave the walks free to extend.
+   */
+  placed: [
+    { type: 'dining', x: 10, y: 12 },
+    { type: 'admin', x: 20, y: 15 },
+  ] as ReadonlyArray<{ type: PlacedType; x: number; y: number }>,
 } as const;

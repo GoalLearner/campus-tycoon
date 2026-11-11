@@ -6,7 +6,7 @@
 export type Zone = 'housing' | 'academic';
 export const ZONES: readonly Zone[] = ['housing', 'academic'];
 
-export type CellKind = 'empty' | 'path' | 'quad' | 'lot';
+export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree' | 'placed';
 
 export interface Cell {
   kind: CellKind;
@@ -14,6 +14,37 @@ export interface Cell {
   zone: Zone | null;
   /** Index into map.buildings, or null when nothing stands here. */
   buildingId: number | null;
+  /** Which kind the player picked. Trees only for now: the kind of tree. 0 everywhere else. */
+  variant: number;
+  /** Index into map.placed for a cell under a hand-placed building, or null. */
+  placedId: number | null;
+}
+
+/** The hand-placed buildings of the Build menu. Their numbers live in config/placed.ts. */
+export type PlacedType =
+  | 'library'
+  | 'dining'
+  | 'coffee'
+  | 'store'
+  | 'gym'
+  | 'track'
+  | 'pool'
+  | 'courts'
+  | 'field'
+  | 'pondSmall'
+  | 'pondMedium'
+  | 'pondLarge'
+  | 'admin';
+
+/** A hand-placed building. It is whole from the moment it is placed. */
+export interface Placed {
+  id: number;
+  type: PlacedType;
+  /** The top corner of its footprint. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export interface Rebuild {
@@ -47,6 +78,8 @@ export interface MapState {
   cells: Cell[];
   /** A building's id is its index. Cleared buildings leave a null. */
   buildings: (Building | null)[];
+  /** Hand-placed buildings. An id is an index here too, and a cleared one leaves a null. */
+  placed: (Placed | null)[];
   /** Desirability of each cell, read as its own zone. 0 where there is no lot. */
   score: number[];
   /** Walk to the nearest Academic lot along paths, in minutes. -1 when unreachable or unused. */
@@ -112,6 +145,20 @@ export interface Admissions {
   /** How many the open waitlist has let in so far. */
   waitlistAdmitted: number;
   lastIntake: IntakeResult | null;
+  /** How the last semester ended: who stayed, who left, and how happy the campus was. */
+  lastSemester: { tick: number; stayed: number; left: number; happiness: number } | null;
+}
+
+/**
+ * What became of one entering class. Kept for good, because the history
+ * cannot be rebuilt later. Graduation rates are read from it (DESIGN.md 24.8).
+ */
+export interface ClassRecord {
+  entryYear: number;
+  entered: number;
+  finishedOnTime: number;
+  finishedLate: number;
+  left: number;
 }
 
 export interface Stats {
@@ -130,6 +177,8 @@ export interface GameState {
   map: MapState;
   /** Headcount by class year: freshmen, sophomores, juniors, seniors. */
   cohorts: [number, number, number, number];
+  /** One record per entering class, oldest first. */
+  classes: ClassRecord[];
   admissions: Admissions;
   timers: Timer[];
   timerSeq: number;
@@ -142,6 +191,7 @@ export type LogKind =
   | 'waitlist'
   | 'waitlistClosed'
   | 'graduation'
+  | 'semester'
   | 'yearEnd'
   | 'grant'
   | 'paused';

@@ -101,7 +101,7 @@ function nextPathStretch(state: GameState): Point[] | null {
 }
 
 function tryPaint(state: GameState, tool: Tool, cells: Point[], reserve: number): GameState | null {
-  const cost = cells.length * (tool === 'path' ? COST.path : tool === 'quad' ? COST.quad : tool === 'clear' ? COST.clear : COST.zoneLot);
+  const cost = cells.length * (tool === 'path' ? COST.path : tool === 'quad' ? COST.quad : tool === 'tree' ? COST.tree : tool === 'clear' ? COST.clear : COST.zoneLot);
   if (state.money.cash - cost < reserve) return null;
   const result = applyAction(state, { type: 'paint', tool, cells });
   return result.ok ? result.state : null;

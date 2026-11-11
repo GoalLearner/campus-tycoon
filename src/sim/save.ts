@@ -1,3 +1,4 @@
+import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
 import type { GameState } from './types';
 
 /**
@@ -6,7 +7,7 @@ import type { GameState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 3;
 
 export interface SaveFile {
   v: number;
@@ -22,7 +23,42 @@ export type Migration = (state: Record<string, unknown>) => Record<string, unkno
  * Add one whenever the state shape changes after a release, with a test
  * that loads an old fixture.
  */
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+  // Version 2 added `variant` to every map cell, for the kind of tree planted there.
+  1: (state) => {
+    const map = state.map as { cells?: Array<Record<string, unknown>> } | undefined;
+    for (const cell of map?.cells ?? []) {
+      if (typeof cell.variant !== 'number') cell.variant = 0;
+    }
+    return state;
+  },
+  // Version 3 added hand-placed buildings, a record of each entering class, and how the last semester ended.
+  2: (state) => {
+    const map = state.map as { cells?: Array<Record<string, unknown>>; placed?: unknown } | undefined;
+    for (const cell of map?.cells ?? []) {
+      if (cell.placedId === undefined) cell.placedId = null;
+    }
+    if (map && !Array.isArray(map.placed)) map.placed = [];
+
+    // The history of the classes already here is not known, so each starts from who is enrolled today.
+    if (!Array.isArray(state.classes)) {
+      const cohorts = Array.isArray(state.cohorts) ? (state.cohorts as number[]) : [];
+      const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
+      const year = tick < FIRST_INTAKE_TICK ? 0 : Math.floor((tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
+      const classes: Array<Record<string, number>> = [];
+      for (let classYear = 3; classYear >= 0; classYear--) {
+        const size = Number(cohorts[classYear] ?? 0);
+        if (size > 0 && year - classYear >= 1) {
+          classes.push({ entryYear: year - classYear, entered: size, finishedOnTime: 0, finishedLate: 0, left: 0 });
+        }
+      }
+      state.classes = classes;
+    }
+    const admissions = state.admissions as Record<string, unknown> | undefined;
+    if (admissions && admissions.lastSemester === undefined) admissions.lastSemester = null;
+    return state;
+  },
+};
 
 export type LoadResult =
   | { ok: true; state: GameState; savedAt: number; migratedFrom: number | null }
@@ -66,6 +102,8 @@ export function validate(state: unknown): string | null {
   if (typeof width !== 'number' || typeof height !== 'number') return 'The map has no size.';
   if (!Array.isArray(cells) || cells.length !== width * height) return 'The map is the wrong size.';
   if (!Array.isArray(buildings)) return 'The map has no building list.';
+  if (!Array.isArray(map.placed)) return 'The map has no list of placed buildings.';
+  if (!Array.isArray(state.classes)) return 'The save has no class records.';
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';
   if ((state.cohorts as unknown[]).length !== 4) return 'The save has the wrong number of class years.';

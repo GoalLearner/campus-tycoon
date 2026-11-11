@@ -1,9 +1,9 @@
 import { calendarAt } from '../calendar';
-import { RETENTION_PER_SEMESTER } from '../config/demand';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
 import { enrollment, openCapacity } from '../selectors';
-import { ZONES, type GameState, type LogEntry, type Season, type Zone } from '../types';
+import { ZONES, type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
 import { classSize, NEED } from './demand';
+import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 
 /**
@@ -30,8 +30,20 @@ export function roomForNewStudents(state: GameState): { room: number; tightest: 
   return { room: Math.max(0, room), tightest };
 }
 
+/** The record of the class that entered in a given year, made on first use. */
+export function classRecord(state: GameState, entryYear: number): ClassRecord {
+  let record = state.classes.find((r) => r.entryYear === entryYear);
+  if (!record) {
+    record = { entryYear, entered: 0, finishedOnTime: 0, finishedLate: 0, left: 0 };
+    state.classes.push(record);
+    state.classes.sort((a, b) => a.entryYear - b.entryYear);
+  }
+  return record;
+}
+
 function enrol(state: GameState, count: number): void {
   state.cohorts[0] += count;
+  if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year)).entered += count;
   state.stats.peakEnrollment = Math.max(state.stats.peakEnrollment, enrollment(state));
   markRatesDirty(state);
 }
@@ -104,19 +116,45 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
   }
 }
 
-/** The end of a semester: a few students from every class do not come back. */
-export function semesterEnd(state: GameState): void {
+/**
+ * The end of a semester: a few students from every class do not come back.
+ * How many follows happiness, and the log says so.
+ */
+export function semesterEnd(state: GameState, log?: LogEntry[]): void {
+  const before = enrollment(state);
+  const mood = campusHappiness(state);
   const c = state.cohorts;
-  const stay = (n: number): number => Math.round(n * RETENTION_PER_SEMESTER);
-  state.cohorts = [stay(c[0]), stay(c[1]), stay(c[2]), stay(c[3])];
+  const { year } = calendarAt(state.clock.tick);
+  const next: [number, number, number, number] = [0, 0, 0, 0];
+  for (let classYear = 0; classYear < 4; classYear++) {
+    const was = c[classYear]!;
+    next[classYear] = Math.round(was * mood.retention);
+    if (was > next[classYear]!) classRecord(state, Math.max(1, year - classYear)).left += was - next[classYear]!;
+  }
+  state.cohorts = next;
+  const stayed = enrollment(state);
+  const left = before - stayed;
+  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.score) };
   markRatesDirty(state);
+  if (log && before > 0) {
+    log.push({
+      tick: state.clock.tick,
+      kind: 'semester',
+      text:
+        left === 0
+          ? 'The semester ended and every student is staying on.'
+          : `The semester ended. ${left} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.score)}.`,
+      data: { left, stayed, happiness: Math.round(mood.score), worst: mood.worst ?? '' },
+    });
+  }
 }
 
 /** Day 6: the spring semester ends and the seniors graduate. */
 export function graduate(state: GameState, log: LogEntry[]): void {
-  semesterEnd(state);
+  semesterEnd(state, log);
   const seniors = state.cohorts[3];
   state.cohorts[3] = 0;
+  if (seniors > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year - 3)).finishedOnTime += seniors;
   state.stats.graduates += seniors;
   markRatesDirty(state);
   if (seniors > 0) {
@@ -133,6 +171,16 @@ export function graduate(state: GameState, log: LogEntry[]): void {
 export function promote(state: GameState): void {
   const c = state.cohorts;
   state.cohorts = [0, c[0], c[1], c[2] + c[3]];
+}
+
+/**
+ * The share of applicants who got a place at the last intake, counting those
+ * who came off the waitlist. null before the first class.
+ */
+export function acceptanceRate(state: GameState): number | null {
+  const last = state.admissions.lastIntake;
+  if (!last || last.expected <= 0) return null;
+  return Math.min(1, (last.admitted + state.admissions.waitlistAdmitted) / last.expected);
 }
 
 export function zoneName(zone: Zone): string {

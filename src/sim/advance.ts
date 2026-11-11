@@ -116,7 +116,7 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       evaluateGrowth(state);
       break;
     case 'springIntake':
-      semesterEnd(state);
+      semesterEnd(state, log);
       runIntake(state, 'spring', log);
       evaluateGrowth(state);
       break;

@@ -13,6 +13,10 @@ export const GREEN_RADIUS = 4;
 /** Chosen so one quad cell within two cells is enough to lift either zone to stage 2. */
 export const GREEN_PER_CELL: Record<Zone, number> = { housing: 10, academic: 9 };
 export const GREEN_CAP: Record<Zone, number> = { housing: 40, academic: 25 };
+/** A single tree counts as this share of a quad cell. */
+export const TREE_GREEN_SHARE = 0.34;
+/** How many kinds of tree the player can pick from. The art supplies one sprite per kind. */
+export const TREE_KINDS = 6;
 
 /** Housing reads the walk to the nearest Academic lot, counted along paths. */
 export const WALK_MINUTES_PER_CELL = 0.5;

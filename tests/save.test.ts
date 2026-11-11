@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { advance, parseSave, SAVE_VERSION, serialize, validate } from '../src/sim';
 import type { Migration } from '../src/sim/save';
@@ -78,5 +79,34 @@ describe('saves', () => {
     const text = JSON.stringify({ v: SAVE_VERSION - 1, savedAt: 0, state: freshGame() });
     const result = parseSave(text, {});
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('a real save from version 1', () => {
+  // Written by the game before trees existed: no cell has a `variant`.
+  const text = readFileSync(new URL('./fixtures/save-v1.json', import.meta.url), 'utf8');
+
+  it('loads, and every cell gains a variant of 0', () => {
+    const raw = JSON.parse(text) as { v: number; state: { map: { cells: Array<Record<string, unknown>> } } };
+    expect(raw.v).toBe(1);
+    expect(raw.state.map.cells.every((cell) => !('variant' in cell))).toBe(true);
+
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(loaded.migratedFrom).toBe(1);
+    expect(loaded.state.version).toBe(SAVE_VERSION);
+    expect(loaded.state.map.cells.every((cell) => cell.variant === 0)).toBe(true);
+    expect(loaded.state.school.name).toBe('Old Save University');
+  });
+
+  it('keeps playing after the upgrade', () => {
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    const before = loaded.state;
+    const later = advance(before, before.clock.lastSimulatedAt, before.clock.lastSimulatedAt + 2 * DAY).state;
+    expect(validate(later)).toBeNull();
+    expect(later.clock.tick).toBe(before.clock.tick + 2 * 24 * 60);
+    const again = parseSave(serialize(later, later.clock.lastSimulatedAt));
+    expect(again.ok && again.migratedFrom === null).toBe(true);
   });
 });

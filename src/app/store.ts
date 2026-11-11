@@ -33,10 +33,12 @@ export interface AwayReport {
 }
 
 type Listener = () => void;
+type LogListener = (entries: LogEntry[]) => void;
 
 export class Store {
   private current: GameState | null = null;
   private listeners = new Set<Listener>();
+  private logListeners = new Set<LogListener>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private lastSavedTick = -1;
@@ -66,6 +68,12 @@ export class Store {
 
   private emit(): void {
     for (const listener of this.listeners) listener();
+  }
+
+  /** Hear about things as they happen while the app is open. The map uses it to show students moving in. */
+  onLive(listener: LogListener): () => void {
+    this.logListeners.add(listener);
+    return () => this.logListeners.delete(listener);
   }
 
   /** Load the saved game, falling back to the backup. Returns whether a game was loaded. */
@@ -160,6 +168,7 @@ export class Store {
         };
       } else {
         this.recent.push(...result.log);
+        if (result.log.length > 0) for (const listener of this.logListeners) listener(result.log);
       }
       // One save a minute while open is plenty: a lost minute is replayed exactly on the next load.
       if (result.state.clock.tick - this.lastSavedTick >= 1) this.scheduleSave(1500);

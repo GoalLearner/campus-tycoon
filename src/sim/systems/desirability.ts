@@ -3,12 +3,15 @@ import {
   GREEN_CAP,
   GREEN_PER_CELL,
   GREEN_RADIUS,
+  TREE_GREEN_SHARE,
   WALK_FREE_MINUTES,
   WALK_MAX_PENALTY,
   WALK_MINUTES_PER_CELL,
   WALK_PENALTY_PER_MINUTE,
 } from '../config/desirability';
+import { PLACED, POND_GREEN_SHARE } from '../config/placed';
 import type { MapState, Zone } from '../types';
+import { libraryLift } from './placed';
 
 /**
  * Desirability and walk time for every lot. Only player actions change the
@@ -87,9 +90,21 @@ function walkFrom(map: MapState, steps: Int32Array, x: number, y: number): numbe
   return best === -1 ? -1 : best * WALK_MINUTES_PER_CELL;
 }
 
-/** Lift from quads near a cell, before the cap. */
+/** How much of a quad cell this cell is worth as green space. Ponds, trees and quads share the one capped input. */
+function greenShare(map: MapState, index: number): number {
+  const cell = map.cells[index]!;
+  if (cell.kind === 'quad') return 1;
+  if (cell.kind === 'tree') return TREE_GREEN_SHARE;
+  if (cell.kind === 'placed' && cell.placedId !== null) {
+    const placed = map.placed[cell.placedId];
+    if (placed && PLACED[placed.type].family === 'water') return POND_GREEN_SHARE;
+  }
+  return 0;
+}
+
+/** Lift from quads, trees and water near a cell, capped. */
 function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
-  const { width, height, cells } = map;
+  const { width, height } = map;
   let lift = 0;
   for (let dy = -GREEN_RADIUS; dy <= GREEN_RADIUS; dy++) {
     const ny = y + dy;
@@ -97,9 +112,10 @@ function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
     for (let dx = -GREEN_RADIUS; dx <= GREEN_RADIUS; dx++) {
       const nx = x + dx;
       if (nx < 0 || nx >= width) continue;
-      if (cells[ny * width + nx]!.kind !== 'quad') continue;
+      const share = greenShare(map, ny * width + nx);
+      if (share === 0) continue;
       const d = Math.max(Math.abs(dx), Math.abs(dy));
-      lift += GREEN_PER_CELL[zone] * ((GREEN_RADIUS + 1 - d) / (GREEN_RADIUS + 1));
+      lift += GREEN_PER_CELL[zone] * share * ((GREEN_RADIUS + 1 - d) / (GREEN_RADIUS + 1));
     }
   }
   return Math.min(GREEN_CAP[zone], lift);
@@ -115,6 +131,8 @@ export function walkPenalty(minutes: number): number {
 export interface ScoreParts {
   base: number;
   green: number;
+  /** Added by a library in reach. Academic only. */
+  library: number;
   /** Subtracted from the score. Housing only. */
   walkPenalty: number;
   /** -1 when there is no route. Housing only. */
@@ -125,8 +143,9 @@ export interface ScoreParts {
 export function scoreParts(map: MapState, x: number, y: number, zone: Zone, walk: number): ScoreParts {
   const green = greenLift(map, x, y, zone);
   const penalty = zone === 'housing' ? walkPenalty(walk) : 0;
-  const total = Math.max(0, Math.min(100, BASE_SCORE + green - penalty));
-  return { base: BASE_SCORE, green, walkPenalty: penalty, walkMinutes: walk, total };
+  const library = zone === 'academic' ? libraryLift(map, x, y) : 0;
+  const total = Math.max(0, Math.min(100, BASE_SCORE + green + library - penalty));
+  return { base: BASE_SCORE, green, library, walkPenalty: penalty, walkMinutes: walk, total };
 }
 
 /** Refresh map.score and map.walkMinutes for every cell. */
