@@ -7,23 +7,34 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "phone": "vite --host",
+    "prebuild": "node scripts/fetch-art.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name campus-tycoon --branch main",
+    "prebuild:ios": "node scripts/fetch-art.mjs",
+    "build:ios": "tsc --noEmit && vite build --mode ios && cap sync ios",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "simulate": "tsx scripts/simulate.ts",
     "art": "python tools/build_art.py",
-    "phone": "vite --host"
+    "art:publish": "node scripts/publish-art.mjs"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.160.1"
   },
   "dependencies": {
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/share": "^8.0.3",
     "phaser": "^3.90.0"
   }
 }

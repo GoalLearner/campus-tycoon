@@ -1,6 +1,6 @@
 # Credits
 
-Campus Tycoon uses the art below. This file is written by `tools/build_art.py` from the art recipe.
+Campus Tycoon uses the art below. This file is written by `tools/build_art.py` from the art recipes.
 
 ## Isometric Landscape, Isometric City and Isometric Buildings
 
@@ -8,3 +8,4 @@ Campus Tycoon uses the art below. This file is written by `tools/build_art.py` f
 - **Licence:** Creative Commons Zero (CC0) (http://creativecommons.org/publicdomain/zero/1.0/)
 - **From:** https://kenney.nl/assets
 - **Changes made:** Tiles are layered into whole buildings, quads and lots, then packed into one atlas.
+- **Where:** Built into this repository. Every build can fall back to it.

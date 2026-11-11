@@ -1,5 +1,7 @@
 import './ui/ui.css';
+import { isNative } from './app/platform';
 import { store } from './app/store';
+import { registerServiceWorker } from './app/updates';
 import { createGame } from './game/createGame';
 import { mountUi } from './ui/ui';
 
@@ -19,12 +21,9 @@ async function boot(): Promise<void> {
   createGame(gameRoot);
   mountUi(uiRoot);
 
-  // The service worker lets the home-screen app open with no connection.
-  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      // Not fatal: the game simply needs a connection to load.
-    });
-  }
+  // The service worker lets the web build open with no connection and offers updates.
+  // The iOS app ships its files inside the app, so it has no service worker.
+  if (import.meta.env.PROD && !__NATIVE_BUILD__ && !isNative) registerServiceWorker();
 }
 
 void boot();

@@ -1,7 +1,9 @@
 import { clock } from '../app/clock';
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
+import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
 import { store } from '../app/store';
+import { updates } from '../app/updates';
 import {
   bottleneck,
   buildingAt,
@@ -62,6 +64,44 @@ const TOOL_NOUN: Record<Exclude<ToolChoice, 'look'>, [string, string]> = {
   clear: ['cell', 'cells'],
 };
 
+/** Taps on the version line that show or hide the tester tools. */
+const TESTER_TAPS = 7;
+const TESTER_KEY = 'campus-tycoon.testerTools';
+
+/** Dev builds always show the time-skip panel. Tester builds show it only after the hidden switch. */
+function testerToolsOn(): boolean {
+  if (import.meta.env.DEV) return true;
+  if (!hasTimeSkip) return false;
+  try {
+    return localStorage.getItem(TESTER_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function setTesterTools(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(TESTER_KEY, 'on');
+    else localStorage.removeItem(TESTER_KEY);
+  } catch {
+    // Without storage the switch simply does not stick.
+  }
+}
+
+/** The art credit for the Menu, read from the art manifest so a new pack brings its own. */
+let artCredit: Promise<string> | null = null;
+function loadArtCredit(): Promise<string> {
+  artCredit ??= fetch('./assets/manifest.json')
+    .then((response) => response.json() as Promise<{ menuCredit?: string; credits?: Array<{ author?: string }> }>)
+    .then((manifest) => {
+      if (manifest.menuCredit) return manifest.menuCredit;
+      const authors = (manifest.credits ?? []).map((credit) => credit.author).filter(Boolean);
+      return authors.length > 0 ? `Art by ${authors.join(', ')}.` : '';
+    })
+    .catch(() => '');
+  return artCredit;
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -116,7 +156,20 @@ export function mountUi(root: HTMLElement): void {
   }
 
   const status = el('div', 'status');
-  hud.append(top, calendar, bars, status);
+
+  // Shown when a new build has been downloaded. The player picks the moment to switch.
+  const updateRow = el('div', 'update-row');
+  const updateButton = button('Update', 'update-button', () => {
+    updateButton.disabled = true;
+    updateButton.textContent = 'Updating';
+    void store.flush().then(() => {
+      updates.apply();
+      // If the new build does not take over by itself, a plain reload picks it up.
+      setTimeout(() => window.location.reload(), 4000);
+    });
+  });
+  updateRow.append(el('span', '', 'A new version is ready.'), updateButton);
+  hud.append(top, calendar, bars, status, updateRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -235,6 +288,10 @@ export function mountUi(root: HTMLElement): void {
       card.append(el('h1', '', store.state.school.name));
       const note = el('p', 'fine', '');
       void isStoragePersistent().then((kept) => {
+        if (isNative) {
+          note.textContent = 'Your save is kept on this device. Export a save to move it to another one.';
+          return;
+        }
         note.textContent = kept
           ? 'This browser has agreed to keep your save.'
           : 'This browser may clear saved games it has not seen for a while. Export a save to be safe.';
@@ -274,9 +331,9 @@ export function mountUi(root: HTMLElement): void {
       });
       card.append(startOver, note);
 
-      if (import.meta.env.DEV) {
+      if (testerToolsOn()) {
         const dev = el('div', 'dev');
-        dev.append(el('div', 'dev-title', 'Dev: skip time'));
+        dev.append(el('div', 'dev-title', import.meta.env.DEV ? 'Dev: skip time' : 'Tester tools: skip time'));
         const skip = (label: string, ms: number): HTMLButtonElement =>
           button(label, 'dev-button', () => {
             clock.skip(ms);
@@ -287,7 +344,27 @@ export function mountUi(root: HTMLElement): void {
         card.append(dev);
       }
 
-      card.append(el('p', 'fine', 'Art by Kenney (kenney.nl), public domain.'), button('Close', 'primary', close));
+      const credit = el('p', 'fine', '');
+      void loadArtCredit().then((text) => {
+        credit.textContent = text;
+      });
+
+      // Tester builds: seven taps on the version line show or hide the time-skip panel.
+      const version = el('p', 'fine version', `Version ${__APP_VERSION__} (${__BUILD_LABEL__})`);
+      if (hasTimeSkip && !import.meta.env.DEV) {
+        let taps = 0;
+        version.addEventListener('click', () => {
+          taps += 1;
+          if (taps < TESTER_TAPS) return;
+          const on = !testerToolsOn();
+          setTesterTools(on);
+          close();
+          openMenu();
+          pushToast(on ? 'Tester tools are on.' : 'Tester tools are off.');
+        });
+      }
+
+      card.append(credit, version, button('Close', 'primary', close));
     });
   }
 
@@ -434,6 +511,11 @@ export function mountUi(root: HTMLElement): void {
     renderInspector(state);
     renderTools();
 
+    updateRow.classList.toggle('show', updates.ready);
+    // Toasts sit just under the HUD, however tall it is.
+    const hudBottom = `${Math.round(hud.getBoundingClientRect().bottom)}px`;
+    if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);
+
     if (store.away && !modalOpen) openAway();
 
     if (store.recent.length > 0) {
@@ -452,6 +534,7 @@ export function mountUi(root: HTMLElement): void {
 
   store.subscribe(render);
   session.subscribe(render);
+  updates.subscribe(render);
   setInterval(render, 1000);
   render();
 }

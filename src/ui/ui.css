@@ -258,6 +258,36 @@ button:active {
   color: var(--muted);
 }
 
+.update-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.update-row.show {
+  display: flex;
+}
+
+.update-row span {
+  flex: 1;
+}
+
+.update-button {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #1c1605;
+}
+
+.update-button:disabled {
+  opacity: 0.6;
+}
+
 /* -------------------------------------------------------------- toolbar */
 
 .toolbar {
@@ -386,7 +416,7 @@ button:active {
 .toast {
   position: absolute;
   left: 50%;
-  top: calc(var(--safe-top) + 178px);
+  top: calc(var(--hud-bottom, calc(var(--safe-top) + 166px)) + 12px);
   transform: translateX(-50%);
   width: max-content;
   max-width: min(440px, calc(100% - 24px));
@@ -471,6 +501,12 @@ button:active {
 
 .card .danger {
   color: var(--bad);
+}
+
+.card .version {
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .name-input {

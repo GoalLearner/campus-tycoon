@@ -80,6 +80,7 @@ export class Store {
       const result = parseSave(text);
       if (result.ok) {
         this.current = result.state;
+        clock.follow(result.state.clock.lastSimulatedAt);
         if (label === 'backup') this.loadProblem = 'Your latest save could not be read, so an earlier one was loaded.';
         this.catchUp();
         return true;
@@ -116,6 +117,7 @@ export class Store {
     const result = parseSave(text);
     if (!result.ok) return result.reason;
     this.current = result.state;
+    clock.follow(result.state.clock.lastSimulatedAt);
     this.away = null;
     this.recent = [];
     this.catchUp();
@@ -182,15 +184,22 @@ export class Store {
   }
 
   saveNow(): void {
+    void this.flush();
+  }
+
+  /** Write the save and wait for it to land. Used before the page reloads for an update. */
+  async flush(): Promise<void> {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
     if (!this.current || this.ephemeral) return;
     this.lastSavedTick = this.current.clock.tick;
-    void writeSave(serialize(this.current, clock.now())).catch(() => {
+    try {
+      await writeSave(serialize(this.current, clock.now()));
+    } catch {
       // Storage can fail in private browsing. The game keeps running in memory.
-    });
+    }
   }
 
   /** Start the once-a-second heartbeat and save whenever the app is put away. */

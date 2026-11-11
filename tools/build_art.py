@@ -23,6 +23,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE_DIR = os.path.join(ROOT, 'art', 'source')
 OUT_DIR = os.path.join(ROOT, 'public', 'assets')
+PRIVATE_DIR = os.path.join(ROOT, 'art', 'private')
 PADDING = 4          # clear pixels around every sprite, so shrunken views do not bleed
 CANVAS = 512         # scratch canvas each sprite is put together on
 ORIGIN = (CANVAS // 2, CANVAS // 2)
@@ -96,23 +97,35 @@ def pack(sprites, size):
     return placed
 
 
-def write_credits(recipe):
+def all_recipes():
+    """Every recipe in art/recipes, with the built-in pack first."""
+    folder = os.path.join(ROOT, 'art', 'recipes')
+    names = sorted(f[:-5] for f in os.listdir(folder) if f.endswith('.json'))
+    recipes = [load_recipe(n) for n in names]
+    return sorted(recipes, key=lambda r: (bool(r.get('private')), r['pack']))
+
+
+def write_credits():
     lines = [
         '# Credits',
         '',
-        'Campus Tycoon uses the art below. This file is written by `tools/build_art.py` from the art recipe.',
+        'Campus Tycoon uses the art below. This file is written by `tools/build_art.py` from the art recipes.',
         '',
     ]
-    for c in recipe['credits']:
-        lines += [
-            '## ' + c['name'],
-            '',
-            '- **By:** ' + c['author'],
-            '- **Licence:** ' + c['licence'] + ' (' + c['licenceUrl'] + ')',
-            '- **From:** ' + c['source'],
-            '- **Changes made:** ' + c['changes'],
-            '',
-        ]
+    for recipe in all_recipes():
+        for c in recipe['credits']:
+            where = ('Used in builds that are given the private art pack.' if recipe.get('private')
+                     else 'Built into this repository. Every build can fall back to it.')
+            lines += [
+                '## ' + c['name'],
+                '',
+                '- **By:** ' + c['author'],
+                '- **Licence:** ' + c['licence'] + ' (' + c['licenceUrl'] + ')',
+                '- **From:** ' + c['source'],
+                '- **Changes made:** ' + c['changes'],
+                '- **Where:** ' + where,
+                '',
+            ]
     with open(os.path.join(ROOT, 'CREDITS.md'), 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(lines))
 
@@ -154,9 +167,12 @@ def main():
             'footprint': recipe.get('footprints', {}).get(key, [1, 1]),
         }
 
-    os.makedirs(OUT_DIR, exist_ok=True)
-    atlas.save(os.path.join(OUT_DIR, 'atlas.png'), optimize=True)
-    with open(os.path.join(OUT_DIR, 'atlas.json'), 'w', encoding='utf-8', newline='\n') as f:
+    # A recipe marked private is a paid pack. Its atlas goes to art/private, which is
+    # git-ignored, and never into public/assets.
+    out_dir = PRIVATE_DIR if recipe.get('private') else OUT_DIR
+    os.makedirs(out_dir, exist_ok=True)
+    atlas.save(os.path.join(out_dir, 'atlas.png'), optimize=True)
+    with open(os.path.join(out_dir, 'atlas.json'), 'w', encoding='utf-8', newline='\n') as f:
         json.dump({'frames': dict(sorted(frames.items())),
                    'meta': {'image': 'atlas.png', 'format': 'RGBA8888',
                             'size': {'w': size, 'h': size}, 'scale': '1'}}, f, indent=1)
@@ -169,11 +185,13 @@ def main():
         'sprites': dict(sorted(manifest_sprites.items())),
         'credits': recipe['credits'],
     }
-    with open(os.path.join(OUT_DIR, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
+    if recipe.get('menuCredit'):
+        manifest['menuCredit'] = recipe['menuCredit']
+    with open(os.path.join(out_dir, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
         json.dump(manifest, f, indent=1)
         f.write('\n')
-    write_credits(recipe)
-    print(f'{len(sprites)} sprites packed into a {size} x {size} atlas.')
+    write_credits()
+    print(f'{len(sprites)} sprites packed into a {size} x {size} atlas in {os.path.relpath(out_dir, ROOT)}.')
 
 
 if __name__ == '__main__':

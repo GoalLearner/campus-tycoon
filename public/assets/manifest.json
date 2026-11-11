@@ -405,5 +405,6 @@
    "source": "https://kenney.nl/assets",
    "changes": "Tiles are layered into whole buildings, quads and lots, then packed into one atlas."
   }
- ]
+ ],
+ "menuCredit": "Art by Kenney (kenney.nl), public domain."
 }
