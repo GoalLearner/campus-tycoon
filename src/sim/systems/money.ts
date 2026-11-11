@@ -6,6 +6,7 @@ import { TICKS_PER_YEAR } from '../config/time';
 import { dollars } from '../format';
 import { enrollment, upkeepPerYear } from '../selectors';
 import type { GameState, LogEntry } from '../types';
+import { placedIncomePerYear } from './placed';
 
 /**
  * First playable money: flat tuition in, upkeep and a flat running cost out.
@@ -19,7 +20,7 @@ export function markRatesDirty(state: GameState): void {
 
 export function recomputeRates(state: GameState): void {
   const students = enrollment(state);
-  state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR;
+  state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR + placedIncomePerYear(state);
   state.money.spendingPerYear =
     upkeepPerYear(state) + students * OPERATING_COST_PER_STUDENT_PER_YEAR;
   state.money.ratesDirty = false;

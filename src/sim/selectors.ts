@@ -1,5 +1,6 @@
 import { stageSpec } from './config/buildings';
 import { TICKS_PER_YEAR } from './config/time';
+import { PLACED } from './config/placed';
 import type { Building, Cell, GameState, MapState, Zone } from './types';
 
 /** Read-only views of the state. The UI reads the game through these. */
@@ -59,6 +60,7 @@ export function upkeepPerYear(state: GameState): number {
   for (const b of state.map.buildings) {
     if (b && b.stage > 0) total += stageSpec(b.zone, b.stage).upkeepPerYear;
   }
+  for (const placed of state.map.placed) if (placed) total += PLACED[placed.type].upkeepPerYear;
   return total;
 }
 

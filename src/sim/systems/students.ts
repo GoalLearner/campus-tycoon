@@ -1,10 +1,10 @@
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
-import { BASE_SCORE, GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
+import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
+import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
 import {
   ARCHETYPE_NAMES,
-  CAUSE_WEIGHTS,
   CLASS_YEAR_NAMES,
   CLUB_MATCH,
   CLUBS,
@@ -51,7 +51,7 @@ import {
 import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
-import { scoreParts } from './desirability';
+import { approvalAt, type Approval, type Cause } from './happiness';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -176,49 +176,6 @@ export function studentLook(state: GameState, ref: StudentRef): number {
 
 // ------------------------------------------------------------ happiness --
 
-export interface Cause {
-  id: CauseId;
-  /** 0 is as bad as it gets, 1 is as good. */
-  level: number;
-  weight: number;
-}
-
-export interface Approval {
-  /** 0 to 100. */
-  score: number;
-  causes: Cause[];
-  /** Minutes to class from here. -1 when there is no route or this is not Housing. */
-  walkMinutes: number;
-}
-
-/**
- * Approval at one lot, with its causes. Campus approval, when it is built, is
- * the average of this over where students live, so a card and the campus
- * number can never disagree.
- */
-export function approvalAt(state: GameState, cell: number): Approval {
-  const map = state.map;
-  const zone = map.cells[cell]?.zone ?? null;
-  if (zone === null) return { score: 0, causes: [], walkMinutes: -1 };
-  const x = cell % map.width;
-  const y = (cell - x) / map.width;
-  const walkMinutes = zone === 'housing' ? (map.walkMinutes[cell] ?? -1) : -1;
-  const parts = scoreParts(map, x, y, zone, walkMinutes);
-
-  const causes: Cause[] = [];
-  // The walk is from a dorm to class, so only a dorm has it.
-  if (zone === 'housing') causes.push({ id: 'walk', level: 1 - parts.walkPenalty / WALK_MAX_PENALTY, weight: CAUSE_WEIGHTS.walk });
-  causes.push({ id: 'green', level: parts.green / GREEN_CAP[zone], weight: CAUSE_WEIGHTS.green });
-
-  let sum = 0;
-  let weights = 0;
-  for (const cause of causes) {
-    sum += cause.level * cause.weight;
-    weights += cause.weight;
-  }
-  return { score: weights === 0 ? 0 : (100 * sum) / weights, causes, walkMinutes };
-}
-
 /** 4 is delighted, 0 is miserable. */
 function moodOf(score: number): number {
   for (let i = 0; i < MOOD_STEPS.length; i++) if (score >= MOOD_STEPS[i]!) return MOOD_STEPS.length - i;
@@ -254,14 +211,17 @@ export function teachingQuality(state: GameState): number {
 
 /**
  * How much there is to do with other people, 0 to 1, with 0.5 as middling.
- * Today it counts quad cells against enrollment. Student Life spots,
- * recreation and events join the count when they are built.
+ * It counts quad cells and recreation buildings against enrollment. Student
+ * Life spots and events join the count when they are built.
  */
 export function socialLife(state: GameState): number {
   const students = enrollment(state);
   if (students === 0) return 0.5;
   let spots = 0;
   for (const cell of state.map.cells) if (cell.kind === 'quad') spots += 1;
+  for (const placed of state.map.placed) {
+    if (placed && PLACED[placed.type].family === 'recreation') spots += SOCIAL_SPOTS_PER_RECREATION;
+  }
   const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / students));
   // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
   return Math.round(level * 20) / 20;
@@ -422,8 +382,9 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   }
   let pool: readonly string[];
   if (chosen.id === 'walk') pool = content ? THOUGHTS.walkGood : approval.walkMinutes < 0 ? THOUGHTS.walkNone : THOUGHTS.walkLong;
-  else if (resident) pool = content ? THOUGHTS.greenGood : THOUGHTS.greenLow;
-  else pool = content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
+  else if (chosen.id === 'green') pool = resident ? (content ? THOUGHTS.greenGood : THOUGHTS.greenLow) : content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
+  else if (chosen.id === 'dining') pool = resident ? (content ? THOUGHTS.diningGood : THOUGHTS.diningLow) : content ? THOUGHTS.commuterDiningGood : THOUGHTS.commuterDiningLow;
+  else pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
   return { cause: chosen.id, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
 }

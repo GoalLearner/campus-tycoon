@@ -155,7 +155,10 @@ describe('desirability', () => {
   it('stalls a lot at stage one for low desirability, then grows it once a quad is placed', () => {
     // A dorm out of the quad's reach reaches stage 1 but not stage 2.
     let state = paint(freshGame(), 'housing', [[8, 13]]);
-    state = advance(state, T0, T0 + 5 * MIN).state;
+    // Fed by a coffee stand, so dining is not what holds it back.
+    const fed = applyAction(state, { type: 'place', building: 'coffee', x: 7, y: 13 });
+    if (!fed.ok) throw new Error(fed.error);
+    state = advance(fed.state, T0, T0 + 5 * MIN).state;
     expect(buildingAt(state.map, 8, 13)?.stage).toBe(1);
 
     const stalled = lotStatus(state, 8, 13);

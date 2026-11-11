@@ -195,11 +195,11 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,
  * the lecture hall for a commuter. Each cause is scored from 0 to 1 and they
- * are averaged by weight. Dining, noise, recreation and safety join this list
- * when those systems are built; nothing else has to change.
+ * are averaged by weight. Dining and recreation joined with the Build menu.
+ * Noise and safety join when those systems are built; nothing else has to change.
  */
-export type CauseId = 'walk' | 'green';
-export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1 };
+export type CauseId = 'walk' | 'green' | 'dining' | 'recreation';
+export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, dining: 1, recreation: 1 };
 /** [T] How far one student's mood can sit from their spot's score. */
 export const TEMPERAMENT_SPREAD = 6;
 /** [T] The lowest score for each face, from delighted down. Below the last is the saddest. */
@@ -311,4 +311,24 @@ export const THOUGHTS = {
     'Nowhere green to sit near my lecture hall. I eat lunch in my car.',
     'Between classes I stand on pavement. A quad by the lecture halls would help.',
   ],
+  diningGood: [
+    'The dining hall is so close I go in my slippers.',
+    'Hot food a short walk from my bed. I may never learn to cook.',
+  ],
+  diningLow: [
+    'There is nowhere to eat near my dorm. It has been cereal for three days.',
+    'No dining hall near my dorm. Even a coffee stand would do.',
+  ],
+  commuterDiningGood: ['I can get lunch right by my lecture hall.'],
+  commuterDiningLow: ['Nowhere to eat near my lecture hall. I pack two lunches.'],
+  recreationGood: [
+    'There is always a game on near my dorm.',
+    'The gym is two minutes from my room. I have run out of excuses.',
+  ],
+  recreationLow: [
+    'Nothing to do near my dorm but homework. A court or a field would help.',
+    'I would join a game if there were anywhere near my dorm to play one.',
+  ],
+  commuterRecreationGood: ['Between classes there is always a game on by the lecture hall.'],
+  commuterRecreationLow: ['Nothing to do between classes. A field by the lecture halls would help.'],
 } as const;

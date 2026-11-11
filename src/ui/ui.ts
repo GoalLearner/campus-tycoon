@@ -581,6 +581,7 @@ export function mountUi(root: HTMLElement): void {
   const CAUSE_TEXT: Record<StallCause, string> = {
     noPath: 'no path beside it',
     noDemand: 'no demand right now',
+    noDining: 'no dining nearby',
     lowDesirability: 'low desirability',
   };
 
@@ -623,6 +624,8 @@ export function mountUi(root: HTMLElement): void {
             text = 'Held back: no path beside it. Lay a path next to this lot.';
           } else if (lotStatusNow.cause === 'noDemand') {
             text = 'Held back: no demand right now. The campus already has room for the next class.';
+          } else if (lotStatusNow.cause === 'noDining') {
+            text = 'Held back: no dining nearby. Build a Dining hall or a Coffee stand in reach of this lot.';
           } else {
             text = `Held back: desirability is ${score} and stage ${lotStatusNow.nextStage} needs ${lotStatusNow.needed}. ${desirabilityHint(state, selected.x, selected.y)}`;
           }

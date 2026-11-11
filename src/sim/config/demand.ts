@@ -19,8 +19,13 @@ export const POOL_CEILING = 4_000;
 /** Beds needed per student. Stand-in for the tier mix. */
 export const BED_NEED = 0.6;
 
-/** Share of each class that stays on at the end of a semester. Stand-in for approval. */
-export const RETENTION_PER_SEMESTER = 0.97;
+/**
+ * Share of each class that stays on at the end of a semester. It follows
+ * happiness: the floor at none, the floor plus the span at full. A campus with
+ * no dining or recreation sits near the old flat 0.97.
+ */
+export const RETENTION_FLOOR = 0.95;
+export const RETENTION_SPAN = 0.045;
 
 /** The pool is scaled by FLOOR + SPAN * (average desirability / 100). */
 export const DESIRABILITY_DRAW_FLOOR = 0.6;

@@ -26,8 +26,23 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { roomForNewStudents, zoneName } from './systems/admissions';
 export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
+export { approvalAt, campusHappiness, retentionRate, type Approval, type CampusHappiness, type Cause } from './systems/happiness';
 export {
-  approvalAt,
+  fedAt,
+  inReach,
+  libraryLift,
+  placedAt,
+  previewPlace,
+  reachCells,
+  recreationAt,
+  storeIncomePerYear,
+  storePassers,
+  type PlacePreview,
+  type PlaceProblem,
+} from './systems/placed';
+export * from './config/placed';
+export { acceptanceRate, classRecord } from './systems/admissions';
+export {
   classYearOf,
   placeIndex,
   relationshipOf,
@@ -39,8 +54,6 @@ export {
   studentKey,
   studentLook,
   teachingQuality,
-  type Approval,
-  type Cause,
   type Relationship,
   type StudentCard,
   type StudentReason,

@@ -5,6 +5,7 @@ import { TICK_MS } from './config/time';
 import { hashInts, seedStreams } from './rng';
 import { SAVE_VERSION } from './save';
 import { recomputeDesirability } from './systems/desirability';
+import { addPlaced } from './systems/placed';
 import { recomputeRates } from './systems/money';
 import type { Cell, GameState, MapState, Zone } from './types';
 
@@ -17,12 +18,13 @@ export interface NewGameOptions {
 
 function emptyMap(size: number): MapState {
   const cells: Cell[] = [];
-  for (let i = 0; i < size * size; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0 });
+  for (let i = 0; i < size * size; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null });
   return {
     width: size,
     height: size,
     cells,
     buildings: [],
+    placed: [],
     score: new Array<number>(size * size).fill(0),
     walkMinutes: new Array<number>(size * size).fill(-1),
   };
@@ -69,6 +71,7 @@ function buildStarterCampus(map: MapState, seed: number): void {
     for (let x = quad.x; x < quad.x + quad.w; x++) setKind(map, x, y, 'quad');
   }
   for (const b of STARTER.buildings) placeStarterBuilding(map, seed, b.zone, b.x, b.y);
+  for (const p of STARTER.placed) addPlaced(map, p.type, p.x, p.y);
 }
 
 /** A brand-new campus, fifteen minutes before its first class moves in. */
@@ -100,7 +103,8 @@ export function newGame(opts: NewGameOptions): GameState {
     },
     map,
     cohorts: [0, 0, 0, 0],
-    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, lastIntake: null },
+    classes: [],
+    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, lastIntake: null, lastSemester: null },
     timers: [],
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
