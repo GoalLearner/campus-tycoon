@@ -21,8 +21,16 @@ export const SPRING_INTAKE_DAY = 4;
 export const GRADUATION_DAY = 6;
 export const YEAR_END_DAY = 7;
 
-/** [T] Turned-away applicants wait this long after an intake. */
-export const WAITLIST_TICKS = 9 * TICKS_PER_HOUR;
+/**
+ * The shortest any window the player can act in may last (DESIGN.md 2.3).
+ * Once a day is the slowest rhythm the game supports. Someone who looks in
+ * every 24 hours always gets a visit inside a window this long, with half a
+ * day left for what they build to open.
+ */
+export const MIN_WINDOW_TICKS = 36 * TICKS_PER_HOUR;
+
+/** [T] Turned-away applicants wait this long after an intake. It was nine hours until 2026-11-11. */
+export const WAITLIST_TICKS = MIN_WINDOW_TICKS;
 
 /** [T] Forecasts and growth are re-evaluated this often. */
 export const GROWTH_EVAL_TICKS = 15;

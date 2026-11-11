@@ -41,6 +41,8 @@ const YEAR_MS = TICKS_PER_YEAR * TICK_MS;
 const CHECK_IN_MS: Record<Style, number> = {
   absent: 30 * DAY_MS,
   casual: 12 * 60 * TICK_MS,
+  // Once a day is the slowest rhythm the game supports (DESIGN.md 2.3).
+  daily: 24 * 60 * TICK_MS,
   optimizer: 2 * 60 * TICK_MS,
 };
 
@@ -96,8 +98,8 @@ function play(style: Style, seed: number, years: number): Run {
   const first = takeTurn(state, style);
   state = first.state;
 
-  // Each year's row is read half a day into the fall, once the new class and its waitlist have settled.
-  let nextRowAt = T0 + DAY_MS / 2;
+  // Each year's row is read two days into the fall, once the new class and its waitlist have settled.
+  let nextRowAt = T0 + 2 * DAY_MS;
 
   for (let now = Math.min(T0 + step, end); ; now = Math.min(now + step, end)) {
     // Stop at each row mark on the way, so the numbers are read at the same point every year.
@@ -260,6 +262,21 @@ function assertLayerZero(runs: Run[]): void {
     const ok = handled + missed > 10 && handled / (handled + missed) >= 0.9;
     check('a covered campus handles nearly every incident', ok, `${handled} handled and ${missed} missed over three days`);
   }
+
+  // 10. Once a day is enough. Eras and the bailout are not built yet, so this reads the sizes a
+  // campus passes on its way up, and the plain grant that stands in for the bailout.
+  {
+    const daily = runs.find((r) => r.style === 'daily')!;
+    const yearReached = (run: Run, students: number): number => run.rows.find((row) => row.students >= students)?.year ?? Infinity;
+    const sizes = [500, 1000, 2000, 4000, 8000].filter((size) => yearReached(casual, size) < Infinity);
+    const slow = sizes.filter((size) => yearReached(daily, size) > Math.max(yearReached(casual, size) + 1, Math.ceil(1.5 * yearReached(casual, size))));
+    const grants = daily.rows.reduce((sum, row) => sum + row.grants, 0);
+    check(
+      'a once-a-day player is never more than half again as slow as a twice-a-day one, and needs no rescue',
+      sizes.length >= 3 && slow.length === 0 && grants === 0,
+      `${sizes.map((size) => `${size} students: year ${yearReached(daily, size)} against ${yearReached(casual, size)}`).join('; ')}; grants ${dollarsShort(grants)}`,
+    );
+  }
 }
 
 // ------------------------------------------------------------------- main --
@@ -267,7 +284,7 @@ function assertLayerZero(runs: Run[]): void {
 const started = performance.now();
 const allRuns: Run[] = [];
 for (const seed of SEEDS) {
-  const runs = (['absent', 'casual', 'optimizer'] as const).map((style) => play(style, seed, YEARS));
+  const runs = (['absent', 'daily', 'casual', 'optimizer'] as const).map((style) => play(style, seed, YEARS));
   runs.forEach(printRun);
   allRuns.push(...runs);
 }

@@ -194,14 +194,20 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
 
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,
- * the lecture hall for a commuter. Each cause is scored from 0 to 1 and they
- * are averaged by weight. Dining and recreation joined with the Build menu,
- * and safety with the Medical Center and Campus Safety. Noise joins when it is
- * built; nothing else has to change.
+ * the lecture hall for a commuter.
+ *
+ * What a student feels there is a list of drivers, each scored 0 to 1. They
+ * are gathered into the named causes the player sees: never more than four,
+ * all at full weight (DESIGN.md 24.2, and the owner's instruction of
+ * 2026-11-11). A cause is the average of its drivers. A new driver, such as
+ * noise, joins by being given a cause here; nothing else has to change.
  */
-export type CauseId = 'walk' | 'green' | 'dining' | 'recreation' | 'safety';
-/** Safety counts for half as much as the others, so a campus without coverage is held back, not sunk. */
-export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, dining: 1, recreation: 1, safety: 0.5 };
+export type DriverId = 'walk' | 'green' | 'dining' | 'recreation' | 'safety';
+export type CauseId = 'walk' | 'green' | 'life' | 'safety';
+/** Which cause each driver counts toward. Dining and things to do share one: "Food & fun". */
+export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'green', dining: 'life', recreation: 'life', safety: 'safety' };
+/** The causes in the order they are listed. Every one counts the same. */
+export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, life: 1, safety: 1 };
 /** [T] How far one student's mood can sit from their spot's score. */
 export const TEMPERAMENT_SPREAD = 6;
 /** [T] The lowest score for each face, from delighted down. Below the last is the saddest. */

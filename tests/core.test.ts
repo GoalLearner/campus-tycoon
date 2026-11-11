@@ -106,7 +106,7 @@ describe('calendar', () => {
     });
   });
 
-  it('closes each waitlist nine hours after its intake', () => {
+  it('closes each waitlist a day and a half after its intake', () => {
     expect(eventsAt(FIRST_INTAKE_TICK + WAITLIST_TICKS)).toEqual(['waitlistClose']);
     expect(eventsAt(FIRST_INTAKE_TICK + 3 * TICKS_PER_DAY + WAITLIST_TICKS)).toEqual(['waitlistClose']);
   });

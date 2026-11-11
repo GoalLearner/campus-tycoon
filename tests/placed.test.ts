@@ -12,6 +12,7 @@ import {
   fedAt,
   lotStatus,
   parseSave,
+  partLevel,
   PLACED,
   placedAt,
   previewPlace,
@@ -192,13 +193,20 @@ describe('happiness', () => {
   it('names the cause whose fix would help most, and rises when it is fixed', () => {
     let state = rich(campus());
     const before = campusHappiness(state);
-    // The starter campus has a dining hall by its dorms and nothing to do.
-    expect(before.worst).toBe('recreation');
+    // The cause it names is the one with the most to gain, and the part it names is that cause's weakest.
+    const toGain = (cause: (typeof before.causes)[number]): number => cause.weight * (1 - cause.level);
+    const named = before.causes.find((cause) => cause.id === before.worst)!;
+    for (const cause of before.causes) expect(toGain(named)).toBeGreaterThanOrEqual(toGain(cause) - 1e-9);
+    for (const part of named.parts) expect(partLevel(before.causes, before.worstPart!)).toBeLessThanOrEqual(part.level + 1e-9);
+    // The starter campus has a dining hall by its dorms and nothing to do: inside Food & fun, food is fine and fun is not.
+    expect(partLevel(before.causes, 'dining')).toBeGreaterThan(0.5);
+    expect(partLevel(before.causes, 'recreation')).toBeLessThan(0.1);
     state = place(state, 'gym', 11, 11);
     state = place(state, 'courts', 17, 19);
     const after = campusHappiness(state);
-    expect(after.score).toBeGreaterThan(before.score + 5);
-    expect(after.causes.find((c) => c.id === 'recreation')!.level).toBeGreaterThan(0.3);
+    expect(after.score).toBeGreaterThan(before.score + 2);
+    expect(partLevel(after.causes, 'recreation')).toBeGreaterThan(0.3);
+    expect(after.causes.find((c) => c.id === 'life')!.level).toBeGreaterThan(before.causes.find((c) => c.id === 'life')!.level);
   });
 
   it('sets how many students stay', () => {
@@ -215,7 +223,11 @@ describe('happiness', () => {
     const resident = sampleStudents(state).find((ref) => studentHome(state, ref) !== null)!;
     const home = studentHome(state, resident)!;
     const before = approvalAt(state, home);
-    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'green', 'dining', 'recreation', 'safety']);
+    // Four causes, never more, and every one counts the same.
+    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'green', 'life', 'safety']);
+    expect(before.causes.every((c) => c.weight === 1)).toBe(true);
+    expect(before.causes.find((c) => c.id === 'life')!.parts.map((part) => part.id)).toEqual(['dining', 'recreation']);
+    expect(before.score).toBeCloseTo(25 * before.causes.reduce((sum, c) => sum + c.level, 0));
     state = place(state, 'gym', 11, 11);
     expect(approvalAt(state, home).score).toBeGreaterThan(before.score);
     expect(studentCard(state, resident)!.happiness).toBeGreaterThan(studentCard(rich(campus()), resident)!.happiness);

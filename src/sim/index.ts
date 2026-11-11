@@ -26,7 +26,7 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { roomForNewStudents, zoneName } from './systems/admissions';
 export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
-export { approvalAt, campusHappiness, retentionRate, type Approval, type CampusHappiness, type Cause } from './systems/happiness';
+export { approvalAt, campusHappiness, partLevel, retentionRate, type Approval, type CampusHappiness, type Cause, type CausePart } from './systems/happiness';
 export {
   fedAt,
   inReach,
@@ -62,7 +62,7 @@ export {
   type StudentReason,
   type StudentRef,
 } from './systems/students';
-export type { ArchetypeId, CauseId, RelationshipId } from './config/students';
+export type { ArchetypeId, CauseId, DriverId, RelationshipId } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
 export { calendarAt, dateAt, eventsAt, formatDate, nextMilestone, type CalendarEvent, type CalendarPos, type GameDate, type Phase } from './calendar';
 export * from './config/academicCalendar';

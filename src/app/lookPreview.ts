@@ -298,8 +298,8 @@ export const LOOK_MENU: BuildEntry[] = [
   { key: 'build.track', name: 'Track and field', category: 'Recreation', cost: '$120K', footprint: '2 x 2', upkeep: 'Upkeep $8K a year', effect: 'Raises happiness for nearby Housing' },
   { key: 'build.courts', name: 'Outdoor courts', category: 'Recreation', cost: '$18K', footprint: '1 x 2', upkeep: 'Upkeep $1K a year', effect: 'Raises happiness nearby. Students play here' },
   { key: 'pond.medium', name: 'Pond', category: 'Recreation', cost: 'From $8K', footprint: '3 sizes', upkeep: 'No upkeep', effect: 'Every zone likes being near water' },
-  { key: 'build.medical', name: 'Medical Center', category: 'Health and safety', cost: '$90K', footprint: '2 x 2', upkeep: 'Upkeep $9K a year', effect: 'Treats injuries within 8 cells' },
-  { key: 'build.safety', name: 'Campus Safety', category: 'Health and safety', cost: '$80K', footprint: '2 x 2', upkeep: 'Upkeep $8K a year', effect: 'Handles mischief within 8 cells' },
+  { key: 'build.medical', name: 'Medical Center', category: 'Safety & health', cost: '$90K', footprint: '2 x 2', upkeep: 'Upkeep $9K a year', effect: 'Treats injuries within 8 cells' },
+  { key: 'build.safety', name: 'Campus Safety', category: 'Safety & health', cost: '$80K', footprint: '2 x 2', upkeep: 'Upkeep $8K a year', effect: 'Handles mischief within 8 cells' },
   { key: 'build.stadium', name: 'Stadium', category: 'On the way', cost: '', footprint: '', upkeep: '', effect: 'Home games and a football team', locked: 'Coming with football' },
   { key: 'build.studentlife', name: 'Student Life', category: 'On the way', cost: '', footprint: '', upkeep: '', effect: 'A zone for clubs and events', locked: 'Coming later' },
 ];

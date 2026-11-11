@@ -13,7 +13,7 @@ export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'wate
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Health and safety' | 'Landmarks';
+  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Landmarks';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -83,11 +83,11 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     radius: 0, strength: 0, effect: 'Green space. Every zone likes water', sprite: 'pond.large', flat: true, buildable: true,
   },
   medical: {
-    name: 'Medical Center', category: 'Health and safety', family: 'medical', w: 2, h: 2, cost: 90_000, upkeepPerYear: 9_000,
+    name: 'Medical Center', category: 'Safety & health', family: 'medical', w: 2, h: 2, cost: 90_000, upkeepPerYear: 9_000,
     radius: 8, strength: 1, effect: 'Treats injuries within 8 cells', sprite: 'build.medical', flat: false, buildable: true,
   },
   safety: {
-    name: 'Campus Safety', category: 'Health and safety', family: 'safety', w: 2, h: 2, cost: 80_000, upkeepPerYear: 8_000,
+    name: 'Campus Safety', category: 'Safety & health', family: 'safety', w: 2, h: 2, cost: 80_000, upkeepPerYear: 8_000,
     radius: 8, strength: 1, effect: 'Handles mischief within 8 cells', sprite: 'build.safety', flat: false, buildable: true,
   },
   admin: {
