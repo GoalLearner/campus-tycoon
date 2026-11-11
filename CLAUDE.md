@@ -4,15 +4,15 @@ A mobile idle sim where the player runs a fictional Division I-style university.
 
 ## Current status
 
-- **Design is written. No game code exists.**
-- **Do not write game code until the owner says "build it".**
-- When building starts, it starts at Layer 0 (DESIGN.md section 19).
+- The owner said "build it" on 2026-11-11, for **Layer 0 only**.
+- Layer 0 is built in four steps: sim core, map and zoning, intake loop, HUD.
+- **Do not start Layer 1.** Stop when the first playable works and hand over the home-screen steps.
 
 Update this section at the end of every layer.
 
 | Layer | Name | Status |
 |---|---|---|
-| 0 | First playable | Not started |
+| 0 | First playable | In progress: step 1 of 4 done (sim core) |
 | 1 | Football and calendar | Not started |
 | 2 | Tiers and money levers | Not started |
 | 3 | Services and overlays | Not started |
@@ -46,6 +46,14 @@ Update this section at the end of every layer.
 9. **Catch-up is cheap.** Students are cohorts, never individuals. No pass walks every lot on a tick. Thirty days of catch-up must stay inside its time target.
 10. **Neglect-safe.** Nothing may end the game. Every inbox item has a default. Cash never causes decay. Run the absent-player profile before calling any layer done.
 
+## Art rules
+
+- Real sprites only. Nothing on the map is a coloured box.
+- Art is data. One manifest maps each zone, stage and variant to a sprite, its anchor and its footprint. Swapping art is a manifest edit, never a code change.
+- Missing art falls back to a labelled placeholder so nothing breaks.
+- Downloaded packs live in `art/source`, which is git-ignored. A paid pack must never be committed or sit in a public repository.
+- `CREDITS.md` lists every pack in use and its licence.
+
 ## Design rules that are easy to forget
 
 - The player pays for permission and conditions. The campus does the building.
@@ -64,9 +72,11 @@ Update this section at the end of every layer.
 
 ## Commands
 
-None exist yet. Layer 0 will add these, and this section must be updated when it does:
+- `npm test`: Vitest, all sim tests
+- `npm run typecheck`: TypeScript with no output
+
+Still to come in Layer 0, and this section must be updated when they land:
 
 - `npm run dev`: local dev server
-- `npm test`: Vitest
 - `npm run simulate`: headless runs with the absent, casual and optimizer profiles
 - `npm run build`: the static site for the home-screen web app

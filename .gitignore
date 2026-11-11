@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+
+# Downloaded art packs. Paid packs must never be committed.
+art/source/
