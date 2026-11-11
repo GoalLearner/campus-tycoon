@@ -2,7 +2,7 @@
 
 Working title. Written 2026-11-11 from the design discussion between the owner and Claude.
 
-**Status: Layer 0, the first playable, is built and waiting for the owner to play it.** Nothing from Layer 1 has been started. Building goes one layer at a time (section 18). Distribution was set up early, on 2026-11-11, outside the layers: a public repository, the web build on Cloudflare Pages, and the iOS app for TestFlight (section 17.8).
+**Status: Layer 0, the first playable, is built and the owner has played it. A feedback pass is under way on top of it.** Built in that pass: the new HUD wording, walking students, trees, laid-out quads and the student card (sections 19.1 and 13.8). The Build menu and its buildings wait for the owner's approval of the look (section 23.5). Nothing from Layer 1 has been started. Building goes one layer at a time (section 18). Distribution was set up early, on 2026-11-11, outside the layers: a public repository, the web build on Cloudflare Pages, and the iOS app for TestFlight (section 17.8).
 
 How to read this document:
 
@@ -11,6 +11,7 @@ How to read this document:
 - Each decision carries a short "why" so later sessions do not reopen settled questions.
 - Section 21 lists what is still open.
 - Section 23 is the master building catalog: every kind of facility a complete campus has, and the layer it lands in.
+- Section 24 is the success metrics: the student pipeline, the Scorecard and the ranking weights.
 
 ---
 
@@ -338,6 +339,7 @@ If the simulation still shows a cliff, the next knob is a cap on how many lots m
 | Three applicant tiers that share buildings | They make the two ladders mechanically different without SimCity 4's wealth-specific lots |
 | Recruited athletes are recruiting classes inside athletics | A few hundred people cannot move a zone bar, and star recruits are louder there |
 | Selectivity is emergent: applicants per seat | A school that does not expand while demand is high becomes selective on its own |
+| Selectivity is shown as an acceptance rate, and yield is worked out at each intake | The terms a player already knows. To fill a class the school must make more offers than it has places, so a better yield makes it more selective at the same size. Section 24 |
 | Each tier's pool has a ceiling lifted by a named landmark or deal | SimCity's demand caps. Tests 3 and 6 |
 | The newspaper runs a yearly admissions story naming the top driver per tier | Three tiers across three zones could blur why a bar moved. Test 4 |
 
@@ -355,9 +357,9 @@ Coefficients are tuning targets. Shapes are decisions.
 
 ```
 pool[tier]     = min(ceiling[tier], base[tier] * draw[tier])
-draw[inState]  = priceEffect(inStateTuition) * mild(approval) * mild(academicStanding)
+draw[inState]  = priceEffect(inStateTuition) * mild(academicStanding)
 draw[outState] = priceEffect(outStateTuition) * strong(athleticStanding, academicStanding)
-                 * mild(approval, studentLifeCoverage)
+yield[tier]    = baseYield[tier] * campusLook * affordability[tier] * condition    (section 24.1)
 draw[scholar]  = strong(academicStanding) * mild(libraryCoverage, instructionFunding)
                  capped at scholarshipBudget / scholarshipCost
 expected[tier] = pool[tier] * yield[tier]
@@ -374,10 +376,13 @@ At an intake:
    In-state and out-of-state are admitted in proportion: s * expected[tier].
 3. turnedAway[tier] = expected[tier] - admitted[tier]
 4. The zone whose line bound s is the Bottleneck.
-5. applicantsPerSeat = total expected / total admitted
+5. offers[tier]    = admitted[tier] / yield[tier]
+   acceptanceRate  = total offers / total pool
 ```
 
 The waitlist reruns step 2 for the turned-away students whenever capacity opens during the window. The spring intake runs the same steps on a smaller pool.
+
+Approval no longer pulls on applications. It keeps students once they are here (retention), and the look of the campus wins the yes (yield): one cause feeds one stage (section 24.2).
 
 ```
 bar[zone] = (capacity wanted for the next intake - capacity open) / capacity open
@@ -385,7 +390,7 @@ bar[zone] = (capacity wanted for the next intake - capacity open) / capacity ope
 
 ### 7.4 Students
 
-Students are simulated as cohorts by class year and tier, never as individuals. Retention is applied at each semester's end and falls with low approval. Seniors graduate on day 6 and join an alumni pool that grows forever and drives donations. Walkers, student cards and personalities are a readout of the cohorts (section 13).
+Students are simulated as cohorts by class year and tier, never as individuals. Retention is applied at each semester's end and falls with low approval. Seniors graduate on day 6 and join an alumni pool that grows forever and drives donations. Walkers, student cards and personalities are a readout of the cohorts (section 13). Each entering class also keeps a short record of how many came, stayed, finished on time, finished late and left, and students who do not finish in four years stay on as fifth and sixth years (section 24.8).
 
 ---
 
@@ -491,7 +496,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Student Life foot traffic | Per student served, with game-day bursts |
 | Tickets, concessions, merchandise | Per home game |
 | TV and conference deal | Negotiated |
-| Alumni donations | Alumni pool times affinity |
+| Alumni donations | Alumni pool times affinity times alumni success (section 24.1). A big school has many small donors, a selective one fewer and richer |
 | Endowment income | Small permanent yield |
 | One-off gifts and naming deals | Inbox |
 
@@ -593,7 +598,7 @@ A pure profit centre would be a dominant strategy and fail tests 1 and 5. A pure
 | The coach has one rating and one trait | Hired or renewed in summer |
 | Five stadium tiers, each earned by a season of near sell-outs | Test 2 applied to the stadium |
 | A ticket price lever in five steps | Cheap tickets fill seats and earn the next tier. Dear tickets earn more now |
-| Stadium work starts only in the off-season, on a footprint reserved from the start | The old stadium serves until the new tier opens |
+| Stadium work starts only in the off-season, on a plot of 2 by 3 cells reserved from the start | The old stadium serves until the new tier opens. Tiers one to three stand on four of the six cells with the practice field on the other two; tiers four and five fill the plot. Agreed 2026-11-11 |
 | Before tier one, the team rents a field in town | The first stadium is an early goal |
 | Each stadium tier widens its noise radius and game-day crowd | Nearby housing runs down and the area needs rezoning. This keeps athletics loud on the map |
 | Live games: forty real minutes, score by quarter, computed at kickoff | Appointment viewing that stays deterministic |
@@ -641,6 +646,8 @@ At home games, crowds in school colors walk the paths to the stadium, tailgates 
 | The other 188 get one sampled season record a year | Cheap, and enough for a poll |
 | Bowl opponents come from a similar poll position; the top bowl is first against second | No bracket needed |
 | The field does not rise over time | It must not be a treadmill |
+| The player's academic rating is the visible weighted sum of section 24.4 | The owner's rule: the ranking is computed from the metrics, with weights the player can read |
+| The other 199 schools keep one academic rating each. For Year-End grades each also stores one fixed offset per pipeline stage, made once | "B+ in retention" is then a real position among 200, at no cost in catch-up. Stored, never regenerated |
 
 ```
 each year, for each school and each of {academic, athletic}:
@@ -837,6 +844,34 @@ Flavour walkers with small thought pools, each tied to a stat.
 ### 13.7 Tone for personalities
 
 Jokes aim at types and institutions and never demean a student. The Party Animal carries no alcohol reference: they are always coming from a party and sleep through morning class. The Charmer stays at harmless flirting. Homesick, Stressed-Out, Heartbroken and Broke Student stay comic and never imply a crisis.
+
+### 13.8 The student card, simple version
+
+Brought forward into the feedback pass on 2026-11-11 at the owner's request. Built: `src/sim/systems/students.ts`, `src/sim/config/students.ts`, `src/ui/studentCard.ts`.
+
+| Decision | Why |
+|---|---|
+| Tapping a walking student opens a card with exactly five lines: who, doing now, grades, club, happiness | RollerCoaster Tycoon's guest card, cut to what fits a phone |
+| No per-student simulation. A student is a seeded identity: the game's seed, the year their class entered, and their place in that class | The same student shows the same name, major, quirk, club, look and dorm every time. Nothing is saved and catch-up never runs it |
+| Every other line is read from live numbers while the card is open | A card can never disagree with the campus. Class year comes from the cohorts, grades from the teaching side of campus, happiness from the causes of approval where the student lives |
+| Happiness is approval read at one student's spot. One number, never two | The owner's rule. Campus approval, when it is built, is the average of the same function over where students live |
+| The happiness line is a face and the single biggest reason, phrased as a thought. Tapping it glides the map to the building it is about and selects it | Test 4. The joke on top, the number underneath, the fix one tap away |
+| A content student names the biggest plus. Anyone else names what would help most | The reason always points at something the player can change |
+| Every walker is one of the enrolled students, and only goes home to their own dorm | "Doing now" matches the map, and a thought about "my dorm" is about the dorm they walk into |
+| One Follow button | The camera stays on the student until they go indoors or the player drags the map |
+| Clubs are names only, weighted by major, nature and quirk | No club mechanics |
+| First names are ones anyone can carry, and surnames are built from two invented halves | A name never clashes with a walker's look, and no card can carry a real person's full name |
+
+| Line | Reads now | Replaced or widened by |
+|---|---|---|
+| Happiness | Walk time and green space at the dorm. A commuter reads the green around two lecture halls | Dining, noise, recreation and safety join the same list as each is built. Layer 3's overlays become the jump target where one fits |
+| Grades | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed and nature. D is the lowest: nobody on a card is failing | The academic score of section 24 |
+| Archetype | A lasting nature by seed, from the fourteen archetypes whose stat exists today. Lost Freshman and Homesick fade over the first year. Super Senior grows when Academic seats capped the last class | The state-driven mix of 13.2 and all eighteen, in layer 6 |
+| Quirk | The six of 13.4, as a label | Their visible behaviours, in layer 6 |
+| Thought | A short pool per cause | The archetype pools of 13.4, in layer 4 |
+| Staff | Before the first class arrives the walkers are staff and have no card | Non-student characters, 13.6 |
+
+Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
 ---
 
@@ -1175,12 +1210,14 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
+- **Feedback pass, 2026-11-11, on branch `layer-0-feedback`.** Built: walking students, trees, laid-out quads, the student card (13.8). Agreed and waiting for the look approval: the Build menu and its buildings (23.5), and three metrics pieces (24.7): the class record, retention shown with its cause, and the acceptance rate shown at each intake.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
 ### Layer 1: Football and calendar
 
 - **Contents:** the anchored whole-day week, founding day and scrimmage, anchor shift. The national field with drift. Conference, ten-game season, title game, bowls, poll. Team rating, coach, recruiting pitch, signing day, spring game, rivalry. Five-tier stadium, ticket price, rented field, noise radius. Live games with a score ticker. TV deals. Football profit-and-loss page. A basic Year-End report. A plain "annual decisions" list with deadlines and defaults.
+- **Metrics (24.7):** the Scorecard page, first version. Athletic prestige. A first academic rank from the inputs that exist. Grades on the Year-End report.
 - **Stand-ins:** Athletics funding fixed at full. Football lifts the single applicant pool. No crowds or band yet.
 - **Acceptance checks:** intakes and day games land in waking hours. A morning visit finds overnight results. A live game can be watched. A season of sell-outs earns a tier. Missing a weekend applies one-year defaults.
 - **Simulate must assert:** the favourite win rate; ten games per team per season and consistent standings; no annual window under 48 hours; the field's average does not drift; determinism still holds.
@@ -1188,6 +1225,7 @@ Defined precisely in section 19.
 ### Layer 2: Tiers and money levers
 
 - **Contents:** Student Life zone. Three density tiers, upzoning, rectangle fill, Preserve. Decay with its brake. Density economics. Three applicant tiers, tier breakdown, emergent selectivity. Three price levers. Five sliders with overfunding. Approval. Alumni and donations. The budget screen. Bailout. Land purchase.
+- **Metrics (24.7):** computed yield, affordability, class size, graduation rate with its forecast, fifth and sixth years, alumni success with job placement, donations by success, facilities condition, the full ranking weights.
 - **Stand-ins:** tiers and land unlock at bare enrollment thresholds. Ceilings are constants. Medium density has no safety gate yet.
 - **Acceptance checks:** a price change shows its forecast and bills from the next intake. An overbuilt zone shows red on the budget and turns Rundown. A week away does not flatten the campus. Football's draw is visible in out-of-state applicants.
 - **Simulate must assert:** both absent-profile runs settle; the stage-loss limits; the overfunding rule; budget shares near targets; the bailout never ends a game.
@@ -1201,18 +1239,21 @@ Defined precisely in section 19.
 ### Layer 4: Advisors and newspaper
 
 - **Contents:** four advisors with top-issue lines. The inbox with its four kinds and the annual section. Policies. Events. The newspaper with poll, admissions story and movers. Walkers and student cards with basic thoughts. Game-day crowds and tailgates. The first thirty content items, written under the tone guide.
+- **Metrics (24.7):** the advisors and the newspaper read their top issues from the same limiting-factor helper as the Scorecard.
 - **Acceptance checks:** each check-in opens on a newspaper. Each advisor's line matches what the overlays show. Ignored items resolve to their marked default. Every disaster story names what would have reduced it.
 - **Simulate must assert:** the check-in contract for the casual profile; the inbox cap; every item has a default; no content item breaks the tone guide's banned-word list.
 
 ### Layer 5: Milestones
 
 - **Contents:** two ladders, four eras, replacing the stand-ins. Reward buildings, ceiling landmarks, three prestige landmarks. Rankings day. Yearly awards. Board goals. Hall of fame. Endowment. The legacy screen.
+- **Metrics (24.7):** the Year-End report graded on all seven stages. Endowment per student.
 - **Acceptance checks:** every locked item shows its checklist. A rung is reached on each ladder. Standing falls in a bad year while unlocks stay.
 - **Simulate must assert:** the optimizer's six-month target; the era pacing targets; a prestige-only strategy reaches every era; the endowment cannot be used to farm bailouts.
 
 ### Layer 6: Identity
 
 - **Contents:** Greek Row with rush, chapter standing and its two policies. Traditions. Homecoming, finals, commencement speaker, spring concert. The flavour items. Marching band. Layered personalities with eighteen archetypes and six quirks. Named regulars and non-student characters. Content to about sixty-five items.
+- **Metrics (24.7):** town relations.
 - **Acceptance checks:** the Row settles near the stadium. A tradition shows "at risk" before it breaks. The crowd visibly changes during finals and on game day. A student card's thought matches a real stat.
 - **Simulate must assert:** no generated chapter or school name matches the blocklists; archetype mixes always sum to one; an absent player keeps traditions whose conditions still stand; all earlier assertions.
 
@@ -1243,6 +1284,7 @@ The smallest thing that proves the core loop is fun: zone, grow, intake, bottlen
 | Trees | A Tree tool with a picker of six kinds. A tree sits on one cell, costs $6,000 [T] and lifts nearby lots about a third as much as a quad cell [T]. Added on 2026-11-11 after the owner's first session |
 | Quads | A quad is a clean lawn. What stands on each cell follows from its place in the quad: trees at corners and ends, benches along edges, flowers in the middle, a showpiece on a quad of one cell. No scatter |
 | Walking students | A sample of the students walks the paths between housing, classes and quads. The number in view grows with enrollment and with how much of the campus is on screen. Students who get a place while the player watches walk in from the edge of campus under a "+24 moving in" note. It is for show only: nothing is saved, the sim never runs it, and catch-up does not pay for it. Brought forward from the polish layer on 2026-11-11 |
+| Student card | Tapping a walking student opens five lines: who they are, what they are doing, their grades, their club, and a face with the one biggest reason for their happiness. Tapping the reason glides to the building it is about. A Follow button keeps the camera on them. Nothing is stored per student (section 13.8). Added on 2026-11-11 at the owner's request |
 | Money | Flat tuition, zoning and path costs, upkeep. The HUD shows cash and net income per real hour |
 | Feedback | A plain list of what happened while away |
 | Identity | A school name |
@@ -1307,10 +1349,11 @@ Settled on 2026-11-11 and no longer open: the personalities addition (section 13
 3. **Map size.** Twenty-five parcels may be more land than the capacity numbers ever need. Settled with the simulate script in layer 2.
 4. **Stall-cause order** when several apply. Proceeding with: no demand, density cap, safety, health, desirability.
 5. **Final lists** still to be written under the tone guide: fourteen policies, sixteen reward buildings, ten awards, Board goal templates, the three prestige landmarks' effects. Section 23 supplies candidates for the reward buildings.
-6. **Stadium art.** No public-domain stadium model was found, only attribution-licensed ones. Blender is not installed on the dev PC.
+6. **Stadium art.** Settled for building, open for release. All five tiers have a sprite: one is the pack's, two and three are made from its own stand, four and five are a CC-BY 3D bowl rendered in the pack's colours, outline and camera (`tools/render/model.html`). The owner judged the rendered bowl good enough to build football with, and it is to be replaced by drawn art before release. He is asking Penzilla for a quote himself. Nothing is ordered.
 7. **Founding numbers.** The founding class size and the first size rung must let the first rung land by the third check-in.
 8. **Daylight saving.** The anchor is stored in UTC, so it moves an hour in local time twice a year until the player shifts it.
 9. **Game title.** "Campus Tycoon" is a working title.
+10. **One word for approval.** The design and the Build menu cards say approval. The student card, as the owner specified it, says Happiness. They are one number, so one word should be on screen. The owner picks.
 
 ### First-playable stand-ins
 
@@ -1376,6 +1419,9 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Traditions | Streak cap and the cost of breaking one | To be set |
 | Students | Lost Freshman share at intake, finals Stressed-Out share | To be set |
 | Students | Named regulars per entering class, number of walkers, cap on small archetype effects | A handful per class; the rest to be set |
+| Students | Student card: nature weights, Lost Freshman and Homesick shares, Super Senior share, club match weights, grade floor, span and spread, mood steps | The values in `src/sim/config/students.ts` |
+| Metrics | Ranking weights: graduation, class size, alumni success, reputation, retention, selectivity, money per student | 25, 15, 15, 15, 10, 10, 10 |
+| Metrics | How far one stage can swing the next | To be set, and bounded |
 | Greek Row | Beds per stage, target share of enrollment | The table in 6.2; share to be set |
 | Simulate | Optimizer check-in interval | 2 hours |
 | Performance | 30 days of catch-up | Under one second on a desktop |
@@ -1489,11 +1535,13 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
-| Football stadium | Venue with five tiers, as designed | As designed | Reserved from the start | 1 | Stadium_FootballAmerican for tier one. Tiers two and three by adding stands and roofs. None for four and five | No sprite |
+| Football stadium | Venue with five tiers, as designed | As designed | 2 x 3, reserved from the start | 1 | Stadium_FootballAmerican for tier one. Tiers two and three made from its own stand. Four and five are a rendered 3D bowl until drawn art is commissioned | From parts, then a stand-in |
 | Athletics headquarters | Flavour landmark that arrives with stadium tier two | Opens the Athletic Director's page | 2 x 2 | 1 | A Workplace building with a trophy on its sign | From parts |
 | Practice fields | Flavour, drawn beside the stadium | None of its own | None | 1 | Soccer pitch with its stands cut off | From parts |
 | Basketball arena | Venue | Needs basketball, which is on the later roadmap | 2 x 2 or larger | Later | None | No sprite |
-| Baseball stadium, softball field, tennis centre | Varsity venues | Need their sport. They wait for spring sports | 2 x 2 | Later | Stadium_Baseball, Stadium_Cricket recoloured, Stadium_Tennis | Drawn |
+| Baseball stadium, softball field, tennis centre | Varsity venues | Need their sport. They wait for spring sports, and are not placed early as prestige venues (23.8) | 2 x 2 | Later | Stadium_Baseball, Stadium_Cricket recoloured, Stadium_Tennis | Drawn |
+| Tennis courts | Hand-placed | Raises approval nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Tennis without its roof | Drawn |
+| Ball field | Hand-placed | Raises approval nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Baseball without its roof | Drawn |
 
 **Access and transport**
 
@@ -1560,7 +1608,7 @@ Of 54 types, 39 are drawn in the Penzilla packs, 8 can be made from pack parts, 
 | A 3D model rendered to a sprite with drawn outlines. Free, but it will not match the pack exactly | The same ten, as the fallback if a commission is refused or too dear | About 10 sprites |
 | Not needed: cut | Bike lane and bike parking | 2 sprites |
 
-The first gap that blocks a layer is the stadium: Layer 1 needs five tiers and the pack draws one. The public repository's Kenney fallback has no sprite for any hand-placed type. It will get about ten shared stand-ins rendered from Kenney's public-domain 3D kits, one per family.
+The first gap that blocked a layer was the stadium: Layer 1 needs five tiers and the pack draws one. It is filled for building: tiers two and three from pack parts, four and five by the rendered stand-in, which is replaced before release. The public repository's Kenney fallback has no sprite for any hand-placed type. It will get about ten shared stand-ins rendered from Kenney's public-domain 3D kits, one per family.
 
 ### 23.7 Design tests
 
@@ -1573,3 +1621,144 @@ The first gap that blocks a layer is the stadium: Layer 1 needs five tiers and t
 | Neglect-safe | Twenty hand-placed buildings each carry upkeep. The simulate script must assert that an absent campus with a full Build menu still pays its way. |
 | Cheap catch-up | Every radius, coverage and lift is worked out when the player acts, never during a tick. |
 | Scale, test 7 | Four-cell buildings fill the 32 by 32 starting land fast. Land purchase in Layer 2 has to arrive before most of this catalog does. |
+
+### 23.8 Venues are not placed early
+
+The owner asked on 2026-11-11 whether the basketball arena, baseball stadium, softball field and tennis centre could be placed early as prestige venues with a simple desirability or approval effect, then gain their real role when the sport arrives. Decided:
+
+| Idea | Decision | Why |
+|---|---|---|
+| A venue placed early as a prestige building | No. They stay Later | It is the stadium that does nothing with a different effect painted on: it promises a team that does not exist. And when the sport arrives it starts making noise and drawing crowds, so a building placed beside dorms as an amenity turns into one that hurts them. A rule must not change under the player |
+| Tennis courts and a ball field as plain recreation | Yes, in the pass after football | The name matches what it does today. They are two more looks in the Approval family, with the track's effect. All approval buildings share one cap, as green space does |
+| Later, when the sport exists | Making a court or field the varsity home is a choice the player is offered | Never something that happens to them |
+| Basketball arena | Later either way | No sprite, and an indoor arena cannot pass as recreation |
+
+---
+
+## 24. Success metrics: the student pipeline
+
+Proposed by the owner and agreed on 2026-11-11. He accepted the defaults recorded in 24.9 and may still amend them after reading the full discussion. Nothing in this section is built except where 24.7 says "this pass".
+
+### 24.1 The spine
+
+Seven stages. Each feeds the next, and the last feeds the first.
+
+```
+applications -> acceptance rate -> yield -> retention -> graduation rate -> alumni success -> donations
+      ^                                                                                           |
+      +------------------------------- reputation <-----------------------------------------------+
+```
+
+| Stage | Rule | Its causes | Before this section |
+|---|---|---|---|
+| Applications | The pool per tier, section 7.3 | Academic standing, athletic standing, price, the tier's ceiling | Existed |
+| Acceptance rate | Offers divided by applications. Offers are admitted students divided by yield | Room on campus, the size of the pool, yield | Existed upside down as applicants per seat |
+| Yield | The share of offers that enrol, per tier, worked out at each intake | How the campus looks (average Housing desirability), cost after aid, facilities condition | A fixed number per tier |
+| Retention | The share of each class that returns, applied each semester | Approval, safety and health coverage, policies | Existed, flat in the first playable |
+| Graduation rate | Per entering class: the share who finish in four years, and in six | How selective the class was, class size, room in class | Named once, defined nowhere |
+| Alumni success | One score per graduating class, fixed on the day it graduates | The school's academic score that year, on-time graduation, job placement | New |
+| Donations | Alumni times affinity times success | The number of alumni, affinity (approval while enrolled, traditions, football), success | Existed without success |
+| The loop | Alumni success and donations feed academic standing, which draws applications | | Standing already drew applications |
+
+One lap of the loop takes four to six real weeks, because a game year is a real week. That makes it the long arc (test 6), not a runaway.
+
+### 24.2 Three rules
+
+They exist because seven stages, eight supporting metrics and four HUD numbers would otherwise bury cause and effect (test 4).
+
+1. **One screen, seven rows.** A supporting metric never gets its own row. It appears as the "why" under a stage.
+2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Approval keeps them. Teaching graduates them. No cause counts twice.
+3. **Slow numbers show a forecast.** Graduation rate, alumni success and donations move weeks after their causes. Each shows "on today's conditions" beside the real figure. The forecast moves the day the player acts, and the real figure arrives later and proves it.
+
+A fourth rule comes from the idle constraints: every stage can swing the next only by a bounded amount [T], so neglect drifts to mediocre and never spirals. Everything here is a few numbers per class, worked out at intakes, semester ends and year end, so catch-up cost is nothing.
+
+### 24.3 Supporting metrics
+
+| Metric | What it is | Shown under | New work |
+|---|---|---|---|
+| Student-to-faculty ratio | The face of the Instruction slider: funding against enrollment | Graduation rate, as class size | A readout |
+| Affordability | Net price after aid against the national middle | Yield | A readout of the price levers |
+| Job placement | The share of the newest class with a job | Alumni success. It is the measured half of that score, not a separate number | New, small |
+| Campus safety | The share of incidents handled | Retention | Falls out of the coverage and incidents work |
+| Facilities condition | The share of buildings in good repair | Yield | A readout of Rundown and the Facilities slider |
+| Endowment | Section 9.5, shown per student, where growth dilutes it | Donations, and the ranking | A readout |
+| Town relations | Noise and crowds at the town edge lower it, shops facing the town raise it, and it sets the price of the next land purchase | Its own line on the Year-End report | A new system. It must keep both a lever and a consequence |
+| Research output | Arrives with the Research zone and takes a share of the ranking then | The ranking | Later roadmap |
+
+### 24.4 The ranking, with visible weights
+
+The player's academic rating is this sum, and the player can read it. All weights are tuning targets.
+
+| Input | Weight | Comes from |
+|---|---|---|
+| Graduation rate, six-year | 25% | Stage 5 |
+| Class size | 15% | The student-to-faculty ratio |
+| Alumni success | 15% | Stage 6 |
+| Reputation | 15% | A slow average of the school's own past score, plus events |
+| First-year retention | 10% | Stage 4 |
+| Selectivity | 10% | The acceptance rate, stage 2 |
+| Money per student | 10% | Instruction spending and endowment per head |
+
+Every older rule that says "the academic rating takes a hit" now names its input. A bailout hits Reputation. A hiring freeze hits Class size. Tough grading raises Reputation and lowers Retention. Greek Row's drag and the Slacker and Scholar effects move Reputation a little. Sections 9, 12, 13 and 14 are reworded to match when layer 2 builds this. Before an input exists, its weight is shared among the ones that do. Reputation is slow on purpose: it stops the rank from jumping.
+
+### 24.5 Three levels of display
+
+| Level | Shows | Notes |
+|---|---|---|
+| HUD | Cash, students, and a chip each for academic prestige, athletic prestige and approval | A chip appears when its system exists: approval in the feedback pass, the other two in layer 1. The student count stays, because it is the score on the size ladder |
+| Scorecard | The funnel: seven rows, each with its number, a trend arrow and its one biggest limiting factor. Tapping a row opens its causes | One helper works out the biggest limiting factor for any number. The Bottleneck panel, the Scorecard, the advisors and the newspaper all read from it |
+| Year-End report | Each stage graded against the national field | Section 11 holds how the other schools are graded |
+
+### 24.6 The two ladders
+
+| | Metrics |
+|---|---|
+| Drive the size ladder | Applications, yield, retention, and room: beds, seats and places |
+| Drive the prestige ladder | Graduation rate, class size, alumni success, reputation, selectivity, money per student |
+| Help both | Retention, yield, approval, safety, facilities condition. Never a wrong move, so they are the easy early wins |
+| Create the tension | Acceptance rate and class size. Every extra student admitted from the same pool raises the acceptance rate. Every extra student worsens the ratio unless Instruction grows with them, and above full funding that cost climbs steeply. Money per student is a quieter third |
+
+How selective a class was sets how prepared it is, and that is one of the causes of its graduation rate. Growing by admitting deeper therefore shows as a lower forecast graduation rate the same day. This is what makes "the double" of section 15.4 hard.
+
+### 24.7 Where each piece lands
+
+| Piece | Layer | Why there |
+|---|---|---|
+| The class record of 24.8 | This pass | History cannot be rebuilt later |
+| Retention shown with its cause | This pass | The recreation and dining buildings act through it |
+| Acceptance rate shown at each intake | This pass | The number is already computed |
+| Campus safety score, approval chip on the HUD | This pass, arriving with coverage and approval | |
+| Scorecard, first version. Athletic prestige. A first academic rank. Year-End grades | 1 | The national field arrives here |
+| Computed yield, affordability, class size, graduation rate with its forecast, fifth and sixth years, alumni success with job placement, donations by success, facilities condition, the full weights | 2 | Tiers, levers, sliders, approval, alumni and donations are already layer 2 |
+| Limiting factors feed the advisors and the newspaper | 4 | |
+| Year-End graded on all seven stages. Endowment per student | 5 | |
+| Town relations | 6 | It needs Greek Row, game-day crowds and the parade to react to |
+| Research output | Later roadmap | |
+
+The three "this pass" pieces wait, with the rest of the pass's rules, for the owner's approval of the look.
+
+### 24.8 The class record
+
+```
+classRecord[entryYear] = { entered, enrolled, finishedOnTime, finishedLate, left }
+
+fourYearRate = finishedOnTime / entered
+sixYearRate  = (finishedOnTime + finishedLate) / entered
+forecast     = product of this year's class-to-class retention * the on-time share on today's conditions
+```
+
+One record per entering class, kept for good in `history`. Students who do not finish in four years stay as fifth and sixth years and keep using a bed and a seat, which is the cost of a crowded Academic zone. Those who have not finished after six years leave. The headline graduation rate is the six-year one, with on-time as the detail.
+
+### 24.9 Decisions
+
+Accepted by the owner on 2026-11-11 as the defaults:
+
+1. The three rules of 24.2.
+2. The word on screen is "approval". Open again: see section 21, item 10.
+3. The student count stays on the HUD beside the three ratings.
+4. The weights of 24.4, as tuning targets.
+5. The headline graduation rate is six-year, with on-time as the detail.
+6. Job placement folds into alumni success.
+7. Selectivity sets how prepared a class is, which feeds its graduation rate.
+8. Town relations waits for layer 6.
+9. The three cheap pieces join the feedback pass.
