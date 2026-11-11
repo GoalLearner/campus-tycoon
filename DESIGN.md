@@ -2,7 +2,7 @@
 
 Working title. Written 2026-11-11 from the design discussion between the owner and Claude.
 
-**Status: design only. No game code exists.** Building starts when the owner says "build it", and then one layer at a time (section 18).
+**Status: Layer 0, the first playable, is built and waiting for the owner to play it.** Nothing from Layer 1 has been started. Building goes one layer at a time (section 18).
 
 How to read this document:
 
@@ -280,10 +280,11 @@ Growth chases next fall's applicants, not current enrollment. A zone builds ahea
 
 ### 6.4 Stall causes
 
-A stalled lot shows exactly one primary cause, with any others listed beneath it.
+A stalled lot shows exactly one primary cause, with any others listed beneath it. Causes are checked in the order of the table.
 
 | Cause | Fix |
 |---|---|
+| No path beside it | Lay a path next to the lot. Checked first, because nothing else matters until it is fixed |
 | No demand | Raise applicant draw, or wait for the next class |
 | Density cap | Upzone the lot, or reach the next era |
 | No Campus Safety coverage | Place or fund Campus Safety. Gates medium density |
@@ -1154,6 +1155,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 
 Defined precisely in section 19.
 
+- **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1230,10 +1232,15 @@ Football and everything in athletics. Student Life. Applicant tiers. Medium and 
 
 ### 19.3 Installing it on a home screen
 
-1. The build is a static site, published to a free static host. No paid service is involved.
-2. On the iPhone, open the address in Safari.
-3. Tap Share, then Add to Home Screen.
-4. Launch it from the icon. It opens full screen, like an app.
+There are two ways, and neither costs anything.
+
+**Over home Wi-Fi, today.** On the PC, run `npm run phone` in the project folder and note the Network address it prints. On the iPhone, open that address in Safari, tap Share, then Add to Home Screen. It works while the PC is on and that command is running. It cannot open with no connection, because browsers only allow that over a secure address.
+
+**From a free static host, for real use.** Run `npm run build` and publish the `dist` folder. Then:
+
+1. On the iPhone, open the address in Safari.
+2. Tap Share, then Add to Home Screen.
+3. Launch it from the icon. It opens full screen, like an app, and works with no connection after the first launch.
 
 It includes a web app manifest, an icon, and a small service worker so it opens without a connection. The save lives in the browser's storage for that home-screen app. The app asks the browser to keep it, and the export-save button backs it up or moves it to another device. During development the same build can also be opened from the PC over home Wi-Fi.
 
@@ -1272,7 +1279,7 @@ Before any system is cut, the inbox cadence drops from three items a day to two.
 
 Settled on 2026-11-11 and no longer open: the personalities addition (section 13), save storage (IndexedDB on the web with persistent storage and export and import), the one-minute tick, the 30-day cap that drops whole weeks, and the first playable anchoring its week to the install moment.
 
-1. **Art pack.** The pack is chosen by comparison, not by default. The owner picks from a side-by-side test before the art manifest is built.
+1. **Art pack.** Five packs were compared on 2026-11-11 and the top two were test-rendered side by side. The first playable uses Kenney's public-domain isometric tiles, because they are free, complete and clean to ship. Penzilla's Giant City Builder, at $10, is the recommended upgrade: it has more charm and real campus buildings. The owner decides. Swapping is a recipe and manifest edit.
 2. **Free host** for the first playable: one that needs a public repository, or one that works with a private repository. A paid art pack must not sit in a public repository.
 3. **Map size.** Twenty-five parcels may be more land than the capacity numbers ever need. Settled with the simulate script in layer 2.
 4. **Stall-cause order** when several apply. Proceeding with: no demand, density cap, safety, health, desirability.
@@ -1293,6 +1300,8 @@ Simplifications the first playable uses until a later layer replaces them. All a
 | Flat tuition per student [T] | Layer 2, by the price levers |
 | Flat retention [T] | Layer 2, by approval |
 | A plain state grant when cash would go below zero, with no penalty | Layer 2, by the bailout |
+| A flat running cost per student [T] | Layer 2, by the five funding sliders |
+| Growth is re-evaluated by walking every lot | Layer 2 or 3, by sorted candidate lists, when maps grow |
 | The week is anchored to the install moment | Layer 1, by the waking-hours anchor |
 
 ---

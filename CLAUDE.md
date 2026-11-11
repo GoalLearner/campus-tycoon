@@ -4,15 +4,15 @@ A mobile idle sim where the player runs a fictional Division I-style university.
 
 ## Current status
 
-- The owner said "build it" on 2026-11-11, for **Layer 0 only**.
-- Layer 0 is built in four steps: sim core, map and zoning, intake loop, HUD.
-- **Do not start Layer 1.** Stop when the first playable works and hand over the home-screen steps.
+- **Layer 0, the first playable, is built** (2026-11-11) on the branch `layer-0-first-playable`.
+- It is waiting for the owner to play it. **Do not start Layer 1 until he says so.**
+- Nothing is pushed anywhere and nothing is published. Publishing needs his go-ahead.
 
 Update this section at the end of every layer.
 
 | Layer | Name | Status |
 |---|---|---|
-| 0 | First playable | In progress: step 1 of 4 done (sim core) |
+| 0 | First playable | Built. Waiting for the owner to play it |
 | 1 | Football and calendar | Not started |
 | 2 | Tiers and money levers | Not started |
 | 3 | Services and overlays | Not started |
@@ -72,11 +72,22 @@ Update this section at the end of every layer.
 
 ## Commands
 
+- `npm run dev`: local dev server on port 5183, with the dev time-skip in the Menu
+- `npm run phone`: the same, reachable from a phone on the same Wi-Fi
 - `npm test`: Vitest, all sim tests
 - `npm run typecheck`: TypeScript with no output
+- `npm run simulate`: headless runs with absent, casual and optimizer players, then the layer's assertions. Options: `-- --years 10 --seeds 1,2,3`
+- `npm run build`: typecheck, then the static site in `dist`
+- `npm run preview`: serve `dist` locally
+- `npm run art`: rebuild the atlas, manifest and CREDITS.md from `art/recipes/kenney.json`. Needs Python with Pillow and the packs in `art/source`
 
-Still to come in Layer 0, and this section must be updated when they land:
+Dev builds only: `window.__campus` exposes the store, session and clock, and opening the page with `?demo` shows a small tended campus without touching the save. A phone-sized screenshot can be taken with headless Edge pointed at `http://localhost:5183/?demo` (window size 500 by 1000, device scale factor 2, `--enable-unsafe-swiftshader`).
 
-- `npm run dev`: local dev server
-- `npm run simulate`: headless runs with the absent, casual and optimizer profiles
-- `npm run build`: the static site for the home-screen web app
+## Where things are
+
+- `src/sim`: the pure simulation. `advance.ts` is the heart. `actions.ts` is everything the player can do. One file per system under `systems/`, one config file per system under `config/`.
+- `src/app`: clock, store, saves, dev tools. The store is the only thing that changes the game state.
+- `src/game`: Phaser. `CampusScene.ts` draws the map and reads touches. `art.ts` resolves sprites through the manifest.
+- `src/ui`: the HUD and panels as plain HTML.
+- `scripts`: the simulate script and its scripted players.
+- `tools/build_art.py` and `art/recipes`: how sprites are put together from the source pack.

@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "simulate": "tsx scripts/simulate.ts",
-    "art": "python tools/build_art.py"
+    "art": "python tools/build_art.py",
+    "phone": "vite --host"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

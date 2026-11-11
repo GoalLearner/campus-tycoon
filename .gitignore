@@ -5,3 +5,6 @@ dist/
 
 # Downloaded art packs. Paid packs must never be committed.
 art/source/
+
+# The handoff page embeds a comparison render of a paid pack sampler. Keep it out of the repo.
+docs/handoff/
