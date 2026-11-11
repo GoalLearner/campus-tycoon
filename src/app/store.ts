@@ -1,3 +1,4 @@
+import { upgradeNotes } from './upgradeNotes';
 import {
   advance,
   applyAction,
@@ -49,6 +50,8 @@ export class Store {
   away: AwayReport | null = null;
   /** Things that happened while the app was open, newest last. The UI drains it. */
   recent: LogEntry[] = [];
+  /** Rules that are new to a save made by an older version. The UI shows them once and clears them. */
+  upgradeNotes: string[] = [];
   /** True when a save was found but could not be read, and the backup was used or nothing was. */
   loadProblem: string | null = null;
 
@@ -88,6 +91,7 @@ export class Store {
       const result = parseSave(text);
       if (result.ok) {
         this.current = result.state;
+        if (result.migratedFrom !== null) this.upgradeNotes = upgradeNotes(result.migratedFrom);
         clock.follow(result.state.clock.lastSimulatedAt);
         if (label === 'backup') this.loadProblem = 'Your latest save could not be read, so an earlier one was loaded.';
         this.catchUp();
@@ -125,6 +129,7 @@ export class Store {
     const result = parseSave(text);
     if (!result.ok) return result.reason;
     this.current = result.state;
+    this.upgradeNotes = result.migratedFrom !== null ? upgradeNotes(result.migratedFrom) : [];
     clock.follow(result.state.clock.lastSimulatedAt);
     this.away = null;
     this.recent = [];

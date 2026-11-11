@@ -1,3 +1,4 @@
+import { STARTER } from './config/map';
 import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
 import type { GameState } from './types';
 
@@ -7,7 +8,7 @@ import type { GameState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface SaveFile {
   v: number;
@@ -56,6 +57,40 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     const admissions = state.admissions as Record<string, unknown> | undefined;
     if (admissions && admissions.lastSemester === undefined) admissions.lastSemester = null;
+    return state;
+  },
+  // Version 4 records when each thing was paid for, so clearing can refund it.
+  // What the campus began with was never paid for. Everything else is treated as paid long ago.
+  3: (state) => {
+    const map = state.map as
+      | { width?: number; cells?: Array<Record<string, unknown>>; placed?: Array<Record<string, unknown> | null> }
+      | undefined;
+    const width = Number(map?.width ?? 0);
+    const starter = new Map<number, string>();
+    const mark = (x: number, y: number, kind: string): void => void starter.set(y * width + x, kind);
+    for (const spine of STARTER.spines) for (let x = spine.x0; x <= spine.x1; x++) mark(x, spine.y, 'path');
+    const { ring, quad } = STARTER;
+    for (let y = ring.y; y < ring.y + ring.h; y++) {
+      for (let x = ring.x; x < ring.x + ring.w; x++) {
+        if (x === ring.x || y === ring.y || x === ring.x + ring.w - 1 || y === ring.y + ring.h - 1) mark(x, y, 'path');
+      }
+    }
+    for (let y = quad.y; y < quad.y + quad.h; y++) for (let x = quad.x; x < quad.x + quad.w; x++) mark(x, y, 'quad');
+    for (const b of STARTER.buildings) mark(b.x, b.y, 'lot');
+
+    for (const placed of map?.placed ?? []) {
+      if (!placed || typeof placed.builtTick === 'number') continue;
+      const given = STARTER.placed.some((p) => p.type === placed.type && p.x === placed.x && p.y === placed.y);
+      placed.builtTick = given ? -1 : 0;
+    }
+    (map?.cells ?? []).forEach((cell, index) => {
+      if (typeof cell.builtTick === 'number') return;
+      if (cell.kind === 'empty') cell.builtTick = -1;
+      else if (cell.kind === 'placed') {
+        const placed = typeof cell.placedId === 'number' ? map?.placed?.[cell.placedId] : null;
+        cell.builtTick = placed ? Number(placed.builtTick) : 0;
+      } else cell.builtTick = starter.get(index) === cell.kind ? -1 : 0;
+    });
     return state;
   },
 };

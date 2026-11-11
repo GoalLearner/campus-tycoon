@@ -35,6 +35,8 @@ class Session {
   /** A cell the map should glide to. A new `seq` means a new request. */
   focus: { x: number; y: number; seq: number } | null = null;
   preview: PaintPreview | null = null;
+  /** A clear the player has dragged out and not yet confirmed. */
+  clearing: PaintPreview | null = null;
   toast: Toast | null = null;
 
   private listeners = new Set<Listener>();
@@ -52,6 +54,7 @@ class Session {
   setTool(tool: ToolChoice): void {
     this.tool = tool;
     this.preview = null;
+    this.clearing = null;
     this.placing = null;
     this.ghost = null;
     if (tool !== 'look') {
@@ -71,6 +74,25 @@ class Session {
     this.selected = null;
     this.student = null;
     this.following = false;
+    this.emit();
+  }
+
+  /** Hold a dragged-out clear until the player has seen what comes back and said yes. */
+  askClear(preview: PaintPreview): void {
+    this.clearing = preview;
+    this.preview = null;
+    this.emit();
+  }
+
+  cancelClear(): void {
+    if (!this.clearing) return;
+    this.clearing = null;
+    this.emit();
+  }
+
+  /** Glide the map to a cell without selecting anything. */
+  lookAt(x: number, y: number): void {
+    this.focus = { x, y, seq: (this.focus?.seq ?? 0) + 1 };
     this.emit();
   }
 

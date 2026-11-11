@@ -1,3 +1,4 @@
+import { ACADEMIC_CALENDAR, type AcademicCalendar, type CalDate } from './config/academicCalendar';
 import {
   FIRST_INTAKE_TICK,
   GRADUATION_DAY,
@@ -105,3 +106,66 @@ export function nextMilestone(tick: number): Upcoming {
   }
   return { event: 'fallIntake', inTicks: TICKS_PER_YEAR - t };
 }
+
+// ------------------------------------------------------------- the date --
+
+/** Days since 1970-01-01 for a calendar date. Plain arithmetic: the sim never reads a clock. */
+function daysFromCivil(year: number, month: number, day: number): number {
+  const y = month <= 2 ? year - 1 : year;
+  const era = Math.floor(y / 400);
+  const yearOfEra = y - era * 400;
+  const dayOfYear = Math.floor((153 * (month + (month > 2 ? -3 : 9)) + 2) / 5) + day - 1;
+  const dayOfEra = yearOfEra * 365 + Math.floor(yearOfEra / 4) - Math.floor(yearOfEra / 100) + dayOfYear;
+  return era * 146097 + dayOfEra - 719468;
+}
+
+function civilFromDays(days: number): { year: number; month: number; day: number } {
+  const z = days + 719468;
+  const era = Math.floor(z / 146097);
+  const dayOfEra = z - era * 146097;
+  const yearOfEra = Math.floor((dayOfEra - Math.floor(dayOfEra / 1460) + Math.floor(dayOfEra / 36524) - Math.floor(dayOfEra / 146096)) / 365);
+  const dayOfYear = dayOfEra - (365 * yearOfEra + Math.floor(yearOfEra / 4) - Math.floor(yearOfEra / 100));
+  const mp = Math.floor((5 * dayOfYear + 2) / 153);
+  const month = mp < 10 ? mp + 3 : mp - 9;
+  return { year: yearOfEra + era * 400 + (month <= 2 ? 1 : 0), month, day: dayOfYear - Math.floor((153 * mp + 2) / 5) + 1 };
+}
+
+export interface GameDate {
+  /** 1 to 12. */
+  month: number;
+  day: number;
+  /** 0 is Sunday. */
+  weekday: number;
+}
+
+/**
+ * The date in the academic year at a tick. It moves steadily with the real
+ * week, about two game days to a real hour, and every game year shows the
+ * same dates on the same weekdays. Before the first class arrives it is the
+ * first day of the fall semester.
+ */
+export function dateAt(tick: number, calendar: AcademicCalendar = ACADEMIC_CALENDAR): GameDate {
+  const hours = tick < FIRST_INTAKE_TICK ? 0 : ((tick - FIRST_INTAKE_TICK) % TICKS_PER_YEAR) / 60;
+  const dayOf = ([month, day, year]: CalDate): number => daysFromCivil(calendar.startYear + year, month, day);
+  const knots = calendar.knots;
+  let days = dayOf(knots[0]![1]);
+  for (let i = 0; i < knots.length - 1; i++) {
+    const [fromHour, fromDate] = knots[i]!;
+    const [toHour, toDate] = knots[i + 1]!;
+    if (hours >= fromHour && hours < toHour) {
+      days = dayOf(fromDate) + Math.floor(((hours - fromHour) / (toHour - fromHour)) * (dayOf(toDate) - dayOf(fromDate)));
+      break;
+    }
+  }
+  const { month, day } = civilFromDays(days);
+  return { month, day, weekday: (((days + 4) % 7) + 7) % 7 };
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Mon, Aug 24". */
+export function formatDate(date: GameDate): string {
+  return `${WEEKDAYS[date.weekday]}, ${MONTHS[date.month - 1]} ${date.day}`;
+}
+

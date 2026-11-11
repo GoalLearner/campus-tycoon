@@ -52,6 +52,9 @@ export function buildEntries(): BuildEntry[] {
     soon('build.medical', 'Medical Center', 'Treats injuries in its circle', 'Coming next'),
     soon('build.safety', 'Campus Safety', 'Handles mischief in its circle', 'Coming next'),
     soon('build.parking', 'Parking lot', 'Spaces for locals who drive in', 'Coming with the town'),
+    soon('build.garage', 'Parking structure', 'Several times the cars of a parking lot', 'Coming with the town'),
+    soon('road.15', 'Roads', 'Link parking to the town streets', 'Coming with the town'),
+    soon('ground.grass', 'Land purchase', 'More ground to build on', 'Coming with the town'),
     soon('build.stadium', 'Stadium', 'Home games and a football team', 'Coming with football'),
     soon('build.studentlife', 'Student Life', 'A zone for clubs and events', 'Coming later'),
   );

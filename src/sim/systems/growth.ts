@@ -3,6 +3,7 @@ import { WALK_FREE_MINUTES } from '../config/desirability';
 import { DINING_STAGE } from '../config/placed';
 import { cellAt } from '../selectors';
 import { ZONES, type Building, type GameState, type MapState, type Zone } from '../types';
+import { cancelTimers } from '../timers';
 import { startBuild } from './construction';
 import { shortage } from './demand';
 import { scoreParts } from './desirability';
@@ -85,6 +86,29 @@ export function desirabilityHint(state: GameState, x: number, y: number): string
     return `The walk to class is ${Math.round(parts.walkMinutes)} minutes. Students want ${WALK_FREE_MINUTES} or less.`;
   }
   return 'There is no green space nearby. Place a quad or plant trees.';
+}
+
+/**
+ * Stop any build that has lost what it needed: its path, its dining, or the
+ * desirability its next stage asks for. Called after something is cleared, so
+ * a thing cannot be placed, used to start builds, and then taken back.
+ * Returns how many builds were stopped.
+ */
+export function cancelStrandedBuilds(state: GameState): number {
+  const map = state.map;
+  let stopped = 0;
+  for (const building of map.buildings) {
+    if (!building?.rebuild) continue;
+    const { x, y, zone } = building;
+    const toStage = building.rebuild.toStage;
+    const needed = stageSpec(zone, toStage).desirabilityNeeded;
+    const stillGood = touchesPath(map, x, y) && map.score[y * map.width + x]! >= needed && !needsDining(map, x, y, zone, toStage);
+    if (stillGood) continue;
+    cancelTimers(state, 'buildDone', building.id);
+    building.rebuild = null;
+    stopped += 1;
+  }
+  return stopped;
 }
 
 interface Candidate {

@@ -1,4 +1,5 @@
 import { PLACED } from './config/placed';
+import { REFUND_SHARE, UNDO_TICKS } from './config/money';
 import { addPlaced, previewPlace, removePlaced } from './systems/placed';
 import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
@@ -6,7 +7,7 @@ import { COST } from './config/money';
 import { dollars } from './format';
 import { inBounds } from './selectors';
 import { recomputeDesirability } from './systems/desirability';
-import { evaluateGrowth } from './systems/growth';
+import { evaluateGrowth, cancelStrandedBuilds } from './systems/growth';
 import { markRatesDirty } from './systems/money';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
@@ -35,6 +36,12 @@ export interface PaintPreview {
   skipped: number;
   cost: number;
   affordable: boolean;
+  /** Clear only: the money that comes back. */
+  refund: number;
+  /** Clear only: true when everything is still inside its undo minute, so the whole price comes back. */
+  undo: boolean;
+  /** Clear only: the hand-placed buildings it would remove. */
+  buildings: PlacedType[];
 }
 
 export type ActionResult =
@@ -61,6 +68,23 @@ function fixedInPlace(map: MapState, index: number): boolean {
   return placed ? !PLACED[placed.type].buildable : false;
 }
 
+/**
+ * What comes back for clearing something that cost `cost` and was paid for at
+ * `builtTick`. All of it inside the undo minute, a share after, and nothing
+ * for what the campus began with. The undo ends early if a class arrived or a
+ * semester ended while the thing stood, so it cannot be put up for that moment
+ * and taken back for free.
+ */
+export function refundFor(state: GameState, cost: number, builtTick: number): { amount: number; undo: boolean } {
+  if (builtTick < 0) return { amount: 0, undo: false };
+  const a = state.admissions;
+  const counted = (a.lastIntake !== null && a.lastIntake.tick > builtTick) || (a.lastSemester !== null && a.lastSemester.tick > builtTick);
+  const undo = state.clock.tick - builtTick <= UNDO_TICKS && !counted;
+  return { amount: undo ? cost : Math.floor(cost * REFUND_SHARE), undo };
+}
+
+const PAINT_COST: Partial<Record<CellKind, number>> = { path: COST.path, quad: COST.quad, tree: COST.tree, lot: COST.zoneLot };
+
 /** What a paint would do and cost, without doing it. Drives the live preview while dragging. */
 export function previewPaint(state: GameState, tool: Tool, cells: readonly Point[]): PaintPreview {
   const map = state.map;
@@ -78,8 +102,32 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
     if (canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(map, i))) valid.push([x, y]);
     else skipped += 1;
   }
+  let refund = 0;
+  let undo = tool === 'clear' && valid.length > 0;
+  const buildings: PlacedType[] = [];
+  if (tool === 'clear') {
+    const counted = new Set<number>();
+    for (const [x, y] of valid) {
+      const cell = map.cells[y * map.width + x]!;
+      let back = { amount: 0, undo: false };
+      if (cell.placedId !== null) {
+        // A building is one thing, however many of its cells the drag touched.
+        if (counted.has(cell.placedId)) continue;
+        counted.add(cell.placedId);
+        const placed = map.placed[cell.placedId];
+        if (placed) {
+          buildings.push(placed.type);
+          back = refundFor(state, PLACED[placed.type].cost, placed.builtTick);
+        }
+      } else {
+        back = refundFor(state, PAINT_COST[cell.kind] ?? 0, cell.builtTick);
+      }
+      refund += back.amount;
+      if (!back.undo) undo = false;
+    }
+  }
   const cost = valid.length * UNIT_COST[tool];
-  return { tool, cells: valid, skipped, cost, affordable: cost <= state.money.cash };
+  return { tool, cells: valid, skipped, cost, affordable: cost <= state.money.cash, refund, undo, buildings };
 }
 
 function clearCell(state: GameState, map: MapState, x: number, y: number): void {
@@ -97,6 +145,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
   cell.zone = null;
   cell.buildingId = null;
   cell.variant = 0;
+  cell.builtTick = -1;
 }
 
 function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 0): ActionResult {
@@ -112,6 +161,7 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
   const map = next.map;
   for (const [x, y] of preview.cells) {
     const cell = map.cells[y * map.width + x]!;
+    if (tool !== 'clear') cell.builtTick = next.clock.tick;
     switch (tool) {
       case 'clear':
         clearCell(next, map, x, y);
@@ -132,12 +182,14 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
     }
   }
 
-  next.money.cash -= preview.cost;
-  next.money.yearSpent += preview.cost;
+  next.money.cash += preview.refund - preview.cost;
+  next.money.yearSpent += preview.cost - preview.refund;
   recomputeDesirability(map);
+  // Builds that leaned on what was just cleared stop, so nothing can be placed for a moment and taken back.
+  if (tool === 'clear') cancelStrandedBuilds(next);
   markRatesDirty(next);
   evaluateGrowth(next);
-  return { ok: true, state: next, cost: preview.cost, changed: preview.cells.length };
+  return { ok: true, state: next, cost: preview.cost - preview.refund, changed: preview.cells.length };
 }
 
 const PLACE_ERROR = {
@@ -155,7 +207,7 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   if (preview.problem) return { ok: false, state, error: PLACE_ERROR[preview.problem] };
 
   const next = structuredClone(state);
-  addPlaced(next.map, type, x, y);
+  addPlaced(next.map, type, x, y, next.clock.tick);
   next.money.cash -= spec.cost;
   next.money.yearSpent += spec.cost;
   recomputeDesirability(next.map);

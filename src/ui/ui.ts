@@ -8,6 +8,8 @@ import {
   bottleneck,
   buildingAt,
   calendarAt,
+  dateAt,
+  formatDate,
   capacityWanted,
   cellAt,
   COST,
@@ -29,6 +31,7 @@ import {
   stageSpec,
   TREE_KINDS,
   acceptanceRate,
+  nearestSpot,
   PLACED,
   placedAt,
   previewPlace,
@@ -80,7 +83,7 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'path', label: 'Path', hint: `Drag to lay a path · ${dollars(COST.path)} a cell` },
   { id: 'quad', label: 'Quad', hint: `Drag to plant a quad · ${dollars(COST.quad)} a cell` },
   { id: 'tree', label: 'Tree', hint: `Tap or drag to plant trees · ${dollars(COST.tree)} each` },
-  { id: 'clear', label: 'Clear', hint: `Drag to clear · ${dollars(COST.clear)} a cell` },
+  { id: 'clear', label: 'Clear', hint: 'Drag over what to clear · you see what comes back before it goes' },
 ];
 
 const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]> = {
@@ -303,7 +306,20 @@ export function mountUi(root: HTMLElement): void {
   const inspectorState = el('div', 'inspector-state');
   const inspectorFacts = el('div', 'inspector-facts');
   const inspectorClose = button('Close', 'inspector-close', () => session.clearSelection());
-  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts);
+  // Shown on a dorm held back for want of dining: a shortcut to placing a hall beside it.
+  let actionLot: { x: number; y: number } | null = null;
+  const inspectorAction = button('Build a dining hall here', 'primary inspector-action', () => {
+    if (!actionLot) return;
+    const spot = nearestSpot(store.state, 'dining', actionLot.x, actionLot.y);
+    if (!spot) {
+      session.notify('There is no free ground in reach of this dorm. Clear some first.', 'error');
+      return;
+    }
+    session.startPlacing('dining');
+    session.setGhost(spot.x, spot.y);
+    session.lookAt(spot.x, spot.y);
+  });
+  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorAction);
 
   const studentPanel = mountStudentCard();
 
@@ -329,6 +345,23 @@ export function mountUi(root: HTMLElement): void {
   placerButtons.append(placeButton, button('Cancel', '', () => session.setTool('look')));
   placer.append(placerTitle, placerState, placerButtons);
 
+  const clearer = el('div', 'placer clearer');
+  const clearerTitle = el('div', 'placer-title');
+  const clearerState = el('div', 'placer-state');
+  const clearerButtons = el('div', 'placer-buttons');
+  clearerButtons.append(
+    button('Clear', 'primary', () => {
+      const pending = session.clearing;
+      if (!pending) return;
+      session.cancelClear();
+      const result = store.dispatch({ type: 'paint', tool: 'clear', cells: pending.cells });
+      if (!result.ok) session.notify(result.error, 'error');
+      else if (pending.refund > 0) session.notify(`Cleared. ${dollars(pending.refund)} came back.`);
+    }),
+    button('Cancel', '', () => session.cancelClear()),
+  );
+  clearer.append(clearerTitle, clearerState, clearerButtons);
+
   function openBuild(): void {
     openBuildMenu(root, buildEntries(), (entry) => {
       if (entry.id) session.startPlacing(entry.id as PlacedType);
@@ -337,7 +370,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, buildButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, clearer, buildButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -416,13 +449,17 @@ export function mountUi(root: HTMLElement): void {
 
   function openAway(): void {
     const report = store.away;
-    if (!report) return;
+    const notes = store.upgradeNotes;
+    if (!report && notes.length === 0) return;
     store.away = null;
-    const summary = summarizeAway(report.log, report);
+    store.upgradeNotes = [];
+    const summary = report ? summarizeAway(report.log, report) : null;
     openModal((close, card) => {
-      card.append(el('h1', '', summary.headline));
+      card.append(el('h1', '', summary ? summary.headline : 'New since your last visit'));
       const list = el('ul', 'away-list');
-      for (const line of summary.lines) list.append(el('li', '', line));
+      for (const line of summary?.lines ?? []) list.append(el('li', '', line));
+      // Rules that are new to an older save, told once.
+      for (const note of notes) list.append(el('li', 'away-note', note));
       card.append(list, button('Back to campus', 'primary', close));
     });
   }
@@ -531,7 +568,7 @@ export function mountUi(root: HTMLElement): void {
     const tick = state.clock.tick;
     const pos = calendarAt(tick);
     setText(when, NOW_LABEL[pos.phase]);
-    setText(next, pos.year === 0 ? '' : `Year ${pos.year} · Day ${pos.day}`);
+    setText(next, pos.year === 0 ? formatDate(dateAt(tick)) : `${formatDate(dateAt(tick))} · Year ${pos.year}`);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
@@ -650,6 +687,7 @@ export function mountUi(root: HTMLElement): void {
       setText(inspectorTitle, PLACED[placedHere.type].name);
       setText(inspectorState, placedSummary(state, placedHere));
       setText(inspectorFacts, placedFacts(placedHere));
+      inspectorAction.classList.remove('show');
       inspector.classList.add('show');
       return;
     }
@@ -707,13 +745,31 @@ export function mountUi(root: HTMLElement): void {
     if (zone === 'housing') facts.push(walk < 0 ? 'No route to class' : `${Math.round(walk)} min walk to class`);
     facts.push(...lotFacts(state, selected.x, selected.y));
     setText(inspectorFacts, facts.join(' · '));
+    const hungry = lotStatusNow?.kind === 'stalled' && (lotStatusNow.cause === 'noDining' || lotStatusNow.also.includes('noDining'));
+    actionLot = hungry ? { x: selected.x, y: selected.y } : null;
+    inspectorAction.classList.toggle('show', hungry);
     inspector.classList.add('show');
+  }
+
+  /** The prompt before anything is cleared: what goes, and what comes back. */
+  function renderClearer(): void {
+    const pending = session.clearing;
+    clearer.classList.toggle('show', pending !== null);
+    if (!pending) return;
+    const n = pending.cells.length;
+    const only = pending.buildings.length === 1 && n <= PLACED[pending.buildings[0]!].w * PLACED[pending.buildings[0]!].h;
+    setText(clearerTitle, only ? `Clear the ${PLACED[pending.buildings[0]!].name}?` : `Clear ${n} ${TOOL_NOUN.clear[n === 1 ? 0 : 1]}?`);
+    let text: string;
+    if (pending.refund === 0) text = 'Nothing comes back for what the campus began with.';
+    else if (pending.undo) text = `You get ${dollars(pending.refund)} back, the full price. It was built less than a minute ago.`;
+    else text = `You get ${dollars(pending.refund)} back.`;
+    setText(clearerState, text);
   }
 
   function renderPlacer(state: GameState): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
-    buildButton.classList.toggle('hidden', type !== null);
+    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null);
     if (!type) return;
     setText(placerTitle, placingLine(type));
     const ghost = session.ghost;
@@ -771,7 +827,12 @@ export function mountUi(root: HTMLElement): void {
       chip.classList.remove('show', 'bad');
       return;
     }
-    if (preview && preview.cells.length > 0) {
+    if (preview && preview.cells.length > 0 && tool === 'clear') {
+      const n = preview.cells.length;
+      setText(chip, `${n} ${TOOL_NOUN.clear[n === 1 ? 0 : 1]} · ${preview.refund > 0 ? `${dollars(preview.refund)} back` : 'nothing back'}`);
+      chip.classList.add('show');
+      chip.classList.remove('bad');
+    } else if (preview && preview.cells.length > 0) {
       const n = preview.cells.length;
       const noun = TOOL_NOUN[tool][n === 1 ? 0 : 1];
       setText(chip, `${n} ${noun} · ${dollars(preview.cost)}${preview.affordable ? '' : ' · not enough cash'}`);
@@ -808,6 +869,7 @@ export function mountUi(root: HTMLElement): void {
     renderInspector(state);
     studentPanel.render(state);
     renderPlacer(state);
+    renderClearer();
     renderTools();
 
     updateRow.classList.toggle('show', updates.ready);
@@ -815,7 +877,7 @@ export function mountUi(root: HTMLElement): void {
     const hudBottom = `${Math.round(hud.getBoundingClientRect().bottom)}px`;
     if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);
 
-    if (store.away && !modalOpen) openAway();
+    if ((store.away || store.upgradeNotes.length > 0) && !modalOpen) openAway();
 
     if (store.recent.length > 0) {
       for (const entry of store.recent) {

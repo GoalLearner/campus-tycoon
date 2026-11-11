@@ -14,6 +14,7 @@ How to read this document:
 - Section 24 is the success metrics: the student pipeline, the Scorecard and the ranking weights.
 - Section 25 is off-campus neighbourhoods, roads and parking.
 - Section 26 is the art to fix before release.
+- Section 27 is Stress, which ships with the calendar in layer 1.
 
 ---
 
@@ -191,6 +192,67 @@ The demand bars are forecasts of the next intake, so they react within minutes o
 | Session one, ten minutes | Admitted students with no beds or seats | School name, colors, mascot, wake time | Housing and Academic lots, which rise in two minutes. The class moves in and the waitlist fills what is added next |
 | That evening | Newspaper: the founding scrimmage, lots that grew a stage, the waitlist closed with a count lost | First advisor decision | A quad or a Campus Safety office. The desirability overlay appears |
 | Next morning | Overnight income, first results, first size rung | Where the reward building goes | Student Life zoning unlocks. The spring forecast sets the next goal |
+
+### 4.8 The calendar year
+
+Asked for by the owner on 2026-11-11, from a real university's published academic calendar. Its structure and dates are used, never its name. One game year is still one real week of whole-day phases.
+
+**Built now:** the date on the HUD ("Mon, Aug 24") beside the phase, and the whole calendar as data in `src/sim/config/academicCalendar.ts`, so another year's calendar is a change to that file. **Everything else here lands in layer 1.**
+
+| Decision | Why |
+|---|---|
+| The sim shows a calendar date that moves steadily with the wall clock, about two game days to a real hour | The week gains a year's worth of landmarks |
+| The date is read from a few fixed points, with the days between spread evenly: the fall intake is Aug 19, the spring intake is Jan 19, commencement is May 13, the summer term starts May 26 | Each intake and report stays at its anchor hour and lands on its real date |
+| Fall and winter break fill days 1 to 3 (Aug 19 to Jan 18). Spring fills days 4 and 5 (Jan 19 to May 12). Graduation is day 6 (May 13 to May 25). Summer is day 7 (May 26 to Aug 18) | The owner's mapping, changed in two places. He put Jan 1 at the start of day 4, which would date the spring intake eighteen days before the semester starts. And he ended day 6 on May 21, which would make the date jump four days |
+| Every game year shows the same dates on the same weekdays | One calendar, stored as data |
+| Events are data: a name, a kind and a date or a span | Nothing about a holiday is written in code |
+| A week of midterms is added at the middle of each semester | The reference calendar lists none, and Stress (section 27) needs it |
+| The school's rescheduled holidays and its satellite-campus entry are left out | The owner's instruction |
+| The away summary groups what happened by date | "Sep 7: Labor Day." A once-a-day player misses most events live |
+
+**What each kind of event does.**
+
+| Kind | Effect |
+|---|---|
+| One-day holiday | Campus closed: few walkers, no classes. Flavour only |
+| Break: Thanksgiving, winter, spring | Most students leave and the campus is visibly quiet. Student Life income dips. Happiness lifts and Stress drops (section 27). Build timers are untouched |
+| Midterms and finals | Stress peaks. The library and coffee stands fill. Happiness dips |
+| Summer term | About 15% of students stay on campus [T], with income to match. Annual decisions and the Year-End report as designed |
+| First day of classes | A busy-paths moment and a newspaper line |
+
+**How long each lasts in real time.** One game day is about 28 real minutes in fall, 25 in spring, 111 on graduation day and 17 in summer.
+
+| Event | Game days | Real time | Seen by a once-a-day player? |
+|---|---|---|---|
+| Labor Day, Veterans Day, New Year's Day, MLK Day | 1 | 28 minutes | No. Away summary only |
+| Juneteenth, Independence Day | 1 | 17 minutes | No. Away summary only |
+| Midterm week, fall and spring | 5 | 2 h 21 min and 2 h 06 min | Rarely. Away summary |
+| Thanksgiving break | 5 | 2 h 21 min | Rarely. Away summary |
+| Spring break | 5 | 2 h 06 min | Rarely. Away summary |
+| Fall finals | 7 | 3 h 18 min | Rarely. Away summary, with the exam report of section 27 |
+| Spring finals | 7 | 2 h 57 min, ending at the day-6 anchor | Its end, on a morning visit |
+| Winter break | 31 | 14 h 35 min, ending at the day-4 anchor | Yes |
+| Commencement | 4 | 7 h 23 min from the day-6 anchor | Yes |
+| Summer term | 85 | 24 hours | Yes |
+
+Everything in the first six rows must leave a line in the away summary, because most players will never be looking when it happens.
+
+**What has to move.** Checked against section 4.3.
+
+| Beat | In the design today | On the real calendar | Proposal |
+|---|---|---|---|
+| Rivalry game | Day 3, the evening game | Thanksgiving weekend, Nov 28 | With an even date line ten games on four slots a day run to mid-December. Bend the line with one more fixed point so the rivalry slot (day 3, anchor + 8 h) is Nov 28. Games one to nine then fall from late August to mid-November |
+| Conference title game | Day 4 | Early December | Moves to day 3, about anchor + 10 h |
+| Bowl | Day 4, after the title game | Around New Year | Moves to overnight after day 3, about anchor + 18 h. Day 4 opens with its result and the spring class |
+| Fall finals | Overnight at the end of day 3, about ten hours | Dec 12 to 18 | Becomes about two hours in the evening of day 3, then winter break overnight |
+| Spring finals | Overnight at the end of day 5, about ten hours | May 6 to 12 | Stays overnight at the end of day 5, but about three hours |
+| Signing day | Day-5 anchor | Early February, which is day 4 at about anchor + 6 h | Stays on day 5. Moving it would cut the recruiting pitch window below the 48 hours every annual decision is promised |
+| Rankings day | Day-5 anchor | September, for the best-known national ranking | Stays on day 5. The prestige ladder needs its own day and an anchor-hour reveal. Its date reads mid-March |
+| Commencement | Day-6 anchor | May 13 | No move |
+| Year-End report | Day-7 anchor | The summer term starts May 26 | No move |
+| Homecoming, spring game | Day 2 afternoon, day 5 evening | Late October, early April | No move |
+
+The football rows are proposals for layer 1 and wait for the owner's answer. The date line built today has no bend.
 
 ---
 
@@ -569,6 +631,28 @@ When cash would go below zero at the daily check:
 
 Cash paid into the endowment cannot be withdrawn. It earns a small permanent income [T]. Because a deficit draws on it before the state steps in, nobody can hoard and take a bailout.
 
+### 9.6 Clearing and refunds
+
+Decided by the owner on 2026-11-11, after play stop 1. Built.
+
+| Decision | Why |
+|---|---|
+| Clearing within a minute of building gives the whole price back | An undo. A misplaced building is not a punishment. A tick is a minute, so the player always has at least one full minute |
+| After that, clearing gives half the price back | Changing your mind costs something, but not everything |
+| Hand-placed buildings, paths, quads, trees and zoned lots all follow it | One rule |
+| Clearing is free, and nothing is cleared until a prompt has shown what comes back | The owner asked to see the refund first |
+| What the campus began with gives nothing back | It was never paid for. Without this the starter paths, quad and dining hall are free money |
+| A build that leaned on what was cleared stops | Otherwise a quad or a dining hall could be placed, used to start a row of dorms growing, and taken straight back for a full refund |
+| The undo ends early if a class arrived or a semester ended while the thing stood | Otherwise recreation or quads could be put up for the minute that sets the class size or retention, then taken back for free |
+
+Still open, and reported to the owner:
+
+| Gap | Size | How it closes |
+|---|---|---|
+| Build, let lots finish growing, sell for half | Half price for growth that then stays, because nothing decays yet | Decay in layer 2 takes back a stage the lot no longer earns. No new rule needed |
+| Sell a full dorm and keep its students | They stay enrolled and paying until they graduate, because room only limits admissions | Proposed: students with no place leave at the end of the semester. Waits for the owner |
+| A refund is half of today's price, not of the price paid | Matters only if prices are retuned upward | Store the price paid, if it ever matters |
+
 ---
 
 ## 10. Athletics
@@ -709,6 +793,7 @@ Final wording follows the tone guide.
 | Free student section | Attendance and happiness | Ticket income |
 | Parking fees | Income | Commuter happiness |
 | Tough grading | Academic rating | Retention |
+| Reading days before finals | Lower exam Stress (section 27) | A little teaching time, so a slightly lower academic score that semester |
 | All-night library | Scholar draw, a softer finals dip | A bigger library load |
 | Hiring freeze | Lower Instruction need | Academic rating |
 | Naming rights | Income | Happiness |
@@ -1226,13 +1311,14 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, next:** Medical Center, Campus Safety, coverage circles and incidents. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25).
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, next:** Medical Center, Campus Safety, coverage circles and incidents. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
 ### Layer 1: Football and calendar
 
 - **Contents:** the anchored whole-day week, founding day and scrimmage, anchor shift. The national field with drift. Conference, ten-game season, title game, bowls, poll. Team rating, coach, recruiting pitch, signing day, spring game, rivalry. Five-tier stadium, ticket price, rented field, noise radius. Live games with a score ticker. TV deals. Football profit-and-loss page. A basic Year-End report. A plain "annual decisions" list with deadlines and defaults.
+- **Calendar and Stress (sections 4.8 and 27):** the dated events of the academic year with their effects, the away summary grouped by date, midterm weeks, Stress for students and faculty with its exam reports, the reading-days policy, and the proposed moves to the football calendar once the owner answers them. The HUD date and the calendar data are already built.
 - **Metrics (24.7):** the Scorecard page, first version. Athletic prestige. A first academic rank from the inputs that exist. Grades on the Year-End report.
 - **Stand-ins:** Athletics funding fixed at full. Football lifts the single applicant pool. No crowds or band yet.
 - **Acceptance checks:** intakes and day games land in waking hours. A morning visit finds overnight results. A live game can be watched. A season of sell-outs earns a tier. Missing a weekend applies one-year defaults.
@@ -1894,3 +1980,56 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way. The face on the student card is drawn in code, and the owner approved it.
 
 Any sprite assembled or rendered from now on is added to this table in the same piece of work.
+
+---
+
+## 27. Stress
+
+Asked for by the owner on 2026-11-11 as an addition to the calendar. It ships with the calendar in layer 1. Nothing here is built.
+
+### 27.1 Decisions
+
+| Decision | Why |
+|---|---|
+| One new number for students, Stress, from 0 to 100. It is a row on the Happiness panel and a small meter on the student card's Happiness line. It is not on the HUD | The owner's instruction. The HUD stays at four numbers |
+| The calendar sets its season: it rises toward midterms, peaks in finals week, drops sharply at each break and sits low through summer | The year gets a pulse the player can feel |
+| The campus sets how hard the season lands, through four named causes: class crowding, teaching (Instruction funding), places to unwind (recreation, quads and ponds), and support (library capacity and Medical Center coverage) | The owner listed six drivers. They are grouped into four so the rule of section 24.2 holds. The first two raise Stress and the last two lower it |
+| Stress is worked out from the date and the campus when it is needed, and at each exam period. Nothing accumulates except one average per semester | It cannot spiral or stay pinned: when the season eases, so does Stress. Catch-up cost is a handful of evaluations a year |
+| High Stress lowers Happiness and nudges GPA down. A semester of sustained high Stress lowers retention a little | The owner's effects, all small and capped [T] |
+| A campus with good relief gets through finals with a small dip. A campus without it gets a big one | The reason to build for it |
+| Breaks lift Happiness: Thanksgiving, winter, spring and summer each give a lift that fades when classes resume. The first day back has a small dip | The owner's rule |
+| Faculty Stress is one more value, from the same calendar (peaking at finals and at the dates grades are due) and from class size. High faculty Stress lowers Instruction quality a little for that period | No per-person staff. It is shown with its cause on the Provost's page |
+| The away summary reports each exam period: how high Stress peaked, its main cause, and what would have eased it | Exam weeks last two or three real hours, so most players only ever see the report |
+| One new policy, reading days before finals, trades a little teaching time for lower exam Stress | Section 12.3 |
+| On screen the number is always called Stress. "Anxiety" appears only as ordinary exam nerves in a student's thought. Nothing clinical, nothing depicting serious distress, and every spike ends when exams end | Tone guide. The rating target of 16.3 holds: none of its rows covers this. Recheck at submission |
+
+```
+season   = the calendar's curve for today's date, 0.1 on a break to 1.0 in finals week
+pressure = share of the two raising causes, 0 to 1
+relief   = share of the two easing causes, 0 to 1
+stress   = 100 * season * (0.55 + 0.45 * pressure) * (1 - 0.5 * relief)
+```
+
+At finals the worst campus reads 100 and the best about 28. All of these numbers are tuning targets.
+
+### 27.2 Students, cards and walkers
+
+| Item | Rule |
+|---|---|
+| Thoughts | They follow the calendar: exam worries in midterms and finals, excitement before a break, relief after finals |
+| Archetypes | Stressed-Out and Overachiever spike hardest, Slacker barely moves, and All-Nighter appears in numbers during finals as a passing phase, like Lost Freshman |
+| Walkers | During exams the library and coffee stands visibly fill. During breaks the campus is quiet. For show, as walkers always are |
+
+### 27.3 Tests
+
+The simulate script must assert that Stress never stays at its maximum past the end of an exam period, that it returns to a low value at every break across five years on every profile, and that a once-a-day player's away summary carries an exam report for each semester even when the exam week passed between visits.
+
+### 27.4 Points raised with the owner
+
+| Point | Proposal |
+|---|---|
+| Happiness would have five inputs: its four causes and Stress | Show the calendar's effect as one signed line on the Happiness panel, "This week": the exam dip or the break lift. Four causes the player can build for, and the season |
+| Recreation and green space would count twice: once for Happiness directly, once through Stress | Their relief only matters at the exam peaks, and the whole effect of Stress on Happiness is capped at about ten points |
+| Two of the four causes do not exist in layer 1 | Instruction funding arrives in layer 2 and library capacity in layer 3. Until then teaching reads as neutral, and support reads library presence and Medical Center coverage |
+| Overachiever and All-Nighter are not among the eighteen archetypes of 13.4 | Scholar takes the Overachiever's part until the fuller list ships. All-Nighter is added as a nineteenth, a finals-only phase |
+| The Provost's page arrives in layer 4 | Until then faculty Stress appears in the exam report in the away summary |
