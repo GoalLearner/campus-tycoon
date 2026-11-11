@@ -195,11 +195,13 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,
  * the lecture hall for a commuter. Each cause is scored from 0 to 1 and they
- * are averaged by weight. Dining and recreation joined with the Build menu.
- * Noise and safety join when those systems are built; nothing else has to change.
+ * are averaged by weight. Dining and recreation joined with the Build menu,
+ * and safety with the Medical Center and Campus Safety. Noise joins when it is
+ * built; nothing else has to change.
  */
-export type CauseId = 'walk' | 'green' | 'dining' | 'recreation';
-export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, dining: 1, recreation: 1 };
+export type CauseId = 'walk' | 'green' | 'dining' | 'recreation' | 'safety';
+/** Safety counts for half as much as the others, so a campus without coverage is held back, not sunk. */
+export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, dining: 1, recreation: 1, safety: 0.5 };
 /** [T] How far one student's mood can sit from their spot's score. */
 export const TEMPERAMENT_SPREAD = 6;
 /** [T] The lowest score for each face, from delighted down. Below the last is the saddest. */
@@ -331,4 +333,14 @@ export const THOUGHTS = {
   ],
   commuterRecreationGood: ['Between classes there is always a game on by the lecture hall.'],
   commuterRecreationLow: ['Nothing to do between classes. A field by the lecture halls would help.'],
+  safetyGood: [
+    'Help is two minutes away if I ever need it. I sleep well.',
+    'Somebody always turns up when things go sideways around here.',
+  ],
+  safetyLow: [
+    'If I twisted an ankle here I am not sure who would come. A Medical Center nearby would help.',
+    'Nobody ever comes when something goes wrong by my dorm. Campus Safety should be closer.',
+  ],
+  commuterSafetyGood: ['Somebody always turns up when things go sideways near my lecture hall.'],
+  commuterSafetyLow: ['Nobody would come if something went wrong by my lecture hall. It needs a Medical Center or Campus Safety in reach.'],
 } as const;

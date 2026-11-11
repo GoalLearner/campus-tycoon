@@ -400,6 +400,8 @@ export function mountUi(root: HTMLElement): void {
   }
 
   const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant']);
+  /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
+  const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
   // --------------------------------------------------------------- modals --
   let modalOpen = false;
@@ -881,7 +883,7 @@ export function mountUi(root: HTMLElement): void {
 
     if (store.recent.length > 0) {
       for (const entry of store.recent) {
-        if (NEWSWORTHY.has(entry.kind)) pushToast(entry.text);
+        if (worthSaying(entry)) pushToast(entry.text);
       }
       store.recent.length = 0;
     }

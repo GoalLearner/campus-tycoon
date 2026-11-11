@@ -67,6 +67,24 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
   const lostToWaitlist = log.filter((e) => e.kind === 'waitlistClosed' && Number(e.data?.lost ?? 0) > 0);
   if (lostToWaitlist.length > 0) lines.push(lostToWaitlist[lostToWaitlist.length - 1]!.text);
 
+  // Incidents: how many were handled, and for the rest, the building that would have handled them.
+  let handled = 0;
+  const missed = new Map<string, number>();
+  for (const entry of log) {
+    if (entry.kind !== 'incident') continue;
+    if (entry.data?.handled === 1) handled += 1;
+    else {
+      const need = entry.data?.need === 'medical' ? 'A Medical Center' : 'Campus Safety';
+      const where = entry.data?.place === 'a dorm' ? 'the dorms' : `the ${String(entry.data?.place ?? 'campus')}`;
+      const key = `${need} in reach of ${where}`;
+      missed.set(key, (missed.get(key) ?? 0) + 1);
+    }
+  }
+  if (handled > 0) lines.push(handled === 1 ? '1 incident was handled.' : `${handled} incidents were handled.`);
+  for (const [fix, count] of [...missed].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
+    lines.push(`${count} ${count === 1 ? 'incident' : 'incidents'} had nobody come. ${fix} would have handled ${count === 1 ? 'it' : 'them'}.`);
+  }
+
   lines.push(...latestText(log, 'graduation'));
   lines.push(...latestText(log, 'yearEnd'));
 

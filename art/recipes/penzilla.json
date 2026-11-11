@@ -2295,6 +2295,114 @@
   "pond.large": {
    "layers": [
     {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      2
+     ]
+    },
+    {
      "file": "penzilla/Medieval/Tiles/RiverLake16.png",
      "footprint": [
       1,

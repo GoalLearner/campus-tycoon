@@ -15,8 +15,9 @@ describe('the date on the HUD', () => {
     expect(at(168 - 1 / 60)).toBe('Wed, Aug 18');
   });
 
-  it('reaches the first day of classes a couple of hours in', () => {
-    expect(at(2.5)).toBe('Mon, Aug 24');
+  it('reaches the first day of classes a few hours in, and the rivalry game on Thanksgiving weekend', () => {
+    expect(at(3)).toBe('Mon, Aug 24');
+    expect(at(56)).toBe('Sat, Nov 28');
   });
 
   it('never runs backward, and every year is the same', () => {

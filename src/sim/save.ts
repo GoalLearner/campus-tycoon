@@ -8,7 +8,7 @@ import type { GameState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface SaveFile {
   v: number;
@@ -93,6 +93,13 @@ export const MIGRATIONS: Record<number, Migration> = {
     });
     return state;
   },
+  // Version 5 added incidents.
+  4: (state) => {
+    if (typeof state.incidents !== 'object' || state.incidents === null) {
+      state.incidents = { active: [], nextId: 1, handled: 0, missed: 0 };
+    }
+    return state;
+  },
 };
 
 export type LoadResult =
@@ -125,7 +132,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers'] as const) {

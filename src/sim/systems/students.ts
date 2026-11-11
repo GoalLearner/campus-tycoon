@@ -384,7 +384,8 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   if (chosen.id === 'walk') pool = content ? THOUGHTS.walkGood : approval.walkMinutes < 0 ? THOUGHTS.walkNone : THOUGHTS.walkLong;
   else if (chosen.id === 'green') pool = resident ? (content ? THOUGHTS.greenGood : THOUGHTS.greenLow) : content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
   else if (chosen.id === 'dining') pool = resident ? (content ? THOUGHTS.diningGood : THOUGHTS.diningLow) : content ? THOUGHTS.commuterDiningGood : THOUGHTS.commuterDiningLow;
-  else pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
+  else if (chosen.id === 'recreation') pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
+  else pool = resident ? (content ? THOUGHTS.safetyGood : THOUGHTS.safetyLow) : content ? THOUGHTS.commuterSafetyGood : THOUGHTS.commuterSafetyLow;
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
   return { cause: chosen.id, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
 }

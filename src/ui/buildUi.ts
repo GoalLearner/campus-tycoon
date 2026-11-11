@@ -49,8 +49,6 @@ export function buildEntries(): BuildEntry[] {
     locked,
   });
   entries.push(
-    soon('build.medical', 'Medical Center', 'Treats injuries in its circle', 'Coming next'),
-    soon('build.safety', 'Campus Safety', 'Handles mischief in its circle', 'Coming next'),
     soon('build.parking', 'Parking lot', 'Spaces for locals who drive in', 'Coming with the town'),
     soon('build.garage', 'Parking structure', 'Several times the cars of a parking lot', 'Coming with the town'),
     soon('road.15', 'Roads', 'Link parking to the town streets', 'Coming with the town'),
@@ -93,6 +91,12 @@ export function placedSummary(state: GameState, placed: Placed): string {
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
+    case 'medical':
+    case 'safety': {
+      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      const job = spec.family === 'medical' ? 'Treats injuries' : 'Handles mischief';
+      return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.`;
+    }
     case 'landmark':
       return `${spec.effect}.`;
   }
@@ -115,6 +119,7 @@ export const CAUSE_NAME: Record<CauseId, string> = {
   green: 'Green space',
   dining: 'Dining nearby',
   recreation: 'Things to do',
+  safety: 'Safety and health',
 };
 
 const CAUSE_FIX: Record<CauseId, string> = {
@@ -122,6 +127,7 @@ const CAUSE_FIX: Record<CauseId, string> = {
   green: 'Add quads, trees or a pond near dorms and lecture halls.',
   dining: 'Build a Dining hall or a Coffee stand near dorms and lecture halls.',
   recreation: 'Build a gym, courts, a field, a pool or a track near dorms and lecture halls.',
+  safety: 'Build a Medical Center and Campus Safety so their circles cover dorms and lecture halls.',
 };
 
 export interface HappinessView {
@@ -152,7 +158,7 @@ export function happinessView(state: GameState): HappinessView {
     mood: score >= 80 ? 4 : score >= 62 ? 3 : score >= 45 ? 2 : score >= 28 ? 1 : 0,
     rows,
     advice: mood.worst ? `Biggest gap: ${CAUSE_NAME[mood.worst].toLowerCase()}. ${CAUSE_FIX[mood.worst]}` : '',
-    build: mood.worst === 'dining' || mood.worst === 'recreation',
+    build: mood.worst === 'dining' || mood.worst === 'recreation' || mood.worst === 'safety',
     staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.`,
     lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${last.stayed} stayed. Happiness was ${last.happiness}.` : '',
   };

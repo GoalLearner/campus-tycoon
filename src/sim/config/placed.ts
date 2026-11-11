@@ -8,12 +8,12 @@ import type { PlacedType } from '../types';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'landmark';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'landmark';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Landmarks';
+  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Health and safety' | 'Landmarks';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -82,6 +82,14 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Lake', category: 'Water', family: 'water', w: 3, h: 3, cost: 50_000, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Green space. Every zone likes water', sprite: 'pond.large', flat: true, buildable: true,
   },
+  medical: {
+    name: 'Medical Center', category: 'Health and safety', family: 'medical', w: 2, h: 2, cost: 90_000, upkeepPerYear: 9_000,
+    radius: 8, strength: 1, effect: 'Treats injuries within 8 cells', sprite: 'build.medical', flat: false, buildable: true,
+  },
+  safety: {
+    name: 'Campus Safety', category: 'Health and safety', family: 'safety', w: 2, h: 2, cost: 80_000, upkeepPerYear: 8_000,
+    radius: 8, strength: 1, effect: 'Handles mischief within 8 cells', sprite: 'build.safety', flat: false, buildable: true,
+  },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Where the university began', sprite: 'build.admin', flat: false, buildable: false,
@@ -90,7 +98,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
 
 /** The order of the Build menu. */
 export const BUILD_ORDER: readonly PlacedType[] = [
-  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge',
+  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety',
 ];
 
 /** A pond cell counts as this share of a quad cell in the one green-space input, which is capped. */

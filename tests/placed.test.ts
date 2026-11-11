@@ -215,7 +215,7 @@ describe('happiness', () => {
     const resident = sampleStudents(state).find((ref) => studentHome(state, ref) !== null)!;
     const home = studentHome(state, resident)!;
     const before = approvalAt(state, home);
-    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'green', 'dining', 'recreation']);
+    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'green', 'dining', 'recreation', 'safety']);
     state = place(state, 'gym', 11, 11);
     expect(approvalAt(state, home).score).toBeGreaterThan(before.score);
     expect(studentCard(state, resident)!.happiness).toBeGreaterThan(studentCard(rich(campus()), resident)!.happiness);

@@ -15,6 +15,8 @@ import {
   PLACED,
   previewPlace,
   reachCells,
+  incidentText,
+  type Incident,
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Iso } from './iso';
@@ -70,6 +72,8 @@ export class CampusScene extends Phaser.Scene {
   private gesture: Gesture | null = null;
   private dpr = 1;
   private pendingArrivals = 0;
+  /** One walking responder for each incident that has help on the way. */
+  private responders = new Map<number, Phaser.GameObjects.Image>();
   /** Items the dev previews put on the map, beside the buildings in the game state. */
   private devItems: PlacedItem[] = [];
   private placedDirty = true;
@@ -156,6 +160,7 @@ export class CampusScene extends Phaser.Scene {
       this.placedDirty = false;
     }
     this.walkers.update(delta);
+    this.moveResponders(state, time);
     this.watchStudent(delta);
     this.placed.update(time);
     if (this.overlayDirty) {
@@ -180,6 +185,8 @@ export class CampusScene extends Phaser.Scene {
     this.gameId = '';
     this.walkers.clear();
     this.placed.clear();
+    for (const sprite of this.responders.values()) sprite.destroy();
+    this.responders.clear();
     this.tints = [];
     this.pendingArrivals = 0;
     this.overlay.clear();
@@ -353,6 +360,11 @@ export class CampusScene extends Phaser.Scene {
       const sprite = this.spriteFor(placed.type);
       items.push({ key: sprite.key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
     }
+    // An icon floats over every open incident.
+    for (const incident of state.incidents.active) {
+      const over = this.incidentPlace(state, incident);
+      items.push({ key: incident.kind === 'injury' ? 'icon.injury' : 'icon.mischief', x: over.x, y: over.y, w: over.w, h: over.h, layer: 'float', lift: over.lift });
+    }
     if (session.placing && session.ghost) {
       const spec = PLACED[session.placing];
       const sprite = this.spriteFor(session.placing);
@@ -428,6 +440,71 @@ export class CampusScene extends Phaser.Scene {
       g.fillRoundedRect(left - 2, top - 2, w + 4, h + 4, 5);
       g.fillStyle(0xffd24a, 1);
       g.fillRoundedRect(left, top, Math.max(3, w * done), h, 3);
+    }
+  }
+
+  // ------------------------------------------------------------ incidents --
+
+  /** The block of cells an incident's icon hovers over, and how high: the middle of the building it happened at. */
+  private incidentPlace(state: GameState, incident: Incident): { x: number; y: number; w: number; h: number; lift: number } {
+    const id = state.map.cells[incident.y * state.map.width + incident.x]?.placedId ?? null;
+    const placed = id === null ? null : state.map.placed[id];
+    if (placed) return { x: placed.x, y: placed.y, w: placed.w, h: placed.h, lift: PLACED[placed.type].flat ? 56 : 120 };
+    return { x: incident.x, y: incident.y, w: 1, h: 1, lift: 112 };
+  }
+
+  /** Where an incident's icon sits in the world. */
+  private incidentSpot(incident: Incident): { x: number; y: number } {
+    const over = this.incidentPlace(store.state, incident);
+    const at = this.iso.toWorld(over.x + over.w / 2, over.y + over.h / 2);
+    return { x: at.x, y: at.y - over.lift };
+  }
+
+  /**
+   * Walk a responder from the covering building to each incident with help on
+   * the way. For show: the outcome and its time were fixed when the incident
+   * began, and the walk is drawn to arrive on that minute.
+   */
+  private moveResponders(state: GameState, timeMs: number): void {
+    const people = this.art.people;
+    const seen = new Set<number>();
+    if (people) {
+      const now = clock.now();
+      for (const incident of state.incidents.active) {
+        const home = incident.responder === null ? null : state.map.placed[incident.responder];
+        if (!home) continue;
+        const began = this.realTimeOfTick(state, incident.startTick);
+        const ends = this.realTimeOfTick(state, incident.endTick);
+        const along = Phaser.Math.Clamp((now - began) / Math.max(1, ends - began), 0, 1);
+        const fromX = home.x + home.w / 2;
+        const fromY = home.y + home.h + 0.2;
+        const over = this.incidentPlace(state, incident);
+        const toX = over.x + over.w / 2;
+        const toY = over.y + over.h / 2;
+        const x = fromX + (toX - fromX) * along;
+        const y = fromY + (toY - fromY) * along;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const direction = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'se' : 'nw') : dy >= 0 ? 'sw' : 'ne';
+        const facing = people.flip?.[direction] ?? direction;
+        const look = (incident.kind === 'injury' ? people.roles?.medic : people.roles?.officer) ?? 0;
+        const frame = along >= 1 ? 0 : Math.floor(timeMs / people.frameMs) % people.frames;
+        let sprite = this.responders.get(incident.id);
+        if (!sprite) {
+          sprite = this.add.image(0, 0, '__DEFAULT');
+          this.responders.set(incident.id, sprite);
+        }
+        this.art.apply(sprite, `person.${look}.${facing}.${frame}`);
+        sprite.setFlipX(people.flip?.[direction] !== undefined);
+        const at = this.iso.toWorld(x, y);
+        sprite.setPosition(at.x, at.y).setDepth((x + y - 1) * 4 + 2.6);
+        seen.add(incident.id);
+      }
+    }
+    for (const [id, sprite] of this.responders) {
+      if (seen.has(id)) continue;
+      sprite.destroy();
+      this.responders.delete(id);
     }
   }
 
@@ -674,6 +751,14 @@ export class CampusScene extends Phaser.Scene {
       const spec = PLACED[session.placing];
       const [cx, cy] = this.cellAt(screenX, screenY);
       session.setGhost(cx - Math.floor((spec.w - 1) / 2), cy - Math.floor((spec.h - 1) / 2));
+      return;
+    }
+    // An incident's icon says what happened and whether anyone is coming.
+    const reach = (26 * this.dpr) / this.cameras.main.zoom;
+    for (const incident of store.state.incidents.active) {
+      const spot = this.incidentSpot(incident);
+      if (Math.abs(world.x - spot.x) > reach || Math.abs(world.y - (spot.y - reach * 0.6)) > reach * 1.4) continue;
+      session.notify(`${incidentText(incident)} ${incident.responder === null ? 'Nobody is coming.' : 'Help is on the way.'}`);
       return;
     }
     // A walker is in front of whatever they are walking past.

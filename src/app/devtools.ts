@@ -1,4 +1,4 @@
-import { advance, applyAction, newGame, PLACED, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, incidentText, nearestSpot, newGame, PLACED, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
@@ -80,6 +80,30 @@ function builtCampus(): GameState {
   return state;
 }
 
+/**
+ * The built campus with one injury at the courts: with a Medical Center in
+ * reach and its responder half way there, or with nobody coming. For the two
+ * screenshots of play stop 2: `?demo=built&incident=handled` or `=unhandled`.
+ */
+function incidentCampus(covered: boolean): GameState {
+  let state = builtCampus();
+  const courts = state.map.placed.find((p) => p?.type === 'courts');
+  if (!courts) return state;
+  let responder: number | null = null;
+  if (covered) {
+    const spot = nearestSpot(state, 'medical', courts.x, courts.y);
+    const result = spot ? applyAction(state, { type: 'place', building: 'medical', x: spot.x, y: spot.y }) : null;
+    if (result?.ok) {
+      state = result.state;
+      responder = state.map.placed.length - 1;
+    }
+  }
+  const tick = state.clock.tick;
+  state.incidents.active.push({ id: 1, kind: 'injury', x: courts.x, y: courts.y, place: 'Outdoor courts', line: 1, startTick: tick - 3, responder, endTick: tick + (covered ? 3 : 30) });
+  state.incidents.nextId = 2;
+  return state;
+}
+
 interface DevScene {
   cameras: { main: { zoom: number; width: number; height: number; scrollX: number; scrollY: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
@@ -122,7 +146,8 @@ function applyViewParams(params: URLSearchParams): void {
   const card = params.get('card');
   const placing = params.get('place');
   const panel = params.get('panel');
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel) return;
+  const incident = params.get('incident');
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -172,6 +197,20 @@ function applyViewParams(params: URLSearchParams): void {
         scene.walkers.arrive(arrive);
         settle(1.4);
       }
+      const open = incident ? store.state.incidents.active[0] : undefined;
+      if (open) {
+        // Look at the incident and say its line, as a tap on its icon would.
+        const camera = scene.cameras.main;
+        camera.setZoom(camera.zoom * 1.5);
+        const aim = (): void => {
+          const at = scene.iso.toWorld(open.x + 0.5, open.y + 0.5);
+          camera.setScroll(at.x - camera.width / 2, at.y - camera.height / 2);
+        };
+        aim();
+        setTimeout(aim, 1200);
+        // Said late, so a screenshot taken a few seconds in still shows it.
+        setTimeout(() => session.notify(`${incidentText(open)} ${open.responder === null ? 'Nobody is coming.' : 'Help is on the way.'}`), 3200);
+      }
       if (placing) {
         const [type, x, y] = placing.split(',');
         session.startPlacing(type as Parameters<typeof session.startPlacing>[0]);
@@ -205,6 +244,8 @@ export function installDevTools(): void {
     store.adopt(lookCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stadium') {
     store.adopt(stadiumCampus(clock.now()), { ephemeral: true });
+  } else if (params.get('demo') === 'built' && params.get('incident')) {
+    store.adopt(incidentCampus(params.get('incident') === 'handled'), { ephemeral: true });
   } else if (params.get('demo') === 'built') {
     store.adopt(builtCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'town') {

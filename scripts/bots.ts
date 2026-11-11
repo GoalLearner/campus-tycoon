@@ -1,7 +1,15 @@
 import {
   applyAction,
+  approvalAt,
+  campusHappiness,
   COST,
+  coverFor,
+  fedAt,
+  PLACED,
+  previewPlace,
   shortage,
+  type CauseId,
+  type PlacedType,
   ZONES,
   type GameState,
   type Point,
@@ -120,6 +128,89 @@ function neediestZone(state: GameState): Zone | null {
   return best;
 }
 
+// ---------------------------------------------------------- the Build menu --
+
+/** The nearest free ground from which a building would reach a lot, keeping off the street plan. */
+function menuSpot(state: GameState, type: PlacedType, x: number, y: number): Point | null {
+  const spec = PLACED[type];
+  let best: Point | null = null;
+  let bestFar = Infinity;
+  for (let py = y - spec.radius - spec.h + 1; py <= y + spec.radius; py++) {
+    for (let px = x - spec.radius - spec.w + 1; px <= x + spec.radius; px++) {
+      const far = Math.max(Math.max(px - x, 0, x - (px + spec.w - 1)), Math.max(py - y, 0, y - (py + spec.h - 1)));
+      if (far < 1 || far > spec.radius || far >= bestFar) continue;
+      let clear = previewPlace(state, type, px, py).problem === null;
+      for (let cy = py; cy < py + spec.h && clear; cy++) for (let cx = px; cx < px + spec.w && clear; cx++) if (onStreetPlan(cx, cy)) clear = false;
+      if (!clear) continue;
+      best = [px, py];
+      bestFar = far;
+    }
+  }
+  return best;
+}
+
+/** The open building where one cause of happiness is lowest: where a new building would help most. */
+function neediestLot(state: GameState, cause: CauseId): { x: number; y: number; level: number } | null {
+  let worst: { x: number; y: number; level: number } | null = null;
+  for (const b of state.map.buildings) {
+    if (!b || b.stage < 1) continue;
+    const found = approvalAt(state, b.y * state.map.width + b.x).causes.find((c) => c.id === cause);
+    if (found && (!worst || found.level < worst.level)) worst = { x: b.x, y: b.y, level: found.level };
+  }
+  return worst;
+}
+
+const PLAY: readonly PlacedType[] = ['courts', 'gym', 'field', 'pool', 'track'];
+
+/**
+ * What a player who reads the Happiness panel would build next: dining for a
+ * dorm that cannot grow without it, then whatever the panel names as the
+ * biggest gap, put in reach of the lot that lacks it most.
+ */
+function nextFromMenu(state: GameState): { type: PlacedType; x: number; y: number } | null {
+  for (const b of state.map.buildings) {
+    if (b && b.zone === 'housing' && b.stage === 1 && !fedAt(state.map, b.x, b.y)) {
+      return { type: state.money.cash > 150_000 ? 'dining' : 'coffee', x: b.x, y: b.y };
+    }
+  }
+  const worst = campusHappiness(state).worst;
+  if (worst === 'dining' || worst === 'recreation' || worst === 'safety') {
+    const lot = neediestLot(state, worst);
+    if (lot && lot.level < 0.85) {
+      if (worst === 'dining') return { type: 'dining', x: lot.x, y: lot.y };
+      if (worst === 'recreation') {
+        const built = state.map.placed.filter((p) => p && PLACED[p.type].family === 'recreation').length;
+        return { type: PLAY[built % PLAY.length]!, x: lot.x, y: lot.y };
+      }
+      return { type: coverFor(state.map, 'medical', lot.x, lot.y) ? 'safety' : 'medical', x: lot.x, y: lot.y };
+    }
+  }
+  // Then close the gaps in coverage: a place to play with no Medical Center over it, a dorm with no Campus Safety.
+  for (const p of state.map.placed) {
+    if (p && PLACED[p.type].family === 'recreation' && !coverFor(state.map, 'medical', p.x, p.y)) return { type: 'medical', x: p.x, y: p.y };
+  }
+  for (const b of state.map.buildings) {
+    if (b && b.zone === 'housing' && b.stage > 0 && !coverFor(state.map, 'safety', b.x, b.y)) return { type: 'safety', x: b.x, y: b.y };
+  }
+  return null;
+}
+
+function buildFromMenu(state: GameState, reserve: number, most: number): { state: GameState; built: number; blocked: boolean } {
+  let current = state;
+  let built = 0;
+  for (; built < most; built++) {
+    const want = nextFromMenu(current);
+    if (!want) break;
+    if (current.money.cash - PLACED[want.type].cost < reserve) return { state: current, built, blocked: true };
+    const spot = menuSpot(current, want.type, want.x, want.y);
+    if (!spot) break;
+    const result = applyAction(current, { type: 'place', building: want.type, x: spot[0], y: spot[1] });
+    if (!result.ok) break;
+    current = result.state;
+  }
+  return { state: current, built, blocked: false };
+}
+
 export interface TurnResult {
   state: GameState;
   /** Purchases made this check-in. */
@@ -159,5 +250,11 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     current = next;
     purchases += 1;
   }
+
+  // Then the Build menu, as a player who has read the Happiness panel would use it.
+  const menu = buildFromMenu(current, reserve, style === 'casual' ? 1 : 3);
+  current = menu.state;
+  purchases += menu.built;
+  if (menu.blocked) blockedByCash = true;
   return { state: current, purchases, blockedByCash };
 }

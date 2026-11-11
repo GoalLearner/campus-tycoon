@@ -40,6 +40,8 @@ export type PlacedType =
   | 'pondSmall'
   | 'pondMedium'
   | 'pondLarge'
+  | 'medical'
+  | 'safety'
   | 'admin';
 
 /** A hand-placed building. It is whole from the moment it is placed. */
@@ -191,6 +193,35 @@ export interface GameState {
   timers: Timer[];
   timerSeq: number;
   stats: Stats;
+  incidents: Incidents;
+}
+
+export type IncidentKind = 'injury' | 'mischief';
+
+/** Something small going wrong on the map. Its outcome is fixed the moment it begins. */
+export interface Incident {
+  id: number;
+  kind: IncidentKind;
+  /** The cell it happened at. */
+  x: number;
+  y: number;
+  /** Where, in words: "Gym", or "a dorm". */
+  place: string;
+  /** Which line describes it. */
+  line: number;
+  startTick: number;
+  /** The building whose responder is on the way: an index into map.placed. null when no circle covers it. */
+  responder: number | null;
+  /** The tick the responder arrives, or the tick it passes with nobody coming. */
+  endTick: number;
+}
+
+export interface Incidents {
+  active: Incident[];
+  nextId: number;
+  /** Totals over the life of the save. */
+  handled: number;
+  missed: number;
 }
 
 export type LogKind =
@@ -200,6 +231,7 @@ export type LogKind =
   | 'waitlistClosed'
   | 'graduation'
   | 'semester'
+  | 'incident'
   | 'yearEnd'
   | 'grant'
   | 'paused';

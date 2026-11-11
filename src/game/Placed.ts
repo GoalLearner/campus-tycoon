@@ -66,7 +66,9 @@ export class PlacedSprites {
 
       let at = this.iso.toWorld(item.x, item.y);
       if (layer === 'ground') {
-        sprite.setDepth((item.x + item.y) * 4 + 0.5);
+        // After the tiles behind it and before the tiles in front. A wide one would otherwise be
+        // drawn before the tiles beside its far corners, and their earth would lie over its shore.
+        sprite.setDepth((item.x + item.y + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5);
       } else if (layer === 'object') {
         // Sorted by its front cell, so things behind it stay behind all of it.
         sprite.setDepth((item.x + w - 1 + item.y + h - 1) * 4 + 1);
