@@ -332,7 +332,7 @@ If the simulation still shows a cliff, the next knob is a cap on how many lots m
 | Applicants are the demand, zones are the supply, and enrollment is capped by the scarcest zone | Three needs of one population are not an RCI loop. This is the version that passes test 1 |
 | Each zone has its own job | Housing sets beds and earns room fees. Academic sets seats and produces prestige. Student Life drives approval and retention and earns from foot traffic |
 | Three demand bars that can go negative | Up is shortage, down is surplus. Surplus is the overbuilding warning |
-| The tightest zone carries a Bottleneck tag and the count of qualified applicants turned away | The same number reads as lost income on the size ladder and as selectivity on the prestige ladder |
+| The tightest zone carries a Bottleneck tag and the count of qualified applicants turned away. Tapping it gives the number of lots that would fix it | The same number reads as lost income on the size ladder and as selectivity on the prestige ladder |
 | Three applicant tiers that share buildings | They make the two ladders mechanically different without SimCity 4's wealth-specific lots |
 | Recruited athletes are recruiting classes inside athletics | A few hundred people cannot move a zone bar, and star recruits are louder there |
 | Selectivity is emergent: applicants per seat | A school that does not expand while demand is high becomes selective on its own |
@@ -1232,7 +1232,8 @@ The smallest thing that proves the core loop is fun: zone, grow, intake, bottlen
 | Map | One fixed map. The starting land only |
 | Zoning | Paths. Drag a row with a live cost preview. Housing and Academic |
 | Growth | Two stages, automatic, with timed rebuilds and the old building serving |
-| Demand | One applicant pool. Two forecast bars. The Bottleneck tag and the turned-away count |
+| Demand | One applicant pool. Two forecast bars. The Bottleneck tag and the turned-away count. Tapping a bar or the tag says exactly how many lots of which kind would seat the students who are waiting, or the next class, with the cost |
+| HUD wording | The HUD leads with what is happening now ("Fall semester in session"), then what the player can do ("310 waiting: add Academic seats to admit them"). The countdown to the next class is a smaller second line. Changed on 2026-11-11 after the owner's first session, when the countdown read as a wait before play could start |
 | Desirability | Quads and walk time only. The lot inspector names one stall cause |
 | Money | Flat tuition, zoning and path costs, upkeep. The HUD shows cash and net income per real hour |
 | Feedback | A plain list of what happened while away |

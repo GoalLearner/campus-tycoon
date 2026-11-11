@@ -25,6 +25,7 @@ export {
 export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCause } from './systems/growth';
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { roomForNewStudents, zoneName } from './systems/admissions';
+export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
 export { newGame, type NewGameOptions } from './newGame';
 export { calendarAt, eventsAt, nextMilestone, type CalendarEvent, type CalendarPos, type Phase } from './calendar';
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';

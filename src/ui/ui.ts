@@ -17,11 +17,15 @@ import {
   dollarsShort,
   duration,
   enrollment,
+  expectedClass,
+  FIRST_INTAKE_TICK,
   lotStatus,
   MAX_STAGE,
   netPerRealHour,
   nextMilestone,
   openCapacity,
+  roomForNewStudents,
+  roomPlan,
   stageSpec,
   type GameState,
   type LogEntry,
@@ -39,7 +43,20 @@ import {
 const ZONES: readonly Zone[] = ['housing', 'academic'];
 const ZONE_LABEL: Record<Zone, string> = { housing: 'Housing', academic: 'Academics' };
 const ZONE_UNIT: Record<Zone, string> = { housing: 'beds', academic: 'seats' };
-const PHASE_LABEL = { moveIn: 'Move-in day', fall: 'Fall', spring: 'Spring', graduation: 'Graduation', summer: 'Summer' };
+/** What is happening right now, in words a first-time player reads at a glance. */
+const NOW_LABEL = {
+  moveIn: 'Founding day',
+  fall: 'Fall semester in session',
+  spring: 'Spring semester in session',
+  graduation: 'Graduation day',
+  summer: 'Summer break',
+};
+/** What to add when a zone is short. */
+const ZONE_ASK: Record<Zone, string> = { housing: 'Housing beds', academic: 'Academic seats' };
+const ZONE_LOT: Record<Zone, [string, string]> = {
+  housing: ['Housing lot', 'Housing lots'],
+  academic: ['Academic lot', 'Academic lots'],
+};
 const MILESTONE_LABEL = {
   fallIntake: 'Fall class arrives',
   springIntake: 'Spring class arrives',
@@ -144,18 +161,21 @@ export function mountUi(root: HTMLElement): void {
   for (const zone of ZONES) {
     const row = el('div', 'bar');
     const head = el('div', 'bar-head');
-    const tag = el('span', 'tag', 'Bottleneck');
+    const tag = el('span', 'tag', 'Bottleneck \u203a');
     const amount = el('span', 'amount');
     head.append(el('span', 'name', ZONE_LABEL[zone]), tag, amount);
     const track = el('div', 'track');
     const fill = el('div', 'fill');
     track.append(fill, el('div', 'mid'));
     row.append(head, track);
+    // Tapping a bar says exactly what to build.
+    row.addEventListener('click', () => openPlan(zone));
     bars.append(row);
     barParts[zone] = { tag, amount, fill, row };
   }
 
   const status = el('div', 'status');
+  const upcoming = el('div', 'upcoming');
 
   // Shown when a new build has been downloaded. The player picks the moment to switch.
   const updateRow = el('div', 'update-row');
@@ -169,7 +189,7 @@ export function mountUi(root: HTMLElement): void {
     });
   });
   updateRow.append(el('span', '', 'A new version is ready.'), updateButton);
-  hud.append(top, calendar, bars, status, updateRow);
+  hud.append(top, calendar, bars, status, upcoming, updateRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -377,10 +397,11 @@ export function mountUi(root: HTMLElement): void {
     rate.className = perHour >= 0 ? 'rate up' : 'rate down';
     setText(studentCount, String(enrollment(state)));
 
-    const pos = calendarAt(state.clock.tick);
-    setText(when, pos.year === 0 ? 'Move-in day' : `Year ${pos.year} · ${PHASE_LABEL[pos.phase]} · Day ${pos.day}`);
-    const milestone = nextMilestone(state.clock.tick);
-    setText(next, `${MILESTONE_LABEL[milestone.event]} in ${duration(milestone.inTicks)}`);
+    // Lead with what is happening now. The date is the small print.
+    const tick = state.clock.tick;
+    const pos = calendarAt(tick);
+    setText(when, NOW_LABEL[pos.phase]);
+    setText(next, pos.year === 0 ? '' : `Year ${pos.year} · Day ${pos.day}`);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
@@ -396,18 +417,86 @@ export function mountUi(root: HTMLElement): void {
       );
     }
 
-    const a = state.admissions;
-    let line = '';
-    if (a.waitlist > 0 && a.waitlistUntilTick > state.clock.tick) {
-      line = `${a.waitlist} on the waitlist. It closes in ${duration(a.waitlistUntilTick - state.clock.tick)}.`;
-    } else if (a.lastIntake && a.lastIntake.turnedAway > 0 && a.lastIntake.bottleneck) {
-      line = `${a.lastIntake.turnedAway} turned away at the last intake for want of ${ZONE_UNIT[a.lastIntake.bottleneck]}.`;
-    } else if (a.lastIntake) {
-      line = 'Everyone found a place at the last intake.';
+    // Then what the player can do about it, and last the countdown.
+    const plan = roomPlan(state);
+    const asks = ZONES.filter((zone) => plan.zones[zone].lots > 0).map((zone) => ZONE_ASK[zone]);
+    const add = asks.join(' and ');
+    const milestone = nextMilestone(tick);
+    const coming = `${MILESTONE_LABEL[milestone.event]} in ${duration(milestone.inTicks)}`;
+
+    let action: string;
+    let later: string;
+    if (plan.goal === 'waitlist') {
+      action = add ? `${plan.students} waiting: add ${add} to admit them` : `${plan.students} waiting: their room is being built`;
+      later = `Waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)} · ${coming}`;
+    } else if (tick < FIRST_INTAKE_TICK) {
+      const arrives = duration(FIRST_INTAKE_TICK - tick);
+      action = add ? `${plan.students} students arrive in ${arrives}: add ${add}` : `${plan.students} students arrive in ${arrives}`;
+      const fits = Math.min(plan.students, roomForNewStudents(state).room);
+      later = fits >= plan.students ? 'There is room for all of them.' : `There is room for ${fits} of them so far.`;
     } else {
-      line = 'Zone lots beside a path before the first class arrives.';
+      action = add ? `Next class is ${plan.students}: add ${add} to fit them all` : `Room for the whole next class of ${plan.students}`;
+      later = coming;
     }
-    setText(status, line);
+    setText(status, action);
+    status.classList.toggle('urgent', add !== '');
+    setText(upcoming, later);
+  }
+
+  /** The Bottleneck tag and both bars open this: how many lots of which kind would do it. */
+  function openPlan(focus: Zone): void {
+    const state = store.state;
+    const tick = state.clock.tick;
+    const plan = roomPlan(state);
+    const tight = bottleneck(state);
+    const order = [focus, ...ZONES.filter((zone) => zone !== focus)];
+
+    openModal((close, card) => {
+      card.append(el('h1', '', tight ? `${ZONE_LABEL[tight]} is the bottleneck` : 'There is room for everyone'));
+      let lead: string;
+      if (plan.goal === 'waitlist') {
+        lead = `${plan.students} students are waiting for a place. The waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)}.`;
+      } else if (tick < FIRST_INTAKE_TICK) {
+        lead = `${plan.students} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
+      } else {
+        lead = `The next class is ${plan.students} students.`;
+      }
+      card.append(el('p', '', lead));
+
+      const list = el('ul', 'away-list');
+      for (const zone of order) {
+        const need = plan.zones[zone];
+        const unit = ZONE_UNIT[zone];
+        let text: string;
+        if (need.short === 0) {
+          text = `${ZONE_LABEL[zone]}: enough ${unit}.`;
+        } else if (need.lots === 0) {
+          text = `${ZONE_LABEL[zone]}: ${need.short} ${unit} short, and all of them are being built.`;
+        } else {
+          const lots = `${need.lots} more ${ZONE_LOT[zone][need.lots === 1 ? 0 : 1]}`;
+          const already = need.building > 0 ? ` ${need.building} ${unit} are already being built.` : '';
+          text = `${ZONE_LABEL[zone]}: ${need.short} ${unit} short.${already} ${lots} would cover it: ${need.perLot} ${unit} each, ${dollarsShort(need.lots * COST.zoneLot)} in all.`;
+        }
+        list.append(el('li', '', text));
+      }
+      card.append(list);
+      if (plan.goal === 'waitlist') {
+        // The bars look ahead to the next class too, so they can show more than this list.
+        card.append(el('p', 'fine', `The bars also count the next class of about ${expectedClass(state)}, so they show a little more.`));
+      }
+      card.append(el('p', 'fine', 'A lot must touch a path. Lots near a quad grow bigger by themselves.'));
+
+      for (const zone of order) {
+        if (plan.zones[zone].lots === 0) continue;
+        card.append(
+          button(`Zone ${ZONE_LOT[zone][1]}`, 'primary', () => {
+            session.setTool(zone);
+            close();
+          }),
+        );
+      }
+      card.append(button('Close', 'wide', close));
+    });
   }
 
   const CAUSE_TEXT: Record<StallCause, string> = {
