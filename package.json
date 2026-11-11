@@ -2,6 +2,8 @@
   "name": "campus-tycoon",
   "private": true,
   "version": "0.0.1",
+  "license": "UNLICENSED",
+  "description": "A mobile idle game where you run a fictional university.",
   "type": "module",
   "scripts": {
     "dev": "vite",

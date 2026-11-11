@@ -3,8 +3,46 @@ dist/
 *.local
 .DS_Store
 
+# Private working notes and local tool settings.
+CLAUDE.local.md
+.claude/
+
+# Secrets and signing files. They live in Cloudflare and Codemagic settings, never in this repository.
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+*.p12
+*.p8
+*.pem
+*.key
+*.cer
+*.crt
+*.der
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.keystore
+*.jks
+*.ipa
+*.xcarchive
+ExportOptions.plist
+
 # Downloaded art packs. Paid packs must never be committed.
 art/source/
 
-# The handoff page embeds a comparison render of a paid pack sampler. Keep it out of the repo.
+# Paid art fetched from the private store at build time, or built locally from a paid pack.
+art/private/
+
+# Handoff pages for the owner. One embeds a render of a paid pack sampler.
 docs/handoff/
+
+# iOS build output. The Xcode project itself is committed.
+ios/App/build/
+ios/App/output/
+ios/App/Pods/
+ios/App/App/public/
+ios/DerivedData/
+build/
+xcuserdata/

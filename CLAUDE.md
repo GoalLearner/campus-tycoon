@@ -4,9 +4,9 @@ A mobile idle sim where the player runs a fictional Division I-style university.
 
 ## Current status
 
-- **Layer 0, the first playable, is built** (2026-11-11) on the branch `layer-0-first-playable`.
-- It is waiting for the owner to play it. **Do not start Layer 1 until he says so.**
-- Nothing is pushed anywhere and nothing is published. Publishing needs his go-ahead.
+- **Layer 0, the first playable, is built** (2026-11-11). It is waiting for the owner to play it. **Do not start Layer 1 until he says so.**
+- The repository is public on GitHub. `main` holds the playable game and `layer-0-first-playable` records the layer as built.
+- Distribution is being set up outside the layers: Cloudflare Pages for the web build and TestFlight through Codemagic for iOS. See the Distribution section below.
 
 Update this section at the end of every layer.
 
@@ -30,7 +30,7 @@ Update this section at the end of every layer.
 5. **Stay inside the current layer.** Something from a later layer is out of scope even when it would be easy. Say so and move on.
 6. **Design changes go through the owner.** If building shows a decision in DESIGN.md is wrong, stop, explain, and propose options. Update DESIGN.md when he decides. Never drift from it silently.
 7. **Check every proposal against the eight design tests** (DESIGN.md 2.1) and say which one it fails, if any.
-8. **Commit after each step inside a layer, with tests passing.** Do not push unless asked.
+8. **Commit after each step inside a layer, with tests passing, and push after every commit.** The repository is public, so check each commit for secrets, signing files, personal paths and paid art before it goes.
 9. **Spend nothing.** No paid services, hosts, assets or accounts without asking first.
 
 ## Architecture rules
