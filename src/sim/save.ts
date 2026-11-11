@@ -6,7 +6,7 @@ import type { GameState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface SaveFile {
   v: number;
@@ -22,7 +22,16 @@ export type Migration = (state: Record<string, unknown>) => Record<string, unkno
  * Add one whenever the state shape changes after a release, with a test
  * that loads an old fixture.
  */
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+  // Version 2 added `variant` to every map cell, for the kind of tree planted there.
+  1: (state) => {
+    const map = state.map as { cells?: Array<Record<string, unknown>> } | undefined;
+    for (const cell of map?.cells ?? []) {
+      if (typeof cell.variant !== 'number') cell.variant = 0;
+    }
+    return state;
+  },
+};
 
 export type LoadResult =
   | { ok: true; state: GameState; savedAt: number; migratedFrom: number | null }

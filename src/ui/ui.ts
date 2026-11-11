@@ -27,6 +27,7 @@ import {
   roomForNewStudents,
   roomPlan,
   stageSpec,
+  TREE_KINDS,
   type GameState,
   type LogEntry,
   type StallCause,
@@ -70,6 +71,7 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'academic', label: 'Academic', hint: `Drag a row of lecture-hall lots · ${dollars(COST.zoneLot)} each · two fingers move the map` },
   { id: 'path', label: 'Path', hint: `Drag to lay a path · ${dollars(COST.path)} a cell` },
   { id: 'quad', label: 'Quad', hint: `Drag to plant a quad · ${dollars(COST.quad)} a cell` },
+  { id: 'tree', label: 'Tree', hint: `Tap or drag to plant trees · ${dollars(COST.tree)} each` },
   { id: 'clear', label: 'Clear', hint: `Drag to clear · ${dollars(COST.clear)} a cell` },
 ];
 
@@ -78,6 +80,7 @@ const TOOL_NOUN: Record<Exclude<ToolChoice, 'look'>, [string, string]> = {
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
   quad: ['quad cell', 'quad cells'],
+  tree: ['tree', 'trees'],
   clear: ['cell', 'cells'],
 };
 
@@ -105,18 +108,74 @@ function setTesterTools(on: boolean): void {
   }
 }
 
+interface UiManifest {
+  menuCredit?: string;
+  credits?: Array<{ author?: string }>;
+  atlas?: { image: string; data: string };
+  sprites?: Record<string, unknown>;
+  trees?: string[];
+}
+
+/** The art manifest, fetched once. The UI reads the credit line and the tree names from it. */
+let manifestOnce: Promise<UiManifest> | null = null;
+function loadManifest(): Promise<UiManifest> {
+  manifestOnce ??= fetch('./assets/manifest.json')
+    .then((response) => response.json() as Promise<UiManifest>)
+    .catch(() => ({}));
+  return manifestOnce;
+}
+
 /** The art credit for the Menu, read from the art manifest so a new pack brings its own. */
-let artCredit: Promise<string> | null = null;
 function loadArtCredit(): Promise<string> {
-  artCredit ??= fetch('./assets/manifest.json')
-    .then((response) => response.json() as Promise<{ menuCredit?: string; credits?: Array<{ author?: string }> }>)
-    .then((manifest) => {
-      if (manifest.menuCredit) return manifest.menuCredit;
-      const authors = (manifest.credits ?? []).map((credit) => credit.author).filter(Boolean);
-      return authors.length > 0 ? `Art by ${authors.join(', ')}.` : '';
-    })
-    .catch(() => '');
-  return artCredit;
+  return loadManifest().then((manifest) => {
+    if (manifest.menuCredit) return manifest.menuCredit;
+    const authors = (manifest.credits ?? []).map((credit) => credit.author).filter(Boolean);
+    return authors.length > 0 ? `Art by ${authors.join(', ')}.` : '';
+  });
+}
+
+interface TreeChoice {
+  name: string;
+  /** A small picture of the tree, cut from the atlas. Null if the atlas could not be read. */
+  picture: HTMLCanvasElement | null;
+}
+
+/** The kinds of tree the pack offers, with a thumbnail of each for the picker. */
+async function loadTreeChoices(): Promise<TreeChoice[]> {
+  const manifest = await loadManifest();
+  let kinds = 0;
+  while (kinds < TREE_KINDS && manifest.sprites?.[`tree.${kinds}`]) kinds += 1;
+  if (kinds === 0 || !manifest.atlas) return [];
+
+  let frames: Record<string, { frame: { x: number; y: number; w: number; h: number } }> = {};
+  let sheet: HTMLImageElement | null = null;
+  try {
+    frames = ((await (await fetch(`./assets/${manifest.atlas.data}`)).json()) as { frames: typeof frames }).frames;
+    sheet = new Image();
+    sheet.src = `./assets/${manifest.atlas.image}`;
+    await sheet.decode();
+  } catch {
+    sheet = null;
+  }
+
+  const choices: TreeChoice[] = [];
+  for (let kind = 0; kind < kinds; kind++) {
+    const rect = frames[`tree.${kind}`]?.frame;
+    let picture: HTMLCanvasElement | null = null;
+    if (sheet && rect) {
+      // Twice the shown size, so it stays sharp on a phone.
+      const side = 88;
+      picture = document.createElement('canvas');
+      picture.width = side;
+      picture.height = side;
+      const scale = Math.min(side / rect.w, side / rect.h);
+      const w = rect.w * scale;
+      const h = rect.h * scale;
+      picture.getContext('2d')?.drawImage(sheet, rect.x, rect.y, rect.w, rect.h, (side - w) / 2, side - h, w, h);
+    }
+    choices.push({ name: manifest.trees?.[kind] ?? `Tree ${kind + 1}`, picture });
+  }
+  return choices;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = ''): HTMLElementTagNameMap[K] {
@@ -203,6 +262,23 @@ export function mountUi(root: HTMLElement): void {
     toolbar.append(b);
   }
 
+  // ---------------------------------------------------------- tree picker --
+  // Shown above the toolbar while the Tree tool is in hand.
+  const treePicker = el('div', 'tree-picker');
+  const treeButtons: HTMLButtonElement[] = [];
+  let treeNames: string[] = [];
+  void loadTreeChoices().then((choices) => {
+    treeNames = choices.map((choice) => choice.name);
+    choices.forEach((choice, kind) => {
+      const b = button('', 'tree-choice', () => session.setTreeKind(kind));
+      if (choice.picture) b.append(choice.picture);
+      b.append(el('span', '', choice.name));
+      treeButtons.push(b);
+      treePicker.append(b);
+    });
+    render();
+  });
+
   // ------------------------------------------------------------ inspector --
   const inspector = el('div', 'inspector');
   const inspectorTitle = el('div', 'inspector-title');
@@ -213,7 +289,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, inspector, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -566,21 +642,32 @@ export function mountUi(root: HTMLElement): void {
     for (const [id, b] of toolButtons) b.classList.toggle('active', session.tool === id);
     const preview = session.preview;
     const tool = session.tool;
+
+    const picking = tool === 'tree' && treeButtons.length > 0;
+    treePicker.classList.toggle('show', picking);
+    chip.classList.toggle('raised', picking);
+    treeButtons.forEach((b, kind) => b.classList.toggle('active', kind === session.treeKind));
     if (tool === 'look') {
-      chip.classList.remove('show');
+      chip.classList.remove('show', 'bad');
       return;
     }
     if (preview && preview.cells.length > 0) {
       const n = preview.cells.length;
       const noun = TOOL_NOUN[tool][n === 1 ? 0 : 1];
       setText(chip, `${n} ${noun} · ${dollars(preview.cost)}${preview.affordable ? '' : ' · not enough cash'}`);
-      chip.className = preview.affordable ? 'chip show' : 'chip show bad';
+      chip.classList.add('show');
+      chip.classList.toggle('bad', !preview.affordable);
     } else if (preview) {
       setText(chip, 'Nothing here can take that');
-      chip.className = 'chip show bad';
+      chip.classList.add('show', 'bad');
     } else {
-      setText(chip, TOOLS.find((t) => t.id === tool)?.hint ?? '');
-      chip.className = 'chip show';
+      const name = picking ? treeNames[session.treeKind] : undefined;
+      setText(
+        chip,
+        name ? `${name} · tap or drag to plant · ${dollars(COST.tree)} each` : (TOOLS.find((t) => t.id === tool)?.hint ?? ''),
+      );
+      chip.classList.add('show');
+      chip.classList.remove('bad');
     }
   }
 

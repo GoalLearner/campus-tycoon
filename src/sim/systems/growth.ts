@@ -76,7 +76,7 @@ export function desirabilityHint(state: GameState, x: number, y: number): string
   if (cell.zone === 'housing' && parts.walkPenalty >= 6) {
     return `The walk to class is ${Math.round(parts.walkMinutes)} minutes. Students want ${WALK_FREE_MINUTES} or less.`;
   }
-  return 'There is no green space nearby. Place a quad.';
+  return 'There is no green space nearby. Place a quad or plant trees.';
 }
 
 interface Candidate {

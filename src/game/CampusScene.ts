@@ -14,6 +14,7 @@ import {
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Iso } from './iso';
+import { Walkers } from './Walkers';
 
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
 const ZONE_TINT: Record<Zone, number> = { housing: 0x9cc3ff, academic: 0xffc27a };
@@ -50,6 +51,7 @@ export class CampusScene extends Phaser.Scene {
   private mapWidth = 0;
   private mapHeight = 0;
   private gameId = '';
+  private walkers!: Walkers;
   private overlay!: Phaser.GameObjects.Graphics;
   private bars!: Phaser.GameObjects.Graphics;
   private dirty = true;
@@ -58,6 +60,7 @@ export class CampusScene extends Phaser.Scene {
   private touches = new Map<number, { x: number; y: number }>();
   private gesture: Gesture | null = null;
   private dpr = 1;
+  private pendingArrivals = 0;
 
   constructor() {
     super('campus');
@@ -68,6 +71,9 @@ export class CampusScene extends Phaser.Scene {
     this.art = new Art(this, manifest);
     this.iso = new Iso(this.art.halfWidth, this.art.halfHeight);
     this.dpr = 1 / this.scale.zoom;
+    this.walkers = new Walkers(this, this.art, this.iso);
+    // Dev builds: reach the scene from the console, for screenshots and checks.
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__scene = this;
 
     this.overlay = this.add.graphics().setDepth(1_000_000);
     this.bars = this.add.graphics().setDepth(1_000_001);
@@ -85,15 +91,25 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
     });
+    // Students who get a place while the player is watching are shown walking in.
+    const unsubscribeLive = store.onLive((entries) => {
+      let movedIn = 0;
+      for (const entry of entries) {
+        if (entry.kind === 'waitlist') movedIn += Number(entry.data?.count ?? 0);
+        else if (entry.kind === 'intake') movedIn += Number(entry.data?.admitted ?? 0);
+      }
+      if (movedIn > 0) this.pendingArrivals += movedIn;
+    });
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsubscribeStore();
       unsubscribeSession();
+      unsubscribeLive();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
   }
 
-  override update(time: number): void {
+  override update(time: number, delta: number): void {
     if (!store.hasGame) {
       if (this.visuals.length > 0) this.clearMap();
       return;
@@ -107,10 +123,16 @@ export class CampusScene extends Phaser.Scene {
     }
     if (this.dirty) {
       this.syncMap(state);
+      this.walkers.setMap(state);
       this.dirty = false;
       this.overlayDirty = true;
       this.nextBarsAt = 0;
     }
+    if (this.pendingArrivals > 0) {
+      this.walkers.arrive(this.pendingArrivals);
+      this.pendingArrivals = 0;
+    }
+    this.walkers.update(delta);
     if (this.overlayDirty) {
       this.drawOverlay();
       this.overlayDirty = false;
@@ -131,6 +153,8 @@ export class CampusScene extends Phaser.Scene {
     }
     this.visuals = [];
     this.gameId = '';
+    this.walkers.clear();
+    this.pendingArrivals = 0;
     this.overlay.clear();
     this.bars.clear();
   }
@@ -164,6 +188,39 @@ export class CampusScene extends Phaser.Scene {
     return `${prefix}.${count > 0 ? variant % count : 0}`;
   }
 
+  /**
+   * What stands on a quad cell, chosen from where the cell sits in its quad so a
+   * lawn looks laid out rather than scattered: trees at the corners and ends,
+   * benches along the edges, flowers in the middle, and plain lawn between.
+   * A quad of one cell gets the showpiece.
+   */
+  private quadTop(state: GameState, x: number, y: number): string {
+    const { width, height, cells } = state.map;
+    const isQuad = (cx: number, cy: number): boolean =>
+      cx >= 0 && cy >= 0 && cx < width && cy < height && cells[cy * width + cx]!.kind === 'quad';
+    const north = isQuad(x, y - 1);
+    const east = isQuad(x + 1, y);
+    const south = isQuad(x, y + 1);
+    const west = isQuad(x - 1, y);
+    const links = Number(north) + Number(east) + Number(south) + Number(west);
+
+    // How far this cell is from the west and north ends of its run of quad cells. Counting
+    // from the quad's own corner keeps the pattern the same wherever the quad is built.
+    let fromWest = 0;
+    while (isQuad(x - fromWest - 1, y)) fromWest += 1;
+    let fromNorth = 0;
+    while (isQuad(x, y - fromNorth - 1)) fromNorth += 1;
+
+    let top = '';
+    if (links === 0) top = 'quad.feature';
+    else if (links === 1) top = 'quad.tree';
+    else if (links === 2 && !(north && south) && !(east && west)) top = 'quad.tree';
+    else if (links === 2) top = ['', 'quad.bench', 'quad.flowers'][(east && west ? fromWest : fromNorth) % 3]!;
+    else if (links === 3) top = (north && south ? fromNorth : fromWest) % 2 === 1 ? 'quad.bench' : '';
+    else top = fromWest % 2 === 1 && fromNorth % 2 === 1 ? 'quad.flowers' : '';
+    return top && this.art.has(top) ? top : '';
+  }
+
   /** Bring every sprite in line with the state. Only cells whose look changed are touched. */
   private syncMap(state: GameState): void {
     const { width, height, cells, buildings } = state.map;
@@ -179,7 +236,15 @@ export class CampusScene extends Phaser.Scene {
         if (cell.kind === 'path') {
           groundKey = `path.${this.pathMask(state, x, y)}`;
         } else if (cell.kind === 'quad') {
-          groundKey = this.variantKey('quad', cellHash(x, y));
+          if (this.art.has('quad.lawn')) {
+            groundKey = 'quad.lawn';
+            objectKey = this.quadTop(state, x, y);
+          } else {
+            // An older pack: whole quad tiles with their trees drawn in.
+            groundKey = this.variantKey('quad', cellHash(x, y));
+          }
+        } else if (cell.kind === 'tree') {
+          objectKey = this.variantKey('tree', cell.variant);
         } else if (cell.kind === 'lot' && cell.zone) {
           const building = cell.buildingId !== null ? (buildings[cell.buildingId] ?? null) : null;
           if (building && building.stage >= 1) {
@@ -444,7 +509,12 @@ export class CampusScene extends Phaser.Scene {
       session.notify(session.tool === 'clear' ? 'Nothing there to clear.' : 'Nothing there can take that.', 'error');
       return;
     }
-    const result = store.dispatch({ type: 'paint', tool: session.tool, cells: preview.cells });
+    const result = store.dispatch({
+      type: 'paint',
+      tool: session.tool,
+      cells: preview.cells,
+      ...(session.tool === 'tree' ? { variant: session.treeKind } : {}),
+    });
     if (!result.ok) session.notify(result.error, 'error');
   }
 
@@ -460,6 +530,7 @@ export class CampusScene extends Phaser.Scene {
         const x = gx + dx;
         const y = gy + dy;
         if (!this.inMap(x, y)) continue;
+        if (store.state.map.cells[y * this.mapWidth + x]?.kind !== 'lot') continue;
         const object = this.visuals[y * this.mapWidth + x]?.object;
         if (object?.visible && object.getBounds().contains(world.x, world.y)) return [x, y];
       }

@@ -17,6 +17,25 @@ export interface SpriteDef {
   footprint: [number, number];
 }
 
+/** The four ways a person can face on the map. South-east is down and to the right. */
+export type WalkDirection = 'se' | 'sw' | 'nw' | 'ne';
+
+/**
+ * The people in a pack. Their sprites are named person.<look>.<direction>.<frame>,
+ * for example person.3.se.0. A pack that only draws two directions lists the
+ * other two under `flip`, and those are drawn mirrored.
+ */
+export interface PeopleSpec {
+  /** How many different-looking people there are. */
+  looks: number;
+  /** Frames in one walk cycle. */
+  frames: number;
+  /** Milliseconds each frame is shown at a normal walk. */
+  frameMs: number;
+  /** Directions drawn by mirroring another one: { sw: 'se' } draws south-west as a flipped south-east. */
+  flip?: Partial<Record<WalkDirection, WalkDirection>>;
+}
+
 export interface ArtManifest {
   version: number;
   pack: string;
@@ -24,6 +43,10 @@ export interface ArtManifest {
   tile: { halfWidth: number; halfHeight: number };
   atlas: { image: string; data: string };
   sprites: Record<string, SpriteDef>;
+  /** Walking people, when the pack has them. */
+  people?: PeopleSpec;
+  /** The name of each kind of tree, in order: tree.0, tree.1 and so on. */
+  trees?: string[];
 }
 
 export const MANIFEST_KEY = 'art-manifest';
@@ -52,6 +75,17 @@ export class Art {
     const tile = manifest?.tile ?? DEFAULT_TILE;
     this.halfWidth = tile.halfWidth;
     this.halfHeight = tile.halfHeight;
+  }
+
+  /** The pack's walking people, or null when it has none. */
+  get people(): PeopleSpec | null {
+    const people = this.manifest?.people;
+    return people && people.looks > 0 && people.frames > 0 ? people : null;
+  }
+
+  /** True when the manifest supplies this sprite. */
+  has(key: string): boolean {
+    return this.manifest?.sprites[key] !== undefined;
   }
 
   /** How many numbered variants exist under a prefix: "quad" counts quad.0, quad.1 and so on. */

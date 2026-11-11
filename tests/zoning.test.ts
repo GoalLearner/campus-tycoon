@@ -225,3 +225,39 @@ describe('determinism with player actions', () => {
     expect(run(37)).toEqual(run(1));
   });
 });
+
+describe('trees', () => {
+  it('plant on empty cells, cost their price and remember their kind', () => {
+    const start = rich(freshGame());
+    const result = applyAction(start, { type: 'paint', tool: 'tree', cells: northRow(18, 20), variant: 3 });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.cost).toBe(3 * COST.tree);
+    expect(cellAt(result.state.map, 19, 13)).toMatchObject({ kind: 'tree', variant: 3 });
+    // A tree cannot go where something already stands.
+    expect(previewPaint(result.state, 'tree', northRow(18, 20)).cells.length).toBe(0);
+  });
+
+  it('fall back to the first kind when the kind is not one the game knows', () => {
+    const state = paint(rich(freshGame()), 'tree', northRow(18, 18));
+    expect(cellAt(state.map, 18, 13)?.variant).toBe(0);
+    const odd = applyAction(rich(freshGame()), { type: 'paint', tool: 'tree', cells: northRow(18, 18), variant: 99 });
+    if (!odd.ok) throw new Error(odd.error);
+    expect(cellAt(odd.state.map, 18, 13)?.variant).toBe(0);
+  });
+
+  it('lift nearby lots, by less than a quad does', () => {
+    const lot: Point = [21, 13];
+    const scoreAt = (state: GameState): number => state.map.score[lot[1] * state.map.width + lot[0]]!;
+    const bare = paint(rich(freshGame()), 'housing', [lot]);
+    const withTree = paint(paint(rich(freshGame()), 'tree', [[22, 13]]), 'housing', [lot]);
+    const withQuad = paint(paint(rich(freshGame()), 'quad', [[22, 13]]), 'housing', [lot]);
+    expect(scoreAt(withTree)).toBeGreaterThan(scoreAt(bare));
+    expect(scoreAt(withQuad)).toBeGreaterThan(scoreAt(withTree));
+  });
+
+  it('clear away like anything else', () => {
+    const planted = paint(rich(freshGame()), 'tree', northRow(18, 18));
+    const cleared = paint(planted, 'clear', northRow(18, 18));
+    expect(cellAt(cleared.map, 18, 13)).toMatchObject({ kind: 'empty', variant: 0 });
+  });
+});

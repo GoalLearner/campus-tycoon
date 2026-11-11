@@ -6,7 +6,7 @@
 export type Zone = 'housing' | 'academic';
 export const ZONES: readonly Zone[] = ['housing', 'academic'];
 
-export type CellKind = 'empty' | 'path' | 'quad' | 'lot';
+export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree';
 
 export interface Cell {
   kind: CellKind;
@@ -14,6 +14,8 @@ export interface Cell {
   zone: Zone | null;
   /** Index into map.buildings, or null when nothing stands here. */
   buildingId: number | null;
+  /** Which kind the player picked. Trees only for now: the kind of tree. 0 everywhere else. */
+  variant: number;
 }
 
 export interface Rebuild {

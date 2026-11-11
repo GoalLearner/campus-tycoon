@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { buildLabel, finishBuild } from './tools/finish-build.ts';
+import { renderSave } from './tools/render/save-plugin.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -18,7 +19,8 @@ export default defineConfig(({ mode }) => {
       // The time-skip panel for testers. Only compiled in when the build asks for it.
       __TESTER_TOOLS__: JSON.stringify(process.env.TESTER_TOOLS === '1'),
     },
-    plugins: [finishBuild({ serviceWorker: !native })],
+    // renderSave is for the dev server only: it lets the pages under tools/render write sprite sheets.
+    plugins: [finishBuild({ serviceWorker: !native }), renderSave()],
     build: {
       // The app's files go to their own folder, so a web deploy can never pick them up by mistake.
       outDir: native ? 'dist-ios' : 'dist',

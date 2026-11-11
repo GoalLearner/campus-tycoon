@@ -3,6 +3,7 @@ import {
   GREEN_CAP,
   GREEN_PER_CELL,
   GREEN_RADIUS,
+  TREE_GREEN_SHARE,
   WALK_FREE_MINUTES,
   WALK_MAX_PENALTY,
   WALK_MINUTES_PER_CELL,
@@ -87,7 +88,7 @@ function walkFrom(map: MapState, steps: Int32Array, x: number, y: number): numbe
   return best === -1 ? -1 : best * WALK_MINUTES_PER_CELL;
 }
 
-/** Lift from quads near a cell, before the cap. */
+/** Lift from quads and trees near a cell, before the cap. */
 function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
   const { width, height, cells } = map;
   let lift = 0;
@@ -97,9 +98,11 @@ function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
     for (let dx = -GREEN_RADIUS; dx <= GREEN_RADIUS; dx++) {
       const nx = x + dx;
       if (nx < 0 || nx >= width) continue;
-      if (cells[ny * width + nx]!.kind !== 'quad') continue;
+      const kind = cells[ny * width + nx]!.kind;
+      const share = kind === 'quad' ? 1 : kind === 'tree' ? TREE_GREEN_SHARE : 0;
+      if (share === 0) continue;
       const d = Math.max(Math.abs(dx), Math.abs(dy));
-      lift += GREEN_PER_CELL[zone] * ((GREEN_RADIUS + 1 - d) / (GREEN_RADIUS + 1));
+      lift += GREEN_PER_CELL[zone] * share * ((GREEN_RADIUS + 1 - d) / (GREEN_RADIUS + 1));
     }
   }
   return Math.min(GREEN_CAP[zone], lift);

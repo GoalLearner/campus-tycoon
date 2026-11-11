@@ -18,6 +18,8 @@ type Listener = () => void;
 
 class Session {
   tool: ToolChoice = 'look';
+  /** The kind of tree the Tree tool plants. */
+  treeKind = 0;
   selected: { x: number; y: number } | null = null;
   preview: PaintPreview | null = null;
   toast: Toast | null = null;
@@ -38,6 +40,11 @@ class Session {
     this.tool = tool;
     this.preview = null;
     if (tool !== 'look') this.selected = null;
+    this.emit();
+  }
+
+  setTreeKind(kind: number): void {
+    this.treeKind = kind;
     this.emit();
   }
 

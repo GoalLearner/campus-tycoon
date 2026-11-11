@@ -1,6 +1,6 @@
 {
   "pack": "kenney-isometric",
-  "note": "How each game sprite is put together from Kenney's isometric tiles. Coordinates are in source pixels, measured from the top corner of a cell's ground diamond. Run tools/build_art.py after editing.",
+  "note": "How each game sprite is put together from Kenney's public-domain art. See the top of tools/build_art.py for what a layer can say. Run tools/build_art.py after editing.",
   "tile": { "halfWidth": 66, "halfHeight": 33 },
   "sources": {
     "L": "kenney-isometric-landscape/PNG/landscapeTiles_%03d.png",
@@ -13,6 +13,13 @@
     "groundBottom": 99,
     "storeyHeight": 35,
     "roofSeat": 50
+  },
+  "recolours": {
+    "comment": "The Nature Kit's leaves are teal. These move them to the greens of the ground tiles, and make the blossom tree.",
+    "leaf": { "from": [140, 205], "to": 88, "saturation": 0.8, "value": 0.9 },
+    "leafDark": { "from": [140, 205], "to": 104, "saturation": 0.85, "value": 0.72 },
+    "blossom": { "from": [140, 205], "to": 338, "saturation": 0.52, "value": 1.12 },
+    "lawn": { "from": [60, 120], "to": 92, "saturation": 1.04, "value": 1.1 }
   },
   "sprites": {
     "ground.grass": { "layers": [["L", 67, -66, 0]] },
@@ -34,9 +41,34 @@
     "path.14": { "layers": [["L", 97, -66, 0]] },
     "path.15": { "layers": [["L", 90, -66, 0]] },
 
-    "quad.0": { "layers": [["L", 67, -66, 0], ["D", 10, -40, -14], ["D", 10, 14, 6]] },
-    "quad.1": { "layers": [["L", 67, -66, 0], ["D", 10, -14, -18], ["D", 10, -34, 8], ["D", 10, 20, 2]] },
-    "quad.2": { "layers": [["L", 67, -66, 0], ["D", 10, 2, -20], ["D", 10, -24, 4]] },
+    "quad.lawn": { "layers": [{ "tile": ["L", 67], "at": [-66, 0], "recolour": "lawn" }] },
+    "quad.tree": {
+      "layers": [
+        { "file": "_candidates/kenney-nature-kit/Isometric/tree_oak_SE.png", "stand": [0.5, 0.5], "scale": 0.66, "recolour": "leaf", "shadow": [17, 8, 80] }
+      ]
+    },
+    "quad.bench": {
+      "layers": [
+        { "file": "_candidates/kenney-nature-kit/Isometric/plant_bushLarge_SE.png", "stand": [0.3, 0.3], "scale": 0.8, "recolour": "leaf", "shadow": [9, 4, 60] },
+        { "file": "_candidates/kenney-furniture-kit/Isometric/bench_SE.png", "stand": [0.52, 0.5], "scale": 0.6, "shadow": [12, 5, 60] }
+      ]
+    },
+    "quad.flowers": {
+      "layers": [
+        { "file": "_candidates/kenney-platformer-kit/Isometric/flowers_SE.png", "stand": [0.5, 0.3], "scale": 0.42 },
+        { "file": "_candidates/kenney-platformer-kit/Isometric/flowers_SE.png", "stand": [0.3, 0.52], "scale": 0.42, "flip": true },
+        { "file": "_candidates/kenney-platformer-kit/Isometric/flowers_SE.png", "stand": [0.7, 0.5], "scale": 0.42 },
+        { "file": "_candidates/kenney-platformer-kit/Isometric/flowers_SE.png", "stand": [0.5, 0.72], "scale": 0.42, "flip": true }
+      ]
+    },
+    "quad.feature": { "layers": [{ "tile": ["L", 100], "at": [-66, 0], "recolour": "lawn" }] },
+
+    "tree.0": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_oak_SE.png", "stand": [0.5, 0.5], "scale": 0.66, "recolour": "leaf", "shadow": [17, 8, 80] }] },
+    "tree.1": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_pineRoundC_SE.png", "stand": [0.5, 0.5], "scale": 0.72, "recolour": "leafDark", "shadow": [14, 6, 80] }] },
+    "tree.2": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_palmDetailedTall_SE.png", "stand": [0.5, 0.5], "scale": 0.6, "recolour": "leaf", "shadow": [14, 6, 70] }] },
+    "tree.3": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_default_SE.png", "stand": [0.5, 0.5], "scale": 0.56, "recolour": "blossom", "shadow": [16, 7, 80] }] },
+    "tree.4": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_oak_fall_SE.png", "stand": [0.5, 0.5], "scale": 0.66, "shadow": [17, 8, 80] }] },
+    "tree.5": { "layers": [{ "file": "_candidates/kenney-nature-kit/Isometric/tree_tall_SE.png", "stand": [0.5, 0.5], "scale": 0.6, "recolour": "leafDark", "shadow": [11, 5, 80] }] },
 
     "lot.empty": { "layers": [["C", 72, -66, 0]] },
     "lot.site": { "layers": [["L", 73, -66, 0], ["B", 5, -49, 8], ["D", 8, -68, 20], ["D", 9, -3, 20]] },
@@ -56,6 +88,33 @@
     "academic.2.1": { "stack": { "ground": 116, "uppers": [24], "roof": null } },
     "academic.2.2": { "stack": { "ground": 109, "uppers": [15], "roof": null } }
   },
+  "trees": ["Oak", "Pine", "Palm", "Blossom", "Maple", "Cypress"],
+  "people": {
+    "comment": "Rendered from Kenney's Mini Characters by tools/render/people.html. South-east and north-east are the other two rows mirrored.",
+    "frames": 8,
+    "frameMs": 84,
+    "height": 34,
+    "cell": [192, 256],
+    "feet": [96, 224],
+    "rows": { "sw": 0, "nw": 1 },
+    "flip": { "se": "sw", "ne": "nw" },
+    "shadow": [8, 4, 90],
+    "looks": [
+      "_rendered/kenney-people/female-a.png",
+      "_rendered/kenney-people/female-b.png",
+      "_rendered/kenney-people/female-c.png",
+      "_rendered/kenney-people/female-d.png",
+      "_rendered/kenney-people/female-e.png",
+      "_rendered/kenney-people/female-f.png",
+      "_rendered/kenney-people/male-a.png",
+      "_rendered/kenney-people/male-b.png",
+      "_rendered/kenney-people/male-c.png",
+      "_rendered/kenney-people/male-d.png",
+      "_rendered/kenney-people/male-e.png",
+      "_rendered/kenney-people/male-f.png",
+      "_rendered/kenney-people/male-g.png"
+    ]
+  },
   "footprints": {},
   "menuCredit": "Art by Kenney (kenney.nl), public domain.",
   "credits": [
@@ -65,7 +124,23 @@
       "licence": "Creative Commons Zero (CC0)",
       "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/",
       "source": "https://kenney.nl/assets",
-      "changes": "Tiles are layered into whole buildings, quads and lots, then packed into one atlas."
+      "changes": "Tiles are layered into whole buildings, quads and lots, then packed into one atlas. Lawn tiles are brightened."
+    },
+    {
+      "name": "Nature Kit, Furniture Kit and Platformer Kit",
+      "author": "Kenney Vleugels (www.kenney.nl)",
+      "licence": "Creative Commons Zero (CC0)",
+      "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets",
+      "changes": "Trees, bushes, flowers and benches are shrunk to the map's scale. Leaves are recoloured from teal to green, and one tree to blossom pink. Soft shadows are added."
+    },
+    {
+      "name": "Mini Characters",
+      "author": "Kenney Vleugels (www.kenney.nl)",
+      "licence": "Creative Commons Zero (CC0)",
+      "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets",
+      "changes": "The 3D characters are rendered to small walking sprites from the map's camera angle. Soft shadows are added."
     }
   ]
 }

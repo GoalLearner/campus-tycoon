@@ -1234,7 +1234,10 @@ The smallest thing that proves the core loop is fun: zone, grow, intake, bottlen
 | Growth | Two stages, automatic, with timed rebuilds and the old building serving |
 | Demand | One applicant pool. Two forecast bars. The Bottleneck tag and the turned-away count. Tapping a bar or the tag says exactly how many lots of which kind would seat the students who are waiting, or the next class, with the cost |
 | HUD wording | The HUD leads with what is happening now ("Fall semester in session"), then what the player can do ("310 waiting: add Academic seats to admit them"). The countdown to the next class is a smaller second line. Changed on 2026-11-11 after the owner's first session, when the countdown read as a wait before play could start |
-| Desirability | Quads and walk time only. The lot inspector names one stall cause |
+| Desirability | Quads, trees and walk time only. The lot inspector names one stall cause |
+| Trees | A Tree tool with a picker of six kinds. A tree sits on one cell, costs $6,000 [T] and lifts nearby lots about a third as much as a quad cell [T]. Added on 2026-11-11 after the owner's first session |
+| Quads | A quad is a clean lawn. What stands on each cell follows from its place in the quad: trees at corners and ends, benches along edges, flowers in the middle, a showpiece on a quad of one cell. No scatter |
+| Walking students | A sample of the students walks the paths between housing, classes and quads. The number in view grows with enrollment and with how much of the campus is on screen. Students who get a place while the player watches walk in from the edge of campus under a "+24 moving in" note. It is for show only: nothing is saved, the sim never runs it, and catch-up does not pay for it. Brought forward from the polish layer on 2026-11-11 |
 | Money | Flat tuition, zoning and path costs, upkeep. The HUD shows cash and net income per real hour |
 | Feedback | A plain list of what happened while away |
 | Identity | A school name |
@@ -1347,6 +1350,7 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Demand | Founding class size | To be set with the first rung |
 | First playable | Stand-in pool, bed need, flat tuition, flat retention | To be set in layer 0 |
 | Desirability | Radii, weights, the 8-minute walk limit | The table in 8.2 |
+| Desirability | Tree price and a tree's share of a quad cell's lift | $6,000 and 0.34 |
 | Services | Base radii, capacities, funding curve | To be set |
 | Money | Price steps for the three levers | To be set from the budget shares |
 | Money | Slider range and overfunding cost curve | About 50% to 120% |

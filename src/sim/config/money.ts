@@ -12,6 +12,8 @@ export const OPERATING_COST_PER_STUDENT_PER_YEAR = 6_500;
 export const COST = {
   path: 2_000,
   quad: 15_000,
+  /** One tree on one cell. Three trees lift nearby lots about as much as one quad cell, for a little more money. */
+  tree: 6_000,
   zoneLot: 15_000,
   clear: 1_000,
 } as const;
