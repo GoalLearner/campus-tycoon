@@ -791,6 +791,26 @@ button.student-reason {
   color: var(--accent);
 }
 
+.inspector-action {
+  display: none;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16201b;
+}
+
+.inspector-action.show {
+  display: block;
+}
+
+.away-note {
+  color: var(--accent);
+}
+
 /* ---------------------------------------------------------------- toast */
 
 .toast {

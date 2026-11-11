@@ -18,6 +18,12 @@ export interface Cell {
   variant: number;
   /** Index into map.placed for a cell under a hand-placed building, or null. */
   placedId: number | null;
+  /**
+   * The tick the player paid for what is on this cell: a path, a quad, a tree
+   * or a zoned lot. -1 for empty ground and for anything the campus began
+   * with, which was never paid for and so refunds nothing.
+   */
+  builtTick: number;
 }
 
 /** The hand-placed buildings of the Build menu. Their numbers live in config/placed.ts. */
@@ -45,6 +51,8 @@ export interface Placed {
   y: number;
   w: number;
   h: number;
+  /** The tick it was placed and paid for. -1 for one the campus began with. */
+  builtTick: number;
 }
 
 export interface Rebuild {

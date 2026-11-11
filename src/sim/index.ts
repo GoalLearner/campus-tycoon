@@ -8,7 +8,7 @@ export * from './config/map';
 export * from './config/demand';
 export * from './config/desirability';
 export { advance } from './advance';
-export { applyAction, previewPaint, rowBetween, type Action, type ActionResult, type PaintPreview, type Point, type Tool } from './actions';
+export { applyAction, previewPaint, refundFor, rowBetween, type Action, type ActionResult, type PaintPreview, type Point, type Tool } from './actions';
 export {
   averageDesirability,
   bottleneck,
@@ -31,6 +31,7 @@ export {
   fedAt,
   inReach,
   libraryLift,
+  nearestSpot,
   placedAt,
   previewPlace,
   reachCells,

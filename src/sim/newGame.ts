@@ -18,7 +18,7 @@ export interface NewGameOptions {
 
 function emptyMap(size: number): MapState {
   const cells: Cell[] = [];
-  for (let i = 0; i < size * size; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null });
+  for (let i = 0; i < size * size; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
   return {
     width: size,
     height: size,

@@ -385,7 +385,7 @@ export class CampusScene extends Phaser.Scene {
     for (const tint of [...this.tints, ...this.ghostTints()]) {
       for (const [x, y] of tint.cells) this.fillCell(x, y, tint.colour, tint.alpha);
     }
-    const preview = session.preview;
+    const preview = session.clearing ?? session.preview;
     if (preview) {
       const colour = preview.affordable ? 0x6fe38c : 0xff6b5e;
       for (const [x, y] of preview.cells) this.fillCell(x, y, colour, 0.5);
@@ -528,6 +528,8 @@ export class CampusScene extends Phaser.Scene {
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     this.touches.set(pointer.id, { x: pointer.x, y: pointer.y });
+    // Touching the map again drops a clear that was waiting for a yes.
+    session.cancelClear();
     if (!store.hasGame) return;
 
     if (this.touches.size >= 2) {
@@ -629,6 +631,11 @@ export class CampusScene extends Phaser.Scene {
     if (session.tool === 'look' || session.tool === 'place' || !preview) return;
     if (preview.cells.length === 0) {
       session.notify(session.tool === 'clear' ? 'Nothing there to clear.' : 'Nothing there can take that.', 'error');
+      return;
+    }
+    if (session.tool === 'clear') {
+      // Nothing is cleared until the player has seen what comes back.
+      session.askClear(preview);
       return;
     }
     const result = store.dispatch({

@@ -56,10 +56,10 @@ export function previewPlace(state: GameState, type: PlacedType, x: number, y: n
   return { type, x, y, cells, cost: spec.cost, problem };
 }
 
-/** Put a building on the map. The caller has checked the spot and paid. */
-export function addPlaced(map: MapState, type: PlacedType, x: number, y: number): Placed {
+/** Put a building on the map. The caller has checked the spot and paid. `builtTick` is -1 for one the campus begins with. */
+export function addPlaced(map: MapState, type: PlacedType, x: number, y: number, builtTick = -1): Placed {
   const spec = PLACED[type];
-  const placed: Placed = { id: map.placed.length, type, x, y, w: spec.w, h: spec.h };
+  const placed: Placed = { id: map.placed.length, type, x, y, w: spec.w, h: spec.h, builtTick };
   map.placed.push(placed);
   for (let cy = y; cy < y + spec.h; cy++) {
     for (let cx = x; cx < x + spec.w; cx++) {
@@ -69,6 +69,7 @@ export function addPlaced(map: MapState, type: PlacedType, x: number, y: number)
       cell.buildingId = null;
       cell.placedId = placed.id;
       cell.variant = 0;
+      cell.builtTick = builtTick;
     }
   }
   return placed;
@@ -82,6 +83,7 @@ export function removePlaced(map: MapState, id: number): void {
       const cell = map.cells[cy * map.width + cx]!;
       cell.kind = 'empty';
       cell.placedId = null;
+      cell.builtTick = -1;
     }
   }
   map.placed[id] = null;
@@ -130,6 +132,44 @@ export function libraryLift(map: MapState, x: number, y: number): number {
     const spec = PLACED[placed.type];
     const fade = (spec.radius + 1 - cellsFrom(placed, x, y)) / (spec.radius + 1);
     best = Math.max(best, spec.strength * fade);
+  }
+  return best;
+}
+
+/**
+ * The nearest free ground to a lot where a building would still reach it: the
+ * spot the "build one here" shortcut offers. Ground beside a path wins a tie.
+ * null when nothing in reach is free.
+ */
+export function nearestSpot(state: GameState, type: PlacedType, x: number, y: number): { x: number; y: number } | null {
+  const spec = PLACED[type];
+  const map = state.map;
+  const besidePath = (px: number, py: number): boolean => {
+    for (let cy = py; cy < py + spec.h; cy++) {
+      for (let cx = px; cx < px + spec.w; cx++) {
+        for (const [dx, dy] of NEIGHBOURS) {
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.cells[ny * map.width + nx]!.kind === 'path') return true;
+        }
+      }
+    }
+    return false;
+  };
+  let best: { x: number; y: number } | null = null;
+  let bestScore = Infinity;
+  for (let py = y - spec.radius - spec.h + 1; py <= y + spec.radius; py++) {
+    for (let px = x - spec.radius - spec.w + 1; px <= x + spec.radius; px++) {
+      const far = cellsFrom({ id: -1, type, x: px, y: py, w: spec.w, h: spec.h, builtTick: -1 }, x, y);
+      if (far < 1 || far > spec.radius) continue;
+      const problem = previewPlace(state, type, px, py).problem;
+      if (problem === 'blocked' || problem === 'offMap') continue;
+      const score = far + (besidePath(px, py) ? 0 : 0.5);
+      if (score < bestScore) {
+        bestScore = score;
+        best = { x: px, y: py };
+      }
+    }
   }
   return best;
 }
