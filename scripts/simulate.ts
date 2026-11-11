@@ -1,4 +1,6 @@
 import {
+  campusHappiness,
+  PLACED,
   advance,
   averageDesirability,
   buildings,
@@ -172,6 +174,7 @@ function assertLayerZero(runs: Run[]): void {
   console.log('\nLAYER 0 ASSERTIONS');
   const casual = runs.find((r) => r.style === 'casual')!;
   const absent = runs.find((r) => r.style === 'absent')!;
+  const optimizer = runs.find((r) => r.style === 'optimizer')!;
 
   // 1. Determinism: one call and a thousand small ones, on a campus with plenty going on.
   {
@@ -226,6 +229,37 @@ function assertLayerZero(runs: Run[]): void {
 
   // 6. No run leaves a broken number in the state.
   check('every final state validates', runs.every((r) => validate(r.final) === null), `${runs.length} runs`);
+
+  // 7. The Build menu gives cash somewhere to go. Checked while there is still land to build on.
+  {
+    const placed = (state: GameState): number => state.map.placed.filter((p) => p && PLACED[p.type].buildable).length;
+    const y3 = casual.rows[2];
+    const ok = placed(casual.final) >= 5 && !!y3 && y3.cash < 2 * Math.max(1, y3.netPerYear);
+    check(
+      'a player who uses the Build menu does not pile up cash',
+      ok,
+      y3 ? `casual: ${placed(casual.final)} buildings placed, ${dollarsShort(y3.cash)} in hand in year 3 against ${dollarsShort(y3.netPerYear)} a year` : 'ran fewer than three years',
+    );
+  }
+
+  // 8. A campus with no coverage is less happy, and stays so: it never spirals.
+  {
+    const bare = campusHappiness(absent.final);
+    const tended = campusHappiness(optimizer.final);
+    const safe = (mood: typeof bare): number => mood.causes.find((c) => c.id === 'safety')?.level ?? 0;
+    const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && bare.retention >= 0.95;
+    check('an uncovered campus loses happiness but never spirals', ok, `happiness ${bare.score.toFixed(0)} uncovered against ${tended.score.toFixed(0)} covered, after five years and twenty`);
+  }
+
+  // 9. A covered campus handles nearly every incident.
+  {
+    const before = optimizer.final.incidents;
+    const later = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + 3 * DAY_MS).state.incidents;
+    const handled = later.handled - before.handled;
+    const missed = later.missed - before.missed;
+    const ok = handled + missed > 10 && handled / (handled + missed) >= 0.9;
+    check('a covered campus handles nearly every incident', ok, `${handled} handled and ${missed} missed over three days`);
+  }
 }
 
 // ------------------------------------------------------------------- main --
