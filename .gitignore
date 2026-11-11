@@ -37,6 +37,9 @@ art/source/
 # Paid art fetched from the private store at build time, or built locally from a paid pack.
 art/private/
 
+# Reference material such as real campus maps. Copyrighted: it guides the design and is never committed.
+art/reference/
+
 # Handoff pages for the owner. One embeds a render of a paid pack sampler.
 docs/handoff/
 
