@@ -1,0 +1,1428 @@
+{
+ "pack": "penzilla-giant-city",
+ "private": true,
+ "note": "Written by tools/make_penzilla_recipe.py. Edit that script, not this file.",
+ "tile": {
+  "halfWidth": 66,
+  "halfHeight": 37.640625
+ },
+ "scale": 0.2578125,
+ "canvas": {
+  "comment": "The pack draws on a 512 wide grid whose diamonds are 292 tall. Every picture is bottom-aligned, with 152 pixels of earth under the front corner.",
+  "cell": 512,
+  "rise": 146,
+  "bottom": 152
+ },
+ "sources": {},
+ "recolours": {
+  "comment": "A mown lawn: the same grass, a little greener and brighter.",
+  "lawn": {
+   "from": [
+    45,
+    95
+   ],
+   "to": 76,
+   "saturation": 1.0,
+   "value": 1.13
+  },
+  "cross": {
+   "from": [
+    0,
+    30
+   ],
+   "to": 135,
+   "saturation": 0.9,
+   "value": 0.82,
+   "minSaturation": 0.5
+  }
+ },
+ "swaps": {
+  "comment": "Colours taken from the pack: the rim drawn round the top of a grass tile, and the grass itself.",
+  "rim": {
+   "from": [
+    149,
+    148,
+    55
+   ],
+   "to": [
+    166,
+    173,
+    54
+   ],
+   "within": 12,
+   "above": 220
+  }
+ },
+ "sprites": {
+  "ground.grass": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "path.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.6": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.7": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.8": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.9": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.11": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.12": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.13": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.14": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "path.15": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "lot.empty": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Dirt.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "lot.site": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Dirt.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Construction_1x1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "lot.works": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/EmergencyCone.png",
+     "stand": [
+      0.22,
+      0.96
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/EmergencyCone.png",
+     "stand": [
+      0.96,
+      0.22
+     ]
+    }
+   ]
+  },
+  "housing.1.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "housing.2.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "housing.1.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "housing.2.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "housing.1.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "housing.2.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.1.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.2.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.1.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.2.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.1.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "academic.2.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "quad.lawn": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "recolour": "lawn"
+    }
+   ]
+  },
+  "quad.tree": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree1.png",
+     "stand": [
+      0.5,
+      0.52
+     ]
+    }
+   ]
+  },
+  "quad.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "recolour": "lawn"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree1.png",
+     "stand": [
+      0.5,
+      0.52
+     ]
+    }
+   ]
+  },
+  "quad.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "recolour": "lawn"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree13.png",
+     "stand": [
+      0.5,
+      0.52
+     ]
+    }
+   ]
+  },
+  "quad.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "recolour": "lawn"
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Bench.png",
+     "stand": [
+      0.56,
+      0.6
+     ]
+    }
+   ]
+  },
+  "quad.bench": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.26,
+      0.3
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Bench.png",
+     "stand": [
+      0.56,
+      0.6
+     ]
+    }
+   ]
+  },
+  "quad.flowers": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.5,
+      0.32
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.28,
+      0.58
+     ],
+     "flip": true
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.72,
+      0.58
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.5,
+      0.82
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "quad.feature": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Fountain.png",
+     "stand": [
+      0.5,
+      0.68
+     ]
+    }
+   ]
+  },
+  "tree.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree1.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "tree.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Pine1.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "tree.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Palm1.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "tree.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree13.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "tree.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree22.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "tree.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree10.png",
+     "stand": [
+      0.5,
+      0.55
+     ]
+    }
+   ]
+  },
+  "build.library": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Public_Library.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Public_Library_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.gym": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Workplace_Empty_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ],
+     "paste": [
+      {
+       "file": "penzilla/SportAndGames/Weight.png",
+       "box": [
+        386,
+        452,
+        534,
+        566
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "build.dining": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Sandwich.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Sandwich_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.store": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Kiosk_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Kiosk_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.parking": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Carpark_1x2_Sign.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.track": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_Athletics.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_Athletics_Roof.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.courts": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_Tennis.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "cut": [
+      [
+       180,
+       668
+      ],
+      [
+       660,
+       392
+      ],
+      [
+       1000,
+       578
+      ],
+      [
+       512,
+       866
+      ]
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_Tennis_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.medical": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Doctor_EmergencyRoom.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "recolour": "cross"
+    }
+   ]
+  },
+  "build.safety": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Emergency_PoliceStation.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.stadium": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Roof.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.studentlife": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Theater.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Theater_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.school": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Education_School.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.college": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Education_College.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.university": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Education_University.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.site": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Construction_2x2.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "pond.small": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Pond.png",
+     "stand": [
+      0.94,
+      0.94
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/LakePlants1.png",
+     "stand": [
+      0.3,
+      0.72
+     ]
+    }
+   ]
+  },
+  "pond.medium": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Park_Pond.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "water.top": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake16.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.right": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake13.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.bottom": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake11.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.left": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake13.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "flip": true
+    }
+   ]
+  },
+  "water.ne": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake14.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.nw": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake18.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.sw": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake19.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    }
+   ]
+  },
+  "water.se": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake19.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "flip": true
+    }
+   ]
+  },
+  "water.full": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake27.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "cut": [
+      [
+       0,
+       214
+      ],
+      [
+       512,
+       214
+      ],
+      [
+       512,
+       512
+      ],
+      [
+       0,
+       512
+      ]
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake28.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "cut": [
+      [
+       0,
+       0
+      ],
+      [
+       512,
+       0
+      ],
+      [
+       512,
+       215
+      ],
+      [
+       0,
+       215
+      ]
+     ]
+    }
+   ]
+  },
+  "water.bridge": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/BridgeWood.png",
+     "stand": [
+      0.98,
+      0.98
+     ]
+    }
+   ]
+  },
+  "icon.injury": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Pharmacy_OneFloorRoofed.png",
+     "crop": [
+      632,
+      416,
+      772,
+      606
+     ],
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "recolour": "cross"
+    }
+   ]
+  },
+  "icon.mischief": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/EmergencyCone.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.5
+    }
+   ]
+  },
+  "decor.hoop": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/BasketBallNet.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.16
+    }
+   ]
+  },
+  "decor.car": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Blue_Front.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "decor.lamp": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/StreetLampOn.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "decor.hedge": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Bushes1.png",
+     "stand": [
+      0.5,
+      0.6
+     ]
+    }
+   ]
+  }
+ },
+ "trees": [
+  "Oak",
+  "Pine",
+  "Palm",
+  "Blossom",
+  "Maple",
+  "Elm"
+ ],
+ "people": {
+  "comment": "Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last two looks are the responders, not part of the crowd.",
+  "frames": 8,
+  "frameMs": 84,
+  "height": 36,
+  "cell": [
+   220,
+   220
+  ],
+  "rows": {
+   "sw": 1,
+   "nw": 3
+  },
+  "flip": {
+   "se": "sw",
+   "ne": "nw"
+  },
+  "crowd": 21,
+  "roles": {
+   "medic": 21,
+   "officer": 22,
+   "athlete": 16
+  },
+  "looks": [
+   "penzilla/NPC/NpcReadymade_Character1.png",
+   "penzilla/NPC/NpcReadymade_Character2.png",
+   "penzilla/NPC/NpcReadymade_Character3.png",
+   "penzilla/NPC/NpcReadymade_Character4.png",
+   "penzilla/NPC/NpcReadymade_Character5.png",
+   "penzilla/NPC/NpcReadymade_Character6.png",
+   "penzilla/NPC/NpcReadymade_Character7.png",
+   "penzilla/NPC/NpcReadymade_Character8.png",
+   "penzilla/NPC/NpcReadymade_Character9.png",
+   "penzilla/NPC/NpcReadymade_Character10.png",
+   "penzilla/NPC/NpcReadymade_Character11.png",
+   "penzilla/NPC/NpcReadymade_Character12.png",
+   "penzilla/NPC/NpcReadymade_Character13.png",
+   "penzilla/NPC/NpcReadymade_Character14.png",
+   "penzilla/NPC/NpcReadymade_Character15.png",
+   "penzilla/NPC/NpcReadymade_Character16.png",
+   "penzilla/NPC/NpcReadymade_SportsPlayer1.png",
+   "penzilla/NPC/NpcReadymade_SportsPlayer2.png",
+   "penzilla/NPC/NpcReadymade_SportsPlayer3.png",
+   "penzilla/NPC/NpcReadymade_SportsPlayer4.png",
+   "penzilla/NPC/NpcReadymade_Teacher.png",
+   "penzilla/NPC/NpcReadymade_Doctor.png",
+   "penzilla/NPC/NpcReadymade_Police.png"
+  ]
+ },
+ "footprints": {
+  "build.library": [
+   2,
+   2
+  ],
+  "build.gym": [
+   2,
+   1
+  ],
+  "build.dining": [
+   2,
+   1
+  ],
+  "build.store": [
+   2,
+   1
+  ],
+  "build.parking": [
+   2,
+   1
+  ],
+  "build.track": [
+   2,
+   2
+  ],
+  "build.courts": [
+   2,
+   2
+  ],
+  "build.medical": [
+   2,
+   2
+  ],
+  "build.safety": [
+   2,
+   2
+  ],
+  "build.stadium": [
+   2,
+   2
+  ],
+  "build.studentlife": [
+   2,
+   2
+  ],
+  "build.school": [
+   2,
+   2
+  ],
+  "build.college": [
+   2,
+   2
+  ],
+  "build.university": [
+   2,
+   2
+  ],
+  "build.site": [
+   2,
+   2
+  ],
+  "pond.medium": [
+   2,
+   2
+  ]
+ },
+ "menuCredit": "Graphics created by Penzilla Design.",
+ "credits": [
+  {
+   "name": "Isometric City Builder Pack, Giant NPC Sprite Pack, Medieval City Builder Pack, and Sport and Games Pack",
+   "author": "Graphics created by Penzilla Design (penzilla.itch.io)",
+   "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
+   "licenceUrl": "https://penzilla.itch.io/",
+   "source": "https://penzilla.itch.io/",
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Red crosses on the medical building and the first-aid icon are recoloured green."
+  }
+ ]
+}

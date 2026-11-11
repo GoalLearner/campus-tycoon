@@ -14,6 +14,7 @@ import {
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Iso } from './iso';
+import { PlacedSprites, type PlacedItem } from './Placed';
 import { Walkers } from './Walkers';
 
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
@@ -45,13 +46,17 @@ function cellHash(x: number, y: number): number {
  * a finished drag is sent to the store as an action.
  */
 export class CampusScene extends Phaser.Scene {
-  private art!: Art;
+  /** Read by the dev tools to find the responder looks. */
+  art!: Art;
   private iso!: Iso;
   private visuals: Visual[] = [];
   private mapWidth = 0;
   private mapHeight = 0;
   private gameId = '';
   private walkers!: Walkers;
+  private placed!: PlacedSprites;
+  /** Extra tinted cells: the reach of a building being placed, or a coverage overlay. */
+  private tints: Array<{ cells: Point[]; colour: number; alpha: number }> = [];
   private overlay!: Phaser.GameObjects.Graphics;
   private bars!: Phaser.GameObjects.Graphics;
   private dirty = true;
@@ -72,6 +77,7 @@ export class CampusScene extends Phaser.Scene {
     this.iso = new Iso(this.art.halfWidth, this.art.halfHeight);
     this.dpr = 1 / this.scale.zoom;
     this.walkers = new Walkers(this, this.art, this.iso);
+    this.placed = new PlacedSprites(this, this.art, this.iso);
     // Dev builds: reach the scene from the console, for screenshots and checks.
     if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__scene = this;
 
@@ -133,6 +139,7 @@ export class CampusScene extends Phaser.Scene {
       this.pendingArrivals = 0;
     }
     this.walkers.update(delta);
+    this.placed.update(time);
     if (this.overlayDirty) {
       this.drawOverlay();
       this.overlayDirty = false;
@@ -154,6 +161,8 @@ export class CampusScene extends Phaser.Scene {
     this.visuals = [];
     this.gameId = '';
     this.walkers.clear();
+    this.placed.clear();
+    this.tints = [];
     this.pendingArrivals = 0;
     this.overlay.clear();
     this.bars.clear();
@@ -297,10 +306,24 @@ export class CampusScene extends Phaser.Scene {
     this.overlay.fillPoints(this.iso.diamond(x, y), true);
   }
 
+  /** Show hand-placed things. Used by the dev look-preview until the Build menu exists. */
+  setPlaced(items: readonly PlacedItem[]): void {
+    this.placed.set(items);
+  }
+
+  /** Tint groups of cells, for a reach or coverage area. */
+  setTints(tints: Array<{ cells: Point[]; colour: number; alpha: number }>): void {
+    this.tints = tints;
+    this.overlayDirty = true;
+  }
+
   /** The paint preview and the selected lot. */
   private drawOverlay(): void {
     const g = this.overlay;
     g.clear();
+    for (const tint of this.tints) {
+      for (const [x, y] of tint.cells) this.fillCell(x, y, tint.colour, tint.alpha);
+    }
     const preview = session.preview;
     if (preview) {
       const colour = preview.affordable ? 0x6fe38c : 0xff6b5e;

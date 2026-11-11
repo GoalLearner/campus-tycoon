@@ -34,6 +34,10 @@ export interface PeopleSpec {
   frameMs: number;
   /** Directions drawn by mirroring another one: { sw: 'se' } draws south-west as a flipped south-east. */
   flip?: Partial<Record<WalkDirection, WalkDirection>>;
+  /** How many of the looks, counted from the first, are ordinary people in the crowd. Defaults to all of them. */
+  crowd?: number;
+  /** Looks with a job, by name: { medic: 21, officer: 22 }. */
+  roles?: Record<string, number>;
 }
 
 export interface ArtManifest {

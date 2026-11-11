@@ -290,7 +290,7 @@ export class Walkers {
     const begin = route[leg - 1]!;
     this.walkers.push({
       sprite,
-      look: Math.floor(Math.random() * people.looks),
+      look: Math.floor(Math.random() * Math.min(people.looks, people.crowd ?? people.looks)),
       route,
       leg,
       x: begin.x,

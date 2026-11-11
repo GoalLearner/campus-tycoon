@@ -26,12 +26,22 @@ or an object with any of:
 
     "file":     a file under art/source            (or "tile": ["L", 67])
     "crop":     [left, top, right, bottom] in the file's own pixels
+    "cut":      a list of [x, y] points in the file's own pixels: only the
+                inside of that outline is kept
+    "paste":    [{"file": ..., "box": [left, top, right, bottom]}]: other
+                pictures shrunk into boxes of this one before anything else
     "scale":    size change for this layer, on top of the recipe's "scale"
     "recolour": the name of a rule under "recolours"
+    "swap":     the name of a rule under "swaps": one exact colour replaced by
+                another, used to hide a tile's drawn rim so tiles join cleanly
     "flip":     true to mirror it
     "at":       [dx, dy] top-left corner, as above
     "stand":    [x, y] in cells: the middle of the picture's bottom edge is put
                 on that spot of the cell, so [0.5, 0.5] stands it in the middle
+    "footprint": [w, h] in cells, for packs that draw every picture on a canvas
+                lined up with the ground grid (see "canvas" in the recipe). The
+                picture is placed so its ground meets a w by h block of cells
+                whose top corner is this cell. "shift": [x, y] in cells moves it.
     "lift":     pixels to raise a standing picture, for art with space under it
     "shadow":   [radius x, radius y, darkness 0-255] a soft shadow under a
                 standing picture
@@ -109,6 +119,18 @@ def recoloured(im, rule):
     return Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGBA')
 
 
+def swapped(im, rule):
+    """Replace every pixel close to rule["from"] with rule["to"]. Used on the file's own pixels, before shrinking."""
+    a = np.asarray(im.convert('RGBA')).astype(np.int16)
+    near = np.abs(a[..., :3] - np.array(rule['from'], dtype=np.int16)).max(axis=-1) <= rule.get('within', 10)
+    if 'above' in rule:  # only rows above this line of the picture
+        rows = np.arange(a.shape[0])[:, None] < rule['above']
+        near = near & rows
+    out = a.copy()
+    out[..., :3][near] = np.array(rule['to'], dtype=np.int16)
+    return Image.fromarray(out.astype(np.uint8), 'RGBA')
+
+
 def soft_shadow(canvas, centre, radius_x, radius_y, darkness):
     layer = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
     cx, cy = centre
@@ -146,6 +168,40 @@ class Builder:
             return
 
         im = self.numbered(*layer['tile']) if 'tile' in layer else self.open(layer['file'])
+        if 'swap' in layer:
+            im = swapped(im, self.recipe['swaps'][layer['swap']])
+        if 'paste' in layer:
+            im = im.copy()
+            for extra in layer['paste']:
+                left, top, right, bottom = extra['box']
+                piece = self.open(extra['file'])
+                piece = piece.crop(piece.getbbox())
+                fit = min((right - left) / piece.width, (bottom - top) / piece.height)
+                piece = resized(piece, fit)
+                im.alpha_composite(piece, (round((left + right - piece.width) / 2), round((top + bottom - piece.height) / 2)))
+        if 'cut' in layer:
+            mask = Image.new('L', im.size, 0)
+            ImageDraw.Draw(mask).polygon([tuple(point) for point in layer['cut']], fill=255)
+            clear = Image.new('RGBA', im.size, (0, 0, 0, 0))
+            im = Image.composite(im, clear, mask)
+        if 'footprint' in layer:
+            # The pack's own grid, in the file's pixels: where this picture's ground block begins.
+            grid = self.recipe['canvas']
+            w, h = layer['footprint']
+            corner_x = h * grid['cell'] / 2
+            corner_y = im.height - grid['bottom'] - (w + h) * grid['rise']
+            factor = self.scale * layer.get('scale', 1.0)
+            sx, sy = layer.get('shift', [0, 0])
+            px, py = self.cell_point(sx, sy)
+            if layer.get('flip'):
+                # Mirrored about the middle of the picture, which is the middle of a square block of cells.
+                im = im.transpose(Image.FLIP_LEFT_RIGHT)
+                corner_x = im.width - corner_x
+            im = resized(im, factor)
+            if 'recolour' in layer:
+                im = recoloured(im, self.recipe['recolours'][layer['recolour']])
+            canvas.alpha_composite(im, (round(px - corner_x * factor), round(py - corner_y * factor)))
+            return
         if 'crop' in layer:
             im = im.crop(tuple(layer['crop']))
         if 'stand' in layer:
@@ -217,13 +273,22 @@ class Builder:
             sheet = self.open(relative)
             cells = {}
             up = side = down = 0
+            # With no feet point given, the person stands at the lowest pixel of the whole
+            # sheet, so a bob up and down is kept rather than flattened.
+            lowest = 0
+            if not feet:
+                for row in rows.values():
+                    for f in range(frames):
+                        box = sheet.crop((f * cell_w, row * cell_h, (f + 1) * cell_w, (row + 1) * cell_h)).getbbox()
+                        if box:
+                            lowest = max(lowest, box[3])
             for direction, row in rows.items():
                 for f in range(frames):
                     cell = sheet.crop((f * cell_w, row * cell_h, (f + 1) * cell_w, (row + 1) * cell_h))
                     box = cell.getbbox()
                     if box is None:
                         raise ValueError(f'{relative}: empty frame {direction} {f}')
-                    fx, fy = feet if feet else (cell_w / 2, box[3])
+                    fx, fy = feet if feet else (cell_w / 2, lowest)
                     cells[(direction, f)] = (cell, fx, fy)
                     up = max(up, fy - box[1])
                     down = max(down, box[3] - fy)
@@ -371,8 +436,9 @@ def main():
     if people:
         looks = len(people['looks'])
         manifest['people'] = {'looks': looks, 'frames': people['frames'], 'frameMs': people['frameMs']}
-        if people.get('flip'):
-            manifest['people']['flip'] = people['flip']
+        for key in ('flip', 'crowd', 'roles'):
+            if people.get(key):
+                manifest['people'][key] = people[key]
     with open(os.path.join(out_dir, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
         json.dump(manifest, f, indent=1)
         f.write('\n')

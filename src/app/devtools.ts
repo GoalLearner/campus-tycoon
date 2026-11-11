@@ -1,5 +1,7 @@
 import { advance, applyAction, newGame, rowBetween, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
+import { openBuildMenu } from '../ui/buildMenu';
+import { LOOK_MENU, lookCampus, lookItems, type LookScene } from './lookPreview';
 import { session } from './session';
 import { store } from './store';
 
@@ -47,6 +49,17 @@ interface DevScene {
   cameras: { main: { zoom: number; width: number; height: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
   walkers: { arrive(count: number): void; update(deltaMs: number): void };
+  art: { people: { roles?: Record<string, number> } | null };
+  setPlaced(items: LookScene['items']): void;
+  setTints(tints: LookScene['tints']): void;
+  scale: { zoom: number };
+  add: {
+    text(x: number, y: number, text: string, style: Record<string, unknown>): {
+      setOrigin(x: number, y: number): unknown;
+      setDepth(depth: number): unknown;
+      setScale(scale: number): unknown;
+    };
+  };
 }
 
 /**
@@ -54,15 +67,24 @@ interface DevScene {
  *   &view=15,20,1.6   look at cell (15, 20), zoomed in 1.6 times
  *   &arrive=24        show 24 students moving in
  */
+let lookLabels: LookScene['labels'] = [];
+
 function applyViewParams(params: URLSearchParams): void {
   const view = params.get('view')?.split(',').map(Number);
   const arrive = Number(params.get('arrive') ?? 0);
-  if (!view && !arrive) return;
+  const look = params.get('demo') === 'look';
+  if (!view && !arrive && !look) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
     clearInterval(wait);
     setTimeout(() => {
+      if (look) {
+        const scene2 = lookItems(scene.art.people?.roles ?? {});
+        scene.setPlaced(scene2.items);
+        scene.setTints(scene2.tints);
+        lookLabels = params.has('labels') ? scene2.labels : [];
+      }
       if (view && view.length >= 2 && view.every(Number.isFinite)) {
         const camera = scene.cameras.main;
         camera.setZoom(camera.zoom * (view[2] ?? 1));
@@ -73,6 +95,21 @@ function applyViewParams(params: URLSearchParams): void {
         aim();
         // The canvas can still change size just after load, which moves the middle. Aim again.
         setTimeout(aim, 1200);
+      }
+      // Numbered markers for the guide copy of the look screenshot.
+      for (const label of lookLabels) {
+        const at = scene.iso.toWorld(label.x, label.y);
+        const badge = scene.add.text(at.x, at.y - label.lift, String(label.n), {
+          fontFamily: '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+          fontSize: '34px',
+          fontStyle: 'bold',
+          color: '#16201b',
+          backgroundColor: '#ffd24a',
+          padding: { x: 12, y: 4 },
+        });
+        badge.setOrigin(0.5, 0.5);
+        badge.setDepth(2_000_000);
+        badge.setScale(0.44 / scene.scale.zoom / scene.cameras.main.zoom);
       }
       // Let the crowd settle in as if the view had been open for a while, so a
       // screenshot taken straight away shows people already on their way.
@@ -91,8 +128,19 @@ function applyViewParams(params: URLSearchParams): void {
 export function installDevTools(): void {
   (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
   const params = new URLSearchParams(window.location.search);
-  if (params.has('demo')) {
+  if (params.get('demo') === 'look') {
+    store.adopt(lookCampus(clock.now()), { ephemeral: true });
+  } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });
   }
   applyViewParams(params);
+  // &buildmenu shows the Build menu as it would look, over whatever is on screen.
+  if (params.has('buildmenu')) {
+    const wait = setInterval(() => {
+      const root = document.getElementById('ui');
+      if (!root || !store.hasGame || root.childElementCount === 0) return;
+      clearInterval(wait);
+      openBuildMenu(root, LOOK_MENU, () => undefined);
+    }, 150);
+  }
 }
