@@ -321,7 +321,7 @@ The audit the owner asked for on 2026-11-11. The test is a player who looks in o
 - Income was tuned for a 12-hour gap (the casual test player). The once-a-day test player has to be able to spend a day's income in one visit, or cash piles up.
 - The inbox cap of four open routine items with about three arriving a day: a daily visitor meets three or four at once. That is the top of what a few minutes can hold, and the cadence should drop to two a day if it reads as homework.
 
-**Still to build for the once-a-day player,** asked for on 2026-11-11 and not yet done: tests that catch-up survives a force-close, a phone that was off and days away, on web and iOS; the away summary's layout for a 24-hour gap; and the notifications themselves. The once-a-day test player and its check are in the simulate script now (17.6).
+**Built for the once-a-day player on 2026-11-11:** the once-a-day test player and its check in the simulate script (17.6); tests that a force close in the middle of construction, reopened after an hour, a day and seven days, gives exactly the game that never closed (`tests/reopen.test.ts`); and the away list saved with the game until it is read (17.5). **Still to build:** the away summary's layout for a 24-hour gap, and the notifications.
 
 
 ---
@@ -1318,6 +1318,19 @@ timers       sorted by due tick
 ```
 
 Saves are versioned JSON behind one persistence interface. On the web that is IndexedDB, and the app requests persistent storage so the browser does not evict it. On iOS it is the Capacitor Filesystem: two files in the app's Library folder, which the system never clears and which is part of the phone's backup. Settings will use Capacitor Preferences once the game has settings. The previous save is kept as a backup. The save is written after every meaningful action and when the app is backgrounded. From the first playable on, settings has export-save and import-save buttons, so progress can be backed up and moved to another device.
+
+**The away list is saved with the game** (2026-11-11). It is kept beside the state in the same file, so the two can never disagree, and it stays until the player taps "Back to campus". If the app is closed first it is still there next time, with anything newer added to it. An exported backup does not carry it.
+
+**Backups on the web** (2026-11-11). The app asks the browser for persistent storage when a game is founded and again every time one is loaded. The Menu shows a gentle reminder to export a backup when the browser has not agreed, or when the last export, or the founding of the game if there has been none, is more than five days old. The iOS app never shows it: its files are not the browser's to clear.
+
+| Browser | Without a grant | How a grant is given |
+|---|---|---|
+| Safari on iPhone, iPad and Mac, and other iPhone and iPad browsers, which use the same engine | A save written by the page can be deleted after seven days in which the player did not open the game. A game added to the Home Screen is exempt | By the browser's own judgement, such as being opened from the Home Screen. No prompt |
+| Chrome and Edge | Deleted only when the device is short of space, least recently used sites first | By the browser's own judgement from how much the site is used. No prompt |
+| Firefox | Deleted only when the device is short of space | The player is asked |
+| A private or incognito window, in any browser | Gone when the window closes | Never |
+
+Checked on 2026-11-11 against MDN's page on storage quotas and eviction, and WebKit's pages on storage policy and tracking prevention.
 
 ### 17.6 The simulate script
 

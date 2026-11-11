@@ -1,4 +1,5 @@
 import { clock } from '../app/clock';
+import { backupReminder } from '../app/away';
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
 import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
@@ -453,7 +454,7 @@ export function mountUi(root: HTMLElement): void {
     const report = store.away;
     const notes = store.upgradeNotes;
     if (!report && notes.length === 0) return;
-    store.away = null;
+    // The away list stays saved until the button below is tapped. Closing the app first loses nothing.
     store.upgradeNotes = [];
     const summary = report ? summarizeAway(report.log, report) : null;
     openModal((close, card) => {
@@ -462,28 +463,43 @@ export function mountUi(root: HTMLElement): void {
       for (const line of summary?.lines ?? []) list.append(el('li', '', line));
       // Rules that are new to an older save, told once.
       for (const note of notes) list.append(el('li', 'away-note', note));
-      card.append(list, button('Back to campus', 'primary', close));
-    });
+      card.append(
+        list,
+        button('Back to campus', 'primary', () => {
+          if (report) store.awaySeen(report);
+          close();
+        }),
+      );
+    }, false);
   }
 
   function openMenu(): void {
     openModal((close, card) => {
       card.append(el('h1', '', store.state.school.name));
       const note = el('p', 'fine', '');
-      void isStoragePersistent().then((kept) => {
-        if (isNative) {
-          note.textContent = 'Your save is kept on this device. Export a save to move it to another one.';
-          return;
-        }
-        note.textContent = kept
-          ? 'This browser has agreed to keep your save.'
-          : 'This browser may clear saved games it has not seen for a while. Export a save to be safe.';
-      });
+      // On the web, a gentle reminder when the browser has not promised to keep the save or the last backup is old.
+      const remind = el('p', 'backup-reminder', '');
+      const tellStorage = (): void => {
+        void isStoragePersistent().then((kept) => {
+          if (isNative) {
+            note.textContent = 'Your save is kept on this device. Export a save to move it to another one.';
+            return;
+          }
+          const reminder = backupReminder({ native: false, persistent: kept, lastExportAt: store.lastExportAt, createdAt: store.state.clock.createdAt, now: clock.now() });
+          remind.textContent = reminder ?? '';
+          remind.classList.toggle('show', reminder !== null);
+          note.textContent = reminder === null ? 'This browser has agreed to keep your save.' : '';
+        });
+      };
+      tellStorage();
+      card.append(remind);
 
       card.append(
         button('Export save', 'wide', () => {
           void exportSave(store.exportText(), store.state.school.name).then((how) => {
             if (how === 'downloaded') pushToast('Save file downloaded.');
+            store.markExported();
+            tellStorage();
           });
         }),
         button('Import save', 'wide', () => {
