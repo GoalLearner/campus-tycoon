@@ -1075,3 +1075,19 @@ button.student-reason {
 .build-card.locked .build-effect {
   color: var(--muted);
 }
+
+/* The gentle reminder to export a backup, in the Menu. Web only. */
+.backup-reminder {
+  display: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 210, 63, 0.12);
+  border: 1px solid rgba(255, 210, 63, 0.35);
+  color: #f4e7b0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.backup-reminder.show {
+  display: block;
+}

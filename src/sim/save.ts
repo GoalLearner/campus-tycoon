@@ -103,12 +103,17 @@ export const MIGRATIONS: Record<number, Migration> = {
 };
 
 export type LoadResult =
-  | { ok: true; state: GameState; savedAt: number; migratedFrom: number | null }
+  | { ok: true; state: GameState; savedAt: number; migratedFrom: number | null; app: unknown }
   | { ok: false; reason: string };
 
-export function serialize(state: GameState, savedAt: number): string {
+/**
+ * The save as text. `app` is whatever the app wants kept beside the game, such
+ * as an away list the player has not read yet. The sim carries it and never
+ * looks inside.
+ */
+export function serialize(state: GameState, savedAt: number, app?: unknown): string {
   const file: SaveFile = { v: SAVE_VERSION, savedAt, state };
-  return JSON.stringify(file);
+  return JSON.stringify(app === undefined ? file : { ...file, app });
 }
 
 export function migrate(
@@ -190,6 +195,7 @@ export function parseSave(
     state: state as unknown as GameState,
     savedAt: typeof file.savedAt === 'number' ? file.savedAt : 0,
     migratedFrom,
+    app: file.app ?? null,
   };
 }
 
