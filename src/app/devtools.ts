@@ -1,4 +1,4 @@
-import { advance, applyAction, newGame, rowBetween, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, newGame, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, type LookScene } from './lookPreview';
@@ -48,9 +48,13 @@ function demoCampus(): GameState {
 }
 
 interface DevScene {
-  cameras: { main: { zoom: number; width: number; height: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
+  cameras: { main: { zoom: number; width: number; height: number; scrollX: number; scrollY: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
-  walkers: { arrive(count: number): void; update(deltaMs: number): void };
+  walkers: {
+    arrive(count: number): void;
+    update(deltaMs: number): void;
+    studentsNear(worldX: number, worldY: number): Array<{ entryYear: number; index: number }>;
+  };
   art: { people: { roles?: Record<string, number> } | null };
   setPlaced(items: LookScene['items']): void;
   setTints(tints: LookScene['tints']): void;
@@ -68,6 +72,9 @@ interface DevScene {
  * Screenshot helpers, read from the address:
  *   &view=15,20,1.6   look at cell (15, 20), zoomed in 1.6 times
  *   &arrive=24        show 24 students moving in
+ *   &card=2           open the student card of the third-nearest walker to the middle
+ *   &card=2,follow    the same, with Follow on
+ *   &card=unhappy     the least happy student in sight
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -76,7 +83,8 @@ function applyViewParams(params: URLSearchParams): void {
   const arrive = Number(params.get('arrive') ?? 0);
   const look = params.get('demo') === 'look';
   const stadium = params.get('demo') === 'stadium';
-  if (!view && !arrive && !look && !stadium) return;
+  const card = params.get('card');
+  if (!view && !arrive && !look && !stadium && card === null) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -124,6 +132,22 @@ function applyViewParams(params: URLSearchParams): void {
       if (arrive > 0) {
         scene.walkers.arrive(arrive);
         settle(1.4);
+      }
+      if (card !== null) {
+        // After the view has been aimed for the last time.
+        setTimeout(() => {
+          const camera = scene.cameras.main;
+          const near = scene.walkers.studentsNear(camera.scrollX + camera.width / 2, camera.scrollY + camera.height / 2);
+          const [nth, mode] = card.split(',');
+          // &card=unhappy picks the least happy student in sight.
+          const saddest = [...near].sort(
+            (a, b) => (studentCard(store.state, a)?.happiness ?? 100) - (studentCard(store.state, b)?.happiness ?? 100),
+          )[0];
+          const student = nth === 'unhappy' ? saddest : near[Math.min(near.length - 1, Number(nth) || 0)];
+          if (!student) return;
+          session.openStudent(student);
+          if (mode === 'follow') session.setFollowing(true);
+        }, 1500);
       }
     }, 600);
   }, 100);

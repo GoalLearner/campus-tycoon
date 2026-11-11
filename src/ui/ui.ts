@@ -34,6 +34,7 @@ import {
   summarizeAway,
   type Zone,
 } from '../sim';
+import { mountStudentCard } from './studentCard';
 
 /**
  * The HUD and every panel, as plain HTML over the map. It reads the game from
@@ -287,9 +288,11 @@ export function mountUi(root: HTMLElement): void {
   const inspectorClose = button('Close', 'inspector-close', () => session.clearSelection());
   inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts);
 
+  const studentPanel = mountStudentCard();
+
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -677,6 +680,7 @@ export function mountUi(root: HTMLElement): void {
       toolbar.classList.add('hidden');
       chip.classList.remove('show');
       inspector.classList.remove('show');
+      studentPanel.render(null);
       if (!modalOpen) openSetup();
       return;
     }
@@ -685,6 +689,7 @@ export function mountUi(root: HTMLElement): void {
     const state = store.state;
     renderHud(state);
     renderInspector(state);
+    studentPanel.render(state);
     renderTools();
 
     updateRow.classList.toggle('show', updates.ready);

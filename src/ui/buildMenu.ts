@@ -8,6 +8,8 @@
  * the buildings exist.
  */
 
+import { drawSprite, loadAtlas, type Atlas } from './atlas';
+
 export interface BuildEntry {
   /** Sprite name in the art manifest. */
   key: string;
@@ -21,36 +23,13 @@ export interface BuildEntry {
   locked?: string;
 }
 
-interface Frame {
-  frame: { x: number; y: number; w: number; h: number };
-}
-
-async function loadAtlas(): Promise<{ sheet: HTMLImageElement; frames: Record<string, Frame> } | null> {
-  try {
-    const manifest = (await (await fetch('./assets/manifest.json')).json()) as { atlas: { image: string; data: string } };
-    const frames = ((await (await fetch(`./assets/${manifest.atlas.data}`)).json()) as { frames: Record<string, Frame> }).frames;
-    const sheet = new Image();
-    sheet.src = `./assets/${manifest.atlas.image}`;
-    await sheet.decode();
-    return { sheet, frames };
-  } catch {
-    return null;
-  }
-}
-
-function thumbnail(atlas: { sheet: HTMLImageElement; frames: Record<string, Frame> } | null, key: string): HTMLCanvasElement {
+function thumbnail(atlas: Atlas | null, key: string): HTMLCanvasElement {
   // Drawn at twice the shown size, so it stays sharp on a phone.
   const side = 144;
   const canvas = document.createElement('canvas');
   canvas.width = side;
   canvas.height = side;
-  const rect = atlas?.frames[key]?.frame;
-  if (atlas && rect) {
-    const scale = Math.min(side / rect.w, side / rect.h);
-    const w = rect.w * scale;
-    const h = rect.h * scale;
-    canvas.getContext('2d')?.drawImage(atlas.sheet, rect.x, rect.y, rect.w, rect.h, (side - w) / 2, side - h, w, h);
-  }
+  drawSprite(canvas, atlas, key);
   return canvas;
 }
 

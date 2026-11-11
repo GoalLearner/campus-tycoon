@@ -1,4 +1,4 @@
-import type { PaintPreview, Tool } from '../sim';
+import type { PaintPreview, StudentRef, Tool } from '../sim';
 
 /**
  * What the player is doing right now: the tool in hand, the lot they tapped,
@@ -21,6 +21,14 @@ class Session {
   /** The kind of tree the Tree tool plants. */
   treeKind = 0;
   selected: { x: number; y: number } | null = null;
+  /** The student whose card is open. */
+  student: StudentRef | null = null;
+  /** True while the camera keeps that student in view. */
+  following = false;
+  /** What that student is doing, as the map shows it. null when they have gone indoors. */
+  doing: string | null = null;
+  /** A cell the map should glide to. A new `seq` means a new request. */
+  focus: { x: number; y: number; seq: number } | null = null;
   preview: PaintPreview | null = null;
   toast: Toast | null = null;
 
@@ -39,7 +47,11 @@ class Session {
   setTool(tool: ToolChoice): void {
     this.tool = tool;
     this.preview = null;
-    if (tool !== 'look') this.selected = null;
+    if (tool !== 'look') {
+      this.selected = null;
+      this.student = null;
+      this.following = false;
+    }
     this.emit();
   }
 
@@ -50,7 +62,43 @@ class Session {
 
   select(x: number, y: number): void {
     this.selected = { x, y };
+    this.student = null;
+    this.following = false;
     this.emit();
+  }
+
+  openStudent(ref: StudentRef): void {
+    this.student = ref;
+    this.following = false;
+    this.doing = null;
+    this.selected = null;
+    this.emit();
+  }
+
+  closeStudent(): void {
+    if (!this.student) return;
+    this.student = null;
+    this.following = false;
+    this.emit();
+  }
+
+  setFollowing(on: boolean): void {
+    if (this.following === on) return;
+    this.following = on;
+    this.emit();
+  }
+
+  /** Told by the map, which is where the walker is. */
+  setDoing(doing: string | null): void {
+    if (this.doing === doing) return;
+    this.doing = doing;
+    this.emit();
+  }
+
+  /** Glide the map to a building and select it. */
+  focusOn(x: number, y: number): void {
+    this.focus = { x, y, seq: (this.focus?.seq ?? 0) + 1 };
+    this.select(x, y);
   }
 
   clearSelection(): void {

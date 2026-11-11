@@ -26,6 +26,23 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { roomForNewStudents, zoneName } from './systems/admissions';
 export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
+export {
+  approvalAt,
+  classYearOf,
+  placeIndex,
+  sampleStudents,
+  studentCard,
+  studentHome,
+  studentKey,
+  studentLook,
+  teachingQuality,
+  type Approval,
+  type Cause,
+  type StudentCard,
+  type StudentReason,
+  type StudentRef,
+} from './systems/students';
+export type { ArchetypeId, CauseId } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
 export { calendarAt, eventsAt, nextMilestone, type CalendarEvent, type CalendarPos, type Phase } from './calendar';
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';

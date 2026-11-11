@@ -11,6 +11,7 @@ import {
   type GameState,
   type Point,
   type Zone,
+  studentKey,
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Iso } from './iso';
@@ -66,6 +67,9 @@ export class CampusScene extends Phaser.Scene {
   private gesture: Gesture | null = null;
   private dpr = 1;
   private pendingArrivals = 0;
+  /** A point of the world the camera is gliding to, after a tap on a card's reason. */
+  private glide: { x: number; y: number } | null = null;
+  private focusSeq = 0;
 
   constructor() {
     super('campus');
@@ -96,6 +100,7 @@ export class CampusScene extends Phaser.Scene {
     });
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
+      this.walkers.setMarked(session.student ? studentKey(session.student) : null);
     });
     // Students who get a place while the player is watching are shown walking in.
     const unsubscribeLive = store.onLive((entries) => {
@@ -139,6 +144,7 @@ export class CampusScene extends Phaser.Scene {
       this.pendingArrivals = 0;
     }
     this.walkers.update(delta);
+    this.watchStudent(delta);
     this.placed.update(time);
     if (this.overlayDirty) {
       this.drawOverlay();
@@ -370,6 +376,39 @@ export class CampusScene extends Phaser.Scene {
     }
   }
 
+  // --------------------------------------------------------- student card --
+
+  /** Keep the open card in step with its walker, and the camera on them when asked. */
+  private watchStudent(delta: number): void {
+    const cam = this.cameras.main;
+    const ease = 1 - Math.pow(0.004, delta / 1000);
+
+    const focus = session.focus;
+    if (focus && focus.seq !== this.focusSeq) {
+      this.focusSeq = focus.seq;
+      this.glide = this.iso.toWorld(focus.x + 0.5, focus.y + 0.5);
+    }
+
+    const student = session.student;
+    const key = student ? studentKey(student) : null;
+    session.setDoing(key ? this.walkers.doing(key) : null);
+    const at = key && session.following ? this.walkers.spot(key) : null;
+    // They went indoors: there is nobody left to follow.
+    if (session.following && !at) session.setFollowing(false);
+
+    const target = at ?? this.glide;
+    if (!target) return;
+    // The card covers the bottom of the screen, so aim a little above the middle.
+    const wantX = target.x - cam.width / 2;
+    const wantY = target.y - cam.height / 2 + (cam.height * 0.1) / cam.zoom;
+    const fromX = cam.scrollX;
+    const fromY = cam.scrollY;
+    cam.setScroll(fromX + (wantX - fromX) * ease, fromY + (wantY - fromY) * ease);
+    this.clampCamera();
+    // A glide ends when it arrives, or when the edge of the map stops it.
+    if (!at && Math.abs(cam.scrollX - fromX) + Math.abs(cam.scrollY - fromY) < 0.3) this.glide = null;
+  }
+
   // --------------------------------------------------------------- camera --
 
   private toWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -496,6 +535,11 @@ export class CampusScene extends Phaser.Scene {
       const dx = pointer.x - this.gesture.lastX;
       const dy = pointer.y - this.gesture.lastY;
       this.gesture.travelled += Math.abs(dx) + Math.abs(dy);
+      // Dragging the map takes the camera back from a follow or a glide.
+      if (this.gesture.travelled >= 12 * this.dpr) {
+        this.glide = null;
+        if (session.following) session.setFollowing(false);
+      }
       this.gesture.lastX = pointer.x;
       this.gesture.lastY = pointer.y;
       cam.setScroll(cam.scrollX - dx / cam.zoom, cam.scrollY - dy / cam.zoom);
@@ -562,6 +606,15 @@ export class CampusScene extends Phaser.Scene {
   }
 
   private tap(screenX: number, screenY: number): void {
+    // A walker is in front of whatever they are walking past.
+    const world = this.toWorld(screenX, screenY);
+    const walker = this.walkers.walkerAt(world.x, world.y, (14 * this.dpr) / this.cameras.main.zoom);
+    if (walker) {
+      if (walker.student) session.openStudent(walker.student);
+      else session.notify('Staff. Students arrive with the first class.');
+      return;
+    }
+    session.closeStudent();
     const [x, y] = this.buildingUnder(screenX, screenY) ?? this.cellAt(screenX, screenY);
     if (!this.inMap(x, y)) {
       session.clearSelection();

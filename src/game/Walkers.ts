@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
-import { enrollment, type GameState, type Zone } from '../sim';
+import {
+  enrollment,
+  placeIndex,
+  sampleStudents,
+  studentHome,
+  studentKey,
+  studentLook,
+  type GameState,
+  type StudentRef,
+  type Zone,
+} from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
 
@@ -11,7 +21,15 @@ import type { Iso } from './iso';
  * A walker steps out of a building, follows the paths to another building or
  * to a quad, and steps inside or lingers on the lawn. Every sprite comes from
  * the art manifest. With no people in the manifest there are no walkers.
+ *
+ * Each walker is one of the enrolled students (see the student card, DESIGN.md
+ * section 13.8). Who they are is worked out from the game's seed, never
+ * stored: the same student always has the same look, and only ever goes home
+ * to their own dorm.
  */
+
+/** What a walker is doing, for the student card. */
+export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn';
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
@@ -47,7 +65,12 @@ interface Stop {
 
 interface Walker {
   sprite: Phaser.GameObjects.Image;
+  /** The student this is, or null for staff on a campus with no students yet. */
+  student: StudentRef | null;
+  key: string | null;
   look: number;
+  /** Where this trip began. */
+  from: Stop;
   route: Spot[];
   leg: number;
   x: number;
@@ -93,8 +116,20 @@ export class Walkers {
   private students = 0;
   private spawnClock = 0;
   /** Arrivals still to step onto the map: each is a route and a delay. */
-  private queue: Array<{ from: Stop; to: Stop; inMs: number }> = [];
+  private queue: Array<{ from: Stop; to: Stop; inMs: number; student: StudentRef | null }> = [];
   private readonly people: PeopleSpec | null;
+  private state: GameState | null = null;
+  /** The students walkers are drawn from. */
+  private everyone: StudentRef[] = [];
+  /** Who lives in each dorm, by the dorm's cell. */
+  private residents = new Map<number, StudentRef[]>();
+  /** Each resident's dorm cell, by student key. */
+  private homes = new Map<string, number>();
+  private stopAt = new Map<number, Stop>();
+  /** Students out walking now, so nobody is in two places. */
+  private out = new Set<string>();
+  private marked: string | null = null;
+  private ring: Phaser.GameObjects.Ellipse | null = null;
 
   constructor(
     private scene: Phaser.Scene,
@@ -125,8 +160,23 @@ export class Walkers {
       return -1;
     };
 
+    this.state = state;
+    this.everyone = sampleStudents(state);
+    this.residents.clear();
+    this.homes.clear();
+    const housing = placeIndex(state, 'housing');
+    for (const ref of this.everyone) {
+      const home = studentHome(state, ref, housing);
+      if (home === null) continue;
+      this.homes.set(studentKey(ref), home);
+      const list = this.residents.get(home);
+      if (list) list.push(ref);
+      else this.residents.set(home, [ref]);
+    }
+
     this.stops = [];
     this.gates = [];
+    this.stopAt.clear();
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = y * width + x;
@@ -135,7 +185,11 @@ export class Walkers {
           const building = buildings[cell.buildingId];
           if (!building || building.stage < 1) continue;
           const door = doorOf(x, y);
-          if (door >= 0) this.stops.push({ kind: 'building', zone: building.zone, cell: { x, y }, door });
+          if (door >= 0) {
+            const stop: Stop = { kind: 'building', zone: building.zone, cell: { x, y }, door };
+            this.stops.push(stop);
+            this.stopAt.set(i, stop);
+          }
         } else if (cell.kind === 'quad') {
           const door = doorOf(x, y);
           if (door >= 0) this.stops.push({ kind: 'quad', zone: null, cell: { x, y }, door });
@@ -183,9 +237,23 @@ export class Walkers {
 
     const near = [...homes].sort((a, b) => distance(a) - distance(b)).slice(0, 6);
     const size = Phaser.Math.Clamp(Math.round(count / 6), 3, 18);
+    const year = this.everyone[0]?.entryYear ?? 0;
+    const taken = new Set<string>();
     for (let n = 0; n < size; n++) {
       const to = pick(near);
-      if (to) this.queue.push({ from: gate, to, inMs: n * 230 });
+      if (!to) continue;
+      let student: StudentRef | null = null;
+      if (this.everyone.length > 0) {
+        // The newest students who live in that dorm.
+        const free = (this.residents.get(to.cell.y * this.width + to.cell.x) ?? []).filter(
+          (ref) => !this.out.has(studentKey(ref)) && !taken.has(studentKey(ref)),
+        );
+        const newest = free.filter((ref) => ref.entryYear === year);
+        student = pick(newest.length > 0 ? newest : free) ?? null;
+        if (!student) continue;
+        taken.add(studentKey(student));
+      }
+      this.queue.push({ from: gate, to, inMs: n * 230, student });
     }
 
     const at = this.iso.toWorld(gate.cell.x + 0.5, gate.cell.y + 0.5);
@@ -254,18 +322,41 @@ export class Walkers {
     return route;
   }
 
-  /** Somewhere to go next: mostly from home to class and back, sometimes to a quad. */
-  private destinationFrom(origin: Stop): Stop | undefined {
+  /** A student to step out of a stop: someone who lives there, when it is a dorm. */
+  private studentFor(from: Stop): StudentRef | null {
+    if (from.zone === 'housing') {
+      const here = this.residents.get(from.cell.y * this.width + from.cell.x) ?? [];
+      return pick(here.filter((ref) => !this.out.has(studentKey(ref)))) ?? null;
+    }
+    for (let tries = 0; tries < 8; tries++) {
+      const ref = pick(this.everyone);
+      if (ref && !this.out.has(studentKey(ref))) return ref;
+    }
+    return null;
+  }
+
+  /**
+   * Somewhere to go next: mostly from home to class and back, sometimes to a
+   * quad. A student only ever goes home to their own dorm.
+   */
+  private destinationFrom(origin: Stop, student: StudentRef | null): Stop | undefined {
     const others = this.stops.filter((stop) => stop !== origin);
     const classes = others.filter((stop) => stop.zone === 'academic');
-    const homes = others.filter((stop) => stop.zone === 'housing');
     const quads = others.filter((stop) => stop.kind === 'quad');
+    let homes: Stop[];
+    if (student) {
+      const home = this.stopAt.get(this.homes.get(studentKey(student)) ?? -1);
+      homes = home && home !== origin ? [home] : [];
+    } else {
+      homes = others.filter((stop) => stop.zone === 'housing');
+    }
     const roll = Math.random();
     let choice: readonly Stop[];
-    if (origin.zone === 'housing') choice = roll < 0.65 ? classes : roll < 0.85 ? quads : homes;
+    if (origin.zone === 'housing') choice = roll < 0.7 ? classes : quads;
     else if (origin.zone === 'academic') choice = roll < 0.5 ? homes : roll < 0.75 ? classes : quads;
     else choice = roll < 0.5 ? classes : homes;
-    return pick(choice.length > 0 ? choice : others);
+    if (choice.length === 0) choice = classes.length > 0 ? classes : quads.length > 0 ? quads : homes;
+    return pick(choice);
   }
 
   // ------------------------------------------------------------- walkers --
@@ -277,11 +368,15 @@ export class Walkers {
     );
   }
 
-  private start(from: Stop, to: Stop, partWay: boolean): boolean {
+  private start(from: Stop, to: Stop, partWay: boolean, student: StudentRef | null): boolean {
     const people = this.people;
     if (!people || this.walkers.length >= MAX_WALKERS) return false;
+    const key = student ? studentKey(student) : null;
+    if (key !== null && this.out.has(key)) return false;
     const route = this.routeBetween(from, to);
     if (!route) return false;
+    const looks = Math.min(people.looks, people.crowd ?? people.looks);
+    if (key !== null) this.out.add(key);
 
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
     sprite.setVisible(true).setAlpha(0);
@@ -290,7 +385,11 @@ export class Walkers {
     const begin = route[leg - 1]!;
     this.walkers.push({
       sprite,
-      look: Math.floor(Math.random() * Math.min(people.looks, people.crowd ?? people.looks)),
+      student,
+      key,
+      // A student's look is part of who they are.
+      look: student && this.state ? studentLook(this.state, student) % looks : Math.floor(Math.random() * looks),
+      from,
       route,
       leg,
       x: begin.x,
@@ -310,6 +409,8 @@ export class Walkers {
 
   private retire(index: number): void {
     const walker = this.walkers[index]!;
+    if (walker.key !== null) this.out.delete(walker.key);
+    if (walker.key !== null && walker.key === this.marked) this.ring?.setVisible(false);
     walker.sprite.setVisible(false);
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
@@ -330,6 +431,73 @@ export class Walkers {
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((walker.x + walker.y - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
+    if (walker.key !== null && walker.key === this.marked) {
+      // A ring on the ground under the student whose card is open.
+      const ring = this.ring ?? this.scene.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
+      this.ring = ring;
+      ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
+      ring.setPosition(at.x, at.y).setDepth(walker.sprite.depth - 0.2).setVisible(true).setAlpha(walker.alpha);
+    }
+  }
+
+  // ------------------------------------------------------- student cards --
+
+  /**
+   * The walker at a point of the world, or null. `reach` widens each sprite,
+   * because a walker is a small thing to hit with a thumb.
+   */
+  walkerAt(worldX: number, worldY: number, reach: number): { student: StudentRef | null } | null {
+    let found: Walker | null = null;
+    let nearest = Infinity;
+    for (const walker of this.walkers) {
+      if (walker.fading === 'out') continue;
+      const box = walker.sprite.getBounds();
+      if (worldX < box.x - reach || worldX > box.right + reach || worldY < box.y - reach || worldY > box.bottom + reach) continue;
+      const far = Math.hypot(worldX - box.centerX, worldY - box.centerY);
+      if (far < nearest) {
+        nearest = far;
+        found = walker;
+      }
+    }
+    return found ? { student: found.student } : null;
+  }
+
+  private walkerOf(key: string): Walker | undefined {
+    return this.walkers.find((walker) => walker.key === key && walker.fading !== 'out');
+  }
+
+  /** What that student is doing right now, or null when they are not out walking. */
+  doing(key: string): Doing | null {
+    const walker = this.walkerOf(key);
+    if (!walker || !walker.goal) return null;
+    if (walker.lingerMs > 0) return 'onQuad';
+    if (walker.goal.kind === 'quad') return 'toQuad';
+    if (walker.goal.zone === 'academic') return walker.from.zone === 'academic' ? 'nextClass' : 'toClass';
+    return walker.from.kind === 'gate' ? 'movingIn' : 'toDorm';
+  }
+
+  /** Where that student is in the world, for the camera to follow. */
+  spot(key: string): { x: number; y: number } | null {
+    const walker = this.walkerOf(key);
+    return walker ? this.iso.toWorld(walker.x, walker.y) : null;
+  }
+
+  /** The students out walking, nearest to a point of the world first. For the dev screenshot helper. */
+  studentsNear(worldX: number, worldY: number): StudentRef[] {
+    const far = (walker: Walker): number => {
+      const at = this.iso.toWorld(walker.x, walker.y);
+      return Math.hypot(at.x - worldX, at.y - worldY);
+    };
+    return this.walkers
+      .filter((walker) => walker.student !== null && walker.fading !== 'out')
+      .sort((a, b) => far(a) - far(b))
+      .map((walker) => walker.student!);
+  }
+
+  /** Ring the student whose card is open. */
+  setMarked(key: string | null): void {
+    this.marked = key;
+    if (key === null || !this.walkerOf(key)) this.ring?.setVisible(false);
   }
 
   update(deltaMs: number): void {
@@ -344,7 +512,7 @@ export class Walkers {
       const arrival = this.queue[i]!;
       arrival.inMs -= dt;
       if (arrival.inMs > 0) continue;
-      this.start(arrival.from, arrival.to, false);
+      this.start(arrival.from, arrival.to, false, arrival.student);
       this.queue.splice(i, 1);
     }
 
@@ -368,12 +536,13 @@ export class Walkers {
         walker.lingerMs -= dt;
         if (walker.lingerMs <= 0 && walker.goal) {
           // Rested on the lawn. Off to the next place.
-          const next = this.destinationFrom(walker.goal);
+          const next = this.destinationFrom(walker.goal, walker.student);
           const route = next ? this.routeBetween(walker.goal, next) : null;
           if (next && route) {
             route[0] = { x: walker.x, y: walker.y };
             walker.route = route;
             walker.leg = 1;
+            walker.from = walker.goal;
             walker.goal = next;
           } else {
             walker.fading = 'out';
@@ -427,9 +596,11 @@ export class Walkers {
       if (seen < wanted) {
         const here = this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0));
         const from = pick(here);
-        const to = from ? this.destinationFrom(from) : undefined;
+        // Once there are students, every walker is one of them. Before that, staff.
+        const student = from ? this.studentFor(from) : null;
+        const to = from && (student || this.everyone.length === 0) ? this.destinationFrom(from, student) : undefined;
         // An emptier view is filled with people already on their way.
-        if (from && to) this.start(from, to, seen < wanted * 0.6);
+        if (from && to) this.start(from, to, seen < wanted * 0.6, student);
       }
     }
 
@@ -475,6 +646,9 @@ export class Walkers {
     for (const walker of this.walkers) walker.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
     for (const banner of this.banners) banner.text.destroy();
+    this.ring?.destroy();
+    this.ring = null;
+    this.out.clear();
     this.walkers = [];
     this.pool = [];
     this.banners = [];
