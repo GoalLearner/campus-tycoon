@@ -20,6 +20,8 @@ const params = new URLSearchParams(window.location.search);
 const out = params.get('out') ?? 'fallback';
 const name = params.get('name') ?? 'model';
 const file = params.get('file') ?? '';
+/** A model made here from plain blocks, for a building no kit has: `parking` is a parking structure. */
+const builtin = params.get('builtin') ?? '';
 /** Quarter turns of the model about its upright axis, to choose which side faces the camera. */
 const turn = Number(params.get('turn') ?? 0);
 const size = Number(params.get('size') ?? 1024);
@@ -67,8 +69,7 @@ async function main(): Promise<void> {
   sun.position.set(-3, 6, 2);
   scene.add(sun);
 
-  const gltf = await new GLTFLoader().loadAsync(file);
-  const model = gltf.scene;
+  const model = builtin === 'parking' ? parkingStructure() : (await new GLTFLoader().loadAsync(file)).scene;
   model.rotation.y = (turn * Math.PI) / 2;
   model.scale.y *= tall;
 
@@ -186,6 +187,52 @@ async function main(): Promise<void> {
   await save(`${name}.json`, JSON.stringify(meta, null, 1));
   status.textContent = `Done: art/source/_rendered/${out}/${name}.png`;
   document.title = 'done';
+}
+
+/**
+ * A parking structure two cells square: three open decks on pillars, low
+ * walls round each deck, a dark inside, a striped gate and cars on the roof.
+ * One unit is one cell. The colours are the drawn pack's.
+ */
+function parkingStructure(): THREE.Group {
+  const group = new THREE.Group();
+  const block = (name: string, colour: number, w: number, h: number, d: number, x: number, y: number, z: number): void => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ name, color: colour }));
+    mesh.position.set(x, y + h / 2, z);
+    group.add(mesh);
+  };
+  const CONCRETE = 0x9a98ad;
+  const WALL = 0x817f94;
+  const DARK = 0x46243f;
+  const side = 1.84;
+  const rise = 0.4;
+  // The dark inside, so the open sides read as shade.
+  block('inside', DARK, side - 0.24, rise * 3, side - 0.24, 0, 0, 0);
+  for (let level = 1; level <= 3; level++) {
+    const y = level * rise;
+    block('deck', CONCRETE, side, 0.07, side, 0, y - 0.07, 0);
+    // A low wall round the deck.
+    for (const [w, d, x, z] of [[side, 0.06, 0, side / 2 - 0.03], [side, 0.06, 0, -side / 2 + 0.03], [0.06, side, side / 2 - 0.03, 0], [0.06, side, -side / 2 + 0.03, 0]] as const) {
+      block('wall', WALL, w, 0.13, d, x, y, z);
+    }
+  }
+  // Pillars at the corners and the middle of each side.
+  for (const x of [-1, 0, 1]) {
+    for (const z of [-1, 0, 1]) {
+      if (x === 0 && z === 0) continue;
+      block('pillar', CONCRETE, 0.11, rise * 3, 0.11, x * (side / 2 - 0.055), 0, z * (side / 2 - 0.055));
+    }
+  }
+  // The way in, with a striped gate, on the side facing the camera.
+  block('gate', 0xe39400, 0.5, 0.05, 0.05, 0.45, 0.2, side / 2 + 0.01);
+  block('gatepost', 0xfeffff, 0.06, 0.26, 0.06, 0.16, 0, side / 2 + 0.01);
+  // Cars parked on the roof.
+  const roof = rise * 3 + 0.13;
+  for (const [colour, x, z] of [[0xd8341c, -0.5, -0.45], [0x3fa9e6, 0.1, -0.45], [0xfeffff, 0.55, 0.3], [0x6f7a12, -0.45, 0.4]] as const) {
+    block('car', colour, 0.36, 0.13, 0.2, x, roof - 0.13, z);
+    block('cab', 0x5bc0f0, 0.18, 0.08, 0.17, x - 0.02, roof, z);
+  }
+  return group;
 }
 
 /** Cuts away every triangle that reaches outside the ground outline of the named material, then lays a floor inside it. */

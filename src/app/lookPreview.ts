@@ -72,6 +72,103 @@ export function stadiumItems(): LookScene {
   return { items, tints: [], labels: [] };
 }
 
+/**
+ * The third play stop's art, for approving its look: `?demo=town`. A slice of
+ * town outside the campus land, with houses along a street, a road laid from
+ * the street to a car park and a parking structure, a crossing where the road
+ * meets a campus path, and cars. Nothing here has rules yet.
+ */
+export function townCampus(now: number): GameState {
+  const started = now - 75 * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 2_000_000;
+  // A path from the street into campus, and a campus path that the road crosses.
+  state = paint(state, 'path', [
+    ...rowBetween([21, 4], [21, 6]),
+    ...rowBetween([19, 7], [23, 7]),
+    ...rowBetween([25, 7], [28, 7]),
+    ...rowBetween([20, 11], [28, 11]),
+    ...rowBetween([28, 8], [28, 10]),
+  ]);
+  state = paint(state, 'quad', [[19, 5], [20, 5], [21, 12], [22, 12], [21, 13], [22, 13]]);
+  state = paint(state, 'tree', [[19, 1], [24, 1], [29, 1]], 0);
+  state = paint(state, 'tree', [[21, 1], [28, 5], [23, 10]], 4);
+  state = paint(state, 'tree', [[26, 1], [19, 9], [28, 8]], 3);
+  state = paint(state, 'tree', [[22, 1], [28, 6]], 1);
+  return advance(state, started, now).state;
+}
+
+/** Road cells, and the piece each one takes from the neighbours it joins: the same rule the road tool will use. */
+function roadItems(cells: readonly Point[], crossings: readonly Point[]): PlacedItem[] {
+  const has = (x: number, y: number): boolean => cells.some(([cx, cy]) => cx === x && cy === y);
+  return cells.map(([x, y]) => {
+    const mask = (has(x, y - 1) ? 1 : 0) | (has(x + 1, y) ? 2 : 0) | (has(x, y + 1) ? 4 : 0) | (has(x - 1, y) ? 8 : 0);
+    const crossing = crossings.some(([cx, cy]) => cx === x && cy === y);
+    return { key: crossing ? `road.cross.${mask}` : `road.${mask}`, x, y, layer: 'ground' as const };
+  });
+}
+
+export function townItems(): LookScene {
+  const street: Point[] = [];
+  for (let x = 16; x <= 31; x++) street.push([x, 3]);
+  const sideStreet: Point[] = [[27, 0], [27, 1], [27, 2], [27, 4]];
+  const myRoad: Point[] = [[24, 4], [24, 5], [24, 6], [24, 7], [24, 8], [24, 9], [24, 10], [25, 10], [26, 10]];
+
+  const houses: PlacedItem[] = [];
+  const plots: Point[] = [[18, 2], [19, 2], [20, 2], [21, 2], [22, 2], [24, 2], [25, 2], [26, 2], [28, 2], [29, 2], [18, 4], [19, 4], [20, 4], [22, 4], [23, 4], [25, 4], [26, 4], [28, 4], [29, 4]];
+  plots.forEach(([x, y], n) => houses.push({ key: `town.house.${(n * 5 + x) % 12}`, x, y }));
+
+  const items: PlacedItem[] = [
+    ...roadItems([...street, ...sideStreet, ...myRoad], [[24, 7]]),
+    ...houses,
+    { key: 'town.driveway', x: 23, y: 2 },
+    { key: 'town.pool', x: 20, y: 1 },
+    { key: 'town.garden', x: 25, y: 1 },
+
+    // The campus side: dorms and lecture halls by the paths.
+    { key: 'housing.2.0', x: 22, y: 5 },
+    { key: 'housing.2.1', x: 22, y: 6 },
+    { key: 'housing.2.2', x: 20, y: 6 },
+    { key: 'academic.2.0', x: 26, y: 8 },
+    { key: 'academic.2.1', x: 27, y: 8 },
+    { key: 'housing.2.1', x: 20, y: 8 },
+    { key: 'housing.2.0', x: 20, y: 9 },
+    { key: 'build.library', x: 24, y: 12, w: 2, h: 2 },
+    { key: 'academic.2.2', x: 27, y: 12 },
+
+    // A car park and a parking structure, both touching the road.
+    { key: 'build.parking.large', x: 25, y: 5, w: 2, h: 2 },
+    { key: 'build.garage', x: 22, y: 9, w: 2, h: 2 },
+
+    // Parked cars, filling the car park in proportion to use.
+    { key: 'car.0.ny', x: 25.02, y: 5.0, forward: 2 },
+    { key: 'car.3.ny', x: 25.5, y: 5.0, forward: 2 },
+    { key: 'car.4.ny', x: 26.0, y: 5.0, forward: 2 },
+    { key: 'car.1.py', x: 25.25, y: 6.05, forward: 2 },
+    { key: 'car.5.py', x: 26.05, y: 6.05, forward: 2 },
+    { key: 'car.2.py', x: 23.0, y: 2.0 },
+
+    // Cars on the town's streets and on the road.
+    { key: 'car.0.px', x: 18.6, y: 3.16 },
+    { key: 'car.4.nx', x: 22.2, y: 2.84 },
+    { key: 'car.3.px', x: 28.6, y: 3.16 },
+    { key: 'car.6.ny', x: 27.14, y: 1.3 },
+    { key: 'car.1.py', x: 23.86, y: 5.2 },
+    { key: 'car.5.ny', x: 24.14, y: 8.7 },
+    { key: 'car.2.px', x: 25.3, y: 10.14 },
+
+    // Locals walking in from the street, and one on the crossing.
+    { key: 'person.2.sw.0', x: 21.0, y: 4.1, layer: 'person' },
+    { key: 'person.6.sw.3', x: 21.1, y: 5.3, layer: 'person', flip: true },
+    { key: 'person.11.sw.1', x: 24.0, y: 7.0, layer: 'person' },
+    { key: 'person.4.nw.5', x: 22.6, y: 7.0, layer: 'person' },
+    { key: 'person.8.sw.2', x: 25.7, y: 7.0, layer: 'person', flip: true },
+    { key: 'person.13.sw.4', x: 23.4, y: 11.0, layer: 'person' },
+    { key: 'person.1.nw.1', x: 26.5, y: 11.0, layer: 'person', flip: true },
+  ];
+  return { items, tints: [], labels: [] };
+}
+
 /** Cells within `reach` cells of a block, the block itself left out. */
 function around(x: number, y: number, w: number, h: number, reach: number): Point[] {
   const cells: Point[] = [];

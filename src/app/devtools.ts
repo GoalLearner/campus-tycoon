@@ -1,7 +1,7 @@
 import { advance, applyAction, newGame, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { openBuildMenu } from '../ui/buildMenu';
-import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, type LookScene } from './lookPreview';
+import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { session } from './session';
 import { store } from './store';
 
@@ -13,7 +13,8 @@ import { store } from './store';
  *   hour old, without touching the saved game. It is what the screenshot
  *   script photographs.
  * - `?demo=look` shows every hand-placed item for approving the art, and
- *   `?demo=stadium` shows the rendered stadium between drawn buildings.
+ *   `?demo=stadium` shows the rendered stadium between drawn buildings, and
+ *   `?demo=town` shows the town, roads, cars and parking of the third play stop.
  */
 
 function paint(state: GameState, tool: Tool, cells: Point[], variant = 0): GameState {
@@ -83,8 +84,9 @@ function applyViewParams(params: URLSearchParams): void {
   const arrive = Number(params.get('arrive') ?? 0);
   const look = params.get('demo') === 'look';
   const stadium = params.get('demo') === 'stadium';
+  const town = params.get('demo') === 'town';
   const card = params.get('card');
-  if (!view && !arrive && !look && !stadium && card === null) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -97,6 +99,7 @@ function applyViewParams(params: URLSearchParams): void {
         lookLabels = params.has('labels') ? scene2.labels : [];
       }
       if (stadium) scene.setPlaced(stadiumItems().items);
+      if (town) scene.setPlaced(townItems().items);
       if (view && view.length >= 2 && view.every(Number.isFinite)) {
         const camera = scene.cameras.main;
         camera.setZoom(camera.zoom * (view[2] ?? 1));
@@ -160,6 +163,8 @@ export function installDevTools(): void {
     store.adopt(lookCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stadium') {
     store.adopt(stadiumCampus(clock.now()), { ephemeral: true });
+  } else if (params.get('demo') === 'town') {
+    store.adopt(townCampus(clock.now()), { ephemeral: true });
   } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });
   }

@@ -1157,6 +1157,840 @@
     }
    ]
   },
+  "road.15": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.13": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.11": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.14": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.7": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile3.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.9": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.12": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile5.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.6": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile7.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.8": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile8.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "road.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Road_Tile1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.cross.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/crosswalk.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "road.cross.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/crosswalk.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "town.house.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Blue/House_Type1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Red/House_Type5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Yellow/House_Type9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Green/House_Type13.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Pink/House_Type17.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/White/House_Type20.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.6": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Brown/House_Type3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.7": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Grey/House_Type7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.8": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Yellow/House_Type2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.9": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Blue/House_Type11.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Red/House_Type15.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.house.11": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Green/House_Type6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.driveway": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Garden_Driveway.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.pool": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Garden_Pool.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "town.garden": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Garden_Rustic.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "car.0.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Red_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.0.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Red_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.0.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Red_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.0.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Red_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.1.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Blue_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.1.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Blue_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.1.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Blue_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.1.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Blue_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.2.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Green_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.2.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Green_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.2.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Green_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.2.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Green_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.3.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_White_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.3.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_White_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.3.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_White_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.3.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_White_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.4.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Grey_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.4.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Grey_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.4.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Grey_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.4.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType2_Grey_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.5.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Yellow_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.5.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Yellow_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.5.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Yellow_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.5.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/CarType1_Yellow_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.6.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Yellow_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.6.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Yellow_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "car.6.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Yellow_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "car.6.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Yellow_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "build.parking.large": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Carpark_2x2_Sign.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.garage": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/parking-structure.png",
+     "render": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
   "build.studentlife": {
    "layers": [
     {
@@ -1615,6 +2449,14 @@
    2,
    3
   ],
+  "build.parking.large": [
+   2,
+   2
+  ],
+  "build.garage": [
+   2,
+   2
+  ],
   "build.studentlife": [
    2,
    2
@@ -1648,7 +2490,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane marks repeated across it."
   },
   {
    "name": "Football stadium (3D model)",

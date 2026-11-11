@@ -12,6 +12,7 @@ How to read this document:
 - Section 21 lists what is still open.
 - Section 23 is the master building catalog: every kind of facility a complete campus has, and the layer it lands in.
 - Section 24 is the success metrics: the student pipeline, the Scorecard and the ranking weights.
+- Section 25 is off-campus neighbourhoods, roads and parking.
 
 ---
 
@@ -95,8 +96,8 @@ Every system must help meet these three targets.
 | City rating | Kept | Academic standing, athletic standing, student happiness |
 | Data maps | Kept, reduced | Four overlays (8) |
 | Neighbor deals | Folded in | TV and donor deals in the inbox (10, 12) |
-| Power, water and other networks | Cut | They were chores, and they fail while the player is away |
-| Traffic simulation | Cut | Walk time to class survives as a desirability input |
+| Power, water and other networks | Cut, with one exception | They were chores, and they fail while the player is away. Roads came back on 2026-11-11 as a second network with one rule and no failure state (section 25.3) |
+| Traffic simulation | Cut, and it stays cut | Walk time to class survives as a desirability input. Cars are for show, like walkers (section 25.3) |
 | Terrain, pollution, garbage | Cut | Stadium and parking noise, plus three fixed map features |
 | Regions | Later | Satellite campuses (20) |
 
@@ -451,7 +452,7 @@ effectiveRadius = baseRadius * fundingFactor(Student Services slider) * min(1, c
 | Health Center | High density | Better retention |
 | Library | None | Lifts Academic desirability and draws scholars |
 | Shuttle stop | None | Cuts walk time between stops. First cut if scope slips |
-| Parking | None | Commuter capacity for in-state students, and an eyesore. Holds more cars beside the highway |
+| Parking | None | Spaces for locals who drive in. It holds cars only when a road links it to a town street or the highway (section 25.3). An eyesore, a parking structure less so. Holds more cars beside the highway |
 
 Campus Safety handles mischief, not crime (section 16).
 
@@ -851,7 +852,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 | Decision | Why |
 |---|---|
-| Tapping a walking student opens a card with exactly five lines: who, doing now, grades, club, happiness | RollerCoaster Tycoon's guest card, cut to what fits a phone |
+| Tapping a walking student opens a card with exactly six lines: who, doing now, GPA, club, relationship, happiness | RollerCoaster Tycoon's guest card, cut to what fits a phone. It began as five lines; the owner added Relationship and changed grades to GPA on 2026-11-11 |
 | No per-student simulation. A student is a seeded identity: the game's seed, the year their class entered, and their place in that class | The same student shows the same name, major, quirk, club, look and dorm every time. Nothing is saved and catch-up never runs it |
 | Every other line is read from live numbers while the card is open | A card can never disagree with the campus. Class year comes from the cohorts, grades from the teaching side of campus, happiness from the causes of happiness where the student lives |
 | Happiness on a card is the campus Happiness number, read at one student's spot. One number, never two | The owner's rule. Campus Happiness, when it is built, is the average of the same function over where students live |
@@ -860,13 +861,19 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 | Every walker is one of the enrolled students, and only goes home to their own dorm | "Doing now" matches the map, and a thought about "my dorm" is about the dorm they walk into |
 | One Follow button | The camera stays on the student until they go indoors or the player drags the map |
 | Clubs are names only, weighted by major, nature and quirk | No club mechanics |
+| GPA is on a 4.0 scale to one decimal | It sits around the campus average, a little lower in the first year and higher by the last, with Scholars above and Slackers below. 1.5 is the floor: nobody on a card is failing |
+| Relationship is one of six statuses: single and looking, happily single, in a happy relationship, in an unhappy relationship, happy long-distance, struggling long-distance | A little story to follow. Whether a student is single, with someone or with someone far away follows their own seeded story and can change only at an intake. Nothing is stored: the story is replayed from the semester they arrived |
+| Which side of a status a student is on leans with the campus's social life | The part the player can change. Half are on the happy side when social life is middling, and it moves that share by up to a fifth either way [T]. Someone single and looking says "nowhere to meet people" when it is thin |
+| The status moves that one student's happiness by a few points [T], shown as a note on its own line, and is never the reason on the Happiness line | The reason must stay something the player can act on. The points are the same size up and down and natures lean only toward a kind, never a side, so across the campus they cancel. Only social life moves the average. Tests hold both |
+| The status is the whole of it: never who, never why. It shows on the card only and is never a campus stat | Tone guide, and the rating in 16.3 |
 | The first line also says "Lives in a dorm" or "Lives off campus" | Asked for with the neighbourhoods of section 21, item 11. It reads the share who need no bed today, and the neighbourhood a student lives in once those exist |
 | First names are ones anyone can carry, and surnames are built from two invented halves | A name never clashes with a walker's look, and no card can carry a real person's full name |
 
 | Line | Reads now | Replaced or widened by |
 |---|---|---|
 | Happiness | Walk time and green space at the dorm. A commuter reads the green around two lecture halls | Dining, noise, recreation and safety join the same list as each is built. Layer 3's overlays become the jump target where one fits |
-| Grades | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed and nature. D is the lowest: nobody on a card is failing | The academic score of section 24 |
+| GPA | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed, class year and nature | The academic score of section 24 |
+| Social life | Quad cells per student | Student Life spots, recreation and events join the count as each is built |
 | Archetype | A lasting nature by seed, from the fourteen archetypes whose stat exists today. Lost Freshman and Homesick fade over the first year. Super Senior grows when Academic seats capped the last class | The state-driven mix of 13.2 and all eighteen, in layer 6 |
 | Quirk | The six of 13.4, as a label | Their visible behaviours, in layer 6 |
 | Thought | A short pool per cause | The archetype pools of 13.4, in layer 4 |
@@ -874,7 +881,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
-**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. The swaps owed: dining, noise, recreation and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. The face drawn in code stays.
+**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. The swaps owed: dining, noise, recreation and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
 
 ---
 
@@ -1054,6 +1061,8 @@ Apple's current tiers are 4+, 9+, 13+, 16+ and 18+, set by a content questionnai
 
 **Target: 4+, without flattening the satire. 9+ is acceptable if the humour needs bite. 13+ is not.** The table was read through a summary of Apple's page on 2026-11-11, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
 
+The relationship line on the student card (13.8) was checked against this table on 2026-11-11. It is a status and nothing more, with no detail, no partner and no storyline, and none of the rows above describes it. The target stays 4+. It goes on the list to recheck against Apple's questionnaire at submission.
+
 ---
 
 ## 17. Technical foundation
@@ -1216,7 +1225,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11, on branch `layer-0-feedback`.** Built: walking students, trees, laid-out quads, the student card (13.8). Agreed and waiting for the look approval: the Build menu and its buildings (23.5), and three metrics pieces (24.7): the class record, retention shown with its cause, and the acceptance rate shown at each intake.
+- **Feedback pass, 2026-11-11, on branch `layer-0-feedback`.** Built: walking students, trees, laid-out quads, the student card (13.8). Agreed and waiting for the look approval: the Build menu and its buildings (23.5), and three metrics pieces (24.7): the class record, retention shown with its cause, and the acceptance rate shown at each intake. The pass has three play stops: the Build menu with dining, library, store, recreation and happiness; then medical, safety and incidents; then neighbourhoods, roads, cars, parking lots and the parking structure, with room fees (section 25).
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1360,7 +1369,7 @@ Settled on 2026-11-11 and no longer open: the personalities addition (section 13
 8. **Daylight saving.** The anchor is stored in UTC, so it moves an hour in local time twice a year until the player shifts it.
 9. **Game title.** "Campus Tycoon" is a working title.
 10. **One word for how students feel.** Settled on 2026-11-11: the word on screen is Happiness, everywhere (section 16.2).
-11. **Off-campus neighbourhoods.** Asked for by the owner on 2026-11-11, as item 8 of the feedback pass. His rules: houses grow on their own in the town outside the campus land as commuter numbers rise, drawn with the pack's houses along town streets. A neighbourhood joined to campus by a path and within walking range sends walkers, who need no bed and no parking. One that is too far or has no path sends drivers, who need a road connection and a parking space. Off-campus students pay tuition and no room fees. This replaces the flat share of students who need no bed. Tapping a neighbourhood shows who lives there, who walks, who drives and what would let more walk. Town relations, landlords and buying neighbourhood land are later. **Proposed in reply and waiting for his answer:** only locals live in town, about four in ten of each class and later the in-state commuters of 7.2; fixed house plots per neighbourhood; room fees arrive with neighbourhoods, because in the first playable's numbers a commuter nets more than a dorm student; no road tool, since a parking lot connects by touching a town street or the highway at the edge of the land; living on campus as the fourth cause of retention; the freshman live-on rule of 12.3 stays a policy; and it is a third play stop in the pass, with the Parking lot moved into it. Nothing is built except the card line below.
+11. **Off-campus neighbourhoods.** Settled on 2026-11-11, with a road tool added by the owner. Section 25.
 
 ### First-playable stand-ins
 
@@ -1429,6 +1438,13 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Students | Student card: nature weights, Lost Freshman and Homesick shares, Super Senior share, club match weights, grade floor, span and spread, mood steps | The values in `src/sim/config/students.ts` |
 | Metrics | Ranking weights: graduation, class size, alumni success, reputation, retention, selectivity, money per student | 25, 15, 15, 15, 10, 10, 10 |
 | Metrics | How far one stage can swing the next | To be set, and bounded |
+| Students | Relationship: kinds at entry, share that stays each intake, the social swing, points of happiness, students per social spot | 55/12/33, 0.6, 0.4, 4, 40 |
+| Town | Share of each class who are locals | About four in ten |
+| Town | Neighbourhoods at the start, house plots in each, students per house | 3, about 12, 4 |
+| Town | Walking range from a neighbourhood gate to the nearest Academic lot | 10 minutes |
+| Money | Tuition and room fee once neighbourhoods arrive | $8,200 a student and $3,000 an occupied bed |
+| Roads | Cost a cell, upkeep a cell, the desirability a road takes from a lot beside it | To be set. Small |
+| Parking | Cars in a surface lot, cars in a structure, their costs and penalties | About 20 on two cells; several times that on four; the structure costs much more and offends less |
 | Greek Row | Beds per stage, target share of enrollment | The table in 6.2; share to be set |
 | Simulate | Optimizer check-in interval | 2 hours |
 | Performance | 30 days of catch-up | Under one second on a desktop |
@@ -1555,7 +1571,9 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
 | Parking lot | Hand-placed | Fewer beds needed. Neighbours like it less | 1 x 1, 2 x 1, 2 x 2 | This pass | Carpark in three sizes, one with a gate | Drawn |
-| Parking structure | Upgrade of a parking lot | Three times the cars on the same land | 2 x 2 | 3 | None | No sprite |
+| Parking structure | Hand-placed | Several times the cars of a surface lot on a similar footprint, at a much higher price and a smaller desirability penalty. Needs road access | 2 x 2 | Third play stop of the feedback pass | None. A model of plain blocks, rendered, until one is commissioned | Stand-in |
+| Road | Laid by dragging, a second network beside paths | Gives parking its road access. Lots beside it like it a little less | 1 x 1 | Third play stop | Road_Tile1 to 9, mirrored to make all sixteen joins. The crossing is made from the pack's own lane marks | Drawn, crossing from parts |
+| Town house and town street | Not placeable. They belong to the town | Homes for locals (section 25) | 1 x 1 | Third play stop | House_Type1 to 20 in eight colours, three garden pieces, the road tiles | Drawn |
 | Shuttle stop | Hand-placed service | Cuts walk time between stops | 1 x 1 | 3. First to be cut if scope slips | BusStop | Drawn |
 | Transit station | Ceiling landmark: the Commuter Hub, already designed | Lifts the in-state ceiling. Must touch the highway or the town edge | 2 x 2 | 5 | MetroStation or Public_Trainstation | Drawn |
 | Bike lane and bike parking | Cut | It would be a second tool for walk time beside the shuttle | None | Not planned | None | No sprite |
@@ -1661,7 +1679,7 @@ applications -> acceptance rate -> yield -> retention -> graduation rate -> alum
 | Applications | The pool per tier, section 7.3 | Academic standing, athletic standing, price, the tier's ceiling | Existed |
 | Acceptance rate | Offers divided by applications. Offers are admitted students divided by yield | Room on campus, the size of the pool, yield | Existed upside down as applicants per seat |
 | Yield | The share of offers that enrol, per tier, worked out at each intake | How the campus looks (average Housing desirability), cost after aid, facilities condition | A fixed number per tier |
-| Retention | The share of each class that returns, applied each semester | Happiness, safety and health coverage, policies | Existed, flat in the first playable |
+| Retention | The share of each class that returns, applied each semester | Happiness, safety and health coverage, policies, living on campus | Existed, flat in the first playable |
 | Graduation rate | Per entering class: the share who finish in four years, and in six | How selective the class was, class size, room in class | Named once, defined nowhere |
 | Alumni success | One score per graduating class, fixed on the day it graduates | The school's academic score that year, on-time graduation, job placement | New |
 | Donations | Alumni times affinity times success | The number of alumni, affinity (happiness while enrolled, traditions, football), success | Existed without success |
@@ -1769,3 +1787,81 @@ Accepted by the owner on 2026-11-11 as the defaults:
 7. Selectivity sets how prepared a class is, which feeds its graduation rate.
 8. Town relations waits for layer 6.
 9. The three cheap pieces join the feedback pass.
+
+---
+
+## 25. Off-campus neighbourhoods, roads and parking
+
+Asked for by the owner on 2026-11-11 as item 8 of the feedback pass, and settled the same day. It is the third play stop of that pass. Nothing here is built: its art waits in the look review (`?demo=town`).
+
+### 25.1 Decisions
+
+| Decision | Why |
+|---|---|
+| Not every student lives in a dorm. Locals live in houses in the town, outside the campus land | It replaces the flat share of students who needed no bed, which was free and had no cause |
+| Only locals live in town: about four in ten of each class [T]. From layer 2 they are the in-state commuters of section 7.2. Out-of-state students and scholars always need a bed | Without this the town is an endless free dorm. The most that can skip a bed is the local share |
+| Each neighbourhood has a fixed number of house plots. Houses fill in over real hours as locals enrol, and stop when the plots are full | Growth the player can see and cannot farm. The town is capped, so Housing matters more as the school grows |
+| A local comes if they can reach campus. From a neighbourhood joined by a path and within walking range of an Academic lot, they walk and need no bed and no parking. Otherwise they drive and need a parking space with road access | One rule for how they arrive |
+| A local with no way in needs a bed instead | Every student needs somewhere to live |
+| Off-campus students pay tuition and no room fees. Dorm students pay both. Room fees arrive with neighbourhoods | In the first playable's numbers a commuter netted more than a dorm student, because of bed upkeep. Starting numbers [T]: tuition $8,200 a student and $3,000 an occupied bed, which leaves income unchanged at the start |
+| Living on campus is the fourth cause of retention, from layer 2 | Commuters leave a little more often, drivers a little more than walkers |
+| The freshman live-on rule stays a policy (12.3), off at the start | On, first-year locals live in a dorm too: full dorms and room fees, at a cost in happiness and local applicants |
+| Tapping a neighbourhood shows who lives there, who walks, who drives and what would let more walk | Test 3 |
+| The student card says "Lives in a dorm" or "Lives off campus", and names the street once neighbourhoods exist | The owner's request. The first half is built |
+| Town relations, landlords and buying neighbourhood land are later | The owner's list |
+
+### 25.2 The Housing bar and the bottleneck
+
+Neither changes shape. The bar counts beds and the bottleneck is Housing or Academic.
+
+```
+locals wanted   = localShare * students expected
+drive-in places = min(places in neighbourhoods out of walking range, parking spaces with road access)
+off campus      = min(locals wanted, walk-in places + drive-in places)
+beds wanted     = students expected - off campus
+```
+
+When Housing is the bottleneck, tapping the bar offers up to three fixes with numbers: Housing lots, a path to a named street, or parking spaces. Founding day is unchanged: the starter campus's 36 beds take 36 students and 24 locals walk in from the first neighbourhood.
+
+### 25.3 Roads
+
+The owner overrode the proposal of no road tool. Traffic simulation stays cut.
+
+| Decision | Why |
+|---|---|
+| Roads are a second network, separate from paths, laid by dragging. Students walk on paths. Cars drive on roads | The owner wants streets he can lay |
+| Pieces are chosen from their neighbours: straights, corners, junctions and ends, as paths are | No piece is picked by hand |
+| Where a road meets a path there is a crossing, and both networks pass through that cell | A road must not cut the campus in two for walkers |
+| Town streets belong to the town and appear with the neighbourhoods. The player's roads join them, or the highway, at the edge of the land | The town is not the player's to edit |
+| **One rule only: a parking lot or structure holds cars when a road links it to a town street or the highway. Without that it holds none and shows the stall cause "no road access"** | Roads never become a need of every building. That was the chore SimCity made of them |
+| Cars are for show, like walkers. Their number follows how many locals drive and the time of day. They leave driveways, follow streets and roads to a parking space, and leave later. Parked cars fill a lot in proportion to its use. No congestion, and nothing in catch-up | The traffic cut stands |
+| Housing and Academic lots mildly dislike a road beside them, as part of the noise input | A walkable core with roads at the edges becomes the natural layout, which is the model campus of 23.4 |
+| A road costs money a cell and a little upkeep [T] | A choice, not free |
+| The parking structure holds several times a surface lot on a similar footprint, costs much more, and has a smaller desirability penalty | Land is the scarce thing late on |
+
+### 25.4 Migrating a save
+
+Saves are versioned and upgraded one step at a time by pure functions (17.5). This stop is one more step, written so that a player who opens an old save loses nothing and is surprised by nothing.
+
+1. **The map grows, and nothing moves.** The town is a band of new rows added beyond one edge of the land. Cell indexes are row by row, so every existing cell, building and timer keeps its place and its index. Nothing the player built can be in the way, because the band is land that did not exist.
+2. **The town is made once and stored.** Neighbourhoods, plots, street names and streets are generated from the save's own seed by hashing, without drawing from any random stream, so the same save always upgrades to the same town and other systems' streams are untouched.
+3. **Money is unchanged at the moment of the upgrade.** Under the old rule six in ten students held a bed. Tuition and the room fee are set so that six in ten paying both equals the old flat tuition.
+4. **Beds are unchanged.** The old rule asked for beds for six in ten. The new rule asks for beds for the students who are not locals: the same six in ten.
+5. **Nobody enrolled is turned out.** Locals already enrolled keep coming until they graduate, whether or not a path or a parking space reaches them yet. The new rule binds new classes only. This follows the house rule that growing must never punish the player.
+6. **The player is told once.** The first load shows one line in the away list: the town now stands beside campus, locals in new classes need a path or parking, and current students are unaffected.
+7. **Tests.** A fixture save from before the upgrade is kept in `tests/fixtures`. It must load with the same enrollment, cash, yearly income and buildings, every old cell at the same index, a town in the new rows, and the same result when upgraded twice.
+
+The highway does not exist on the map until layer 3. Until then a road counts when it reaches a town street.
+
+### 25.5 Design tests
+
+| Test | Verdict |
+|---|---|
+| The cut on networks | **Holds, on one condition.** Networks were cut because they were chores that failed while the player was away. A road cannot break, clog or run out, and it is needed by parking alone. If any later feature makes roads a need of ordinary buildings, it reopens the cut and must be argued again |
+| 1. Interdependence | Stronger. Where Academic sits decides who can walk. Roads beside lots cost desirability, so roads and the core pull apart |
+| 3. Caps as puzzles | Passes. "No road access" is a named stall with a one-step fix. Each neighbourhood names why more cannot come |
+| 4. Legible feedback | At risk in one place: two networks that look alike on a phone. Roads are dark asphalt with lane marks and paths are pale paving, and the crossing shows where they share a cell. The look review must confirm they read apart at a glance |
+| 7. Scale | A cost. Roads and car parks use land on a 32 by 32 map. Land purchase in layer 2 has to follow soon |
+| Noise | Brings one piece of layer 3 forward. Desirability reads only green space and walk time today, so "a road beside the lot" is the first noise the lot inspector names |
+| Size of the stop | The largest of the three. Neighbourhoods, the locals rule, room fees, the road tool, two kinds of parking, cars, a new stall cause and a save upgrade arrive together because none of them means anything alone |
+| Neglect-safe and cheap catch-up | Passes. Town houses never decay and cost nothing. Who walks and who drives is worked out when the player builds and at each intake |

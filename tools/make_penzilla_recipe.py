@@ -118,6 +118,50 @@ sprites['build.stadium'] = {'layers': STADIUM_BASE}
 sprites['stadium.4'] = {'layers': [{'file': '_rendered/fallback/stadium.png', 'render': [2, 3]}]}
 # Tier five is the same bowl built taller, with a pale top ring.
 sprites['stadium.5'] = {'layers': [{'file': '_rendered/fallback/stadium-tall.png', 'render': [2, 3]}]}
+# ------------------------------------------------- town, roads and cars --
+# The third play stop's art, for the look review. Nothing here has rules yet.
+#
+# Road pieces are named by which neighbours they join, the way paths are:
+# 1 is the cell up-right (x, y - 1), 2 down-right (x + 1, y), 4 down-left (x, y + 1), 8 up-left (x - 1, y).
+# The pack draws nine pieces. The other seven are the same pieces mirrored, which swaps 1 with 8 and 2 with 4.
+ROAD_PIECES = {15: (1, False), 13: (2, False), 11: (2, True), 14: (3, False), 7: (3, True), 9: (4, False),
+               12: (5, False), 3: (5, True), 6: (6, False), 5: (7, False), 10: (7, True),
+               8: (8, False), 1: (8, True), 4: (9, False), 2: (9, True), 0: (1, False)}
+for mask, (piece, mirrored) in ROAD_PIECES.items():
+    layer = on_grid(f'{TILES}Road_Tile{piece}.png')
+    if mirrored:
+        layer['flip'] = True
+    sprites[f'road.{mask}'] = {'layers': [layer]}
+# A crossing where a road meets a path. The pack has none, so the bars are its own lane marks set side by side
+# (tools/make_crosswalk.py).
+sprites['road.cross.5'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png')]}
+sprites['road.cross.10'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png', flip=True)]}
+
+HOUSES = CITY + 'Houses/'
+TOWN_HOUSES = [('Blue', 1), ('Red', 5), ('Yellow', 9), ('Green', 13), ('Pink', 17), ('White', 20), ('Brown', 3), ('Grey', 7),
+               ('Yellow', 2), ('Blue', 11), ('Red', 15), ('Green', 6)]
+for n, (colour, kind) in enumerate(TOWN_HOUSES):
+    sprites[f'town.house.{n}'] = {'layers': [GRASS, on_grid(f'{HOUSES}{colour}/House_Type{kind}.png')]}
+sprites['town.driveway'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Driveway.png')]}
+sprites['town.pool'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Pool.png')]}
+sprites['town.garden'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Rustic.png')]}
+
+# Cars come drawn from the front and from the back. Mirrored, that is all four ways along the grid:
+# px drives down-right (x + 1), nx up-left, py down-left (y + 1), ny up-right.
+CARS = CITY + 'Vehicles/'
+TOWN_CARS = ['CarType1_Red', 'CarType1_Blue', 'CarType2_Green', 'CarType1_White', 'CarType2_Grey', 'CarType1_Yellow', 'Bus_Yellow']
+for n, name in enumerate(TOWN_CARS):
+    for way, view, mirrored in (('px', 'Front', False), ('py', 'Front', True), ('nx', 'Back', False), ('ny', 'Back', True)):
+        layer = standing(f'{CARS}{name}_{view}.png', 0.5, 0.64)
+        if mirrored:
+            layer['flip'] = True
+        sprites[f'car.{n}.{way}'] = {'layers': [layer]}
+
+sprites['build.parking.large'] = {'layers': [on_grid(PUBLIC + 'Carpark_2x2_Sign.png', 2, 2)]}
+# No pack draws a parking structure. Until one is commissioned it is a model made of plain blocks,
+# rendered with the pack's colours, outline and camera (tools/render/model.html?builtin=parking).
+sprites['build.garage'] = {'layers': [{'file': '_rendered/fallback/parking-structure.png', 'render': [2, 2]}]}
+
 sprites['build.studentlife'] = {'layers': [on_grid(PUBLIC + 'Leasure_Theater.png', 2, 2), on_grid(PUBLIC + 'Leasure_Theater_Front.png', 2, 2)]}
 # What Academic lots could grow into once four of them merge.
 sprites['build.school'] = {'layers': [on_grid(PUBLIC + 'Education_School.png', 2, 2)]}
@@ -205,7 +249,7 @@ recipe = {
     'footprints': {
         'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1],
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
-        'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
+        'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
@@ -216,7 +260,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane marks repeated across it.',
         },
         {
             'name': 'Football stadium (3D model)',

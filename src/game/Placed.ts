@@ -32,6 +32,8 @@ export interface PlacedItem {
   lift?: number;
   /** Mirror the sprite. */
   flip?: boolean;
+  /** Draw this many cells further forward than its spot, for something resting on a flat item such as a car on a car park. */
+  forward?: number;
 }
 
 interface Drawn {
@@ -75,6 +77,7 @@ export class PlacedSprites {
         sprite.setOrigin(0.5, 1);
         sprite.setDepth(900_000 + item.x + item.y);
       }
+      if (item.forward) sprite.setDepth(sprite.depth + item.forward * 4);
       sprite.setPosition(at.x, at.y);
       this.drawn.push({ item, sprite, baseY: at.y });
     }
