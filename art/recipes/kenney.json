@@ -1,0 +1,70 @@
+{
+  "pack": "kenney-isometric",
+  "note": "How each game sprite is put together from Kenney's isometric tiles. Coordinates are in source pixels, measured from the top corner of a cell's ground diamond. Run tools/build_art.py after editing.",
+  "tile": { "halfWidth": 66, "halfHeight": 33 },
+  "sources": {
+    "L": "kenney-isometric-landscape/PNG/landscapeTiles_%03d.png",
+    "B": "kenney-isometric-buildings/PNG/buildingTiles_%03d.png",
+    "C": "kenney-isometric-city/PNG/cityTiles_%03d.png",
+    "D": "kenney-isometric-city/Details/cityDetails_%03d.png"
+  },
+  "stack": {
+    "comment": "Buildings are stacked from a ground floor that includes its base block, any number of upper floors, and an optional roof.",
+    "groundBottom": 99,
+    "storeyHeight": 35,
+    "roofSeat": 50
+  },
+  "sprites": {
+    "ground.grass": { "layers": [["L", 67, -66, 0]] },
+
+    "path.0": { "layers": [["L", 81, -66, 0]] },
+    "path.1": { "layers": [["L", 117, -66, 0]] },
+    "path.2": { "layers": [["L", 105, -66, 0]] },
+    "path.3": { "layers": [["L", 118, -66, 0]] },
+    "path.4": { "layers": [["L", 111, -66, 0]] },
+    "path.5": { "layers": [["L", 82, -66, 0]] },
+    "path.6": { "layers": [["L", 114, -66, 0]] },
+    "path.7": { "layers": [["L", 96, -66, 0]] },
+    "path.8": { "layers": [["L", 112, -66, 0]] },
+    "path.9": { "layers": [["L", 122, -66, 0]] },
+    "path.10": { "layers": [["L", 74, -66, 0]] },
+    "path.11": { "layers": [["L", 104, -66, 0]] },
+    "path.12": { "layers": [["L", 119, -66, 0]] },
+    "path.13": { "layers": [["L", 89, -66, 0]] },
+    "path.14": { "layers": [["L", 97, -66, 0]] },
+    "path.15": { "layers": [["L", 90, -66, 0]] },
+
+    "quad.0": { "layers": [["L", 67, -66, 0], ["D", 10, -40, -14], ["D", 10, 14, 6]] },
+    "quad.1": { "layers": [["L", 67, -66, 0], ["D", 10, -14, -18], ["D", 10, -34, 8], ["D", 10, 20, 2]] },
+    "quad.2": { "layers": [["L", 67, -66, 0], ["D", 10, 2, -20], ["D", 10, -24, 4]] },
+
+    "lot.empty": { "layers": [["L", 73, -66, 0]] },
+    "lot.site": { "layers": [["L", 73, -66, 0], ["B", 5, -49, 8]] },
+    "lot.works": { "layers": [["D", 2, -38, 36], ["D", 3, 4, 44]] },
+
+    "housing.1.0": { "stack": { "ground": 14, "uppers": [], "roof": 69 } },
+    "housing.1.1": { "stack": { "ground": 22, "uppers": [], "roof": 65 } },
+    "housing.1.2": { "stack": { "ground": 30, "uppers": [], "roof": 96 } },
+    "housing.2.0": { "stack": { "ground": 14, "uppers": [43], "roof": 69 } },
+    "housing.2.1": { "stack": { "ground": 22, "uppers": [44], "roof": 65 } },
+    "housing.2.2": { "stack": { "ground": 30, "uppers": [45], "roof": 96 } },
+
+    "academic.1.0": { "stack": { "ground": 3, "uppers": [], "roof": null } },
+    "academic.1.1": { "stack": { "ground": 116, "uppers": [], "roof": null } },
+    "academic.1.2": { "stack": { "ground": 109, "uppers": [], "roof": null } },
+    "academic.2.0": { "stack": { "ground": 3, "uppers": [7], "roof": null } },
+    "academic.2.1": { "stack": { "ground": 116, "uppers": [24], "roof": null } },
+    "academic.2.2": { "stack": { "ground": 109, "uppers": [15], "roof": null } }
+  },
+  "footprints": {},
+  "credits": [
+    {
+      "name": "Isometric Landscape, Isometric City and Isometric Buildings",
+      "author": "Kenney Vleugels (www.kenney.nl)",
+      "licence": "Creative Commons Zero (CC0)",
+      "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets",
+      "changes": "Tiles are layered into whole buildings, quads and lots, then packed into one atlas."
+    }
+  ]
+}

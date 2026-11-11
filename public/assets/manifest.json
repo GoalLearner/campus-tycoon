@@ -1,0 +1,409 @@
+{
+ "version": 1,
+ "pack": "kenney-isometric",
+ "tile": {
+  "halfWidth": 66,
+  "halfHeight": 33
+ },
+ "atlas": {
+  "image": "atlas.png",
+  "data": "atlas.json"
+ },
+ "sprites": {
+  "academic.1.0": {
+   "frame": "academic.1.0",
+   "anchor": [
+    66,
+    28
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "academic.1.1": {
+   "frame": "academic.1.1",
+   "anchor": [
+    66,
+    28
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "academic.1.2": {
+   "frame": "academic.1.2",
+   "anchor": [
+    66,
+    28
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "academic.2.0": {
+   "frame": "academic.2.0",
+   "anchor": [
+    66,
+    63
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "academic.2.1": {
+   "frame": "academic.2.1",
+   "anchor": [
+    66,
+    63
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "academic.2.2": {
+   "frame": "academic.2.2",
+   "anchor": [
+    66,
+    63
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "ground.grass": {
+   "frame": "ground.grass",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.1.0": {
+   "frame": "housing.1.0",
+   "anchor": [
+    66,
+    38
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.1.1": {
+   "frame": "housing.1.1",
+   "anchor": [
+    66,
+    39
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.1.2": {
+   "frame": "housing.1.2",
+   "anchor": [
+    66,
+    39
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.2.0": {
+   "frame": "housing.2.0",
+   "anchor": [
+    66,
+    73
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.2.1": {
+   "frame": "housing.2.1",
+   "anchor": [
+    66,
+    74
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "housing.2.2": {
+   "frame": "housing.2.2",
+   "anchor": [
+    66,
+    74
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "lot.empty": {
+   "frame": "lot.empty",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "lot.site": {
+   "frame": "lot.site",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "lot.works": {
+   "frame": "lot.works",
+   "anchor": [
+    38,
+    -36
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.0": {
+   "frame": "path.0",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.1": {
+   "frame": "path.1",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.10": {
+   "frame": "path.10",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.11": {
+   "frame": "path.11",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.12": {
+   "frame": "path.12",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.13": {
+   "frame": "path.13",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.14": {
+   "frame": "path.14",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.15": {
+   "frame": "path.15",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.2": {
+   "frame": "path.2",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.3": {
+   "frame": "path.3",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.4": {
+   "frame": "path.4",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.5": {
+   "frame": "path.5",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.6": {
+   "frame": "path.6",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.7": {
+   "frame": "path.7",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.8": {
+   "frame": "path.8",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "path.9": {
+   "frame": "path.9",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "quad.0": {
+   "frame": "quad.0",
+   "anchor": [
+    66,
+    14
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "quad.1": {
+   "frame": "quad.1",
+   "anchor": [
+    66,
+    18
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "quad.2": {
+   "frame": "quad.2",
+   "anchor": [
+    66,
+    20
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  }
+ },
+ "credits": [
+  {
+   "name": "Isometric Landscape, Isometric City and Isometric Buildings",
+   "author": "Kenney Vleugels (www.kenney.nl)",
+   "licence": "Creative Commons Zero (CC0)",
+   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "source": "https://kenney.nl/assets",
+   "changes": "Tiles are layered into whole buildings, quads and lots, then packed into one atlas."
+  }
+ ]
+}
