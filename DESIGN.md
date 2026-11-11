@@ -1973,7 +1973,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Outdoor courts, `build.courts` | A tennis court cut from the tennis stadium. It is not a basketball court | Penzilla commission, 2 x 2 |
 | Gym, `build.gym` | A plain hall with a dumbbell icon on its sign. The icon pack asks a small payment for commercial use, which has not been made | Penzilla commission. Or pay for the icon and keep it. Not to ship as it is |
 | Recreation field, `build.field` | The soccer stadium with its stand, booth and banner cut away | Penzilla commission, 2 x 2, or keep if it passes a second look |
-| Lake, `pond.large` | Laid from nine shore tiles. Two are mirrored and the middle is two half tiles joined. A sliver of earth shows at its two side corners | Penzilla commission of the two missing shore pieces and a plain water tile |
+| Lake, `pond.large` | Laid from nine shore tiles. Two are mirrored and the middle is two half tiles joined. The sliver of earth at its two side corners was a fault in the drawing order, not in the art, and was fixed on 2026-11-11 | Penzilla commission of the two missing shore pieces and a plain water tile |
 | First-aid icon, `icon.injury` | The pharmacy sign, cropped, with its cross recoloured green | Penzilla commission: one icon |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
@@ -2091,4 +2091,4 @@ Lit windows would have to be made here, as an overlay cut from each building's o
 
 ### 28.4 Schedule
 
-Layer 1, with the calendar. The real-clock lighting and the walker schedule are cheap, because neither touches the simulation, and can be added sooner if the owner asks.
+Layer 1, with the calendar. The real-clock lighting and the walker schedule are cheap, because neither touches the simulation: a tint over the map by period, the pack's street lamps along paths, and walker numbers and destinations by period. They can be built as one small piece before play stop 3 when the owner says so. Lit windows are the one part that is not cheap, because that art has to be made.
