@@ -7,6 +7,7 @@ A mobile idle sim where the player runs a fictional Division I-style university.
 - **Layer 0, the first playable, is built** (2026-11-11). It is waiting for the owner to play it. **Do not start Layer 1 until he says so.**
 - The repository is public on GitHub. `main` holds the playable game and `layer-0-first-playable` records the layer as built.
 - Distribution is being set up outside the layers: Cloudflare Pages for the web build and TestFlight through Codemagic for iOS. See the Distribution section below.
+- **A feedback pass on Layer 0 is in progress** (2026-11-11). Walking students, placeable trees and laid-out quads are on the branch `layer-0-feedback` with candidate free art. A larger set is requested and not started: a Build menu of hand-placed buildings, ponds, Medical and Safety coverage, and incidents. **The owner's order for this pass: first one phone-sized screenshot with every new item for him to approve the look, then the mechanics.** Football and the stadium stay in Layer 1, after this pass.
 
 Update this section at the end of every layer.
 
@@ -54,6 +55,9 @@ Update this section at the end of every layer.
 - Downloaded packs live in `art/source`, which is git-ignored. A paid pack must never be committed or sit in a public repository.
 - A paid pack's recipe is marked `"private": true`. Its atlas is built into `art/private` (git-ignored) and uploaded to the private repository `GoalLearner/campus-tycoon-art` with `npm run art:publish`. Builds given `ART_TOKEN` download it. Builds without it use the Kenney art in `public/assets`.
 - `CREDITS.md` lists every pack in use and its licence.
+- **Every visible thing is a real sprite** (owner's rule, 2026-11-11): buildings, water and shorelines, trees, benches, people, responders, incident icons, the placement ghost and menu thumbnails. No coloured boxes, dots, circles or text labels standing in for art. A tint on ground tiles for a radius or coverage is feedback, not art.
+- People are sprites named `person.<look>.<direction>.<frame>`, described by `people` in the manifest. With no people in the manifest there are no walkers. 3D characters become walk sheets with `tools/render/people.html`, opened from the dev server.
+- Walkers are for show only. Nothing in `src/sim` may depend on them, and money or traffic must never be read from them.
 
 ## Design rules that are easy to forget
 
@@ -85,6 +89,7 @@ Update this section at the end of every layer.
 - `npm run art`: rebuild the atlas, manifest and CREDITS.md from `art/recipes/kenney.json`. Needs Python with Pillow and the packs in `art/source`
 - `npm run art:publish`: upload the atlas in `art/private` to the private art repository
 - `python tools/build_icons.py`: redraw the placeholder iOS icon and launch image
+- Dev builds: `?demo&view=14,17,1.3&arrive=24` frames a cell at a zoom and shows students moving in, for screenshots
 
 Dev builds only: `window.__campus` exposes the store, session and clock, and opening the page with `?demo` shows a small tended campus without touching the save. A phone-sized screenshot can be taken with headless Edge pointed at `http://localhost:5183/?demo` (window size 500 by 1000, device scale factor 2, `--enable-unsafe-swiftshader`).
 
