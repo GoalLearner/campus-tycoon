@@ -35,7 +35,14 @@ plays several game years without a screen, with an absent player, a casual playe
 npm run build
 ```
 
-type-checks and writes the static site to `dist`.
+type-checks and writes the web build to `dist`.
+
+## How it ships
+
+- **Web:** Cloudflare Pages builds and deploys every push to `main`. The build includes a service worker, so the game opens with no connection and offers each new version with an Update button.
+- **iOS:** the same game wrapped with Capacitor. Pushing a tag that starts with `v` builds it on Codemagic and uploads it to TestFlight.
+
+Signing files, keys and tokens live in Cloudflare and Codemagic settings. None is in this repository.
 
 ## How it is put together
 

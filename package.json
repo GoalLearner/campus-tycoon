@@ -11,7 +11,7 @@
     "prebuild": "node scripts/fetch-art.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name campus-tycoon --branch main",
+    "deploy": "node scripts/deploy.mjs",
     "prebuild:ios": "node scripts/fetch-art.mjs",
     "build:ios": "tsc --noEmit && vite build --mode ios && cap sync ios",
     "test": "vitest run",

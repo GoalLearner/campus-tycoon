@@ -27,21 +27,8 @@ const pack = process.env.ART_PACK?.trim() || 'current';
 const ref = process.env.ART_REF?.trim() || 'main';
 const outDir = fileURLToPath(new URL('../art/private/', import.meta.url));
 
-function fail(message) {
-  console.error(`\nArt: ${message}`);
-  console.error('Art: the build stopped so it cannot ship the wrong art. Remove ART_TOKEN to build with the Kenney art.\n');
-  process.exit(1);
-}
-
-if (!token) {
-  const local = FILES.every((file) => existsSync(outDir + file));
-  console.log(
-    local
-      ? 'Art: no ART_TOKEN. Using the private pack already in art/private.'
-      : 'Art: no ART_TOKEN. Using the built-in Kenney art.',
-  );
-  process.exit(0);
-}
+/** Thrown for any problem with the private pack. Caught once at the bottom. */
+class ArtProblem extends Error {}
 
 async function download(file) {
   const url = `https://api.github.com/repos/${repo}/contents/${pack}/${file}?ref=${encodeURIComponent(ref)}`;
@@ -56,28 +43,55 @@ async function download(file) {
       },
     });
   } catch (err) {
-    fail(`could not reach GitHub for ${file} (${err instanceof Error ? err.message : 'network error'}).`);
+    throw new ArtProblem(`could not reach GitHub for ${file} (${err instanceof Error ? err.message : 'network error'}).`);
   }
-  if (response.status === 401) fail('GitHub refused ART_TOKEN. It may have expired. Make a new one and update the secret.');
+  if (response.status === 401) {
+    throw new ArtProblem('GitHub refused ART_TOKEN. It may have expired. Make a new one and update the secret.');
+  }
   if (response.status === 403 || response.status === 404) {
-    fail(`${pack}/${file} was not found in ${repo}, or ART_TOKEN cannot read that repository (HTTP ${response.status}).`);
+    throw new ArtProblem(
+      `${pack}/${file} was not found in ${repo}, or ART_TOKEN cannot read that repository (HTTP ${response.status}).`,
+    );
   }
-  if (!response.ok) fail(`GitHub answered HTTP ${response.status} for ${file}.`);
+  if (!response.ok) throw new ArtProblem(`GitHub answered HTTP ${response.status} for ${file}.`);
   return Buffer.from(await response.arrayBuffer());
 }
 
-// Download everything first, so a failure never leaves half a pack behind.
-const downloaded = [];
-for (const file of FILES) downloaded.push([file, await download(file)]);
+async function main() {
+  if (!token) {
+    const local = FILES.every((file) => existsSync(outDir + file));
+    console.log(
+      local
+        ? 'Art: no ART_TOKEN. Using the private pack already in art/private.'
+        : 'Art: no ART_TOKEN. Using the built-in Kenney art.',
+    );
+    return;
+  }
 
-let manifest;
-try {
-  manifest = JSON.parse(downloaded.find(([file]) => file === 'manifest.json')[1].toString('utf8'));
-} catch {
-  fail('manifest.json in the private pack is not valid JSON.');
+  // Download everything first, so a failure never leaves half a pack behind.
+  const downloaded = [];
+  for (const file of FILES) downloaded.push([file, await download(file)]);
+
+  let manifest;
+  try {
+    manifest = JSON.parse(downloaded.find(([file]) => file === 'manifest.json')[1].toString('utf8'));
+  } catch {
+    throw new ArtProblem('manifest.json in the private pack is not valid JSON.');
+  }
+  if (!manifest?.atlas?.image || !manifest?.sprites) {
+    throw new ArtProblem('manifest.json in the private pack is missing its atlas or sprites.');
+  }
+
+  await mkdir(outDir, { recursive: true });
+  for (const [file, bytes] of downloaded) await writeFile(outDir + file, bytes);
+  console.log(`Art: downloaded the private pack "${manifest.pack ?? pack}" from ${repo} (${pack}, ${ref}).`);
 }
-if (!manifest?.atlas?.image || !manifest?.sprites) fail('manifest.json in the private pack is missing its atlas or sprites.');
 
-await mkdir(outDir, { recursive: true });
-for (const [file, bytes] of downloaded) await writeFile(outDir + file, bytes);
-console.log(`Art: downloaded the private pack "${manifest.pack ?? pack}" from ${repo} (${pack}, ${ref}).`);
+// Set the exit code and let Node finish by itself. Calling process.exit() while a
+// download is still closing crashes Node on Windows.
+main().catch((err) => {
+  if (!(err instanceof ArtProblem)) throw err;
+  console.error(`\nArt: ${err.message}`);
+  console.error('Art: the build stopped so it cannot ship the wrong art. Remove ART_TOKEN to build with the Kenney art.\n');
+  process.exitCode = 1;
+});

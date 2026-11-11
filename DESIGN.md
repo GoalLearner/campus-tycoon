@@ -2,7 +2,7 @@
 
 Working title. Written 2026-11-11 from the design discussion between the owner and Claude.
 
-**Status: Layer 0, the first playable, is built and waiting for the owner to play it.** Nothing from Layer 1 has been started. Building goes one layer at a time (section 18).
+**Status: Layer 0, the first playable, is built and waiting for the owner to play it.** Nothing from Layer 1 has been started. Building goes one layer at a time (section 18). Distribution was set up early, on 2026-11-11, outside the layers: a public repository, the web build on Cloudflare Pages, and the iOS app for TestFlight (section 17.8).
 
 How to read this document:
 
@@ -1014,7 +1014,7 @@ Apple's current tiers are 4+, 9+, 13+, 16+ and 18+, set by a content questionnai
 
 ### 17.1 Stack
 
-Phaser 3, TypeScript and Vite. Capacitor wraps the game for iOS in the polish layer. The first playable is a home-screen web app. Touch-first: pan, pinch-zoom, tap to select, drag to place.
+Phaser 3, TypeScript and Vite. Capacitor wraps the game for iOS. The app shell was brought forward to 2026-11-11 so the first playable can be tested through TestFlight (section 17.8). The first playable is also a home-screen web app. Touch-first: pan, pinch-zoom, tap to select, drag to place.
 
 ### 17.2 Structure
 
@@ -1106,7 +1106,7 @@ settings     notifications, wake time
 timers       sorted by due tick
 ```
 
-Saves are versioned JSON behind one persistence interface. On the web that is IndexedDB, and the app requests persistent storage so the browser does not evict it. On iOS it is the Capacitor Filesystem, with Capacitor Preferences for settings. The previous save is kept as a backup. The save is written after every meaningful action and when the app is backgrounded. From the first playable on, settings has export-save and import-save buttons, so progress can be backed up and moved to another device.
+Saves are versioned JSON behind one persistence interface. On the web that is IndexedDB, and the app requests persistent storage so the browser does not evict it. On iOS it is the Capacitor Filesystem: two files in the app's Library folder, which the system never clears and which is part of the phone's backup. Settings will use Capacitor Preferences once the game has settings. The previous save is kept as a backup. The save is written after every meaningful action and when the app is backgrounded. From the first playable on, settings has export-save and import-save buttons, so progress can be backed up and moved to another device.
 
 ### 17.6 The simulate script
 
@@ -1139,9 +1139,23 @@ Assertions agreed in the discussion. The script exits non-zero when one fails.
 
 ### 17.7 Dev tools, notifications, art
 
-- **Dev time-skip panel**, dev builds only: +1 hour, +1 day, +1 year. It shifts the app's clock; the sim is unaware.
+- **Dev time-skip panel**: +1 hour, +1 day, +1 year. It shifts the app's clock; the sim is unaware. Dev builds always show it. TestFlight builds carry it behind a hidden switch that is off by default: seven taps on the version line in the Menu. The web build and any App Store release build do not contain it.
 - **Notifications**, iOS app only: at most three a day, player-toggleable. Candidates: an annual decision closing in twelve hours, a decision expiring, construction finished, a game result, the Year-End report.
-- **Art:** real sprites from the first playable on, never coloured boxes. The pack is chosen by comparison and the owner's pick (section 21). Source packs live in `art/source`, which is not committed, and the sprites in use are copied to `public/assets` and packed into an atlas. One manifest maps each zone, stage and variant to a sprite, its anchor point and its footprint, so swapping art is a manifest edit and never a code change. Missing art falls back to a labelled placeholder. Path tiles are chosen automatically from neighbouring cells. Buildings have two or three variants per stage, and a build-site sprite shows while a timer runs. Depth sorting is correct as the camera pans. `CREDITS.md` lists each pack and its licence. No public-domain stadium model has been found yet.
+- **Art:** real sprites from the first playable on, never coloured boxes. The pack is chosen by comparison and the owner's pick (section 21). Source packs live in `art/source`, which is not committed, and the sprites in use are copied to `public/assets` and packed into an atlas. One manifest maps each zone, stage and variant to a sprite, its anchor point and its footprint, so swapping art is a manifest edit and never a code change. Missing art falls back to a labelled placeholder. Path tiles are chosen automatically from neighbouring cells. Buildings have two or three variants per stage, and a build-site sprite shows while a timer runs. Depth sorting is correct as the camera pans. `CREDITS.md` lists each pack and its licence. No public-domain stadium model has been found yet. The repository is public, so it holds only public-domain art. A paid pack lives in a private repository, and a build that is given a read-only token downloads it and uses it in place of the built-in art. A build without the token uses the built-in art, so a fresh clone always builds and runs.
+
+### 17.8 Distribution
+
+Set up on 2026-11-11 at the owner's request, outside the layers.
+
+| Piece | Decision |
+|---|---|
+| Source | A public GitHub repository, for viewing only. All rights reserved, no open-source licence. Secrets, signing files, personal paths and paid art never enter it |
+| Web | Cloudflare Pages. A push to `main` builds and deploys. `npm run deploy` does the same from the PC |
+| Offline and updates | The web build has a service worker written at build time. Its cache is named after a hash of the build, and each build is kept and served whole. A new build downloads in the background, then the HUD shows "A new version is ready" with an Update button. The player picks the moment. Closing the app also switches to the new build |
+| iOS | Capacitor. The app carries its own copy of the game and never loads it from the website. It has no service worker, because its files ship inside the app and a second cache could only serve stale ones. A new app version is a new TestFlight build |
+| iOS builds | Codemagic, with manual signing. A tag that starts with `v` builds, signs and uploads to TestFlight. The build number is one above the newest TestFlight build. The version comes from `package.json` |
+| App identity | Bundle id `com.goallearner.campustycoon`. iPhone only and portrait only for now. No extra capabilities |
+| Secrets | Only in Cloudflare and Codemagic settings. The list is in `CLAUDE.md` |
 
 ---
 
@@ -1199,7 +1213,7 @@ Defined precisely in section 19.
 
 ### Layer 7: Polish
 
-- **Contents:** seasonal palettes. The iOS app through Capacitor. Notifications. The tutorial pass over the first three check-ins. The age-rating questionnaire. A full balance pass. Save migration tests. Performance on a real phone.
+- **Contents:** seasonal palettes. The rest of the iOS app (the shell and TestFlight builds were brought forward, section 17.8): real icon and launch artwork, iPad if wanted, a release build without the tester tools. Notifications. The tutorial pass over the first three check-ins. The age-rating questionnaire. A full balance pass. Save migration tests. Performance on a real phone.
 - **Acceptance checks:** installs from TestFlight. A save from the web build loads in the app. Notifications respect the daily limit and the toggle.
 - **Simulate must assert:** everything, across seeds, on the final numbers.
 
@@ -1236,13 +1250,13 @@ There are two ways, and neither costs anything.
 
 **Over home Wi-Fi, today.** On the PC, run `npm run phone` in the project folder and note the Network address it prints. On the iPhone, open that address in Safari, tap Share, then Add to Home Screen. It works while the PC is on and that command is running. It cannot open with no connection, because browsers only allow that over a secure address.
 
-**From a free static host, for real use.** Run `npm run build` and publish the `dist` folder. Then:
+**From Cloudflare Pages, for real use.** A push to `main` publishes the web build (section 17.8). Then:
 
 1. On the iPhone, open the address in Safari.
 2. Tap Share, then Add to Home Screen.
 3. Launch it from the icon. It opens full screen, like an app, and works with no connection after the first launch.
 
-It includes a web app manifest, an icon, and a small service worker so it opens without a connection. The save lives in the browser's storage for that home-screen app. The app asks the browser to keep it, and the export-save button backs it up or moves it to another device. During development the same build can also be opened from the PC over home Wi-Fi.
+It includes a web app manifest, an icon, and a service worker so it opens without a connection and offers each new build with an Update button. The save lives in the browser's storage for that home-screen app. The app asks the browser to keep it, and the export-save button backs it up or moves it to another device. During development the same build can also be opened from the PC over home Wi-Fi.
 
 ---
 
@@ -1277,10 +1291,10 @@ Before any system is cut, the inbox cadence drops from three items a day to two.
 
 ## 21. Open questions
 
-Settled on 2026-11-11 and no longer open: the personalities addition (section 13), save storage (IndexedDB on the web with persistent storage and export and import), the one-minute tick, the 30-day cap that drops whole weeks, and the first playable anchoring its week to the install moment.
+Settled on 2026-11-11 and no longer open: the personalities addition (section 13), save storage (IndexedDB on the web with persistent storage and export and import), the one-minute tick, the 30-day cap that drops whole weeks, the first playable anchoring its week to the install moment, and hosting (section 17.8: a public repository, Cloudflare Pages, and TestFlight through Codemagic).
 
 1. **Art pack.** Five packs were compared on 2026-11-11 and the top two were test-rendered side by side. The first playable uses Kenney's public-domain isometric tiles, because they are free, complete and clean to ship. Penzilla's Giant City Builder, at $10, is the recommended upgrade: it has more charm and real campus buildings. The owner decides. Swapping is a recipe and manifest edit.
-2. **Free host** for the first playable: one that needs a public repository, or one that works with a private repository. A paid art pack must not sit in a public repository.
+2. **App Store name.** "Campus Tycoon" is the first choice. Backups if it is taken: "Campus Tycoon: Idle University", then "Quad Tycoon".
 3. **Map size.** Twenty-five parcels may be more land than the capacity numbers ever need. Settled with the simulate script in layer 2.
 4. **Stall-cause order** when several apply. Proceeding with: no demand, density cap, safety, health, desirability.
 5. **Final lists** still to be written under the tone guide: fourteen policies, sixteen reward buildings, ten awards, Board goal templates, the three prestige landmarks' effects.

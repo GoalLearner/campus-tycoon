@@ -52,6 +52,7 @@ Update this section at the end of every layer.
 - Art is data. One manifest maps each zone, stage and variant to a sprite, its anchor and its footprint. Swapping art is a manifest edit, never a code change.
 - Missing art falls back to a labelled placeholder so nothing breaks.
 - Downloaded packs live in `art/source`, which is git-ignored. A paid pack must never be committed or sit in a public repository.
+- A paid pack's recipe is marked `"private": true`. Its atlas is built into `art/private` (git-ignored) and uploaded to the private repository `GoalLearner/campus-tycoon-art` with `npm run art:publish`. Builds given `ART_TOKEN` download it. Builds without it use the Kenney art in `public/assets`.
 - `CREDITS.md` lists every pack in use and its licence.
 
 ## Design rules that are easy to forget
@@ -72,22 +73,48 @@ Update this section at the end of every layer.
 
 ## Commands
 
-- `npm run dev`: local dev server on port 5183, with the dev time-skip in the Menu
+- `npm run dev`: local dev server on port 5183, with the time-skip panel in the Menu
 - `npm run phone`: the same, reachable from a phone on the same Wi-Fi
 - `npm test`: Vitest, all sim tests
 - `npm run typecheck`: TypeScript with no output
 - `npm run simulate`: headless runs with absent, casual and optimizer players, then the layer's assertions. Options: `-- --years 10 --seeds 1,2,3`
-- `npm run build`: typecheck, then the static site in `dist`
+- `npm run build`: fetch private art if a token is set, typecheck, then the web build in `dist` with its service worker
+- `npm run deploy`: test, build and upload the web build to Cloudflare Pages
+- `npm run build:ios`: the app's copy of the game in `dist-ios`, then `cap sync ios`. Set `TESTER_TOOLS=1` to compile in the hidden time-skip panel
 - `npm run preview`: serve `dist` locally
 - `npm run art`: rebuild the atlas, manifest and CREDITS.md from `art/recipes/kenney.json`. Needs Python with Pillow and the packs in `art/source`
+- `npm run art:publish`: upload the atlas in `art/private` to the private art repository
+- `python tools/build_icons.py`: redraw the placeholder iOS icon and launch image
 
 Dev builds only: `window.__campus` exposes the store, session and clock, and opening the page with `?demo` shows a small tended campus without touching the save. A phone-sized screenshot can be taken with headless Edge pointed at `http://localhost:5183/?demo` (window size 500 by 1000, device scale factor 2, `--enable-unsafe-swiftshader`).
+
+## Distribution
+
+Set up on 2026-11-11, outside the layers. DESIGN.md section 17.8 has the decisions.
+
+- **Repository:** public at `github.com/GoalLearner/campus-tycoon`, for viewing only, all rights reserved. Commits use the GitHub no-reply address. Before every push, check the commit for secrets, signing files, personal paths, local addresses and paid art.
+- **Web:** Cloudflare Pages project `campus-tycoon`, connected to GitHub. A push to `main` deploys. Build command `npm run build`, output folder `dist`. The project must be created in the dashboard with the Git connection, never from the command line, or it can never be connected to GitHub.
+- **Updates:** `tools/finish-build.ts` writes `sw.js` from `src/sw/service-worker.js` with a cache name made from a hash of the build. `src/app/updates.ts` shows the Update row when a new build is waiting. Never add `skipWaiting()` to the install step: the player picks the moment.
+- **iOS:** Capacitor 8 with Swift packages, so there is no CocoaPods step. `capacitor.config.json` must never get a `server.url`: the app carries its own copy of the game. The app has no service worker. `scripts/check-ios-bundle.mjs` enforces both.
+- **TestFlight:** `codemagic.yaml`, workflow `ios-testflight`. Push a tag that starts with `v` to build and upload. The version comes from `package.json`. Bump it there, never in Xcode.
+- **Tester tools:** the TestFlight workflow sets `TESTER_TOOLS=1`. A future App Store release workflow must leave it unset.
+
+Secrets and where they live. None is ever written to a file in this repository.
+
+| Secret | Where | Needed for |
+|---|---|---|
+| App Store Connect API key | Codemagic, Teams, Integrations, connection named `Codemagic` | Upload to TestFlight and the build number |
+| Apple Distribution certificate | Codemagic, Teams, Code signing identities, reference `awakened-distribution` | Signing |
+| App Store provisioning profile | Codemagic, Teams, Code signing identities, reference `campus-tycoon-app-store` | Signing |
+| `ART_TOKEN` | Cloudflare Pages build settings and a Codemagic variable group | Only once a paid art pack is in use |
+| Cloudflare sign-in | On the owner's PC, from `npx wrangler login` | `npm run deploy` |
 
 ## Where things are
 
 - `src/sim`: the pure simulation. `advance.ts` is the heart. `actions.ts` is everything the player can do. One file per system under `systems/`, one config file per system under `config/`.
-- `src/app`: clock, store, saves, dev tools. The store is the only thing that changes the game state.
+- `src/app`: clock, store, saves, update watcher, dev tools. The store is the only thing that changes the game state. `persistence.ts` picks IndexedDB on the web and files in the app's Library folder on iOS.
 - `src/game`: Phaser. `CampusScene.ts` draws the map and reads touches. `art.ts` resolves sprites through the manifest.
 - `src/ui`: the HUD and panels as plain HTML.
-- `scripts`: the simulate script and its scripted players.
-- `tools/build_art.py` and `art/recipes`: how sprites are put together from the source pack.
+- `scripts`: the simulate script and its scripted players, plus the build helpers: `fetch-art.mjs`, `publish-art.mjs`, `deploy.mjs`, `ios-version.mjs`, `check-ios-bundle.mjs`.
+- `ios`: the Xcode project. It is committed. `ios/App/App/public` is not: `cap sync` fills it.
+- `tools/build_art.py` and `art/recipes`: how sprites are put together from the source pack. `tools/finish-build.ts` is the Vite plugin that swaps in private art and writes the service worker.
