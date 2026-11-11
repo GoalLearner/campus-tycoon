@@ -30,3 +30,4 @@ export { calendarAt, eventsAt, nextMilestone, type CalendarEvent, type CalendarP
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';
 export * from './selectors';
 export * from './format';
+export { summarizeAway, type AwayFacts, type AwaySummary } from './digest';
