@@ -62,7 +62,8 @@ export {
 } from './systems/students';
 export type { ArchetypeId, CauseId, RelationshipId } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
-export { calendarAt, eventsAt, nextMilestone, type CalendarEvent, type CalendarPos, type Phase } from './calendar';
+export { calendarAt, dateAt, eventsAt, formatDate, nextMilestone, type CalendarEvent, type CalendarPos, type GameDate, type Phase } from './calendar';
+export * from './config/academicCalendar';
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';
 export * from './selectors';
 export * from './format';

@@ -8,6 +8,8 @@ import {
   bottleneck,
   buildingAt,
   calendarAt,
+  dateAt,
+  formatDate,
   capacityWanted,
   cellAt,
   COST,
@@ -566,7 +568,7 @@ export function mountUi(root: HTMLElement): void {
     const tick = state.clock.tick;
     const pos = calendarAt(tick);
     setText(when, NOW_LABEL[pos.phase]);
-    setText(next, pos.year === 0 ? '' : `Year ${pos.year} · Day ${pos.day}`);
+    setText(next, pos.year === 0 ? formatDate(dateAt(tick)) : `${formatDate(dateAt(tick))} · Year ${pos.year}`);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
