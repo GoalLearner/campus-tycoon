@@ -45,13 +45,14 @@ import {
   THOUGHTS,
   type ArchetypeId,
   type CauseId,
+  type DriverId,
   type RelationshipId,
   type RelationshipKind,
 } from '../config/students';
 import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
-import { approvalAt, type Approval, type Cause } from './happiness';
+import { approvalAt, partLevel, type Approval, type Cause } from './happiness';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -272,6 +273,8 @@ export function relationshipOf(seed: number, ref: StudentRef, semester: number, 
 
 export interface StudentReason {
   cause: CauseId;
+  /** The part of that cause the thought is about, such as dining inside "Food & fun". */
+  part: DriverId;
   /** True when the student is naming something they like. */
   positive: boolean;
   thought: string;
@@ -357,6 +360,10 @@ function approvalOver(state: GameState, spots: readonly number[]): Approval {
   const causes = first.causes.map((cause, i) => ({
     ...cause,
     level: each.reduce((sum, one) => sum + (one.causes[i]?.level ?? 0), 0) / each.length,
+    parts: cause.parts.map((part, j) => ({
+      ...part,
+      level: each.reduce((sum, one) => sum + (one.causes[i]?.parts[j]?.level ?? 0), 0) / each.length,
+    })),
   }));
   return { score: each.reduce((sum, one) => sum + one.score, 0) / each.length, causes, walkMinutes: first.walkMinutes };
 }
@@ -370,24 +377,28 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   const tied = approval.causes.filter((cause) => size(cause) >= best - 0.05);
   if (tied.length === 0) return null;
   const chosen = pickFrom(tied, roll(state.seed, ref, SALT.tie));
+  // Inside the cause, the thought is about one part: the best when they are pleased, the weakest when
+  // not, so it always names something to build. Parts that are as good as tied take turns too.
+  const edgeOfParts = chosen.parts.reduce((found, part) => (content ? Math.max(found, part.level) : Math.min(found, part.level)), content ? -1 : 2);
+  const part = pickFrom(chosen.parts.filter((one) => Math.abs(one.level - edgeOfParts) <= 0.05), roll(state.seed, ref, SALT.tie)).id;
   // The thought is about one building: the best of their places when they are pleased, the worst when not.
   let spot = spots[0]!;
   let edge = content ? -1 : 2;
   for (const candidate of spots) {
-    const level = approvalAt(state, candidate).causes.find((cause) => cause.id === chosen.id)?.level ?? 0;
+    const level = partLevel(approvalAt(state, candidate).causes, part) ?? 0;
     if (content ? level > edge : level < edge) {
       edge = level;
       spot = candidate;
     }
   }
   let pool: readonly string[];
-  if (chosen.id === 'walk') pool = content ? THOUGHTS.walkGood : approval.walkMinutes < 0 ? THOUGHTS.walkNone : THOUGHTS.walkLong;
-  else if (chosen.id === 'green') pool = resident ? (content ? THOUGHTS.greenGood : THOUGHTS.greenLow) : content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
-  else if (chosen.id === 'dining') pool = resident ? (content ? THOUGHTS.diningGood : THOUGHTS.diningLow) : content ? THOUGHTS.commuterDiningGood : THOUGHTS.commuterDiningLow;
-  else if (chosen.id === 'recreation') pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
+  if (part === 'walk') pool = content ? THOUGHTS.walkGood : approval.walkMinutes < 0 ? THOUGHTS.walkNone : THOUGHTS.walkLong;
+  else if (part === 'green') pool = resident ? (content ? THOUGHTS.greenGood : THOUGHTS.greenLow) : content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
+  else if (part === 'dining') pool = resident ? (content ? THOUGHTS.diningGood : THOUGHTS.diningLow) : content ? THOUGHTS.commuterDiningGood : THOUGHTS.commuterDiningLow;
+  else if (part === 'recreation') pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
   else pool = resident ? (content ? THOUGHTS.safetyGood : THOUGHTS.safetyLow) : content ? THOUGHTS.commuterSafetyGood : THOUGHTS.commuterSafetyLow;
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
-  return { cause: chosen.id, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
+  return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
 }
 
 /** Everything the card shows, or null when no such student is enrolled now. */

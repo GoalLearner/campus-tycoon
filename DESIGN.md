@@ -57,13 +57,19 @@ A proposal that fails one is called out and fixed or dropped.
 
 ### 2.3 The check-in contract
 
-Every system must help meet these three targets.
+**Once a day is the slowest rhythm the game supports.** The game is built for one to two visits a day (the owner's rule, 2026-11-11; it was two or more before). Every system must help meet these targets.
 
 | Part | Target |
 |---|---|
-| Review | A newspaper edition greets each check-in after an hour or more away |
-| Decide | About three new inbox decisions a day, deadlines of at least one day, at most four routine items open |
-| Build | Income tuned so a typical gap between check-ins funds one meaningful purchase, and a week funds one big project |
+| Review | A newspaper edition greets each check-in after an hour or more away. After a day away it leads with the three or four things that matter most and collapses the rest |
+| Decide | About three new inbox decisions a day, at most four routine items open. A routine item stays open at least 36 hours. An annual decision stays open 48 to 72 hours |
+| Build | Income tuned so one day away funds at least one meaningful purchase, and a week funds one big project |
+| Never missed | Nothing that matters opens and closes entirely between two visits a day apart. Any window the player can act in lasts at least 36 hours (`MIN_WINDOW_TICKS`), so someone who looks in every 24 hours always gets a visit inside it with half a day left |
+| Never waiting | Construction and upgrades start and finish by themselves. Game days, rankings and intakes happen on time and wait in the away summary |
+| Catch-up | The game catches up from the last saved moment whenever it opens, on the web and on iOS |
+| Notifications | iOS only. At most two a day by default: a decision about to expire, and a headline result. The player can change the number or turn them off |
+
+Section 4.9 lists every timer against this contract.
 
 ### 2.4 House rules that came out of the discussion
 
@@ -137,15 +143,15 @@ Phases are whole days so every intake and report lands at the anchor hour. The e
 
 | Day | Phase | At the anchor hour | Football and other beats |
 |---|---|---|---|
-| 1 | Fall | Fall intake, waitlist opens | Two home games by day, two away overnight. Rush week begins |
-| 2 | Fall | Rush results | Two home games by day, two away overnight. Homecoming is the afternoon game |
-| 3 | Fall | Recruiting pitch opens | Two games, the rivalry last in the evening. Finals overnight |
-| 4 | Spring | Spring intake, waitlist opens | Conference title game, then a bowl, if earned. Commencement speaker choice opens |
+| 1 | Fall | Fall intake, waitlist opens | Two home games in the evening, two away overnight. Rush week begins |
+| 2 | Fall | Rush results | Three home games by day, Homecoming in the afternoon. Two away overnight. The rivalry kicks off 28 minutes before day 3 |
+| 3 | Fall | Recruiting pitch opens, as the rivalry plays its last quarter | Conference title game late in the morning, if earned. Finals in the afternoon. A bowl in the evening, if earned. Winter break overnight |
+| 4 | Spring | Spring intake, waitlist opens | The top bowl, if earned, kicks off 28 minutes before this anchor. Commencement speaker choice opens |
 | 5 | Spring | Rankings day and signing day | Spring game in the evening. Coach and stadium decisions open. Finals overnight |
 | 6 | Graduation | Commencement, donation drive | Seniors leave the roster. TV deal and Board goal open |
 | 7 | Summer | Year-End report, decay verdicts | Annual decisions close at the next fall anchor |
 
-Game slots [T]: day games at anchor +2 h and +8 h, overnight games at +14 h and +20 h. A morning visit finds two overnight results and later visits find one each.
+Game slots: football plays on the Saturdays of the calendar, which come round every 3 hours 18 minutes in the fall. Section 4.8 has the schedule. A morning visit still finds two overnight results. The earlier four fixed slots a day (anchor +2 h, +8 h, +14 h, +20 h) were dropped on 2026-11-11, because ten games on them ran to mid-December.
 
 **Spring is the prestige season.** National rankings publish, recruits sign and scholars commit, so each ladder has its own peak in the week.
 
@@ -170,7 +176,7 @@ Annual items sit in their own inbox section and never count against the four-ite
 |---|---|---|
 | Rush week | After the fall intake | Students move from dorm beds into chapters (14.1) |
 | Homecoming | Day 2 afternoon home game | Returning alumni, a parade, a donation spike |
-| Finals | Overnight at the end of days 3 and 5, about ten hours [T] | The library's circle shrinks under load and happiness dips |
+| Finals | The afternoon of day 3 and the night that ends day 5, about three hours each, from the calendar's own dates | The library's circle shrinks under load and happiness dips |
 | Spring concert | Day 5 | An ordinary inbox item: pick an act |
 | Seasonal palettes | Across the week | Autumn, first snow, thaw, bloom, summer. Tints and particles in v1 |
 
@@ -181,7 +187,7 @@ A weekly intake alone would make a new player wait seven days to learn whether z
 | Rule | Effect |
 |---|---|
 | Open on move-in day | A new game starts fifteen minutes before the first fall intake |
-| Waitlist window | After every intake, turned-away applicants wait nine hours [T]. Capacity that opens in that window fills at once |
+| Waitlist window | After every intake, turned-away applicants wait 36 hours [T]. Capacity that opens in that window fills at once. It was nine hours until 2026-11-11: someone who looks in once a day could miss all nine |
 | Spring intake | A second class each year, about a fifth the size of fall [T] |
 
 The demand bars are forecasts of the next intake, so they react within minutes of zoning. The player learns at once and gets paid at the intake.
@@ -194,6 +200,8 @@ The demand bars are forecasts of the next intake, so they react within minutes o
 | That evening | Newspaper: the founding scrimmage, lots that grew a stage, the waitlist closed with a count lost | First advisor decision | A quad or a Campus Safety office. The desirability overlay appears |
 | Next morning | Overnight income, first results, first size rung | Where the reward building goes | Student Life zoning unlocks. The spring forecast sets the next goal |
 
+With one visit a day the second check-in below comes the next day and the third the day after. Nothing in the table is lost by that: the waitlist is still open, and the scrimmage, the growth and the first results wait in the away summary.
+
 ### 4.8 The calendar year
 
 Asked for by the owner on 2026-11-11, from a real university's published academic calendar. Its structure and dates are used, never its name. One game year is still one real week of whole-day phases.
@@ -203,7 +211,7 @@ Asked for by the owner on 2026-11-11, from a real university's published academi
 | Decision | Why |
 |---|---|
 | The sim shows a calendar date that moves steadily with the wall clock, about two game days to a real hour | The week gains a year's worth of landmarks |
-| The date is read from a few fixed points, with the days between spread evenly: the fall intake is Aug 19, the spring intake is Jan 19, commencement is May 13, the summer term starts May 26 | Each intake and report stays at its anchor hour and lands on its real date |
+| The date is read from one fixed point at each change of phase, with the days between spread evenly: the fall intake is Aug 19, the spring intake is Jan 19, commencement is May 13, the summer term starts May 26. **The date runs at a steady rate inside each phase, and there is never a fixed point inside one** (the owner's rule, 2026-11-11) | Each intake and report stays at its anchor hour and lands on its real date. A date that speeds up and slows down inside a semester reads as broken |
 | Fall and winter break fill days 1 to 3 (Aug 19 to Jan 18). Spring fills days 4 and 5 (Jan 19 to May 12). Graduation is day 6 (May 13 to May 25). Summer is day 7 (May 26 to Aug 18) | The owner's mapping, changed in two places. He put Jan 1 at the start of day 4, which would date the spring intake eighteen days before the semester starts. And he ended day 6 on May 21, which would make the date jump four days |
 | Every game year shows the same dates on the same weekdays | One calendar, stored as data |
 | Events are data: a name, a kind and a date or a span | Nothing about a holiday is written in code |
@@ -242,10 +250,10 @@ Everything in the first six rows must leave a line in the away summary, because 
 
 | Beat | In the design today | On the real calendar | Proposal |
 |---|---|---|---|
-| Rivalry game | Day 3, the evening game | Thanksgiving weekend, Nov 28 | With an even date line ten games on four slots a day run to mid-December. Bend the line with one more fixed point so the rivalry slot (day 3, anchor + 8 h) is Nov 28. Games one to nine then fall from late August to mid-November |
-| Conference title game | Day 4 | Early December | Moves to day 3, about anchor + 10 h |
-| Bowl | Day 4, after the title game | Around New Year | Moves to overnight after day 3, about anchor + 18 h. Day 4 opens with its result and the spring class |
-| Fall finals | Overnight at the end of day 3, about ten hours | Dec 12 to 18 | Becomes about two hours in the evening of day 3, then winter break overnight |
+| Rivalry game | Day 3, the evening game | Thanksgiving weekend, Nov 28 | Sat, Nov 28, which an even date line puts 28 minutes before the day-3 anchor. The game kicks off then, and its last quarter plays as day 3 begins. It is a morning game now, not an evening one |
+| Conference title game | Day 4 | Early December | Sat, Dec 5: day 3, anchor + 2 h 49 min |
+| Bowl | Day 4, after the title game | Late December to mid-January | An ordinary bowl is Sat, Dec 26: day 3, anchor + 12 h 42 min, in the evening. The top bowl is Mon, Jan 18, kicking off 28 minutes before the day-4 anchor, so the national title is settled as the spring class arrives |
+| Fall finals | Overnight at the end of day 3, about ten hours | Dec 12 to 18 | Day 3, anchor + 6 h 07 min to + 9 h 25 min: an afternoon. Winter break follows, overnight |
 | Spring finals | Overnight at the end of day 5, about ten hours | May 6 to 12 | Stays overnight at the end of day 5, but about three hours |
 | Signing day | Day-5 anchor | Early February, which is day 4 at about anchor + 6 h | Stays on day 5. Moving it would cut the recruiting pitch window below the 48 hours every annual decision is promised |
 | Rankings day | Day-5 anchor | September, for the best-known national ranking | Stays on day 5. The prestige ladder needs its own day and an anchor-hour reveal. Its date reads mid-March |
@@ -253,7 +261,68 @@ Everything in the first six rows must leave a line in the away summary, because 
 | Year-End report | Day-7 anchor | The summer term starts May 26 | No move |
 | Homecoming, spring game | Day 2 afternoon, day 5 evening | Late October, early April | No move |
 
-**Accepted by the owner on 2026-11-11:** both changes to his mapping, the rivalry game pinned to Nov 28, the title game and the bowl moved to late day 3, and signing day and rankings day left on day 5. The date line now has the fixed point for the rivalry game, so fall classes run a little slower (about 33 real minutes a game day) and finals and winter break a little faster (about 19). The table of real times above was worked out before that point was added and is reworked when layer 1 builds the events.
+**Settled on 2026-11-11.** The owner accepted both changes to his mapping, moving the title game and the bowl into day 3, and leaving signing day and rankings day on day 5. He first accepted a fixed point that pinned the rivalry game to Nov 28, then reversed it the same day when he saw it moved late-November dates by up to 18 days: **the date runs evenly, and football fits its games into the calendar.** The table of real times above is right again.
+
+**Football on the even calendar.** Ten games do not fit by Thanksgiving weekend on four slots a day: the eighth slot is anchor + 44 h and Thanksgiving Saturday is anchor + 47 h 32 min. The choice made: keep ten games and tighten the spacing. Every game is played on a Saturday of the calendar, and in the fall a Saturday comes round every 3 hours 18 minutes. The season uses ten of the thirteen Saturdays from Sep 5 to Nov 28, with three bye weeks. The byes are placed so home games still fall in waking hours and away games overnight, taking the player's day to start two hours before the anchor and last sixteen hours [T].
+
+| Game | Date | Real time | Where |
+|---|---|---|---|
+| 1 | Sat, Sep 5 | Day 1, anchor + 8 h 00 | Home opener, evening |
+| 2 | Sat, Sep 12 | Day 1, anchor + 11 h 18 | Home, evening |
+| 3 | Sat, Sep 19 | Day 1, anchor + 14 h 35 | Away, overnight |
+| 4 | Sat, Sep 26 | Day 1, anchor + 17 h 53 | Away, overnight |
+| Bye | Sat, Oct 3 | | |
+| 5 | Sat, Oct 10 | Day 2, anchor + 0 h 28 | Home, morning |
+| Bye | Sat, Oct 17 | | |
+| 6 | Sat, Oct 24 | Day 2, anchor + 7 h 04 | Home, Homecoming, afternoon |
+| 7 | Sat, Oct 31 | Day 2, anchor + 10 h 21 | Home, evening |
+| Bye | Sat, Nov 7 | | |
+| 8 | Sat, Nov 14 | Day 2, anchor + 16 h 56 | Away, overnight |
+| 9 | Sat, Nov 21 | Day 2, anchor + 20 h 14 | Away, overnight |
+| 10 | Sat, Nov 28 | Day 2, anchor + 23 h 32 | The rivalry. Home in odd years, away in even |
+
+What this keeps: ten games, five or six at home, two overnight results every morning, Homecoming on a late-October afternoon, and the top bar reading "Sat" at every kickoff. What it costs: the home games bunch into one evening and one day, a live game of forty minutes now spans a Saturday and half of Sunday on the top bar, and the rivalry is a morning game. The rivalry cannot be an evening game on an even calendar, because Thanksgiving weekend falls where real day 2 ends. Game dates are data beside the calendar, so a change is a change to that list.
+
+### 4.9 Every timer, against one visit a day
+
+The audit the owner asked for on 2026-11-11. The test is a player who looks in once every 24 hours at a fixed time: nothing that matters may open and close between two of their visits.
+
+| Timer | State | Was | Now | Why |
+|---|---|---|---|---|
+| Waitlist window after an intake | Built | 9 hours | 36 hours | A daily visitor could miss all nine. At exactly 24 they could arrive in its last minute, with no time for what they build to open |
+| Routine inbox item | Designed | At least 1 day | At least 36 hours | The owner's number |
+| Annual decisions (4.4) | Designed | 48 to 72 hours | 48 to 72 hours | Two visits are certain |
+| Notice before an annual decision closes | Designed | 12 hours | 12 hours | It is one of the two daily notifications |
+| Spring concert pick | Designed | An inbox item on day 5 | Opens at the day-4 anchor, 36 hours ahead | It was the one routine item tied to a same-day event |
+| Scandals that run in two steps | Designed | Not set | Each step is its own inbox item, so at least 36 hours each | Same rule |
+| Deficit, before the state steps in (9.5) | Designed | At the next daily check, which could be minutes away | 36 hours of warning first, in the away summary and as a notification | Otherwise a daily player could be rescued, with the penalty, without ever seeing the warning |
+| Rundown warning before a stage is lost (6.5) | Designed | At least 2 real days, and only at year-end | No change | Two visits are certain |
+| Lot construction and rebuilds | Built | 2 and 10 minutes, starting and finishing by themselves | No change | Never waits for a tap |
+| Hand-placed buildings | Built | Open at once | No change | Never waits for a tap |
+| Stadium upgrade | Designed | Builds in the off-season once approved | No change. Approval is an annual decision of 72 hours | Never waits for a second tap |
+| Growth check | Built | Every 15 minutes | No change | No player action |
+| Undo for a full refund (9.6) | Built | 1 minute | No change | A guard against a slip inside one visit. After it the refund is half, with no further deadline |
+| Incident, help on the way | Built | 2 minutes plus half a minute a cell | No change | Decided by coverage. Nothing to tap |
+| Incident, nobody coming | Built | Passes after 45 minutes | No change | Nothing to tap. The away summary names the building that would have handled it |
+| Intakes, semester end, graduation, year end | Built | On the anchor hour | No change | They wait in the away summary |
+| Football games | Designed | Four fixed slots a day, 40 minutes live | Calendar Saturdays (4.8), 40 minutes live | Results wait in the away summary. Watching live is a bonus |
+| Rankings day, signing day | Designed | Day-5 anchor | No change | They wait in the away summary |
+| Finals | Designed | About 10 hours | About 3 hours, from the calendar | No player action. The exam report waits |
+| Policy lock | Designed | Until the next intake | No change | Not a deadline |
+| Reward buildings | Designed | Never expire | No change | |
+| Catch-up limit | Built | 30 days | No change | |
+| Notifications a day, iOS | Designed | At most 3 | At most 2 by default, adjustable | The owner's number |
+
+**Also assumed more than one or two visits a day,** and now reads differently:
+
+- The first three check-ins (4.7) were session one, that evening and the next morning. With one visit a day they are three days.
+- "A morning visit finds two overnight results and later visits find one each" (4.3). A daily visitor finds the whole day's results at once, which is what the collapsed away summary is for.
+- Live games as appointment viewing (10.2), and home games placed in waking hours. Both are a bonus for a second visit, never something a daily player loses by missing.
+- Income was tuned for a 12-hour gap (the casual test player). The once-a-day test player has to be able to spend a day's income in one visit, or cash piles up.
+- The inbox cap of four open routine items with about three arriving a day: a daily visitor meets three or four at once. That is the top of what a few minutes can hold, and the cadence should drop to two a day if it reads as homework.
+
+**Still to build for the once-a-day player,** asked for on 2026-11-11 and not yet done: tests that catch-up survives a force-close, a phone that was off and days away, on web and iOS; the away summary's layout for a 24-hour gap; and the notifications themselves. The once-a-day test player and its check are in the simulate script now (17.6).
+
 
 ---
 
@@ -675,8 +744,8 @@ A pure profit centre would be a dominant strategy and fail tests 1 and 5. A pure
 
 | Decision | Why |
 |---|---|
-| Ten regular-season games | Twelve would push the rivalry overnight. Nine would leave no result waiting in the morning |
-| Home games take the day slots; away games play overnight | The player can watch game day, and wakes to results |
+| Ten regular-season games, each on a Saturday of the calendar, from Sep 5 to the rivalry on Thanksgiving Saturday (4.8) | Twelve would leave no bye weeks to keep home games in waking hours. Nine would leave no result waiting in the morning |
+| Home games take the Saturdays that fall in waking hours; away games take the ones overnight | The player can watch game day, and wakes to results |
 | Twelve-team conference in two divisions: one opener, five division games, four crossovers | Gives a title game between division winners |
 | Tiered bowls, the top bowl being the national title | A postseason without a bracket. The playoff bracket is later |
 | Team rating from four visible inputs | Head coach, roster talent, stadium tier, Athletics funding. Every loss recap names the biggest gap |
@@ -958,7 +1027,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 | Line | Reads now | Replaced or widened by |
 |---|---|---|
-| Happiness | Walk time, green space, dining in reach, things to do in reach, and safety, at the dorm. A commuter reads the last four around two lecture halls. Dining and recreation were swapped in with play stop 1 and safety with play stop 2 | Noise joins the same list when it is built. Layer 3's overlays become the jump target where one fits |
+| Happiness | Four causes of equal weight at the dorm: walk to class, green space, food & fun (dining in reach and things to do in reach, averaged), and safety & health (Medical Center and Campus Safety coverage, read together). A commuter reads the last three around two lecture halls. The thought names the weakest part of the cause, so it is always something to build | Noise joins green space as "Surroundings" when it is built. Layer 3's overlays become the jump target where one fits |
 | GPA | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed, class year and nature | The academic score of section 24 |
 | Social life | Quad cells and recreation buildings per student. Recreation was swapped in with play stop 1 | Student Life spots and events join the count as each is built |
 | Archetype | A lasting nature by seed, from the fourteen archetypes whose stat exists today. Lost Freshman and Homesick fade over the first year. Super Senior grows when Academic seats capped the last class | The state-driven mix of 13.2 and all eighteen, in layer 6 |
@@ -968,7 +1037,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
-**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. Done with play stop 2: safety as a cause of happiness. The swaps still owed: noise as a cause of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
+**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. Done with play stop 2: safety as a cause of happiness, regrouped the same day into four causes at full weight (24.2). The swaps still owed: noise as a cause of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
 
 ---
 
@@ -1257,6 +1326,7 @@ Saves are versioned JSON behind one persistence interface. On the web that is In
 | Profile | Behaviour |
 |---|---|
 | Absent | No input. One advance per 30 days |
+| Daily | One check-in a day, the slowest rhythm the game supports. The casual player looking in half as often and buying twice as much in a visit |
 | Casual | Two check-ins a day. Answers the inbox, zones the bottleneck when cash allows, keeps sliders at full funding |
 | Optimizer | A check-in every two hours [T]. Greedy best action |
 
@@ -1275,6 +1345,7 @@ Assertions agreed in the discussion. The script exits non-zero when one fails.
 | The optimizer does not top both ladders before about six real months | Long arc |
 | A clear favourite wins about three games in four | Football |
 | Casual profile: every check-in has something to review, about three new decisions arrive a day, and a typical gap funds a purchase | Check-in contract |
+| Daily profile: reaches each era no worse than about one and a half times slower than the casual profile, and never needs the bailout for a missed deadline alone. Built on 2026-11-11 against campus size and the plain grant, until eras and the bailout exist | Check-in contract |
 | No annual decision window is shorter than 48 hours | Summer rule |
 | Mid-game budget shares sit near their targets on each ladder | Budget |
 | All of the above hold across map seeds | Map variety |
@@ -1282,7 +1353,7 @@ Assertions agreed in the discussion. The script exits non-zero when one fails.
 ### 17.7 Dev tools, notifications, art
 
 - **Dev time-skip panel**: +1 hour, +1 day, +1 year. It shifts the app's clock; the sim is unaware. Dev builds always show it. TestFlight builds carry it behind a hidden switch that is off by default: seven taps on the version line in the Menu. The web build and any App Store release build do not contain it.
-- **Notifications**, iOS app only: at most three a day, player-toggleable. Candidates: an annual decision closing in twelve hours, a decision expiring, construction finished, a game result, the Year-End report.
+- **Notifications**, iOS app only: at most two a day by default, and the player can change the number or turn them off. Two kinds: a decision about to expire, and a headline result. It was three a day, with construction and the Year-End report among the candidates, until the owner set this on 2026-11-11.
 - **Art:** real sprites from the first playable on, never coloured boxes. The pack is chosen by comparison and the owner's pick (section 21). Source packs live in `art/source`, which is not committed, and the sprites in use are copied to `public/assets` and packed into an atlas. One manifest maps each zone, stage and variant to a sprite, its anchor point and its footprint, so swapping art is a manifest edit and never a code change. Missing art falls back to a labelled placeholder. Path tiles are chosen automatically from neighbouring cells. Buildings have two or three variants per stage, and a build-site sprite shows while a timer runs. Depth sorting is correct as the camera pans. `CREDITS.md` lists each pack and its licence. No public-domain stadium model has been found yet. The repository is public, so it holds only public-domain art. A paid pack lives in a private repository, and a build that is given a read-only token downloads it and uses it in place of the built-in art. A build without the token uses the built-in art, so a fresh clone always builds and runs.
 
 ### 17.8 Distribution
@@ -1312,7 +1383,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1485,10 +1556,10 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Area | Target | Starting value |
 |---|---|---|
 | Calendar | Anchor offset after wake time | 2 hours |
-| Calendar | Game slots after the anchor | +2 h, +8 h, +14 h, +20 h |
-| Calendar | Waitlist window | 9 hours |
+| Calendar | Football dates | Ten of the thirteen Saturdays from Sep 5 to Nov 28 (4.8) |
+| Calendar | Waitlist window, and the shortest any window may be | 36 hours |
 | Calendar | Spring intake size | About a fifth of fall |
-| Calendar | Finals window | About 10 hours |
+| Calendar | Finals window | About 3 hours, from the calendar |
 | Calendar | Shortest founding day that still has a scrimmage | 5 hours |
 | Map | Full map and parcels | 80 by 80 cells, 25 parcels of 16 by 16 |
 | Map | Starting land | 4 parcels |
@@ -1782,7 +1853,7 @@ One lap of the loop takes four to six real weeks, because a game year is a real 
 They exist because seven stages, eight supporting metrics and four HUD numbers would otherwise bury cause and effect (test 4).
 
 1. **One screen, seven rows.** A supporting metric never gets its own row. It appears as the "why" under a stage.
-2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice. Happiness has five since play stop 2, at the owner's instruction: walk, green space, dining, things to do, and safety at half weight.
+2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice. Happiness has four, all at full weight, since the owner's instruction of 2026-11-11: **Walk to class, Green space, Food & fun, Safety & health.** For one day it had five, with safety at half weight. Merging Medical Center and Campus Safety coverage could not make four by itself, because they were already one cause; so dining and things to do were also gathered into one, Food & fun, the way Stress gathers six drivers into four causes (section 27). A cause is the average of its parts. The panel and every student thought name the weakest part, so the advice is still one thing to build. Noise will join Green space as "Surroundings", and the count stays at four.
 3. **Slow numbers show a forecast.** Graduation rate, alumni success and donations move weeks after their causes. Each shows "on today's conditions" beside the real figure. The forecast moves the day the player acts, and the real figure arrives later and proves it.
 
 A fourth rule comes from the idle constraints: every stage can swing the next only by a bounded amount [T], so neglect drifts to mediocre and never spirals. Everything here is a few numbers per class, worked out at intakes, semester ends and year end, so catch-up cost is nothing.
@@ -2091,4 +2162,13 @@ Lit windows would have to be made here, as an overlay cut from each building's o
 
 ### 28.4 Schedule
 
-Layer 1, with the calendar. The real-clock lighting and the walker schedule are cheap, because neither touches the simulation: a tint over the map by period, the pack's street lamps along paths, and walker numbers and destinations by period. They can be built as one small piece before play stop 3 when the owner says so. Lit windows are the one part that is not cheap, because that art has to be made.
+**Moved by the owner on 2026-11-11.** The cheap parts go into play stop 3, with roads and neighbourhoods:
+
+| In stop 3 | Detail |
+|---|---|
+| Day and night tint | Follows the player's local clock, in the four periods of 28.1, changing smoothly. Display only |
+| Street lamps | The pack's lamps along paths and roads, lit in the evening and at night |
+| Walker schedule by period | Morning rush from Housing to Academic lots; a steady afternoon; evening at dining, the gym and clubs; a quiet night |
+| The guard for night-only players | A minimum number of walkers at night, and a setting that shows daylight at any hour |
+
+Lit windows, umbrellas, coats and snow wait, because their art has to be made. Weather, and everything in 28.2, stays in layer 1 with the calendar.

@@ -10,6 +10,7 @@ import {
   fallClassDraw,
   FIRST_INTAKE_TICK,
   FOUNDING_CLASS,
+  MIN_WINDOW_TICKS,
   openCapacity,
   roomForNewStudents,
   rowBetween,
@@ -107,7 +108,7 @@ describe('the waitlist', () => {
     expect(result.log.some((e) => e.kind === 'waitlist')).toBe(true);
   });
 
-  it('closes nine hours after the intake and reports who was lost', () => {
+  it('closes a day and a half after the intake and reports who was lost', () => {
     const open = advance(freshGame(), T0, at(FIRST_INTAKE_TICK + WAITLIST_TICKS - 1)).state;
     expect(open.admissions.waitlist).toBeGreaterThan(0);
 
@@ -116,6 +117,31 @@ describe('the waitlist', () => {
     expect(result.state.admissions.waitlistUntilTick).toBe(0);
     const closed = result.log.find((e) => e.kind === 'waitlistClosed');
     expect(closed?.data?.lost).toBeGreaterThan(0);
+  });
+
+  it('is always open on a visit by someone who looks in once a day, with half a day to spare', () => {
+    expect(WAITLIST_TICKS).toBeGreaterThanOrEqual(MIN_WINDOW_TICKS);
+    // Whatever minute of the day they look in, their first visit after an intake is inside the window.
+    for (let minute = 0; minute < TICKS_PER_DAY; minute += 7) {
+      const firstVisit = minute === 0 ? 0 : minute;
+      const lastVisitInside = firstVisit + Math.floor((WAITLIST_TICKS - 1 - firstVisit) / TICKS_PER_DAY) * TICKS_PER_DAY;
+      expect(lastVisitInside).toBeLessThan(WAITLIST_TICKS);
+      expect(WAITLIST_TICKS - firstVisit).toBeGreaterThanOrEqual(12 * 60);
+    }
+    // And no window is still open when the next class arrives.
+    expect(WAITLIST_TICKS).toBeLessThan(2 * TICKS_PER_DAY);
+  });
+
+  it('still takes students a full day after the intake', () => {
+    // Someone who was not there for move-in and looks in a day later can still fix it.
+    let state = advance(freshGame(), T0, at(FIRST_INTAKE_TICK + TICKS_PER_DAY - 1)).state;
+    state.money.cash = 5_000_000;
+    const students = enrollment(state);
+    expect(state.admissions.waitlist).toBeGreaterThan(0);
+    state = paint(state, 'academic', rowBetween([4, 13], [9, 13]));
+    state = paint(state, 'housing', rowBetween([8, 18], [14, 18]));
+    const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 60 * MIN).state;
+    expect(enrollment(later)).toBeGreaterThan(students);
   });
 
   it('admits no one after it has closed', () => {

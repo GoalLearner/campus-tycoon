@@ -15,9 +15,16 @@ describe('the date on the HUD', () => {
     expect(at(168 - 1 / 60)).toBe('Wed, Aug 18');
   });
 
-  it('reaches the first day of classes a few hours in, and the rivalry game on Thanksgiving weekend', () => {
-    expect(at(3)).toBe('Mon, Aug 24');
-    expect(at(56)).toBe('Sat, Nov 28');
+  it('reaches the first day of classes a couple of hours in', () => {
+    expect(at(2.5)).toBe('Mon, Aug 24');
+  });
+
+  it('runs at a steady rate inside each phase, with fixed points only where a phase changes', () => {
+    // Fall is days 1 to 3, spring days 4 and 5, graduation day 6, summer day 7.
+    expect(ACADEMIC_CALENDAR.knots.map(([hours]) => hours)).toEqual([0, 72, 120, 144, 168]);
+    // Thanksgiving Saturday falls where an even line puts it: half an hour before the third day begins.
+    expect(at(47.6)).toBe('Sat, Nov 28');
+    expect(at(48.1)).toBe('Sun, Nov 29');
   });
 
   it('never runs backward, and every year is the same', () => {

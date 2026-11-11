@@ -8,7 +8,8 @@ import {
   PLACED,
   previewPlace,
   shortage,
-  type CauseId,
+  type DriverId,
+  partLevel,
   type PlacedType,
   ZONES,
   type GameState,
@@ -22,7 +23,8 @@ import {
  * actions a person can, so what they manage is what a person could manage.
  */
 
-export type Style = 'absent' | 'casual' | 'optimizer';
+/** Daily is the casual player looking in half as often: once a day, the slowest rhythm the game supports. */
+export type Style = 'absent' | 'daily' | 'casual' | 'optimizer';
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
@@ -149,13 +151,13 @@ function menuSpot(state: GameState, type: PlacedType, x: number, y: number): Poi
   return best;
 }
 
-/** The open building where one cause of happiness is lowest: where a new building would help most. */
-function neediestLot(state: GameState, cause: CauseId): { x: number; y: number; level: number } | null {
+/** The open building where one part of happiness is lowest: where a new building would help most. */
+function neediestLot(state: GameState, part: DriverId): { x: number; y: number; level: number } | null {
   let worst: { x: number; y: number; level: number } | null = null;
   for (const b of state.map.buildings) {
     if (!b || b.stage < 1) continue;
-    const found = approvalAt(state, b.y * state.map.width + b.x).causes.find((c) => c.id === cause);
-    if (found && (!worst || found.level < worst.level)) worst = { x: b.x, y: b.y, level: found.level };
+    const level = partLevel(approvalAt(state, b.y * state.map.width + b.x).causes, part);
+    if (level !== undefined && (!worst || level < worst.level)) worst = { x: b.x, y: b.y, level };
   }
   return worst;
 }
@@ -173,7 +175,8 @@ function nextFromMenu(state: GameState): { type: PlacedType; x: number; y: numbe
       return { type: state.money.cash > 150_000 ? 'dining' : 'coffee', x: b.x, y: b.y };
     }
   }
-  const worst = campusHappiness(state).worst;
+  // The panel names a cause and its weakest part. The part is what gets built.
+  const worst = campusHappiness(state).worstPart;
   if (worst === 'dining' || worst === 'recreation' || worst === 'safety') {
     const lot = neediestLot(state, worst);
     if (lot && lot.level < 0.85) {
@@ -222,8 +225,9 @@ export interface TurnResult {
 /** One check-in. The absent player does nothing. */
 export function takeTurn(state: GameState, style: Style): TurnResult {
   if (style === 'absent') return { state, purchases: 0, blockedByCash: false };
-  const maxPurchases = style === 'casual' ? 5 : 60;
-  const reserve = style === 'casual' ? 20_000 : 0;
+  // The once-a-day player has a day's income to spend, so buys twice as much in a visit as the twice-a-day one.
+  const maxPurchases = style === 'casual' ? 5 : style === 'daily' ? 10 : 60;
+  const reserve = style === 'optimizer' ? 0 : 20_000;
 
   let current = state;
   let purchases = 0;
@@ -252,7 +256,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   }
 
   // Then the Build menu, as a player who has read the Happiness panel would use it.
-  const menu = buildFromMenu(current, reserve, style === 'casual' ? 1 : 3);
+  const menu = buildFromMenu(current, reserve, style === 'casual' ? 1 : style === 'daily' ? 2 : 3);
   current = menu.state;
   purchases += menu.built;
   if (menu.blocked) blockedByCash = true;
