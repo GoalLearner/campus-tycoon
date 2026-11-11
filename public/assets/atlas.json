@@ -284,40 +284,40 @@
    "frame": {
     "x": 686,
     "y": 543,
-    "w": 132,
-    "h": 83
+    "w": 136,
+    "h": 84
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 132,
-    "h": 83
+    "w": 136,
+    "h": 84
    },
    "sourceSize": {
-    "w": 132,
-    "h": 83
+    "w": 136,
+    "h": 84
    }
   },
   "lot.works": {
    "frame": {
-    "x": 822,
+    "x": 826,
     "y": 543,
-    "w": 74,
-    "h": 40
+    "w": 136,
+    "h": 64
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 74,
-    "h": 40
+    "w": 136,
+    "h": 64
    },
    "sourceSize": {
-    "w": 74,
-    "h": 40
+    "w": 136,
+    "h": 64
    }
   },
   "path.0": {

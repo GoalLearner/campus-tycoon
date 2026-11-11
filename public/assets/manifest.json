@@ -167,7 +167,7 @@
   "lot.site": {
    "frame": "lot.site",
    "anchor": [
-    66,
+    68,
     0
    ],
    "footprint": [
@@ -178,8 +178,8 @@
   "lot.works": {
    "frame": "lot.works",
    "anchor": [
-    38,
-    -36
+    68,
+    -20
    ],
    "footprint": [
     1,

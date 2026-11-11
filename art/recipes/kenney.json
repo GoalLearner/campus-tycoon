@@ -39,8 +39,8 @@
     "quad.2": { "layers": [["L", 67, -66, 0], ["D", 10, 2, -20], ["D", 10, -24, 4]] },
 
     "lot.empty": { "layers": [["C", 72, -66, 0]] },
-    "lot.site": { "layers": [["L", 73, -66, 0], ["B", 5, -49, 8]] },
-    "lot.works": { "layers": [["D", 2, -38, 36], ["D", 3, 4, 44]] },
+    "lot.site": { "layers": [["L", 73, -66, 0], ["B", 5, -49, 8], ["D", 8, -68, 20], ["D", 9, -3, 20]] },
+    "lot.works": { "layers": [["D", 8, -68, 20], ["D", 9, -3, 20]] },
 
     "housing.1.0": { "stack": { "ground": 14, "uppers": [], "roof": 69 } },
     "housing.1.1": { "stack": { "ground": 22, "uppers": [], "roof": 65 } },
