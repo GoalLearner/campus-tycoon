@@ -40,6 +40,8 @@ export class Store {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private lastSavedTick = -1;
+  /** When true the game is never written to storage. Used by the dev demo. */
+  private ephemeral = false;
 
   /** Set when the player returns after a while. The UI shows it once and clears it. */
   away: AwayReport | null = null;
@@ -68,6 +70,7 @@ export class Store {
 
   /** Load the saved game, falling back to the backup. Returns whether a game was loaded. */
   async load(): Promise<boolean> {
+    if (this.current) return true;
     const stored = await readSaves();
     for (const [label, text] of [
       ['save', stored.save],
@@ -86,8 +89,18 @@ export class Store {
     return false;
   }
 
+  /** Show a game that was built elsewhere, such as the dev demo. */
+  adopt(state: GameState, options: { ephemeral: boolean }): void {
+    this.current = state;
+    this.ephemeral = options.ephemeral;
+    this.away = null;
+    this.recent = [];
+    this.emit();
+  }
+
   startNewGame(name: string): void {
     clock.reset();
+    this.ephemeral = false;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
     this.current = newGame({ seed, name, now: clock.now() });
     this.away = null;
@@ -173,7 +186,7 @@ export class Store {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    if (!this.current) return;
+    if (!this.current || this.ephemeral) return;
     this.lastSavedTick = this.current.clock.tick;
     void writeSave(serialize(this.current, clock.now())).catch(() => {
       // Storage can fail in private browsing. The game keeps running in memory.

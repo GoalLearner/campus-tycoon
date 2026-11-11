@@ -47,11 +47,11 @@ const MILESTONE_LABEL = {
 
 const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'look', label: 'Look', hint: '' },
-  { id: 'housing', label: 'Housing', hint: `Drag to zone a row. ${dollars(COST.zoneLot)} a lot.` },
-  { id: 'academic', label: 'Academic', hint: `Drag to zone a row. ${dollars(COST.zoneLot)} a lot.` },
-  { id: 'path', label: 'Path', hint: `Drag to lay a path. ${dollars(COST.path)} a cell.` },
-  { id: 'quad', label: 'Quad', hint: `Drag to plant a quad. ${dollars(COST.quad)} a cell.` },
-  { id: 'clear', label: 'Clear', hint: `Drag to clear. ${dollars(COST.clear)} a cell.` },
+  { id: 'housing', label: 'Housing', hint: `Drag a row of dorm lots · ${dollars(COST.zoneLot)} each · two fingers move the map` },
+  { id: 'academic', label: 'Academic', hint: `Drag a row of lecture-hall lots · ${dollars(COST.zoneLot)} each · two fingers move the map` },
+  { id: 'path', label: 'Path', hint: `Drag to lay a path · ${dollars(COST.path)} a cell` },
+  { id: 'quad', label: 'Quad', hint: `Drag to plant a quad · ${dollars(COST.quad)} a cell` },
+  { id: 'clear', label: 'Clear', hint: `Drag to clear · ${dollars(COST.clear)} a cell` },
 ];
 
 const TOOL_NOUN: Record<Exclude<ToolChoice, 'look'>, [string, string]> = {

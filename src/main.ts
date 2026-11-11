@@ -5,6 +5,10 @@ import { mountUi } from './ui/ui';
 
 /** Boot: load the save, catch the sim up to now, then start the map and the HUD. */
 async function boot(): Promise<void> {
+  if (import.meta.env.DEV) {
+    const { installDevTools } = await import('./app/devtools');
+    installDevTools();
+  }
   await store.load();
   store.start();
 
