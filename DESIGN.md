@@ -92,7 +92,7 @@ Every system must help meet these three targets.
 | Newspaper and polls | Kept | The check-in digest (12) |
 | Reward buildings and arcologies | Kept | Reward buildings, ceiling landmarks, prestige landmarks (15) |
 | Disasters | Kept, softened | Rare inbox events, never save-ending (12) |
-| City rating | Kept | Academic standing, athletic standing, student approval |
+| City rating | Kept | Academic standing, athletic standing, student happiness |
 | Data maps | Kept, reduced | Four overlays (8) |
 | Neighbor deals | Folded in | TV and donor deals in the inbox (10, 12) |
 | Power, water and other networks | Cut | They were chores, and they fail while the player is away |
@@ -166,7 +166,7 @@ Annual items sit in their own inbox section and never count against the four-ite
 |---|---|---|
 | Rush week | After the fall intake | Students move from dorm beds into chapters (14.1) |
 | Homecoming | Day 2 afternoon home game | Returning alumni, a parade, a donation spike |
-| Finals | Overnight at the end of days 3 and 5, about ten hours [T] | The library's circle shrinks under load and approval dips |
+| Finals | Overnight at the end of days 3 and 5, about ten hours [T] | The library's circle shrinks under load and happiness dips |
 | Spring concert | Day 5 | An ordinary inbox item: pick an act |
 | Seasonal palettes | Across the week | Autumn, first snow, thaw, bloom, summer. Tints and particles in v1 |
 
@@ -333,7 +333,7 @@ If the simulation still shows a cliff, the next knob is a cap on how many lots m
 | Decision | Why |
 |---|---|
 | Applicants are the demand, zones are the supply, and enrollment is capped by the scarcest zone | Three needs of one population are not an RCI loop. This is the version that passes test 1 |
-| Each zone has its own job | Housing sets beds and earns room fees. Academic sets seats and produces prestige. Student Life drives approval and retention and earns from foot traffic |
+| Each zone has its own job | Housing sets beds and earns room fees. Academic sets seats and produces prestige. Student Life drives happiness and retention and earns from foot traffic |
 | Three demand bars that can go negative | Up is shortage, down is surplus. Surplus is the overbuilding warning |
 | The tightest zone carries a Bottleneck tag and the count of qualified applicants turned away. Tapping it gives the number of lots that would fix it | The same number reads as lost income on the size ladder and as selectivity on the prestige ladder |
 | Three applicant tiers that share buildings | They make the two ladders mechanically different without SimCity 4's wealth-specific lots |
@@ -382,7 +382,7 @@ At an intake:
 
 The waitlist reruns step 2 for the turned-away students whenever capacity opens during the window. The spring intake runs the same steps on a smaller pool.
 
-Approval no longer pulls on applications. It keeps students once they are here (retention), and the look of the campus wins the yes (yield): one cause feeds one stage (section 24.2).
+Happiness no longer pulls on applications. It keeps students once they are here (retention), and the look of the campus wins the yes (yield): one cause feeds one stage (section 24.2).
 
 ```
 bar[zone] = (capacity wanted for the next intake - capacity open) / capacity open
@@ -390,7 +390,7 @@ bar[zone] = (capacity wanted for the next intake - capacity open) / capacity ope
 
 ### 7.4 Students
 
-Students are simulated as cohorts by class year and tier, never as individuals. Retention is applied at each semester's end and falls with low approval. Seniors graduate on day 6 and join an alumni pool that grows forever and drives donations. Walkers, student cards and personalities are a readout of the cohorts (section 13). Each entering class also keeps a short record of how many came, stayed, finished on time, finished late and left, and students who do not finish in four years stay on as fifth and sixth years (section 24.8).
+Students are simulated as cohorts by class year and tier, never as individuals. Retention is applied at each semester's end and falls with low happiness. Seniors graduate on day 6 and join an alumni pool that grows forever and drives donations. Walkers, student cards and personalities are a readout of the cohorts (section 13). Each entering class also keeps a short record of how many came, stayed, finished on time, finished late and left, and students who do not finish in four years stay on as fifth and sixth years (section 24.8).
 
 ---
 
@@ -406,7 +406,7 @@ Students are simulated as cohorts by class year and tier, never as individuals. 
 | Services gate stages and stay out of the score | Every stall then has a distinct label |
 | A service circle shrinks when underfunded or overloaded | One visible circle carries both failures, and growth keeps service placement alive |
 | Four overlays, and the right one appears while placing | Legibility without SimCity 4's dozen data views |
-| No approval overlay | Approval is campus-wide. The newspaper poll covers it |
+| No happiness overlay | Happiness is campus-wide. The newspaper poll covers it |
 
 ### 8.2 How each zone reads the emitters
 
@@ -475,7 +475,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Three price levers: in-state tuition, out-of-state tuition, scholarship budget | SimCity 4's tax rate per wealth level |
 | Five steps per lever, with the forecast shown before commit | Legible and thumb-friendly |
 | A new price bills from the next intake | Stops raising tuition after move-in and dropping it before admissions |
-| A hike hits student approval at once | Enrolled students react now, and the money follows later |
+| A hike hits student happiness at once | Enrolled students react now, and the money follows later |
 | Seats split in proportion to applicants, after scholars | Prices alone steer the mix. No fourth lever |
 | State funding follows the in-state share | Chasing out-of-state money costs state money |
 | Five funding sliders as a percentage of need | Need scales with the campus, so full funding stays the safe default |
@@ -518,7 +518,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Instruction | Classes swell, academic rating falls, scholars leave | Academic rating and scholar draw |
 | Student Services | Safety, health and shuttle circles shrink | Bigger circles, so fewer buildings needed |
 | Facilities | Buildings turn Rundown | A small desirability lift across campus |
-| Student Life | Approval and retention fall | Approval and retention |
+| Student Life | Happiness and retention fall | Happiness and retention |
 | Athletics | Team rating and recruiting fall | Team rating and recruiting |
 
 Overfunding guards:
@@ -691,7 +691,7 @@ The rankings-day story lists the movers. When the player falls while standing st
 | Provost | Academic zone, Instruction, scholars, rankings | "Academic seats are the bottleneck: 412 turned away" |
 | CFO | Budget, overbuilding, deficits | "Housing is 18% empty and losing money every hour" |
 | Athletic Director | Football, stadium, deals | "Five sell-outs in five: the next tier is earned" |
-| Dean of Students | Housing, Student Life, approval, safety, Greek Row | "38 housing lots stalled by stadium noise" |
+| Dean of Students | Housing, Student Life, happiness, safety, Greek Row | "38 housing lots stalled by stadium noise" |
 
 ### 12.3 Starting policy list
 
@@ -699,19 +699,19 @@ Final wording follows the tone guide.
 
 | Policy | Helps | Costs |
 |---|---|---|
-| Quiet Hours | Less mischief | Approval and Student Life income |
+| Quiet Hours | Less mischief | Happiness and Student Life income |
 | Need-blind admissions | In-state and scholar applicants | Scholarship spending |
 | Athlete tutoring | Fewer eligibility crises | Instruction budget |
-| Freshman live-on rule | Full dorms and room fees | Approval and commuter applicants |
+| Freshman live-on rule | Full dorms and room fees | Happiness and commuter applicants |
 | Night games | TV money | Longer noise hours near the stadium |
-| Free student section | Attendance and approval | Ticket income |
-| Parking fees | Income | Commuter approval |
+| Free student section | Attendance and happiness | Ticket income |
+| Parking fees | Income | Commuter happiness |
 | Tough grading | Academic rating | Retention |
 | All-night library | Scholar draw, a softer finals dip | A bigger library load |
 | Hiring freeze | Lower Instruction need | Academic rating |
-| Naming rights | Income | Approval |
-| Tuition freeze pledge | Approval | Price levers lock for a year |
-| Deferred Rush | Less academic drag | Fall approval |
+| Naming rights | Income | Happiness |
+| Tuition freeze pledge | Happiness | Price levers lock for a year |
+| Deferred Rush | Less academic drag | Fall happiness |
 | Chapter Grade Standard | Less academic drag | Chapter membership |
 
 ### 12.4 Events
@@ -724,11 +724,11 @@ All sit inside the tone guide (section 16).
 | Faculty walkout threat | Instruction underfunded | Temporary academic penalty |
 | Dorm flood | A Rundown dorm | Repair timer on one building |
 | Field storming | Thin safety coverage at the stadium | Goalposts, a repair bill |
-| Mascot theft | Rivalry week, thin safety coverage | Approval until it is recovered |
-| Parking uprising | Parking shortage | Approval |
+| Mascot theft | Rivalry week, thin safety coverage | Happiness until it is recovered |
+| Parking uprising | Parking shortage | Happiness |
 | Grade inflation exposé | Tough grading off, weak Instruction | Academic rating |
 | A booster's suspicious gift of a boat | A big donor deal accepted earlier | A choice between cash and reputation |
-| Professor feuds with the marching band | Academic lots inside the stadium's noise | Approval, a noise ruling |
+| Professor feuds with the marching band | Academic lots inside the stadium's noise | Happiness, a noise ruling |
 | A rival's prank | Rivalry week | A statue wears the wrong colours for a day |
 
 ### 12.5 The newspaper
@@ -772,13 +772,13 @@ Transitions are class-year curves and event modifiers, not per-student memory.
 | Transition | Rule |
 |---|---|
 | Lost Freshman ages out | A large share of a new freshman cohort at intake [T], falling through the first year, zero from sophomore year |
-| Homesick fades | Out-of-state freshmen only, strongest in the first term, gone by the second year. Lower when approval and Student Life coverage are high |
+| Homesick fades | Out-of-state freshmen only, strongest in the first term, gone by the second year. Lower when happiness and Student Life coverage are high |
 | Pledge becomes Greek Loyalist | New chapter members read as Pledge for one term after rush, then as Greek Loyalist |
 | Finals push many into Stressed-Out | During each finals window a share of every cohort [T] reads as Stressed-Out, drawn least from Slacker and Party Animal. It reverts afterward |
 | Game days swell Superfan | Doubled on home game days and after big wins |
 | A tuition hike swells Broke Student | For one term after a price step up |
 | Super Senior grows | Seniors only, rising when the graduation rate is low or Academic seats are the bottleneck |
-| Attention Seeker follows the mood | Rises whenever approval has moved sharply, in either direction |
+| Attention Seeker follows the mood | Rises whenever happiness has moved sharply, in either direction |
 
 ### 13.4 The eighteen for v1
 
@@ -797,13 +797,13 @@ The list grew from fifteen to eighteen rather than swapping three out, so every 
 | Varsity Athlete | Recruiting, eligibility, Athletics funding | Stadium and practice paths | A letter jacket | None |
 | Greek Loyalist | Chapter membership and standing | Chapter houses | Letters on a shirt | None |
 | Pledge | Rush week | Chapter porches | Carrying everyone's things | None |
-| Social Butterfly | Student Life coverage, approval | Student Life lots | Waving at everyone | Slightly better retention |
+| Social Butterfly | Student Life coverage, happiness | Student Life lots | Waving at everyone | Slightly better retention |
 | Resident Advisor | Housing crowding, Rundown buildings, Facilities | Dorm entrances | A clipboard | Slightly less mischief in dorms |
 | Super Senior | Graduation rate, the Academic bottleneck | Everywhere, unhurried | A cap from three years ago | None |
 | Class Clown | Campus Safety coverage, mischief | Near statues | A traffic cone | Slightly more prank petitions |
 | Party Animal | Student Life coverage, Greek Row size | Student Life lots by evening, a bench by morning | A party hat, still on | Slightly more Student Life income, a slight drag on the academic rating |
 | Charmer | Campus beauty: green space and average Housing desirability | Quads and the lake | A single flower, a slow stroll | None |
-| Attention Seeker | How fast approval is moving | Wherever the biggest crowd is | Filming themselves | Approval swings a little faster |
+| Attention Seeker | How fast happiness is moving | Wherever the biggest crowd is | Filming themselves | Happiness swings a little faster |
 
 **Six quirks for v1**, each with a visible behaviour and a stat it echoes:
 
@@ -838,7 +838,7 @@ Flavour walkers with small thought pools, each tied to a stat.
 | Booster | Donations and deals |
 | Tour-group parents | The applicant forecast and campus desirability |
 | A townie who hates game day | Stadium noise, the town edge |
-| The mascot | Approval, game day |
+| The mascot | Happiness, game day |
 | A campus squirrel | Green space |
 
 ### 13.7 Tone for personalities
@@ -853,13 +853,14 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 |---|---|
 | Tapping a walking student opens a card with exactly five lines: who, doing now, grades, club, happiness | RollerCoaster Tycoon's guest card, cut to what fits a phone |
 | No per-student simulation. A student is a seeded identity: the game's seed, the year their class entered, and their place in that class | The same student shows the same name, major, quirk, club, look and dorm every time. Nothing is saved and catch-up never runs it |
-| Every other line is read from live numbers while the card is open | A card can never disagree with the campus. Class year comes from the cohorts, grades from the teaching side of campus, happiness from the causes of approval where the student lives |
-| Happiness is approval read at one student's spot. One number, never two | The owner's rule. Campus approval, when it is built, is the average of the same function over where students live |
+| Every other line is read from live numbers while the card is open | A card can never disagree with the campus. Class year comes from the cohorts, grades from the teaching side of campus, happiness from the causes of happiness where the student lives |
+| Happiness on a card is the campus Happiness number, read at one student's spot. One number, never two | The owner's rule. Campus Happiness, when it is built, is the average of the same function over where students live |
 | The happiness line is a face and the single biggest reason, phrased as a thought. Tapping it glides the map to the building it is about and selects it | Test 4. The joke on top, the number underneath, the fix one tap away |
 | A content student names the biggest plus. Anyone else names what would help most | The reason always points at something the player can change |
 | Every walker is one of the enrolled students, and only goes home to their own dorm | "Doing now" matches the map, and a thought about "my dorm" is about the dorm they walk into |
 | One Follow button | The camera stays on the student until they go indoors or the player drags the map |
 | Clubs are names only, weighted by major, nature and quirk | No club mechanics |
+| The first line also says "Lives in a dorm" or "Lives off campus" | Asked for with the neighbourhoods of section 21, item 11. It reads the share who need no bed today, and the neighbourhood a student lives in once those exist |
 | First names are ones anyone can carry, and surnames are built from two invented halves | A name never clashes with a walker's look, and no card can carry a real person's full name |
 
 | Line | Reads now | Replaced or widened by |
@@ -873,6 +874,8 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
+**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. The swaps owed: dining, noise, recreation and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. The face drawn in code stays.
+
 ---
 
 ## 14. Identity: Greek Row, traditions and flavour
@@ -881,7 +884,7 @@ Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
 | Decision | Why |
 |---|---|
-| A Housing brush variant, capped at medium density, with fewer beds than a dorm | Its value is approval, retention and giving, not capacity |
+| A Housing brush variant, capped at medium density, with fewer beds than a dorm | Its value is happiness, retention and giving, not capacity |
 | Chapter names are one or two Greek letters plus a clearly non-Greek joke word, such as Kappa Llama | A blocklist cannot be complete, because thousands of real chapters exist. These names cannot collide by construction. The blocklist stays as a second line |
 | It reads emitters as Student Life does, gets a bonus beside other chapters, ignores noise, and emits noise | The Row lands on the loud land near the stadium that Housing rejects. Test 1 |
 | Rush week moves students from dorm beds into chapters, shown inside the Housing bar | No fourth demand bar |
@@ -893,7 +896,7 @@ Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
 | Upside | Downside |
 |---|---|
-| Approval | Noise that Housing and Academic dislike |
+| Happiness | Noise that Housing and Academic dislike |
 | Retention | A drag on the academic rating, scaled by the Greek share of enrollment |
 | Higher alumni giving | Prank incidents in the inbox |
 
@@ -908,19 +911,19 @@ Greek Row is the biggest identity item. It is the last thing cut (section 20).
 | Keeping one never needs a tap | Each has a standing condition the player must not cut. It is checked on its day each year |
 | Strength grows with the streak | The reward for consistency, with diminishing returns |
 | The card shows "at risk" when the condition is failing | Test 4 |
-| Breaking one costs approval and giving, scaled by the streak, which then resets | A real cost for cutting the thing it depends on |
+| Breaking one costs happiness and giving, scaled by the streak, which then resets | A real cost for cutting the thing it depends on |
 | Streaks appear in the record book | Traditions are the v1 form of the heritage bonus |
 
 | Tradition | Its day | Standing condition | Lifts |
 |---|---|---|---|
-| Rivalry bonfire | Eve of the rivalry game | An open quad kept clear inside Campus Safety coverage | Approval, an edge in the rivalry game |
-| Fight song | Every home game | Student Life at full funding, which keeps the marching band | Attendance, approval |
+| Rivalry bonfire | Eve of the rivalry game | An open quad kept clear inside Campus Safety coverage | Happiness, an edge in the rivalry game |
+| Fight song | Every home game | Student Life at full funding, which keeps the marching band | Attendance, happiness |
 | Lucky statue | Finals nights | The statue stays standing and on a path | A softer finals dip, retention |
 | Rivalry trophy | The rivalry game | Always met; a bonus while the school holds the trophy | Donations |
 | Homecoming parade | Homecoming | An unbroken path from the town edge to the stadium | The donation spike |
-| Victory bell | After home wins | The bell tower stays standing | Approval after wins |
+| Victory bell | After home wins | The bell tower stays standing | Happiness after wins |
 | Senior walk | Commencement | The gate stays, with a path through the main quad | The graduating class's alumni affinity |
-| Midnight breakfast | Finals nights | Student Life at full funding | Approval during finals |
+| Midnight breakfast | Finals nights | Student Life at full funding | Happiness during finals |
 
 ### 14.3 Flavour that is nearly free
 
@@ -1031,6 +1034,9 @@ Light and satirical, like SimCity 2000's newspaper: funny and useful at once.
 | Mischief | Crime |
 | Tailgate, with grills and tents | Any drink |
 | Most Spirited Campus | Party school |
+| Happiness | Approval, satisfaction |
+
+**Happiness is the one word for how students feel about the school, everywhere on screen:** the HUD, the student card, the Build menu cards, the Scorecard, the inbox and the newspaper. The owner retired "approval" from the interface on 2026-11-11. It is one number with one name. The code still calls that number `approval`, and that name never reaches the player. A test (`tests/wording.test.ts`) fails if on-screen text says approval.
 
 Student archetypes that touch feelings, such as Homesick, Stressed-Out, Heartbroken and Broke Student, stay comic and never imply a crisis. A Party Animal's parties are pizza and music.
 
@@ -1107,7 +1113,7 @@ advance(state: GameState, from: number, to: number): { state: GameState; log: Lo
        fire timers due now            construction done, game quarters, waitlist close, deadlines
        fire calendar events due now   intakes, kickoffs, rankings day, Year-End
        every 15 ticks                 forecast bars, growth evaluation, waitlist fill, service load
-       every 60 ticks                 approval drift, Rundown flags, desirability refresh if dirty
+       every 60 ticks                 happiness drift, Rundown flags, desirability refresh if dirty
        at the daily anchor            bailout check, inbox arrivals, edition boundary
        accrue income and spending for one minute
 5. Set lastSimulatedAt = to. Return the clone, the log, and info.
@@ -1130,7 +1136,7 @@ school       name, colors, mascot
 map          layout, parcels owned, paths, lots (zone, density, stage, building, flags), buildings
 cohorts      class year x tier: size, Greek members
 admissions   pools, forecast, last intake result, waitlist
-ratings      academic, athletic, approval
+ratings      academic, athletic, happiness
 money        cash, endowment, levers, sliders and their trailing averages, year accumulators
 services     buildings, levels, loads
 athletics    coach, classes, season, stadium, deals, records
@@ -1224,7 +1230,7 @@ Defined precisely in section 19.
 
 ### Layer 2: Tiers and money levers
 
-- **Contents:** Student Life zone. Three density tiers, upzoning, rectangle fill, Preserve. Decay with its brake. Density economics. Three applicant tiers, tier breakdown, emergent selectivity. Three price levers. Five sliders with overfunding. Approval. Alumni and donations. The budget screen. Bailout. Land purchase.
+- **Contents:** Student Life zone. Three density tiers, upzoning, rectangle fill, Preserve. Decay with its brake. Density economics. Three applicant tiers, tier breakdown, emergent selectivity. Three price levers. Five sliders with overfunding. Happiness. Alumni and donations. The budget screen. Bailout. Land purchase.
 - **Metrics (24.7):** computed yield, affordability, class size, graduation rate with its forecast, fifth and sixth years, alumni success with job placement, donations by success, facilities condition, the full ranking weights.
 - **Stand-ins:** tiers and land unlock at bare enrollment thresholds. Ceilings are constants. Medium density has no safety gate yet.
 - **Acceptance checks:** a price change shows its forecast and bills from the next intake. An overbuilt zone shows red on the budget and turns Rundown. A week away does not flatten the campus. Football's draw is visible in out-of-state applicants.
@@ -1353,7 +1359,8 @@ Settled on 2026-11-11 and no longer open: the personalities addition (section 13
 7. **Founding numbers.** The founding class size and the first size rung must let the first rung land by the third check-in.
 8. **Daylight saving.** The anchor is stored in UTC, so it moves an hour in local time twice a year until the player shifts it.
 9. **Game title.** "Campus Tycoon" is a working title.
-10. **One word for approval.** The design and the Build menu cards say approval. The student card, as the owner specified it, says Happiness. They are one number, so one word should be on screen. The owner picks.
+10. **One word for how students feel.** Settled on 2026-11-11: the word on screen is Happiness, everywhere (section 16.2).
+11. **Off-campus neighbourhoods.** Asked for by the owner on 2026-11-11, as item 8 of the feedback pass. His rules: houses grow on their own in the town outside the campus land as commuter numbers rise, drawn with the pack's houses along town streets. A neighbourhood joined to campus by a path and within walking range sends walkers, who need no bed and no parking. One that is too far or has no path sends drivers, who need a road connection and a parking space. Off-campus students pay tuition and no room fees. This replaces the flat share of students who need no bed. Tapping a neighbourhood shows who lives there, who walks, who drives and what would let more walk. Town relations, landlords and buying neighbourhood land are later. **Proposed in reply and waiting for his answer:** only locals live in town, about four in ten of each class and later the in-state commuters of 7.2; fixed house plots per neighbourhood; room fees arrive with neighbourhoods, because in the first playable's numbers a commuter nets more than a dorm student; no road tool, since a parking lot connects by touching a town street or the highway at the edge of the land; living on campus as the fourth cause of retention; the freshman live-on rule of 12.3 stays a policy; and it is a third play stop in the pass, with the Parking lot moved into it. Nothing is built except the card line below.
 
 ### First-playable stand-ins
 
@@ -1364,7 +1371,7 @@ Simplifications the first playable uses until a later layer replaces them. All a
 | One applicant pool, drawn by word of mouth and average campus desirability | Layer 2, by the three tiers |
 | One bed need for every student [T] | Layer 2 |
 | Flat tuition per student [T] | Layer 2, by the price levers |
-| Flat retention [T] | Layer 2, by approval |
+| Flat retention [T] | Layer 2, by happiness |
 | A plain state grant when cash would go below zero, with no penalty | Layer 2, by the bailout |
 | A flat running cost per student [T] | Layer 2, by the five funding sliders |
 | Growth is re-evaluated by walking every lot | Layer 2 or 3, by sorted candidate lists, when maps grow |
@@ -1444,7 +1451,7 @@ The map shows 54 kinds of facility. Fifty-odd rules would fail design tests 4 an
 | Beds | Residence halls, apartments, towers, housing over shops, and Greek Row as the variant already designed |
 | Places | Student Life lots: shops, food and venues |
 | Dining | Dining commons and coffee stands feed the Housing around them |
-| Approval | Gym, pool, courts, fields, track, theatre and amphitheatre raise approval near them |
+| Happiness | Gym, pool, courts, fields, track, theatre and amphitheatre raise happiness near them |
 | Academic lift | The library, and later the Grand Library |
 | Coverage | Medical Center, Campus Safety, Facilities yard and Shuttle each cover a circle |
 | Access | Parking and the transit station decide how many students can commute |
@@ -1474,7 +1481,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Apartment complex | Skin at medium density | Beds, the same rule | 2 x 2 | 2 | Apartment 2 x 2 with Garden_Pool | Drawn |
 | Residence tower | Zone lot, high density | Beds | 2 x 2 | 2 | Apartment floors stacked higher | From parts |
 | Housing over shops | Skin, when dense Housing touches Student Life | Beds, the same rule | 2 x 1 | 2 | Shop two-floor buildings | Drawn |
-| Chapter house on Greek Row | Housing brush variant | Approval, retention and giving, with noise | 1 x 1 | 6 | House_Type in eight colours, with a banner | From parts |
+| Chapter house on Greek Row | Housing brush variant | Happiness, retention and giving, with noise | 1 x 1 | 6 | House_Type in eight colours, with a banner | From parts |
 
 **Dining and shops**
 
@@ -1491,9 +1498,9 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
 | Student union | Reward landmark that opens the Student Life zone | Unlocks Student Life and emits desirability | 2 x 2 | 2 | Groceries_Mall. It reads as a mall | Drawn |
-| Theatre | Hand-placed | Raises approval and hosts the spring concert | 2 x 2 | 6 | Leasure_Theater | Drawn |
+| Theatre | Hand-placed | Raises happiness and hosts the spring concert | 2 x 2 | 6 | Leasure_Theater | Drawn |
 | Recital hall | Skin of the theatre | The same | 2 x 1 | 6 | Shop_Music_TwoFloors | Drawn |
-| Amphitheatre | Hand-placed | Calendar moments held there lift approval more | 2 x 2 | 6 | None. A stage prop exists | No sprite |
+| Amphitheatre | Hand-placed | Calendar moments held there lift happiness more | 2 x 2 | 6 | None. A stage prop exists | No sprite |
 | Art gallery | Reward landmark | Emits desirability | 2 x 2 | 5 | Leasure_Museum | Drawn |
 | Resource centre, one type with several looks | Hand-placed | Raises retention a little, with falling returns | 1 x 1 | 2 | House_Type | Drawn |
 | Children's centre | Reward landmark | Emits desirability | 2 x 2 | 5 | Education_School, with its swings | Drawn |
@@ -1502,11 +1509,11 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
-| Gym | Hand-placed | Raises approval | 2 x 1 | This pass | Plain hall with a dumbbell on its sign | From parts |
-| Aquatics pool | Hand-placed | Raises approval nearby | 2 x 1 | This pass | Pool | Drawn |
-| Outdoor courts | Hand-placed | Raises approval nearby. Students play there | 1 x 2 | This pass | Court cut from the tennis stadium. No basketball court exists | From parts |
-| Recreation field | Hand-placed | Raises approval nearby. Students play there | 2 x 2 | This pass | Soccer pitch with its stands cut off | From parts |
-| Track and field | Hand-placed | Raises approval for nearby Housing. Lifts Athletics later | 2 x 2 | This pass | Stadium_Athletics | Drawn |
+| Gym | Hand-placed | Raises happiness | 2 x 1 | This pass | Plain hall with a dumbbell on its sign | From parts |
+| Aquatics pool | Hand-placed | Raises happiness nearby | 2 x 1 | This pass | Pool | Drawn |
+| Outdoor courts | Hand-placed | Raises happiness nearby. Students play there | 1 x 2 | This pass | Court cut from the tennis stadium. No basketball court exists | From parts |
+| Recreation field | Hand-placed | Raises happiness nearby. Students play there | 2 x 2 | This pass | Soccer pitch with its stands cut off | From parts |
+| Track and field | Hand-placed | Raises happiness for nearby Housing. Lifts Athletics later | 2 x 2 | This pass | Stadium_Athletics | Drawn |
 
 **Health, safety and upkeep**
 
@@ -1540,8 +1547,8 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Practice fields | Flavour, drawn beside the stadium | None of its own | None | 1 | Soccer pitch with its stands cut off | From parts |
 | Basketball arena | Venue | Needs basketball, which is on the later roadmap | 2 x 2 or larger | Later | None | No sprite |
 | Baseball stadium, softball field, tennis centre | Varsity venues | Need their sport. They wait for spring sports, and are not placed early as prestige venues (23.8) | 2 x 2 | Later | Stadium_Baseball, Stadium_Cricket recoloured, Stadium_Tennis | Drawn |
-| Tennis courts | Hand-placed | Raises approval nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Tennis without its roof | Drawn |
-| Ball field | Hand-placed | Raises approval nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Baseball without its roof | Drawn |
+| Tennis courts | Hand-placed | Raises happiness nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Tennis without its roof | Drawn |
+| Ball field | Hand-placed | Raises happiness nearby, as the track does. Students play there | 2 x 2 | The pass after football | Stadium_Baseball without its roof | Drawn |
 
 **Access and transport**
 
@@ -1624,12 +1631,12 @@ The first gap that blocked a layer was the stadium: Layer 1 needs five tiers and
 
 ### 23.8 Venues are not placed early
 
-The owner asked on 2026-11-11 whether the basketball arena, baseball stadium, softball field and tennis centre could be placed early as prestige venues with a simple desirability or approval effect, then gain their real role when the sport arrives. Decided:
+The owner asked on 2026-11-11 whether the basketball arena, baseball stadium, softball field and tennis centre could be placed early as prestige venues with a simple desirability or happiness effect, then gain their real role when the sport arrives. Decided:
 
 | Idea | Decision | Why |
 |---|---|---|
 | A venue placed early as a prestige building | No. They stay Later | It is the stadium that does nothing with a different effect painted on: it promises a team that does not exist. And when the sport arrives it starts making noise and drawing crowds, so a building placed beside dorms as an amenity turns into one that hurts them. A rule must not change under the player |
-| Tennis courts and a ball field as plain recreation | Yes, in the pass after football | The name matches what it does today. They are two more looks in the Approval family, with the track's effect. All approval buildings share one cap, as green space does |
+| Tennis courts and a ball field as plain recreation | Yes, in the pass after football | The name matches what it does today. They are two more looks in the Happiness family, with the track's effect. All happiness buildings share one cap, as green space does |
 | Later, when the sport exists | Making a court or field the varsity home is a choice the player is offered | Never something that happens to them |
 | Basketball arena | Later either way | No sprite, and an indoor arena cannot pass as recreation |
 
@@ -1654,10 +1661,10 @@ applications -> acceptance rate -> yield -> retention -> graduation rate -> alum
 | Applications | The pool per tier, section 7.3 | Academic standing, athletic standing, price, the tier's ceiling | Existed |
 | Acceptance rate | Offers divided by applications. Offers are admitted students divided by yield | Room on campus, the size of the pool, yield | Existed upside down as applicants per seat |
 | Yield | The share of offers that enrol, per tier, worked out at each intake | How the campus looks (average Housing desirability), cost after aid, facilities condition | A fixed number per tier |
-| Retention | The share of each class that returns, applied each semester | Approval, safety and health coverage, policies | Existed, flat in the first playable |
+| Retention | The share of each class that returns, applied each semester | Happiness, safety and health coverage, policies | Existed, flat in the first playable |
 | Graduation rate | Per entering class: the share who finish in four years, and in six | How selective the class was, class size, room in class | Named once, defined nowhere |
 | Alumni success | One score per graduating class, fixed on the day it graduates | The school's academic score that year, on-time graduation, job placement | New |
-| Donations | Alumni times affinity times success | The number of alumni, affinity (approval while enrolled, traditions, football), success | Existed without success |
+| Donations | Alumni times affinity times success | The number of alumni, affinity (happiness while enrolled, traditions, football), success | Existed without success |
 | The loop | Alumni success and donations feed academic standing, which draws applications | | Standing already drew applications |
 
 One lap of the loop takes four to six real weeks, because a game year is a real week. That makes it the long arc (test 6), not a runaway.
@@ -1667,7 +1674,7 @@ One lap of the loop takes four to six real weeks, because a game year is a real 
 They exist because seven stages, eight supporting metrics and four HUD numbers would otherwise bury cause and effect (test 4).
 
 1. **One screen, seven rows.** A supporting metric never gets its own row. It appears as the "why" under a stage.
-2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Approval keeps them. Teaching graduates them. No cause counts twice.
+2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice.
 3. **Slow numbers show a forecast.** Graduation rate, alumni success and donations move weeks after their causes. Each shows "on today's conditions" beside the real figure. The forecast moves the day the player acts, and the real figure arrives later and proves it.
 
 A fourth rule comes from the idle constraints: every stage can swing the next only by a bounded amount [T], so neglect drifts to mediocre and never spirals. Everything here is a few numbers per class, worked out at intakes, semester ends and year end, so catch-up cost is nothing.
@@ -1705,7 +1712,7 @@ Every older rule that says "the academic rating takes a hit" now names its input
 
 | Level | Shows | Notes |
 |---|---|---|
-| HUD | Cash, students, and a chip each for academic prestige, athletic prestige and approval | A chip appears when its system exists: approval in the feedback pass, the other two in layer 1. The student count stays, because it is the score on the size ladder |
+| HUD | Cash, students, and a chip each for academic prestige, athletic prestige and happiness | A chip appears when its system exists: happiness in the feedback pass, the other two in layer 1. The student count stays, because it is the score on the size ladder |
 | Scorecard | The funnel: seven rows, each with its number, a trend arrow and its one biggest limiting factor. Tapping a row opens its causes | One helper works out the biggest limiting factor for any number. The Bottleneck panel, the Scorecard, the advisors and the newspaper all read from it |
 | Year-End report | Each stage graded against the national field | Section 11 holds how the other schools are graded |
 
@@ -1715,7 +1722,7 @@ Every older rule that says "the academic rating takes a hit" now names its input
 |---|---|
 | Drive the size ladder | Applications, yield, retention, and room: beds, seats and places |
 | Drive the prestige ladder | Graduation rate, class size, alumni success, reputation, selectivity, money per student |
-| Help both | Retention, yield, approval, safety, facilities condition. Never a wrong move, so they are the easy early wins |
+| Help both | Retention, yield, happiness, safety, facilities condition. Never a wrong move, so they are the easy early wins |
 | Create the tension | Acceptance rate and class size. Every extra student admitted from the same pool raises the acceptance rate. Every extra student worsens the ratio unless Instruction grows with them, and above full funding that cost climbs steeply. Money per student is a quieter third |
 
 How selective a class was sets how prepared it is, and that is one of the causes of its graduation rate. Growing by admitting deeper therefore shows as a lower forecast graduation rate the same day. This is what makes "the double" of section 15.4 hard.
@@ -1727,9 +1734,9 @@ How selective a class was sets how prepared it is, and that is one of the causes
 | The class record of 24.8 | This pass | History cannot be rebuilt later |
 | Retention shown with its cause | This pass | The recreation and dining buildings act through it |
 | Acceptance rate shown at each intake | This pass | The number is already computed |
-| Campus safety score, approval chip on the HUD | This pass, arriving with coverage and approval | |
+| Campus safety score, happiness chip on the HUD | This pass, arriving with coverage and happiness | |
 | Scorecard, first version. Athletic prestige. A first academic rank. Year-End grades | 1 | The national field arrives here |
-| Computed yield, affordability, class size, graduation rate with its forecast, fifth and sixth years, alumni success with job placement, donations by success, facilities condition, the full weights | 2 | Tiers, levers, sliders, approval, alumni and donations are already layer 2 |
+| Computed yield, affordability, class size, graduation rate with its forecast, fifth and sixth years, alumni success with job placement, donations by success, facilities condition, the full weights | 2 | Tiers, levers, sliders, happiness, alumni and donations are already layer 2 |
 | Limiting factors feed the advisors and the newspaper | 4 | |
 | Year-End graded on all seven stages. Endowment per student | 5 | |
 | Town relations | 6 | It needs Greek Row, game-day crowds and the parade to react to |
@@ -1754,7 +1761,7 @@ One record per entering class, kept for good in `history`. Students who do not f
 Accepted by the owner on 2026-11-11 as the defaults:
 
 1. The three rules of 24.2.
-2. The word on screen is "approval". Open again: see section 21, item 10.
+2. The word on screen is Happiness. The owner changed this default on 2026-11-11 (section 16.2).
 3. The student count stays on the HUD beside the three ratings.
 4. The weights of 24.4, as tuning targets.
 5. The headline graduation rate is six-year, with on-time as the detail.

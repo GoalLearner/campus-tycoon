@@ -58,6 +58,8 @@ Update this section at the end of every layer.
 - `CREDITS.md` lists every pack in use and its licence.
 - **Every visible thing is a real sprite** (owner's rule, 2026-11-11): buildings, water and shorelines, trees, benches, people, responders, incident icons, the placement ghost and menu thumbnails. No coloured boxes, dots, circles or text labels standing in for art. A tint on ground tiles for a radius or coverage is feedback, not art.
 - People are sprites named `person.<look>.<direction>.<frame>`, described by `people` in the manifest. With no people in the manifest there are no walkers. 3D characters become walk sheets with `tools/render/people.html`, opened from the dev server.
+- **On screen the word is Happiness, never approval** (owner's rule, 2026-11-11; DESIGN.md 16.2). The code may keep `approval` as a name. `tests/wording.test.ts` fails if quoted text in the UI says it.
+- **Student card stand-ins are swapped as real systems arrive, and the owner is told each time** (his standing instruction, 2026-11-11; the list is at the end of DESIGN.md 13.8).
 - Walkers are for show only. Nothing in `src/sim` may depend on them, and money or traffic must never be read from them. Each walker is one enrolled student, found from the seed (`studentKey`), and only goes home to their own dorm. Student card content lives in `src/sim/config/students.ts` and must pass the tone guide.
 
 ## Design rules that are easy to forget

@@ -128,6 +128,7 @@ describe('the student card', () => {
     for (const ref of sampleStudents(state)) {
       const card = studentCard(state, ref)!;
       if (card.home === null) continue;
+      expect(card.residence).toBe('dorm');
       const approval = approvalAt(state, card.home);
       expect(Math.abs(card.happiness - approval.score)).toBeLessThanOrEqual(TEMPERAMENT_SPREAD + 0.5);
       expect(approval.walkMinutes).toBe(state.map.walkMinutes[card.home]);
@@ -159,6 +160,7 @@ describe('the student card', () => {
     expect(commuter).toBeDefined();
     const card = studentCard(state, commuter!)!;
     expect(card.home).toBeNull();
+    expect(card.residence).toBe('offCampus');
     expect(state.map.cells[card.reason!.cell]!.zone).toBe('academic');
     expect(card.archetype).not.toBe('ra');
   });

@@ -144,7 +144,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     }
 
     setText(name, card.name);
-    setText(about, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk}`);
+    const lives = card.residence === 'dorm' ? 'Lives in a dorm' : 'Lives off campus';
+    setText(about, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
 
     const people = atlas?.people;
     if (atlas && people) {

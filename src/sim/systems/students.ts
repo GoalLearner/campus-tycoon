@@ -262,6 +262,8 @@ export interface StudentCard {
   quirk: string;
   /** The dorm's cell, or null for a commuter. */
   home: number | null;
+  /** Where they live, for the card's first line. */
+  residence: 'dorm' | 'offCampus';
   grade: string;
   /** null for a student in no club. */
   club: string | null;
@@ -403,6 +405,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     archetypeName: ARCHETYPE_NAMES[archetype],
     quirk,
     home,
+    residence: resident ? 'dorm' : 'offCampus',
     grade: letter(gpa),
     club: clubOf(seed, ref, nature, major.group, quirk),
     happiness,
