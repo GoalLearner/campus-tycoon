@@ -4,6 +4,7 @@ import { START_CASH } from './config/money';
 import { TICK_MS } from './config/time';
 import { hashInts, seedStreams } from './rng';
 import { SAVE_VERSION } from './save';
+import { recomputeDesirability } from './systems/desirability';
 import { recomputeRates } from './systems/money';
 import type { Cell, GameState, MapState, Zone } from './types';
 
@@ -74,6 +75,7 @@ function buildStarterCampus(map: MapState, seed: number): void {
 export function newGame(opts: NewGameOptions): GameState {
   const map = emptyMap(MAP_SIZE);
   buildStarterCampus(map, opts.seed);
+  recomputeDesirability(map);
 
   const state: GameState = {
     version: SAVE_VERSION,

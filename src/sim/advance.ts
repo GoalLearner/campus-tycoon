@@ -1,6 +1,15 @@
-import { eventsAt, type CalendarEvent } from './calendar';
-import { MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_YEAR } from './config/time';
+import { calendarAt, eventsAt, type CalendarEvent } from './calendar';
+import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_YEAR } from './config/time';
+import {
+  closeWaitlist,
+  fillFromWaitlist,
+  graduate,
+  promote,
+  runIntake,
+  semesterEnd,
+} from './systems/admissions';
 import { finishBuild } from './systems/construction';
+import { evaluateGrowth } from './systems/growth';
 import { accrue, dailyCashCheck } from './systems/money';
 import { yearEnd } from './systems/year';
 import { popDue } from './timers';
@@ -75,14 +84,24 @@ function tick(state: GameState, log: LogEntry[]): void {
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock.tick)) onCalendarEvent(state, event, log);
 
+  if (clock.tick % GROWTH_EVAL_TICKS === 0) {
+    fillFromWaitlist(state, log);
+    evaluateGrowth(state);
+  }
+
   accrue(state);
 }
 
 function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
   switch (timer.kind) {
-    case 'buildDone':
+    case 'buildDone': {
+      const zone = state.map.buildings[timer.ref]?.zone;
       finishBuild(state, timer.ref, log);
+      // Room just opened: let the waitlist in first, then see what should grow next.
+      fillFromWaitlist(state, log);
+      if (zone) evaluateGrowth(state, zone);
       break;
+    }
   }
 }
 
@@ -91,14 +110,24 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
     case 'dayStart':
       dailyCashCheck(state, log);
       break;
+    case 'fallIntake':
+      if (calendarAt(state.clock.tick).year > 1) promote(state);
+      runIntake(state, 'fall', log);
+      evaluateGrowth(state);
+      break;
+    case 'springIntake':
+      semesterEnd(state);
+      runIntake(state, 'spring', log);
+      evaluateGrowth(state);
+      break;
+    case 'waitlistClose':
+      closeWaitlist(state, log);
+      break;
+    case 'graduation':
+      graduate(state, log);
+      break;
     case 'yearEnd':
       yearEnd(state, log);
-      break;
-    case 'fallIntake':
-    case 'springIntake':
-    case 'waitlistClose':
-    case 'graduation':
-      // Handled by the intake loop.
       break;
   }
 }

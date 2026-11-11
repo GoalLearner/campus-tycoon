@@ -23,7 +23,7 @@ import {
   WAITLIST_TICKS,
 } from '../src/sim';
 import { hashInts, nextFloat, nextInt, seedStreams } from '../src/sim/rng';
-import { markRatesDirty, spend } from '../src/sim/systems/money';
+import { markRatesDirty, recomputeRates, spend } from '../src/sim/systems/money';
 import { addTimer, cancelTimers, popDue } from '../src/sim/timers';
 import { DAY, freshGame, T0 } from './helpers';
 
@@ -172,18 +172,19 @@ describe('new game', () => {
 });
 
 describe('money', () => {
-  it('accrues a year of rates over a year of ticks', () => {
+  it('accrues yearly rates one minute at a time', () => {
     const state = freshGame();
     state.cohorts = [100, 100, 100, 100];
     markRatesDirty(state);
-    // Five days ends before day 7 of the first game year, so nothing closes the books.
-    const end = advance(state, T0, T0 + 5 * DAY).state;
+    // Fourteen minutes ends before the first intake, so nothing but money changes.
+    const end = advance(state, T0, T0 + (FIRST_INTAKE_TICK - 1) * 60_000).state;
     const ticks = end.clock.tick;
+    expect(ticks).toBe(FIRST_INTAKE_TICK - 1);
     const perTick =
       (400 * (TUITION_PER_STUDENT_PER_YEAR - OPERATING_COST_PER_STUDENT_PER_YEAR) - upkeepPerYear(state)) /
       TICKS_PER_YEAR;
-    expect(end.money.cash).toBeCloseTo(START_CASH + perTick * ticks, 4);
-    expect(end.money.yearEarned - end.money.yearSpent).toBeCloseTo(perTick * ticks, 4);
+    expect(end.money.cash).toBeCloseTo(START_CASH + perTick * ticks, 6);
+    expect(end.money.yearEarned - end.money.yearSpent).toBeCloseTo(perTick * ticks, 6);
     expect(netPerRealHour(end)).toBeCloseTo(perTick * 60, 6);
   });
 
@@ -195,14 +196,22 @@ describe('money', () => {
     expect(state.money.cash).toBe(START_CASH - 1000);
   });
 
-  it('never lets an untouched campus sit below zero cash', () => {
+  it('tops cash up to zero at the daily check and records the grant', () => {
     const state = freshGame();
-    state.money.cash = 100; // upkeep with no students will run this out
-    const result = advance(state, T0, T0 + 3 * DAY);
-    expect(result.log.some((e) => e.kind === 'grant')).toBe(true);
-    expect(result.state.money.grants).toBeGreaterThan(0);
-    // Cash is topped up to zero at each daily check, so it can only dip by one day of upkeep.
-    expect(result.state.money.cash).toBeGreaterThan(-upkeepPerYear(state) / 7);
+    state.money.cash = -5_000;
+    const result = advance(state, T0, T0 + (FIRST_INTAKE_TICK + 1) * 60_000);
+    const grant = result.log.find((e) => e.kind === 'grant');
+    expect(grant).toBeDefined();
+    expect(result.state.money.grants).toBeGreaterThan(5_000);
+    expect(result.state.money.cash).toBeGreaterThan(-50);
+  });
+
+  it('keeps stored rates equal to freshly computed ones after a long run', () => {
+    const end = advance(freshGame(), T0, T0 + 20 * DAY).state;
+    const fresh = structuredClone(end);
+    recomputeRates(fresh);
+    expect(end.money.incomePerYear).toBeCloseTo(fresh.money.incomePerYear, 6);
+    expect(end.money.spendingPerYear).toBeCloseTo(fresh.money.spendingPerYear, 6);
   });
 
   it('closes the books at the end of each game year', () => {

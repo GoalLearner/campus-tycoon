@@ -1,0 +1,150 @@
+import {
+  BASE_SCORE,
+  GREEN_CAP,
+  GREEN_PER_CELL,
+  GREEN_RADIUS,
+  WALK_FREE_MINUTES,
+  WALK_MAX_PENALTY,
+  WALK_MINUTES_PER_CELL,
+  WALK_PENALTY_PER_MINUTE,
+} from '../config/desirability';
+import type { MapState, Zone } from '../types';
+
+/**
+ * Desirability and walk time for every lot. Only player actions change the
+ * things these read, so this runs after an action and never during a tick.
+ * That keeps catch-up cheap.
+ */
+
+const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+/**
+ * Steps from each walkable cell to the nearest Academic lot, counted along
+ * paths and quads. -1 where no Academic lot can be reached.
+ */
+function stepsToClass(map: MapState): Int32Array {
+  const { width, height, cells } = map;
+  const dist = new Int32Array(width * height).fill(-1);
+  const queue: number[] = [];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const cell = cells[y * width + x]!;
+      if (cell.kind !== 'lot' || cell.zone !== 'academic') continue;
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const ni = ny * width + nx;
+        const kind = cells[ni]!.kind;
+        if ((kind === 'path' || kind === 'quad') && dist[ni] === -1) {
+          dist[ni] = 1;
+          queue.push(ni);
+        }
+      }
+    }
+  }
+
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head]!;
+    const x = i % width;
+    const y = (i - x) / width;
+    for (const [dx, dy] of NEIGHBOURS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const ni = ny * width + nx;
+      const kind = cells[ni]!.kind;
+      if ((kind === 'path' || kind === 'quad') && dist[ni] === -1) {
+        dist[ni] = dist[i]! + 1;
+        queue.push(ni);
+      }
+    }
+  }
+  return dist;
+}
+
+/** Walk from a housing lot to class, in minutes. -1 when there is no route. */
+function walkFrom(map: MapState, steps: Int32Array, x: number, y: number): number {
+  const { width, height, cells } = map;
+  let best = -1;
+  for (const [dx, dy] of NEIGHBOURS) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+    const ni = ny * width + nx;
+    const cell = cells[ni]!;
+    let cellsWalked = -1;
+    if (cell.kind === 'lot' && cell.zone === 'academic') cellsWalked = 1;
+    else if (steps[ni]! > 0) cellsWalked = steps[ni]! + 1;
+    if (cellsWalked > 0 && (best === -1 || cellsWalked < best)) best = cellsWalked;
+  }
+  return best === -1 ? -1 : best * WALK_MINUTES_PER_CELL;
+}
+
+/** Lift from quads near a cell, before the cap. */
+function greenLift(map: MapState, x: number, y: number, zone: Zone): number {
+  const { width, height, cells } = map;
+  let lift = 0;
+  for (let dy = -GREEN_RADIUS; dy <= GREEN_RADIUS; dy++) {
+    const ny = y + dy;
+    if (ny < 0 || ny >= height) continue;
+    for (let dx = -GREEN_RADIUS; dx <= GREEN_RADIUS; dx++) {
+      const nx = x + dx;
+      if (nx < 0 || nx >= width) continue;
+      if (cells[ny * width + nx]!.kind !== 'quad') continue;
+      const d = Math.max(Math.abs(dx), Math.abs(dy));
+      lift += GREEN_PER_CELL[zone] * ((GREEN_RADIUS + 1 - d) / (GREEN_RADIUS + 1));
+    }
+  }
+  return Math.min(GREEN_CAP[zone], lift);
+}
+
+export function walkPenalty(minutes: number): number {
+  if (minutes < 0) return WALK_MAX_PENALTY;
+  const over = minutes - WALK_FREE_MINUTES;
+  return over <= 0 ? 0 : Math.min(WALK_MAX_PENALTY, over * WALK_PENALTY_PER_MINUTE);
+}
+
+/** The pieces of one lot's score, for the lot inspector. */
+export interface ScoreParts {
+  base: number;
+  green: number;
+  /** Subtracted from the score. Housing only. */
+  walkPenalty: number;
+  /** -1 when there is no route. Housing only. */
+  walkMinutes: number;
+  total: number;
+}
+
+export function scoreParts(map: MapState, x: number, y: number, zone: Zone, walk: number): ScoreParts {
+  const green = greenLift(map, x, y, zone);
+  const penalty = zone === 'housing' ? walkPenalty(walk) : 0;
+  const total = Math.max(0, Math.min(100, BASE_SCORE + green - penalty));
+  return { base: BASE_SCORE, green, walkPenalty: penalty, walkMinutes: walk, total };
+}
+
+/** Refresh map.score and map.walkMinutes for every cell. */
+export function recomputeDesirability(map: MapState): void {
+  const { width, height, cells } = map;
+  const steps = stepsToClass(map);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const cell = cells[i]!;
+      if (cell.kind !== 'lot' || cell.zone === null) {
+        map.score[i] = 0;
+        map.walkMinutes[i] = -1;
+        continue;
+      }
+      const walk = cell.zone === 'housing' ? walkFrom(map, steps, x, y) : -1;
+      map.walkMinutes[i] = walk;
+      map.score[i] = scoreParts(map, x, y, cell.zone, walk).total;
+    }
+  }
+}
