@@ -1,3 +1,4 @@
+import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { calendarAt, eventsAt, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_YEAR } from './config/time';
 import {
@@ -88,6 +89,9 @@ function tick(state: GameState, log: LogEntry[]): void {
     fillFromWaitlist(state, log);
     evaluateGrowth(state);
   }
+
+  stepIncidents(state, log);
+  spawnIncidents(state);
 
   accrue(state);
 }

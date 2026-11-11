@@ -208,7 +208,9 @@ def moved(layers, x, y):
 
 # The lake is three cells by three, laid from the nine shore pieces.
 LAKE_PLAN = [('top', 0, 0), ('ne', 1, 0), ('nw', 0, 1), ('right', 2, 0), ('full', 1, 1), ('left', 0, 2), ('se', 2, 1), ('sw', 1, 2), ('bottom', 2, 2)]
-sprites['pond.large'] = {'layers': [layer for name, x, y in LAKE_PLAN for layer in moved(LAKE[name], x, y)]}
+# Grass goes under the shore pieces. Their edges are ragged, and without it the earth of the
+# tiles behind showed through at the lake's two side corners.
+sprites['pond.large'] = {'layers': grass_under(3, 3) + [layer for name, x, y in LAKE_PLAN for layer in moved(LAKE[name], x, y)]}
 sprites['pond.medium'] = {'layers': grass_under(2, 2) + [on_grid(PUBLIC + 'Park_Pond.png', 2, 2)]}
 
 sprites['build.courts']['layers'] = grass_under(2, 2) + sprites['build.courts']['layers']

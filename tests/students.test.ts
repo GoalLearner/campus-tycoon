@@ -276,7 +276,7 @@ describe('the student card', () => {
     const state = withStudents();
     for (const ref of sampleStudents(state)) {
       const card = studentCard(state, ref)!;
-      expect(['walk', 'green', 'dining', 'recreation']).toContain(card.reason!.cause);
+      expect(['walk', 'green', 'dining', 'recreation', 'safety']).toContain(card.reason!.cause);
       expect(Math.abs(card.relationship.points)).toBe(RELATIONSHIP_POINTS);
     }
     const thin = relationshipOf(1, { entryYear: 1, index: 0 }, 0, 'scholar', 0);

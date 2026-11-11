@@ -108,6 +108,7 @@ export function newGame(opts: NewGameOptions): GameState {
     timers: [],
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
+    incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
   };
   recomputeRates(state);
   return state;

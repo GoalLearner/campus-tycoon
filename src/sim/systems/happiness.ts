@@ -4,6 +4,7 @@ import { CAUSE_WEIGHTS, type CauseId } from '../config/students';
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
+import { safetyAt } from './incidents';
 import { fedAt, recreationAt } from './placed';
 
 /**
@@ -60,6 +61,7 @@ export function approvalAt(state: GameState, cell: number): Approval {
   causes.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]), weight: CAUSE_WEIGHTS.green });
   causes.push({ id: 'dining', level: fedAt(map, x, y) ? 1 : 0, weight: CAUSE_WEIGHTS.dining });
   causes.push({ id: 'recreation', level: recreationAt(map, x, y), weight: CAUSE_WEIGHTS.recreation });
+  causes.push({ id: 'safety', level: safetyAt(state, x, y), weight: CAUSE_WEIGHTS.safety });
   return { score: scoreOf(causes), causes, walkMinutes };
 }
 

@@ -132,6 +132,18 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
     if (was > next[classYear]!) classRecord(state, Math.max(1, year - classYear)).left += was - next[classYear]!;
   }
   state.cohorts = next;
+
+  // Students with no bed do not come back. Room only limits who is admitted, so this is what
+  // stops a full dorm being cleared and its students kept.
+  const room = Math.floor(openCapacity(state, 'housing') / NEED.housing + 1e-9);
+  let homeless = enrollment(state) - room;
+  for (let classYear = 0; classYear < 4 && homeless > 0; classYear++) {
+    const go = Math.min(homeless, state.cohorts[classYear]!);
+    if (go === 0) continue;
+    state.cohorts[classYear]! -= go;
+    classRecord(state, Math.max(1, year - classYear)).left += go;
+    homeless -= go;
+  }
   const stayed = enrollment(state);
   const left = before - stayed;
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.score) };

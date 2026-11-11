@@ -43,6 +43,8 @@ export {
 } from './systems/placed';
 export * from './config/placed';
 export { acceptanceRate, classRecord } from './systems/admissions';
+export { coverFor, incidentText, safetyAt } from './systems/incidents';
+export * from './config/incidents';
 export {
   classYearOf,
   placeIndex,
