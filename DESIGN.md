@@ -108,7 +108,7 @@ Section 4.9 lists every timer against this contract.
 | Neighbor deals | Folded in | TV and donor deals in the inbox (10, 12) |
 | Power, water and other networks | Cut, with one exception | They were chores, and they fail while the player is away. Roads came back on 2026-11-11 as a second network with one rule and no failure state (section 25.3) |
 | Traffic simulation | Cut, and it stays cut | Walk time to class survives as a desirability input. Cars are for show, like walkers (section 25.3) |
-| Terrain, pollution, garbage | Cut | Stadium and parking noise, plus three fixed map features | Garbage came back on 2026-11-11 as litter with a ceiling and no failure state, on the conditions in section 29.10 |
+| Terrain, pollution, garbage | Cut, with one exception | Stadium and parking noise, plus three fixed map features. Garbage came back on 2026-11-11 as litter with a ceiling and no failure state, on the conditions in section 29.10 |
 | Regions | Later | Satellite campuses (20) |
 
 ---
