@@ -10,6 +10,7 @@ How to read this document:
 - Numbers without the mark are structural decisions.
 - Each decision carries a short "why" so later sessions do not reopen settled questions.
 - Section 21 lists what is still open.
+- Section 23 is the master building catalog: every kind of facility a complete campus has, and the layer it lands in.
 
 ---
 
@@ -1301,7 +1302,7 @@ Settled on 2026-11-11 and no longer open: the personalities addition (section 13
 2. **App Store name.** "Campus Tycoon" is the first choice. Backups if it is taken: "Campus Tycoon: Idle University", then "Quad Tycoon".
 3. **Map size.** Twenty-five parcels may be more land than the capacity numbers ever need. Settled with the simulate script in layer 2.
 4. **Stall-cause order** when several apply. Proceeding with: no demand, density cap, safety, health, desirability.
-5. **Final lists** still to be written under the tone guide: fourteen policies, sixteen reward buildings, ten awards, Board goal templates, the three prestige landmarks' effects.
+5. **Final lists** still to be written under the tone guide: fourteen policies, sixteen reward buildings, ten awards, Board goal templates, the three prestige landmarks' effects. Section 23 supplies candidates for the reward buildings.
 6. **Stadium art.** No public-domain stadium model was found, only attribution-licensed ones. Blender is not installed on the dev PC.
 7. **Founding numbers.** The founding class size and the first size rung must let the first rung land by the third check-in.
 8. **Daylight saving.** The anchor is stored in UTC, so it moves an hour in local time twice a year until the player shifts it.
@@ -1374,3 +1375,197 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Greek Row | Beds per stage, target share of enrollment | The table in 6.2; share to be set |
 | Simulate | Optimizer check-in interval | 2 hours |
 | Performance | 30 days of catch-up | Under one second on a desktop |
+
+---
+
+## 23. Master building catalog
+
+Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented.
+
+**Status: proposed.** The table is the plan for where each type lands. Nothing in it is built unless its layer says "this pass", and the four marked "proposed" wait for the owner.
+
+### 23.1 The rule that keeps it readable
+
+The map shows 54 kinds of facility. Fifty-odd rules would fail design tests 4 and 8. So there are ten effect families, and every building type is a look, a size or a landmark inside one of them. A type never gets a rule of its own. The Build menu is grouped by family.
+
+| Family | What it covers |
+|---|---|
+| Seats | Academic halls. A department is a look, not a rule |
+| Beds | Residence halls, apartments, towers, housing over shops, and Greek Row as the variant already designed |
+| Places | Student Life lots: shops, food and venues |
+| Dining | Dining commons and coffee stands feed the Housing around them |
+| Approval | Gym, pool, courts, fields, track, theatre and amphitheatre raise approval near them |
+| Academic lift | The library, and later the Grand Library |
+| Coverage | Medical Center, Campus Safety, Facilities yard and Shuttle each cover a circle |
+| Access | Parking and the transit station decide how many students can commute |
+| Landmarks | Reward, ceiling and prestige landmarks. Each emits desirability or lifts one ceiling |
+| Venues | The stadium, and later the arena and varsity fields, each tied to a sport that exists |
+
+### 23.2 The catalog
+
+Layers are the build layers in section 18. "This pass" is the feedback pass on Layer 0. Sprites are named by their file in the Penzilla packs. "From parts" means made from pack pieces with edits that are listed in the credits.
+
+**Academic**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Academic hall | Zone lot | Seats | 1 x 1, merging to 2 x 2 | 0. Merging is on the later roadmap | Plain blocks at one cell. School, College and University at four cells | Drawn |
+| Department identity: Engineering, Sciences, Arts and Letters, Business, Education, Music, Fine Arts, Health Sciences | Skin on an Academic hall | None of its own. The skin follows the mix of student majors and feeds student cards and newspaper stories | Same lot | 4 | An emblem on the hall from pack props: anvil, bottle, book, coins, scroll, lute, statue, herbs | From parts |
+| Library | Hand-placed | Lifts nearby Academic lots and draws scholars | 2 x 2 | This pass, full version in 3 | Public_Library | Drawn |
+| Research lab | Zone lot of the later Research zone | Research income and prestige | 2 x 2 | Later | Industrial and Workplace buildings | Drawn |
+| Observatory | Reward landmark | Emits desirability | 1 x 1 | 5 | None | No sprite |
+| Continuing education centre | Flavour | None. It belongs with transfer and graduate students on the later roadmap | None | Later | Hotel_OneFloor | Drawn |
+
+**Housing**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Residence hall | Zone lot, low and medium density | Beds | 1 x 1, merging to 2 x 1 and 2 x 2 | 0. Density tiers in 2 | Apartment blocks in six colours and nine sizes | Drawn |
+| Apartment complex | Skin at medium density | Beds, the same rule | 2 x 2 | 2 | Apartment 2 x 2 with Garden_Pool | Drawn |
+| Residence tower | Zone lot, high density | Beds | 2 x 2 | 2 | Apartment floors stacked higher | From parts |
+| Housing over shops | Skin, when dense Housing touches Student Life | Beds, the same rule | 2 x 1 | 2 | Shop two-floor buildings | Drawn |
+| Chapter house on Greek Row | Housing brush variant | Approval, retention and giving, with noise | 1 x 1 | 6 | House_Type in eight colours, with a banner | From parts |
+
+**Dining and shops**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs one | 2 x 1 | This pass | Fifteen restaurants. The bar is not used | Drawn |
+| Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass, proposed | StreetStand_Coffee | Drawn |
+| Campus store or bookstore | Hand-placed | Earns from foot traffic | 2 x 1 | This pass | Shop_Kiosk. A book prop makes it a bookstore | Drawn |
+| Retail plaza | Zone lot of Student Life | Places, and foot-traffic income | 1 x 1 and 2 x 1 | 2 | Eleven shop kinds, a market and street stands | Drawn |
+| Faculty club | Reward landmark | Emits desirability | 2 x 1 | 5 | Cafe | Drawn |
+
+**Student life and culture**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Student union | Reward landmark that opens the Student Life zone | Unlocks Student Life and emits desirability | 2 x 2 | 2 | Groceries_Mall. It reads as a mall | Drawn |
+| Theatre | Hand-placed | Raises approval and hosts the spring concert | 2 x 2 | 6 | Leasure_Theater | Drawn |
+| Recital hall | Skin of the theatre | The same | 2 x 1 | 6 | Shop_Music_TwoFloors | Drawn |
+| Amphitheatre | Hand-placed | Calendar moments held there lift approval more | 2 x 2 | 6 | None. A stage prop exists | No sprite |
+| Art gallery | Reward landmark | Emits desirability | 2 x 2 | 5 | Leasure_Museum | Drawn |
+| Resource centre, one type with several looks | Hand-placed | Raises retention a little, with falling returns | 1 x 1 | 2 | House_Type | Drawn |
+| Children's centre | Reward landmark | Emits desirability | 2 x 2 | 5 | Education_School, with its swings | Drawn |
+
+**Recreation**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Gym | Hand-placed | Raises approval | 2 x 1 | This pass | Plain hall with a dumbbell on its sign | From parts |
+| Aquatics pool | Hand-placed | Raises approval nearby | 2 x 1 | This pass, proposed | Pool | Drawn |
+| Outdoor courts | Hand-placed | Raises approval nearby. Students play there | 1 x 2 | This pass | Court cut from the tennis stadium. No basketball court exists | From parts |
+| Recreation field | Hand-placed | Raises approval nearby. Students play there | 2 x 2 | This pass, proposed | Soccer pitch with its stands cut off | From parts |
+| Track and field | Hand-placed | Raises approval for nearby Housing. Lifts Athletics later | 2 x 2 | This pass | Stadium_Athletics | Drawn |
+
+**Health, safety and upkeep**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Medical Center | Hand-placed service | Treats injuries in its circle. Later gates high density and lifts retention | 2 x 2 | This pass, full version in 3 | Doctor_Office, EmergencyRoom and Hospital: three sizes | Drawn |
+| Campus Safety | Hand-placed service | Handles mischief in its circle. Later gates medium density | 2 x 2 | This pass, full version in 3 | Emergency_PoliceStation | Drawn |
+| Facilities yard | Hand-placed service | Buildings in its circle run down more slowly | 2 x 1 | 3 | Workplace_Handyman | Drawn |
+| Central plant | Reward landmark | Lowers upkeep a little. An eyesore | 2 x 2 | 5 | Industrial_PowerPlant and WaterPlant | Drawn |
+| Central receiving | Flavour | None. Crates and a truck beside the store | None | 7 | PostOffice, shipping containers, trucks | Drawn |
+| Campus station, radio and television | Reward landmark | Emits desirability and gives the newspaper a voice | 2 x 1 | 5 | RadioStation and TeleTower | Drawn |
+
+**Administration and landmarks**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Administration building | Starter landmark, not placeable | Emits desirability. Later it opens the budget | 2 x 2 | This pass, proposed | Public_Townhall | Drawn |
+| Student services | Flavour | None. It is part of Administration | None | None | Workplace buildings | Drawn |
+| Welcome Center | Ceiling landmark, already designed | Lifts the out-of-state ceiling | 2 x 2 | 5 | Hotel_OneFloor | Drawn |
+| Alumni centre | Reward landmark | Lifts alumni giving | 2 x 1 | 5 | Hotel_TwoFloors or WorkSpace_Bank | Drawn |
+| Bell tower | Reward landmark | Emits desirability. Home of the Victory Bell tradition | 1 x 1 | 5 | Medieval stone tower, or the church with its spire | Drawn |
+| Historic cottage and garden | Reward landmark | Emits desirability | 1 x 1 | 5 | Medieval FarmHouse with a pond | Drawn |
+| Grand Library, Hall of Champions, Founders' Commons | Prestige landmarks, already designed | One campus-wide effect each | Large | 5 | None | No sprite |
+
+**Athletics**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Football stadium | Venue with five tiers, as designed | As designed | Reserved from the start | 1 | Stadium_FootballAmerican for tier one. Tiers two and three by adding stands and roofs. None for four and five | No sprite |
+| Athletics headquarters | Flavour landmark that arrives with stadium tier two | Opens the Athletic Director's page | 2 x 2 | 1 | A Workplace building with a trophy on its sign | From parts |
+| Practice fields | Flavour, drawn beside the stadium | None of its own | None | 1 | Soccer pitch with its stands cut off | From parts |
+| Basketball arena | Venue | Needs basketball, which is on the later roadmap | 2 x 2 or larger | Later | None | No sprite |
+| Baseball stadium, softball field, tennis centre | Varsity venues | Need their sport. They wait for spring sports | 2 x 2 | Later | Stadium_Baseball, Stadium_Cricket recoloured, Stadium_Tennis | Drawn |
+
+**Access and transport**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Parking lot | Hand-placed | Fewer beds needed. Neighbours like it less | 1 x 1, 2 x 1, 2 x 2 | This pass | Carpark in three sizes, one with a gate | Drawn |
+| Parking structure | Upgrade of a parking lot | Three times the cars on the same land | 2 x 2 | 3 | None | No sprite |
+| Shuttle stop | Hand-placed service | Cuts walk time between stops | 1 x 1 | 3. First to be cut if scope slips | BusStop | Drawn |
+| Transit station | Ceiling landmark: the Commuter Hub, already designed | Lifts the in-state ceiling. Must touch the highway or the town edge | 2 x 2 | 5 | MetroStation or Public_Trainstation | Drawn |
+| Bike lane and bike parking | Proposed: cut | It would be a second tool for walk time beside the shuttle | None | Later, if at all | None | No sprite |
+| Kiosks, pay stations, drop-off zones | Flavour, placed automatically | None | None | 7 | SignMap, signs, ATM, mailbox | Drawn |
+
+**Grounds**
+
+| Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
+|---|---|---|---|---|---|---|
+| Quad, trees, ponds and the lake | Hand-placed | They share one green-space input and its cap | Any | This pass | Done | Drawn |
+| Central walk | A strip of quad along the main path | Green space | Any | This pass | Lawn, trees and benches | Drawn |
+
+### 23.3 Where the expected mapping was changed
+
+| The expectation | What the catalog does instead, and why |
+|---|---|
+| Departments tied to majors | Keep the tie, but only as a look. If each major needed its own seats there would be eight demand bars, which fails test 1 and breaks the rule in 7.1 that one population has three needs. A hall takes the emblem of whichever major is most short of a home when it is built. Nothing else changes. |
+| Housing over shops | Not a new lot type. A dense Housing lot that touches Student Life shows shops on its ground floor. Same beds, same rule. |
+| Twenty hand-placed buildings | Too many to each do something different. Seven of them become the reward landmarks the design already owes: section 21 lists sixteen reward buildings still to be written, and the map supplies them. The rest join an existing family. |
+| Athletics venues | The arena, baseball stadium, softball field and tennis centre wait for their sport, by the same rule the owner set for the stadium: no venue that does nothing. The pool, courts, fields and track work now as recreation. Practice fields and the athletics headquarters are scenery attached to football, because the team rating already has four visible inputs and a fifth would blur every loss recap. |
+| Back of house | The Facilities yard gets the one mechanic: buildings near it run down more slowly, which ties to the Facilities slider. The central plant and the campus station are reward landmarks. Central receiving is scenery. None of them gates density: Campus Safety and the Medical Center already hold the two gates. |
+| Transport | The transit station is the Commuter Hub ceiling landmark that section 15.3 already has. Shuttle stops stay as designed. Bike lanes should be cut: they would be a second tool for the one walk-time number. |
+
+### 23.4 Layout: the model campus
+
+The starter campus and the advisors' tips follow this shape: an academic core on a central walk with the library and the union, housing clusters one block out with their own dining, athletics on one side, and parking and transit on the perimeter by the highway. The starter campus becomes: the Administration building at the head of a short central walk, three Academic lots along it, three Housing lots a block away with a dining commons, and a parking lot at the end of the path nearest the map edge.
+
+| Part of the model | Do the desirability rules in 8.2 reward it? |
+|---|---|
+| Academic core around a central walk, with the library | Yes. Academic lots like each other, the library lifts them strongly, and a walk built as a strip of quad counts as green space. |
+| Student union between classes and housing | Yes. Student Life likes foot traffic from both. |
+| Housing clusters with their own dining | Yes, once dining has a radius. |
+| Athletics district on one side | Yes. Stadium noise pushes Housing and Academic away and pulls Student Life and Greek Row in. |
+| Housing at the edges | **No.** Housing likes Academic lots and pays a walk penalty, so the rules pull dorms into the core. Proposed fix: Academic lots dislike Housing next door a little, as quiet study. Then the core stays academic and housing settles one block out. |
+| Parking and transit on the perimeter by the highway | **Only by default.** Nothing dislikes parking there, but nothing rewards it. Proposed fix: a parking lot beside the highway holds more cars, and the transit station must touch the highway or the town edge. |
+| A central walkway | **Not by itself.** A path gives nothing. Proposed fix: none needed if the walk is laid as a quad strip, which the starter campus will do. |
+
+### 23.5 What belongs in the current pass
+
+Four additions are cheap because the sprite is drawn and the rule already exists in this pass. They wait for the owner's yes.
+
+| Addition | Why it is cheap |
+|---|---|
+| Aquatics pool | A second look for the recreation rule. The sprite is drawn |
+| Recreation field | The same rule again, and somewhere for walkers to play |
+| Coffee stand | The dining rule with a small radius, for a housing cluster too small for a commons |
+| Administration building | No rule. It anchors the starter campus and later opens the budget |
+
+### 23.6 Art gaps
+
+Of 54 types, 39 are drawn in the Penzilla packs, 8 can be made from pack parts, and 7 have no sprite. A type with no sprite does not ship: the art rule allows no stand-ins.
+
+| How to fill | Types | Rough count |
+|---|---|---|
+| Made from pack parts, no cost, edits listed in the credits | Department emblems, residence tower, chapter-house banners, gym, outdoor courts, recreation field, practice fields, athletics headquarters, stadium tiers two and three | 8 types, about 20 sprites, plus stadium tiers two and three |
+| Commissioned from Penzilla in the same style. Their site was read as about $6 for a small item, and large ones need a quote | Stadium tiers four and five, basketball arena, basketball court, amphitheatre, parking structure, observatory, three prestige landmarks | About 10 sprites |
+| A 3D model rendered to a sprite with drawn outlines. Free, but it will not match the pack exactly | The same ten, as the fallback if a commission is refused or too dear | About 10 sprites |
+| Not needed if the proposal to cut it is accepted | Bike lane and bike parking | 2 sprites |
+
+The first gap that blocks a layer is the stadium: Layer 1 needs five tiers and the pack draws one. The public repository's Kenney fallback has no sprite for any hand-placed type. It will get about ten shared stand-ins rendered from Kenney's public-domain 3D kits, one per family.
+
+### 23.7 Design tests
+
+| Test | Risk and guard |
+|---|---|
+| Readable cause and effect, tests 4 and 8 | 54 types cannot each have a rule. Section 23.1 is the guard. |
+| Interdependence, test 1 | Departments must stay a look. Per-major seats would let one zone be solved alone. |
+| No building that does nothing | Venues wait for their sport. Every reward landmark emits desirability, so none is inert. |
+| Caps as puzzles, test 3 | No new density gate. Two gates with two named buildings is the limit. |
+| Neglect-safe | Twenty hand-placed buildings each carry upkeep. The simulate script must assert that an absent campus with a full Build menu still pays its way. |
+| Cheap catch-up | Every radius, coverage and lift is worked out when the player acts, never during a tick. |
+| Scale, test 7 | Four-cell buildings fill the 32 by 32 starting land fast. Land purchase in Layer 2 has to arrive before most of this catalog does. |
