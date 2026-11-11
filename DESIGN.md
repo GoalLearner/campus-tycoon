@@ -15,6 +15,7 @@ How to read this document:
 - Section 25 is off-campus neighbourhoods, roads and parking.
 - Section 26 is the art to fix before release.
 - Section 27 is Stress, which ships with the calendar in layer 1.
+- Section 28 is time of day and weather, also for layer 1.
 
 ---
 
@@ -252,7 +253,7 @@ Everything in the first six rows must leave a line in the away summary, because 
 | Year-End report | Day-7 anchor | The summer term starts May 26 | No move |
 | Homecoming, spring game | Day 2 afternoon, day 5 evening | Late October, early April | No move |
 
-The football rows are proposals for layer 1 and wait for the owner's answer. The date line built today has no bend.
+**Accepted by the owner on 2026-11-11:** both changes to his mapping, the rivalry game pinned to Nov 28, the title game and the bowl moved to late day 3, and signing day and rankings day left on day 5. The date line now has the fixed point for the rivalry game, so fall classes run a little slower (about 33 real minutes a game day) and finals and winter break a little faster (about 19). The table of real times above was worked out before that point was added and is reworked when layer 1 builds the events.
 
 ---
 
@@ -650,7 +651,7 @@ Still open, and reported to the owner:
 | Gap | Size | How it closes |
 |---|---|---|
 | Build, let lots finish growing, sell for half | Half price for growth that then stays, because nothing decays yet | Decay in layer 2 takes back a stage the lot no longer earns. No new rule needed |
-| Sell a full dorm and keep its students | They stay enrolled and paying until they graduate, because room only limits admissions | Proposed: students with no place leave at the end of the semester. Waits for the owner |
+| Sell a full dorm and keep its students | Closed on 2026-11-11 | Students with no bed leave at the end of the semester. Built in play stop 2 |
 | A refund is half of today's price, not of the price paid | Matters only if prices are retuned upward | Store the price paid, if it ever matters |
 
 ---
@@ -957,7 +958,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 | Line | Reads now | Replaced or widened by |
 |---|---|---|
-| Happiness | Walk time, green space, dining in reach and things to do in reach, at the dorm. A commuter reads the last three around two lecture halls. Dining and recreation were swapped in with play stop 1 | Noise and safety join the same list as each is built. Layer 3's overlays become the jump target where one fits |
+| Happiness | Walk time, green space, dining in reach, things to do in reach, and safety, at the dorm. A commuter reads the last four around two lecture halls. Dining and recreation were swapped in with play stop 1 and safety with play stop 2 | Noise joins the same list when it is built. Layer 3's overlays become the jump target where one fits |
 | GPA | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed, class year and nature | The academic score of section 24 |
 | Social life | Quad cells and recreation buildings per student. Recreation was swapped in with play stop 1 | Student Life spots and events join the count as each is built |
 | Archetype | A lasting nature by seed, from the fourteen archetypes whose stat exists today. Lost Freshman and Homesick fade over the first year. Super Senior grows when Academic seats capped the last class | The state-driven mix of 13.2 and all eighteen, in layer 6 |
@@ -967,7 +968,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
-**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. The swaps still owed: noise and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
+**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. Done with play stop 2: safety as a cause of happiness. The swaps still owed: noise as a cause of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
 
 ---
 
@@ -1111,7 +1112,7 @@ Light and satirical, like SimCity 2000's newspaper: funny and useful at once.
 
 1. **The joke sits on top and the number sits underneath.** Every item carries real information.
 2. **Jokes aim at institutions, never at students.** Administration, boosters, parking, bureaucracy and rival schools are fair game.
-3. **Events harm buildings, budgets and pride, never people.**
+3. **Events harm buildings, budgets and pride, never people,** with one exception the owner made on 2026-11-11: minor, comic injuries, such as a stubbed toe at the courts. Nothing serious, nothing graphic, nobody dies, and every one resolves. Campus Safety handles mischief and pranks, not crime.
 4. Scandals and incidents stay in comic territory: mascot theft, a booster's suspicious gift of a boat, a parking uprising, a professor's feud with the marching band, grade inflation, a rival's prank.
 5. Nothing depicts or implies serious real-world harm to students.
 6. **No alcohol, tobacco or drug references anywhere.** Not as policy flavour, not in art, not in names.
@@ -1311,7 +1312,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, next:** Medical Center, Campus Safety, coverage circles and incidents. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1781,7 +1782,7 @@ One lap of the loop takes four to six real weeks, because a game year is a real 
 They exist because seven stages, eight supporting metrics and four HUD numbers would otherwise bury cause and effect (test 4).
 
 1. **One screen, seven rows.** A supporting metric never gets its own row. It appears as the "why" under a stage.
-2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice.
+2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice. Happiness has five since play stop 2, at the owner's instruction: walk, green space, dining, things to do, and safety at half weight.
 3. **Slow numbers show a forecast.** Graduation rate, alumni success and donations move weeks after their causes. Each shows "on today's conditions" beside the real figure. The forecast moves the day the player acts, and the real figure arrives later and proves it.
 
 A fourth rule comes from the idle constraints: every stage can swing the next only by a bounded amount [T], so neglect drifts to mediocre and never spirals. Everything here is a few numbers per class, worked out at intakes, semester ends and year end, so catch-up cost is nothing.
@@ -2026,6 +2027,8 @@ The simulate script must assert that Stress never stays at its maximum past the 
 
 ### 27.4 Points raised with the owner
 
+The owner accepted the proposal on all five points on 2026-11-11, unless he says otherwise after reading them.
+
 | Point | Proposal |
 |---|---|
 | Happiness would have five inputs: its four causes and Stress | Show the calendar's effect as one signed line on the Happiness panel, "This week": the exam dip or the break lift. Four causes the player can build for, and the season |
@@ -2033,3 +2036,59 @@ The simulate script must assert that Stress never stays at its maximum past the 
 | Two of the four causes do not exist in layer 1 | Instruction funding arrives in layer 2 and library capacity in layer 3. Until then teaching reads as neutral, and support reads library presence and Medical Center coverage |
 | Overachiever and All-Nighter are not among the eighteen archetypes of 13.4 | Scholar takes the Overachiever's part until the fuller list ships. All-Nighter is added as a nineteenth, a finals-only phase |
 | The Provost's page arrives in layer 4 | Until then faculty Stress appears in the exam report in the away summary |
+
+---
+
+## 28. Time of day and weather
+
+Asked for by the owner on 2026-11-11, for the football and calendar layer. Both are simple and mostly visual. Nothing here is built.
+
+### 28.1 Time of day
+
+| Decision | Why |
+|---|---|
+| Time of day follows the player's real local clock, in four periods with smooth changes between them: morning, afternoon, evening and night. The in-game date keeps advancing with the game's own time | A game day passes in about half a real hour, which is too fast for a day and a night |
+| It is presentation only: lighting, how many walkers there are and where they go, and the student card's "Doing now". No rule of the simulation reads the local clock | Catch-up, saves and tests stay exact. A changed time zone or a wrong device clock changes only what the campus looks like |
+| Breaks, finals and game days from the calendar layer on top of the period | One picture, two inputs |
+
+| Period | Walkers and lighting |
+|---|---|
+| Morning | Rush hour: many walkers hurrying from Housing to Academic lots, a busy coffee stand and dining hall |
+| Afternoon | A steady mix of class, library, dining and recreation |
+| Evening | Dining, the gym and recreation, clubs, Greek Row when it exists, and students heading to jobs in town. Few going to class |
+| Night | Quiet. A few walkers to night classes and the library. Lit windows, street lights along paths and roads, a darker tint |
+
+**The one problem with the split.** A player who only ever opens the game at night would always find a dark, quiet campus, which is the emptiness the walkers were added to cure. Two guards: night keeps a floor of walkers and its lit windows, so it reads as cosy and not as empty, and a setting shows the campus in daylight whatever the hour. Nothing else conflicts: football kicks off at real times already, so day games and night games match the light.
+
+### 28.2 Weather
+
+| Decision | Why |
+|---|---|
+| Weather follows the season of the in-game date, in one temperate climate: a mild fall with some wind and rain, a cold winter with occasional snow, a rainy spring, and a hot summer with occasional heat waves | The year becomes visible |
+| It comes in spells of a few real hours. Each spell is chosen from the game's seed and its place in the calendar, with no stored state | Catch-up stays exact, and the away summary can say what the weather was |
+| Effects on Happiness are small: a small lift on a sunny day, a small dip in rain, snow or a heat wave, a few points at most [T] | No season may dominate the year |
+| Indoor buildings in reach soften the dip: library, dining and gym now, the union later | The part the player can act on |
+| Weather shows on the Happiness panel only while it is active, with its relief, on the same seasonal line as the exam dip and the break lift of section 27 | One line for everything the calendar and the sky do |
+| In bad weather walkers favour indoor places, outdoor recreation and quads lose their pull for the day, and umbrellas or coats appear | Behaviour that can be seen |
+| Weather never touches construction timers, income or deadlines | It is flavour with a small feeling attached |
+| No storm damages a building. Disasters keep their own design | Weather and night stay cosy and light |
+
+### 28.3 Visuals and art
+
+Rain, snow and heat shimmer are light particle effects. Paths look wet and the ground takes a snow tint. A setting reduces all of it for older phones.
+
+Checked in the owner's packs on 2026-11-11:
+
+| Wanted | In the packs |
+|---|---|
+| Street lights | Yes: a street lamp drawn off, on and with its glow, a smaller lamp, and strings of lights |
+| Car lights | Yes: headlight animation sheets for both car shapes |
+| Lit windows | No. No building has a night version or a window overlay |
+| Umbrellas and coats on walkers | Not found. There is an umbrella stand as a prop |
+| Snow on the ground | Not found as tiles. A tint would be used |
+
+Lit windows would have to be made here, as an overlay cut from each building's own windows. When that is built it goes on the list in section 26.
+
+### 28.4 Schedule
+
+Layer 1, with the calendar. The real-clock lighting and the walker schedule are cheap, because neither touches the simulation, and can be added sooner if the owner asks.

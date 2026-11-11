@@ -38,8 +38,8 @@ export interface AcademicCalendar {
    * between are spread evenly. The week is 168 hours.
    *
    * Hour 0 is the fall intake and hour 72 the spring intake, so each lands on
-   * the first day of its semester. Hour 120 is commencement and hour 144 the
-   * first day of the summer term.
+   * the first day of its semester. Hour 56 pins the rivalry game to Nov 28.
+   * Hour 120 is commencement and hour 144 the first day of the summer term.
    */
   knots: ReadonlyArray<readonly [hours: number, date: CalDate]>;
   events: readonly CalendarEntry[];
@@ -49,6 +49,8 @@ export const ACADEMIC_CALENDAR: AcademicCalendar = {
   startYear: 2026,
   knots: [
     [0, [8, 19, 0]],
+    // The rivalry game's slot, day 3 at the anchor plus eight hours, is Thanksgiving weekend.
+    [56, [11, 28, 0]],
     [72, [1, 19, 1]],
     [120, [5, 13, 1]],
     [144, [5, 26, 1]],
