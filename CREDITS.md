@@ -31,5 +31,13 @@ Campus Tycoon uses the art below. This file is written by `tools/build_art.py` f
 - **By:** Graphics created by Penzilla Design (penzilla.itch.io)
 - **Licence:** Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared (https://penzilla.itch.io/)
 - **From:** https://penzilla.itch.io/
-- **Changes made:** Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Red crosses on the medical building and the first-aid icon are recoloured green.
+- **Changes made:** Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green.
+- **Where:** Used in builds that are given the private art pack.
+
+## Football stadium (3D model)
+
+- **By:** Poly by Google, via Poly Pizza
+- **Licence:** Creative Commons Attribution 3.0 (CC-BY 3.0) (https://creativecommons.org/licenses/by/3.0/)
+- **From:** https://poly.pizza/m/6TZCkGh76m5
+- **Changes made:** Rendered to flat pictures for stadium tiers four and five, with the ground slab and road removed, the colours changed to match the drawn pack, and a dark outline added.
 - **Where:** Used in builds that are given the private art pack.

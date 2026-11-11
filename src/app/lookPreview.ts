@@ -41,6 +41,37 @@ export function lookCampus(now: number): GameState {
   return advance(state, started, now).state;
 }
 
+/**
+ * A bare corner of the map for judging stadium art: open the page with `?demo=stadium`.
+ * It shows the rendered tier-four stadium between buildings the pack draws.
+ */
+export function stadiumCampus(now: number): GameState {
+  const started = now - 75 * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 2_000_000;
+  state = paint(state, 'path', [...rowBetween([22, 1], [22, 10]), ...rowBetween([23, 6], [26, 6])]);
+  state = paint(state, 'tree', [[19, 5], [18, 6], [26, 3]], 0);
+  state = paint(state, 'tree', [[19, 8], [25, 9], [26, 8]], 4);
+  state = paint(state, 'tree', [[25, 2], [20, 9]], 1);
+  state = paint(state, 'tree', [[26, 4], [21, 10]], 3);
+  return advance(state, started, now).state;
+}
+
+export function stadiumItems(): LookScene {
+  const items: PlacedItem[] = [
+    { key: 'build.university', x: 20, y: 3, w: 2, h: 2 },
+    { key: 'stadium.4', x: 23, y: 3, w: 2, h: 3 },
+    { key: 'stadium.3', x: 20, y: 6, w: 2, h: 2 },
+    { key: 'build.library', x: 23, y: 7, w: 2, h: 2 },
+    { key: 'person.0.sw.0', x: 22.1, y: 6.9, layer: 'person' },
+    { key: 'person.3.sw.2', x: 22.3, y: 8.6, layer: 'person', flip: true },
+    { key: 'person.5.nw.4', x: 22.2, y: 7.4, layer: 'person' },
+    { key: 'person.7.sw.1', x: 24.3, y: 6.2, layer: 'person' },
+    { key: 'person.9.sw.5', x: 25.2, y: 6.3, layer: 'person', flip: true },
+  ];
+  return { items, tints: [], labels: [] };
+}
+
 /** Cells within `reach` cells of a block, the block itself left out. */
 function around(x: number, y: number, w: number, h: number, reach: number): Point[] {
   const cells: Point[] = [];

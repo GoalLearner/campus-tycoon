@@ -926,17 +926,10 @@
     }
    ]
   },
-  "build.stadium": {
+  "stadium.1": {
    "layers": [
     {
      "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
-     "footprint": [
-      2,
-      2
-     ]
-    },
-    {
-     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Roof.png",
      "footprint": [
       2,
       2
@@ -947,6 +940,219 @@
      "footprint": [
       2,
       2
+     ]
+    }
+   ]
+  },
+  "stadium.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "cut": [
+      [
+       176,
+       284
+      ],
+      [
+       478,
+       88
+      ],
+      [
+       656,
+       100
+      ],
+      [
+       656,
+       372
+      ],
+      [
+       345,
+       562
+      ],
+      [
+       296,
+       524
+      ],
+      [
+       284,
+       394
+      ],
+      [
+       184,
+       394
+      ]
+     ],
+     "shift": [
+      -0.549,
+      -0.259
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "stadium.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "cut": [
+      [
+       176,
+       284
+      ],
+      [
+       478,
+       88
+      ],
+      [
+       656,
+       100
+      ],
+      [
+       656,
+       372
+      ],
+      [
+       345,
+       562
+      ],
+      [
+       296,
+       524
+      ],
+      [
+       284,
+       394
+      ],
+      [
+       184,
+       394
+      ]
+     ],
+     "flip": true,
+     "scale": 0.72,
+     "shift": [
+      0.434,
+      -0.612
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "cut": [
+      [
+       176,
+       284
+      ],
+      [
+       478,
+       88
+      ],
+      [
+       656,
+       100
+      ],
+      [
+       656,
+       372
+      ],
+      [
+       345,
+       562
+      ],
+      [
+       296,
+       524
+      ],
+      [
+       284,
+       394
+      ],
+      [
+       184,
+       394
+      ]
+     ],
+     "shift": [
+      -0.549,
+      -0.259
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.stadium": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballAmerican_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "stadium.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/stadium.png",
+     "render": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "stadium.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/stadium-tall.png",
+     "render": [
+      2,
+      3
      ]
     }
    ]
@@ -1389,6 +1595,26 @@
    2,
    2
   ],
+  "stadium.1": [
+   2,
+   2
+  ],
+  "stadium.2": [
+   2,
+   2
+  ],
+  "stadium.3": [
+   2,
+   2
+  ],
+  "stadium.4": [
+   2,
+   3
+  ],
+  "stadium.5": [
+   2,
+   3
+  ],
   "build.studentlife": [
    2,
    2
@@ -1422,7 +1648,15 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Red crosses on the medical building and the first-aid icon are recoloured green."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green."
+  },
+  {
+   "name": "Football stadium (3D model)",
+   "author": "Poly by Google, via Poly Pizza",
+   "licence": "Creative Commons Attribution 3.0 (CC-BY 3.0)",
+   "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "source": "https://poly.pizza/m/6TZCkGh76m5",
+   "changes": "Rendered to flat pictures for stadium tiers four and five, with the ground slab and road removed, the colours changed to match the drawn pack, and a dark outline added."
   }
  ]
 }

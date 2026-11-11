@@ -101,11 +101,23 @@ sprites['build.courts'] = {'layers': [on_grid(PUBLIC + 'Stadium_Tennis.png', 2, 
 # The pack draws a red cross on its medical buildings. A red cross on white is a protected emblem, so it is turned green.
 sprites['build.medical'] = {'layers': [on_grid(PUBLIC + 'Doctor_EmergencyRoom.png', 2, 2, recolour='cross')]}
 sprites['build.safety'] = {'layers': [on_grid(PUBLIC + 'Emergency_PoliceStation.png', 2, 2)]}
-sprites['build.stadium'] = {'layers': [
-    on_grid(PUBLIC + 'Stadium_FootballAmerican.png', 2, 2),
-    on_grid(PUBLIC + 'Stadium_FootballAmerican_Roof.png', 2, 2),
-    on_grid(PUBLIC + 'Stadium_FootballAmerican_Front.png', 2, 2),
-]}
+# The football stadium has five tiers and the pack draws one. Tiers two and three are made
+# from its own parts: the stand is cut out, then raised behind itself as an upper deck, and
+# mirrored and shrunk as a second stand behind the scoreboard.
+STADIUM = PUBLIC + 'Stadium_FootballAmerican.png'
+STAND = [[176, 284], [478, 88], [656, 100], [656, 372], [345, 562], [296, 524], [284, 394], [184, 394]]
+STADIUM_BASE = [on_grid(STADIUM, 2, 2), on_grid(PUBLIC + 'Stadium_FootballAmerican_Front.png', 2, 2)]
+UPPER_DECK = on_grid(STADIUM, 2, 2, cut=STAND, shift=[-0.549, -0.259])
+FAR_STAND = on_grid(STADIUM, 2, 2, cut=STAND, flip=True, scale=0.72, shift=[0.434, -0.612])
+sprites['stadium.1'] = {'layers': STADIUM_BASE}
+sprites['stadium.2'] = {'layers': [UPPER_DECK] + STADIUM_BASE}
+sprites['stadium.3'] = {'layers': [FAR_STAND, UPPER_DECK] + STADIUM_BASE}
+sprites['build.stadium'] = {'layers': STADIUM_BASE}
+# Tiers four and five are a full bowl, which the pack does not draw. Until drawn art is commissioned it is a
+# 3D model rendered with the pack's colours, outline and camera (see tools/render/model.html).
+sprites['stadium.4'] = {'layers': [{'file': '_rendered/fallback/stadium.png', 'render': [2, 3]}]}
+# Tier five is the same bowl built taller, with a pale top ring.
+sprites['stadium.5'] = {'layers': [{'file': '_rendered/fallback/stadium-tall.png', 'render': [2, 3]}]}
 sprites['build.studentlife'] = {'layers': [on_grid(PUBLIC + 'Leasure_Theater.png', 2, 2), on_grid(PUBLIC + 'Leasure_Theater_Front.png', 2, 2)]}
 # What Academic lots could grow into once four of them merge.
 sprites['build.school'] = {'layers': [on_grid(PUBLIC + 'Education_School.png', 2, 2)]}
@@ -193,7 +205,7 @@ recipe = {
     'footprints': {
         'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1],
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
-        'build.safety': [2, 2], 'build.stadium': [2, 2], 'build.studentlife': [2, 2], 'build.school': [2, 2],
+        'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
@@ -204,7 +216,15 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Red crosses on the medical building and the first-aid icon are recoloured green.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green.',
+        },
+        {
+            'name': 'Football stadium (3D model)',
+            'author': 'Poly by Google, via Poly Pizza',
+            'licence': 'Creative Commons Attribution 3.0 (CC-BY 3.0)',
+            'licenceUrl': 'https://creativecommons.org/licenses/by/3.0/',
+            'source': 'https://poly.pizza/m/6TZCkGh76m5',
+            'changes': 'Rendered to flat pictures for stadium tiers four and five, with the ground slab and road removed, the colours changed to match the drawn pack, and a dark outline added.',
         },
     ],
 }

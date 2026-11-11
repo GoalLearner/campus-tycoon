@@ -42,6 +42,11 @@ or an object with any of:
                 lined up with the ground grid (see "canvas" in the recipe). The
                 picture is placed so its ground meets a w by h block of cells
                 whose top corner is this cell. "shift": [x, y] in cells moves it.
+    "render":   [w, h] in cells, for a picture made from a 3D model by the page
+                tools/render/model.html. The notes saved beside the picture say
+                where the model's ground middle is and how big it is, so the
+                picture is sized to fill a w by h block of cells and stood on
+                its middle. For buildings no pack draws, until drawn art arrives.
     "lift":     pixels to raise a standing picture, for art with space under it
     "shadow":   [radius x, radius y, darkness 0-255] a soft shadow under a
                 standing picture
@@ -184,6 +189,18 @@ class Builder:
             ImageDraw.Draw(mask).polygon([tuple(point) for point in layer['cut']], fill=255)
             clear = Image.new('RGBA', im.size, (0, 0, 0, 0))
             im = Image.composite(im, clear, mask)
+        if 'render' in layer:
+            with open(os.path.join(SOURCE_DIR, os.path.splitext(layer['file'])[0] + '.json'), encoding='utf-8') as handle:
+                notes = json.load(handle)
+            w, h = layer['render']
+            # The model's long side fills the long side of the block. One cell edge is half a cell wide on screen.
+            long_side = max(notes['modelGroundSize']) * notes['pixelsPerUnitAcross']
+            factor = max(w, h) * self.half_w / long_side * layer.get('scale', 1.0)
+            ground_x, ground_y = notes['groundMiddle']
+            px, py = self.cell_point(w / 2, h / 2)
+            im = resized(im, factor)
+            canvas.alpha_composite(im, (round(px - ground_x * factor), round(py - ground_y * factor)))
+            return
         if 'footprint' in layer:
             # The pack's own grid, in the file's pixels: where this picture's ground block begins.
             grid = self.recipe['canvas']
