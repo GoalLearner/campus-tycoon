@@ -208,6 +208,7 @@ The demand bars are forecasts of the next intake, so they react within minutes o
 | Footprint is stored per building from day one | Lot merging is on the later roadmap and must not need a rewrite |
 | Land is bought in adjacent parcels for cash. The number ownable is set by era | Land gets a long arc, and the start stays generous |
 | Three fixed map features: a lake, a town edge, a highway | They are emitters, not terrain, and they make each parcel a real choice |
+| No bike lanes | They would be a second tool for the one walk-time number. The shuttle is that tool |
 | Map variety by seeded choice from hand-made pieces | Dozens of maps for little work, and no bad seeds |
 
 ### 5.2 Numbers
@@ -416,6 +417,7 @@ score(lot, zone) = base + sum over emitters in range of weight[zone][kind] * fal
 | Student Life lots | ++ | 0 | 0 | + |
 | Academic lots | + | + | + | 0 |
 | Housing lots, as foot traffic | 0 | 0 | + | + |
+| Housing lots next door, as noise by a place of study | 0 | - (mild, adjacent only) | 0 | 0 |
 | Other chapter houses | - | - | 0 | ++ |
 | Quads and parks | ++ | + | + | + |
 | Reward and prestige landmarks | + | + | + | + |
@@ -430,6 +432,8 @@ score(lot, zone) = base + sum over emitters in range of weight[zone][kind] * fal
 
 Walk time is the path distance from a housing lot to the nearest Academic lot, counted along paths. Shuttle stops shorten it.
 
+Two rules were added on 2026-11-11 so the model campus in section 23.4 pays off. Academic lots mildly dislike Housing directly next door, which keeps the core academic and settles dorms one block out. A parking lot beside the highway holds more cars [T], which pulls parking to the perimeter.
+
 ### 8.3 Services
 
 ```
@@ -442,7 +446,7 @@ effectiveRadius = baseRadius * fundingFactor(Student Services slider) * min(1, c
 | Health Center | High density | Better retention |
 | Library | None | Lifts Academic desirability and draws scholars |
 | Shuttle stop | None | Cuts walk time between stops. First cut if scope slips |
-| Parking | None | Commuter capacity for in-state students, and an eyesore |
+| Parking | None | Commuter capacity for in-state students, and an eyesore. Holds more cars beside the highway |
 
 Campus Safety handles mischief, not crime (section 16).
 
@@ -1382,7 +1386,7 @@ Every number below is expected to change. All live in `src/sim/config`.
 
 Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented.
 
-**Status: proposed.** The table is the plan for where each type lands. Nothing in it is built unless its layer says "this pass", and the four marked "proposed" wait for the owner.
+**Status: accepted by the owner on 2026-11-11**, with the mapping changes in 23.3, both layout fixes in 23.4 and the four additions in 23.5. Bike lanes are cut. The table is the plan for where each type lands. Nothing in it is built yet: the mechanics of this pass wait for the owner to approve the look.
 
 ### 23.1 The rule that keeps it readable
 
@@ -1431,7 +1435,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
 | Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs one | 2 x 1 | This pass | Fifteen restaurants. The bar is not used | Drawn |
-| Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass, proposed | StreetStand_Coffee | Drawn |
+| Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass | StreetStand_Coffee | Drawn |
 | Campus store or bookstore | Hand-placed | Earns from foot traffic | 2 x 1 | This pass | Shop_Kiosk. A book prop makes it a bookstore | Drawn |
 | Retail plaza | Zone lot of Student Life | Places, and foot-traffic income | 1 x 1 and 2 x 1 | 2 | Eleven shop kinds, a market and street stands | Drawn |
 | Faculty club | Reward landmark | Emits desirability | 2 x 1 | 5 | Cafe | Drawn |
@@ -1453,9 +1457,9 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
 | Gym | Hand-placed | Raises approval | 2 x 1 | This pass | Plain hall with a dumbbell on its sign | From parts |
-| Aquatics pool | Hand-placed | Raises approval nearby | 2 x 1 | This pass, proposed | Pool | Drawn |
+| Aquatics pool | Hand-placed | Raises approval nearby | 2 x 1 | This pass | Pool | Drawn |
 | Outdoor courts | Hand-placed | Raises approval nearby. Students play there | 1 x 2 | This pass | Court cut from the tennis stadium. No basketball court exists | From parts |
-| Recreation field | Hand-placed | Raises approval nearby. Students play there | 2 x 2 | This pass, proposed | Soccer pitch with its stands cut off | From parts |
+| Recreation field | Hand-placed | Raises approval nearby. Students play there | 2 x 2 | This pass | Soccer pitch with its stands cut off | From parts |
 | Track and field | Hand-placed | Raises approval for nearby Housing. Lifts Athletics later | 2 x 2 | This pass | Stadium_Athletics | Drawn |
 
 **Health, safety and upkeep**
@@ -1473,7 +1477,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
-| Administration building | Starter landmark, not placeable | Emits desirability. Later it opens the budget | 2 x 2 | This pass, proposed | Public_Townhall | Drawn |
+| Administration building | Starter landmark, not placeable | Emits desirability. Later it opens the budget | 2 x 2 | This pass | Public_Townhall | Drawn |
 | Student services | Flavour | None. It is part of Administration | None | None | Workplace buildings | Drawn |
 | Welcome Center | Ceiling landmark, already designed | Lifts the out-of-state ceiling | 2 x 2 | 5 | Hotel_OneFloor | Drawn |
 | Alumni centre | Reward landmark | Lifts alumni giving | 2 x 1 | 5 | Hotel_TwoFloors or WorkSpace_Bank | Drawn |
@@ -1499,7 +1503,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Parking structure | Upgrade of a parking lot | Three times the cars on the same land | 2 x 2 | 3 | None | No sprite |
 | Shuttle stop | Hand-placed service | Cuts walk time between stops | 1 x 1 | 3. First to be cut if scope slips | BusStop | Drawn |
 | Transit station | Ceiling landmark: the Commuter Hub, already designed | Lifts the in-state ceiling. Must touch the highway or the town edge | 2 x 2 | 5 | MetroStation or Public_Trainstation | Drawn |
-| Bike lane and bike parking | Proposed: cut | It would be a second tool for walk time beside the shuttle | None | Later, if at all | None | No sprite |
+| Bike lane and bike parking | Cut | It would be a second tool for walk time beside the shuttle | None | Not planned | None | No sprite |
 | Kiosks, pay stations, drop-off zones | Flavour, placed automatically | None | None | 7 | SignMap, signs, ATM, mailbox | Drawn |
 
 **Grounds**
@@ -1530,13 +1534,13 @@ The starter campus and the advisors' tips follow this shape: an academic core on
 | Student union between classes and housing | Yes. Student Life likes foot traffic from both. |
 | Housing clusters with their own dining | Yes, once dining has a radius. |
 | Athletics district on one side | Yes. Stadium noise pushes Housing and Academic away and pulls Student Life and Greek Row in. |
-| Housing at the edges | **No.** Housing likes Academic lots and pays a walk penalty, so the rules pull dorms into the core. Proposed fix: Academic lots dislike Housing next door a little, as quiet study. Then the core stays academic and housing settles one block out. |
-| Parking and transit on the perimeter by the highway | **Only by default.** Nothing dislikes parking there, but nothing rewards it. Proposed fix: a parking lot beside the highway holds more cars, and the transit station must touch the highway or the town edge. |
+| Housing at the edges | **No.** Housing likes Academic lots and pays a walk penalty, so the rules pull dorms into the core. Fix, accepted: Academic lots dislike Housing next door a little, as quiet study. Then the core stays academic and housing settles one block out. |
+| Parking and transit on the perimeter by the highway | **Only by default.** Nothing dislikes parking there, but nothing rewards it. Fix, accepted: a parking lot beside the highway holds more cars, and the transit station must touch the highway or the town edge. |
 | A central walkway | **Not by itself.** A path gives nothing. Proposed fix: none needed if the walk is laid as a quad strip, which the starter campus will do. |
 
 ### 23.5 What belongs in the current pass
 
-Four additions are cheap because the sprite is drawn and the rule already exists in this pass. They wait for the owner's yes.
+Four additions are cheap because the sprite is drawn and the rule already exists in this pass. The owner accepted all four.
 
 | Addition | Why it is cheap |
 |---|---|
@@ -1554,7 +1558,7 @@ Of 54 types, 39 are drawn in the Penzilla packs, 8 can be made from pack parts, 
 | Made from pack parts, no cost, edits listed in the credits | Department emblems, residence tower, chapter-house banners, gym, outdoor courts, recreation field, practice fields, athletics headquarters, stadium tiers two and three | 8 types, about 20 sprites, plus stadium tiers two and three |
 | Commissioned from Penzilla in the same style. Their site was read as about $6 for a small item, and large ones need a quote | Stadium tiers four and five, basketball arena, basketball court, amphitheatre, parking structure, observatory, three prestige landmarks | About 10 sprites |
 | A 3D model rendered to a sprite with drawn outlines. Free, but it will not match the pack exactly | The same ten, as the fallback if a commission is refused or too dear | About 10 sprites |
-| Not needed if the proposal to cut it is accepted | Bike lane and bike parking | 2 sprites |
+| Not needed: cut | Bike lane and bike parking | 2 sprites |
 
 The first gap that blocks a layer is the stadium: Layer 1 needs five tiers and the pack draws one. The public repository's Kenney fallback has no sprite for any hand-placed type. It will get about ten shared stand-ins rendered from Kenney's public-domain 3D kits, one per family.
 
