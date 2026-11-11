@@ -16,6 +16,7 @@ How to read this document:
 - Section 26 is the art to fix before release.
 - Section 27 is Stress, which ships with the calendar in layer 1.
 - Section 28 is time of day and weather, also for layer 1.
+- Section 29 is Grounds: litter, bins, seating and maintenance workers. Designed on 2026-11-11 and waiting for the owner's go-ahead.
 
 ---
 
@@ -107,7 +108,7 @@ Section 4.9 lists every timer against this contract.
 | Neighbor deals | Folded in | TV and donor deals in the inbox (10, 12) |
 | Power, water and other networks | Cut, with one exception | They were chores, and they fail while the player is away. Roads came back on 2026-11-11 as a second network with one rule and no failure state (section 25.3) |
 | Traffic simulation | Cut, and it stays cut | Walk time to class survives as a desirability input. Cars are for show, like walkers (section 25.3) |
-| Terrain, pollution, garbage | Cut | Stadium and parking noise, plus three fixed map features |
+| Terrain, pollution, garbage | Cut | Stadium and parking noise, plus three fixed map features | Garbage came back on 2026-11-11 as litter with a ceiling and no failure state, on the conditions in section 29.10 |
 | Regions | Later | Satellite campuses (20) |
 
 ---
@@ -597,6 +598,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Desirability | A zone picker, the score, the top pluses and minuses, walk minutes on housing |
 | Coverage | A service picker, each circle, and a ghost outline of its full size |
 | Money | Each lot's net income per real hour |
+| Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). The first overlay to be built |
 
 ---
 
@@ -1396,7 +1398,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1711,7 +1713,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 |---|---|---|---|---|---|---|
 | Medical Center | Hand-placed service | Treats injuries in its circle. Later gates high density and lifts retention | 2 x 2 | This pass, full version in 3 | Doctor_Office, EmergencyRoom and Hospital: three sizes | Drawn |
 | Campus Safety | Hand-placed service | Handles mischief in its circle. Later gates medium density | 2 x 2 | This pass, full version in 3 | Emergency_PoliceStation | Drawn |
-| Facilities yard | Hand-placed service | Buildings in its circle run down more slowly | 2 x 1 | 3 | Workplace_Handyman | Drawn |
+| Facilities yard | Hand-placed service | Holds maintenance workers, who clear litter, empty bins and fix broken things in its circle. From layer 2 they also slow decay there (section 29.4) | 2 x 1 | Play stop 4 | Workplace_Handyman | Drawn |
 | Central plant | Reward landmark | Lowers upkeep a little. An eyesore | 2 x 2 | 5 | Industrial_PowerPlant and WaterPlant | Drawn |
 | Central receiving | Flavour | None. Crates and a truck beside the store | None | 7 | PostOffice, shipping containers, trucks | Drawn |
 | Campus station, radio and television | Reward landmark | Emits desirability and gives the newspaper a voice | 2 x 1 | 5 | RadioStation and TeleTower | Drawn |
@@ -1866,7 +1868,7 @@ One lap of the loop takes four to six real weeks, because a game year is a real 
 They exist because seven stages, eight supporting metrics and four HUD numbers would otherwise bury cause and effect (test 4).
 
 1. **One screen, seven rows.** A supporting metric never gets its own row. It appears as the "why" under a stage.
-2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice. Happiness has four, all at full weight, since the owner's instruction of 2026-11-11: **Walk to class, Green space, Food & fun, Safety & health.** For one day it had five, with safety at half weight. Merging Medical Center and Campus Safety coverage could not make four by itself, because they were already one cause; so dining and things to do were also gathered into one, Food & fun, the way Stress gathers six drivers into four causes (section 27). A cause is the average of its parts. The panel and every student thought name the weakest part, so the advice is still one thing to build. Noise will join Green space as "Surroundings", and the count stays at four.
+2. **At most four named causes per number. Each cause is something the player can do, and each cause feeds one stage.** Reputation brings applicants. The campus wins the yes. Happiness keeps them. Teaching graduates them. No cause counts twice. Happiness has four, all at full weight, since the owner's instruction of 2026-11-11: **Walk to class, Green space, Food & fun, Safety & health.** For one day it had five, with safety at half weight. Merging Medical Center and Campus Safety coverage could not make four by itself, because they were already one cause; so dining and things to do were also gathered into one, Food & fun, the way Stress gathers six drivers into four causes (section 27). A cause is the average of its parts. The panel and every student thought name the weakest part, so the advice is still one thing to build. Noise will join Green space as "Surroundings", and the count stays at four. In play stop 4 Green space is renamed Grounds and gathers green space, cleanliness and seating (section 29.5). The count stays at four.
 3. **Slow numbers show a forecast.** Graduation rate, alumni success and donations move weeks after their causes. Each shows "on today's conditions" beside the real figure. The forecast moves the day the player acts, and the real figure arrives later and proves it.
 
 A fourth rule comes from the idle constraints: every stage can swing the next only by a bounded amount [T], so neglect drifts to mediocre and never spirals. Everything here is a few numbers per class, worked out at intakes, semester ends and year end, so catch-up cost is nothing.
@@ -2185,3 +2187,172 @@ Lit windows would have to be made here, as an overlay cut from each building's o
 | The guard for night-only players | A minimum number of walkers at night, and a setting that shows daylight at any hour |
 
 Lit windows, umbrellas, coats and snow wait, because their art has to be made. Weather, and everything in 28.2, stays in layer 1 with the calendar.
+
+---
+
+## 29. Grounds: litter, bins, seating and maintenance workers
+
+Asked for by the owner on 2026-11-11, adapted from RollerCoaster Tycoon's handymen and Two Point Campus's janitors for an idle game. **Designed, not built. It waits for the owner's go-ahead.** It is play stop 4 of the feedback pass (29.12).
+
+### 29.1 The loop
+
+Students drop litter where they eat and play. Bins catch most of it. Workers from a Facilities Yard empty the bins, sweep up what missed, and fix what gets broken. A dirty spot costs a little Happiness and invites more mess, up to a ceiling.
+
+### 29.2 Litter
+
+| Decision | Why |
+|---|---|
+| Litter comes from **mess spots**: the dining hall, the coffee stand, the campus store and every recreation building. Later the stadium and its tailgates on a home game day (layer 1), and Student Life lots (layer 2) | The owner's list. A short list of places is something the player can answer. Litter everywhere would be a chore |
+| A spot's litter follows the students in its reach, times a strength for its kind: coffee stand and dining hall high, store medium, recreation low [T] | It is worked out from the simulation's own count of who uses each building, never from the walkers on screen |
+| A thin, even amount also falls along every busy path. Alone it never takes a spot below about 85% clean [T] | Paths look lived in. Bins are never needed everywhere |
+| Each spot keeps one number: the litter lying around it, from nothing up to a ceiling | The ceiling is what stops a spiral |
+| A bin catches about 85% of the litter dropped within three cells of it [T]. It fills. A full bin overflows: it catches nothing until it is emptied | The owner's rule |
+| Dirt invites dirt: the dirtiest spot draws up to half again as much litter [T] | "Invite more mess", with a limit |
+| Student types tilt it lightly, by a tenth at most [T]: a campus heavy in Slackers and Party Animals litters more, and a Resident Advisor now and then empties a full bin on the way past | The owner's request. It reads the mix of types the campus already has, so there is no per-student simulation |
+| It is worked out every 20 minutes, on the beat incidents already use: a few sums for each spot, bin and yard | Thirty days of catch-up is about half a million sums. The one-second target holds |
+| Nothing here ever stops a building working, holds back growth, or waits for a tap | The conditions in 29.10 |
+
+On the map, litter is small pieces on the paths around a spot, more of them as its number rises. A full bin shows heaped. An overflowing bin has bags beside it.
+
+### 29.3 Things to place: the Grounds shelf
+
+A new shelf in the Build menu. Each thing is one cell and cheap, and dragging lays a row, as with trees.
+
+| Thing | Cost [T] | What it does |
+|---|---|---|
+| Trash bin | $1,500 | Catches litter within three cells. Workers empty it |
+| Bench | $2,500 | Somewhere to sit. Counts as seating for the lots within three cells |
+| Picnic table | $4,000 | Seating too. Where a dining building or an Academic lot is within three cells it also adds to social life, and from layer 1 it takes a little off Stress there (section 27) |
+
+| Decision | Why |
+|---|---|
+| None of them has upkeep. Wages are the running cost of grounds | One cost to watch, not two |
+| A quad's own benches count as seating | A campus that already has quads does not start from nothing |
+| A new campus starts with two bins beside its dining hall, and no yard | The first full bin is the lesson, and it points at the Facilities Yard |
+| **Lamp posts are not placed by hand.** Play stop 3 puts them along paths and roads by itself, and they stay that way. They can still be broken and fixed like everything else here | The owner listed lamps "if not already added". A lamp can have no rule of its own, because the simulation never reads the time of day. Say so if hand-placed lamps are wanted anyway |
+| Walkers use the seats by time of day: coffee on a bench in the morning, lunch at the tables, studying outside in the afternoon, talking in the evening, empty at night | For show, like the rest of the walker schedule (28.4). The student card's "Doing now" says it |
+
+### 29.4 The Facilities Yard and its workers
+
+| Decision | Why |
+|---|---|
+| The Facilities Yard becomes a real building: 2 by 1, about $60,000, covering a circle of eight cells like the Medical Center [T] | The owner's instruction |
+| The yard's card has a plus and a minus. It holds up to four workers [T] and opens with one | "A simple + / - count up to a cap per yard" |
+| Each worker costs a wage of about $36 a real hour, which is $6,000 a game year [T]. Hiring and letting go are instant and free | Set once and left alone. It suits one visit a day |
+| Workers do everything inside the circle by themselves, in this order: empty the fullest bins, sweep the dirtiest spot, fix what is broken | Prevention first. No patrol areas, no job lists and no mowing, which were RollerCoaster Tycoon's most hated chores |
+| One worker keeps about two busy spots clean [T]. More workers clear faster. Too few and litter builds to its ceiling | The owner's rule |
+| The card says "Keeping up" or "Understaffed: hire 2 more", from the same sums | One line that names the fix |
+| A spot inside two circles is served by the nearer yard | No double counting |
+| Workers are seen walking out from the yard with a cart or a broom. They are for show: what gets cleaned is decided by the sums | The same rule as walkers, cars and responders |
+| Wages sit under Facilities on the budget screen when that screen exists (layer 2). Until then they show on the yard's card and inside the hourly figure on the top bar | The budget screen is not built yet |
+| **The yard's old rule is absorbed.** From layer 2, a building inside a staffed yard's circle takes longer to turn Rundown and recovers sooner, and more so while the yard is keeping up. The flat "runs down more slowly" is dropped | One building, one idea: workers look after what is near them |
+| The Facilities slider of layer 2 scales how much each worker gets done | The same treatment every other service gets from its slider |
+
+### 29.5 Consequences
+
+| Decision | Why |
+|---|---|
+| **Green space is renamed Grounds.** It gathers green space, cleanliness and seating, and Happiness keeps four causes: Walk to class, Grounds, Food & fun, Safety & health | The owner's proposal, and the best split found. Putting cleanliness under Safety & health was weighed and dropped: that cause would then need three buildings, and the fix for litter is grounds work |
+| Inside Grounds the parts do not count the same: green space half, cleanliness three tenths, seating two tenths [T] | A bench must not weigh as much as a quad. Until now the parts of a cause counted equally, so this adds weights |
+| Noise joins Grounds when it is built, not a cause of its own | It was to join Green space. The count still stays at four |
+| A campus with no bins and no workers settles at about 30% clean [T], which costs about five points of Happiness, and stays there | "A neglected campus gets messy and loses some Happiness, then levels off" |
+| Where litter is above seven tenths of its ceiling, something within reach may get broken: a bench, a table, a bin or a lamp. At most one thing a day at each spot [T] | "Very dirty areas lead to mischief" |
+| It is more likely where the students nearby are unhappy, and a quarter as likely inside a Campus Safety circle [T] | The owner's rule, and the security guards of RollerCoaster Tycoon |
+| A broken thing stops working until it is fixed, and that is its whole cost: a broken bin catches nothing, a broken bench seats nobody, a broken lamp is dark | One consequence, already understood |
+| Workers in range fix it without being asked, in about half an hour of one worker's time [T]. Out of range it stays broken, and tapping it says "Outside worker coverage" | Nothing is ever rebuilt by hand |
+| It cannot spiral. There are three ceilings: the litter at a spot, the things that can break (no more than were placed), and the share of Happiness that Grounds holds | The owner's rule, by construction |
+
+### 29.6 Feedback
+
+| Decision | Why |
+|---|---|
+| A Cleanliness overlay: paths tinted by litter, full bins and broken things marked, and each yard's circle. It opens from the Grounds row of the Happiness panel | The owner's request. It is the first of the overlays of section 8.4 to be built |
+| Tapping litter, a full bin or a broken thing names one fix: "No bin within reach", "Outside worker coverage", or "Yard understaffed: hire 2 more" | Test 3 |
+| New student thoughts, good and bad: "So much trash by the dining hall." "Love eating lunch out here." | The owner's examples. Each names something to act on |
+| The away summary gives grounds one line: the messiest spot and its fix, how many bins overflowed, what was repaired. It leads the list only when cleanliness is what is holding Happiness back | The 24-hour summary shows three or four things first (2.3) |
+| No notification | Two a day are for decisions and headlines |
+
+### 29.7 Old saves
+
+One more upgrade step, written so that nothing is lost and nothing surprises.
+
+1. No bins, benches, tables or yards are added. Nothing is charged.
+2. Litter starts at nothing and does not build for the first 36 hours after the upgrade. That is the shortest window the check-in contract allows (2.3), so the player reads about litter before any Happiness is lost to it.
+3. Quads count as seating from the first moment, so Grounds opens close to where Green space stood.
+4. The away list says once: students now drop litter where they eat and play, bins catch it, and workers from a Facilities Yard clear it.
+
+### 29.8 Art
+
+Checked in the owner's packs on 2026-11-11.
+
+| Wanted | In the packs | Gap, and the plan |
+|---|---|---|
+| Bin, empty | Yes: a lidded can and a small bin | |
+| Bin, full | Yes: a wire basket heaped with rubbish | It is a different bin from the lidded can. One bin drawn in three states is a commission |
+| Bin, overflowing | No single picture. Two rubbish bags exist | The full bin with a bag beside it: two real pictures, nothing assembled |
+| Bin, bench and table, broken | None | The thing with the pack's traffic cone beside it, as building sites already use. Drawn broken versions are a commission |
+| Bench | Yes: the wooden bench the quads use, and a padded seat | |
+| Picnic table | No true picnic table. A table with four chairs in four colours | The table and chairs stand in. A picnic table is a commission |
+| Litter pieces | Yes: five small pieces, such as a cup, a wrapper and an apple core, and two bags | |
+| Facilities Yard | Yes: a handyman's workshop in two heights, wheeled bins in five colours, a large container, and a recycling depot | |
+| Worker | Yes: a walking worker in a hard hat | |
+| Worker with a broom or cart | A broom and two carts exist as separate things. No figure holds anything, because the figures have no hands | The broom or cart is drawn beside the worker. A worker drawn holding a broom is a commission |
+| Students sitting, eating, studying | None. Every figure only stands and walks | A student stands at the bench or table. Seated figures are a commission |
+| Lamp, dark | Yes: the street lamp drawn unlit | |
+
+Anything assembled or stood in when this is built goes on the list in section 26 in the same piece of work.
+
+### 29.9 Tone and rating
+
+Litter is paper cups, wrappers and apple cores. There is no vomit, nothing gross, no smells and no pests. Breakage is told as a joke and is mischief, never crime: "A bench has lost an argument with a skateboard." Nobody is caught or punished; a worker fixes it. Nothing here changes an answer on the age-rating form, so the target of 4+ holds (16.3).
+
+### 29.10 Design tests
+
+| Test | Verdict |
+|---|---|
+| The cut on garbage (section 3) | **Reopened, and it holds on conditions.** SimCity's garbage was a network with a capacity that failed out of sight and choked growth. This is local to a spot, always visible, has a ceiling, mends itself where there is staff, and touches Happiness only. The conditions: litter never stops a building working and never holds back growth, and staffing stays one number per yard. A later feature that breaks either reopens the cut and must be argued again |
+| The chores RollerCoaster Tycoon was hated for | **The real risk.** A bin on every other cell would be homework on a phone. Guards: mess spots are few, one bin serves a spot, a yard serves a district, the game names where each is missing, and the simulate script counts what a mid-sized campus needs. The target is about one bin for each food or fun building and one yard for every six to eight of them [T] |
+| 1. Interdependence | Stronger. Food and fun now bring a cost that grounds answer, Campus Safety deters breakage, and unhappy students break more |
+| 3. Caps as puzzles, 4. Legible feedback | Passes. Every mess names one of three fixes, and the overlay shows all of them at once |
+| 5. Edge of chaos | Adds a live tension that grows with enrollment and never needs a deadline |
+| Neglect-safe and cheap catch-up | Passes. An untended campus loses about five points and stops there. The sums are a handful per spot every 20 minutes |
+| Once a day (2.3) | Passes. Nothing opens and closes, nothing waits for a tap, and old saves get 36 hours before litter counts |
+| Four causes (24.2) | Passes. Grounds replaces Green space |
+| Size of the stop | Middling. About the size of stop 2 for the rules, plus walkers and workers to draw. It can be played in two halves if wanted: bins, litter, the yard and workers first, then seating and breakage |
+
+### 29.11 Tests and simulate checks
+
+- A full bin catches nothing, and an emptied one catches again.
+- Twice the workers clear a spot in half the time. Too few and it sits at its ceiling.
+- A broken thing is fixed inside a circle with no tap, and stays broken outside one.
+- Breakage is rarer inside a Campus Safety circle and where students are happy.
+- One advance equals many small ones, and thirty days of catch-up stays inside its target.
+- Simulate: a campus with no bins and no workers gets messy, loses a few points of Happiness, and is the same at year five as at year twenty.
+- Simulate: a well-staffed campus stays above 90% clean and has nothing left broken after a day.
+- Simulate: the casual player's wages stay a small share of income [T], and the count of bins and yards it needed stays inside the target of 29.10.
+- No line of litter or breakage text breaks the tone guide's word list.
+
+### 29.12 Where it lands
+
+**Play stop 4 of the feedback pass: after stop 3, before the football and calendar layer.** The owner expected this, and it is right for three reasons. It uses stop 3's lamps and walker schedule. It must exist before game days, so that layer 1 only has to add the stadium and tailgates as mess spots. And it needs nothing from later layers to be worth playing.
+
+What it leaves switched off until its layer arrives:
+
+| Piece | Waits for |
+|---|---|
+| Litter from home game days | Layer 1, football |
+| The picnic table's effect on Stress | Layer 1, Stress |
+| Wages on the budget screen, the Facilities slider, slower decay near a yard | Layer 2 |
+
+### 29.13 Points raised with the owner
+
+| Point | What is proposed |
+|---|---|
+| This reopens a cut. Garbage was cut from SimCity's list | Bring it back on the two conditions of 29.10 |
+| Bins everywhere would be a chore | Few mess spots, one bin a spot, and a count checked by the simulate script |
+| Lamp posts as a Grounds item | Leave them automatic from stop 3, breakable and fixable, with no rule of their own |
+| How much each part of Grounds counts | Green space half, cleanliness three tenths, seating two tenths |
+| There is no budget screen yet for wages | Show them on the yard's card and in the hourly figure until layer 2 |
+| A new campus | Two bins by the dining hall and no yard, so the first full bin teaches the system |
+| Old saves | No litter for the first 36 hours, and one line in the away list |
+| No picture of a broken thing, a picnic table, a seated student or a worker holding a broom | Stand-ins from real pictures now (29.8), and four small commissions for the Penzilla request |
