@@ -97,7 +97,7 @@ sprites['build.parking'] = {'layers': [on_grid(PUBLIC + 'Carpark_1x2_Sign.png', 
 sprites['build.track'] = {'layers': [on_grid(PUBLIC + 'Stadium_Athletics.png', 2, 2), on_grid(PUBLIC + 'Stadium_Athletics_Roof.png', 2, 2)]}
 # Outdoor courts: the court cut out of the tennis stadium, without its stands.
 COURT = [[180, 668], [660, 392], [1000, 578], [512, 866]]
-sprites['build.courts'] = {'layers': [on_grid(PUBLIC + 'Stadium_Tennis.png', 2, 2, cut=COURT), on_grid(PUBLIC + 'Stadium_Tennis_Front.png', 2, 2)]}
+sprites['build.courts'] = {'layers': [on_grid(PUBLIC + 'Stadium_Tennis.png', 2, 2, cut=COURT), on_grid(PUBLIC + 'Stadium_Tennis_Front.png', 2, 2)]}  # grass is added under it below
 # The pack draws a red cross on its medical buildings. A red cross on white is a protected emblem, so it is turned green.
 sprites['build.medical'] = {'layers': [on_grid(PUBLIC + 'Doctor_EmergencyRoom.png', 2, 2, recolour='cross')]}
 sprites['build.safety'] = {'layers': [on_grid(PUBLIC + 'Emergency_PoliceStation.png', 2, 2)]}
@@ -171,7 +171,6 @@ sprites['build.site'] = {'layers': [on_grid(PUBLIC + 'Construction_2x2.png', 2, 
 
 # ------------------------------------------------------------------ water --
 sprites['pond.small'] = {'layers': [GRASS, standing(OLD + 'Decor/Pond.png', 0.94, 0.94), standing(OLD + 'Decor/LakePlants1.png', 0.3, 0.72)]}
-sprites['pond.medium'] = {'layers': [on_grid(PUBLIC + 'Park_Pond.png', 2, 2)]}
 # A lake of any rectangle: a full-water middle, four shores and four corners. Each tile was
 # chosen by which of its edges are grass. The pack has no west corner or south-east shore,
 # so those are the east corner and south-west shore mirrored.
@@ -195,6 +194,32 @@ LAKE = {
 for name, layers in LAKE.items():
     sprites[f'water.{name}'] = {'layers': layers}
 sprites['water.bridge'] = {'layers': [standing(OLD + 'Tiles/BridgeWood.png', 0.98, 0.98)]}
+
+
+def grass_under(w, h):
+    """A grass tile for every cell of a block, back to front. Flat things are drawn in place of the ground, so they bring their own."""
+    cells = sorted(((x, y) for y in range(h) for x in range(w)), key=lambda c: (c[0] + c[1], c[0]))
+    return [on_grid(TILES + 'Grass.png', swap='rim', shift=[x, y]) for x, y in cells]
+
+
+def moved(layers, x, y):
+    return [{**layer, 'shift': [x, y]} for layer in layers]
+
+
+# The lake is three cells by three, laid from the nine shore pieces.
+LAKE_PLAN = [('top', 0, 0), ('ne', 1, 0), ('nw', 0, 1), ('right', 2, 0), ('full', 1, 1), ('left', 0, 2), ('se', 2, 1), ('sw', 1, 2), ('bottom', 2, 2)]
+sprites['pond.large'] = {'layers': [layer for name, x, y in LAKE_PLAN for layer in moved(LAKE[name], x, y)]}
+sprites['pond.medium'] = {'layers': grass_under(2, 2) + [on_grid(PUBLIC + 'Park_Pond.png', 2, 2)]}
+
+sprites['build.courts']['layers'] = grass_under(2, 2) + sprites['build.courts']['layers']
+
+# The four additions of the feedback pass.
+sprites['build.pool'] = {'layers': grass_under(2, 1) + [on_grid(PUBLIC + 'Pool.png', 2, 1)]}
+# A pitch for anyone to use: the soccer stadium with its stand, booth and banner cut away.
+FIELD = [[186, 662], [676, 384], [704, 372], [740, 366], [900, 452], [900, 530], [992, 590], [524, 868]]
+sprites['build.field'] = {'layers': grass_under(2, 2) + [on_grid(PUBLIC + 'Stadium_FootballSocker.png', 2, 2, cut=FIELD)]}
+sprites['build.coffee'] = {'layers': [on_grid(PUBLIC + 'StreetStand_Coffee.png'), on_grid(PUBLIC + 'StreetStand_Coffee_Front.png')]}
+sprites['build.admin'] = {'layers': [on_grid(PUBLIC + 'Public_Townhall.png', 2, 2)]}
 
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
@@ -249,7 +274,7 @@ recipe = {
     'footprints': {
         'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1],
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
-        'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.studentlife': [2, 2], 'build.school': [2, 2],
+        'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.pool': [2, 1], 'build.field': [2, 2], 'build.admin': [2, 2], 'pond.large': [3, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
@@ -260,7 +285,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane marks repeated across it.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away.',
         },
         {
             'name': 'Football stadium (3D model)',

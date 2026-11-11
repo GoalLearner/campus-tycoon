@@ -29,6 +29,13 @@ const INDOORS: Record<string, string> = {
   movingIn: 'Unpacking in the dorm',
 };
 
+/** A walker on the way to, or at, a named place such as the Dining hall. */
+function doingText(doing: string): string {
+  if (doing.startsWith('toPlace:')) return `Heading to the ${doing.slice(8)}`;
+  if (doing.startsWith('atPlace:')) return `At the ${doing.slice(8)}`;
+  return DOING[doing] ?? 'Out on campus';
+}
+
 const MOOD_NAMES = ['Miserable', 'Unhappy', 'Fine', 'Happy', 'Delighted'];
 const MOOD_COLOURS = ['#ff8a7a', '#ffb347', '#ffd24a', '#b9e36b', '#7be495'];
 /** The mouth for each mood, drawn in a 24 by 24 face. */
@@ -41,7 +48,7 @@ const MOUTHS = [
 ];
 
 /** A small drawn face. The same five on every phone, unlike emoji. */
-function face(mood: number): string {
+export function face(mood: number): string {
   const colour = MOOD_COLOURS[mood] ?? MOOD_COLOURS[2]!;
   const mouth = MOUTHS[mood] ?? MOUTHS[2]!;
   const brows = mood === 0 ? '<path d="M6.6 7.4 L10 8.6 M17.4 7.4 L14 8.6" />' : '';
@@ -165,7 +172,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
 
     if (session.doing) lastDoing = session.doing;
     const outside = session.doing !== null;
-    setText(doing.value, outside ? (DOING[session.doing!] ?? 'Out on campus') : lastDoing ? (INDOORS[lastDoing] ?? 'Out of sight') : 'Out of sight');
+    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? (INDOORS[lastDoing] ?? 'Out of sight') : 'Out of sight');
     follow.disabled = !outside;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');

@@ -12,6 +12,9 @@ import {
   type Point,
   type Zone,
   studentKey,
+  PLACED,
+  previewPlace,
+  reachCells,
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Iso } from './iso';
@@ -67,6 +70,9 @@ export class CampusScene extends Phaser.Scene {
   private gesture: Gesture | null = null;
   private dpr = 1;
   private pendingArrivals = 0;
+  /** Items the dev previews put on the map, beside the buildings in the game state. */
+  private devItems: PlacedItem[] = [];
+  private placedDirty = true;
   /** A point of the world the camera is gliding to, after a tap on a card's reason. */
   private glide: { x: number; y: number } | null = null;
   private focusSeq = 0;
@@ -100,6 +106,7 @@ export class CampusScene extends Phaser.Scene {
     });
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
+      this.placedDirty = true;
       this.walkers.setMarked(session.student ? studentKey(session.student) : null);
     });
     // Students who get a place while the player is watching are shown walking in.
@@ -135,6 +142,7 @@ export class CampusScene extends Phaser.Scene {
     if (this.dirty) {
       this.syncMap(state);
       this.walkers.setMap(state);
+      this.placedDirty = true;
       this.dirty = false;
       this.overlayDirty = true;
       this.nextBarsAt = 0;
@@ -142,6 +150,10 @@ export class CampusScene extends Phaser.Scene {
     if (this.pendingArrivals > 0) {
       this.walkers.arrive(this.pendingArrivals);
       this.pendingArrivals = 0;
+    }
+    if (this.placedDirty) {
+      this.showPlaced(state);
+      this.placedDirty = false;
     }
     this.walkers.update(delta);
     this.watchStudent(delta);
@@ -273,13 +285,21 @@ export class CampusScene extends Phaser.Scene {
           }
         }
 
-        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}`;
+        // A flat building is drawn in place of the ground under it, from its top corner.
+        let hidden = false;
+        if (cell.kind === 'placed' && cell.placedId !== null) {
+          const placed = state.map.placed[cell.placedId];
+          hidden = !!placed && PLACED[placed.type].flat && this.art.has(PLACED[placed.type].sprite) && !(placed.x === x && placed.y === y);
+        }
+
+        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}|${hidden ? 1 : 0}`;
         const visual = this.visuals[i]!;
         if (visual.signature === signature) continue;
         visual.signature = signature;
 
         this.art.apply(visual.ground, groundKey);
         visual.ground.setTint(tint);
+        visual.ground.setVisible(!hidden);
 
         const pos = this.iso.toWorld(x, y);
         if (objectKey) {
@@ -312,9 +332,44 @@ export class CampusScene extends Phaser.Scene {
     this.overlay.fillPoints(this.iso.diamond(x, y), true);
   }
 
-  /** Show hand-placed things. Used by the dev look-preview until the Build menu exists. */
+  /** Extra things for the dev look previews to put on the map. */
   setPlaced(items: readonly PlacedItem[]): void {
+    this.devItems = [...items];
+    this.placedDirty = true;
+  }
+
+  /** The sprite for a building, or a plain stand-in when the art pack in use does not draw it. */
+  private spriteFor(type: keyof typeof PLACED): { key: string; flat: boolean } {
+    const spec = PLACED[type];
+    if (this.art.has(spec.sprite)) return { key: spec.sprite, flat: spec.flat };
+    return { key: spec.flat ? 'quad.lawn' : this.variantKey('academic.2', 0), flat: false };
+  }
+
+  /** Draw the hand-placed buildings in the game state, and the one being placed. */
+  private showPlaced(state: GameState): void {
+    const items: PlacedItem[] = [...this.devItems];
+    for (const placed of state.map.placed) {
+      if (!placed) continue;
+      const sprite = this.spriteFor(placed.type);
+      items.push({ key: sprite.key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
+    }
+    if (session.placing && session.ghost) {
+      const spec = PLACED[session.placing];
+      const sprite = this.spriteFor(session.placing);
+      // Drawn in front of whatever it overlaps, so the player can always see where it would go.
+      items.push({ key: sprite.key, x: session.ghost.x, y: session.ghost.y, w: spec.w, h: spec.h, layer: 'object', alpha: 0.7, forward: 1 });
+    }
     this.placed.set(items);
+  }
+
+  /** While placing: the footprint in green or red, and the reach in blue. */
+  private ghostTints(): Array<{ cells: Point[]; colour: number; alpha: number }> {
+    if (!session.placing || !session.ghost || !store.hasGame) return [];
+    const preview = previewPlace(store.state, session.placing, session.ghost.x, session.ghost.y);
+    return [
+      { cells: reachCells(store.state.map, session.placing, session.ghost.x, session.ghost.y), colour: 0x8fd3ff, alpha: 0.2 },
+      { cells: preview.cells, colour: preview.problem === null ? 0x6fe38c : 0xff6b5c, alpha: 0.55 },
+    ];
   }
 
   /** Tint groups of cells, for a reach or coverage area. */
@@ -327,7 +382,7 @@ export class CampusScene extends Phaser.Scene {
   private drawOverlay(): void {
     const g = this.overlay;
     g.clear();
-    for (const tint of this.tints) {
+    for (const tint of [...this.tints, ...this.ghostTints()]) {
       for (const [x, y] of tint.cells) this.fillCell(x, y, tint.colour, tint.alpha);
     }
     const preview = session.preview;
@@ -482,7 +537,7 @@ export class CampusScene extends Phaser.Scene {
       return;
     }
 
-    if (session.tool === 'look') {
+    if (session.tool === 'look' || session.tool === 'place') {
       this.gesture = { kind: 'pan', lastX: pointer.x, lastY: pointer.y, travelled: 0 };
       return;
     }
@@ -504,7 +559,7 @@ export class CampusScene extends Phaser.Scene {
   }
 
   private updatePaint(to: Point): void {
-    if (this.gesture?.kind !== 'paint' || session.tool === 'look') return;
+    if (this.gesture?.kind !== 'paint' || session.tool === 'look' || session.tool === 'place') return;
     this.gesture.last = to;
     const cells = rowBetween(this.gesture.start, to);
     session.setPreview(previewPaint(store.state, session.tool, cells));
@@ -571,7 +626,7 @@ export class CampusScene extends Phaser.Scene {
 
     const preview = session.preview;
     session.setPreview(null);
-    if (session.tool === 'look' || !preview) return;
+    if (session.tool === 'look' || session.tool === 'place' || !preview) return;
     if (preview.cells.length === 0) {
       session.notify(session.tool === 'clear' ? 'Nothing there to clear.' : 'Nothing there can take that.', 'error');
       return;
@@ -606,8 +661,15 @@ export class CampusScene extends Phaser.Scene {
   }
 
   private tap(screenX: number, screenY: number): void {
-    // A walker is in front of whatever they are walking past.
     const world = this.toWorld(screenX, screenY);
+    if (session.tool === 'place' && session.placing) {
+      // The building goes where the finger is: its footprint is centred on the tapped cell.
+      const spec = PLACED[session.placing];
+      const [cx, cy] = this.cellAt(screenX, screenY);
+      session.setGhost(cx - Math.floor((spec.w - 1) / 2), cy - Math.floor((spec.h - 1) / 2));
+      return;
+    }
+    // A walker is in front of whatever they are walking past.
     const walker = this.walkers.walkerAt(world.x, world.y, (14 * this.dpr) / this.cameras.main.zoom);
     if (walker) {
       if (walker.student) session.openStudent(walker.student);
@@ -615,13 +677,18 @@ export class CampusScene extends Phaser.Scene {
       return;
     }
     session.closeStudent();
+    const building = this.placed.hit(world.x, world.y);
+    if (building) {
+      session.select(building.x, building.y);
+      return;
+    }
     const [x, y] = this.buildingUnder(screenX, screenY) ?? this.cellAt(screenX, screenY);
     if (!this.inMap(x, y)) {
       session.clearSelection();
       return;
     }
     const cell = store.state.map.cells[y * this.mapWidth + x]!;
-    if (cell.kind === 'lot') session.select(x, y);
+    if (cell.kind === 'lot' || cell.kind === 'placed') session.select(x, y);
     else session.clearSelection();
   }
 

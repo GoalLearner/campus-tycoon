@@ -32,6 +32,8 @@ export interface PlacedItem {
   lift?: number;
   /** Mirror the sprite. */
   flip?: boolean;
+  /** Set on a building from the game state: its index in the map's list. */
+  id?: number;
   /** Draw this many cells further forward than its spot, for something resting on a flat item such as a car on a car park. */
   forward?: number;
 }
@@ -81,6 +83,17 @@ export class PlacedSprites {
       sprite.setPosition(at.x, at.y);
       this.drawn.push({ item, sprite, baseY: at.y });
     }
+  }
+
+  /** The front-most building from the game state under a point of the world, or null. */
+  hit(worldX: number, worldY: number): PlacedItem | null {
+    let found: Drawn | null = null;
+    for (const drawn of this.drawn) {
+      if (drawn.item.id === undefined) continue;
+      if (!drawn.sprite.getBounds().contains(worldX, worldY)) continue;
+      if (!found || drawn.sprite.depth > found.sprite.depth) found = drawn;
+    }
+    return found ? found.item : null;
   }
 
   /** Floating icons bob gently so they catch the eye. */

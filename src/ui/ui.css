@@ -497,6 +497,164 @@ button:active {
   font-size: 12px;
 }
 
+/* ---------------------------------------------------------------- build */
+
+.build-fab {
+  position: absolute;
+  right: calc(var(--safe-right) + 12px);
+  bottom: calc(var(--safe-bottom) + 78px);
+  padding: 11px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16201b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.build-fab.hidden {
+  display: none;
+}
+
+.inspector.show ~ .build-fab,
+.student.show ~ .build-fab {
+  display: none;
+}
+
+.placer {
+  position: absolute;
+  left: calc(var(--safe-left) + 8px);
+  right: calc(var(--safe-right) + 8px);
+  bottom: calc(var(--safe-bottom) + 76px);
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 12px 14px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: none;
+}
+
+.placer.show {
+  display: block;
+}
+
+.placer.bad {
+  border-color: var(--bad);
+}
+
+.placer-title {
+  font-weight: 700;
+}
+
+.placer-state {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.placer.bad .placer-state {
+  color: #ffd9d3;
+}
+
+.placer-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.placer-buttons button {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.placer-buttons .primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16201b;
+  font-weight: 700;
+}
+
+.placer-buttons .primary:disabled {
+  opacity: 0.4;
+}
+
+/* ------------------------------------------------------------- happiness */
+
+button.happy {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  border-radius: 8px;
+}
+
+.happy-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.happy-face {
+  display: flex;
+}
+
+.happy-face svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cause-list {
+  margin: 10px 0 12px;
+}
+
+.cause {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.cause-name {
+  flex: none;
+  width: 108px;
+}
+
+.cause-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.cause-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--good);
+}
+
+.cause.worst .cause-fill {
+  background: var(--short);
+}
+
+.cause.worst .cause-name {
+  font-weight: 700;
+  color: var(--short);
+}
+
+.cause-value {
+  flex: none;
+  width: 40px;
+  text-align: right;
+  color: var(--muted);
+}
+
 /* --------------------------------------------------------- student card */
 
 .student {

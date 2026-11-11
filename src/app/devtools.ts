@@ -1,4 +1,4 @@
-import { advance, applyAction, newGame, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, newGame, PLACED, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
@@ -48,6 +48,38 @@ function demoCampus(): GameState {
   return advance(state, state.clock.lastSimulatedAt, now).state;
 }
 
+/**
+ * The tended campus with one of every building from the Build menu on it, each
+ * put on the nearest free ground to the middle that touches a path. For
+ * screenshots of the first play stop: `?demo=built`.
+ */
+function builtCampus(): GameState {
+  let state = demoCampus();
+  state.money.cash = 5_000_000;
+  const { width, height, cells } = state.map;
+  const spots: Array<[number, number]> = [];
+  for (let y = 2; y < height - 4; y++) for (let x = 2; x < width - 4; x++) spots.push([x, y]);
+  const far = ([x, y]: [number, number]): number => Math.max(Math.abs(x - 15), Math.abs(y - 16));
+  spots.sort((a, b) => far(a) - far(b));
+  const besidePath = (x: number, y: number, w: number, h: number): boolean => {
+    for (let cy = y - 1; cy <= y + h; cy++) {
+      for (let cx = x - 1; cx <= x + w; cx++) {
+        const corner = (cx < x || cx >= x + w) && (cy < y || cy >= y + h);
+        if (!corner && cells[cy * width + cx]?.kind === 'path') return true;
+      }
+    }
+    return false;
+  };
+  for (const type of ['library', 'gym', 'track', 'store', 'coffee', 'pool', 'courts', 'field', 'pondLarge', 'pondMedium', 'pondSmall'] as const) {
+    const spec = PLACED[type];
+    const spot = spots.find(([x, y]) => previewPlace(state, type, x, y).problem === null && (spec.family === 'water' || besidePath(x, y, spec.w, spec.h)));
+    if (!spot) continue;
+    const result = applyAction(state, { type: 'place', building: type, x: spot[0], y: spot[1] });
+    if (result.ok) state = result.state;
+  }
+  return state;
+}
+
 interface DevScene {
   cameras: { main: { zoom: number; width: number; height: number; scrollX: number; scrollY: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
@@ -76,6 +108,8 @@ interface DevScene {
  *   &card=2           open the student card of the third-nearest walker to the middle
  *   &card=2,follow    the same, with Follow on
  *   &card=unhappy     the least happy student in sight
+ *   &place=gym,11,11  begin placing a building with its ghost at a cell
+ *   &panel=happiness  open the Happiness panel
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -86,7 +120,9 @@ function applyViewParams(params: URLSearchParams): void {
   const stadium = params.get('demo') === 'stadium';
   const town = params.get('demo') === 'town';
   const card = params.get('card');
-  if (!view && !arrive && !look && !stadium && !town && card === null) return;
+  const placing = params.get('place');
+  const panel = params.get('panel');
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -136,6 +172,12 @@ function applyViewParams(params: URLSearchParams): void {
         scene.walkers.arrive(arrive);
         settle(1.4);
       }
+      if (placing) {
+        const [type, x, y] = placing.split(',');
+        session.startPlacing(type as Parameters<typeof session.startPlacing>[0]);
+        session.setGhost(Number(x), Number(y));
+      }
+      if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       if (card !== null) {
         // After the view has been aimed for the last time.
         setTimeout(() => {
@@ -163,6 +205,8 @@ export function installDevTools(): void {
     store.adopt(lookCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stadium') {
     store.adopt(stadiumCampus(clock.now()), { ephemeral: true });
+  } else if (params.get('demo') === 'built') {
+    store.adopt(builtCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'town') {
     store.adopt(townCampus(clock.now()), { ephemeral: true });
   } else if (params.has('demo')) {
@@ -175,7 +219,9 @@ export function installDevTools(): void {
       const root = document.getElementById('ui');
       if (!root || !store.hasGame || root.childElementCount === 0) return;
       clearInterval(wait);
-      openBuildMenu(root, LOOK_MENU, () => undefined);
+      // The look preview shows its example cards. Anywhere else, the real menu.
+      if (params.get('demo') === 'look') openBuildMenu(root, LOOK_MENU, () => undefined);
+      else document.querySelector<HTMLButtonElement>('.build-fab')?.click();
     }, 150);
   }
 }

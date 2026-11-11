@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
   enrollment,
+  PLACED,
   placeIndex,
   sampleStudents,
   studentHome,
@@ -29,7 +30,7 @@ import type { Iso } from './iso';
  */
 
 /** What a walker is doing, for the student card. */
-export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn';
+export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn' | `toPlace:${string}` | `atPlace:${string}`;
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
@@ -55,7 +56,10 @@ interface Spot {
 }
 
 interface Stop {
-  kind: 'building' | 'quad' | 'gate';
+  /** A 'place' is a hand-placed building students visit: a dining hall, a gym, a court. */
+  kind: 'building' | 'quad' | 'gate' | 'place';
+  /** The name of a place, for the student card. */
+  name?: string;
   zone: Zone | null;
   /** The cell the stop is on. */
   cell: Spot;
@@ -206,6 +210,22 @@ export class Walkers {
       }
     }
 
+    // Places to eat, shop and play, when a path reaches them.
+    for (const placed of state.map.placed) {
+      if (!placed) continue;
+      const spec = PLACED[placed.type];
+      if (spec.family === 'water' || spec.family === 'landmark') continue;
+      let found = false;
+      for (let cy = placed.y; cy < placed.y + placed.h && !found; cy++) {
+        for (let cx = placed.x; cx < placed.x + placed.w && !found; cx++) {
+          const door = doorOf(cx, cy);
+          if (door < 0) continue;
+          this.stops.push({ kind: 'place', name: spec.name, zone: null, cell: { x: cx, y: cy }, door });
+          found = true;
+        }
+      }
+    }
+
     // Anyone whose way ahead was dug up leaves quietly.
     for (const walker of this.walkers) {
       for (let k = walker.leg; k < walker.route.length - 1; k++) {
@@ -307,7 +327,7 @@ export class Walkers {
     if (stop.kind === 'gate') return door;
     const centre = { x: stop.cell.x + 0.5, y: stop.cell.y + 0.5 };
     // Buildings are entered at their edge. On a quad, people stop on the near part of the lawn.
-    const reach = stop.kind === 'quad' ? 0.62 + Math.random() * 0.16 : 0.52;
+    const reach = stop.kind === 'quad' || stop.kind === 'place' ? 0.62 + Math.random() * 0.16 : 0.52;
     return { x: door.x + (centre.x - door.x) * reach, y: door.y + (centre.y - door.y) * reach };
   }
 
@@ -342,7 +362,7 @@ export class Walkers {
   private destinationFrom(origin: Stop, student: StudentRef | null): Stop | undefined {
     const others = this.stops.filter((stop) => stop !== origin);
     const classes = others.filter((stop) => stop.zone === 'academic');
-    const quads = others.filter((stop) => stop.kind === 'quad');
+    const quads = others.filter((stop) => stop.kind === 'quad' || stop.kind === 'place');
     let homes: Stop[];
     if (student) {
       const home = this.stopAt.get(this.homes.get(studentKey(student)) ?? -1);
@@ -470,6 +490,7 @@ export class Walkers {
   doing(key: string): Doing | null {
     const walker = this.walkerOf(key);
     if (!walker || !walker.goal) return null;
+    if (walker.goal.kind === 'place') return walker.lingerMs > 0 ? `atPlace:${walker.goal.name ?? ''}` : `toPlace:${walker.goal.name ?? ''}`;
     if (walker.lingerMs > 0) return 'onQuad';
     if (walker.goal.kind === 'quad') return 'toQuad';
     if (walker.goal.zone === 'academic') return walker.from.zone === 'academic' ? 'nextClass' : 'toClass';
@@ -570,7 +591,7 @@ export class Walkers {
         }
         walker.stride += dt * (walker.pace / PACE);
         if (walker.leg >= walker.route.length && walker.fading !== 'out') {
-          if (walker.goal?.kind === 'quad') walker.lingerMs = 2500 + Math.random() * 5000;
+          if (walker.goal?.kind === 'quad' || walker.goal?.kind === 'place') walker.lingerMs = 2500 + Math.random() * 5000;
           else walker.fading = 'out';
         }
       }

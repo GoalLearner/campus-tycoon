@@ -2,7 +2,7 @@
 
 Working title. Written 2026-11-11 from the design discussion between the owner and Claude.
 
-**Status: Layer 0, the first playable, is built and the owner has played it. A feedback pass is under way on top of it.** Built in that pass: the new HUD wording, walking students, trees, laid-out quads and the student card (sections 19.1 and 13.8). The Build menu and its buildings wait for the owner's approval of the look (section 23.5). Nothing from Layer 1 has been started. Building goes one layer at a time (section 18). Distribution was set up early, on 2026-11-11, outside the layers: a public repository, the web build on Cloudflare Pages, and the iOS app for TestFlight (section 17.8).
+**Status: Layer 0, the first playable, is built and the owner has played it. A feedback pass is under way on top of it.** The owner approved the look on 2026-11-11. Play stop 1 of the pass is built and waiting for him to play: the Build menu and its buildings, Happiness, and the three metrics pieces (section 18). Stops 2 and 3 are not started. Nothing from Layer 1 has been started. Building goes one layer at a time (section 18). Distribution was set up early, on 2026-11-11, outside the layers: a public repository, the web build on Cloudflare Pages, and the iOS app for TestFlight (section 17.8).
 
 How to read this document:
 
@@ -13,6 +13,7 @@ How to read this document:
 - Section 23 is the master building catalog: every kind of facility a complete campus has, and the layer it lands in.
 - Section 24 is the success metrics: the student pipeline, the Scorecard and the ranking weights.
 - Section 25 is off-campus neighbourhoods, roads and parking.
+- Section 26 is the art to fix before release.
 
 ---
 
@@ -871,9 +872,9 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 | Line | Reads now | Replaced or widened by |
 |---|---|---|
-| Happiness | Walk time and green space at the dorm. A commuter reads the green around two lecture halls | Dining, noise, recreation and safety join the same list as each is built. Layer 3's overlays become the jump target where one fits |
+| Happiness | Walk time, green space, dining in reach and things to do in reach, at the dorm. A commuter reads the last three around two lecture halls. Dining and recreation were swapped in with play stop 1 | Noise and safety join the same list as each is built. Layer 3's overlays become the jump target where one fits |
 | GPA | The campus average follows how pleasant the Academic lots are and how full the seats are [T]. A student sits around it by seed, class year and nature | The academic score of section 24 |
-| Social life | Quad cells per student | Student Life spots, recreation and events join the count as each is built |
+| Social life | Quad cells and recreation buildings per student. Recreation was swapped in with play stop 1 | Student Life spots and events join the count as each is built |
 | Archetype | A lasting nature by seed, from the fourteen archetypes whose stat exists today. Lost Freshman and Homesick fade over the first year. Super Senior grows when Academic seats capped the last class | The state-driven mix of 13.2 and all eighteen, in layer 6 |
 | Quirk | The six of 13.4, as a label | Their visible behaviours, in layer 6 |
 | Thought | A short pool per cause | The archetype pools of 13.4, in layer 4 |
@@ -881,7 +882,7 @@ Brought forward into the feedback pass on 2026-11-11 at the owner's request. Bui
 
 Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
-**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. The swaps owed: dining, noise, recreation and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
+**Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. The swaps still owed: noise and safety as causes of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
 
 ---
 
@@ -1225,7 +1226,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11, on branch `layer-0-feedback`.** Built: walking students, trees, laid-out quads, the student card (13.8). Agreed and waiting for the look approval: the Build menu and its buildings (23.5), and three metrics pieces (24.7): the class record, retention shown with its cause, and the acceptance rate shown at each intake. The pass has three play stops: the Build menu with dining, library, store, recreation and happiness; then medical, safety and incidents; then neighbourhoods, roads, cars, parking lots and the parking structure, with room fees (section 25).
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, next:** Medical Center, Campus Safety, coverage circles and incidents. **Stop 3:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25).
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1300,6 +1301,8 @@ The smallest thing that proves the core loop is fun: zone, grow, intake, bottlen
 | Quads | A quad is a clean lawn. What stands on each cell follows from its place in the quad: trees at corners and ends, benches along edges, flowers in the middle, a showpiece on a quad of one cell. No scatter |
 | Walking students | A sample of the students walks the paths between housing, classes and quads. The number in view grows with enrollment and with how much of the campus is on screen. Students who get a place while the player watches walk in from the edge of campus under a "+24 moving in" note. It is for show only: nothing is saved, the sim never runs it, and catch-up does not pay for it. Brought forward from the polish layer on 2026-11-11 |
 | Student card | Tapping a walking student opens five lines: who they are, what they are doing, their grades, their club, and a face with the one biggest reason for their happiness. Tapping the reason glides to the building it is about. A Follow button keeps the camera on them. Nothing is stored per student (section 13.8). Added on 2026-11-11 at the owner's request |
+| Build menu | A Build button opens a menu of hand-placed buildings by category, each card with its sprite, cost, footprint, upkeep and one line on what it does. Picking one and tapping the map shows it faded in place, its footprint green or red, and its reach in blue, with Place and Cancel. Tapping a placed building says what it is doing now. The Clear tool removes it. Added in play stop 1 of the feedback pass |
+| Happiness | One number on the HUD with a face. Tapping it lists its causes across the campus, names the biggest gap and what to build, and says how many students stay each semester at that happiness. Retention follows it. Added in play stop 1 |
 | Money | Flat tuition, zoning and path costs, upkeep. The HUD shows cash and net income per real hour |
 | Feedback | A plain list of what happened while away |
 | Identity | A school name |
@@ -1809,6 +1812,7 @@ Asked for by the owner on 2026-11-11 as item 8 of the feedback pass, and settled
 | Tapping a neighbourhood shows who lives there, who walks, who drives and what would let more walk | Test 3 |
 | The student card says "Lives in a dorm" or "Lives off campus", and names the street once neighbourhoods exist | The owner's request. The first half is built |
 | Town relations, landlords and buying neighbourhood land are later | The owner's list |
+| Land purchase arrives at this stop, brought forward from layer 2 | The owner's decision of 2026-11-11. Roads, car parks and a town band all use land on a 32 by 32 map, which is the scale cost noted in 25.5 |
 
 ### 25.2 The Housing bar and the bottleneck
 
@@ -1865,3 +1869,28 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 | Noise | Brings one piece of layer 3 forward. Desirability reads only green space and walk time today, so "a road beside the lot" is the first noise the lot inspector names |
 | Size of the stop | The largest of the three. Neighbourhoods, the locals rule, room fees, the road tool, two kinds of parking, cars, a new stall cause and a save upgrade arrive together because none of them means anything alone |
 | Neglect-safe and cheap catch-up | Passes. Town houses never decay and cost nothing. Who walks and who drives is worked out when the player builds and at each intake |
+
+---
+
+## 26. Art to fix before release
+
+Asked for by the owner on 2026-11-11, when he approved the look "for now". These are the sprites that were assembled or rendered here instead of drawn by the pack's artist. He accepted them as stand-ins only. Every sprite is named in the art manifest and built from one line of the recipe, so each fix is art-only: replace the picture or the recipe line and run the art build. No code changes.
+
+| Sprite | What it is today | Planned fix |
+|---|---|---|
+| Parking structure, `build.garage` | A model of plain blocks, rendered. The owner called it ugly | Penzilla commission, 2 x 2. Or a bought low-poly model, rendered properly |
+| Stadium tier four, `stadium.4` | A free CC-BY 3D bowl, rendered. The owner called it ugly | Penzilla commission, 2 x 3. Or a bought low-poly model, rendered properly |
+| Stadium tier five, `stadium.5` | Tier four stretched taller. It is not its own design | Penzilla commission, 2 x 3, drawn as a distinct stadium |
+| Stadium tiers two and three, `stadium.2` and `stadium.3` | The pack's stadium with its own stand copied, raised and mirrored | Penzilla commission, with tiers four and five, so the five read as one family |
+| Crossing, `road.cross.5` and `road.cross.10` | The straight road piece with its lane mark enlarged and repeated across it. Made bolder on 2026-11-11 so it reads at normal phone zoom | Penzilla commission: one tile |
+| Outdoor courts, `build.courts` | A tennis court cut from the tennis stadium. It is not a basketball court | Penzilla commission, 2 x 2 |
+| Gym, `build.gym` | A plain hall with a dumbbell icon on its sign. The icon pack asks a small payment for commercial use, which has not been made | Penzilla commission. Or pay for the icon and keep it. Not to ship as it is |
+| Recreation field, `build.field` | The soccer stadium with its stand, booth and banner cut away | Penzilla commission, 2 x 2, or keep if it passes a second look |
+| Lake, `pond.large` | Laid from nine shore tiles. Two are mirrored and the middle is two half tiles joined. A sliver of earth shows at its two side corners | Penzilla commission of the two missing shore pieces and a plain water tile |
+| First-aid icon, `icon.injury` | The pharmacy sign, cropped, with its cross recoloured green | Penzilla commission: one icon |
+| Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
+| App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
+
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way. The face on the student card is drawn in code, and the owner approved it.
+
+Any sprite assembled or rendered from now on is added to this table in the same piece of work.

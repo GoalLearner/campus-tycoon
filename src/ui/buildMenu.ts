@@ -11,6 +11,8 @@
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 export interface BuildEntry {
+  /** The building this card places. Missing on cards that are only shown. */
+  id?: string;
   /** Sprite name in the art manifest. */
   key: string;
   name: string;

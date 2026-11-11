@@ -28,13 +28,20 @@ import {
   roomPlan,
   stageSpec,
   TREE_KINDS,
+  acceptanceRate,
+  PLACED,
+  placedAt,
+  previewPlace,
   type GameState,
   type LogEntry,
+  type PlacedType,
   type StallCause,
   summarizeAway,
   type Zone,
 } from '../sim';
-import { mountStudentCard } from './studentCard';
+import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
+import { openBuildMenu } from './buildMenu';
+import { face, mountStudentCard } from './studentCard';
 
 /**
  * The HUD and every panel, as plain HTML over the map. It reads the game from
@@ -76,7 +83,7 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'clear', label: 'Clear', hint: `Drag to clear · ${dollars(COST.clear)} a cell` },
 ];
 
-const TOOL_NOUN: Record<Exclude<ToolChoice, 'look'>, [string, string]> = {
+const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]> = {
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
@@ -208,8 +215,18 @@ export function mountUi(root: HTMLElement): void {
   const students = el('div', 'students');
   const studentCount = el('span', 'count');
   students.append(studentCount, el('span', 'label', 'students'));
+  // Happiness: a face and a number. Tapping it shows the causes.
+  const happy = el('button', 'students happy');
+  happy.type = 'button';
+  const happyFace = el('span', 'happy-face');
+  const happyCount = el('span', 'count');
+  const happyTop = el('span', 'happy-top');
+  happyTop.append(happyFace, happyCount);
+  happy.append(happyTop, el('span', 'label', 'happiness'));
+  happy.addEventListener('click', () => openHappiness());
+  let shownMood = -1;
   const menuButton = button('Menu', 'menu-button', () => openMenu());
-  top.append(money, students, menuButton);
+  top.append(money, students, happy, menuButton);
 
   const calendar = el('div', 'calendar');
   const when = el('span', 'when');
@@ -290,9 +307,37 @@ export function mountUi(root: HTMLElement): void {
 
   const studentPanel = mountStudentCard();
 
+  // ---------------------------------------------------------------- build --
+  const buildButton = button('Build', 'build-fab', () => openBuild());
+  // Shown while a building picked from the menu is being placed.
+  const placer = el('div', 'placer');
+  const placerTitle = el('div', 'placer-title');
+  const placerState = el('div', 'placer-state');
+  const placerButtons = el('div', 'placer-buttons');
+  const placeButton = button('Place', 'primary', () => {
+    const type = session.placing;
+    const ghost = session.ghost;
+    if (!type || !ghost) return;
+    const result = store.dispatch({ type: 'place', building: type, x: ghost.x, y: ghost.y });
+    if (!result.ok) {
+      session.notify(result.error, 'error');
+      return;
+    }
+    session.notify(`${PLACED[type].name} built.`);
+    session.setTool('look');
+  });
+  placerButtons.append(placeButton, button('Cancel', '', () => session.setTool('look')));
+  placer.append(placerTitle, placerState, placerButtons);
+
+  function openBuild(): void {
+    openBuildMenu(root, buildEntries(), (entry) => {
+      if (entry.id) session.startPlacing(entry.id as PlacedType);
+    });
+  }
+
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, buildButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -475,6 +520,12 @@ export function mountUi(root: HTMLElement): void {
     setText(rate, `${perHour >= 0 ? '+' : '-'}${dollarsShort(Math.abs(perHour))}/hr`);
     rate.className = perHour >= 0 ? 'rate up' : 'rate down';
     setText(studentCount, String(enrollment(state)));
+    const mood = happinessView(state);
+    setText(happyCount, String(mood.score));
+    if (mood.mood !== shownMood) {
+      shownMood = mood.mood;
+      happyFace.innerHTML = face(mood.mood);
+    }
 
     // Lead with what is happening now. The date is the small print.
     const tick = state.clock.tick;
@@ -541,6 +592,12 @@ export function mountUi(root: HTMLElement): void {
         lead = `The next class is ${plan.students} students.`;
       }
       card.append(el('p', '', lead));
+      const rate = acceptanceRate(state);
+      const lastIntake = state.admissions.lastIntake;
+      if (rate !== null && lastIntake) {
+        const placed = lastIntake.admitted + state.admissions.waitlistAdmitted;
+        card.append(el('p', 'fine', `Acceptance rate ${Math.round(rate * 100)}%: ${placed} of the ${lastIntake.expected} who applied got a place.`));
+      }
 
       const list = el('ul', 'away-list');
       for (const zone of order) {
@@ -588,6 +645,14 @@ export function mountUi(root: HTMLElement): void {
   function renderInspector(state: GameState): void {
     const selected = session.selected;
     const cell = selected ? cellAt(state.map, selected.x, selected.y) : null;
+    const placedHere = selected ? placedAt(state.map, selected.x, selected.y) : null;
+    if (placedHere) {
+      setText(inspectorTitle, PLACED[placedHere.type].name);
+      setText(inspectorState, placedSummary(state, placedHere));
+      setText(inspectorFacts, placedFacts(placedHere));
+      inspector.classList.add('show');
+      return;
+    }
     if (!selected || !cell || cell.kind !== 'lot' || !cell.zone) {
       inspector.classList.remove('show');
       return;
@@ -640,8 +705,57 @@ export function mountUi(root: HTMLElement): void {
 
     const facts = [`Desirability ${score}`];
     if (zone === 'housing') facts.push(walk < 0 ? 'No route to class' : `${Math.round(walk)} min walk to class`);
+    facts.push(...lotFacts(state, selected.x, selected.y));
     setText(inspectorFacts, facts.join(' · '));
     inspector.classList.add('show');
+  }
+
+  function renderPlacer(state: GameState): void {
+    const type = session.tool === 'place' ? session.placing : null;
+    placer.classList.toggle('show', type !== null);
+    buildButton.classList.toggle('hidden', type !== null);
+    if (!type) return;
+    setText(placerTitle, placingLine(type));
+    const ghost = session.ghost;
+    const preview = ghost ? previewPlace(state, type, ghost.x, ghost.y) : null;
+    let text = 'Tap the map where it should go.';
+    if (preview?.problem === 'blocked') text = 'Something is in the way. It needs empty ground.';
+    else if (preview?.problem === 'offMap') text = 'That does not fit on your land.';
+    else if (preview?.problem === 'cash') text = `You have ${dollars(state.money.cash)}. It costs ${dollars(preview.cost)}.`;
+    else if (preview) text = PLACED[type].radius > 0 ? `${PLACED[type].effect}. The blue cells are its reach.` : `${PLACED[type].effect}.`;
+    setText(placerState, text);
+    placer.classList.toggle('bad', !!preview?.problem);
+    placeButton.disabled = !preview || preview.problem !== null;
+  }
+
+  function openHappiness(): void {
+    const view = happinessView(store.state);
+    openModal((close, card) => {
+      card.append(el('h1', '', `Happiness ${view.score}`));
+      const list = el('div', 'cause-list');
+      for (const cause of view.rows) {
+        const line = el('div', cause.worst ? 'cause worst' : 'cause');
+        const bar = el('div', 'cause-bar');
+        const fill = el('div', 'cause-fill');
+        fill.style.width = `${cause.percent}%`;
+        bar.append(fill);
+        line.append(el('span', 'cause-name', cause.name), bar, el('span', 'cause-value', `${cause.percent}%`));
+        list.append(line);
+      }
+      card.append(list);
+      if (view.advice) card.append(el('p', '', view.advice));
+      card.append(el('p', 'fine', view.staying));
+      if (view.lastSemester) card.append(el('p', 'fine', view.lastSemester));
+      if (view.build) {
+        card.append(
+          button('Open the Build menu', 'primary wide', () => {
+            close();
+            openBuild();
+          }),
+        );
+      }
+      card.append(button('Close', 'wide', close));
+    });
   }
 
   function renderTools(): void {
@@ -653,7 +767,7 @@ export function mountUi(root: HTMLElement): void {
     treePicker.classList.toggle('show', picking);
     chip.classList.toggle('raised', picking);
     treeButtons.forEach((b, kind) => b.classList.toggle('active', kind === session.treeKind));
-    if (tool === 'look') {
+    if (tool === 'look' || tool === 'place') {
       chip.classList.remove('show', 'bad');
       return;
     }
@@ -693,6 +807,7 @@ export function mountUi(root: HTMLElement): void {
     renderHud(state);
     renderInspector(state);
     studentPanel.render(state);
+    renderPlacer(state);
     renderTools();
 
     updateRow.classList.toggle('show', updates.ready);

@@ -1,4 +1,4 @@
-import type { PaintPreview, StudentRef, Tool } from '../sim';
+import type { PaintPreview, PlacedType, StudentRef, Tool } from '../sim';
 
 /**
  * What the player is doing right now: the tool in hand, the lot they tapped,
@@ -6,7 +6,8 @@ import type { PaintPreview, StudentRef, Tool } from '../sim';
  * read it and are told when it changes.
  */
 
-export type ToolChoice = 'look' | Tool;
+/** 'place' is the mode entered from the Build menu: taps position one building. */
+export type ToolChoice = 'look' | 'place' | Tool;
 
 export interface Toast {
   text: string;
@@ -20,6 +21,10 @@ class Session {
   tool: ToolChoice = 'look';
   /** The kind of tree the Tree tool plants. */
   treeKind = 0;
+  /** The building picked from the Build menu and not yet placed. */
+  placing: PlacedType | null = null;
+  /** Where its top corner would go. null until the player taps the map. */
+  ghost: { x: number; y: number } | null = null;
   selected: { x: number; y: number } | null = null;
   /** The student whose card is open. */
   student: StudentRef | null = null;
@@ -47,11 +52,30 @@ class Session {
   setTool(tool: ToolChoice): void {
     this.tool = tool;
     this.preview = null;
+    this.placing = null;
+    this.ghost = null;
     if (tool !== 'look') {
       this.selected = null;
       this.student = null;
       this.following = false;
     }
+    this.emit();
+  }
+
+  /** Begin placing a building picked from the Build menu. */
+  startPlacing(type: PlacedType): void {
+    this.tool = 'place';
+    this.placing = type;
+    this.ghost = null;
+    this.preview = null;
+    this.selected = null;
+    this.student = null;
+    this.following = false;
+    this.emit();
+  }
+
+  setGhost(x: number, y: number): void {
+    this.ghost = { x, y };
     this.emit();
   }
 

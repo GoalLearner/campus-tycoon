@@ -870,6 +870,54 @@
   "build.courts": {
    "layers": [
     {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
      "file": "penzilla/GiantCityBuilder/Public/Stadium_Tennis.png",
      "footprint": [
       2,
@@ -2079,17 +2127,6 @@
     }
    ]
   },
-  "pond.medium": {
-   "layers": [
-    {
-     "file": "penzilla/GiantCityBuilder/Public/Park_Pond.png",
-     "footprint": [
-      2,
-      2
-     ]
-    }
-   ]
-  },
   "water.top": {
    "layers": [
     {
@@ -2251,6 +2288,384 @@
      "stand": [
       0.98,
       0.98
+     ]
+    }
+   ]
+  },
+  "pond.large": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake16.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake14.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake18.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake13.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake27.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "cut": [
+      [
+       0,
+       214
+      ],
+      [
+       512,
+       214
+      ],
+      [
+       512,
+       512
+      ],
+      [
+       0,
+       512
+      ]
+     ],
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake28.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "cut": [
+      [
+       0,
+       0
+      ],
+      [
+       512,
+       0
+      ],
+      [
+       512,
+       215
+      ],
+      [
+       0,
+       215
+      ]
+     ],
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake13.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "flip": true,
+     "shift": [
+      0,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake19.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "flip": true,
+     "shift": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake19.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Tiles/RiverLake11.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "pond.medium": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Park_Pond.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.pool": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Pool.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.field": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Stadium_FootballSocker.png",
+     "footprint": [
+      2,
+      2
+     ],
+     "cut": [
+      [
+       186,
+       662
+      ],
+      [
+       676,
+       384
+      ],
+      [
+       704,
+       372
+      ],
+      [
+       740,
+       366
+      ],
+      [
+       900,
+       452
+      ],
+      [
+       900,
+       530
+      ],
+      [
+       992,
+       590
+      ],
+      [
+       524,
+       868
+      ]
+     ]
+    }
+   ]
+  },
+  "build.coffee": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_Coffee.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_Coffee_Front.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "build.admin": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Public_Townhall.png",
+     "footprint": [
+      2,
+      2
      ]
     }
    ]
@@ -2457,6 +2872,22 @@
    2,
    2
   ],
+  "build.pool": [
+   2,
+   1
+  ],
+  "build.field": [
+   2,
+   2
+  ],
+  "build.admin": [
+   2,
+   2
+  ],
+  "pond.large": [
+   3,
+   3
+  ],
   "build.studentlife": [
    2,
    2
@@ -2490,7 +2921,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane marks repeated across it."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away."
   },
   {
    "name": "Football stadium (3D model)",
