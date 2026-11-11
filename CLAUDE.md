@@ -106,7 +106,7 @@ Secrets and where they live. None is ever written to a file in this repository.
 | App Store Connect API key | Codemagic, Teams, Integrations, connection named `Codemagic` | Upload to TestFlight and the build number |
 | Apple Distribution certificate | Codemagic, Teams, Code signing identities, reference `awakened-distribution` | Signing |
 | App Store provisioning profile | Codemagic, Teams, Code signing identities, reference `campus-tycoon-app-store` | Signing |
-| `ART_TOKEN` | Cloudflare Pages build settings and a Codemagic variable group | Only once a paid art pack is in use |
+| `ART_TOKEN` | Cloudflare Pages, Settings, Variables and Secrets (type Secret). Codemagic, app Environment variables, group `campus_tycoon`, marked Secure | Fetching the private art pack. It is a read-only deploy key for `GoalLearner/campus-tycoon-art`, stored as one line of base64. To replace it, make a new key pair, add the public half with `gh repo deploy-key add`, and delete the old one |
 | Cloudflare sign-in | On the owner's PC, from `npx wrangler login` | `npm run deploy` |
 
 ## Where things are

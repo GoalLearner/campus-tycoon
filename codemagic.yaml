@@ -16,6 +16,9 @@
 #        the App Store profile for com.goallearner.campustycoon,
 #        reference name "campus-tycoon-app-store"
 #
+#   4. App settings > Environment variables
+#        ART_TOKEN, marked Secure, in a group named "campus_tycoon"
+#
 # The app has no extra capabilities (no push, no HealthKit), so the profile is
 # a plain App Store profile.
 
@@ -29,6 +32,10 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
+      # Variable groups made in the Codemagic app settings. campus_tycoon holds ART_TOKEN,
+      # the read-only key for the private art repository.
+      groups:
+        - campus_tycoon
       ios_signing:
         provisioning_profiles:
           - campus-tycoon-app-store

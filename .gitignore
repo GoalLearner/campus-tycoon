@@ -9,6 +9,7 @@ CLAUDE.local.md
 .claude/
 
 # Secrets and signing files. They live in Cloudflare and Codemagic settings, never in this repository.
+.secrets/
 .env
 .env.*
 !.env.example
