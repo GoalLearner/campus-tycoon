@@ -27,7 +27,7 @@ import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, t
 type Loop = keyof SoundMix;
 
 /** How loud each steady layer is at its fullest, before the player's volume. All of it sits well under the music and the taps. */
-const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0 };
+const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0, stadium: 0.2 };
 /** The scheduler looks this far ahead, this often. */
 const TICK_MS = 200;
 /** A pentatonic scale from middle C, in hertz: no note in it clashes with another. */
@@ -59,7 +59,7 @@ class SoundEngine {
   private lastHour: number | null = null;
   private hidden = false;
   /** When the next of each scattered sound is due, on the audio clock. */
-  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0, busk: 0 };
+  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0, busk: 0, cheer: 0 };
   private beat = 0;
   private note = 2;
   private buskNote = 4;
@@ -108,6 +108,8 @@ class SoundEngine {
     this.loops.crowd = this.loop('bandpass', 650, 0.6);
     this.loops.traffic = this.loop('lowpass', 150, 0.4);
     this.loops.rain = this.loop('highpass', 1400, 0.3);
+    // A crowd a long way off: a broad murmur, lower than chatter close by.
+    this.loops.stadium = this.loop('bandpass', 420, 0.5);
     this.applyVolumes();
     this.lastHour = clockHour();
     this.wake();
@@ -190,7 +192,7 @@ class SoundEngine {
     if (this.timer === null) {
       // Nothing that was due while it slept is played late.
       const now = ctx.currentTime;
-      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5, busk: now + 0.5 };
+      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5, busk: now + 0.5, cheer: now + 2 };
       this.lastHour = clockHour();
       this.timer = setInterval(() => this.tick(), TICK_MS);
     }
@@ -223,9 +225,9 @@ class SoundEngine {
     const facts = this.facts;
     this.mix = facts ? soundMix({ ...facts, period: currentDaylight().period, hidden: this.hidden || facts.hidden }) : SILENT;
     const mix = this.mix;
-    for (const name of ['crowd', 'traffic', 'rain'] as const) {
-      // A crowd's murmur rises and falls a little by itself.
-      const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : 1;
+    for (const name of ['crowd', 'traffic', 'rain', 'stadium'] as const) {
+      // A crowd's murmur rises and falls a little by itself, and a stadium's swells.
+      const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : name === 'stadium' ? 0.6 + Math.random() * 0.8 : 1;
       this.loops[name]?.gain.setTargetAtTime(mix[name] * LOOP_LEVEL[name] * waver, now, 0.5);
     }
     // Scattered sounds: each is due at a time that the mix brings nearer or pushes away.
@@ -244,6 +246,13 @@ class SoundEngine {
     if (mix.traffic > 0.1 && now >= this.next.swoosh) {
       this.swoosh(now, mix.traffic);
       this.next.swoosh = now + (2.5 + Math.random() * 5) / mix.traffic;
+    }
+    // Now and then the stadium roars, and the band's drum is heard under it.
+    if (mix.stadium > 0.05 && now >= this.next.cheer) {
+      this.puff('bandpass', 500, 1100, now, 1.6, 0.16 * mix.stadium);
+      this.tone(this.soundBus, 'sine', 110, 70, now + 0.1, 0.18, 0.1 * mix.stadium, 0.005);
+      this.tone(this.soundBus, 'sine', 110, 70, now + 0.5, 0.18, 0.1 * mix.stadium, 0.005);
+      this.next.cheer = now + 5 + Math.random() * 9;
     }
     if (mix.busker > 0.03 && now >= this.next.busk) {
       this.busk(now, mix.busker);

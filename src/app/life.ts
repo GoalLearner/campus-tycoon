@@ -80,6 +80,12 @@ export interface LifeFacts {
   students: number;
   /** True with Reduce effects on. */
   reduced: boolean;
+  /** The share of students on campus, from the calendar: a quarter in a break, fewer in the summer term. 1 when left out. */
+  presence?: number;
+  /** True in midterm and finals weeks: more study groups, and no games on the quads. */
+  exams?: boolean;
+  /** True from an hour before a home game's kickoff to its final whistle. */
+  gameDay?: boolean;
 }
 
 export interface Scenes {
@@ -101,6 +107,10 @@ export interface Scenes {
   wind: number;
   /** The share of dorm and lecture hall windows that are lit, from 0 to 1. */
   windows: number;
+  /** Tailgates in the car parks before and during a home game: a parasol, a table and a few fans at each. */
+  tailgates: number;
+  /** The marching band, formed up by the stadium on a home game day. */
+  band: boolean;
 }
 
 /** How much of the day's studying outdoors is going on. */
@@ -119,6 +129,9 @@ const MAX_FAIR_TABLES = 5;
 /** A pickup game for this many students, and the most at once. */
 const STUDENTS_PER_PICKUP = 500;
 const MAX_PICKUP = 3;
+/** One tailgate, and another for every this many students, up to the most at once. */
+const STUDENTS_PER_TAILGATE = 900;
+const MAX_TAILGATES = 4;
 /** A picnic rug for this many students, and the most at once. */
 const STUDENTS_PER_PICNIC = 400;
 const MAX_PICNICS = 4;
@@ -132,17 +145,23 @@ export function scenesFor(facts: LifeFacts): Scenes {
   const fine = facts.weather === 'clear';
   const day = facts.period === 'morning' || facts.period === 'afternoon';
   const out = facts.period !== 'night';
-  const anyone = facts.students > 0;
+  // On a break most students have gone home: what is left is quiet. In the summer term a few stay.
+  const here = facts.presence ?? 1;
+  const anyone = facts.students > 0 && here > 0;
+  const quiet = here < 0.5;
+  const exams = facts.exams === true;
+  const gameDay = facts.gameDay === true && facts.students > 0;
   // The summer break is between terms: few students are about, and no clubs meet.
   const term = facts.term;
 
   // Study groups sit out in fine weather, less on a weekend and little in the cold.
-  const study = !anyone || !fine ? 0 : STUDY[facts.period] * (facts.weekend ? 0.5 : 1) * (season === 'winter' ? 0.3 : 1) * (term ? 1 : 0.4);
+  // In an exam week nearly every table has a group at it, whatever the season. On a break hardly any.
+  const study = !anyone || !fine ? 0 : exams ? Math.min(0.95, STUDY[facts.period] * 1.6) : STUDY[facts.period] * (facts.weekend ? 0.5 : 1) * (season === 'winter' ? 0.3 : 1) * (term ? 1 : 0.4) * (quiet ? 0.3 : 1);
 
   // Club tables: every weekday in the two weeks a semester begins, and on every other day of the month for
   // the rest of the term. Fewer in the morning, none in the evening.
   let clubs = 0;
-  if (anyone && fine && term && !facts.weekend && day) {
+  if (anyone && fine && term && !facts.weekend && day && !quiet && !exams) {
     const fair = clubFair(facts.month, facts.day);
     const meets = fair || facts.day % 2 === 0;
     const most = fair ? MAX_FAIR_TABLES : MAX_CLUB_TABLES;
@@ -152,20 +171,20 @@ export function scenesFor(facts: LifeFacts): Scenes {
 
   // Pickup games: afternoons and evenings in fine weather, more at a weekend, few in winter.
   let pickup = 0;
-  if (anyone && fine && (facts.period === 'afternoon' || facts.period === 'evening')) {
-    const keen = (facts.weekend ? 1.5 : 1) * (season === 'winter' ? 0.34 : 1);
+  if (anyone && fine && !exams && (facts.period === 'afternoon' || facts.period === 'evening')) {
+    const keen = (facts.weekend ? 1.5 : 1) * (season === 'winter' ? 0.34 : 1) * (quiet ? 0.34 : 1);
     pickup = Math.min(MAX_PICKUP, Math.round(Math.max(facts.students >= 60 ? 1 : 0, facts.students / STUDENTS_PER_PICKUP) * keen));
   }
 
   // Picnic rugs on a sunny lawn: the afternoon most, a few in the evening, more at a weekend, none in winter.
   let picnics = 0;
   if (anyone && fine && season !== 'winter' && (facts.period === 'afternoon' || facts.period === 'evening')) {
-    const keen = (facts.weekend ? 1.5 : 1) * (facts.period === 'evening' ? 0.5 : 1);
+    const keen = (facts.weekend ? 1.5 : 1) * (facts.period === 'evening' ? 0.5 : 1) * (quiet ? 0.34 : 1);
     picnics = Math.min(MAX_PICNICS, Math.round(Math.max(facts.students >= 60 ? 1 : 0, facts.students / STUDENTS_PER_PICNIC) * keen));
   }
 
   // A busker by the coffee stand in the afternoon and evening of two days in three, when it is fine and not winter.
-  const busker = anyone && fine && season !== 'winter' && (facts.period === 'afternoon' || facts.period === 'evening') && facts.day % 3 !== 0;
+  const busker = anyone && fine && !quiet && season !== 'winter' && (facts.period === 'afternoon' || facts.period === 'evening') && facts.day % 3 !== 0;
 
   return {
     studyGroups: facts.reduced ? Math.min(study, 0.3) : study,
@@ -177,7 +196,11 @@ export function scenesFor(facts: LifeFacts): Scenes {
     sprinklers: !facts.reduced && fine && facts.period === 'morning' && season !== 'winter',
     ripples: !facts.reduced && out,
     wind: facts.reduced ? 0 : WIND[season] * (facts.weather === 'rain' ? 1.3 : 1),
-    windows: WINDOWS[facts.period],
+    // With most students away, most windows are dark.
+    windows: WINDOWS[facts.period] * (quiet ? 0.35 : 1),
+    // A home game: tailgates in the car parks in any weather, more of them at a bigger school, and the band by the stadium.
+    tailgates: gameDay ? Math.min(MAX_TAILGATES, 1 + Math.floor(facts.students / STUDENTS_PER_TAILGATE)) : 0,
+    band: gameDay,
   };
 }
 
@@ -190,6 +213,8 @@ export interface SoundFacts {
   vehiclesInView: number;
   /** True while the busker by the coffee stand is on screen. */
   buskerInView: boolean;
+  /** A home game is being played: 1 with the stadium on screen, a little when it is somewhere off it, 0 with no game. Left out, 0. */
+  stadium?: number;
   /** How far in the map is zoomed: 1 is the size the game opens at. */
   zoom: number;
   period: DayPeriod;
@@ -210,9 +235,11 @@ export interface SoundMix {
   rain: number;
   /** The busker's tune, heard only while they are on screen. */
   busker: number;
+  /** The stadium crowd during a home game: loudest with the stadium on screen. */
+  stadium: number;
 }
 
-export const SILENT: SoundMix = { crowd: 0, traffic: 0, birds: 0, crickets: 0, rain: 0, busker: 0 };
+export const SILENT: SoundMix = { crowd: 0, traffic: 0, birds: 0, crickets: 0, rain: 0, busker: 0, stadium: 0 };
 /** People on screen at which the crowd is as loud as it gets, and vehicles for traffic. */
 export const CROWD_FULL_AT = 70;
 export const TRAFFIC_FULL_AT = 10;
@@ -246,6 +273,7 @@ export function soundMix(facts: SoundFacts): SoundMix {
     crickets: snow ? 0 : CRICKETS[facts.period] * CRICKET_SEASON[season] * (wet ? 0.3 : 1) * (0.6 + 0.4 * near),
     rain: wet ? 0.9 : 0,
     busker: facts.buskerInView ? near : 0,
+    stadium: Math.max(0, Math.min(1, facts.stadium ?? 0)) * near,
   };
 }
 

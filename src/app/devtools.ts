@@ -4,7 +4,7 @@ import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { setCrowdSetting } from './crowd';
-import { foodCampus, lifeCampus, playCampus, unjoinedCampus } from './demoAlive';
+import { foodCampus, footballCampus, lifeCampus, playCampus, unjoinedCampus } from './demoAlive';
 import { session } from './session';
 import { sound } from './sound';
 import { store } from './store';
@@ -314,7 +314,7 @@ function applyViewParams(params: URLSearchParams): void {
       }
     }, 2600);
   }
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather') && !params.has('movein') && !params.has('sound')) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather') && !params.has('movein') && !params.has('sound') && !params.has('storm')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -415,6 +415,8 @@ function applyViewParams(params: URLSearchParams): void {
         const count = Number(params.get('movein')) || 120;
         setTimeout(() => (scene as unknown as { moveInNow?: (count: number) => void }).moveInNow?.(count), 2500);
       }
+      // &storm puts fans on the stadium's field, as after a big home win.
+      if (params.has('storm')) (scene as unknown as { holdStorm?: () => void }).holdStorm?.();
       // &scene=club puts the middle of the view on the first small scene of that kind: club, pickup, busker or boxes.
       const kind = params.get('scene');
       if (kind) {
@@ -537,6 +539,13 @@ export function installDevTools(): void {
     store.adopt(playCampus(Number(params.get('students') ?? 1500)), { ephemeral: true });
   } else if (params.get('demo') === 'food') {
     store.adopt(foodCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
+  } else if (params.get('demo') === 'football') {
+    store.adopt(footballCampus(params.get('at') ?? 'live', Number(params.get('students') ?? 2400), Number(params.get('tier') ?? 2)), { ephemeral: true });
+    // &away=24 then lets that many hours pass at once, so the away list opens as it would after a day away.
+    if (params.has('away')) {
+      clock.skip((Number(params.get('away')) || 24) * 3_600_000);
+      store.catchUp();
+    }
   } else if (params.get('demo') === 'life') {
     store.adopt(lifeCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
   } else if (params.get('demo') === 'unjoined') {

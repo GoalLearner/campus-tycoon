@@ -5,6 +5,7 @@ import {
   dateAt,
   DIVISION_NAMES,
   dollars,
+  dollarsShort,
   duration,
   expectedCrowd,
   fallClassDraw,
@@ -240,16 +241,16 @@ export function footballMoney(state: GameState): FootballMoney | null {
   // What those students pay in a year: tuition, and a room for six in ten.
   const perStudent = b.incomeTotal > 0 && state.cohorts.reduce((total, n) => total + n, 0) > 0 ? ((b.income.find((line) => line.id === 'tuition')?.amount ?? 0) + (b.income.find((line) => line.id === 'rooms')?.amount ?? 0)) / state.cohorts.reduce((total, n) => total + n, 0) : 0;
   const rows = [
-    { name: 'Tickets and stands', amount: dollars(books.tickets) },
-    { name: 'TV and conference deal', amount: dollars(books.tv) },
-    { name: 'Coaches and staff, with benefits', amount: `-${dollars(books.pay + benefits)}` },
-    { name: 'Operations', amount: `-${dollars(books.operations)}` },
+    { name: 'Tickets and stands', amount: dollarsShort(books.tickets) },
+    { name: 'TV and conference deal', amount: dollarsShort(books.tv) },
+    { name: 'Coaches and staff, with benefits', amount: `-${dollarsShort(books.pay + benefits)}` },
+    { name: 'Operations', amount: `-${dollarsShort(books.operations)}` },
   ];
-  if (books.upkeep + books.utilities > 0) rows.push({ name: 'Stadium upkeep and utilities', amount: `-${dollars(books.upkeep + books.utilities)}` });
+  if (books.upkeep + books.utilities > 0) rows.push({ name: 'Stadium upkeep and utilities', amount: `-${dollarsShort(books.upkeep + books.utilities)}` });
   return {
     rows,
-    net: net >= 0 ? `Football earns ${dollars(net)} a year on its own lines.` : `Football costs ${dollars(-net)} a year on its own lines.`,
-    applicants: drew > 0 ? `It also draws about ${people(drew)} applicants to each fall class, who pay about ${dollars(drew * perStudent)} a year between them.` : 'It draws no extra applicants yet: athletic standing is too low.',
+    net: net >= 0 ? `Football earns ${dollarsShort(net)} a year on its own lines.` : `Football costs ${dollarsShort(-net)} a year on its own lines.`,
+    applicants: drew > 0 ? `It also draws about ${people(drew)} applicants to each fall class, who pay about ${dollarsShort(drew * perStudent)} a year between them.` : 'It draws no extra applicants yet: athletic standing is too low.',
   };
 }
 

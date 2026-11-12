@@ -150,7 +150,16 @@ export function newFootball(rng: RngState, field: Field, firstYear: number): Foo
 export function makeCandidates(state: GameState): Coach[] {
   const level = (state.football.coach.rating + teamRating(state).total) / 2;
   const until = state.clock.week.year + CONTRACT_YEARS;
-  return Array.from({ length: COACH_CANDIDATES }, (_, n) => makeCoach(state.rng, level + (n - 1) * (CANDIDATE_SPREAD / 2) + (nextFloat(state.rng, 'football') * 2 - 1) * (CANDIDATE_SPREAD / 2), until));
+  const found: Coach[] = [];
+  for (let n = 0; n < COACH_CANDIDATES; n++) {
+    const rating = level + (n - 1) * (CANDIDATE_SPREAD / 2) + (nextFloat(state.rng, 'football') * 2 - 1) * (CANDIDATE_SPREAD / 2);
+    let coach = makeCoach(state.rng, rating, until);
+    // No two on the list share a first name, with each other or with the coach they would replace.
+    const first = (name: string): string => name.split(' ')[0]!;
+    for (let tries = 0; tries < 6 && [state.football.coach, ...found].some((other) => first(other.name) === first(coach.name)); tries++) coach = makeCoach(state.rng, rating, until);
+    found.push(coach);
+  }
+  return found;
 }
 
 // --------------------------------------------------------------- ratings --

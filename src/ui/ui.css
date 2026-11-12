@@ -1414,15 +1414,16 @@ button.money {
 }
 
 .fb-tab {
-  flex: none;
+  flex: 1 1 auto;
   min-height: 34px;
-  padding: 4px 11px;
+  padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 17px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .fb-tab.active {

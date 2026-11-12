@@ -20,6 +20,11 @@ const RIPPLE_EVERY_MS = 420;
 const RIPPLE_LIFE_MS = 1900;
 /** How many places on each kind of pond a ripple can begin, found once by looking at its picture. */
 const POND_SPOTS = 14;
+/** Drops of rain and flakes of snow in view at once. Light particles, as the design allows for weather (28.3). */
+const RAIN_DROPS = 70;
+const SNOW_FLAKES = 60;
+/** Just under the sheet of night colour, so rain at night is dark too. */
+const WEATHER_DEPTH = 790_000;
 /** The most lawns with a sprinkler on at once, and the dots in each one's spray. */
 const MAX_SPRAYS = 8;
 const SPRAY_DOTS = 7;
@@ -60,6 +65,11 @@ export class Ambient {
   private nextRippleAt = 0;
   private wantRipples = false;
   private wantSprinklers = false;
+  private sky: 'clear' | 'rain' | 'snow' = 'clear';
+  private drops: Phaser.GameObjects.Rectangle[] = [];
+  private flakes: Phaser.GameObjects.Arc[] = [];
+  private haze: Phaser.GameObjects.Rectangle | null = null;
+  private lastMs = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -104,6 +114,44 @@ export class Ambient {
     this.wantSprinklers = sprinklers;
   }
 
+  /** The sky: rain, snow or neither. With Reduce effects on, nothing falls. */
+  setWeather(sky: 'clear' | 'rain' | 'snow', reduced: boolean): void {
+    this.sky = reduced ? 'clear' : sky;
+  }
+
+  /** Rain falls fast and slanted, snow slowly and wandering. Each is a handful of shapes, used again as they leave the view. */
+  private weather(timeMs: number): void {
+    const view = this.scene.cameras.main.worldView;
+    const dt = Math.min(100, Math.max(0, timeMs - this.lastMs)) / 1000;
+    this.lastMs = timeMs;
+    const raining = this.sky === 'rain';
+    const snowing = this.sky === 'snow';
+    while (raining && this.drops.length < RAIN_DROPS) {
+      this.drops.push(this.scene.add.rectangle(view.x + Math.random() * view.width, view.y + Math.random() * view.height, 1.2, 9, 0xd6e6ff, 0.5).setRotation(0.3).setDepth(WEATHER_DEPTH));
+    }
+    while (snowing && this.flakes.length < SNOW_FLAKES) {
+      this.flakes.push(this.scene.add.circle(view.x + Math.random() * view.width, view.y + Math.random() * view.height, 1.5, 0xffffff, 0.85).setDepth(WEATHER_DEPTH));
+    }
+    for (const drop of this.drops) {
+      drop.setVisible(raining);
+      if (!raining) continue;
+      drop.y += 420 * dt;
+      drop.x -= 126 * dt;
+      if (drop.y > view.bottom + 10 || drop.x < view.x - 10) drop.setPosition(view.x + Math.random() * (view.width + 80), view.y - 10 - Math.random() * 40);
+    }
+    this.flakes.forEach((flake, n) => {
+      flake.setVisible(snowing);
+      if (!snowing) return;
+      flake.y += (26 + (n % 7) * 4) * dt;
+      flake.x += Math.sin(timeMs / 900 + n) * 9 * dt;
+      if (flake.y > view.bottom + 6) flake.setPosition(view.x + Math.random() * view.width, view.y - 6);
+      else if (flake.x < view.x - 6 || flake.x > view.right + 6 || flake.y < view.y - 40) flake.setPosition(view.x + Math.random() * view.width, view.y + Math.random() * view.height);
+    });
+    // Snow lies as a faint whiteness over the whole campus. The packs have no snowy ground.
+    if (snowing && !this.haze) this.haze = this.scene.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0.1).setDepth(WEATHER_DEPTH - 1);
+    this.haze?.setVisible(snowing);
+  }
+
   /** Read the ponds, the fountains and the lawns again. */
   setMap(state: GameState): void {
     const { width, height, cells } = state.map;
@@ -129,6 +177,7 @@ export class Ambient {
   }
 
   update(timeMs: number): void {
+    this.weather(timeMs);
     const view = this.scene.cameras.main.worldView;
     const inView = (x: number, y: number): boolean => {
       const at = this.iso.toWorld(x, y);
@@ -199,6 +248,12 @@ export class Ambient {
     for (const ripple of this.ripples) ripple.shape.destroy();
     for (const shape of this.spare) shape.destroy();
     for (const spray of this.sprays) for (const dot of spray.dots) dot.destroy();
+    for (const drop of this.drops) drop.destroy();
+    for (const flake of this.flakes) flake.destroy();
+    this.haze?.destroy();
+    this.drops = [];
+    this.flakes = [];
+    this.haze = null;
     this.ripples = [];
     this.spare = [];
     this.sprays = [];

@@ -79,6 +79,9 @@ const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, ev
 const SIDEWALK = 0.36;
 /** A tour ambles. */
 const TOUR_PACE = 0.6;
+/** On a home game day this share of walkers setting out are going to the stadium, and this many times the usual crowd is out. */
+const FAN_SHARE = 0.65;
+const GAME_DAY_CROWD = 1.5;
 /** How far behind the one in front each member of a tour walks, in milliseconds. */
 const TOUR_GAP_MS = 750;
 
@@ -153,6 +156,8 @@ interface Walker {
   goal: Stop | null;
   offscreenMs: number;
   shownKey: string;
+  /** True while the figure is drawn in the school's colour. */
+  tinted: boolean;
 }
 
 interface Banner {
@@ -233,6 +238,12 @@ export class Walkers {
   /** The part of the player's own day. It sets how many are out and where they go. */
   private period: DayPeriod = 'afternoon';
   private weekend = false;
+  /** The school's colour while a home game is on, laid over the fans walking to it. null on any other day. */
+  private fanTint: number | null = null;
+  /** The share of the usual crowd that is out. */
+  private presence = 1;
+  /** The stadium's gate, when a path reaches the plot. People go there on a home game day only. */
+  private stadiumStop: Stop | null = null;
   /** The crowd step in force: the player's setting, or lower while frames are short. */
   private step = 2;
   /** How much a pennant sways, from 0 for still. */
@@ -256,6 +267,25 @@ export class Walkers {
   }
 
   /** Told by the map: a Saturday or Sunday in the game's calendar is quieter. */
+  /**
+   * A home game day: fans walk to the stadium in the school's colour, and
+   * more people are out. null when no game is on.
+   */
+  setGameDay(tint: number | null): void {
+    this.fanTint = tint;
+  }
+
+  /** The share of the usual crowd that is out: a quarter on a break, fewer in the summer term. */
+  setPresence(share: number): void {
+    this.presence = Math.max(0, Math.min(1, share));
+  }
+
+  /** True while the stadium's gate is on screen. The sound of a game is loudest there. */
+  get stadiumSeen(): boolean {
+    const stop = this.stadiumStop;
+    return !!stop && this.inView(this.scene.cameras.main.worldView, stop.cell.x + 0.5, stop.cell.y + 0.5, 200);
+  }
+
   setWeekend(weekend: boolean): void {
     this.weekend = weekend;
   }
@@ -331,6 +361,7 @@ export class Walkers {
     }
 
     this.stops = [];
+    this.stadiumStop = null;
     this.gates = [];
     this.stopAt.clear();
     for (let y = 0; y < height; y++) {
@@ -369,6 +400,16 @@ export class Walkers {
       // Places to go: not ponds, car parks, bins, the yard, or the offices people are sent from. The
       // Administration building is where staff work: they go there, and students do not.
       if (['water', 'parking', 'bin', 'yard', 'medical', 'safety'].includes(spec.family)) continue;
+      // The stadium is somewhere to go on a home game day only. Its gate is the path cell beside the plot.
+      if (spec.family === 'athletics') {
+        for (let cy = placed.y; cy < placed.y + placed.h && !this.stadiumStop; cy++) {
+          for (let cx = placed.x; cx < placed.x + placed.w && !this.stadiumStop; cx++) {
+            const door = doorOf(cx, cy);
+            if (door >= 0) this.stadiumStop = { kind: 'place', name: 'the stadium', use: 'play', zone: null, cell: { x: cx, y: cy }, door, placedId: placed.id, family: spec.family };
+          }
+        }
+        continue;
+      }
       if (spec.family === 'landmark' && placed.type !== 'admin') continue;
       const use: Use =
         spec.family === 'landmark' ? 'office' : spec.family === 'recreation' ? 'play' : spec.family === 'seat' ? 'seat' : spec.family === 'dining' || spec.family === 'store' ? 'food' : 'other';
@@ -574,6 +615,8 @@ export class Walkers {
    * student only ever goes home to their own dorm.
    */
   private destinationFrom(origin: Stop, student: StudentRef | null): Stop | undefined {
+    // A home game: most of the campus is on its way to the stadium.
+    if (this.fanTint !== null && this.stadiumStop && origin !== this.stadiumStop && Math.random() < FAN_SHARE) return this.stadiumStop;
     const others = this.stops.filter((stop) => stop !== origin);
     const classes = others.filter((stop) => stop.zone === 'academic');
     const quads = others.filter((stop) => stop.kind === 'quad');
@@ -669,7 +712,9 @@ export class Walkers {
       goal: to,
       offscreenMs: 0,
       shownKey: '',
+      tinted: false,
     });
+    sprite.clearTint();
     return true;
   }
 
@@ -698,6 +743,13 @@ export class Walkers {
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((walker.x + walker.y - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
+    // A fan on the way to the game wears the school's colour: the figure itself is tinted, since none has a scarf.
+    const fan = this.fanTint !== null && walker.kind === 'student' && walker.goal === this.stadiumStop;
+    if (fan !== walker.tinted) {
+      walker.tinted = fan;
+      if (fan) walker.sprite.setTint(this.fanTint!);
+      else walker.sprite.clearTint();
+    }
     if (walker.prop) {
       // Beside them: no figure in the pack can hold anything. A pennant moves in the wind.
       const beside = this.iso.toWorld(walker.x + 0.2, walker.y + 0.04);
@@ -1117,7 +1169,9 @@ export class Walkers {
       const x = i % this.width;
       if (this.inView(view, x + 0.5, (i - x) / this.width + 0.5, 0)) visible += 1;
     }
-    return walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, period: this.period, weekend: this.weekend, step: this.step });
+    const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, period: this.period, weekend: this.weekend, step: this.step });
+    // Fewer on a break, half as many again on a home game day, and never an empty campus.
+    return Math.max(Math.min(wanted, 3), Math.round(wanted * this.presence * (this.fanTint !== null ? GAME_DAY_CROWD : 1)));
   }
 
   /** How many walkers are alive. For tests and the dev console. */

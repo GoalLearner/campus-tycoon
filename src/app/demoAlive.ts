@@ -155,6 +155,70 @@ export function lifeCampus(students = 1200): GameState {
 }
 
 /**
+ * Football and the calendar at a chosen moment. `?demo=football&at=live`.
+ *
+ * The life campus with a stadium on its plot beside the east walk, a car park
+ * for tailgates, and a campus big enough to fill it. `at` picks the moment:
+ * gameday (the crowd walking in before the home opener), live (its second
+ * quarter), season (the middle of the fall), finals, break (the winter
+ * break), decisions (the spring, with choices open) and summer.
+ */
+export const FOOTBALL_MOMENTS: Record<string, number> = {
+  gameday: 8 * 60 - 22,
+  live: 8 * 60 + 17,
+  season: 24 * 60 + 9 * 60,
+  rivalry: 2 * 24 * 60 - 20,
+  finals: 2 * 24 * 60 + 6 * 60 + 50,
+  break: 2 * 24 * 60 + 13 * 60,
+  decisions: 5 * 24 * 60 + 45,
+  summer: 6 * 24 * 60 + 5 * 60,
+};
+
+export function footballCampus(at = 'live', students = 2400, tier = 2): GameState {
+  const now = clock.now();
+  const minutes = 15 + (FOOTBALL_MOMENTS[at] ?? FOOTBALL_MOMENTS.live!);
+  const started = now - minutes * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 30_000_000;
+  state = paint(state, 'housing', [[8, 13], [9, 13], [13, 13]]);
+  state = place(state, 'coffee', 18, 15);
+  state = paint(state, 'table', [[22, 15], [22, 16], [22, 18]]);
+  state = paint(state, 'bench', [[13, 16]]);
+  state = paint(state, 'bin', [[19, 15], [23, 18]]);
+  state = place(state, 'pondMedium', 10, 15);
+  state = place(state, 'library', 15, 19);
+  // The stadium plot north of the east walk, with a walk up to its gate and a car park beside it for the tailgates.
+  state = place(state, 'stadium', 25, 12);
+  state = paint(state, 'path', [...rowBetween([24, 14], [28, 14]), ...rowBetween([24, 15], [24, 16])]);
+  state = place(state, 'parking', 28, 15);
+  state = paint(state, 'road', rowBetween([30, 15], [31, 15]));
+  // The first class moves in, and then the campus is given its size and its team a following.
+  state = advance(state, started, started + 16 * 60_000).state;
+  state = structuredClone(state);
+  const year = Math.round(students / 4);
+  const fill = (): void => {
+    state.cohorts = [students - year * 3, year, year, year];
+  };
+  fill();
+  state.football.standing = 55;
+  state.football.stadium.tier = tier;
+  // The next tier is earned, the coach is in the last year of a contract and the TV deal is up: the spring has all three to decide.
+  state.football.stadium.earned = tier + 1;
+  state.football.coach.until = 1;
+  state.football.tv = { perYear: 500_000, until: 1 };
+  state.stats.graduates = 6000;
+  // Through the year a campus this small in beds would shrink at each semester's end: it is kept full, day by day.
+  for (let t = started + 16 * 60_000; t < now; t += 6 * 3_600_000) {
+    state = structuredClone(advance(state, state.clock.lastSimulatedAt, Math.min(now, t + 6 * 3_600_000)).state);
+    fill();
+  }
+  state = structuredClone(advance(state, state.clock.lastSimulatedAt, now).state);
+  fill();
+  state.money.ratesDirty = true;
+  return advance(state, state.clock.lastSimulatedAt, now).state;
+}
+
+/**
  * A campus the town cannot get into: no walk to College Avenue and no parking.
  * `?demo=unjoined`. The map says so at its edge.
  */

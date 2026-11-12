@@ -1268,11 +1268,11 @@ export function mountUi(root: HTMLElement): void {
       }
       card.append(list);
       // The calendar's one line beside the four causes: exams, a break, the weather.
-      for (const part of view.week) {
+      view.week.forEach((part, n) => {
         const line = el('div', 'cause week');
-        line.append(el('span', 'cause-name', 'This week'), el('span', 'week-label', part.label), el('span', 'cause-value', part.points));
+        line.append(el('span', 'cause-name', n === 0 ? 'This week' : ''), el('span', 'week-label', part.label), el('span', 'cause-value', part.points));
         card.append(line);
-      }
+      });
       const stress = el('div', 'cause');
       const stressBar = el('div', 'cause-bar');
       const stressFill = el('div', 'cause-fill stress');
