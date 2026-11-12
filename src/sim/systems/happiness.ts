@@ -6,7 +6,8 @@ import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
-import { fedAt, recreationAt } from './placed';
+import { fedAt } from './placed';
+import { recreationAt } from './play';
 
 /**
  * Happiness: how students feel about the school. In the code the number is
@@ -105,7 +106,7 @@ export function approvalAt(state: GameState, cell: number): Approval {
   felt.push({ id: 'clean', level: cleanAt(state, x, y) });
   felt.push({ id: 'seating', level: seatingAt(state, x, y) });
   felt.push({ id: 'dining', level: fedAt(map, x, y) ? 1 : 0 });
-  felt.push({ id: 'recreation', level: recreationAt(map, x, y) });
+  felt.push({ id: 'recreation', level: recreationAt(state, x, y) });
   // Medical Center and Campus Safety coverage are read together, as one level.
   felt.push({ id: 'safety', level: safetyAt(state, x, y) });
   const causes = gathered(felt);

@@ -137,13 +137,6 @@ export function fedAt(map: MapState, x: number, y: number): boolean {
   return inReach(map, 'dining', x, y).length > 0;
 }
 
-/** How much there is to do near a spot, 0 to 1. Every recreation building in reach adds its share, up to one cap. */
-export function recreationAt(map: MapState, x: number, y: number): number {
-  let sum = 0;
-  for (const placed of inReach(map, 'recreation', x, y)) sum += PLACED[placed.type].strength;
-  return Math.min(1, sum);
-}
-
 /** Points of desirability a library adds to an Academic lot here. The best one in reach counts, fading with distance. */
 export function libraryLift(map: MapState, x: number, y: number): number {
   let best = 0;

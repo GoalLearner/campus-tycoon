@@ -7,6 +7,8 @@ import {
   isMessSpot,
   BENEFITS_SHARE,
   BROKE_BY,
+  playLine,
+  playUse,
   budget,
   utilitiesOf,
   WAGE_PER_YEAR,
@@ -157,7 +159,8 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'recreation': {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
-      return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.`;
+      const use = playUse(state, placed);
+      return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.${use ? ` ${playLine(use)}` : ''}`;
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
@@ -335,7 +338,7 @@ export const CAUSE_FIXES = PART_FIX;
 export function lotFacts(state: GameState, x: number, y: number): string[] {
   const facts: string[] = [];
   facts.push(fedAt(state.map, x, y) ? 'Dining in reach' : 'No dining in reach');
-  const fun = recreationAt(state.map, x, y);
+  const fun = recreationAt(state, x, y);
   facts.push(fun > 0 ? `Things to do ${Math.round(fun * 100)}%` : 'Nothing to do nearby');
   return facts;
 }

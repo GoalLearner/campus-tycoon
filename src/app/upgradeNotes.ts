@@ -24,5 +24,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion === 7) {
     notes.push('Changed: a Facilities Yard now reaches 12 cells instead of 8, and its workers mend a broken bin before they sweep. Tap a broken street lamp to see what broke it and when it will be fixed.');
   }
+  if (fromVersion < 10) {
+    notes.push('New: a court, a field, a pool, the track and the gym each hold so many students at once. Where one is crowded, students wait their turn and Happiness there can dip a little. Tap it to see how busy it is. A second one nearby clears the line.');
+  }
   return notes;
 }
