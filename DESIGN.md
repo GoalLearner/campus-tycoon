@@ -4715,7 +4715,7 @@ No difference that can be told from the spread between runs.
 
 | Rough | Why |
 |---|---|
-| Two cars passing in opposite lanes still brush | The pack's cars are wider than half its road |
+| Two cars passing in opposite lanes still brush | The pack's cars are wider than half its road. **The owner's decision, 2026-11-12:** asked whether to draw the cars a little smaller so that they stop brushing, he said "Leave them". The cars keep their size, and it is not to be raised with him again |
 | The stop sign is a plain red disc | It is the pack's sign as drawn. It has no word on it |
 | Fifteen crossings on the avenue | One to each side of every junction. It is orderly and a little busy to look at |
 | A car stops and starts in an instant | There is no slowing down or pulling away |
