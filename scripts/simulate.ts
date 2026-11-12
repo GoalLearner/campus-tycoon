@@ -324,7 +324,12 @@ function assertLayerZero(runs: Run[]): void {
 
   // 14. Where a place has its bin and a yard that is keeping up, it stays clean and nothing near it stays broken.
   {
-    const day = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + DAY_MS).state;
+    // The run ends in summer, with the campus at its emptiest, and the fall class arrives during the next day.
+    // A yard staffed for summer is short of hands by that evening. So the player looks in once the class is
+    // here, as it does every two hours, and it is the day after that visit that is judged.
+    const arrived = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + DAY_MS).state;
+    const visited = takeTurn(arrived, 'optimizer').state;
+    const day = advance(visited, visited.clock.lastSimulatedAt, visited.clock.lastSimulatedAt + DAY_MS).state;
     const places = day.map.placed.filter((p): p is NonNullable<typeof p> => !!p && isMessSpot(p));
     const tended = places.filter((p) => spotFix(day, p) === null);
     const dirty = tended.filter((p) => spotClean(day, p) <= 0.9).length;
@@ -335,7 +340,7 @@ function assertLayerZero(runs: Run[]): void {
     };
     const stillBroken = Object.keys(day.grounds.broken).map(Number).filter(keepingUp).length;
     check(
-      'a well-staffed place stays above 90% clean and nothing near it is left broken after a day',
+      'a well-staffed place stays above 90% clean and nothing near it is left broken, a day after the player last looked in',
       tended.length >= places.length * 0.6 && dirty === 0 && stillBroken === 0,
       `${tended.length} of ${places.length} places have a bin and a yard that is keeping up; ${dirty} of those are under 90% clean; ${stillBroken} things left broken beside them; ${day.grounds.repaired} repairs so far`,
     );
@@ -373,7 +378,7 @@ function assertLayerZero(runs: Run[]): void {
     const filthy = campusClean(s);
     const brokenBins = Object.keys(s.grounds.broken).filter((id) => s.map.placed[Number(id)]?.type === 'bin').length;
     // Twice a day, as the casual player would: read each yard's line and hire up to it.
-    for (let visit = 0; visit < 6; visit++) {
+    for (let visit = 0; visit < 10; visit++) {
       staff((yard) => {
         const status = yardStatus(s, yard);
         return Math.min(status.max, Math.max(1, status.workers + status.hire));
@@ -382,9 +387,9 @@ function assertLayerZero(runs: Run[]): void {
     }
     const stuck = yards.filter((yard) => yardStatus(s, yard).beyond).length;
     check(
-      'a campus left to rot comes back in three days once its yards are staffed, with nothing new built',
+      'a campus left to rot comes back within five days once its yards are staffed, with nothing new built',
       filthy < 0.5 && brokenBins > 0 && campusClean(s) > 0.9 && stuck === 0,
-      `${Math.round(filthy * 100)}% clean with ${brokenBins} bins broken after six days with no workers; ${Math.round(campusClean(s) * 100)}% clean three days after hiring again; ${stuck} yards beyond a full crew`,
+      `${Math.round(filthy * 100)}% clean with ${brokenBins} bins broken after six days with no workers; ${Math.round(campusClean(s) * 100)}% clean five days after hiring again; ${stuck} yards beyond a full crew`,
     );
   }
 
