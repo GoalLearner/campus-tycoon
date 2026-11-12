@@ -18,6 +18,7 @@ import {
   cleanAt,
   COST,
   DIRT_AT_CEILING,
+  DIRT_INVITES,
   enrollment,
   FIX_WORK,
   fixText,
@@ -166,8 +167,10 @@ describe('workers', () => {
     };
     const one = checksToClear(1);
     const two = checksToClear(2);
-    expect(one).toBe(Math.ceil(LITTER_CEILING / WORK_PER_WORKER));
-    expect(two).toBe(Math.ceil(LITTER_CEILING / (2 * WORK_PER_WORKER)));
+    // Deep litter goes faster than the plain sum of a worker's 2.2 a check: half again as fast at the ceiling.
+    expect(one).toBeLessThan(Math.ceil(LITTER_CEILING / WORK_PER_WORKER));
+    expect(one).toBeGreaterThan(Math.ceil(LITTER_CEILING / (WORK_PER_WORKER * (1 + DIRT_INVITES))));
+    expect(Math.abs(two - one / 2)).toBeLessThanOrEqual(1);
     expect(staff(mess, 0).grounds.workers[yard(mess).id]).toBe(0);
   });
 
@@ -179,7 +182,7 @@ describe('workers', () => {
     expect(spotFix(state, dining(state))).toBe('noBin');
     const short = run(state, 2 * 24 * 60).state;
     // It sits at its ceiling, less the little one worker sweeps at each check.
-    expect(litter(short)).toBeGreaterThanOrEqual(LITTER_CEILING - WORK_PER_WORKER - 1e-9);
+    expect(litter(short)).toBeGreaterThanOrEqual(LITTER_CEILING - WORK_PER_WORKER * (1 + DIRT_INVITES) - 1e-9);
 
     // With its bins back one worker is enough, and the yard says so.
     state = act(state, { type: 'paint', tool: 'bin', cells: [[9, 12], [12, 12]] });

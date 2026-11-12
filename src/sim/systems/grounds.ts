@@ -305,9 +305,13 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
       mySpots.sort((x, y) => g.litter[y.id]! - g.litter[x.id]! || x.id - y.id);
       for (const spot of mySpots) {
         if (work <= 0) break;
-        const swept = Math.min(work, g.litter[spot.id]!);
-        g.litter[spot.id] = g.litter[spot.id]! - swept;
-        work -= swept;
+        // Deep litter is quicker to clear, piece for piece: by as much as a filthy place draws more of it.
+        // So a crew that can keep its places clean can also win them back, however bad they got.
+        const lying = g.litter[spot.id]!;
+        const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
+        const swept = Math.min(work * pace, lying);
+        g.litter[spot.id] = lying - swept;
+        work -= swept / pace;
       }
     }
     // The other broken things in the circle, and broken lamps under it.
@@ -566,10 +570,13 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   for (const placed of state.map.placed) {
     if (!placed || state.map.care.yard[placed.id] !== yard.id) continue;
     if (isMessSpot(placed)) {
+      // A filthy place draws more litter, and a worker clears deep litter faster by the same measure, so
+      // the two cancel: what a place asks of its yard is what it asks when clean, plus the backlog.
       const lying = state.grounds.litter[placed.id] ?? 0;
-      const drawn = upkeepOf(state, placed) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
+      const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
+      const drawn = upkeepOf(state, placed);
       falling += drawn;
-      need += drawn + lying / CLEAR_WITHIN_CHECKS;
+      need += drawn + lying / pace / CLEAR_WITHIN_CHECKS;
     }
     need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
   }

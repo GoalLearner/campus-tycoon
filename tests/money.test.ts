@@ -45,6 +45,7 @@ import {
   type LogEntry,
 } from '../src/sim';
 import { dailyCashCheck, recomputeRates } from '../src/sim/systems/money';
+import { buildEntries, moneyView, placedFacts, placedSummary } from '../src/ui/buildUi';
 import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
 
 function act(state: GameState, action: Action): GameState {
@@ -360,5 +361,88 @@ describe('a save from before these costs', () => {
     log.push(...final.log);
     expect(final.state.money).toEqual(once.state.money);
     expect(log.filter((entry) => entry.kind === 'costs')).toEqual(once.log.filter((entry) => entry.kind === 'costs'));
+  });
+});
+
+describe('the Money panel, in words', () => {
+  it('leads with how much of every $100 is kept', () => {
+    expect(moneyView(campus(0)).lead).toBe('No money comes in until the first class arrives.');
+    const healthy = moneyView(campus(1000));
+    expect(healthy.lead).toMatch(/^You keep \$\d+ of every \$100 that comes in\.$/);
+    expect(healthy.lead).toBe('You keep $' + Math.round(budget(campus(1000)).kept) + ' of every $100 that comes in.');
+    // Five students in buildings put up for sixty: the campus runs at a loss, and the panel says by how much.
+    const thin = campus(5);
+    expect(budget(thin).kept).toBeLessThan(0);
+    expect(moneyView(thin).lead).toMatch(/^You spend \$\d+ more than every \$100 that comes in\.$/);
+  });
+
+  it('lists income, then spending in groups that open to their lines, largest first', () => {
+    const state = act(campus(1000), { type: 'place', building: 'medical', x: 14, y: 10 });
+    const view = moneyView(state);
+    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees']);
+    expect(view.income[0]).toEqual({ name: 'Tuition', detail: '1,000 students at $8,200', amount: '$8.2M' });
+    expect(view.groups[0]!.name).toBe('Payroll');
+    expect(view.groups.map((group) => group.name).sort()).toEqual(['Buildings and utilities', 'Other', 'Payroll']);
+    for (const group of view.groups) {
+      expect(group.share).toMatch(/^\d+%$/);
+      expect(group.lines.length).toBeGreaterThan(0);
+    }
+    const payroll = view.groups[0]!.lines.map((row) => row.name);
+    expect(payroll).toEqual(expect.arrayContaining(['Faculty', 'Staff', 'Safety and medical staff', 'Benefits']));
+    expect(view.groups[0]!.lines.find((row) => row.name === 'Faculty')!.detail).toBe('50 members at $58,000, one for every 20 students');
+    expect(view.phase).toBeNull();
+  });
+
+  it('says what marketing is doing and what the endowment earns, and offers only part of the cash to pay in', () => {
+    const state = campus(1000);
+    expect(moneyView(state).marketing).toEqual({ step: 0, max: 4, line: 'Off. Each step brings more applications: 5, 9, 12, then 14%.' });
+    const on = act(state, { type: 'marketing', step: 2 });
+    expect(moneyView(on).marketing.line).toBe('Step 2 of 4 · 9% more applications · $120K a year');
+    expect(moneyView(state).endowment.line).toBe('Nothing yet. Cash paid in earns 2% a year for good.');
+    // $10M in hand: a tenth and a quarter are offered, never all of it.
+    expect(moneyView(state).endowment.payIn).toEqual([1_000_000, 2_500_000]);
+    const paid = act(state, { type: 'endow', amount: 2_500_000 });
+    expect(moneyView(paid).endowment.line).toBe('$2.5M · earns $50K a year');
+    // With almost nothing in hand there is nothing to offer.
+    const broke = structuredClone(state);
+    broke.money.cash = 30_000;
+    expect(moneyView(broke).endowment.payIn).toEqual([]);
+  });
+
+  it('says which step of seven an older save has reached and where its spending will settle', () => {
+    const text = readFileSync(join(__dirname, 'fixtures', 'save-v8-mature.json'), 'utf8');
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    const later = advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + 2 * DAY).state;
+    expect(moneyView(later).phase).toMatch(/^New running costs are coming in over 7 days\. This is step 2 of 7: you pay \$\d+M this year, and about \$\d+M once they are all in\.$/);
+  });
+});
+
+describe('what a building costs to run, on its card', () => {
+  it('shows a Medical Center its staff, and every building its upkeep and utilities', () => {
+    const state = act(campus(3000), { type: 'place', building: 'medical', x: 14, y: 10 });
+    const medical = state.map.placed.find((p) => p?.type === 'medical')!;
+    const staff = careStaffAt(state, medical);
+    const pay = (staff * CARE_STAFF_PAY * (1 + BENEFITS_SHARE)).toLocaleString('en-US');
+    expect(placedFacts(state, medical)).toBe('Staff of ' + staff + ': $' + pay + ' a year with benefits · Upkeep and utilities $15,000 a year · The Clear tool removes it');
+    const dining = state.map.placed.find((p) => p?.type === 'dining')!;
+    expect(placedFacts(state, dining)).toBe('Upkeep and utilities $9,000 a year · The Clear tool removes it');
+    const bin = state.map.placed.find((p) => p?.type === 'bin')!;
+    expect(placedFacts(state, bin)).toBe('Costs nothing to run · The Clear tool removes it');
+  });
+
+  it('shows a yard what its workers cost with benefits', () => {
+    const state = act(campus(500), { type: 'place', building: 'yard', x: 6, y: 11 });
+    const yard = state.map.placed.find((p) => p?.type === 'yard')!;
+    expect(placedSummary(state, yard)).toMatch(/^1 of 6 workers\. .* Wages and benefits \$62,400 a year\.$/);
+  });
+
+  it('says on the Build menu what a building will cost to run before it is bought', () => {
+    const cards = buildEntries();
+    const line = (name: string): string => cards.find((card) => card.name === name)!.upkeep;
+    expect(line('Medical Center')).toBe('Runs at $15K a year, plus staff from $55K');
+    expect(line('Facilities Yard')).toBe('Runs at $3.0K a year, plus $62K a worker');
+    expect(line('Gym')).toBe('Runs at $8.0K a year');
+    expect(line('Small pond')).toBe('Costs nothing to run');
   });
 });

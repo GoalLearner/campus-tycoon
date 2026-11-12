@@ -386,7 +386,9 @@ function wantsFromMenu(state: GameState): Array<{ type: PlacedType; x: number; y
   for (const b of state.map.buildings) {
     if (hungry >= 3) break;
     if (b && b.zone === 'housing' && b.stage === 1 && !fedAt(state.map, b.x, b.y)) {
-      wants.push({ type: state.money.cash > 150_000 ? 'dining' : 'coffee', x: b.x, y: b.y });
+      // A dining hall feeds four times the ground a coffee stand does and takes two cells. A campus that
+      // only ever buys the stand ends up with dozens of them where its Medical Centers should have gone.
+      wants.push({ type: state.money.cash >= PLACED.dining.cost + 20_000 ? 'dining' : 'coffee', x: b.x, y: b.y });
       hungry += 1;
     }
   }
@@ -468,6 +470,21 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   let purchases = 0;
   let blockedByCash = false;
 
+  // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a
+  // Medical Center, and by the time it stopped growing the ground for one would be gone. It buys what the
+  // Happiness panel asks for first, and if it cannot afford the next of those it holds that price back from
+  // this visit's zoning: saving up. The other players are held back by how much they do in a visit, not by
+  // cash, so they shop for these after zoning, as before.
+  let lotReserve = reserve;
+  if (style === 'optimizer') {
+    const first = buildFromMenu(current, reserve, 4);
+    current = first.state;
+    purchases += first.built;
+    const waiting = wantsFromMenu(current).filter((want) => menuSpot(current, want.type, want.x, want.y) !== null);
+    // Hold back the dearest of them, so a Campus Safety office is not for ever outbid by a coffee stand.
+    if (waiting.length > 0) lotReserve += Math.max(...waiting.map((want) => (want.type === 'coffee' ? PLACED.dining.cost : PLACED[want.type].cost)));
+  }
+
   while (purchases < maxPurchases) {
     const zone = neediestZone(current);
     if (!zone) break;
@@ -476,17 +493,17 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     let next: GameState | null;
     if (spots.length === 0) {
       const stretch = nextPathStretch(current);
-      if (stretch) next = tryPaint(current, 'path', stretch, reserve);
+      if (stretch) next = tryPaint(current, 'path', stretch, lotReserve);
       else {
         // Out of room on the land the campus has: buy the next field.
         const land = nextLand(current);
         if (land === null) break;
-        const bought = current.money.cash - current.map.parcels[land]!.price >= reserve ? applyAction(current, { type: 'buyLand', parcel: land }) : null;
+        const bought = current.money.cash - current.map.parcels[land]!.price >= lotReserve ? applyAction(current, { type: 'buyLand', parcel: land }) : null;
         next = bought?.ok ? bought.state : null;
       }
     } else {
       const spot = spots[0]!;
-      next = tryPaint(current, isQuadSpot(spot) ? 'quad' : zone, [spot], reserve);
+      next = tryPaint(current, isQuadSpot(spot) ? 'quad' : zone, [spot], lotReserve);
     }
     if (!next) {
       blockedByCash = true;

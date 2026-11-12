@@ -207,7 +207,10 @@ function groundsCampus(): GameState {
   }
   if (farBin && (state.map.care.yard[farBin.id] ?? -1) >= 0) state.grounds.bins[farBin.id] = 31;
   const benches = state.map.placed.filter((placed) => placed?.type === 'bench' && (state.map.care.yard[placed.id] ?? -1) < 0);
-  if (benches[0]) state.grounds.broken[benches[0].id] = 3.3;
+  if (benches[0]) {
+    state.grounds.broken[benches[0].id] = 3.3;
+    if (shop) state.grounds.brokenFrom[benches[0].id] = { spot: shop.id, line: 0 };
+  }
   // Two broken street lamps: one a worker will reach, and one no yard covers. &select=lamp and &select=lamp2 open them.
   const breakLampBy = (spot: { id: number; x: number; y: number } | null, line: number): void => {
     if (!spot) return;
@@ -269,6 +272,7 @@ interface DevScene {
  *   &card=unhappy     the least happy student in sight
  *   &place=gym,11,11  begin placing a building with its ghost at a cell
  *   &panel=happiness  open the Happiness panel
+ *   &panel=money      open the Money panel; &group=payroll opens one of its groups
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -284,6 +288,14 @@ function applyViewParams(params: URLSearchParams): void {
   const incident = params.get('incident');
   const select = params.get('select')?.split(',').map(Number);
   if (select && select.length === 2 && select.every(Number.isFinite)) setTimeout(() => session.select(select[0]!, select[1]!), 2600);
+  // &select=broken opens the first broken bin, bench or table.
+  if (params.get('select') === 'broken') {
+    setTimeout(() => {
+      const id = Number(Object.keys(store.state.grounds.broken)[0]);
+      const thing = Number.isFinite(id) ? store.state.map.placed[id] : null;
+      if (thing) session.focusOn(thing.x, thing.y);
+    }, 2600);
+  }
   // &select=lamp opens a broken street lamp a yard covers, and &select=lamp2 one that none does.
   const lampPick = params.get('select');
   if (lampPick === 'lamp' || lampPick === 'lamp2') {
@@ -381,6 +393,19 @@ function applyViewParams(params: URLSearchParams): void {
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       // &panel=plan opens the room plan as a tap on the Housing bar would.
       if (panel === 'plan') setTimeout(() => document.querySelector<HTMLElement>('.bars .bar')?.click(), 1400);
+      // &panel=money opens the Money panel as a tap on the cash figure would, and &group=payroll opens one of its groups.
+      if (panel === 'money') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('button.money')?.click(), 1400);
+        const group = params.get('group');
+        if (group) {
+          setTimeout(() => {
+            const order = ['payroll', 'buildings', 'other'];
+            const heads = [...document.querySelectorAll<HTMLButtonElement>('.money-group')];
+            const names: Record<string, string> = { payroll: 'Payroll', buildings: 'Buildings', other: 'Other' };
+            (heads.find((head) => head.textContent?.startsWith(names[group] ?? '')) ?? heads[order.indexOf(group)])?.click();
+          }, 1900);
+        }
+      }
       // &tool=road puts the road tool in hand, and &overlay=parking shows the Parking overlay.
       if (params.get('tool') === 'road') setTimeout(() => session.setTool('road'), 1400);
       const overlay = params.get('overlay');
