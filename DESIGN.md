@@ -3631,3 +3631,32 @@ Left out, because the game has nothing for them yet: the theatres and the music 
 | The arena, ballpark and tennis centre | The stadium plot, recreation fields and courts stand for them | Wait until those sports exist |
 | How full it opens | Nine tenths full, second-stage buildings | A half-built campus to finish |
 | The stadium | An empty plot, as the first goal | A first-tier stadium already standing |
+
+### 35.7 Its size: 46,000 students
+
+Asked for by the owner on 2026-11-12, while the model campus was being built: "I want it to simulate 46,000 students." As first laid it held about 1,400 classroom seats and opened with about 1,260 students.
+
+| Decision | Why |
+|---|---|
+| The model campus opens with 46,000 students, in all four class years | His instruction |
+| It gets there by a **campus scale**: one whole number, kept in the save, that says how many of the small game's students each bed, seat, parking space, place to play and town house stands for. It is 1 for every other campus and about 37 here | The land is 32 cells by 48. Even the six stages of 6.2 would hold about 14,000 on the lots this layout has. Each hall here stands for one of the reference's big ones, which is true to the reference: about thirty lecture buildings for a school of that size |
+| Everything counted in heads or tied to a building is multiplied by it: beds and seats, places at the gym and the fields, parking spaces, town places, stadium seats, the applicant pool and its ceiling, what a bin holds and what a worker clears, and every price, upkeep and utility bill | A campus at scale 37 then behaves like the tuned small game with every count 37 times larger. Its balance is inherited and is not tuned a second time |
+| Nothing counted for each student changes: tuition, cost per student, staff ratios, Happiness, desirability, reach in cells, and every timer | They follow enrollment already |
+| Students are still counted by class year and never one by one (section 13). Catch-up costs the same at 46,000 as at 400 | The phone |
+| On screen a sample of them walks about, as it always has. The crowd limits and the frame budget of section 33 do not move | No phone draws 46,000 figures |
+| Numbers this large are written short where space is tight | Simple screens |
+| An existing save has a scale of 1 and does not change | The scale belongs to how a campus began |
+
+Anything with a head count written into a rule is checked one by one when this is built, and each is either scaled or left alone on purpose, with the list kept here: the founding class, the pool ceiling, the size rungs, stadium tiers and gate, incidents, alumni and gifts.
+
+**Chosen:** a campus scale. **The alternatives:** build the medium and high density tiers of 6.2 and pack the land with about 200 lots, which needs new building art for four stages and stops following the reference's layout; or the 80 by 80 map, which is several stops.
+
+Tests, added to 35.5:
+
+- The model campus opens with exactly 46,000 students, and that is about nine tenths of its seats.
+- The same campus run for five years at scale 1 and at its own scale ends with enrollment, cash and a year's spending in the same proportion, within a few percent [T].
+- Every earlier test passes unchanged at scale 1.
+- Thirty days of catch-up at 46,000 students stays inside one second.
+- No screen shows a number too long for its place at this size.
+
+For section 26, art to fix before release: the model campus's halls are drawn at the low tier's size though each counts for a far larger building. Taller halls come with the density tiers.
