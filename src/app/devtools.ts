@@ -393,6 +393,13 @@ function applyViewParams(params: URLSearchParams): void {
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       // &panel=plan opens the room plan as a tap on the Housing bar would.
       if (panel === 'plan') setTimeout(() => document.querySelector<HTMLElement>('.bars .bar')?.click(), 1400);
+      // &phone=375x667 lays the interface out in a box of that size at the top left, for a screenshot of a
+      // panel on a phone narrower than a desktop browser window can be made.
+      const phone = params.get('phone')?.split('x').map(Number);
+      if (phone && phone.length === 2 && phone.every((n) => Number.isFinite(n) && n > 0)) {
+        const ui = document.getElementById('ui');
+        if (ui) Object.assign(ui.style, { width: `${phone[0]}px`, height: `${phone[1]}px`, right: 'auto', bottom: 'auto', transform: 'translateZ(0)', overflow: 'hidden' });
+      }
       // &panel=money opens the Money panel as a tap on the cash figure would, and &group=payroll opens one of its groups.
       if (panel === 'money') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('button.money')?.click(), 1400);
