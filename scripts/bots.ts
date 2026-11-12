@@ -244,7 +244,8 @@ function tendGrounds(state: GameState, reserve: number, most: number): { state: 
       }
       // No yard in reach, or the one in reach is full and still short of hands: build one where it covers the most.
       const yardId = current.map.care.yard[spot.id] ?? -1;
-      const full = fix === 'understaffed' && yardId >= 0 && workersAt(current, yardId) >= YARD_MAX_WORKERS;
+      const over = yardId >= 0 ? current.map.placed[yardId] : null;
+      const full = fix === 'understaffed' && !!over && workersAt(current, yardId) >= YARD_MAX_WORKERS && yardStatus(current, over).beyond;
       if (fix === 'noYard' || full) {
         if (current.money.cash - PLACED.yard.cost < reserve) continue;
         const at = yardSpot(current, spot, full);

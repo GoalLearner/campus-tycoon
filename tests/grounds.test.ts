@@ -186,6 +186,18 @@ describe('workers', () => {
     expect(spotFix(staff(state, 0), dining(state))).toBe('noWorkers');
   });
 
+  it('ask for another yard only when a full crew could never hold the place, not for a backlog', () => {
+    const state = withYard(busy());
+    const now = yardStatus(state, yard(state));
+    expect(now.beyond).toBe(false);
+    const full = { ...now, workers: YARD_MAX_WORKERS, supply: YARD_MAX_WORKERS * WORK_PER_WORKER, need: 10, hire: 1 };
+    expect(yardLine({ ...full, beyond: false })).toBe('Full crew, catching up.');
+    expect(yardLine({ ...full, beyond: true })).toBe('Understaffed, and full. Build another yard near the busiest places.');
+    const room = { ...now, workers: 3, supply: 3 * WORK_PER_WORKER, need: 12, hire: 3 };
+    expect(yardLine({ ...room, beyond: false })).toBe('Understaffed: hire 1 more.');
+    expect(yardLine({ ...room, beyond: true })).toBe('Understaffed: hire 1 more, and build another yard.');
+  });
+
   it('are paid a wage, and a yard holds no more than four', () => {
     let state = withYard(busy());
     expect(state.grounds.workers[yard(state).id]).toBe(1);

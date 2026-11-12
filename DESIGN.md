@@ -2486,7 +2486,7 @@ Play stop 4a, 2026-11-11. Everything in 29.2 to 29.7 is built except what is lis
 | Paths | Lots outside a staffed yard's circle are never above 85% clean. Inside one the paths are swept |
 | The yard | 2 by 1, $60,000, a circle of eight cells, one worker to start and four at most, $6,000 a year each. Its card has a minus and a plus |
 | A worker | Clears 2.2 at each check: bins more than half full first, fullest first, then the dirtiest spot, then what is broken, then the other bins. That is about two busy places with bins, or half of one without |
-| What a yard says | "Keeping up", or "Understaffed: hire 2 more", from the work its places ask for against what its workers can do. The work counts the litter already lying there and anything broken: a yard is keeping up only if its circle would be clean within about a day |
+| What a yard says | "Keeping up", or "Understaffed: hire 2 more", from the work its places ask for against what its workers can do. The work counts the litter already lying there and anything broken: a yard is keeping up only if its circle would be clean within about a day. A yard with all four workers and a backlog says "Full crew, catching up". It asks for another yard only when more falls at each check than four workers clear, which no amount of waiting fixes |
 | Seating | Benches and picnic tables within three cells, and quad cells. A broken one seats nobody. A table near a dining building or an Academic lot adds two spots to social life |
 | Grounds | The cause that was Green space. Green space counts half, cleanliness three tenths and seating two tenths. The part with the most to gain is the one the panel names |
 | Breakage | Above seven tenths of the ceiling, about one chance in 25 at each check for a campus of middling happiness, a quarter of that inside a Campus Safety circle, and at most one thing a day at a spot. A bin, bench, table or street lamp within four cells |
@@ -2508,7 +2508,7 @@ Play stop 4a, 2026-11-11. Everything in 29.2 to 29.7 is built except what is lis
 
 **Simulate checks added:** an untended campus gets messy, loses a few points, and is the same at year five as at year twenty; a well-staffed campus stays above 90% clean with nothing left broken after a day; a place with a bin and a yard that is keeping up stays above 90% clean, with nothing near it left broken after a day; the casual player's grounds stay a small job (bins no more than one and a half for each place, wages under 5% of income).
 
-**One target is missed.** 29.10 hoped for one yard for every six to eight places. The casual test player needed one for about every two and a half, because places are spread across the campus and a circle of eight cells reaches only so far. Put to the owner on 2026-11-11: widen the circle, or drop the target.
+**One target is missed.** 29.10 hoped for one yard for every six to eight places. The casual test player needed one for about every two, because places are spread across the campus and a circle of eight cells reaches only so far. Put to the owner on 2026-11-11: widen the circle, or drop the target.
 
 ---
 

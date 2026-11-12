@@ -452,6 +452,13 @@ export interface YardStatus {
   supply: number;
   /** Workers to hire for it to keep up. 0 when it does. It may be more than the yard can hold. */
   hire: number;
+  /**
+   * True when even a full crew could not hold its places where they are: what
+   * falls at each check is more than four workers clear. Only then is another
+   * yard the answer. A full crew working through a backlog needs time, not a
+   * second yard.
+   */
+  beyond: boolean;
   wagesPerYear: number;
 }
 
@@ -467,17 +474,22 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   // What its places ask for at each check, as they are now: a dirty place draws more litter, and what is
   // already lying there, or broken, has to be cleared within about a day for the yard to count as keeping up.
   let need = 0;
+  // What falls at each check, without the backlog: the part no amount of waiting clears.
+  let falling = 0;
   for (const placed of state.map.placed) {
     if (!placed || state.map.care.yard[placed.id] !== yard.id) continue;
     if (isMessSpot(placed)) {
       const lying = state.grounds.litter[placed.id] ?? 0;
-      need += upkeepOf(state, placed) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING) + lying / CLEAR_WITHIN_CHECKS;
+      const drawn = upkeepOf(state, placed) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
+      falling += drawn;
+      need += drawn + lying / CLEAR_WITHIN_CHECKS;
     }
     need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
   }
   const supply = workers * WORK_PER_WORKER;
   const hire = need > supply + 1e-9 ? Math.ceil((need - supply) / WORK_PER_WORKER - 1e-9) : 0;
-  return { workers, max: YARD_MAX_WORKERS, need, supply, hire, wagesPerYear: workers * WAGE_PER_YEAR };
+  const beyond = falling > YARD_MAX_WORKERS * WORK_PER_WORKER + 1e-9;
+  return { workers, max: YARD_MAX_WORKERS, need, supply, hire, beyond, wagesPerYear: workers * WAGE_PER_YEAR };
 }
 
 /** One line on a yard: keeping up, or how many more to hire. */
@@ -485,8 +497,9 @@ export function yardLine(status: YardStatus): string {
   if (status.workers === 0) return status.need > 0 ? `Nobody works here. Hire ${Math.min(status.max, Math.max(1, status.hire))} to start.` : 'Nobody works here.';
   if (status.hire === 0) return 'Keeping up.';
   const room = status.max - status.workers;
-  if (room <= 0) return 'Understaffed, and full. Build another yard near the busiest places.';
-  return status.hire <= room ? `Understaffed: hire ${status.hire} more.` : `Understaffed: hire ${room} more, and build another yard.`;
+  if (room <= 0) return status.beyond ? 'Understaffed, and full. Build another yard near the busiest places.' : 'Full crew, catching up.';
+  if (status.hire <= room) return `Understaffed: hire ${status.hire} more.`;
+  return status.beyond ? `Understaffed: hire ${room} more, and build another yard.` : `Understaffed: hire ${room} more.`;
 }
 
 /** The one fix a mess spot needs, or null when it is looked after. */
@@ -515,7 +528,9 @@ export function fixText(state: GameState, placed: Placed, fix: GroundsFix): stri
   if (fix !== 'understaffed') return FIX_TEXT[fix];
   const yardId = state.map.care.yard[placed.id] ?? -1;
   const yard = yardId >= 0 ? state.map.placed[yardId] : null;
-  return yard ? `Yard ${yardLine(yardStatus(state, yard)).replace(/^U/, 'u')}` : FIX_TEXT.noYard;
+  if (!yard) return FIX_TEXT.noYard;
+  const line = yardLine(yardStatus(state, yard));
+  return line.startsWith('Understaffed') ? `Yard ${line.replace(/^U/, 'u')}` : 'Its yard has a full crew and is catching up.';
 }
 
 /** What a bin, bench or table needs. A full bin needs emptying. A broken thing needs a worker in range. */
