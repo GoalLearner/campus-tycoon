@@ -236,7 +236,7 @@ describe("the paper's first issue", () => {
     const kinds = paper.top.map((item) => item.kind);
     // The first goal leads, then the next class, the halls outside reach and the stadium. Four lines at the most.
     expect(kinds).toEqual(['news', 'intake', 'problem', 'game']);
-    expect(paper.top[0]!.text).toBe('Test University has 46,000 students. The first goal is 50,000.');
+    expect(paper.top[0]!.text).toBe('Test University has 46,000 students. The first goal is 50,000: a full campus.');
     expect(paper.top[1]!.text).toMatch(/^The next class is [\d,]+ strong\. (The campus is [\d,]+ (beds|classroom seats)( and [\d,]+ classroom seats)? short of fitting them|There is room for all of them)\.$/);
     expect(paper.top[2]!.text).toMatch(/^A Medical Center and Campus Safety both reach \d+ of the 36 residence halls\. The other \d+ are on their own\.$/);
     expect(paper.top[3]!.text).toBe('The team plays on a rented field of 3,000 seats. The stadium plot stands bare.');

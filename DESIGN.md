@@ -4107,7 +4107,7 @@ On the model campus it reads: the next class is 9,942 strong and the campus is 3
 
 Asked for by the owner on 2026-11-12: "A new game opens at 46,000 students, above the whole current ladder (500 to 40,000). Propose a new size ladder that starts above the model campus and still takes months to climb, and check the prestige ladder, eras, and land unlocks still make sense from this start." **This section was the proposal. He approved it on 2026-11-12, with a money target of his own (37.10).**
 
-**Changed by him later the same day: enrollment is capped at 50,000 students (38.4).** When that is built, the size goals above 50,000 go and the rank goals are the long climb. Until then the game is as this section says.
+**Changed by him later the same day: enrollment is capped at 50,000 students (38.4).** That is built. The size goals above 50,000 are gone and the rank goals are the long climb. 37.12 lists what in this section no longer holds, and 38.5 and 38.6 are the record.
 
 ### 37.1 What was measured first
 
@@ -4341,11 +4341,27 @@ The player who works every cause is a new test player, `striver`: once a day, ma
 | The headline and the first line of the paper repeated a goal | Fixed with the next stop (section 39): a goal that is the headline is said once, in the line under it |
 | The published rating and the year's measure are two numbers | The Rankings page says both in one line. It may read as one too many |
 
+### 37.12 What the cap changed in this section
+
+Enrollment was capped at 50,000 students on 2026-11-12 (38.4), and it is built (38.5). The parts above are kept as they were written. This is what holds now.
+
+| Part | Said | Now |
+|---|---|---|
+| 37.2, the size ladder | Eight goals, 50,000 to 100,000 | One goal: 50,000 students, a full campus. A save that reached more keeps them |
+| 37.3, applicants | Reach times four causes, with the rank adding up to 25 in a hundred, built as 55 | The same reach and the same four causes. The rank adds up to 25 in a hundred. Applicants past the room are turned away |
+| 37.4, the prestige ladder | Eight goals, the Top 175 to the Top 10 | The same eight. They are the long climb. The published rating moves no more than a point a year |
+| 37.5, eras | Opened by a size or by a rank | Opened by the rank alone: the Top 125, the Top 75 and the Top 25. One a save opened stays open |
+| 37.7, the Size panel | Students, the next goal, applicants, the rank | The Goals page of the screen of 38.5, beside Capacity. It shows the students against the cap, and who is admitted and turned away |
+| 37.7, a free building | For each size goal | For each rank goal. Still off |
+| 37.8, the long-run checks | Size goals by week 9, and the last not before month five | The checks of 38.6: the campus full within a month, the Top 100 in about month two, the Top 10 not before month five |
+| 37.11, the pace table | Sizes to 100,000 by week 31 to 33 | Superseded by the table in 38.6 |
+| 37.11, the money | $23.00 to $24.80 kept by week 44 | $13.80 to $16.50 in weeks 9 to 44 (38.6) |
+
 ---
 
 ## 38. Capacity and faculty: scaling with enrollment
 
-Asked for by the owner on 2026-11-12, typed to the build session while the size goals were being built: "Make scaling with enrollment a core, visible mechanic. Much of it exists; unify it and fill the gaps." **He said yes on 2026-11-12: it is the next stop after the streets (section 39), with the recommended options of 38.3, and with a cap on enrollment that he added the same day (38.4). Nothing in it is built yet.**
+Asked for by the owner on 2026-11-12, typed to the build session while the size goals were being built: "Make scaling with enrollment a core, visible mechanic. Much of it exists; unify it and fill the gaps." **He said yes on 2026-11-12: it is the next stop after the streets (section 39), with the recommended options of 38.3, and with a cap on enrollment that he added the same day (38.4). It was built on 2026-11-12: 38.5 to 38.8 are the record.**
 
 ### 38.1 What he asked for
 
@@ -4398,7 +4414,7 @@ Two things his brief leans on are not built: **decay** of empty buildings, and t
 
 ### 38.4 A cap of 50,000 students (the owner, 2026-11-12)
 
-His words: "I think there should be max student capacity honestly at 50,000?" He was told that it replaces seven of the eight size goals he had approved that morning (37.2), and asked: "Cap enrollment at 50,000 and make rank the long climb?" He answered: "Yes, cap at 50,000". It is built in the same stop as the rest of this section, because both move the same money. **Not built yet.**
+His words: "I think there should be max student capacity honestly at 50,000?" He was told that it replaces seven of the eight size goals he had approved that morning (37.2), and asked: "Cap enrollment at 50,000 and make rank the long climb?" He answered: "Yes, cap at 50,000". It is built in the same stop as the rest of this section, because both move the same money. **Built: 38.5 says how, and 38.6 has what was measured.**
 
 | Decision | Chosen | The alternative |
 |---|---|---|
@@ -4417,6 +4433,204 @@ To measure in the build, and to report to him:
 - The rank goals must still take months now that every full campus turns applicants away: the Top 100 in about month two, and the Top 10 not before month five.
 - Rank, applicants and selectivity must not feed each other without end. A better rank brings more applicants, more applicants make a school more selective, and a more selective school ranks better.
 - The money against his $12 to $17 kept of every $100, since income no longer grows with the head count.
+
+### 38.5 As built
+
+Built on 2026-11-12, on the owner's yes to 38.3 and 38.4. Where a number differs from the proposal above, this part is what the game does. Everything here that is special to a game begun on the model campus is keyed on its goals being there (`state.goals`), as the size goals were.
+
+**The cap.**
+
+| Thing | As built | Where |
+|---|---|---|
+| The cap | On a game with goals enrollment never passes 50,000 students, whatever beds and seats there are. It is a head count, so it follows the campus scale: 1,786 at scale 1. A game with no goals has none | `ENROLLMENT_CAP`, `enrollmentCap`, `roomUnderCap`, `admitPlan` |
+| Applicants past the room | Turned away for good as the class moves in. They are not a waitlist: the waitlist is still for a bed or a seat, as it was, and only for students the cap has room for. The intake's line says how many, and so do the paper's headline and its admissions story | `runIntake`, `IntakeResult.capped` |
+| The forecast | The next class is its applicants as far as the cap leaves room. Beds and seats are wanted for the students the campus can take, and no more are built for applicants it cannot | `expectedClass`, `nextApplicants` |
+| Selectivity | Read from the year's two classes together: everyone who applied in the fall and the spring, against everyone who got a place. Read from the last intake alone, one spring class of a few hundred places would have put every full campus at its most selective. This is so on every game | `admissions.year`, `yearAcceptance` |
+| Size goals | One: 50,000 students, a full campus. It lands at an intake, as before, and is kept for good | `SIZE_GOALS` |
+| A save that had reached more | Keeps every one, under its own name. The seven sizes above 50,000 are kept in the config for that and nothing else | `SIZE_GOALS_ONCE`, `sizeGoal` |
+| Eras | Opened by the rank alone: Growth at the Top 125, Flagship at the Top 75, Legacy at the Top 25. An era a save opened by its size stays open, read from the list of what it reached | `eraOf` |
+| A free building for a goal | Belongs to the rank goals now. Still off, and still only a counter in the save | `goals.rewards` |
+| A game already above the cap | Keeps every student and every goal. It admits nobody until commencement brings it under, and then fills to the cap and no further | `roomUnderCap` |
+| What a rank adds to applicants | 25 in a hundred at 1st, the figure he approved in 37.9 | `RANK_LIFT` |
+| How fast the published rating moves | A part of the way to the year's measure, as before, and now no more than one point a year, up or down | `RANK_STEP`, `rankingsDay` |
+| Seats for room | An Academic lot is built on while seats are short of the students wanted, as before, and also while classes are crowded: until the students wanted fill no more than seven seats in ten. The player zones the lot, and the campus builds on it. Without this a campus at its cap could never ease crowded classes, because it needs no more seats to take its students | `seatsForRoom`, `growthShortage` |
+| The top bar | On a full campus it says "The campus is full at 50,000 students", and the room plan says how many will apply and be turned away | `renderHud`, `openPlan` |
+
+**Faculty and staff.**
+
+| Thing | As built | Where |
+|---|---|---|
+| Head counts | Faculty and staff are two numbers kept in the save. They were worked out afresh from enrollment every time they were read | `state.staffing`, `src/sim/systems/staffing.ts` |
+| Hiring, a semester behind | A semester starts at the fall intake and at the spring intake, once the class has moved in. Each count then moves toward what the students need now, and no further than was measured when the semester before began. So the faculty for a bigger class arrive a semester after it | `staffSemester`, `settle` |
+| No layoffs | When enrollment falls nobody is let go. The count comes down a semester later, as people leave, and the payroll is carried until then. It never falls below what the students need | The same |
+| What is measured, and when | What the campus needs is noted at each intake, again when a waitlist closes, and when the slider is moved | `planStaff` |
+| The summer | Commencement is not a fall in enrollment. From commencement to the fall only the faculty and staff the summer's students need are on the payroll, as they always were, and everyone is back for the fall. Without this every summer would have cost about three and a half of every $100 a year | `facultyWorking`, `staffWorking` |
+| A campus as it opens | Staffed in full: everyone was hired for the opening | `openStaff` |
+| The Instruction slider | Eleven steps, a student a step: one member of faculty to 25 students at the bottom, to 20 in the middle, to 15 at the top. The middle is full funding, and is what every campus ran on before. Moving it hires nobody on the spot: the faculty for the new ratio arrive, or leave, when the next semester begins | `INSTRUCTION_RATIOS`, the `instruction` action |
+| What it costs | Only the faculty it asks for. On a full campus a step is 83 to 208 more faculty, $6M to $16M a year with benefits: about $1.20 to $3 of every $100 that comes in. From the middle to the top is 833 faculty and $63M a year, about $12 of every $100 | `budget` |
+| Staff | One to every 40 students, as before. There is no slider for them | `staffNeed` |
+| A game begun on the small campus | Its faculty and staff follow its students at once, as they always did. It has the slider | `hiresBehind`, `LAG_EVERY_GAME` |
+
+**What a shortfall lowers.** Nothing blocks. Each lowers one number, and that number names it.
+
+| Short of | Lowers | How |
+|---|---|---|
+| Faculty | Class size | Class size is one number with two named causes in equal parts: how full the seats are, and how many students there are to a member of faculty. It is nothing at 15 to one, a half at 20, and everything at 25. No ratio past either end counts for more, so a term of huge classes is bounded. Roomy seats alone take it to a quarter, and so does a well-funded faculty alone: it takes both to bring it to nothing | `classPressure`, `teaching` |
+| Class size, in turn | Stress, the academic rating, grades, and the faculty's own Stress | Stress already had a place for teaching beside crowded classes, held at a half until the slider existed (27.1). Its cause is named "too few faculty" when that is what full funding would ease most. Class size in the rating (15 of its weight) is the same number. So is the room part of a student's grades | `stressRead`, `academicInputs`, `teachingQuality`, `facultyStress` |
+| Staff | Support against Stress | Advisors are staff. With half the staff it needs, or fewer, a campus gives three tenths less support. At full strength nothing changes | `staffSupport` |
+| Dining | Food & fun, a little | Each place to eat can feed so many at the busiest hour: 80 at a Dining hall in the small game, 140 at a Food court, 16 at a Coffee stand. A tenth of the students it feeds want a meal then. Over that there is a line, and its part in Food & fun falls toward seven tenths at twice its room, and no further. It is the recreation rule (30.4). A lot's meals are shared among the places that reach it in proportion to what each can feed | `mealUse`, `mealLoads`, `diningAt` |
+| Recreation, Safety & health, parking, workers | As before | Their rules were built. They have rows now |
+
+**The screen.** Tapping the student count opens one screen with two pages.
+
+| Page | Shows |
+|---|---|
+| Goals | The students against the cap, as a bar. This fall's applicants with the reach and the four causes in students, then how many are admitted and how many turned away. The rank and its next goal, the era, and the goals reached. It is the Size panel of 37.7 |
+| Capacity | Next fall's students, and nine rows. A row is a name, one line of what the campus has against what its students ask, and a word: OK, Tight or Short. Tapping a row opens it: what its status does, what next fall will ask, and a button to its fix. One row is open at a time. The tab says how many are short |
+
+| Row | Has, against | Tight when | Short when | Its fix |
+|---|---|---|---|---|
+| Beds | Beds, against students who do not live in town. It says how many live in town | Never: a full bed does no harm | A student has no bed, or the next class does not fit | The Housing plan |
+| Classroom seats | Seats, against students | More than seven in ten are taken: classes are crowded | The next class does not fit | The Academics plan |
+| Faculty | Faculty at work, against those the slider funds, and the ratio | Classes are a fiftieth over | A tenth over | The Instruction slider, in the row |
+| Dining | Meals at the busiest hour, against those wanted | A place has a line | More are wanted than the campus can serve | The Build menu, at the busiest place |
+| Recreation | Places at the busiest hour, the same way | The same | The same | The Build menu |
+| Safety & health | The share of students inside both a Medical Center's circle and Campus Safety's | Under nine in ten | Under six in ten | The Build menu, at a hall outside |
+| Parking | Spaces a road reaches, against drivers | Never | Locals in the next class would drive in and cannot park | Placing a Parking lot |
+| Maintenance workers | Workers hired, against those the litter asks for | A yard is short of hands | A yard has nobody, or is far short | The yard |
+| Staff | Staff at work, against one to every 40 | As faculty | As faculty | None: they are hired by themselves |
+
+The ratio is also at the end of the Provost's line ("Faculty: 1 to 21."), which leads with it when faculty are a tenth or more short. It is on a student's card beside the GPA ("classes of 21") and in a professor's own words. The Scorecard is not built, so it is not there. The slider is in the Faculty row and in the Money panel, beside marketing.
+
+**Saves.** Version 16. A save gains its faculty and staff, the slider and the year's applicants. Faculty and staff load at one to every 20 and one to every 40 of its students, which is what it paid for the moment before, and the slider loads in the middle. Nothing else in the save is touched: who eats where is worked out for the map and nothing more. Two fixtures prove it: a game like the owner's own (`tests/fixtures/save-v15-model.json`: the model campus, "Larp University", 46,000 students, a day and a half old) comes through with its spending and its income to the dollar and everything else as it was saved.
+
+Three things do read a little differently on the day a save loads, and none is a number on the top bar. Class size in the academic rating, the room part of a student's grades and the faculty's own Stress now count seats and faculty in equal parts, where they counted seats alone. On a full campus that is better by a quarter of their range. The rating published follows it by a point a year at most.
+
+### 38.6 What was tuned, and what was measured
+
+**What was tuned.**
+
+| Number | Proposed | As built | Why |
+|---|---|---|---|
+| The cap | 50,000 | 50,000 | His decision |
+| What a rank adds to applicants | Back toward 25 in a hundred | 25 in a hundred | It was 55 only so that 100,000 students could be reached. On a full campus it now buys selectivity and nothing else |
+| The most the published rating moves in a year | Not in the proposal | One point, up or down | Every full campus turns applicants away, so every campus's measure sits well above the standing it opens with. On the pull of 37.11 alone the best player was in the Top 10 in ten weeks. A point a year puts the Top 100 in week 7 and the Top 10 in month six or seven |
+| The slider's range | 15 to 25, from his example | 15 to 25, in eleven steps | See 38.7 |
+| Where teaching is at its best and its worst | Not in the proposal | 15 and 25 students to a member of faculty | The ends of the slider |
+| The share of students who want a meal at the busiest hour | Not in the proposal | A tenth | The model campus opens with no line anywhere, so nothing moves on the day a save loads, and the small campus's long runs print the same tables |
+| What a staff shortfall takes from support | Not in the proposal | Up to three tenths, at half the staff or fewer | Small, and bounded |
+| Tuition, marketing, pay | No change | No change | Nothing in the price of anything was moved in this stop |
+
+The test players were moved, since they are how "run well" is measured. On a full campus they take marketing off, because a bigger class has nowhere to go (the player who works every cause keeps it on, for the rank). They read the margin in term, and count the faculty they have already hired. They buy from the Build menu while they keep $15.20 or more of every $100, as they did at $14.50. And they use the slider: a step more faculty when the campus would still keep $14.50 after paying for them, a step fewer under $13.
+
+**The pace, measured.** The real week each goal is reached, over 44 weeks, on two seeds. A game year is a real week.
+
+| Goal | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| A full campus, 50,000 students | 2 | 2 | 2 |
+| Top 175 | 1 | 1 | 1 |
+| Top 150 | 2 | 2 | 1 to 2 |
+| Top 125 | 5 | 5 | 5 |
+| Top 100 | 7 | 7 | 7 |
+| Top 75 | 11 to 12 | 12 | 12 |
+| Top 50 | 15 to 18 | 16 to 17 | 16 |
+| Top 25 | 23 to 24 | 23 to 24 | 19 to 22 |
+| Top 10 | 33 to 39 | 33 to 39 | 26 to 29 |
+| Rank at week 44 | 8th to 11th | 7th to 8th | 1st to 2nd |
+| Faculty funded at week 44 | 1 to 16 | 1 to 17 | 1 to 18 |
+
+Against the targets: the Top 100 comes in week 7, which is month two. The Top 10 is never reached before month five by anyone, and is reached: in month six or seven by the player who works every cause, and in month eight or nine by a regular player who funds teaching with what the campus keeps. A campus nobody touches passes the Top 100 in week 8 and the Top 50 in about week 22, and is near 35th after forty weeks: it does not reach the Top 25.
+
+With the slider left where it opens, the regular players reach the Top 10 between week 37 and week 43, or not at all in 44 weeks, and end between 9th and 17th.
+
+**Rank, applicants and selectivity settle.** A better rank brings applicants, applicants make a full campus more selective, and a selective campus ranks better. Each turn of that loop is worth well under a tenth of the one before, so it runs out. On a campus left alone for forty years, read on each rankings day:
+
+| Year | Applicants | Admitted | Measured | Published | Rank |
+|---|---|---|---|---|---|
+| 1 | 12,728 | 100% | 39.0 | 43.0 | 152nd |
+| 2 | 12,728 | 89% | 59.8 | 44.0 | 145th |
+| 4 | 13,035 | 80% | 60.9 | 46.0 | 128th |
+| 8 | 13,336 | 78% | 59.9 | 49.8 | 100th |
+| 16 | 14,076 | 75% | 60.9 | 54.7 | 68th |
+| 24 | 14,392 | 75% | 61.4 | 57.6 | 43rd |
+| 32 | 14,617 | 74% | 62.0 | 59.5 | 42nd |
+| 40 | 15,030 | 72% | 62.4 | 60.7 | 34th |
+
+The measure is steady from the second year, between 60 and 62.4, and the published rating walks up to it. In the last ten years the published rating moves 1.4 points and applicants by 480 in 14,700. The four causes at their very best could never make more than 26,300 applicants. The long run checks all of this.
+
+**Money: the owner's target of $12 to $17 kept of every $100.** Read two days into each fall, with the class settled.
+
+| Measured | Kept of every $100 |
+|---|---|
+| A new game, as it opens | $16.60, as before |
+| Left alone, full, in term | $17 to $18 |
+| The casual player, years 3 to 8, two seeds | $12.60 to $14.90 |
+| The once-a-day player, years 3 to 8, two seeds | $12.40 to $14.20 |
+| The player who works every cause, years 3 to 8 | $13.10 to $14.50 |
+| The casual player, weeks 9 to 44 | $14.10 to $16.50 |
+| The once-a-day player, weeks 9 to 44 | $13.80 to $16.30 |
+| The player who works every cause, weeks 9 to 44 | $13.10 to $15.50 |
+| The same weeks with the slider left where it opens | Up to $24.20 for the casual player and $22.80 for the once-a-day |
+
+The later weeks rose to $23 to $25 before this stop because a test player's endowment grows, to $2.6 to $2.9 billion by week 44, and earns two in a hundred of itself a year. Income no longer grows with the head count, so that would have happened sooner. **The lever that holds the later weeks in his range is the Instruction slider.** It is part of this stop, and it is an honest one: the money buys smaller classes, which lower Stress and lift grades. Class size is a fifth of the academic rating, and faculty are half of class size. A step costs $6M to $16M a year, about $1.20 to $3 of every $100. The regular players end at one member of faculty to 16 or 17 students. Nothing new to spend on was added.
+
+**His two long-run checks.**
+
+| Check | What was run | What happened |
+|---|---|---|
+| A campus that grows fast without building ahead ends short and unhappy, and never spirals | A model campus that opens a third full, with every second place to eat, place to play, Medical Center and Campus Safety building taken away and one worker at each yard. Its player turns marketing to its top step, underfunds teaching, and builds nothing for twelve years | From 15,333 students to 41,314 by its third fall, and 50,000 at its twelfth, steady over the last four. Faculty were a tenth or more short in three falls of the twelve. At the end classroom seats, recreation and workers are Tight and Safety & health is Short. Happiness is 59 against 92 on a tended campus, 97.6% of students stay each semester, it nets $135M a year, and it took nothing from the state |
+| A campus that shrinks recovers its finances within two years | The once-a-day player's campus, six years in, loses three students in ten overnight | 50,000 students and $14.20 kept before. The day after, 35,000 students, 750 more faculty than they need still on the payroll, and it spends $15.50 more than every $100 that comes in. That is the worst reading. Two years on it is full again and keeps $17.80. Cash never fell under $166M, and nothing came from the state |
+
+With a cap, no game grows fast for long, so the first check is a made-up start. It is the nearest thing to his words that the game can now do.
+
+**Catch-up.** Thirty days on the model campus take 132 to 162 ms, and 339 to 378 ms on the busiest small campus, as before. Faculty and staff change at an intake, when a waitlist closes and on a tap of the slider, and nowhere else.
+
+**Tests and long runs.** 29 new tests in `tests/capacity.test.ts`, and the goals tests brought in line with one size goal: 616 in all. The model campus's long-run checks were rewritten for the cap: 48 in all. The small campus's long-run tables print the same numbers as before this stop.
+
+### 38.7 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Whether the hiring lag is on every game | On a game with goals only. A game begun on the small campus keeps faculty and staff that follow its students at once | One rule for every game. Tried in the long run: the small campus doubles in size each year, so its faculty are always a semester behind and its payroll always light. Its margin ran from 15.8% to 27.4% against the 10% to 20% it is tuned for, the once-a-day player took $1.2M from the state and never reached 8,000 students, and four checks failed |
+| What "a semester behind" means | A count moves toward what is needed now, and no further than was measured a semester ago. Hiring and leaving are both a semester behind | Faculty simply equal last semester's need. A campus that dipped and recovered would be short of faculty it never had to lose |
+| The summer | Only those the summer's students need are paid, as before. Commencement is not a fall in enrollment | Pay everyone all year. Every campus would keep about $3.50 less of every $100, and the Money panel would show a loss every summer |
+| The slider's steps | Eleven, one student a step, from 25 to 15 | Five steps (25, 22, 20, 17, 15). Tried: a step then moved the margin by $6 of every $100, too coarse to hold a campus inside $12 to $17 |
+| What the slider sets | The ratio alone | Teaching supplies as well, as section 9.2 has it. One effect for one control |
+| How the two causes of class size combine | In equal parts, the way Stress already combined them (27.1) | The ratio added to the seats, which leaves full funding exactly as it was. Tried: with roomy seats the ratio then did nothing, so a player would never fund faculty for the rank |
+| Where the two causes are named | In the rating's own line for class size, in the cause of Stress, and on the Capacity rows | A new line of their own on each panel |
+| What a staff shortfall lowers | Support against Stress, since advisors are staff | Happiness directly, as a fifth cause. The owner's rule is four |
+| Dining capacity | The recreation rule: a line at the busiest hour takes a little off, with a floor | A hard limit on who is fed. A shortfall must never block |
+| What a tenth of students at the busiest hour means | A tenth of the students a place feeds want a meal there in its busiest hour | A larger share, with every coffee stand on a small campus over its room on the day the save loads |
+| Seats on a full campus | Academic lots are built on until classes are no longer crowded | Leave growth as it was. The Classroom seats row would say Tight for good, with no fix |
+| Where that rule applies | On a game with goals | Every game. The small campus's long runs would change |
+| How selectivity is read | From the year's two classes together, on every game | From the last intake. Every full campus would read as most selective each spring |
+| Applicants past the cap | Turned away as the class moves in, and said so | Kept on the waitlist. They would wait for a place that cannot open |
+| The old size goals | Kept in the config by name, for a save that reached one | Dropped, with such a save unable to say what it had reached |
+| How the rank is paced | The published rating moves no more than a point a year | Slow the pull itself. A regular player would then take four months to the Top 100 |
+| Which page opens first | Goals, and the page last looked at for the rest of the visit. The Capacity tab says how many needs are short | Capacity first whenever something is short |
+| A row with nothing wrong | Says only what next fall will ask | A line of praise |
+| Beds and parking | Never Tight. A full bed and a full car park do no harm | Tight at nine in ten, for ever on a full campus |
+| Coverage | Students inside both circles, a Medical Center's and Campus Safety's | Either one. The paper's first issue already counts both |
+| The test players and the slider | A step more faculty when the campus would still keep $14.50 after paying for them, and a step fewer under $13. That is what "run well" means once income no longer grows | Leave the slider alone, with the later weeks at $23 to $24 |
+| The test players and marketing | Off on a full campus, except for the player who works every cause | On for everyone. It buys only selectivity now |
+| News of a late or a lingering faculty | One line in the away list and the paper, when the gap is a fiftieth or more | Nothing said. The mechanic would be invisible to a player who never opens the page |
+
+### 38.8 Rough
+
+| Rough | Why |
+|---|---|
+| A new game opens with one row Short: three students in ten are inside both a Medical Center's circle and Campus Safety's | It is true of the campus as laid. The paper's first issue says the same thing. Two more of each would close most of it |
+| A campus left alone still climbs to about 35th | Its graduation rate is high from the first spring, it is selective because it is full, and class size now counts faculty at full funding as half way. The Top 25 and the Top 10 are what take work |
+| Every player passes the Top 100 in the same week | The rating moves a point a year at most, and every campus's measure is far enough above its opening standing to move it the whole point. The players part company after the Top 75 |
+| The slider is worth less to the rank than seats | Fifteen Academic lots cost about $19M a year and take class size half way. The faculty for the other half cost $63M. A player chasing the rank zones first |
+| Faculty arrive all at once | 833 new faculty on the first day of a semester. There is no hiring over the term |
+| Staff have no lever | They are hired by themselves, a semester behind. The row can say Short and offer nothing to do but wait |
+| The ratio is not on the Scorecard | The Scorecard is not built |
+| Empty buildings do not decay | Left for its own stop (38.3) |
+| The summer margin is lower | Buildings cost what they cost with a quarter of the students gone. It was so before, and the Money panel shows it: about $11 to $12 of every $100 against $18 in term on an untended campus |
+| A step of the slider reads as nothing for a semester | Nobody is hired on the spot. The row says who is on the way and when |
+| "Classes of 21" on every student card | It is the campus's ratio, the same for everyone |
+| Never run on a phone | Checked in pictures and in tests on this PC |
 
 ---
 

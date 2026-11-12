@@ -1,4 +1,7 @@
-import { FOOD_INCOME_PER_STUDENT, PLACED, SMOOTHIE_CELLS, SMOOTHIE_TIMES, TUTORING_GPA, VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
+import { FOOD_INCOME_PER_STUDENT, PLACED, placedMeals, SMOOTHIE_CELLS, SMOOTHIE_TIMES, TUTORING_GPA, VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
+import { MEAL_SHARE } from '../config/staffing';
+import { scaleOf } from '../scale';
+import { crowdLift } from './play';
 import { enrollment } from '../selectors';
 import type { GameState, MapState, Placed, PlacedType } from '../types';
 import { inReach } from './placed';
@@ -100,6 +103,87 @@ export function foodLoads(map: MapState, places: readonly Placed[]): Record<numb
     }
   }
   return load;
+}
+
+// ------------------------------------------------------------- capacity --
+
+/**
+ * Share the lots out among the places to eat that reach them, in proportion
+ * to how many each can feed: a dining hall takes more of a dorm's meals than
+ * the coffee stand beside it. The result, for each place, is how many lots'
+ * worth of students eat there. Called after every action, with the rest of
+ * `care`.
+ */
+export function mealLoads(map: MapState, places: readonly Placed[]): Record<number, number> {
+  const load: Record<number, number> = {};
+  for (const placed of places) load[placed.id] = 0;
+  if (places.length === 0) return load;
+  const { width, height, cells } = map;
+  const near: Placed[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (cells[y * width + x]!.kind !== 'lot') continue;
+      near.length = 0;
+      let feeds = 0;
+      for (const placed of places) {
+        if (gap(placed, x, y) > PLACED[placed.type].radius) continue;
+        near.push(placed);
+        feeds += placedMeals(placed.type, 1);
+      }
+      if (feeds <= 0) continue;
+      for (const placed of near) load[placed.id]! += placedMeals(placed.type, 1) / feeds;
+    }
+  }
+  return load;
+}
+
+export interface MealUse {
+  /** Students it can feed at the busiest hour. */
+  capacity: number;
+  /** Students who want a meal there at the busiest hour. */
+  demand: number;
+  /** Demand over capacity. */
+  ratio: number;
+  /** In line at the busiest hour. */
+  waiting: number;
+  /** What is left of its part in Happiness, from a floor to 1: a long line takes a little off. */
+  lift: number;
+}
+
+/**
+ * How busy a place to eat is at the busiest hour (DESIGN.md 38.5). null for
+ * anything else. It is the recreation rule: over what it can feed, the rest
+ * wait, and a long line takes a little off what the place is worth to the
+ * students near it. It never blocks anything, and the loss has a floor.
+ */
+export function mealUse(state: GameState, placed: Placed): MealUse | null {
+  const capacity = placedMeals(placed.type, scaleOf(state));
+  if (capacity <= 0) return null;
+  const care = state.map.care;
+  const lots = care.lots > 0 ? (care.meals?.[placed.id] ?? 0) : 0;
+  const demand = care.lots > 0 ? (lots * enrollment(state) * MEAL_SHARE) / care.lots : 0;
+  const ratio = demand / capacity;
+  return { capacity, demand, ratio, waiting: Math.max(0, Math.round(demand) - capacity), lift: crowdLift(ratio) };
+}
+
+/**
+ * What the food in reach of a spot is worth, 0 to 1: nothing with none in
+ * reach, all of it where any place in reach has room, and a little less where
+ * every one of them has a line.
+ */
+export function diningAt(state: GameState, x: number, y: number): number {
+  const map = state.map;
+  // A save from before a place to eat could fill up reads as it always did until its map is next worked out.
+  if (!map.care?.meals) return foodKindsAt(map, x, y) > 0 ? 1 : 0;
+  const ids = map.care.byFamily?.dining ?? [];
+  let best = 0;
+  for (const id of ids) {
+    const placed = map.placed[id];
+    if (!placed || gap(placed, x, y) > PLACED[placed.type].radius) continue;
+    best = Math.max(best, mealUse(state, placed)?.lift ?? 1);
+    if (best >= 1) return 1;
+  }
+  return best;
 }
 
 /** True when a recreation building stands within two cells of this place. It doubles what a smoothie bar earns. */

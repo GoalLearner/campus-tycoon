@@ -41,6 +41,8 @@ export interface PlacedSpec {
   capacity?: number;
   /** Food only: how many kinds of food it counts as toward variety. The food court is three. One when left out. */
   kinds?: number;
+  /** Food only: how many students it can feed at the busiest hour in the small game. Read it through `placedMeals`. */
+  meals?: number;
   /** Clearing it returns the whole price, whenever it is cleared. The food truck drives off. */
   fullRefund?: boolean;
 }
@@ -52,45 +54,45 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   dining: {
     name: 'Dining hall', category: 'Food', family: 'dining', w: 2, h: 1, cost: 45_000, upkeepPerYear: 6_000,
-    radius: 6, strength: 1, effect: 'Feeds Housing within 6 cells', sprite: 'build.dining', flat: false, buildable: true,
+    radius: 6, strength: 1, effect: 'Feeds Housing within 6 cells', sprite: 'build.dining', flat: false, buildable: true, meals: 80,
   },
   coffee: {
     name: 'Coffee stand', category: 'Food', family: 'dining', w: 1, h: 1, cost: 12_000, upkeepPerYear: 1_500,
-    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells', sprite: 'build.coffee', flat: false, buildable: true,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells', sprite: 'build.coffee', flat: false, buildable: true, meals: 16,
   },
   // Play stop 4b (DESIGN.md section 30). Every one is the dining rule at its own size: a look, a price and
   // a reach. Upkeep is about a twelfth of the price. When each is busy is seen on the map and never counted.
   foodcourt: {
     name: 'Food court', category: 'Food', family: 'dining', w: 2, h: 2, cost: 140_000, upkeepPerYear: 11_500,
-    radius: 7, strength: 1, effect: 'Feeds Housing within 7 cells. Counts as three kinds of food', sprite: 'build.foodcourt', flat: false, buildable: true, kinds: 3,
+    radius: 7, strength: 1, effect: 'Feeds Housing within 7 cells. Counts as three kinds of food', sprite: 'build.foodcourt', flat: false, buildable: true, meals: 140, kinds: 3,
   },
   diner: {
     name: 'Late-night diner', category: 'Food', family: 'dining', w: 2, h: 1, cost: 36_000, upkeepPerYear: 3_000,
-    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busiest at night', sprite: 'build.diner', flat: false, buildable: true,
+    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busiest at night', sprite: 'build.diner', flat: false, buildable: true, meals: 45,
   },
   burger: {
     name: 'Burger grill', category: 'Food', family: 'dining', w: 2, h: 1, cost: 30_000, upkeepPerYear: 2_500,
-    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busy at lunch', sprite: 'build.burger', flat: false, buildable: true,
+    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busy at lunch', sprite: 'build.burger', flat: false, buildable: true, meals: 40,
   },
   pizza: {
     name: 'Pizza place', category: 'Food', family: 'dining', w: 2, h: 1, cost: 14_000, upkeepPerYear: 1_200,
-    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Busiest in the evening and at night', sprite: 'build.pizza', flat: false, buildable: true,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Busiest in the evening and at night', sprite: 'build.pizza', flat: false, buildable: true, meals: 24,
   },
   taco: {
     name: 'Taco stand', category: 'Food', family: 'dining', w: 2, h: 1, cost: 10_000, upkeepPerYear: 850,
-    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. The cheap lunch spot', sprite: 'build.taco', flat: false, buildable: true,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. The cheap lunch spot', sprite: 'build.taco', flat: false, buildable: true, meals: 20,
   },
   smoothie: {
     name: 'Smoothie and juice bar', category: 'Food', family: 'dining', w: 1, h: 1, cost: 10_000, upkeepPerYear: 850,
-    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Earns double with recreation within 2 cells', sprite: 'build.smoothie', flat: false, buildable: true,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Earns double with recreation within 2 cells', sprite: 'build.smoothie', flat: false, buildable: true, meals: 14,
   },
   convenience: {
     name: 'Convenience store', category: 'Food', family: 'dining', w: 1, h: 1, cost: 9_000, upkeepPerYear: 750,
-    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Snacks, open late', sprite: 'build.convenience', flat: false, buildable: true,
+    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Snacks, open late', sprite: 'build.convenience', flat: false, buildable: true, meals: 12,
   },
   truck: {
     name: 'Food truck', category: 'Food', family: 'dining', w: 1, h: 1, cost: 8_000, upkeepPerYear: 650,
-    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Clear it and the whole price comes back, so moving it is free', sprite: 'build.truck', flat: false, buildable: true,
+    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Clear it and the whole price comes back, so moving it is free', sprite: 'build.truck', flat: false, buildable: true, meals: 12,
     fullRefund: true, utilitiesPerYear: 500,
   },
   // Academics (30.3). One effect each: the library's rule, the recreation rule, and tutoring.
@@ -206,6 +208,11 @@ export function placedUtilities(type: PlacedType, scale: number): number | undef
 /** How many students a place to play holds at once. 0 for anything else. */
 export function placedRoom(type: PlacedType, scale: number): number {
   return (PLACED[type].capacity ?? 0) * scale;
+}
+
+/** How many students a place to eat can feed at the busiest hour. 0 for anything else. */
+export function placedMeals(type: PlacedType, scale: number): number {
+  return (PLACED[type].meals ?? 0) * scale;
 }
 
 /** How many cars a car park holds. 0 for anything else. */

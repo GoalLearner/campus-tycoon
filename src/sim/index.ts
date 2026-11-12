@@ -16,6 +16,9 @@ export {
   continuingStudents,
   demandBar,
   expectedClass,
+  nextApplicants,
+  growthShortage,
+  seatsForRoom,
   fallClassDraw,
   nextIntakeSeason,
   bedsWanted,
@@ -36,18 +39,16 @@ export { occupiedBeds } from './systems/money';
 export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
 export { hallName, peopleCounts, personCard, personKey, personName, type PersonCard, type PersonRef } from './systems/people';
 export * from './config/people';
-export { besideRecreation, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, tutoredAt, tutoringLift, varietyAt, type FoodTrade } from './systems/food';
+export { besideRecreation, diningAt, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, mealLoads, mealUse, tutoredAt, tutoringLift, varietyAt, type FoodTrade, type MealUse } from './systems/food';
 export {
   budget,
   careStaffAt,
   careStaffCount,
-  facultyCount,
   firstClassArrived,
   hasCareStaff,
   marketingLift,
   marketingCost,
   tuitionRate,
-  staffCount,
   studentsInCircle,
   workerCount,
   type Budget,
@@ -125,7 +126,10 @@ export {
   type TownHints,
   type TownPlaces,
 } from './systems/town';
-export { acceptanceRate, classRecord, spreadClassYears, startedHere } from './systems/admissions';
+export { acceptanceRate, classRecord, spreadClassYears, startedHere, yearAcceptance } from './systems/admissions';
+export * from './systems/staffing';
+export * from './systems/capacity';
+export * from './config/staffing';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
 export * from './config/incidents';
 export {

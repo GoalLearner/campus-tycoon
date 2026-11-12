@@ -67,12 +67,14 @@ import {
   DEFAULT_WAKE_HOUR,
   SCHOOL_COLOURS,
   weatherAt,
+  enrollmentCap,
+  nextApplicants,
 } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { openFootball } from './footballPanels';
-import { sizeView } from './sizeUi';
+import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
@@ -271,7 +273,7 @@ export function mountUi(root: HTMLElement): void {
   const cash = el('span', 'cash');
   const rate = el('span', 'rate');
   money.append(cash, rate);
-  // The student count. Tapping it opens the Size panel: the next goal, and this fall's applicants with what makes them.
+  // The student count. Tapping it opens the Goals and Capacity screen: the cap, this fall's applicants, the rank, and every need of a student.
   const students = el('button', 'students');
   students.type = 'button';
   const studentCount = el('span', 'count');
@@ -902,6 +904,12 @@ export function mountUi(root: HTMLElement): void {
       later = fits >= plan.students ? 'There is room for all of them.' : `There is room for ${fits} of them so far.`;
     } else {
       action = add ? `Next class is ${headCount(plan.students)}: add ${add} to fit them all` : `Room for the whole next class of ${headCount(plan.students)}`;
+      // A campus at its cap: the next class is as many as the cap leaves room for, and the rest are turned away.
+      const cap = enrollmentCap(state);
+      const applicants = nextApplicants(state);
+      if (!add && cap !== null && plan.students < applicants) {
+        action = plan.students === 0 ? `The campus is full at ${headCount(cap)} students` : `The next class fills the campus: ${headCount(plan.students)} of ${headCount(applicants)} applicants`;
+      }
       later = coming;
     }
     setText(status, action);
@@ -925,7 +933,11 @@ export function mountUi(root: HTMLElement): void {
       } else if (tick < FIRST_INTAKE_TICK) {
         lead = `${headCount(plan.students)} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
       } else {
+        const cap = enrollmentCap(state);
+        const applicants = nextApplicants(state);
         lead = `The next class is ${headCount(plan.students)} students.`;
+        // At its cap a campus takes as many as the cap leaves room for.
+        if (cap !== null && plan.students < applicants) lead = plan.students === 0 ? `The campus is full at ${headCount(cap)} students. ${headCount(applicants)} will apply, and there is no place for them until commencement.` : `The next class is ${headCount(plan.students)} students, which fills the campus. ${headCount(applicants - plan.students)} more will apply and be turned away.`;
       }
       card.append(el('p', '', lead));
       const rate = acceptanceRate(state);
@@ -1273,7 +1285,10 @@ export function mountUi(root: HTMLElement): void {
           body.append(el('p', '', ball.net), el('p', 'fine', ball.applicants));
         }
 
-        // Recruiting and marketing: the one cost here the player sets.
+        // Instruction: how many students one member of faculty is hired for (DESIGN.md 38).
+        body.append(el('div', 'money-head', 'Instruction'), ...instructionSteps(() => draw()));
+
+        // Recruiting and marketing: the other cost here the player sets.
         body.append(el('div', 'money-head', 'Recruiting and marketing'));
         const steps = el('div', 'money-steps');
         const set = (step: number): void => {
@@ -1311,34 +1326,137 @@ export function mountUi(root: HTMLElement): void {
     });
   }
 
-  function openSize(): void {
-    const view = sizeView(store.state);
+  /** The Instruction slider: a step down, the ratio it asks for, a step up. Used on the Capacity page and in Money. */
+  function instructionSteps(redraw: () => void, brief = false): HTMLElement[] {
+    const view = instructionView(store.state);
+    const steps = el('div', 'money-steps');
+    const set = (step: number): void => {
+      const result = store.dispatch({ type: 'instruction', step });
+      if (!result.ok) session.notify(result.error, 'error');
+      redraw();
+    };
+    const down = button('−', 'staff-button', () => set(view.step - 1));
+    const up = button('+', 'staff-button', () => set(view.step + 1));
+    down.disabled = view.step <= 0;
+    up.disabled = view.step >= view.max;
+    steps.append(down, el('span', 'staff-count', view.line), up);
+    return [steps, el('p', 'fine', brief ? view.cost : view.note)];
+  }
+
+  /** The page the Goals and Capacity screen was last on, kept for the visit. */
+  let campusPage: 'goals' | 'capacity' = 'goals';
+
+  /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
+  function openSize(page: 'goals' | 'capacity' = campusPage): void {
+    campusPage = page;
+    /** The row of the Capacity page that is open. One at a time. */
+    let openRow: string | null = null;
     openModal((close, card) => {
-      card.append(el('h1', '', view.title));
-      if (view.next) {
-        const bar = el('div', 'cause-bar size-bar');
-        const fill = el('div', 'cause-fill');
-        fill.style.width = `${view.next.percent}%`;
-        bar.append(fill);
-        card.append(el('div', 'size-goal', view.next.line), bar, el('p', 'fine', view.next.toGo));
-      } else if (view.done) card.append(el('p', '', view.done));
-      // This fall's applicants, from where they start to what each cause adds.
-      const total = el('div', 'size-row total');
-      total.append(el('span', '', view.applicants.head), el('span', 'size-value', view.applicants.total));
-      card.append(total);
-      for (const row of view.applicants.rows) {
-        const line = el('div', 'size-row');
-        line.append(el('span', '', row.name), el('span', 'size-value', row.value));
-        card.append(line);
-      }
-      card.append(el('div', 'size-goal', view.rank));
-      if (view.rankNext) card.append(el('p', 'fine', view.rankNext));
-      if (view.era) card.append(el('div', 'size-goal', view.era));
-      if (view.reached.length > 0) {
-        card.append(el('div', 'money-head', 'Goals reached'));
-        for (const line of view.reached) card.append(el('p', 'fine', line));
-      }
-      card.append(button('Close', 'wide', close));
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      card.append(head, body, button('Close', 'wide', close));
+
+      const goFix = (row: CapacityRow): void => {
+        const fix = row.fix;
+        if (fix.kind === 'plan') {
+          close();
+          openPlan(fix.zone);
+        } else if (fix.kind === 'zone') {
+          session.setTool(fix.zone);
+          close();
+        } else if (fix.kind === 'build') {
+          close();
+          if (fix.at) session.lookAt(fix.at.x, fix.at.y);
+          openBuild();
+        } else if (fix.kind === 'place') {
+          session.startPlacing(fix.type);
+          close();
+        } else if (fix.kind === 'yard') {
+          session.setTool('look');
+          session.lookAt(fix.x, fix.y);
+          session.select(fix.x, fix.y);
+          close();
+        }
+      };
+
+      const draw = (): void => {
+        const state = store.state;
+        const size = sizeView(state);
+        const needs = capacityView(state);
+        const scrolled = body.scrollTop;
+        head.textContent = '';
+        head.append(el('h1', '', size.title));
+        const tabs = el('div', 'fb-tabs');
+        for (const [id, label] of [['goals', 'Goals'], ['capacity', needs.tab]] as const) {
+          const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
+            campusPage = id;
+            body.scrollTop = 0;
+            draw();
+          });
+          tabs.append(tab);
+        }
+        head.append(tabs);
+
+        body.textContent = '';
+        if (campusPage === 'goals') {
+          if (size.cap) {
+            const bar = el('div', 'cause-bar size-bar');
+            const fill = el('div', 'cause-fill');
+            fill.style.width = `${size.cap.percent}%`;
+            bar.append(fill);
+            body.append(el('div', 'size-goal', size.cap.line), bar, el('p', 'fine', size.cap.note));
+          }
+          // This fall's applicants, from where they start to what each cause adds, and who gets a place.
+          const total = el('div', 'size-row total');
+          total.append(el('span', '', size.applicants.head), el('span', 'size-value', size.applicants.total));
+          body.append(total);
+          for (const row of size.applicants.rows) {
+            const line = el('div', 'size-row');
+            line.append(el('span', '', row.name), el('span', 'size-value', row.value));
+            body.append(line);
+          }
+          if (size.places) {
+            for (const [name, value] of [['Admitted', size.places.admitted], ['Turned away', size.places.turnedAway]] as const) {
+              const line = el('div', 'size-row places');
+              line.append(el('span', '', name), el('span', 'size-value', value));
+              body.append(line);
+            }
+          }
+          body.append(el('div', 'size-goal', size.rank));
+          if (size.rankNext) body.append(el('p', 'fine', size.rankNext));
+          if (size.era) body.append(el('div', 'size-goal', size.era));
+          if (size.reached.length > 0) {
+            body.append(el('div', 'money-head', 'Goals reached'));
+            for (const line of size.reached) body.append(el('p', 'fine', line));
+          }
+        } else {
+          body.append(el('p', 'fine', needs.lead));
+          for (const row of needs.rows) {
+            const open = openRow === row.id;
+            const top = el('button', open ? `need open ${row.status}` : `need ${row.status}`);
+            top.type = 'button';
+            const text = el('div', 'need-text');
+            text.append(el('span', 'need-name', row.name), el('span', 'need-line', row.line));
+            top.append(text, el('span', `need-status ${row.status}`, row.word));
+            top.addEventListener('click', () => {
+              openRow = open ? null : row.id;
+              draw();
+            });
+            body.append(top);
+            if (!open) continue;
+            const detail = el('div', 'need-detail');
+            for (const line of row.detail) detail.append(el('p', '', line));
+            // Faculty: the fix is the Instruction slider, right here.
+            // Who is on the way is said once: in the row's own words when it has any.
+            if (row.fix.kind === 'slider') detail.append(...instructionSteps(draw, row.detail.length > 1));
+            if (row.fixLabel) detail.append(button(row.fixLabel, 'wide', () => goFix(row)));
+            body.append(detail);
+          }
+        }
+        body.scrollTop = scrolled;
+      };
+      draw();
     });
   }
 

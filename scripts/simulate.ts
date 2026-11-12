@@ -41,6 +41,13 @@ import {
   FIRST_INTAKE_TICK,
   RANK_GOALS,
   SIZE_GOALS,
+  capacity,
+  enrollmentCap,
+  facultyCount,
+  facultyNeed,
+  fallApplicants,
+  openStaff,
+  ratioTarget,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -54,7 +61,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
-import { takeTurn, type Style } from './bots';
+import { botOptions, takeTurn, type Style } from './bots';
 
 /**
  * Headless balance runs. Plays the pure simulation for many game years under
@@ -71,6 +78,9 @@ function option(name: string, fallback: string): string {
   return i >= 0 && args[i + 1] ? args[i + 1]! : fallback;
 }
 const YEARS = Number(option('years', '20'));
+// `-- --no-slider` runs the test players with the Instruction slider left where it opens: a comparison, to show
+// what the slider is worth to the margin. Its checks on the margin are then expected to fail.
+if (args.includes('--no-slider')) botOptions.slider = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -159,6 +169,8 @@ interface Seen {
   rankWeeks: number[];
   /** Goals whose headline was not in the paper of the visit after they were reached. */
   goalsUnsaid: number;
+  /** The most students the campus ever held, whenever it was looked at. */
+  mostStudents: number;
 }
 
 const newSeen = (): Seen => ({
@@ -188,6 +200,7 @@ const newSeen = (): Seen => ({
   sizeWeeks: SIZE_GOALS.map(() => 0),
   rankWeeks: RANK_GOALS.map(() => 0),
   goalsUnsaid: 0,
+  mostStudents: 0,
 });
 
 /** Check lines against the tone guide's banned and retired words. */
@@ -213,6 +226,7 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     for (let n = Number(entry.data?.from ?? 0); n < Number(entry.data?.count ?? 0); n++) weeks[n] = week;
   }
   seen.deskMost = Math.max(seen.deskMost, state.inbox.open.length);
+  seen.mostStudents = Math.max(seen.mostStudents, enrollment(state));
   const season = campusHappiness(state).season;
   seen.stressMax = Math.max(seen.stressMax, season.stress.score);
   if (season.day.kind !== 'finals' && season.day.kind !== 'midterms') seen.stressOutsideExams = Math.max(seen.stressOutsideExams, season.stress.score);
@@ -899,16 +913,52 @@ const PACE_WEEKS = 44;
 
 const weekOf = (week: number): string => (week > 0 ? `week ${week}` : 'not reached');
 
+/** A campus as if a share of its students had gone, or had never come: every class cut by the same share. */
+function withStudents(state: GameState, share: number, staffToo: boolean): GameState {
+  const next = structuredClone(state);
+  next.cohorts = next.cohorts.map((n) => Math.round(n * share)) as GameState['cohorts'];
+  next.offCampus = next.offCampus.map((n, year) => Math.min(next.cohorts[year]!, Math.round(n * share))) as GameState['offCampus'];
+  for (const record of next.classes) record.entered = Math.round(record.entered * share);
+  // A campus that opens smaller was staffed for the students it has. One that lost them still has everyone it hired.
+  if (staffToo) openStaff(next);
+  next.money.ratesDirty = true;
+  return next;
+}
+
+/** Take away every second building of the kinds a growing campus has to add, and every worker: nothing built ahead. */
+function stripped(state: GameState): GameState {
+  let next = state;
+  const count: Record<string, number> = {};
+  for (const placed of state.map.placed) {
+    if (!placed) continue;
+    const family = PLACED[placed.type].family;
+    if (!['dining', 'recreation', 'medical', 'safety'].includes(family)) continue;
+    count[family] = (count[family] ?? 0) + 1;
+    if (count[family]! % 2 === 0) continue;
+    const cleared = applyAction(next, { type: 'paint', tool: 'clear', cells: [[placed.x, placed.y]] });
+    if (cleared.ok) next = cleared.state;
+  }
+  for (const placed of next.map.placed) {
+    if (!placed || placed.type !== 'yard') continue;
+    const staffed = applyAction(next, { type: 'staff', yard: placed.id, workers: 1 });
+    if (staffed.ok) next = staffed.state;
+  }
+  return next;
+}
+
 /**
- * The model campus (DESIGN.md 35.5 and section 37): whole from the first
- * minute, so it has to stand up by itself, keep what a well-run campus should
- * keep, and climb its goals over months and not weeks.
+ * The model campus (DESIGN.md 35.5, section 37 and section 38): whole from
+ * the first minute, so it has to stand up by itself, keep what a well-run
+ * campus should keep, never pass its cap, and climb its rank goals over
+ * months and not weeks.
  */
 function assertModelCampus(seed: number): void {
   console.log('');
   console.log('THE MODEL CAMPUS');
   const alone = play('absent', seed, 5, 'model');
   printRun(alone);
+  const opening = newGame({ seed, name: 'Sim model', now: T0, campus: 'model' });
+  const cap = enrollmentCap(opening) ?? 0;
 
   // Left alone for five years it keeps a surplus, needs no rescue and stays clean.
   {
@@ -933,63 +983,172 @@ function assertModelCampus(seed: number): void {
   console.log(`THE PACE OF THE GOALS: the real week each is reached, over ${PACE_WEEKS} weeks`);
   const head = runs.map((run) => `${run.style} ${run.seed}`.padStart(14)).join('');
   console.log(`${'goal'.padEnd(18)}${head}`);
-  SIZE_GOALS.forEach((goal, n) => console.log(`${`${goal.toLocaleString('en-US')} students`.padEnd(18)}${runs.map((run) => weekOf(run.seen.sizeWeeks[n]!).padStart(14)).join('')}`));
+  console.log(`${`Full: ${cap.toLocaleString('en-US')}`.padEnd(18)}${runs.map((run) => weekOf(run.seen.sizeWeeks[0]!).padStart(14)).join('')}`);
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${runs.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
+  console.log(`${'rank at the end'.padEnd(18)}${runs.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
+  console.log(`${'faculty funded'.padEnd(18)}${runs.map((run) => `1 to ${ratioTarget(run.final)}`.padStart(14)).join('')}`);
   console.log('');
 
-  const sizeBy = (run: Run, week: number): number => run.seen.sizeWeeks.filter((at) => at > 0 && at <= week).length;
+  // The cap: nobody ever holds more students than it allows, and every campus is full within a few weeks.
+  {
+    const most = Math.max(alone.seen.mostStudents, ...runs.map((run) => run.seen.mostStudents));
+    const full = runs.map((run) => run.seen.sizeWeeks[0]!);
+    check(
+      'no model campus ever passes its cap, and every tended one is full within a month',
+      cap > 0 && most <= cap && full.every((week) => week > 0 && week <= 4),
+      `the cap is ${cap.toLocaleString('en-US')}; the most any campus held was ${most.toLocaleString('en-US')}; full at ${runs.map((run) => `${run.style} ${run.seed} ${weekOf(run.seen.sizeWeeks[0]!)}`).join(', ')}`,
+    );
+  }
 
   // A well-run model campus keeps $12 to $17 of every $100 (the owner's target, 37.10), measured in years 3 to 8.
   {
-    const read = (run: Run): { low: number; high: number } => {
-      const mid = run.rows.filter((row) => row.year >= 3 && row.year <= 8).map((row) => row.kept);
+    const read = (run: Run, from: number, to: number): { low: number; high: number } => {
+      const mid = run.rows.filter((row) => row.year >= from && row.year <= to).map((row) => row.kept);
       return { low: Math.min(...mid), high: Math.max(...mid) };
     };
     // The owner's target is measured on the casual and the once-a-day players. The striver's range is told beside it.
-    const all = [...of('casual'), ...of('daily')].map(read);
+    const all = [...of('casual'), ...of('daily')].map((run) => read(run, 3, 8));
     const low = Math.min(...all.map((one) => one.low));
     const high = Math.max(...all.map((one) => one.high));
-    const late = runs.map((run) => run.rows[run.rows.length - 1]!.kept);
-    const opens = budget(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })).kept;
+    const later = [...of('casual'), ...of('daily')].map((run) => read(run, 9, PACE_WEEKS));
+    const laterLow = Math.min(...later.map((one) => one.low));
+    const laterHigh = Math.max(...later.map((one) => one.high));
+    const opens = budget(opening).kept;
     const books = budget(of('casual')[0]!.final);
     const payroll = (books.groups.find((group) => group.id === 'payroll')?.amount ?? 0) / Math.max(1, books.fullSpending);
+    const range = (style: Style, from: number, to: number): string => `${Math.min(...of(style).map((run) => read(run, from, to).low)).toFixed(1)}% to ${Math.max(...of(style).map((run) => read(run, from, to).high)).toFixed(1)}%`;
     check(
       'a model campus run by the casual or the once-a-day player keeps $12 to $17 of every $100 in years 3 to 8, and opens inside that range',
       low >= 12 && high <= 17 && opens >= 12 && opens <= 17 && payroll >= 0.5,
-      `it opens keeping ${opens.toFixed(1)}%; ${styles.map((style) => `${style} ${Math.min(...of(style).map((run) => read(run).low)).toFixed(1)}% to ${Math.max(...of(style).map((run) => read(run).high)).toFixed(1)}%`).join(', ')} over ${seeds.length} seeds; by week ${PACE_WEEKS} they keep ${Math.min(...late).toFixed(1)}% to ${Math.max(...late).toFixed(1)}%, most of the rise being what the endowment earns (${dollarsShort(Math.min(...runs.map((run) => run.final.money.endowment)))} to ${dollarsShort(Math.max(...runs.map((run) => run.final.money.endowment)))} by then); payroll ${Math.round(payroll * 100)}% of the casual player's spending; state grants ${dollarsShort(Math.max(...runs.map((run) => run.final.money.grants)))} at most`,
+      `it opens keeping ${opens.toFixed(1)}%; years 3 to 8: ${styles.map((style) => `${style} ${range(style, 3, 8)}`).join(', ')} over ${seeds.length} seeds; payroll ${Math.round(payroll * 100)}% of the casual player's spending; state grants ${dollarsShort(Math.max(...runs.map((run) => run.final.money.grants)))} at most`,
     );
-  }
-
-  // The once-a-day player: three to five size goals by week 9, and none of the last three before week 12.
-  {
-    const ok = of('daily').every((run) => sizeBy(run, 9) >= 3 && sizeBy(run, 9) <= 5 && run.seen.sizeWeeks.slice(5).every((at) => at === 0 || at >= 12));
-    check('the once-a-day player has three to five size goals by week 9 and none of the last three before week 12', ok, of('daily').map((run) => `seed ${run.seed}: ${sizeBy(run, 9)} by week 9, 81,000 at ${weekOf(run.seen.sizeWeeks[5]!)}`).join('; '));
-  }
-
-  // Any regular player has four size goals in the first two months.
-  {
-    const ok = runs.every((run) => sizeBy(run, 9) >= 4);
-    check('every regular player has four size goals in the first two months', ok, runs.map((run) => `${run.style} ${run.seed}: the fourth at ${weekOf(run.seen.sizeWeeks[3]!)}`).join('; '));
-  }
-
-  // Nobody has the last goal before month five, and the player who works all four causes does get there.
-  {
-    const last = SIZE_GOALS.length - 1;
-    const early = runs.filter((run) => run.seen.sizeWeeks[last]! > 0 && run.seen.sizeWeeks[last]! < 20);
-    check('nobody has the last size goal before month five', early.length === 0, runs.map((run) => `${run.style} ${run.seed}: ${weekOf(run.seen.sizeWeeks[last]!)}`).join('; '));
-    const strivers = of('striver');
     check(
-      'the last size goal can be reached: the player who works all four causes of applicants gets there, in months',
-      strivers.every((run) => run.seen.sizeWeeks[last]! >= 20),
-      strivers.map((run) => `seed ${run.seed}: 100,000 students at ${weekOf(run.seen.sizeWeeks[last]!)}, with ${enrollment(run.final)} at the end, looks ${averageDesirability(run.final).toFixed(0)} of 100, marketing at step ${run.final.money.marketing}, a tier ${run.final.football.stadium.tier} stadium and rank ${run.final.field.rank}`).join('; '),
+      'the later weeks stay in that range too, for the casual and the once-a-day player',
+      laterLow >= 12 && laterHigh <= 17,
+      `weeks 9 to ${PACE_WEEKS}: ${styles.map((style) => `${style} ${range(style, 9, PACE_WEEKS)}`).join(', ')}; the endowment holds ${dollarsShort(Math.min(...runs.map((run) => run.final.money.endowment)))} to ${dollarsShort(Math.max(...runs.map((run) => run.final.money.endowment)))} by week ${PACE_WEEKS}; faculty funded at one to every ${runs.map((run) => ratioTarget(run.final)).join(', ')} students at the end`,
     );
   }
 
-  // Rank: Top 100 in about month two, and the Top 10 not before month five.
+  // Rank: the Top 100 in about month two, the Top 10 not before month five, and somebody gets there.
   {
     const strivers = of('striver');
-    const ok = strivers.every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 13 && (run.seen.rankWeeks[7]! === 0 || run.seen.rankWeeks[7]! >= 20));
-    check('the rank climbs a little a year: Top 100 in about month two, and the Top 10 not before month five', ok, strivers.map((run) => `seed ${run.seed}: first rank ${weekOf(run.seen.rankWeeks[0]!)} in the Top 175, Top 100 at ${weekOf(run.seen.rankWeeks[3]!)}, Top 50 at ${weekOf(run.seen.rankWeeks[5]!)}, Top 10 ${weekOf(run.seen.rankWeeks[7]!)}`).join('; '));
+    const regular = [...of('casual'), ...of('daily')];
+    const ok =
+      strivers.every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 13) &&
+      regular.every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 18) &&
+      runs.every((run) => run.seen.rankWeeks[7]! === 0 || run.seen.rankWeeks[7]! >= 20);
+    check(
+      'the rank climbs a little a year: the Top 100 in about month two, and the Top 10 not before month five',
+      ok,
+      runs.map((run) => `${run.style} ${run.seed}: Top 100 at ${weekOf(run.seen.rankWeeks[3]!)}, Top 50 at ${weekOf(run.seen.rankWeeks[5]!)}, Top 10 ${weekOf(run.seen.rankWeeks[7]!)}`).join('; '),
+    );
+    check(
+      'the last rank goal can be reached: the player who works every cause gets to the Top 10, in months',
+      strivers.every((run) => run.seen.rankWeeks[7]! >= 20),
+      strivers.map((run) => `seed ${run.seed}: the Top 10 at ${weekOf(run.seen.rankWeeks[7]!)}, No. ${run.final.field.rank} at the end, looks ${averageDesirability(run.final).toFixed(0)} of 100, marketing at step ${run.final.money.marketing}, a tier ${run.final.football.stadium.tier} stadium, ${Math.round((100 * enrollment(run.final)) / Math.max(1, capacity(run.final).needs.find((need) => need.id === 'seats')!.have))}% of seats taken`).join('; '),
+    );
+  }
+
+  // Rank, applicants and selectivity feed each other: a better rank brings applicants, applicants make a full
+  // campus more selective, and a selective campus ranks better. It has to settle. Nothing else changes here:
+  // the campus is left alone for forty years.
+  {
+    let state = opening;
+    const rows: Array<{ year: number; applicants: number; accept: number; measured: number; published: number; rank: number }> = [];
+    // Read each year on rankings day itself: what was measured, and what was published.
+    for (let year = 1; year <= 40; year++) {
+      const result = advance(state, state.clock.lastSimulatedAt, T0 + year * YEAR_MS);
+      state = result.state;
+      const day = result.log.filter((entry) => entry.kind === 'rankings').pop();
+      const fall = result.log.filter((entry) => entry.kind === 'intake' && entry.data?.season === 'fall').pop();
+      const spring = result.log.filter((entry) => entry.kind === 'intake' && entry.data?.season === 'spring').pop();
+      const applied = Number(fall?.data?.expected ?? 0) + Number(spring?.data?.expected ?? 0);
+      const admitted = Number(fall?.data?.admitted ?? 0) + Number(spring?.data?.admitted ?? 0);
+      if (day) rows.push({ year, applicants: Number(fall?.data?.expected ?? fallApplicants(state).total), accept: applied > 0 ? admitted / applied : 1, measured: Number(day.data?.measured ?? 0), published: Number(day.data?.rating ?? 0), rank: Number(day.data?.rank ?? 0) });
+    }
+    console.log('');
+    console.log('RANK, APPLICANTS AND SELECTIVITY ON A CAMPUS LEFT ALONE');
+    console.log('year  applicants  admitted  measured  published  rank');
+    for (const row of rows.filter((one) => one.year <= 4 || one.year % 4 === 0)) {
+      console.log([String(row.year).padStart(4), String(row.applicants).padStart(11), `${Math.round(row.accept * 100)}%`.padStart(9), row.measured.toFixed(1).padStart(9), row.published.toFixed(1).padStart(10), String(row.rank).padStart(5)].join(' '));
+    }
+    const late = rows.slice(-10);
+    const span = (pick: (row: (typeof rows)[number]) => number): number => Math.max(...late.map(pick)) - Math.min(...late.map(pick));
+    const most = Math.max(...rows.map((row) => row.applicants));
+    // The most the four causes could ever make of the reach: looks, marketing, football and the rank all at their best.
+    const ceiling = (cap / 50_000) * 11_000 * 1.4 * 1.2 * 1.14 * 1.25;
+    check(
+      'rank, applicants and selectivity settle: left alone, the last ten of forty years barely move',
+      span((row) => row.published) <= 2 && span((row) => row.applicants) <= 0.05 * late[0]!.applicants && most < ceiling,
+      `years 31 to 40: the published rating moves ${span((row) => row.published).toFixed(1)} points, applicants ${span((row) => row.applicants)} (${late[0]!.applicants} to start with), the share admitted ${Math.round(Math.min(...late.map((row) => row.accept)) * 100)}% to ${Math.round(Math.max(...late.map((row) => row.accept)) * 100)}%; rank ${Math.min(...late.map((row) => row.rank))} to ${Math.max(...late.map((row) => row.rank))} as the field drifts; the most applicants in any year ${most}, and the four causes at their best could never make more than ${Math.round(ceiling)}`,
+    );
+  }
+
+  // The owner's two checks (DESIGN.md 38.1, point 4).
+  // A campus that grows fast without building ahead ends short and unhappy, and never spirals. It opens a third
+  // full, with half of what feeds, entertains and looks after its students taken away and one worker at each yard.
+  // Its player turns marketing up, underfunds teaching, and builds nothing.
+  {
+    let state = withStudents(stripped(opening), 1 / 3, true);
+    const started = enrollment(state);
+    for (const action of [{ type: 'marketing', step: 4 } as const, { type: 'instruction', step: 0 } as const]) {
+      const done = applyAction(state, action);
+      if (done.ok) state = done.state;
+    }
+    const students: number[] = [];
+    const happy: number[] = [];
+    let stretched = 0;
+    for (let year = 1; year <= 12; year++) {
+      // Read each fall, two days in, with the class settled.
+      state = advance(state, state.clock.lastSimulatedAt, T0 + (year - 1) * YEAR_MS + 2 * DAY_MS).state;
+      students.push(enrollment(state));
+      happy.push(campusHappiness(state).base);
+      if (facultyCount(state) < facultyNeed(state) * 0.9) stretched += 1;
+    }
+    const page = capacity(state);
+    const short = page.needs.filter((need) => need.status !== 'ok').map((need) => `${need.name.toLowerCase()} ${need.status}`);
+    const tended = campusHappiness(of('daily')[0]!.final).base;
+    const last = students.slice(-4);
+    const steady = Math.max(...last) - Math.min(...last) <= 0.05 * last[0]!;
+    const mood = campusHappiness(state);
+    check(
+      'a campus that grows fast without building ahead ends short and unhappy, and never spirals',
+      students[2]! >= started * 2 && stretched >= 1 && short.length >= 3 && happy[11]! < tended - 5 && happy[11]! >= 25 && steady && mood.retention >= 0.95 && state.money.grants === 0 && state.money.incomePerYear > state.money.spendingPerYear && validate(state) === null,
+      `${started} students to begin with, ${students[2]} by its third fall and ${students[11]} at its twelfth, the last four within ${Math.max(...last) - Math.min(...last)} of each other; faculty a tenth or more short in ${stretched} of twelve falls; at the end: ${short.join(', ')}; Happiness ${happy[11]!.toFixed(0)} against ${tended.toFixed(0)} on a tended campus; ${(mood.retention * 100).toFixed(1)}% stay each semester; it nets ${dollarsShort(state.money.incomePerYear - state.money.spendingPerYear)} a year and took ${dollarsShort(state.money.grants)} from the state`,
+    );
+  }
+
+  // A campus that shrinks recovers its finances within two years. The once-a-day player's campus, six years in,
+  // loses three students in ten overnight. Nobody is let go, so the payroll is carried until the semester turns.
+  {
+    // Six years, and then two days into the seventh fall, so the campus is read in term with its class settled.
+    const six = play('daily', seed, 6, 'model');
+    const settled = takeTurn(advance(six.final, six.final.clock.lastSimulatedAt, T0 + 6 * YEAR_MS + 2 * DAY_MS).state, 'daily').state;
+    const before = budget(settled);
+    let state = withStudents(settled, 0.7, false);
+    const carried = facultyCount(state) - facultyNeed(state);
+    const atOnce = budget(state);
+    let least = state.money.cash;
+    let worst = atOnce.kept;
+    const kept: number[] = [];
+    const from = state.clock.lastSimulatedAt;
+    // Two years, a visit a day.
+    for (let day = 1; day <= 14; day++) {
+      state = advance(state, state.clock.lastSimulatedAt, from + day * DAY_MS).state;
+      state = takeTurn(state, 'daily').state;
+      least = Math.min(least, state.money.cash);
+      const now = budget(state).kept;
+      worst = Math.min(worst, now);
+      kept.push(now);
+    }
+    // Read in term, as the margin always is: the last reading that is not a summer's.
+    const end = budget(state);
+    const inTerm = Math.max(...kept.slice(-7));
+    check(
+      'a campus that shrinks carries its payroll for a while, and recovers its finances within two years',
+      carried > 0 && atOnce.kept < before.kept - 5 && inTerm >= 12 && state.money.grants === settled.money.grants && least >= 0 && validate(state) === null,
+      `${enrollment(settled)} students and $${before.kept.toFixed(1)} kept of every $100 before; ${enrollment(withStudents(settled, 0.7, false))} students the day after, with ${carried} more faculty than they need still paid, and $${atOnce.kept.toFixed(1)} kept; the worst reading in two years $${worst.toFixed(1)}; two years on ${enrollment(state)} students, $${inTerm.toFixed(1)} kept in term and $${end.kept.toFixed(1)} on the last day; cash never under ${dollarsShort(least)}; no grant from the state`,
+    );
   }
 
   // A goal reached while away is in the paper of the next visit, for every player.
@@ -1001,17 +1160,16 @@ function assertModelCampus(seed: number): void {
 
   // Thirty days of catch-up on it stays inside one second.
   {
-    const fresh = newGame({ seed, name: 'Sim model', now: T0, campus: 'model' });
     let best = Infinity;
     for (let n = 0; n < 3; n++) {
       const t = performance.now();
-      advance(fresh, fresh.clock.lastSimulatedAt, fresh.clock.lastSimulatedAt + 30 * DAY_MS);
+      advance(opening, opening.clock.lastSimulatedAt, opening.clock.lastSimulatedAt + 30 * DAY_MS);
       best = Math.min(best, performance.now() - t);
     }
-    check('30 days of catch-up on the model campus runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${buildings(fresh.map).length} lots and ${fresh.map.placed.filter(Boolean).length} placed things`);
+    check('30 days of catch-up on the model campus runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${buildings(opening.map).length} lots and ${opening.map.placed.filter(Boolean).length} placed things`);
   }
 
-  check('the model campus validates when it opens and after its longest run', validate(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
+  check('the model campus validates when it opens and after its longest run', validate(opening) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
 }
 
 // ------------------------------------------------------------------- main --

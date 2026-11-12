@@ -3,6 +3,8 @@ import { openingStanding } from './systems/field';
 import { newGoals } from './systems/goals';
 import { newInbox } from './systems/inbox';
 import { STARTER } from './config/map';
+import { CLASS_SIZE, STUDENTS_PER_STAFF } from './config/money';
+import { INSTRUCTION_FULL } from './config/staffing';
 import { plainWeek } from './calendar';
 import { newTerm, startFootball } from './newGame';
 import { seedStreams } from './rng';
@@ -11,7 +13,9 @@ import { GROUNDS_QUIET_TICKS } from './config/grounds';
 import { LOCAL_SHARE, WORLD } from './config/town';
 import { recomputeDesirability } from './systems/desirability';
 import { buildTown, startingParcels } from './systems/town';
-import type { Field, GameState, MapState } from './types';
+import { PLACED } from './config/placed';
+import { mealLoads } from './systems/food';
+import type { Field, GameState, MapState, Placed } from './types';
 
 /**
  * Versioned saves. A save file is { v, savedAt, state }. On load it is parsed,
@@ -19,7 +23,7 @@ import type { Field, GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 15;
+export const SAVE_VERSION = 16;
 
 export interface SaveFile {
   v: number;
@@ -230,6 +234,32 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 16: faculty and staff are head counts kept in the save, with the Instruction slider, and the year's
+  // applicants are kept for selectivity (DESIGN.md section 38). A save loads with exactly the faculty and staff it
+  // paid for the moment before, at full funding, so nothing moves on the day it loads. They were always worked
+  // out from enrollment, so that is what they are worked out from here: one to every 20 students and one to
+  // every 40. Over a summer that is fewer than the campus employs, and the fall's intake brings the rest back.
+  // The goals a save has reached, and the eras it has opened, are kept: a game above the cap admits nobody
+  // until commencement brings it back under, and loses no student (38.4).
+  15: (state) => {
+    const cohorts = Array.isArray(state.cohorts) ? (state.cohorts as number[]) : [];
+    const students = cohorts.reduce((sum, n) => sum + Number(n ?? 0), 0);
+    const count = (per: number): number => (students > 0 ? Math.max(1, Math.round(students / per)) : 0);
+    if (typeof state.staffing !== 'object' || state.staffing === null) {
+      const faculty = count(CLASS_SIZE);
+      const staff = count(STUDENTS_PER_STAFF);
+      state.staffing = { faculty, staff, facultyPlan: faculty, staffPlan: staff, instruction: INSTRUCTION_FULL };
+    }
+    const admissions = state.admissions as { lastIntake?: { expected?: number; admitted?: number } | null; waitlistAdmitted?: number; year?: unknown };
+    if (typeof admissions.year !== 'object' || admissions.year === null) {
+      const last = admissions.lastIntake;
+      admissions.year = last ? { applied: Number(last.expected ?? 0), admitted: Number(last.admitted ?? 0) + Number(admissions.waitlistAdmitted ?? 0) } : { applied: 0, admitted: 0 };
+    }
+    // Who eats where: the one new thing kept with the map. Nothing else about the map is worked out again.
+    const map = state.map as unknown as MapState;
+    if (map.care && !map.care.meals) map.care.meals = mealLoads(map, map.placed.filter((placed): placed is Placed => !!placed && PLACED[placed.type].family === 'dining'));
+    return state;
+  },
 };
 
 /**
@@ -295,7 +325,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {
@@ -318,6 +348,7 @@ export function validate(state: unknown): string | null {
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';
   if ((state.cohorts as unknown[]).length !== 4) return 'The save has the wrong number of class years.';
+  if (!isObject((state.admissions as Record<string, unknown>).year)) return 'The save has no record of the year\'s applicants.';
 
   const bad = firstBadNumber(state, 'state');
   if (bad) return `The save holds a broken number at ${bad}.`;
