@@ -1,6 +1,6 @@
 import { dateAt, formatDate } from './calendar';
 import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand';
-import { PAPER_NAMES } from './config/inbox';
+import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
 import { dollars, duration } from './format';
@@ -69,11 +69,6 @@ export interface Edition {
   /** How many lines are folded away under the top: scores, stories, the rest and the dated lines. */
   folded: number;
 }
-
-/** The most things at the top of an edition. */
-export const TOP_ITEMS = 4;
-/** An absence at least this long, in minutes, gets the newspaper. A shorter one gets the plain list. */
-export const EDITION_MINUTES = 60;
 
 const sum = (values: readonly number[]): number => values.reduce((a, b) => a + b, 0);
 
@@ -256,31 +251,6 @@ export function waiting(state: GameState): Array<{ title: string; closes: number
   ];
   return out.sort((a, b) => a.closes - b.closes);
 }
-
-/**
- * How much each kind of news matters, for the top of the paper (DESIGN.md
- * 36.3). First whatever the player can still act on, then what was decided
- * without them, then the results they were waiting for, then trouble, then
- * the rest.
- */
-export const TOP_WEIGHTS = {
-  decisions: 100,
-  paused: 96,
-  annualDefault: 90,
-  bigGame: 84,
-  intake: 78,
-  waitlistLost: 74,
-  game: 72,
-  grant: 68,
-  goodNews: 62,
-  yearEnd: 58,
-  groundsFirst: 57,
-  graduation: 56,
-  missed: 55,
-  exams: 50,
-  money: 45,
-  deskDefault: 40,
-} as const;
 
 /**
  * An edition, for an absence and the campus as it stands at the end of it.

@@ -12,10 +12,11 @@ import {
 import { PLACED } from '../config/placed';
 import { FIRST_NAMES, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
 import { FIRST_INTAKE_TICK, TICKS_PER_DAY, TICKS_PER_HOUR } from '../config/time';
-import { dollars, duration } from '../format';
+import { dollars, duration, headCount } from '../format';
 import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { AdvisorId, Boost, GameState, InboxEffect, InboxItem, InboxOption, LogEntry, Placed } from '../types';
+import { scaleOf, smallCount } from '../scale';
 import { pruneBoosts } from './boosts';
 import { budget, occupiedBeds } from './budget';
 import { hasSeason, noiseAt, teamName } from './football';
@@ -46,6 +47,10 @@ import { crowding, dayRead, type CampusDay } from './season';
 /** What the written items read. Each is worked out once for the day, and only when something asks. */
 interface Facts {
   state: GameState;
+  /** The campus scale (DESIGN.md 35.7). A sum that is not counted for each student follows it. */
+  scale: number;
+  /** Students as the small game would count them: for rules about how big a campus has to be. */
+  small: number;
   students: number;
   cash: number;
   /** A year's spending, at today's rates. */
@@ -118,6 +123,8 @@ function read(state: GameState, day: number): Facts {
   const beds = openCapacity(state, 'housing');
   return {
     state,
+    scale: scaleOf(state),
+    small: smallCount(state, students),
     students,
     cash: state.money.cash,
     spend: state.money.spendingPerYear,
@@ -171,9 +178,13 @@ function read(state: GameState, day: number): Facts {
 
 const DAY = TICKS_PER_DAY;
 
-/** A sum that follows the size of the school, to the nearest $500, and never under a floor. */
-function amount(students: number, perStudent: number, floor: number): number {
-  return Math.max(floor, Math.round((students * perStudent) / 500) * 500);
+/**
+ * A sum that follows the size of the school: so much for each student, to the
+ * nearest $500, and never under a floor. The floor is the small game's, so it
+ * follows the campus scale (DESIGN.md 35.7).
+ */
+function amount(facts: Facts, perStudent: number, floor: number): number {
+  return Math.max(floor * facts.scale, Math.round((facts.students * perStudent) / 500) * 500);
 }
 
 const days = (n: number): string => (n === 1 ? 'a day' : `${['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'][n] ?? n} days`);
@@ -239,8 +250,8 @@ export const WRITTEN: readonly Written[] = [
     rest: 2,
     when: (f) => {
       const queue = f.queue();
-      if (!queue || f.students < 200) return null;
-      const cost = amount(f.students, 4, 2000);
+      if (!queue || f.small < 200) return null;
+      const cost = amount(f, 4, 2000);
       return {
         title: `Late hours at the ${queue.name}`,
         body: `Students wait about ${queue.wait} minutes for a turn at the ${queue.name}. A petition with a great many signatures, some of them real, asks for late hours this week.`,
@@ -261,7 +272,7 @@ export const WRITTEN: readonly Written[] = [
     when: (f) => {
       const mess = f.mess();
       if (!mess) return null;
-      const cost = amount(f.students, 3, 1500);
+      const cost = amount(f, 3, 1500);
       return {
         title: `A clean-up day at the ${mess.name}`,
         body: `The ground around the ${mess.name} is ${Math.round(mess.clean * 100)}% clean. Students have asked, politely and in writing, whether anyone is in charge of that.`,
@@ -282,12 +293,12 @@ export const WRITTEN: readonly Written[] = [
     rest: 2,
     when: (f) => {
       if (f.broken < 3) return null;
-      const cost = Math.max(1500, f.broken * 700);
+      const cost = Math.max(1500, f.broken * 700) * f.scale;
       return {
         title: 'A repair crew for a day',
-        body: `${f.broken} things are broken: bins, benches, tables or lamps. The grounds staff will get to them. The question is which semester.`,
+        body: `${headCount(f.broken)} things are broken: bins, benches, tables or lamps. The grounds staff will get to them. The question is which semester.`,
         options: [
-          option('fix', `Call a crew: ${dollars(cost)}`, `All ${f.broken} are mended today.`, -cost, [{ t: 'fix' }]),
+          option('fix', `Call a crew: ${dollars(cost)}`, `All ${headCount(f.broken)} are mended today.`, -cost, [{ t: 'fix' }]),
           option('wait', 'Wait for the grounds staff', 'Nothing changes. Workers at a Facilities Yard mend things in their own time.'),
         ],
         fallback: 'wait',
@@ -301,8 +312,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'provost',
     rest: 2,
     when: (f) => {
-      if (f.kind !== 'term' || f.crowd < 0.4 || f.students < INBOX_MIN_STUDENTS) return null;
-      const cost = amount(f.students, 5, 2500);
+      if (f.kind !== 'term' || f.crowd < 0.4 || f.small < INBOX_MIN_STUDENTS) return null;
+      const cost = amount(f, 5, 2500);
       return {
         title: 'Weekend review sessions',
         body: `Classes are crowded, and crowded classes are most of what makes exams hard here. The faculty will run review sessions at the weekend, if someone pays for the rooms and the biscuits.`,
@@ -322,7 +333,7 @@ export const WRITTEN: readonly Written[] = [
     rest: 2,
     when: (f) => {
       if (!f.has('library') || (f.kind !== 'term' && f.kind !== 'midterms') || f.state.term.factor < 0.5) return null;
-      const cost = amount(f.students, 4, 2000);
+      const cost = amount(f, 4, 2000);
       return {
         title: 'Keep the Library open late',
         body: `At the height of finals, Stress here would reach about ${Math.round(f.state.term.factor * 100)} of 100. Students ask for the Library to stay open late until exams are over. The librarians ask for the same thing in fewer words.`,
@@ -342,7 +353,7 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     when: (f) => {
       if (!f.season || f.losses < 3 || !f.homeAhead) return null;
-      const cost = amount(f.students, 2, 1000);
+      const cost = amount(f, 2, 1000);
       return {
         title: 'A pep rally',
         body: `The team has lost ${f.losses} in a row. The Athletic Director would like a pep rally before the next home game, on the theory that it cannot hurt.`,
@@ -361,8 +372,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'dean',
     rest: 2,
     when: (f) => {
-      if (f.students < 150 || f.mood().worstPart !== 'dining') return null;
-      const cost = amount(f.students, 3, 1500);
+      if (f.small < 150 || f.mood().worstPart !== 'dining') return null;
+      const cost = amount(f, 3, 1500);
       return {
         title: 'A visiting food cart',
         body: 'Food is what students here grumble about most. A travelling noodle cart will set up outside the dorms for a few days, for a fee.',
@@ -382,10 +393,10 @@ export const WRITTEN: readonly Written[] = [
     rest: 2,
     when: (f) => {
       if (f.missedNew < 6) return null;
-      const cost = amount(f.students, 4, 2000);
+      const cost = amount(f, 4, 2000);
       return {
         title: 'A night watch for the week',
-        body: `${f.missedNew} incidents lately had nobody come: a stubbed toe here, a borrowed traffic cone there. Students ask for someone, anyone, with a torch.`,
+        body: `${headCount(f.missedNew)} incidents lately had nobody come: a stubbed toe here, a borrowed traffic cone there. Students ask for someone, anyone, with a torch.`,
         options: [
           option('yes', `Hire a night watch: ${dollars(cost)}`, `Happiness is ${points(1)} higher for ${days(5)}. Campus Safety and a Medical Center in reach of the dorms would answer every call.`, -cost, [happy(1, 5, 'Night watch')]),
           option('no', 'No watch', 'Nothing changes.'),
@@ -401,7 +412,7 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'cfo',
     rest: 1,
     when: (f) => {
-      if (f.cash < 400_000 || f.cash < 0.45 * f.spend) return null;
+      if (f.cash < 400_000 * f.scale || f.cash < 0.45 * f.spend) return null;
       const gift = Math.round((f.cash * 0.1) / 10_000) * 10_000;
       return {
         title: 'Put the surplus to work',
@@ -422,8 +433,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'cfo',
     rest: 2,
     when: (f) => {
-      if (f.kind !== 'term' || f.beds < 100 || f.emptyBeds() < 0.15) return null;
-      const fee = amount(f.students, 10, 4000);
+      if (f.kind !== 'term' || f.beds < 100 * f.scale || f.emptyBeds() < 0.15) return null;
+      const fee = amount(f, 10, 4000);
       return {
         title: 'A choir festival wants the empty rooms',
         body: `${Math.round(f.emptyBeds() * 100)}% of the beds are empty, and empty beds earn nothing. A travelling choir festival will rent them for the weekend. They rehearse early.`,
@@ -442,8 +453,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'cfo',
     rest: 3,
     when: (f) => {
-      if (!f.has('dining') || f.students < 150 || (f.kept() >= 12 && f.cash >= 0.05 * f.spend)) return null;
-      const fee = amount(f.students, 25, 10_000);
+      if (!f.has('dining') || f.small < 150 || (f.kept() >= 12 && f.cash >= 0.05 * f.spend)) return null;
+      const fee = amount(f, 25, 10_000);
       const sponsor = SPONSORS[f.pick(11) % SPONSORS.length]!;
       return {
         title: `${sponsor} would like its name on the Dining hall`,
@@ -463,8 +474,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'provost',
     rest: 2,
     when: (f) => {
-      if (f.students < 300 || f.mood().score < 60) return null;
-      const cost = amount(f.students, 6, 3000);
+      if (f.small < 300 || f.mood().score < 60) return null;
+      const cost = amount(f, 6, 3000);
       return {
         title: 'A college guide wants to profile the campus',
         body: `Happiness is ${Math.round(f.mood().score)}, which is the kind of number a college guide likes to print. The writer needs a room, a tour and, the guide is clear about this, lunch.`,
@@ -484,7 +495,7 @@ export const WRITTEN: readonly Written[] = [
     rest: 3,
     when: (f) => {
       if (f.tier < 1 || !f.season) return null;
-      const fee = amount(f.students, 15, 8000);
+      const fee = amount(f, 15, 8000);
       const sponsor = SPONSORS[f.pick(12) % SPONSORS.length]!;
       return {
         title: `${sponsor} wants the scoreboard`,
@@ -506,8 +517,8 @@ export const WRITTEN: readonly Written[] = [
     when: (f) => {
       const marks = f.state.inbox.marks;
       if (marks.donor === 0 || marks.boat !== 0 || f.year <= marks.donor) return null;
-      const price = amount(f.students, 8, 4000);
-      const haul = amount(f.students, 1, 600);
+      const price = amount(f, 8, 4000);
+      const haul = amount(f, 1, 600);
       return {
         title: "A booster's suspicious gift of a boat",
         body: `After last year's sponsorship, a grateful booster has given the school a boat. It is forty feet long. ${f.has('pondLarge') || f.has('pondMedium') || f.has('pondSmall') ? 'The campus has a pond.' : 'The campus has no water at all.'}`,
@@ -527,8 +538,8 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'dean',
     rest: 2,
     when: (f) => {
-      if (!f.quad || f.students < 500 || f.kind !== 'term') return null;
-      const fee = amount(f.students, 10, 5000);
+      if (!f.quad || f.small < 500 || f.kind !== 'term') return null;
+      const fee = amount(f, 10, 5000);
       return {
         title: 'A film crew wants the quad',
         body: 'A film about a much older, much grander university needs a quad for two days. Yours will do, they say, with some ivy brought in.',
@@ -551,7 +562,7 @@ export const WRITTEN: readonly Written[] = [
     when: (f) => {
       // The risk that makes it possible: rivalry season, and Campus Safety covering little of the campus.
       if (!mascotYear(f)) return null;
-      const cost = amount(f.students, 1.5, 800);
+      const cost = amount(f, 1.5, 800);
       return {
         title: 'The mascot costume is missing',
         body: `It is rivalry season, and the mascot costume has left the building. Campus Safety covers little of the campus, which made it easy. A note signed "a friend from ${f.rival}" says it is safe and enjoying the trip.`,
@@ -574,8 +585,8 @@ export const WRITTEN: readonly Written[] = [
     when: (f) => {
       if (!f.season || mascotYear(f)) return null;
       const landmark = f.has('admin') ? 'the Administration building' : 'the main gate';
-      const leave = amount(f.students, 1, 600);
-      const answer = amount(f.students, 2, 1200);
+      const leave = amount(f, 1, 600);
+      const answer = amount(f, 2, 1200);
       return {
         title: `${landmark[0]!.toUpperCase()}${landmark.slice(1)} is wearing the wrong colours`,
         body: `Rivalry season has begun. Overnight, students from ${f.rival} dressed ${landmark} in their colours. It is, the Athletic Director admits, tidy work.`,
@@ -600,7 +611,7 @@ export const WRITTEN: readonly Written[] = [
       const hall = f.noisyHall();
       if (!hall || !f.season) return null;
       const professor = professorName(f);
-      const cost = amount(f.students, 1.5, 800);
+      const cost = amount(f, 1.5, 800);
       return {
         title: `${professor} against the marching band`,
         body: `${hall} stands inside the stadium's noise. ${professor} has now lost three lectures to the drum line and has written to the Provost, the band, and a newspaper.`,
@@ -621,8 +632,8 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     days: [3],
     when: (f) => {
-      if (!f.quad || f.students < INBOX_MIN_STUDENTS) return null;
-      const cost = amount(f.students, 1, 500);
+      if (!f.quad || f.small < INBOX_MIN_STUDENTS) return null;
+      const cost = amount(f, 1, 500);
       return {
         title: 'The clubs ask for the main quad',
         body: 'A new semester, and forty clubs want the main quad for a fair. Thirty-nine have filled in the form. The juggling club has sent a diagram.',
@@ -643,9 +654,9 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     days: [4],
     when: (f) => {
-      if (f.students < 200) return null;
-      const big = amount(f.students, 8, 4000);
-      const local = amount(f.students, 2, 1000);
+      if (f.small < 200) return null;
+      const big = amount(f, 8, 4000);
+      const local = amount(f, 2, 1000);
       return {
         title: 'The spring concert',
         body: 'The student committee has two plans for the spring concert and a strong feeling about each.',
@@ -667,8 +678,8 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     days: [5],
     when: (f) => {
-      if (!f.has('admin') || !f.state.fourYears || f.state.cohorts[3] <= 0 || f.students < INBOX_MIN_STUDENTS) return null;
-      const cost = amount(f.students, 1, 600);
+      if (!f.has('admin') || !f.state.fourYears || f.state.cohorts[3] <= 0 || f.small < INBOX_MIN_STUDENTS) return null;
+      const cost = amount(f, 1, 600);
       return {
         title: 'The seniors want to paint the steps',
         body: 'Commencement is near. The senior class asks to paint the steps of the Administration building in the school colour, as a gift to the campus. The Provost notes that nobody asked for it.',
@@ -689,8 +700,8 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     days: [7],
     when: (f) => {
-      if (!hasSeason(f.state) || f.students < INBOX_MIN_STUDENTS) return null;
-      const cost = amount(f.students, 3, 1500);
+      if (!hasSeason(f.state) || f.small < INBOX_MIN_STUDENTS) return null;
+      const cost = amount(f, 3, 1500);
       // It closes a day into the fall, before Homecoming is played, and its crowd comes for that game.
       const closes = nextFall(f.state) + DAY;
       return {
@@ -735,7 +746,7 @@ function windowOf(kind: InboxItem['kind']): number {
 export function openRoutine(state: GameState, day: number, log: LogEntry[]): void {
   const inbox = state.inbox;
   pruneBoosts(state);
-  if (state.clock.tick < FIRST_INTAKE_TICK + TICKS_PER_DAY || enrollment(state) < INBOX_MIN_STUDENTS) return;
+  if (state.clock.tick < FIRST_INTAKE_TICK + TICKS_PER_DAY || smallCount(state, enrollment(state)) < INBOX_MIN_STUDENTS) return;
   if (state.decisions.open.length >= ANNUAL_PAUSE) return;
   let room = Math.min(NEW_PER_DAY, ROUTINE_CAP - inbox.open.length);
   if (room <= 0) return;
@@ -901,6 +912,8 @@ export function everyWrittenItem(from: GameState): Array<{ key: string; draft: {
   for (const parity of [1, 2]) {
     const facts: Facts = {
       state,
+      scale: 1,
+      small: 2400,
       students: 2400,
       cash: 5_000_000,
       spend: 10_000_000,

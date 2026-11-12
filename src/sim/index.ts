@@ -178,6 +178,7 @@ export * from './systems/decisions';
 export * from './systems/inbox';
 export * from './systems/boosts';
 export * from './systems/advisors';
+export * from './newspaper';
 export * from './config/inbox';
 export * from './config/tone';
 export { startFootball, newTerm } from './newGame';

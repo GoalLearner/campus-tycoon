@@ -1,6 +1,7 @@
 import { ADVISOR_ORDER, ADVISORS } from '../config/inbox';
 import type { DriverId } from '../config/students';
 import { dollars } from '../format';
+import { scaleOf } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
 import type { AdvisorId, GameState } from '../types';
 import { budget, occupiedBeds } from './budget';
@@ -63,8 +64,8 @@ function cfo(state: GameState): string {
   }
   const beds = openCapacity(state, 'housing');
   const empty = beds > 0 ? 1 - occupiedBeds(state) / beds : 0;
-  if (beds >= 50 && empty >= 0.15) return `Housing is ${Math.round(empty * 100)}% empty, and an empty bed earns nothing.`;
-  if (state.money.cash >= 400_000 && state.money.cash >= 0.45 * state.money.spendingPerYear) return `${dollars(state.money.cash)} is sitting in the bank. The endowment would put some of it to work.`;
+  if (beds >= 50 * scaleOf(state) && empty >= 0.15) return `Housing is ${Math.round(empty * 100)}% empty, and an empty bed earns nothing.`;
+  if (state.money.cash >= 400_000 * scaleOf(state) && state.money.cash >= 0.45 * state.money.spendingPerYear) return `${dollars(state.money.cash)} is sitting in the bank. The endowment would put some of it to work.`;
   return `The campus keeps $${kept} of every $100 that comes in.`;
 }
 

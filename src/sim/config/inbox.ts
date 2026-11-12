@@ -45,3 +45,40 @@ export const SPONSORS: readonly string[] = ['Brackenby Biscuits', 'Quillby Crack
 
 /** A notice goes out this long before a decision closes (4.4). */
 export const CLOSING_SOON_TICKS = 12 * TICKS_PER_HOUR;
+
+/**
+ * How much each kind of news matters, for the top of the paper after a day
+ * away (DESIGN.md 36.3). First whatever the player can still act on, then
+ * what was decided without them, then the results they were waiting for,
+ * then trouble, then the rest.
+ */
+export const TOP_WEIGHTS = {
+  decisions: 100,
+  paused: 96,
+  annualDefault: 90,
+  bigGame: 84,
+  intake: 78,
+  waitlistLost: 74,
+  game: 72,
+  grant: 68,
+  goodNews: 62,
+  yearEnd: 58,
+  groundsFirst: 57,
+  graduation: 56,
+  missed: 55,
+  rules: 52,
+  exams: 50,
+  money: 45,
+  enrollment: 44,
+  waitlistIn: 42,
+  deskDefault: 40,
+  built: 38,
+  grounds: 37,
+  handled: 30,
+  quiet: 5,
+} as const;
+
+/** The most things at the top of an edition. */
+export const TOP_ITEMS = 4;
+/** An absence at least this long, in minutes, gets the newspaper. A shorter one gets the plain list. */
+export const EDITION_MINUTES = 60;
