@@ -5,8 +5,10 @@ import {
   fixText,
   isBrokenThing,
   isMessSpot,
-  LAMP_BROKE_BY,
+  BROKE_BY,
   lampReport,
+  thingReport,
+  type BreakReport,
   spotClean,
   spotFix,
   thingFix,
@@ -160,15 +162,15 @@ function baseSummary(state: GameState, placed: Placed): string {
       return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
     case 'bin': {
+      const broke = thingReport(state, placed);
+      if (broke) return `Broken, so it catches nothing. ${breakWords(state, broke)}`;
       const fix = fixText(state, placed, thingFix(state, placed));
       const how = { empty: 'Catching litter.', filling: 'Filling up.', full: 'Full. It catches nothing until it is emptied.', broken: 'Broken. It catches nothing until it is fixed.' }[binState(state, placed.id)];
       return fix ? `${how} ${fix}` : how;
     }
     case 'seat': {
-      if (isBrokenThing(state, placed.id)) {
-        const fix = fixText(state, placed, thingFix(state, placed));
-        return `Broken. Nobody can sit here until it is fixed.${fix ? ` ${fix}` : ' A worker is on the way.'}`;
-      }
+      const broke = thingReport(state, placed);
+      if (broke) return `Broken, so nobody can sit here. ${breakWords(state, broke)}`;
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       return `Somewhere to sit for ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.`;
     }
@@ -197,13 +199,21 @@ function about(minutes: number): string {
  */
 export function lampSummary(state: GameState, x: number, y: number): string | null {
   const report = lampReport(state, x, y);
-  if (!report) return null;
-  const story = report.line === null ? undefined : LAMP_BROKE_BY[report.line];
+  return report ? `Broken. ${breakWords(state, report)}` : null;
+}
+
+/**
+ * The rest of a broken thing's panel, the same for a lamp, a bin, a bench and
+ * a table: what broke it, whether a yard covers it, and when it will be fixed.
+ */
+function breakWords(state: GameState, report: BreakReport): string {
+  const story = report.line === null ? undefined : BROKE_BY[report.kind][report.line];
   const where = report.spot ? `after litter piled up around the ${PLACED[report.spot.type].name}` : 'where litter had piled up';
   const cause = story ? `${story}, ${where}.` : `It happened ${where}.`;
+  const stays = report.kind === 'lamp' ? 'dark' : 'broken';
   let fix: string;
-  if (!report.yard) fix = `No Facilities Yard reaches it, so it stays dark. Build one within ${PLACED.yard.radius} cells.`;
-  else if (report.workers === 0) fix = 'The Facilities Yard over it has no workers, so it stays dark. Hire one.';
+  if (!report.yard) fix = `No Facilities Yard reaches it, so it stays ${stays}. Build one within ${PLACED.yard.radius} cells.`;
+  else if (report.workers === 0) fix = `The Facilities Yard over it has no workers, so it stays ${stays}. Hire one.`;
   else if (report.minutes !== null) fix = `A Facilities Yard covers it, and a worker should have it fixed in about ${about(report.minutes)}.`;
   else {
     // Covered, but the crew has too much else to do. The yard's own line says what would help.
@@ -211,7 +221,7 @@ export function lampSummary(state: GameState, x: number, y: number): string | nu
     const help = line.startsWith('Understaffed') ? ` Its yard is ${line.replace(/^U/, 'u')}` : '';
     fix = `A Facilities Yard covers it, but its workers will not get to it for days.${help}`;
   }
-  return `Broken. ${cause} ${fix}`;
+  return `${cause} ${fix}`;
 }
 
 export function placedFacts(placed: Placed): string {

@@ -41,7 +41,7 @@ export const BIN_PER_WORK = BIN_CAPACITY / 6;
 export const FIX_WORK = 3.3;
 /** A yard opens with this many workers and holds at most this many. */
 export const YARD_START_WORKERS = 1;
-export const YARD_MAX_WORKERS = 4;
+export const YARD_MAX_WORKERS = 6;
 /** A worker's wage for a game year: about $36 a real hour. */
 export const WAGE_PER_YEAR = 6_000;
 
@@ -77,5 +77,11 @@ export const BREAK_LINES: Record<'bin' | 'bench' | 'table' | 'lamp', readonly st
   lamp: ['A street lamp met a stray frisbee and went dark.', 'A street lamp has stopped working after a very ambitious kick.'],
 };
 
-/** The same two stories about a street lamp, as its own panel tells them. In the order of BREAK_LINES.lamp. */
-export const LAMP_BROKE_BY: readonly string[] = ['A stray frisbee hit it', 'Somebody tried a very ambitious kick'];
+/** The same stories, as the broken thing's own panel tells them. In the order of BREAK_LINES. */
+export const BROKE_BY: Record<'bin' | 'bench' | 'table' | 'lamp', readonly string[]> = {
+  bin: ['Somebody used it as a goal', 'It was seen rolling down the path by itself'],
+  bench: ['It lost an argument with a skateboard', 'A leg went missing, and nobody saw anything'],
+  table: ['It hosted one tug-of-war too many', 'Too many people stacked themselves on it at once'],
+  lamp: ['A stray frisbee hit it', 'Somebody tried a very ambitious kick'],
+};
+export const LAMP_BROKE_BY: readonly string[] = BROKE_BY.lamp;

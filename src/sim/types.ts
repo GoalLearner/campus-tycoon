@@ -293,6 +293,8 @@ export interface Grounds {
   bins: Record<number, number>;
   /** Broken bins, benches and tables: the work left to fix each. */
   broken: Record<number, number>;
+  /** What broke each of those: the place whose litter led to it, and which of its stories it was. */
+  brokenFrom: Record<number, { spot: number; line: number }>;
   /** Broken street lamps, by cell index: the work left to fix each. */
   lamps: Record<number, number>;
   /**
