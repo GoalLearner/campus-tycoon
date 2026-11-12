@@ -37,6 +37,8 @@ class Session {
   preview: PaintPreview | null = null;
   /** A clear the player has dragged out and not yet confirmed. */
   clearing: PaintPreview | null = null;
+  /** An overlay the player has asked to see until they tap Done. Parking: which car parks and roads reach a street. */
+  overlay: 'parking' | null = null;
   toast: Toast | null = null;
 
   private listeners = new Set<Listener>();
@@ -57,6 +59,7 @@ class Session {
     this.clearing = null;
     this.placing = null;
     this.ghost = null;
+    this.overlay = null;
     if (tool !== 'look') {
       this.selected = null;
       this.student = null;
@@ -74,6 +77,13 @@ class Session {
     this.selected = null;
     this.student = null;
     this.following = false;
+    this.emit();
+  }
+
+  /** Show or hide an overlay. It stays until Done is tapped or another tool is picked. */
+  setOverlay(overlay: 'parking' | null): void {
+    if (this.overlay === overlay) return;
+    this.overlay = overlay;
     this.emit();
   }
 

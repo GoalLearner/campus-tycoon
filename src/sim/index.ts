@@ -29,7 +29,7 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
-export { roomPlan, waitlistOpen, type RoomPlan, type ZonePlan } from './systems/plan';
+export { housingFixes, roomPlan, waitlistOpen, type HousingFixes, type RoomPlan, type ZonePlan } from './systems/plan';
 export { approvalAt, campusHappiness, partLevel, retentionRate, type Approval, type CampusHappiness, type Cause, type CausePart } from './systems/happiness';
 export {
   fedAt,
@@ -59,6 +59,8 @@ export {
   offCampusNow,
   ownedAt,
   parcelAt,
+  roadReach,
+  roadsByAccess,
   startingParcels,
   townLiving,
   townPlaces,

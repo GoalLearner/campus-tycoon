@@ -34,7 +34,7 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
  */
 const walkable = (kind: string): boolean => kind === 'path' || kind === 'quad' || kind === 'crossing';
 
-function stepsToClass(map: MapState): Int32Array {
+export function stepsToClass(map: MapState): Int32Array {
   const { width, height, cells } = map;
   const dist = new Int32Array(width * height).fill(-1);
   const queue: number[] = [];

@@ -12,6 +12,7 @@ import {
   enrollment,
   FIRST_INTAKE_TICK,
   hasRoadAccess,
+  housingFixes,
   hoodAdvice,
   hoodAt,
   hoodCapacity,
@@ -30,6 +31,8 @@ import {
   PLOTS_MIN,
   PLOTS_SPREAD,
   previewPaint,
+  roadsByAccess,
+  roomPlan,
   previewPlace,
   ROAD_NOISE,
   ROAD_UPKEEP_PER_YEAR,
@@ -55,6 +58,7 @@ import {
   type Neighbourhood,
 } from '../src/sim';
 import { seedStreams } from '../src/sim/rng';
+import { housingFixLines } from '../src/ui/buildUi';
 import { recomputeRates } from '../src/sim/systems/money';
 import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
 
@@ -407,5 +411,106 @@ describe('upgrading a version 5 save, from before the town', () => {
     // And the town is the one a new game with the same seed would have.
     const fresh = freshGame(old.seed);
     expect(load().map.town.neighbourhoods).toEqual(fresh.map.town.neighbourhoods);
+  });
+});
+
+describe('the three fixes for a shortage of beds', () => {
+  it('gives each fix its numbers, and each number is what the fix then does', () => {
+    const state = rich();
+    const fixes = housingFixes(state);
+    const places = townPlaces(state.map);
+    const stuck = localsAmong(400) - places.total;
+    expect(stuck).toBeGreaterThan(0);
+
+    // 1. Housing lots: as many as cover every missing bed.
+    const plan = roomPlan(state).zones.housing;
+    expect(fixes.bedsShort).toBe(plan.short);
+    expect(fixes.lots).toEqual({ count: Math.ceil(plan.short / 12), perLot: 12, cost: Math.ceil(plan.short / 12) * COST.zoneLot });
+
+    // 2. A path to the nearest street nobody walks from: three cells up the edge from the walk the campus begins with.
+    const next = hoodOnRow(state, 12);
+    expect(fixes.path).toMatchObject({ hood: next.id, street: next.name, cells: 3, cost: 3 * COST.path, brings: stuck, gate: [31, 14] });
+    const joined = act(state, { type: 'paint', tool: 'path', cells: rowBetween([31, 16], [31, 14]) });
+    expect(joined.map.town.access.walk[next.id]).toBe(fixes.path!.minutes);
+    expect(bedsWanted(state) - bedsWanted(joined)).toBe(fixes.path!.brings);
+    expect(townPlaces(joined.map).walk).toBe(places.walk + hoodCapacity(next));
+
+    // 3. Parking: a space for each local who could drive in, and the lots that hold them.
+    expect(fixes.parking).toEqual({ spaces: stuck, lots: Math.ceil(stuck / 20), cost: Math.ceil(stuck / 20) * PLACED.parking.cost, brings: stuck });
+    let parked = state;
+    for (let n = 0; n < fixes.parking!.lots; n++) parked = act(parked, { type: 'place', building: 'parking', x: 30, y: 19 + n });
+    expect(state.money.cash - parked.money.cash).toBe(fixes.parking!.cost);
+    expect(townPlaces(parked.map).spaces).toBeGreaterThanOrEqual(fixes.parking!.spaces);
+    expect(bedsWanted(state) - bedsWanted(parked)).toBe(fixes.parking!.brings);
+  });
+
+  it('counts the same locals when a waitlist is open', () => {
+    const state = atIntake(rich());
+    const fixes = housingFixes(state);
+    const free = townPlaces(state.map).total - offCampusNow(state);
+    expect(fixes.path!.brings).toBe(state.admissions.waitlistLocals - free);
+    expect(fixes.parking!.brings).toBe(state.admissions.waitlistLocals - free);
+    expect(fixes.bedsShort).toBe(roomPlan(state).zones.housing.short - roomPlan(state).zones.housing.building);
+  });
+
+  it('offers no path or parking once the town takes every local, and nothing at all when beds are not short', () => {
+    // Join two more streets: more places than there are locals.
+    let state = act(rich(), { type: 'paint', tool: 'path', cells: rowBetween([31, 16], [31, 14]) });
+    state = act(state, { type: 'paint', tool: 'path', cells: rowBetween([31, 18], [31, 20]) });
+    expect(townPlaces(state.map).total).toBeGreaterThanOrEqual(localsAmong(400));
+    const full = housingFixes(state);
+    expect(full.bedsShort).toBeGreaterThan(0);
+    expect(full.lots).not.toBeNull();
+    expect(full.path).toBeNull();
+    expect(full.parking).toBeNull();
+
+    // With the beds built, there is nothing to fix.
+    const beds = openCapacity(state, 'housing');
+    for (const building of state.map.buildings) if (building && building.zone === 'housing') building.stage = 2;
+    const roomy = structuredClone(state);
+    roomy.cohorts = [0, 0, 0, 0];
+    roomy.admissions.waitlist = 0;
+    expect(openCapacity(roomy, 'housing')).toBeGreaterThan(beds);
+    // Make the next class small enough for the beds there are.
+    roomy.clock.tick = FIRST_INTAKE_TICK + 2;
+    const none = housingFixes(roomy);
+    if (roomPlan(roomy).zones.housing.short === 0) expect(none).toEqual({ bedsShort: 0, lots: null, path: null, parking: null });
+    else expect(none.bedsShort).toBeGreaterThan(0);
+  });
+
+  it('skips a street that is joined already but too long a walk', () => {
+    // A path all the way to the far end of the land: the last street is joined, and too far.
+    const state = act(rich(), { type: 'paint', tool: 'path', cells: rowBetween([31, 16], [31, 3]) });
+    const far = hoodOnRow(state, 2);
+    expect(state.map.town.access.walk[far.id]).toBeGreaterThan(TOWN_WALK_MAX_MINUTES);
+    expect(housingFixes(state).path?.hood).not.toBe(far.id);
+  });
+
+  it('says each fix in one line, with its numbers', () => {
+    const state = rich();
+    const fixes = housingFixes(state);
+    const lines = housingFixLines(fixes);
+    expect(lines.lots).toMatch(new RegExp(`Zone ${fixes.lots!.count} more Housing lots: 12 beds each`));
+    expect(lines.path).toContain(`Lay a path to ${fixes.path!.street}: about 3 path cells, $6,000.`);
+    expect(lines.path).toContain(`${fixes.path!.brings} locals could walk in`);
+    expect(lines.path).toContain(`${fixes.path!.brings} fewer beds are needed`);
+    expect(lines.parking).toContain(`Build ${fixes.parking!.spaces} parking spaces with a road to a street: ${fixes.parking!.lots} Parking lots, $80K.`);
+    expect(lines.parking).toContain(`${fixes.parking!.brings} locals could drive in`);
+    // Nothing is said about a fix that would bring nobody in.
+    expect(housingFixLines({ bedsShort: 5, lots: { count: 1, perLot: 12, cost: 15_000 }, path: null, parking: null })).toMatchObject({ path: '', parking: '' });
+  });
+});
+
+describe('the Parking overlay', () => {
+  it('sorts roads by whether a car from the town can reach them', () => {
+    let state = act(rich(), { type: 'paint', tool: 'road', cells: rowBetween([26, 22], [28, 22]) });
+    expect(roadsByAccess(state.map)).toEqual({ linked: [], cut: [[26, 22], [27, 22], [28, 22]] });
+    state = act(state, { type: 'paint', tool: 'road', cells: rowBetween([29, 22], [31, 22]) });
+    const sorted = roadsByAccess(state.map);
+    expect(sorted.cut).toEqual([]);
+    expect(sorted.linked.length).toBe(6);
+    // A second road that goes nowhere is still shown as cut off.
+    state = act(state, { type: 'paint', tool: 'road', cells: rowBetween([20, 24], [21, 24]) });
+    expect(roadsByAccess(state.map).cut).toEqual([[20, 24], [21, 24]]);
   });
 });

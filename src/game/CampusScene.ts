@@ -23,7 +23,9 @@ import {
   hasRoadAccess,
   isPathKind,
   isRoadKind,
+  roadsByAccess,
   START_LAND,
+  TOWN_X,
   townLiving,
   townPlaces,
   type Incident,
@@ -42,6 +44,12 @@ const NO_TINT = 0xffffff;
 const FOR_SALE_TINT = 0x9cb39a;
 /** The light of the hour is laid over the map here: above everything on the ground, below the icons that float. */
 const LIGHT_DEPTH = 800_000;
+/** The Parking overlay: what a road reaches, what it does not, and the avenue a road has to get to. */
+const PARKING_OK = 0x6fe38c;
+const PARKING_CUT = 0xff5a4d;
+const PARKING_AVENUE = 0x7ab8ff;
+/** How high the "no road access" badge floats over a surface lot and over a parking structure. */
+const BADGE_LIFT = { low: 74, tall: 168 } as const;
 /** Where cars park on a surface lot, as steps along it from its top corner. */
 const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
@@ -490,6 +498,10 @@ export class CampusScene extends Phaser.Scene {
         items.push({ key: `car.${(placed.id * 3 + k * 2) % 7}.ny`, x: placed.x + PARKED_AT[k]!, y: placed.y, forward: 2 });
       }
     }
+    // A car park no road reaches holds no cars. A lowered barrier floats over it until one does.
+    for (const placed of this.unlinkedCarParks(state)) {
+      items.push({ key: 'icon.noroad', x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: 'float', lift: placed.type === 'garage' ? BADGE_LIFT.tall : BADGE_LIFT.low });
+    }
     // An icon floats over every open incident.
     for (const incident of state.incidents.active) {
       const over = this.incidentPlace(state, incident);
@@ -521,9 +533,48 @@ export class CampusScene extends Phaser.Scene {
   }
 
   /** The paint preview and the selected lot. */
+  /** Car parks that hold no cars because no road joins them to a street. */
+  private unlinkedCarParks(state: GameState): Array<NonNullable<GameState['map']['placed'][number]>> {
+    const out: Array<NonNullable<GameState['map']['placed'][number]>> = [];
+    for (const placed of state.map.placed) {
+      if (placed && PLACED[placed.type].cars && !hasRoadAccess(state.map, placed)) out.push(placed);
+    }
+    return out;
+  }
+
+  /**
+   * True while the Parking overlay should show: when the player asked for it,
+   * while a road is being laid or a car park placed, and while a car park is
+   * selected. Those are the moments it answers a question.
+   */
+  private parkingOverlayOn(state: GameState): boolean {
+    if (session.overlay === 'parking' || session.tool === 'road') return true;
+    if (session.placing && PLACED[session.placing].cars) return true;
+    const selected = session.selected;
+    const id = selected ? (state.map.cells[selected.y * state.map.width + selected.x]?.placedId ?? null) : null;
+    const placed = id === null ? null : state.map.placed[id];
+    return !!placed && !!PLACED[placed.type].cars;
+  }
+
+  /** Green where cars can get to, red where they cannot, and the avenue every road has to reach in blue. */
+  private drawParkingOverlay(state: GameState): void {
+    for (let y = 0; y < state.map.height; y++) this.fillCell(TOWN_X, y, PARKING_AVENUE, 0.3);
+    const roads = roadsByAccess(state.map);
+    for (const [x, y] of roads.linked) this.fillCell(x, y, PARKING_OK, 0.38);
+    for (const [x, y] of roads.cut) this.fillCell(x, y, PARKING_CUT, 0.5);
+    for (const placed of state.map.placed) {
+      if (!placed || !PLACED[placed.type].cars) continue;
+      const linked = hasRoadAccess(state.map, placed);
+      for (let cy = placed.y; cy < placed.y + placed.h; cy++) {
+        for (let cx = placed.x; cx < placed.x + placed.w; cx++) this.fillCell(cx, cy, linked ? PARKING_OK : PARKING_CUT, linked ? 0.5 : 0.62);
+      }
+    }
+  }
+
   private drawOverlay(): void {
     const g = this.overlay;
     g.clear();
+    if (store.hasGame && this.parkingOverlayOn(store.state)) this.drawParkingOverlay(store.state);
     for (const tint of [...this.tints, ...this.ghostTints()]) {
       for (const [x, y] of tint.cells) this.fillCell(x, y, tint.colour, tint.alpha);
     }
@@ -890,6 +941,15 @@ export class CampusScene extends Phaser.Scene {
       const spot = this.incidentSpot(incident);
       if (Math.abs(world.x - spot.x) > reach || Math.abs(world.y - (spot.y - reach * 0.6)) > reach * 1.4) continue;
       session.notify(`${incidentText(incident)} ${incident.responder === null ? 'Nobody is coming.' : 'Help is on the way.'}`);
+      return;
+    }
+    // The barrier over a car park with no road: tapping it opens that car park's panel.
+    for (const placed of this.unlinkedCarParks(store.state)) {
+      const at = this.iso.toWorld(placed.x + placed.w / 2, placed.y + placed.h / 2);
+      const lift = placed.type === 'garage' ? BADGE_LIFT.tall : BADGE_LIFT.low;
+      if (Math.abs(world.x - at.x) > reach * 1.5 || Math.abs(world.y - (at.y - lift - reach * 0.4)) > reach * 1.3) continue;
+      session.closeStudent();
+      session.select(placed.x, placed.y);
       return;
     }
     // A walker is in front of whatever they are walking past.
