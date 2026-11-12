@@ -192,7 +192,11 @@ export class Store {
     this.emit();
   }
 
-  /** `wakeHour` is the hour of the player's own clock their day usually starts. `colour` is the school's. `campus` is which to begin with. */
+  /**
+   * `wakeHour` is the hour of the player's own clock their day usually starts. `colour` is the school's.
+   * `campus` is which to begin on. The founding screen always asks for the model campus (DESIGN.md 35.6).
+   * Left out, it is the small campus, which the tests and the long runs use and no player is offered.
+   */
   startNewGame(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string, campus: 'small' | 'model' = 'small'): void {
     clock.reset();
     this.ephemeral = false;

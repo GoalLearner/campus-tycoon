@@ -1,5 +1,4 @@
 import { stageSpec } from './config/buildings';
-import { scaleOf } from './scale';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
 import { openWithStudents } from './systems/admissions';
 import { yardStatus } from './systems/grounds';
@@ -123,7 +122,7 @@ export function newTerm(tick: number): Term {
  */
 export function startFootball(state: GameState, firstYear: number): void {
   state.field = makeField(state.rng, state.school.name);
-  state.football = newFootball(state.rng, state.field, firstYear, scaleOf(state));
+  state.football = newFootball(state.rng, state.field, firstYear);
 }
 
 /** A brand-new campus, fifteen minutes before its first class moves in. */
