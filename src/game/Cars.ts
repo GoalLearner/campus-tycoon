@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars, smallCount } from '../sim';
+import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars } from '../sim';
 import type { Art } from './art';
 import type { Iso } from './iso';
 import { driveways } from './townLook';
@@ -182,8 +182,8 @@ export class Cars {
     this.height = height;
     this.drivable = cells.map((cell) => isRoadKind(cell.kind));
     this.crossing = cells.map((cell) => cell.kind === 'crossing');
-    // The cars drawn are a sample of those who drive in, as the small game would count them.
-    this.drivers = smallCount(state, driversNow(state));
+    // Student cars have a cap of their own, so they follow the real number who drive in.
+    this.drivers = driversNow(state);
 
     const roadBeside = (x0: number, y0: number, w: number, h: number): number => {
       for (let y = y0 - 1; y <= y0 + h; y++) {

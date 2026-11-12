@@ -18,7 +18,6 @@ import {
   type PersonRef,
   type StudentRef,
   type Zone,
-  smallCount,
 } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
@@ -323,12 +322,11 @@ export class Walkers {
     const { width, height, cells, buildings } = state.map;
     this.width = width;
     this.height = height;
-    // The crowd drawn is a sample. It follows how busy the campus is, as the small game counts it, so a campus
-    // that stands for many more students draws no more people (DESIGN.md 35.7).
-    this.students = smallCount(state, enrollment(state));
+    // The crowd drawn follows the real enrollment, up to the limits that already hold it: the Crowd density setting, the caps of each step and the frame budget (DESIGN.md 35.9).
+    this.students = enrollment(state);
     const onBooks = peopleCounts(state);
-    this.faculty = smallCount(state, onBooks.faculty);
-    this.staffOnBooks = smallCount(state, onBooks.staff);
+    this.faculty = onBooks.faculty;
+    this.staffOnBooks = onBooks.staff;
     this.isPath = cells.map((cell) => isPathKind(cell.kind));
     this.isStreet = cells.map((cell) => cell.kind === 'street');
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
@@ -446,7 +444,7 @@ export class Walkers {
     for (const hood of state.map.town.neighbourhoods) {
       const here = living[hood.id];
       const walks = !!here && here.mode === 'walk' && here.living > 0;
-      if (walks) this.walkingIn += smallCount(state, here.living);
+      if (walks) this.walkingIn += here.living;
       hood.plots.forEach((plot, n) => {
         const door = hood.row * width + plot.x;
         if (!this.isStreet[door]) return;
