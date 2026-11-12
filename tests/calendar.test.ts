@@ -292,13 +292,17 @@ describe('the events of the academic year', () => {
     // Every line carries the date it happened on.
     for (const line of log) expect(line.date, line.text).toBeGreaterThan(100);
     expect(about('laborDay')[0]!.date).toBe(907);
-    const days = datedDays(log).days;
+    // The list by date, from the calendar's own lines: a whole year with football in it is longer than the list keeps.
+    const days = datedDays(said).days;
     expect(days.find((day) => day.date === 'Sep 7')!.lines[0]).toContain('Labor Day');
     expect(days.map((day) => day.date)).toContain('Dec 19');
+    // The whole year fits inside the last real week, so all of it is told by date.
+    expect(datedDays(log).days.map((day) => day.date)).toContain('May 13');
   });
 
   it('an older year is told in what was kept, and a long list keeps its newest lines', () => {
-    const line = (year: number, date: number, text: string, keep = 0): LogEntry => ({ tick: 0, kind: 'calendar', text, date, year, data: { keep } });
+    // Each year's lines are two real weeks from the next year's.
+    const line = (year: number, date: number, text: string, keep = 0): LogEntry => ({ tick: year * 2 * TICKS_PER_YEAR + date, kind: 'calendar', text, date, year, data: { keep } });
     const { days } = datedDays([line(3, 907, 'Labor Day.'), line(3, 1128, 'A season to remember.', 1), line(4, 907, 'Labor Day again.'), line(4, 907, 'And a game.')]);
     expect(days).toEqual([
       { date: 'Year 3', lines: ['A season to remember.'] },

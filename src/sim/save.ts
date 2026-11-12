@@ -1,6 +1,7 @@
 import { STARTER } from './config/map';
 import { plainWeek } from './calendar';
-import { newTerm } from './newGame';
+import { newTerm, startFootball } from './newGame';
+import { seedStreams } from './rng';
 import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
 import { GROUNDS_QUIET_TICKS } from './config/grounds';
 import { LOCAL_SHARE, WORLD } from './config/town';
@@ -213,6 +214,16 @@ function upgradeToLayerOne(state: Record<string, unknown>): Record<string, unkno
   if (typeof state.term !== 'object' || state.term === null) state.term = newTerm(tick);
   // Breaks and the summer now change what food and the stores earn.
   (state.money as Record<string, unknown>).ratesDirty = true;
+  // Football and the national field. The football random stream starts where a new game's would, so the
+  // streams the save already has are untouched. Its first season is the next fall: nothing is played, paid
+  // or decided before then.
+  const rng = state.rng as Record<string, number>;
+  if (typeof rng.football !== 'number') rng.football = seedStreams(Number(state.seed ?? 0)).football;
+  if (typeof state.football !== 'object' || state.football === null) {
+    const year = tick < FIRST_INTAKE_TICK ? 0 : (clock.week as { year: number }).year;
+    startFootball(state as unknown as GameState, year + 1);
+  }
+  if (typeof state.decisions !== 'object' || state.decisions === null) state.decisions = { open: [], nextId: 1, past: [] };
   return state;
 }
 
@@ -251,7 +262,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

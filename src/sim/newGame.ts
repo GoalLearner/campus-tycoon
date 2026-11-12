@@ -10,7 +10,9 @@ import { recomputeDesirability } from './systems/desirability';
 import { addPlaced } from './systems/placed';
 import { recomputeRates } from './systems/money';
 import { buildTown, startingParcels } from './systems/town';
-import type { Cell, GameState, MapState, Term, Zone } from './types';
+import { makeField } from './systems/field';
+import { newFootball, scheduleScrimmage } from './systems/football';
+import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
 export interface NewGameOptions {
   seed: number;
@@ -94,6 +96,16 @@ export function newTerm(tick: number): Term {
   return { stressSum: 0, since: tick, lastTick: tick, lastStress: 0, factor: 0.6, examPeak: 0, examCause: 'season', facultyPeak: 0, lastAverage: 0, snowYear: 0 };
 }
 
+/**
+ * Give a campus its national field and its football programme. `firstYear`
+ * is the first game year with a season: 1 for a new campus, and the year
+ * after this one for a save from before football.
+ */
+export function startFootball(state: GameState, firstYear: number): void {
+  state.field = makeField(state.rng, state.school.name);
+  state.football = newFootball(state.rng, state.field, firstYear);
+}
+
 /** A brand-new campus, fifteen minutes before its first class moves in. */
 export function newGame(opts: NewGameOptions): GameState {
   const map = emptyMap(WORLD.width, WORLD.height, opts.seed >>> 0);
@@ -142,7 +154,13 @@ export function newGame(opts: NewGameOptions): GameState {
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
     grounds: { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
     term: newTerm(0),
+    // Filled in just below, from the football random stream.
+    field: { schools: [], reputation: 0, academic: 0, rank: 0, rankYear: 0, moved: null },
+    football: null as unknown as Football,
+    decisions: { open: [], nextId: 1, past: [] },
   };
+  startFootball(state, 1);
+  scheduleScrimmage(state);
   recomputeRates(state);
   return state;
 }

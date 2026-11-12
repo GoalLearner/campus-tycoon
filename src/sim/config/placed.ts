@@ -9,12 +9,12 @@ import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -173,6 +173,12 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Facilities Yard', category: 'Grounds', family: 'yard', w: 2, h: 1, cost: 60_000, upkeepPerYear: 0,
     radius: 16, strength: 0, effect: 'Its workers empty bins, sweep and fix within 16 cells', sprite: 'build.yard', flat: false, buildable: true,
   },
+  // The plot the stadium stands on. It is free, there is one, and what is drawn on it follows the tier.
+  stadium: {
+    name: 'Stadium plot', category: 'Athletics', family: 'athletics', w: 2, h: 3, cost: 0, upkeepPerYear: 0,
+    radius: 0, strength: 0, effect: 'Where the stadium is built, once a season of sell-outs earns one', sprite: 'build.stadium', flat: false, buildable: true,
+    utilitiesPerYear: 0,
+  },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Where the university began', sprite: 'build.admin', flat: false, buildable: false,
@@ -184,6 +190,7 @@ export const BUILD_ORDER: readonly PlacedType[] = [
   'library', 'computerLab', 'studyCenter', 'makerspace',
   'dining', 'foodcourt', 'diner', 'burger', 'pizza', 'taco', 'coffee', 'smoothie', 'convenience', 'truck',
   'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard',
+  'stadium',
 ];
 
 /** A pond cell counts as this share of a quad cell in the one green-space input, which is capped. */

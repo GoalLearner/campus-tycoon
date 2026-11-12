@@ -1,3 +1,4 @@
+import { TICKS_PER_YEAR } from './config/time';
 import { dollars, duration } from './format';
 import type { LogEntry } from './types';
 
@@ -39,14 +40,16 @@ const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weath
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * The dated part of the away list. The game year in progress is told day by
- * day. Earlier years are told in the few lines that still matter: a season's
- * record, a title, a decision that was made for the player.
+ * The dated part of the away list. The last real week, which is one game
+ * year, is told day by day. Anything older is told in the few lines that
+ * still matter: a season's record, a title, a decision that was made for the
+ * player.
  */
 export function datedDays(log: readonly LogEntry[]): { days: AwayDay[]; earlier: number } {
   const dated = log.filter((entry) => DATED.has(entry.kind) && entry.date !== undefined);
   if (dated.length === 0) return { days: [], earlier: 0 };
   const latest = dated[dated.length - 1]!.year ?? 0;
+  const cut = dated[dated.length - 1]!.tick - TICKS_PER_YEAR;
   const days: AwayDay[] = [];
   const push = (date: string, text: string): void => {
     const last = days[days.length - 1];
@@ -54,10 +57,9 @@ export function datedDays(log: readonly LogEntry[]): { days: AwayDay[]; earlier:
     else days.push({ date, lines: [text] });
   };
   for (const entry of dated) {
-    const year = entry.year ?? latest;
-    if (year < latest) {
-      // An earlier year: only what was marked as worth keeping.
-      if (entry.data?.keep === 1) push(`Year ${year}`, entry.text);
+    if (entry.tick < cut) {
+      // More than a week ago: only what was marked as worth keeping, under its year.
+      if (entry.data?.keep === 1) push(`Year ${entry.year ?? latest}`, entry.text);
       continue;
     }
     const date = entry.date!;

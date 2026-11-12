@@ -167,6 +167,11 @@ export {
   type Phase,
 } from './calendar';
 export * from './config/season';
+export * from './config/football';
+export * from './systems/field';
+export * from './systems/football';
+export * from './systems/decisions';
+export { startFootball, newTerm } from './newGame';
 export * from './systems/season';
 export { campusLevels } from './systems/happiness';
 export { placedIncomePerYear } from './systems/placed';

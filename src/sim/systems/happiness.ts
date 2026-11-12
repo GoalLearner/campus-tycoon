@@ -6,6 +6,7 @@ import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
 import { foodKindsAt } from './food';
+import { noiseAt } from './football';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
 import { recreationAt } from './play';
@@ -113,6 +114,11 @@ export function approvalAt(state: GameState, cell: number): Approval {
   felt.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]) });
   felt.push({ id: 'clean', level: cleanAt(state, x, y) });
   felt.push({ id: 'seating', level: seatingAt(state, x, y) });
+  // A dorm inside a stadium's reach hears every home game. Noise is part of Grounds, and only there.
+  if (zone === 'housing') {
+    const noise = noiseAt(state, x, y);
+    if (noise > 0) felt.push({ id: 'noise', level: 1 - noise });
+  }
   // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
   const kinds = foodKindsAt(map, x, y);
   felt.push({ id: 'dining', level: kinds > 0 ? 1 : 0 });

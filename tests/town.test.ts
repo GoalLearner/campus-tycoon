@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  budget,
   advance,
   applyAction,
   bedsWanted,
@@ -84,7 +85,8 @@ describe('the town', () => {
     const b = freshGame(7);
     expect(a.map.town).toEqual(b.map.town);
     expect(a.map.cells).toEqual(b.map.cells);
-    expect(a.rng).toEqual(seedStreams(7));
+    // The town draws from no stream. Football's own stream, added later, is the only one a new game has used.
+    expect({ ...a.rng, football: 0 }).toEqual({ ...seedStreams(7), football: 0 });
     const other = freshGame(8);
     expect(other.map.town.neighbourhoods.map((hood) => hood.plots)).not.toEqual(a.map.town.neighbourhoods.map((hood) => hood.plots));
   });
@@ -135,7 +137,9 @@ describe('locals', () => {
     recomputeRates(state);
     expect(occupiedBeds(state)).toBe(36);
     // The starter dining hall has half the lots, so 30 of the 60 students, to itself: $30 each (tests/food.test.ts).
-    expect(state.money.incomePerYear).toBe(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR + 30 * 30);
+    // Football's ticket line is its own (tests/football.test.ts).
+    const tickets = budget(state).income.find((line) => line.id === 'tickets')?.amount ?? 0;
+    expect(state.money.incomePerYear - tickets).toBeCloseTo(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR + 30 * 30, 6);
     expect(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR).toBe(60 * 10_000);
 
     // They show as living on that street, a house for every ten.

@@ -82,8 +82,9 @@ describe('what the money buys', () => {
     const b = budget(state);
     expect(line(b, 'faculty')).toBe(50 * FACULTY_PAY);
     expect(line(b, 'staff')).toBe(25 * STAFF_PAY);
-    expect(line(b, 'benefits')).toBeCloseTo(BENEFITS_SHARE * (line(b, 'faculty') + line(b, 'staff') + line(b, 'care') + line(b, 'workers')), 6);
-    expect(group(b, 'payroll')).toBeCloseTo(line(b, 'faculty') + line(b, 'staff') + line(b, 'care') + line(b, 'workers') + line(b, 'benefits'), 6);
+    // Coaches and athletics staff are on the payroll too, since football (tests/football.test.ts).
+    expect(line(b, 'benefits')).toBeCloseTo(BENEFITS_SHARE * (line(b, 'faculty') + line(b, 'staff') + line(b, 'care') + line(b, 'workers') + line(b, 'coaches')), 6);
+    expect(group(b, 'payroll')).toBeCloseTo(line(b, 'faculty') + line(b, 'staff') + line(b, 'care') + line(b, 'workers') + line(b, 'coaches') + line(b, 'benefits'), 6);
     // To the nearest whole person, and nobody on the books of an empty campus.
     expect(facultyCount(campus(210))).toBe(11);
     expect(staffCount(campus(210))).toBe(5);
@@ -418,7 +419,7 @@ describe('the Money panel, in words', () => {
   it('lists income, then spending in groups that open to their lines, largest first', () => {
     const state = act(campus(1000), { type: 'place', building: 'medical', x: 14, y: 10 });
     const view = moneyView(state);
-    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees', 'Food places']);
+    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees', 'Food places', 'Football tickets and stands']);
     expect(view.income[0]).toEqual({ name: 'Tuition', detail: '1,000 students at $8,200', amount: '$8.2M' });
     expect(view.groups[0]!.name).toBe('Payroll');
     expect(view.groups.map((group) => group.name).sort()).toEqual(['Buildings and utilities', 'Other', 'Payroll']);

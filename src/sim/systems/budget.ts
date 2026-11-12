@@ -28,6 +28,8 @@ import type { GameState, Placed } from '../types';
 import { foodIncomePerYear, foodPlaces } from './food';
 import { placedIncomePerYear } from './placed';
 import { dayRead } from './season';
+import { footballBooks, homeGameNow } from './football';
+import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
 import { offCampusNow } from './town';
 
 /**
@@ -166,11 +168,19 @@ export function budget(state: GameState): Budget {
   const away = day.presence < 1 ? ` ${day.name ?? 'This week'}: ${Math.round(day.presence * 100)}% of students are here` : '';
   const stores = placedIncomePerYear(state) * day.presence;
   if (stores > 0) income.push({ id: 'stores', name: 'Campus stores', amount: stores, detail: `More on a busy path.${away}`.replace(/\.$/, '') });
-  const food = foodIncomePerYear(state) * day.presence;
+  // A home game day brings the crowd past every food place, from an hour before kickoff to the final whistle.
+  const gameDay = homeGameNow(state) !== null;
+  const food = foodIncomePerYear(state) * day.presence * (gameDay ? GAME_DAY_FOOD : 1);
   if (food > 0) {
     const places = foodPlaces(state);
-    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared among the places that reach them.${away}`.replace(/\.$/, '') });
+    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared among the places that reach them.${away}${gameDay ? ' Game day: the crowd is in' : ''}`.replace(/\.$/, '') });
   }
+  // Football's income: tickets with what the crowd spends, and the TV deal.
+  const ball = footballBooks(state);
+  if (ball.tickets > 0) {
+    income.push({ id: 'tickets', name: 'Football tickets and stands', amount: ball.tickets, detail: `${HOME_GAMES_PER_YEAR} home games a year, ${people(Math.round(ball.crowd), 'fan', 'fans')} a game at ${dollars(TICKET_PRICE[state.football.stadium.price]!)} and ${dollars(CONCESSIONS_PER_FAN)} spent inside` });
+  }
+  if (ball.tv > 0) income.push({ id: 'tv', name: 'TV and conference deal', amount: ball.tv, detail: `To the end of year ${state.football.tv.until}` });
   if (m.endowment > 0) {
     income.push({ id: 'endowment', name: 'Endowment income', amount: m.endowment * ENDOWMENT_YIELD, detail: `${Math.round(ENDOWMENT_YIELD * 100)}% of ${dollars(m.endowment)}, every year` });
   }
@@ -181,12 +191,13 @@ export function budget(state: GameState): Budget {
   const staff = staffCount(state);
   const care = careStaffCount(state);
   const workers = workerCount(state);
-  const pay = faculty * FACULTY_PAY + staff * STAFF_PAY + care * CARE_STAFF_PAY + workers * WAGE_PER_YEAR;
+  const pay = faculty * FACULTY_PAY + staff * STAFF_PAY + care * CARE_STAFF_PAY + workers * WAGE_PER_YEAR + ball.pay;
   const payroll: BudgetLine[] = [
     { id: 'faculty', name: 'Faculty', amount: faculty * FACULTY_PAY, detail: `${people(faculty, 'member', 'members')} at ${dollars(FACULTY_PAY)}, one for every ${CLASS_SIZE} students` },
     { id: 'staff', name: 'Staff', amount: staff * STAFF_PAY, detail: `${people(staff, 'member', 'members')} at ${dollars(STAFF_PAY)}: admissions, advisors, administration, IT and dining` },
     { id: 'care', name: 'Safety and medical staff', amount: care * CARE_STAFF_PAY, detail: `${people(care, 'member', 'members')} at ${dollars(CARE_STAFF_PAY)}, by the students in each building's circle` },
     { id: 'workers', name: 'Maintenance workers', amount: workers * WAGE_PER_YEAR, detail: `${people(workers, 'worker', 'workers')} at ${dollars(WAGE_PER_YEAR)}, hired at each Facilities Yard` },
+    { id: 'coaches', name: 'Coaches and athletics staff', amount: ball.pay, detail: ball.pay > 0 ? `${state.football.coach.name} at ${dollars(ball.coach)}${ball.coach < state.football.coach.pay ? ', a share of the going rate at a school this size' : ''}, and ${people(ball.staff, 'member', 'members')} of staff at ${dollars(ATHLETICS_STAFF_PAY)}` : '' },
     { id: 'benefits', name: 'Benefits', amount: pay * BENEFITS_SHARE, detail: `${Math.round(BENEFITS_SHARE * 100)}% on top of all pay` },
   ];
 
@@ -207,7 +218,8 @@ export function budget(state: GameState): Budget {
     utilities += bill;
     if (bill > 0 || PLACED[placed.type].upkeepPerYear > 0) placedCount += 1;
   }
-  const upkeep = upkeepPerYear(state);
+  const upkeep = upkeepPerYear(state) + ball.upkeep;
+  utilities += ball.utilities;
   const count = standing + placedCount;
   const roadNote = roads > 0 ? ` and ${people(roads, 'cell', 'cells')} of road at ${dollars(ROAD_UPKEEP_PER_YEAR)}` : '';
   const buildings: BudgetLine[] = [
@@ -223,6 +235,7 @@ export function budget(state: GameState): Budget {
     { id: 'programs', name: 'Student programs and events', amount: students * PROGRAMS_PER_STUDENT, detail: `${dollars(PROGRAMS_PER_STUDENT)} a student` },
     { id: 'marketing', name: 'Recruiting and marketing', amount: marketing, detail: step === 0 ? 'Off' : `Step ${step} of ${MARKETING_LIFT.length - 1}: ${dollars(MARKETING_COST_PER_STUDENT[step]!)} a student` },
     { id: 'insurance', name: 'Insurance and legal', amount: students * INSURANCE_PER_STUDENT, detail: `${dollars(INSURANCE_PER_STUDENT)} a student` },
+    { id: 'athletics', name: 'Athletics operations', amount: ball.operations, detail: state.football.stadium.tier === 0 ? 'Travel, kit, game days and the rent of a field in town' : 'Travel, kit and game days' },
   ];
 
   const groups: BudgetGroup[] = [

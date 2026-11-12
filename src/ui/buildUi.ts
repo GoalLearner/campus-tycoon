@@ -42,6 +42,10 @@ import {
   dollarsShort,
   fedAt,
   FOOD_INCOME_PER_STUDENT,
+  duration,
+  MAX_TIER,
+  NOISE_RADIUS,
+  SEATS,
   foodKindsAt,
   foodTrade,
   VARIETY_KINDS,
@@ -148,6 +152,19 @@ export function placedSummary(state: GameState, placed: Placed): string {
   return `${base} ${Math.round(spotClean(state, placed) * 100)}% clean.${fix ? ` ${fix}` : ''}`;
 }
 
+/** The stadium plot: what stands on it, and what would put more there. */
+function stadiumSummary(state: GameState): string {
+  const stadium = state.football.stadium;
+  if (stadium.work) return `Tier ${stadium.work.tier} is being built here. It opens in ${duration(stadium.work.done - state.clock.tick)}.`;
+  if (stadium.tier === 0) {
+    return stadium.earned > 0
+      ? 'A stadium has been earned. The choice to build it comes each spring, in Decisions.'
+      : 'Reserved for the stadium. The team plays at a rented field in town until a season of sell-outs there earns one.';
+  }
+  const reach = NOISE_RADIUS[stadium.tier] ?? 0;
+  return `Tier ${stadium.tier} of ${MAX_TIER}: ${(SEATS[stadium.tier] ?? 0).toLocaleString('en-US')} seats. Dorms within ${reach} cells hear every home game. A season of sell-outs earns the next tier.`;
+}
+
 function baseSummary(state: GameState, placed: Placed): string {
   const spec = PLACED[placed.type];
   switch (spec.family) {
@@ -181,6 +198,8 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
+    case 'athletics':
+      return stadiumSummary(state);
     case 'medical':
     case 'safety': {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
@@ -309,6 +328,7 @@ const PART_FIX: Record<DriverId, string> = {
   green: 'Add quads, trees or a pond near dorms and lecture halls.',
   clean: 'Litter is building up. Put a Trash bin beside each place to eat or play, and a Facilities Yard with workers in reach.',
   seating: 'Students have nowhere to sit outside. Add benches or picnic tables near dorms and lecture halls.',
+  noise: 'Dorms beside the stadium hear every home game. Clear the nearest ones and zone Housing further off.',
   dining: 'Students have nowhere to eat nearby. Build a Dining hall, or anything else under Food, near dorms and lecture halls.',
   recreation: 'Students have nothing to do nearby. Build a gym, courts, a field, a pool or a track near dorms and lecture halls.',
   safety: 'Build a Medical Center and Campus Safety so their circles cover dorms and lecture halls.',

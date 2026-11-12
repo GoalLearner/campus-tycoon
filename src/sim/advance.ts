@@ -1,7 +1,7 @@
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
-import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_YEAR } from './config/time';
+import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
 import {
   closeWaitlist,
   fillFromWaitlist,
@@ -15,9 +15,12 @@ import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
 import { campusLevels } from './systems/happiness';
 import { stepSeason } from './systems/season';
-import { accrue, dailyCashCheck, stepPhase } from './systems/money';
+import { accrue, dailyCashCheck, markRatesDirty, stepPhase } from './systems/money';
+import { openAnnualDecisions, stepDecisions } from './systems/decisions';
+import { driftField, rankingsDay } from './systems/field';
+import { finalWhistle, footballYearEnd, hasSeason, kickoff, scrimmage, stadiumDone, startSeason } from './systems/football';
 import { yearEnd } from './systems/year';
-import { popDue } from './timers';
+import { addTimer, popDue } from './timers';
 import type { AdvanceResult, GameState, LogEntry, Timer } from './types';
 
 /**
@@ -92,6 +95,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
   stepSeason(state, log, () => campusLevels(state));
+  stepDecisions(state, log);
 
   if (clock.tick % GROWTH_EVAL_TICKS === 0) {
     fillFromWaitlist(state, log);
@@ -124,15 +128,40 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
       if (zone) evaluateGrowth(state, zone);
       break;
     }
+    case 'kickoff':
+      // An hour before a home game the crowd turns out: what food earns changes. Then the kickoff itself.
+      if (timer.ref >= 100) markRatesDirty(state);
+      else kickoff(state, timer.ref);
+      break;
+    case 'final':
+      finalWhistle(state, timer.ref, log);
+      break;
+    case 'stadiumDone':
+      stadiumDone(state, log);
+      break;
+    case 'scrimmage':
+      scrimmage(state, timer.ref, log);
+      break;
+    case 'decision':
+      break;
   }
 }
 
 function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]): void {
   switch (event) {
-    case 'dayStart':
+    case 'dayStart': {
       dailyCashCheck(state, log);
       stepPhase(state, log);
+      const day = calendarAt(state.clock).day;
+      // Day 1 opens the football season. Day 5 is rankings day, and the spring game is played that evening.
+      if (day === 1) startSeason(state, log);
+      if (day === 5) {
+        rankingsDay(state, log);
+        if (hasSeason(state)) addTimer(state, state.clock.tick + 10 * TICKS_PER_HOUR, 'scrimmage', 1);
+      }
+      openAnnualDecisions(state, day, log);
       break;
+    }
     case 'fallIntake':
       if (calendarAt(state.clock).year > 1) {
         promote(state);
@@ -154,6 +183,9 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       break;
     case 'yearEnd':
       yearEnd(state, log);
+      // The field moves on a year, and so does the coach.
+      driftField(state.field, state.rng);
+      footballYearEnd(state);
       break;
   }
 }
