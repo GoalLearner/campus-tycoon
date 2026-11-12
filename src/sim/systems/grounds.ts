@@ -18,7 +18,6 @@ import {
   LITTER_STRENGTH,
   MESS_REACH_MIN,
   PATH_DIRT,
-  RA_TIDY,
   SEAT_REACH,
   SEAT_UNITS,
   SEATS_PLENTY,
@@ -163,7 +162,8 @@ export function dropOf(state: GameState, spot: Placed): number {
 /**
  * How the mix of student types tilts littering, a tenth either way at most.
  * The types that would move it, Slackers and Party Animals, do not yet vary
- * from one campus to another, so today this is always 1.
+ * from one campus to another, so today this is always 1. For the same reason
+ * the Resident Advisor who empties a full bin in passing is not built yet.
  */
 export function litterTilt(_state: GameState): number {
   return 1;
@@ -215,12 +215,6 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
       }
     }
     g.litter[spot.id] = Math.min(LITTER_CEILING, lying + ground);
-  }
-
-  // A Resident Advisor empties a little of a full bin on the way past.
-  for (const key of Object.keys(g.bins)) {
-    const id = Number(key);
-    if ((g.bins[id] ?? 0) >= BIN_CAPACITY) g.bins[id] = BIN_CAPACITY - RA_TIDY;
   }
 
   // 2. Workers: the fullest bins first, then the dirtiest spot, then what is broken.
@@ -288,10 +282,7 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     // Two draws at every check for every spot this dirty, whatever comes of them, so the stream never depends on the outcome.
     const roll = nextFloat(state.rng, 'events');
     const pick = nextFloat(state.rng, 'events');
-    const mood = state.admissions.lastSemester?.happiness ?? 60;
-    const safe = map.placed.some((placed) => placed && PLACED[placed.type].family === 'safety' && gapBetween(placed, spot) <= PLACED[placed.type].radius);
-    const chance = BREAK_RATE * (0.5 + (100 - mood) / 100) * (safe ? BREAK_SAFETY_SHARE : 1);
-    if (roll >= chance) continue;
+    if (roll >= breakChance(state, spot)) continue;
     const things: Array<{ placed: Placed } | { lamp: number }> = [];
     for (const placed of map.placed) {
       if (!placed || isBroken(state, placed.id)) continue;
@@ -312,6 +303,17 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     const lines = BREAK_LINES[kind];
     log.push({ tick, kind: 'grounds', text: lines[Math.floor(pick * 97) % lines.length]!, data: { event: 'broken', thing: kind, spot: spot.id } });
   }
+}
+
+/**
+ * The chance, at one check, that something near a filthy spot gets broken:
+ * higher where students were unhappy last semester, and a quarter as high
+ * inside a Campus Safety circle.
+ */
+export function breakChance(state: GameState, spot: Placed): number {
+  const mood = state.admissions.lastSemester?.happiness ?? 60;
+  const safe = state.map.placed.some((placed) => placed && PLACED[placed.type].family === 'safety' && gapBetween(placed, spot) <= PLACED[placed.type].radius);
+  return BREAK_RATE * (0.5 + (100 - mood) / 100) * (safe ? BREAK_SAFETY_SHARE : 1);
 }
 
 // ------------------------------------------------------------ what it costs --
@@ -453,7 +455,7 @@ export function fixText(state: GameState, placed: Placed, fix: GroundsFix): stri
 export function thingFix(state: GameState, placed: Placed): GroundsFix {
   const yardId = state.map.care.yard[placed.id] ?? -1;
   const yard = yardId >= 0 ? state.map.placed[yardId] : null;
-  const needsWork = isBroken(state, placed.id) || (placed.type === 'bin' && (state.grounds.bins[placed.id] ?? 0) >= BIN_CAPACITY - RA_TIDY - 1e-9);
+  const needsWork = isBroken(state, placed.id) || (placed.type === 'bin' && (state.grounds.bins[placed.id] ?? 0) >= BIN_CAPACITY - 1e-9);
   if (!needsWork) return null;
   if (!yard) return 'noYard';
   if (workersAt(state, yard.id) === 0) return 'noWorkers';
@@ -465,7 +467,7 @@ export function thingFix(state: GameState, placed: Placed): GroundsFix {
 export function binState(state: GameState, id: number): 'broken' | 'full' | 'filling' | 'empty' {
   if (isBroken(state, id)) return 'broken';
   const fill = state.grounds.bins[id] ?? 0;
-  return fill >= BIN_CAPACITY - RA_TIDY - 1e-9 ? 'full' : fill > BIN_CAPACITY * 0.6 ? 'filling' : 'empty';
+  return fill >= BIN_CAPACITY - 1e-9 ? 'full' : fill > BIN_CAPACITY * 0.6 ? 'filling' : 'empty';
 }
 
 export function isBrokenThing(state: GameState, id: number): boolean {

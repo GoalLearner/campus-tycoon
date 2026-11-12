@@ -50,6 +50,7 @@ export * from './config/town';
 export * from './config/grounds';
 export {
   binState,
+  breakChance,
   campusClean,
   cleanAt,
   fixText,

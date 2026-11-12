@@ -32,8 +32,6 @@ export const BIN_CATCH = 0.85;
 export const BIN_REACH = 3;
 /** What a bin holds. A full bin catches nothing until it is emptied. */
 export const BIN_CAPACITY = 40;
-/** Now and then a Resident Advisor empties a little of a full bin on the way past. */
-export const RA_TIDY = 0.4;
 
 /** What one worker gets done at each check: this much litter swept, or its worth in bins emptied and things fixed. */
 export const WORK_PER_WORKER = 2.2;
