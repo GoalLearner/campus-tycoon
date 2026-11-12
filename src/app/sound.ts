@@ -25,6 +25,13 @@ type Loop = keyof SoundMix;
 
 /** How loud each steady layer is at its fullest, before the player's volume. All of it sits well under the music and the taps. */
 const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0 };
+/**
+ * The layers made from noise are off: a crowd's murmur, footsteps and traffic.
+ * Under the music they sounded like static (the owner, 2026-11-12, the first
+ * time anyone heard them). They come back when recorded sound replaces them.
+ * Rain is not one of them: rain is noise, and it waits for the weather.
+ */
+const NOISE_AMBIENCE = false;
 /** The scheduler looks this far ahead, this often. */
 const TICK_MS = 200;
 /** A pentatonic scale from middle C, in hertz: no note in it clashes with another. */
@@ -186,10 +193,11 @@ class SoundEngine {
     for (const name of ['crowd', 'traffic', 'rain'] as const) {
       // A crowd's murmur rises and falls a little by itself.
       const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : 1;
-      this.loops[name]?.gain.setTargetAtTime(mix[name] * LOOP_LEVEL[name] * waver, now, 0.5);
+      const level = name === 'rain' || NOISE_AMBIENCE ? LOOP_LEVEL[name] : 0;
+      this.loops[name]?.gain.setTargetAtTime(mix[name] * level * waver, now, 0.5);
     }
     // Scattered sounds: each is due at a time that the mix brings nearer or pushes away.
-    if (mix.crowd > 0.03 && now >= this.next.step) {
+    if (NOISE_AMBIENCE && mix.crowd > 0.03 && now >= this.next.step) {
       this.footstep(now, mix.crowd);
       this.next.step = now + (0.16 + Math.random() * 0.3) / Math.max(0.15, mix.crowd);
     }
@@ -201,7 +209,7 @@ class SoundEngine {
       this.cricket(now, mix.crickets);
       this.next.cricket = now + (0.9 + Math.random() * 1.6) / mix.crickets;
     }
-    if (mix.traffic > 0.1 && now >= this.next.swoosh) {
+    if (NOISE_AMBIENCE && mix.traffic > 0.1 && now >= this.next.swoosh) {
       this.swoosh(now, mix.traffic);
       this.next.swoosh = now + (2.5 + Math.random() * 5) / mix.traffic;
     }
