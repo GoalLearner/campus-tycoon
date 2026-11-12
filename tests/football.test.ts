@@ -10,6 +10,7 @@ import {
   budget,
   calendarAt,
   dateAt,
+  datedDays,
   driftField,
   expectedCrowd,
   fallClassDraw,
@@ -238,6 +239,27 @@ describe('the conference and its schedule', () => {
     // The season's games are laid out on the first day, each with its kickoff.
     expect(state.football.season!.games.map((game) => game.kick)).toEqual(SLOTS.map((_, slot) => slotKick(state, slot)));
     expect(state.timers.filter((timer) => timer.kind === 'kickoff' && timer.ref < 100).length).toBe(10);
+  });
+
+  it("tells a game's result under the Saturday it kicked off, though the whistle blows a date or two later", () => {
+    const start = run(fresh(), FIRST_INTAKE_TICK).state;
+    const { log } = to(start, slotKick(start, 9) + GAME_TICKS + 5);
+    const games = log.filter((entry) => entry.kind === 'game' && Number(entry.data?.slot) < 10);
+    expect(games.length).toBe(10);
+    for (const entry of games) {
+      const [month, day] = SLOTS[Number(entry.data!.slot)]!.date;
+      expect(entry.date, `game ${Number(entry.data!.slot) + 1}`).toBe(month * 100 + day);
+      // Forty minutes is longer than a date in the game, so the date at the whistle is a later one.
+      expect(dateAt({ tick: entry.tick, week: start.clock.week }).day).not.toBe(day);
+    }
+    // In the away list each date has one heading, and the games stand in the order they were played.
+    const days = datedDays(log).days;
+    const headings = days.map((day) => day.date);
+    expect(new Set(headings).size).toBe(headings.length);
+    const told = days.flatMap((day) => day.lines.filter((line) => games.some((game) => game.text === line)));
+    expect(told).toEqual(games.map((game) => game.text));
+    expect(headings).toContain('Sep 5');
+    expect(headings).toContain('Nov 28');
   });
 
   it('a ten-point edge wins about three games in four', () => {

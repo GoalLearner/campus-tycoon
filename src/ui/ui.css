@@ -1407,6 +1407,8 @@ button.money {
 
 .fb-tabs {
   display: flex;
+  /* A row that scrolls sideways may be squeezed to nothing by a long page under it. This one keeps its height. */
+  flex: 0 0 auto;
   gap: 4px;
   margin: 8px 0 6px;
   overflow-x: auto;

@@ -1,4 +1,4 @@
-import { calendarAt, tickOfDate } from '../calendar';
+import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
   ATHLETICS_STAFF,
@@ -544,11 +544,15 @@ export function finalWhistle(state: GameState, slot: number, log: LogEntry[]): v
       const big = won && (slot === RIVALRY_SLOT || game.oppRating - game.rating >= 6 || sum(game.us) - sum(game.them) >= 17);
       if (big) f.bigWin = state.clock.tick;
     }
+    // A game is forty minutes and a date in the game is shorter, so the whistle blows a date or two after kickoff.
+    // The result is told under the game's own date, the Saturday on the schedule.
+    const played = dateAt({ tick: game.kick, week: state.clock.week });
     log.push({
       tick: state.clock.tick,
       kind: 'game',
+      date: played.month * 100 + played.day,
       text: recap(state, game),
-      data: { slot, won: won ? 1 : 0, us: sum(game.us), them: sum(game.them), home: game.home ? 1 : 0, crowd: game.crowd, storm: slot === RIVALRY_SLOT && won && game.home ? 1 : 0 },
+      data: { slot, at: game.kick, won: won ? 1 : 0, us: sum(game.us), them: sum(game.them), home: game.home ? 1 : 0, crowd: game.crowd, storm: slot === RIVALRY_SLOT && won && game.home ? 1 : 0 },
     });
     // A home game ending changes what food earns again.
     markRatesDirty(state);

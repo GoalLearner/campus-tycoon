@@ -112,8 +112,9 @@ function tick(state: GameState, log: LogEntry[]): void {
   if (log.length > said) {
     const date = dateAt(clock);
     for (let i = said; i < log.length; i++) {
-      log[i]!.date = date.month * 100 + date.day;
-      log[i]!.year = clock.week.year;
+      // A line that names its own date keeps it: a game's result belongs to the day it kicked off.
+      log[i]!.date ??= date.month * 100 + date.day;
+      log[i]!.year ??= clock.week.year;
     }
   }
 }

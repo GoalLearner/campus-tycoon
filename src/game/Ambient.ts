@@ -21,7 +21,7 @@ const RIPPLE_LIFE_MS = 1900;
 /** How many places on each kind of pond a ripple can begin, found once by looking at its picture. */
 const POND_SPOTS = 14;
 /** Drops of rain and flakes of snow in view at once. Light particles, as the design allows for weather (28.3). */
-const RAIN_DROPS = 70;
+const RAIN_DROPS = 140;
 const SNOW_FLAKES = 60;
 /** Just under the sheet of night colour, so rain at night is dark too. */
 const WEATHER_DEPTH = 790_000;
@@ -126,8 +126,10 @@ export class Ambient {
     this.lastMs = timeMs;
     const raining = this.sky === 'rain';
     const snowing = this.sky === 'snow';
+    // Drops and flakes keep their size on the screen however far out the map is zoomed, so they can be seen on a phone.
+    const size = 1 / Math.max(0.2, this.scene.cameras.main.zoom);
     while (raining && this.drops.length < RAIN_DROPS) {
-      this.drops.push(this.scene.add.rectangle(view.x + Math.random() * view.width, view.y + Math.random() * view.height, 1.2, 9, 0xd6e6ff, 0.5).setRotation(0.3).setDepth(WEATHER_DEPTH));
+      this.drops.push(this.scene.add.rectangle(view.x + Math.random() * view.width, view.y + Math.random() * view.height, 1.5, 13, 0xe2eeff, 0.7).setRotation(0.3).setDepth(WEATHER_DEPTH));
     }
     while (snowing && this.flakes.length < SNOW_FLAKES) {
       this.flakes.push(this.scene.add.circle(view.x + Math.random() * view.width, view.y + Math.random() * view.height, 1.5, 0xffffff, 0.85).setDepth(WEATHER_DEPTH));
@@ -135,6 +137,7 @@ export class Ambient {
     for (const drop of this.drops) {
       drop.setVisible(raining);
       if (!raining) continue;
+      drop.setScale(size);
       drop.y += 420 * dt;
       drop.x -= 126 * dt;
       if (drop.y > view.bottom + 10 || drop.x < view.x - 10) drop.setPosition(view.x + Math.random() * (view.width + 80), view.y - 10 - Math.random() * 40);
@@ -142,14 +145,17 @@ export class Ambient {
     this.flakes.forEach((flake, n) => {
       flake.setVisible(snowing);
       if (!snowing) return;
+      flake.setScale(size);
       flake.y += (26 + (n % 7) * 4) * dt;
       flake.x += Math.sin(timeMs / 900 + n) * 9 * dt;
       if (flake.y > view.bottom + 6) flake.setPosition(view.x + Math.random() * view.width, view.y - 6);
       else if (flake.x < view.x - 6 || flake.x > view.right + 6 || flake.y < view.y - 40) flake.setPosition(view.x + Math.random() * view.width, view.y + Math.random() * view.height);
     });
-    // Snow lies as a faint whiteness over the whole campus. The packs have no snowy ground.
-    if (snowing && !this.haze) this.haze = this.scene.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0.1).setDepth(WEATHER_DEPTH - 1);
-    this.haze?.setVisible(snowing);
+    // Snow lies as a faint whiteness over the whole campus, and rain dulls it a little. The packs have no snowy or wet ground.
+    if ((snowing || raining) && !this.haze) this.haze = this.scene.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0.1).setDepth(WEATHER_DEPTH - 1);
+    this.haze?.setVisible(snowing || raining);
+    if (snowing) this.haze?.setFillStyle(0xffffff, 0.1);
+    else if (raining) this.haze?.setFillStyle(0x3d4d66, 0.12);
   }
 
   /** Read the ponds, the fountains and the lawns again. */

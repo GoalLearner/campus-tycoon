@@ -660,7 +660,7 @@ export interface LogEntry {
   text: string;
   /** Numbers the UI may want without parsing the text. */
   data?: Record<string, number | string>;
-  /** The date in the game when it happened, as month * 100 + day, and the game year. Stamped by advance(). */
+  /** The date in the game when it happened, as month * 100 + day, and the game year. Stamped by advance(), unless the line names its own. */
   date?: number;
   year?: number;
 }

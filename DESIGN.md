@@ -1472,7 +1472,7 @@ Defined precisely in section 19.
 - **Stand-ins:** Athletics funding fixed at full. Football lifts the single applicant pool. No crowds or band yet.
 - **Acceptance checks:** intakes and day games land in waking hours. A morning visit finds overnight results. A live game can be watched. A season of sell-outs earns a tier. Missing a weekend applies one-year defaults.
 - **Simulate must assert:** the favourite win rate; ten games per team per season and consistent standings; no annual window under 48 hours; the field's average does not drift; determinism still holds.
-- **Built 2026-11-12** as Stop B (section 34). 448 tests pass and the simulate script passes all 29 of its assertions, seven of them new. Not built, each with its reason in 34.2: the reading-days policy, the Board goal and commencement speaker, the Scorecard page and the grades on the Year-End report. The crowd walking to the stadium, the tailgates and the band are built, so "No crowds or band yet" no longer holds.
+- **Built 2026-11-12** as Stop B (section 34). 449 tests pass and the simulate script passes all 29 of its assertions, seven of them new. Not built, each with its reason in 34.2: the reading-days policy, the Board goal and commencement speaker, the Scorecard page and the grades on the Year-End report. The crowd walking to the stadium, the tailgates and the band are built, so "No crowds or band yet" no longer holds.
 
 ### Layer 2: Tiers and money levers
 
@@ -2244,7 +2244,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Fans on the field after a big win | Twelve tinted figures jumping on the spot on the stadium's picture. No goalposts | The fan figure above |
 | The stadium plot while bare, and the practice lawn beside tiers one to three | The quad's mown lawn on each cell. No field lines and no goalposts | Penzilla commission: a practice field of 2 x 1, drawn with the stadium family |
 | A stadium tier going up, `lot.site` | The building-site tile of a zoned lot, on the two cells where the new part will stand | Keep |
-| Rain and snow | Streaks and flakes made in code, as 33.3 allows, and a faint whiteness over the whole campus for snow. The ground never turns white, and nobody carries an umbrella or wears a coat | Keep the particles. Penzilla commission: umbrellas and coats, and snowy ground if wanted |
+| Rain and snow | Streaks and flakes made in code, as 33.3 allows, with a faint grey over the whole campus in rain and a faint whiteness in snow. The ground never turns white, and nobody carries an umbrella or wears a coat | Keep the particles. Penzilla commission: umbrellas and coats, and snowy ground if wanted |
 | The mascot | Nothing. The packs have no mascot, so none is shown | Penzilla commission, with the team's nickname decided first |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
@@ -3447,7 +3447,7 @@ Save version 12. A save from before is given a field of schools, a team and a pl
 | Rankings day | At the day-5 anchor the school's academic rating is worked out from the inputs that exist (graduation, class size, reputation, retention, selectivity) and placed among the 200. The line says who moved and, if the school fell while standing still, who passed it | `rankingsDay` |
 | The conference | Eleven rivals from the middle of the field, in two divisions of six, under an invented name. The player's school is first in the first division, and its rival is beside it | `newFootball` |
 | The season | Ten games for every team on the calendar's Saturdays: an opener against a school from outside the conference, five division games, four crossovers that turn with the years, and the rivalry last, at home in odd years. Then the title game on the first Saturday of December, a bowl by where the poll puts the team, and the national title game on January 18 | `src/sim/systems/football.ts` |
-| A game | Rolled whole at kickoff from the football stream: the winner by the two ratings and the home edge, then the score by quarter. It is shown a quarter at a time for forty minutes. After a loss the recap names the biggest gap | `kickoff`, `finalWhistle`, `liveGame` |
+| A game | Rolled whole at kickoff from the football stream: the winner by the two ratings and the home edge, then the score by quarter. It is shown a quarter at a time for forty minutes. After a loss the recap names the biggest gap. A date in the game is shorter than a game, so the result is told under the Saturday it kicked off | `kickoff`, `finalWhistle`, `liveGame` |
 | The team | A rating from the coach, the roster (the last four signing classes), the stadium tier and funding, which is full until the slider exists. A coach has a rating and one of four traits | `teamRating` |
 | The annual decisions | The recruiting pitch (opens on day 3 for 48 hours, to signing day). The coach's contract in its last year, and the stadium when a tier is earned (day 5, 72 hours). The TV deal when it runs out (day 6, 48 hours). Each has an advisor's pick and a default that applies by itself | `src/sim/systems/decisions.ts` |
 | The stadium | A plot of two cells by three. A rented field of 3,000 seats before tier one, then 8,000, 16,000, 28,000, 45,000 and 70,000. A season of home games at 95% full earns the next tier. Building is a choice each spring, takes 24 to 60 hours and is paid from cash. The ticket price has five steps | `Stadium`, `fanDemand` |
@@ -3473,7 +3473,7 @@ Each was the build's to take under his rule for this run (33.9). None costs mone
 | How fast Stress eases | **At once**: it is worked out from the date. A semester's average counts against retention from 20 to 36, since a whole semester averages far below its exam peak | A Stress that lingers after exams. The owner ruled out spirals |
 | Reading days before finals | **Not built.** With no Instruction funding yet it would cost nothing, so it would be the right answer every time | A switch now, given its cost in layer 2 |
 | What breaks do to money | **Food places and campus stores earn by who is on campus.** Tuition and room fees are untouched | Leave all income alone and make breaks for show only |
-| Weather on screen | **Rain and snow as light particles, and a faint whiteness over the campus for snow.** A sunny spell and a heat wave change Happiness and the word on the top bar, and have no picture. No umbrellas, coats or wet paths: there is no art for them | Wait for art before showing any weather |
+| Weather on screen | **Rain and snow as light particles that keep their size at any zoom. Rain dulls the day a little, and snow lays a faint whiteness over the campus.** A sunny spell and a heat wave change Happiness and the word on the top bar, and have no picture. No umbrellas, coats or wet paths: there is no art for them | Wait for art before showing any weather |
 | Board goal and commencement speaker | **Not built.** Section 4.4 lists them with the annual decisions, and they belong to layers 5 and 6 | Flavour-only versions now |
 | Changing a choice | **The pitch can be changed until signing day. Every other choice takes effect at once and is done**, so an early yes to the stadium buys building time | Let every choice be changed until its window closes |
 | The first TV deal | **Offered the spring a stadium is going up or standing.** None at a rented field | A small deal from the first year |
@@ -3510,14 +3510,14 @@ Measured by `npm run simulate`, the same script and seed, on main before this st
 | The once-a-day player at year 20 | 8,884 students, nets $21M, keeps 21, endowment $167M | 8,970 students, nets $25M, keeps 23, endowment $156M |
 | State grants | $0 for every test player | $0 for the absent, casual and once-a-day players. $14K, once, for the player who spends every dollar |
 | A mature save from before real costs, after they phase in | Spends $72M a year and keeps 20 of every $100 | Spends $74M a year and keeps 18 |
-| 30 days of catch-up on the largest test campus | 0.23 s | 0.42 to 0.49 s over three runs |
-| 30 days of catch-up on a campus nobody tends | 0.26 s | 0.41 to 0.47 s |
+| 30 days of catch-up on the largest test campus | 0.23 s | 0.42 to 0.49 s over four runs |
+| 30 days of catch-up on a campus nobody tends | 0.26 s | 0.41 to 0.54 s |
 
 In words. The early years are thinner and the late years fatter. A young programme costs more than it earns: a coach, staff and a rented field against small crowds, and breaks take some food and store income. Once a stadium and a TV deal arrive it earns. The pace to every campus size did not move. Both margin checks and the payroll check pass. Catch-up takes nearly twice as long, because Stress and the weather are read every minute of the time away. It is still inside the one-second limit, with about half of it left.
 
 ### 34.4 Tests and checks
 
-`tests/calendar.test.ts` (24 tests) and `tests/football.test.ts` (25) are new, with two more in `tests/life.test.ts` for the Mute button. `npm run simulate` has seven new checks:
+`tests/calendar.test.ts` (24 tests) and `tests/football.test.ts` (26) are new, with two more in `tests/life.test.ts` for the Mute button. `npm run simulate` has seven new checks:
 
 | Check | Result |
 |---|---|
@@ -3543,7 +3543,7 @@ One advance equals many still holds, with a football season inside the span.
 | Game day and the weather were checked from still frames | They cannot be judged from a still. They want a look in play |
 | Early seasons are losing seasons | A new programme rates about 43 in a conference around 48. On three test campuses it won three or four games in ten over its first six seasons, and went winless twice. A coach, signing classes and a stadium lift it. Every early loss recap names the stadium |
 | The player who spends every dollar took one $14K state grant | Football's early cost on a quiet summer day. A player who keeps anything in hand does not see it |
-| Catch-up is slower | Up to 0.49 s for thirty days on the largest test campus, from 0.23 s. The limit is one second |
+| Catch-up is slower | Up to 0.54 s for thirty days, from about 0.25 s. The limit is one second |
 | After a daylight-saving change the day begins an hour off | The anchor is kept in UTC. The Menu moves it |
 | A decision's advisor is always the Athletic Director | The other advisors arrive with the inbox |
 | No Scorecard page, no grades on the Year-End line | The Rankings tab is the first version of both |

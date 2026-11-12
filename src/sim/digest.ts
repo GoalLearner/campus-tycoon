@@ -46,10 +46,13 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * player.
  */
 export function datedDays(log: readonly LogEntry[]): { days: AwayDay[]; earlier: number } {
-  const dated = log.filter((entry) => DATED.has(entry.kind) && entry.date !== undefined);
-  if (dated.length === 0) return { days: [], earlier: 0 };
-  const latest = dated[dated.length - 1]!.year ?? 0;
-  const cut = dated[dated.length - 1]!.tick - TICKS_PER_YEAR;
+  const said = log.filter((entry) => DATED.has(entry.kind) && entry.date !== undefined);
+  if (said.length === 0) return { days: [], earlier: 0 };
+  const latest = said[said.length - 1]!.year ?? 0;
+  const cut = said[said.length - 1]!.tick - TICKS_PER_YEAR;
+  // A game's result is said at the final whistle and belongs to the day of its kickoff, so it is put back in its place.
+  const when = (entry: LogEntry): number => (typeof entry.data?.at === 'number' ? entry.data.at : entry.tick);
+  const dated = said.map((entry, index) => ({ entry, index })).sort((a, b) => when(a.entry) - when(b.entry) || a.index - b.index).map((item) => item.entry);
   const days: AwayDay[] = [];
   const push = (date: string, text: string): void => {
     const last = days[days.length - 1];
