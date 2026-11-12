@@ -507,9 +507,14 @@ describe('the Capacity page', () => {
     expect(status).toMatchObject({ beds: 'ok', seats: 'tight', faculty: 'ok', dining: 'ok', recreation: 'ok', parking: 'ok', workers: 'ok', staff: 'ok' });
     // A row that is doing nothing says nothing. One that is says what it lowers.
     for (const one of capacity(state).needs) expect(one.consequence === '', one.id).toBe(one.status === 'ok');
-    expect(need(state, 'seats').consequence).toBe('91% of the seats are taken, and classes feel crowded past 70%. Crowded classes raise Stress, and lower grades and the academic rating.');
+    // Crowded classes on a campus with room for every student: zoning Academic lots is the fix, and it says how many.
+    expect(need(state, 'seats').consequence).toMatch(/^91% of the seats are taken, and classes feel crowded past 70%\. Crowded classes raise Stress, and lower grades and the academic rating\. [\d,]+ more seats would give them room: about \d+ more Academic lots\.$/);
     expect(need(state, 'beds').fix).toEqual({ kind: 'plan', zone: 'housing' });
-    expect(need(state, 'seats').fix).toEqual({ kind: 'plan', zone: 'academic' });
+    expect(need(state, 'seats').fix).toEqual({ kind: 'zone', zone: 'academic' });
+    expect(need(state, 'seats').fixLabel).toBe('Zone Academic lots');
+    // A game with no cap builds no seat a student does not need, so its row promises none and goes to the plan.
+    const small = at(freshGame(), T0 + DAY).state;
+    expect(need(small, 'seats').fix).toEqual({ kind: 'plan', zone: 'academic' });
     expect(need(state, 'faculty').fix).toEqual({ kind: 'slider' });
     expect(need(state, 'dining').fix).toMatchObject({ kind: 'build', label: 'Food' });
     expect(need(state, 'care').fix).toMatchObject({ kind: 'build', label: 'Safety & health' });
@@ -611,7 +616,7 @@ describe('the Capacity page', () => {
     expect(view.rows.find((row) => row.id === 'seats')!.detail.length).toBe(2);
     expect(view.rows.find((row) => row.id === 'faculty')!.detail).toEqual([need(state, 'faculty').forecast]);
     expect(view.rows.find((row) => row.id === 'faculty')!.fixLabel).toBe('');
-    expect(view.rows.find((row) => row.id === 'seats')!.fixLabel).toBe('See the Academics plan');
+    expect(view.rows.find((row) => row.id === 'seats')!.fixLabel).toBe('Zone Academic lots');
 
     const slider = instructionView(state);
     expect(slider).toMatchObject({ step: INSTRUCTION_FULL, max: 10, line: '1 to 20 · full funding' });

@@ -288,10 +288,20 @@ function setMarketing(state: GameState, style: Style): GameState {
   const full = (a.lastIntake.capped ?? 0) > 0 && style !== 'striver';
   let step = lost || atCeiling || full ? 0 : style === 'optimizer' || style === 'striver' ? 4 : 2;
   // On a game with goals the player keeps an eye on the margin: marketing stops while the campus keeps too little.
+  // The margin is read in term. Over the summer a quarter of the students are away and the buildings cost what
+  // they cost, so every campus keeps less then, and a player who turned marketing off each summer would have
+  // it off on the day the fall class applies.
+  if (state.goals) {
+    const phase = calendarAt(state.clock).phase;
+    if (phase !== 'fall' && phase !== 'spring') return state;
+  }
   if (state.goals && step > 0) {
     const kept = keeps(state);
-    if (kept < KEEPS_ENOUGH) step = 0;
-    else if (kept < KEEPS_PLENTY) step = Math.min(step, state.money.marketing);
+    // The player who works every cause pays for marketing before it funds more faculty: it is the cheaper of the two.
+    const enough = style === 'striver' ? KEEPS_ENOUGH - 1 : KEEPS_ENOUGH;
+    const plenty = style === 'striver' ? KEEPS_ENOUGH : KEEPS_PLENTY;
+    if (kept < enough) step = 0;
+    else if (kept < plenty) step = Math.min(step, state.money.marketing);
   }
   if (step === state.money.marketing) return state;
   const result = applyAction(state, { type: 'marketing', step });

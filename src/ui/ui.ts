@@ -67,6 +67,8 @@ import {
   DEFAULT_WAKE_HOUR,
   SCHOOL_COLOURS,
   weatherAt,
+  enrollmentCap,
+  nextApplicants,
 } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
@@ -902,6 +904,12 @@ export function mountUi(root: HTMLElement): void {
       later = fits >= plan.students ? 'There is room for all of them.' : `There is room for ${fits} of them so far.`;
     } else {
       action = add ? `Next class is ${headCount(plan.students)}: add ${add} to fit them all` : `Room for the whole next class of ${headCount(plan.students)}`;
+      // A campus at its cap: the next class is as many as the cap leaves room for, and the rest are turned away.
+      const cap = enrollmentCap(state);
+      const applicants = nextApplicants(state);
+      if (!add && cap !== null && plan.students < applicants) {
+        action = plan.students === 0 ? `The campus is full at ${headCount(cap)} students` : `The next class fills the campus: ${headCount(plan.students)} of ${headCount(applicants)} applicants`;
+      }
       later = coming;
     }
     setText(status, action);
@@ -925,7 +933,11 @@ export function mountUi(root: HTMLElement): void {
       } else if (tick < FIRST_INTAKE_TICK) {
         lead = `${headCount(plan.students)} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
       } else {
+        const cap = enrollmentCap(state);
+        const applicants = nextApplicants(state);
         lead = `The next class is ${headCount(plan.students)} students.`;
+        // At its cap a campus takes as many as the cap leaves room for.
+        if (cap !== null && plan.students < applicants) lead = plan.students === 0 ? `The campus is full at ${headCount(cap)} students. ${headCount(applicants)} will apply, and there is no place for them until commencement.` : `The next class is ${headCount(plan.students)} students, which fills the campus. ${headCount(applicants - plan.students)} more will apply and be turned away.`;
       }
       card.append(el('p', '', lead));
       const rate = acceptanceRate(state);
@@ -1315,7 +1327,7 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The Instruction slider: a step down, the ratio it asks for, a step up. Used on the Capacity page and in Money. */
-  function instructionSteps(redraw: () => void): HTMLElement[] {
+  function instructionSteps(redraw: () => void, brief = false): HTMLElement[] {
     const view = instructionView(store.state);
     const steps = el('div', 'money-steps');
     const set = (step: number): void => {
@@ -1328,7 +1340,7 @@ export function mountUi(root: HTMLElement): void {
     down.disabled = view.step <= 0;
     up.disabled = view.step >= view.max;
     steps.append(down, el('span', 'staff-count', view.line), up);
-    return [steps, el('p', 'fine', view.note)];
+    return [steps, el('p', 'fine', brief ? view.cost : view.note)];
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
@@ -1350,6 +1362,9 @@ export function mountUi(root: HTMLElement): void {
         if (fix.kind === 'plan') {
           close();
           openPlan(fix.zone);
+        } else if (fix.kind === 'zone') {
+          session.setTool(fix.zone);
+          close();
         } else if (fix.kind === 'build') {
           close();
           if (fix.at) session.lookAt(fix.at.x, fix.at.y);
@@ -1433,7 +1448,8 @@ export function mountUi(root: HTMLElement): void {
             const detail = el('div', 'need-detail');
             for (const line of row.detail) detail.append(el('p', '', line));
             // Faculty: the fix is the Instruction slider, right here.
-            if (row.fix.kind === 'slider') detail.append(...instructionSteps(draw));
+            // Who is on the way is said once: in the row's own words when it has any.
+            if (row.fix.kind === 'slider') detail.append(...instructionSteps(draw, row.detail.length > 1));
             if (row.fixLabel) detail.append(button(row.fixLabel, 'wide', () => goFix(row)));
             body.append(detail);
           }

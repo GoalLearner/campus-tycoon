@@ -61,7 +61,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
-import { takeTurn, type Style } from './bots';
+import { botOptions, takeTurn, type Style } from './bots';
 
 /**
  * Headless balance runs. Plays the pure simulation for many game years under
@@ -78,6 +78,9 @@ function option(name: string, fallback: string): string {
   return i >= 0 && args[i + 1] ? args[i + 1]! : fallback;
 }
 const YEARS = Number(option('years', '20'));
+// `-- --no-slider` runs the test players with the Instruction slider left where it opens: a comparison, to show
+// what the slider is worth to the margin. Its checks on the margin are then expected to fail.
+if (args.includes('--no-slider')) botOptions.slider = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);

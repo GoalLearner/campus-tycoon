@@ -164,6 +164,8 @@ export interface InstructionView {
   line: string;
   /** What it pays for, and when a change arrives. */
   note: string;
+  /** What it pays for alone, where who is on the way is already said beside it. */
+  cost: string;
 }
 
 /** The Instruction slider: the ratio it asks for, what that costs, and who is on the way. */
@@ -185,5 +187,6 @@ export function instructionView(state: GameState): InstructionView {
     max: INSTRUCTION_RATIOS.length - 1,
     line: `1 to ${ratio} · ${word}`,
     note: need > 0 ? `${headCount(need)} faculty for today's students: ${cost} a year with benefits.${moving}` : 'Faculty are hired when the first class arrives.',
+    cost: need > 0 ? `${headCount(need)} faculty for today's students: ${cost} a year with benefits.` : 'Faculty are hired when the first class arrives.',
   };
 }

@@ -45,7 +45,7 @@ export function upgradeNotes(fromVersion: number): string[] {
   }
   if (fromVersion < 15) {
     notes.push(
-      "New: tap the student count to see this fall's applicants and what makes them. A game begun on the model campus has size goals and rank goals there, kept for good once reached. The main street is Lantern Avenue.",
+      "New: tap the student count to see this fall's applicants and what makes them. A game begun on the model campus has its goals there, kept for good once reached. The main street is Lantern Avenue.",
     );
   }
   if (fromVersion < 16) {

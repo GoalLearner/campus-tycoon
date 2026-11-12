@@ -1,5 +1,5 @@
 import { calendarAt, GRADUATION_TICK_IN_YEAR } from '../calendar';
-import { stageSpec } from '../config/buildings';
+import { MAX_STAGE, stageSpec } from '../config/buildings';
 import { WORK_PER_WORKER, YARD_MAX_WORKERS } from '../config/grounds';
 import { STUDENTS_PER_STAFF } from '../config/money';
 import { PLACED } from '../config/placed';
@@ -10,7 +10,7 @@ import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Placed, Zone } from '../types';
-import { bedsWanted, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, studentsWanted } from './demand';
+import { bedsWanted, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
 import { mealUse } from './food';
 import { roomUnderCap } from './goals';
 import { workersAt, yardStatus } from './grounds';
@@ -37,6 +37,8 @@ export type NeedStatus = 'ok' | 'tight' | 'short';
 /** Where a row's fix is: the screen or the spot the row taps through to. */
 export type NeedFix =
   | { kind: 'plan'; zone: Zone }
+  /** Put a zone's tool in hand: the lots to zone are the fix. */
+  | { kind: 'zone'; zone: Zone }
   | { kind: 'slider' }
   | { kind: 'build'; label: string; at: { x: number; y: number } | null }
   | { kind: 'place'; type: 'parking' }
@@ -238,8 +240,15 @@ export function capacity(state: GameState): Capacity {
     const full = have > 0 ? students / have : students > 0 ? 1 : 0;
     const status: NeedStatus = wanted > have || students > have ? 'short' : full > CROWDING_FROM ? 'tight' : 'ok';
     let consequence = '';
+    // Where lots are built on to ease crowded classes, zoning them is the fix, and the row says how many.
+    const forRoom = seatsForRoom(state);
+    const lots = Math.ceil(forRoom / stageSpec('academic', MAX_STAGE, scale).capacity);
     if (status === 'short') consequence = `The next class needs ${headCount(Math.max(wanted, students) - have)} more seats than there are. Those without one wait, and go elsewhere when the waitlist closes.`;
-    else if (status === 'tight') consequence = `${percent(full)} of the seats are taken, and classes feel crowded past ${percent(CROWDING_FROM)}. Crowded classes raise Stress, and lower grades and the academic rating.`;
+    else if (status === 'tight') {
+      consequence = `${percent(full)} of the seats are taken, and classes feel crowded past ${percent(CROWDING_FROM)}. Crowded classes raise Stress, and lower grades and the academic rating.`;
+      if (forRoom > 0) consequence += ` ${headCount(forRoom)} more seats would give them room: about ${lots} more Academic ${lots === 1 ? 'lot' : 'lots'}.`;
+    }
+    const zoning = status === 'tight' && forRoom > 0;
     needs.push({
       id: 'seats',
       name: 'Classroom seats',
@@ -248,9 +257,9 @@ export function capacity(state: GameState): Capacity {
       status,
       line: `${headCount(students)} of ${headCount(have)} taken`,
       consequence,
-      forecast: `Next fall's students need ${headCount(Math.max(wanted, fall))}. Classes have room at ${headCount(Math.ceil(fall / CROWDING_FROM))}.`,
-      fixLabel: 'See the Academics plan',
-      fix: { kind: 'plan', zone: 'academic' },
+      forecast: `Next fall's students need ${headCount(Math.max(wanted, fall))}.`,
+      fixLabel: zoning ? 'Zone Academic lots' : 'See the Academics plan',
+      fix: zoning ? { kind: 'zone', zone: 'academic' } : { kind: 'plan', zone: 'academic' },
     });
   }
 
