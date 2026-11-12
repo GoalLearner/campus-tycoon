@@ -1684,7 +1684,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
-| Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs a food place in reach | 2 x 1 | This pass | Restaurant_Sandwich. Ten more restaurants are spare. The bar is not used | Drawn |
+| Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs a food place in reach | 2 x 1 | This pass | Restaurant_Sandwich. Nine more restaurants are spare. The bar is not used | Drawn |
 | Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass | StreetStand_Coffee | Drawn |
 | Food truck | Hand-placed, small | Feeds a small radius. Clearing it always returns its whole price, so moving it is free | 1 x 1 | Play stop 4 | Truck_Groceries. It is a box truck with no serving hatch | Drawn |
 | Taco stand | Hand-placed, small | Feeds a small radius | 1 x 1 | Play stop 4 | Restaurant_Mexican with its patio cut away | From parts |
@@ -2470,7 +2470,7 @@ Checked in the owner's packs on 2026-11-11. Every restaurant in the pack carries
 | Study center | None | A plain hall with the pack's book as its sign |
 | Science lab | None. The museum is already the art gallery | A plain two-floor building with the pack's bottle as its sign, when layer 2 builds it |
 
-Ten more restaurants are spare for later: ramen, chicken, sushi, cake, grill, salad, and four more. The bar stays unused. The market, the ice-cream stand and the newspaper stand had been set aside for the Student Life zone, which keeps its eleven shops.
+Nine more restaurants are spare for later: ramen, chicken, sushi, cake, grill, salad, Chinese, French and Indian. The bar stays unused. The market, the ice-cream stand and the newspaper stand had been set aside for the Student Life zone, which keeps its eleven shops.
 
 The stand-ins are on the list in section 26, with the fix for each.
 
