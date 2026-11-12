@@ -2259,6 +2259,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Stadium tier five, `stadium.5` | Tier four stretched taller. It is not its own design | Penzilla commission, 2 x 3, drawn as a distinct stadium |
 | Stadium tiers two and three, `stadium.2` and `stadium.3` | The pack's stadium with its own stand copied, raised and mirrored | Penzilla commission, with tiers four and five, so the five read as one family |
 | Crossing, `road.cross.5` and `road.cross.10` | The straight road piece with its lane mark enlarged and repeated across it. Made bolder on 2026-11-11 so it reads at normal phone zoom | Penzilla commission: one tile |
+| The avenue's crossings (section 39) | The same crossing tile, laid on the avenue to each side of every junction. Nothing new was made for them | The same commission as the crossing |
 | Outdoor courts, `build.courts` | A tennis court cut from the tennis stadium. It is not a basketball court | Penzilla commission, 2 x 2 |
 | Gym, `build.gym` | A plain hall with a dumbbell icon on its sign. The icon pack asks a small payment for commercial use, which has not been made | Penzilla commission. Or pay for the icon and keep it. Not to ship as it is |
 | Recreation field, `build.field` | The soccer stadium with its stand, booth and banner cut away | Penzilla commission, 2 x 2, or keep if it passes a second look |
@@ -4392,3 +4393,95 @@ Two things his brief leans on are not built: **decay** of empty buildings, and t
 | Decay of empty buildings | Left for its own stop | Built here, with the rules of section 6 |
 | The money target | Measured again at the end of the stop against $12 to $17, with what moved | Left as tuned for the size goals |
 | What a faculty shortfall lowers | Class size first, and through it GPA, Stress and the rating, each naming the ratio | Its own new penalty on each |
+
+---
+
+## 39. Order on the streets, as built
+
+Asked for by the owner on 2026-11-12, from playing the build, with a picture of the town street beside the campus: "There needs to be a pedestrian walk and street lights and such ... the cars are just speeding and hitting the people. I think there need to be more order there. People need to cross the street intelligently and cars need to stop when someone crosses the road, there needs to be street lights or stop signs, etc. Traffic on the streets is allowed during rush hour."
+
+All of this is for show. Nothing in the simulation or the save changed, nothing is counted, and the long run prints the same numbers as before.
+
+### 39.1 What was wrong
+
+| Seen | Cause |
+|---|---|
+| Cars drove through people on the avenue | People walking in from town crossed the avenue through the junction itself. A car only knew of a crossing the player had laid, a path over a road, and the town had none |
+| People wandered over a street mid-block | Someone whose house was across the street from where they were going crossed wherever they happened to be |
+| Cars drove through each other at junctions and bends | A car only looked for a car ahead that faced the same way. Round a corner the one in front faces another way, and at a junction nothing kept two apart |
+| Cars read as speeding | 2.3 cells a second, and a gap of 0.85 of a cell |
+| A car pulled out of a driveway into another | It did not look before joining the road |
+
+### 39.2 The rules
+
+They are plain functions in `src/app/traffic.ts`, tested without the game engine. `src/game/Cars.ts` and `src/game/Walkers.ts` draw what they decide.
+
+| Rule | As built |
+|---|---|
+| A gap | A car keeps one cell behind the car in front, and more behind a bus or a truck. It looks along its own route, round bends too, so cars queue behind one that has stopped past a corner |
+| A junction | Any road cell where three or four roads meet. Every way in has a stop sign. A car rolls up to the line, stands for two thirds of a second, and then they go first come, first served |
+| One at a time | A junction and the crossings beside it are one zone, and one car holds a zone at a time. The one exception is two cars going straight through in opposite directions: their paths never cross, so both may be in it |
+| A junction always clears | A car does not enter until there is room beyond for it to get right out. It lets go of the junction the moment its tail is clear |
+| A marked crossing | It belongs to whoever is on it. A car stops at the line while anybody is on the crossing or stepping onto it. A person waits at the kerb while a car has it |
+| People first, but not for ever | A car that has waited two and a half seconds for a stream of people is let through: the next people wait at the kerb |
+| Where people cross the avenue | At the marked crossing beside each junction with a side street. From the street's sidewalk they turn the corner along the kerb, reach the crossing and go straight over. Nobody cuts through the junction |
+| One sidewalk a street | People keep to the sidewalk of the house they leave or go to on that street. A neighbour does not pick a house across their own street |
+| Pulling out | A car leaving a driveway or a car park waits for clear road where it joins |
+| A town speed | 1.6 cells a second (was 2.3). A bus or a truck 1.3 (was 1.84) |
+| The same rules everywhere | The town's streets and the roads the player lays are read the same way. A path the player lays over a road is a crossing, as before, and now has a sign |
+| A safety net | A car that cannot move for a minute leaves the road. The tests expect it never to be used, and in them it is not |
+
+### 39.3 What is drawn
+
+| Thing | Art |
+|---|---|
+| The stop sign | The pack's round red sign, as drawn (`sign.stop`), at the line of every way into a junction, on the kerb of the lane that comes in |
+| A crossing on the avenue | The crossing tile the game already had, `road.cross`, on the avenue cell to each side of a junction. Nothing new was made. It is on the list of section 26 |
+| A crossing by itself | A path over a road the player laid. The pack's blue square sign (`sign.crossing`) stands at each way onto it |
+| Traffic lights | None. His packs hold no traffic light: `Light.png` is a warning lamp and `Lights.png` a string of bulbs. He said "street lights or stop signs", so stop signs it is |
+| Street lamps | Already along every street and road, every few cells. None was missing, so none was added |
+
+### 39.4 The rush
+
+No cap on cars was raised. The streets carry what they carried at the rush: about 20 cars on the Normal crowd setting. Outside the rush they are lighter than they were: the most student cars on the road now follows the time of day, and the town runs two cars in the afternoon where it ran three. Measured on the model campus at Normal: 20 driving at the morning rush and 9 at midday, where it was 20 and 17.
+
+### 39.5 Tests and measures
+
+17 new tests in `tests/traffic.test.ts`, 587 in all. They cover: reading the roads into junctions, crossings and zones; the gap; a car never on a crossing with somebody on it; people crossing the avenue only at the marked crossing; a junction with never two cars in it whose paths cross; and a soak.
+
+**The soak.** The model campus's own roads, 22 cars at once for twenty minutes, each driving the whole way from one end of the roads to another, with people arriving at all fifteen crossings. About 600 cars set out and all but those still on their way at the end arrived. None gave up. No car was ever on a crossing with somebody on it. The longest any car stood still was 21 seconds, and nobody stood at a kerb for half a minute.
+
+**Frame time,** on this PC, the model campus at Normal crowd at the morning rush, the work in one frame:
+
+| View | Before | After |
+|---|---|---|
+| The avenue, close | 3.35 to 3.44 ms | 3.08 to 3.38 ms |
+| The whole campus | 3.65 to 3.87 ms | 3.77 to 3.86 ms |
+
+No difference that can be told from the spread between runs.
+
+`npm run simulate` prints the same 46 checks with the same numbers as before this stop.
+
+### 39.6 Decisions made for the owner, and what is rough
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Lights or signs | Stop signs, since his packs have no traffic light | Draw or buy a traffic light |
+| Where the avenue's crossings are | Beside each junction with a side street, on both sides, because that is where people from the town cross | Where each campus path meets the avenue. Nobody crosses there: the avenue's walk is on the campus side already |
+| Who goes first at a junction | First come, first served, as at an all-way stop | Give the avenue the right of way, with signs on the side streets only. It moves more cars and is less plainly fair to watch |
+| Two cars in a junction | Only two going straight through in opposite directions | Strictly one, which jams the avenue at the rush |
+| A car waiting for a stream of people | Let through after two and a half seconds | People always first, and a car that never moves |
+| The rush | The same number of cars as before, and fewer outside it | More cars at the rush |
+| Lanes | A little further apart (0.2 of a cell from the middle, was 0.15) | Leave them, with passing cars overlapping more |
+| The paper and a goal | A goal that is the headline is said once, in the line under it (asked for with this stop) | Twice, as it was |
+
+| Rough | Why |
+|---|---|
+| Two cars passing in opposite lanes still brush | The pack's cars are wider than half its road |
+| The stop sign is a plain red disc | It is the pack's sign as drawn. It has no word on it |
+| Fifteen crossings on the avenue | One to each side of every junction. It is orderly and a little busy to look at |
+| A car stops and starts in an instant | There is no slowing down or pulling away |
+| People at a kerb stand on one spot | They do not form a line |
+| Cars still turn on the spot | As before (25.7) |
+| The junction of the campus road beside the last side street | The two junctions touch, so they are one zone and one car goes through both at a time |
+| Not seen on a phone | Checked in pictures and in tests on this PC |
