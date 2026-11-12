@@ -29,13 +29,19 @@ import {
   thingFix,
   yardLine,
   yardStatus,
-  COST,
+  paintCost,
+  placedCars,
+  placedCost,
+  placedUpkeep,
+  scaleOf,
+  seatsAt,
   ROAD_UPKEEP_PER_YEAR,
   hoodAdvice,
   type HousingFixes,
   type HoodLiving,
   type Parcel,
   dollars,
+  headCount,
   driversNow,
   hasRoadAccess,
   townPlaces,
@@ -46,7 +52,6 @@ import {
   duration,
   MAX_TIER,
   NOISE_RADIUS,
-  SEATS,
   foodKindsAt,
   foodTrade,
   VARIETY_KINDS,
@@ -75,7 +80,7 @@ export const TOOL_ENTRY = 'tool:';
 export const ROAD_ENTRY = `${TOOL_ENTRY}road`;
 
 /** The Build menu: what can be built now, then what is on the way. */
-export function buildEntries(): BuildEntry[] {
+export function buildEntries(scale = 1): BuildEntry[] {
   const entries: BuildEntry[] = BUILD_ORDER.map((type) => {
     const spec = PLACED[type];
     return {
@@ -83,10 +88,10 @@ export function buildEntries(): BuildEntry[] {
       key: spec.sprite,
       name: spec.name,
       category: spec.category,
-      cost: dollarsShort(spec.cost),
+      cost: dollarsShort(placedCost(type, scale)),
       footprint: footprint(spec.w, spec.h),
-      upkeep: runningLine(type),
-      effect: spec.effect,
+      upkeep: runningLine(type, scale),
+      effect: effectLine(type, scale),
     };
   });
   const soon = (key: string, name: string, effect: string, locked: string): BuildEntry => ({
@@ -105,9 +110,9 @@ export function buildEntries(): BuildEntry[] {
     key: 'road.5',
     name: 'Road',
     category: 'Roads and parking',
-    cost: `${dollarsShort(COST.road)} a cell`,
+    cost: `${dollarsShort(paintCost('road', scale))} a cell`,
     footprint: 'drag to lay',
-    upkeep: `Upkeep ${dollars(ROAD_UPKEEP_PER_YEAR)} a cell a year`,
+    upkeep: `Upkeep ${dollars(ROAD_UPKEEP_PER_YEAR * scale)} a cell a year`,
     effect: 'Links a car park to a town street. Lots like it less beside them',
   };
   // Bins, benches and tables are one cell each and laid in rows, so their cards hand over to a drag tool too.
@@ -116,7 +121,7 @@ export function buildEntries(): BuildEntry[] {
     key: PLACED[type].sprite,
     name: PLACED[type].name,
     category: 'Grounds',
-    cost: `${dollarsShort(PLACED[type].cost)} each`,
+    cost: `${dollarsShort(placedCost(type, scale))} each`,
     footprint: 'tap or drag a row',
     upkeep: 'Costs nothing to run',
     effect: PLACED[type].effect,
@@ -160,7 +165,7 @@ function stadiumSummary(state: GameState): string {
       : 'Reserved for the stadium. The team plays at a rented field in town until a season of sell-outs there earns one.';
   }
   const reach = NOISE_RADIUS[stadium.tier] ?? 0;
-  return `Tier ${stadium.tier} of ${MAX_TIER}: ${(SEATS[stadium.tier] ?? 0).toLocaleString('en-US')} seats. Dorms within ${reach} cells hear every home game. A season of sell-outs earns the next tier.`;
+  return `Tier ${stadium.tier} of ${MAX_TIER}: ${seatsAt(state, stadium.tier).toLocaleString('en-US')} seats. Dorms within ${reach} cells hear every home game. A season of sell-outs earns the next tier.`;
 }
 
 function baseSummary(state: GameState, placed: Placed): string {
@@ -205,11 +210,11 @@ function baseSummary(state: GameState, placed: Placed): string {
       return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.`;
     }
     case 'parking': {
-      const cars = spec.cars ?? 0;
+      const cars = placedCars(placed.type, scaleOf(state));
       if (!hasRoadAccess(state.map, placed)) return 'No road access. It holds no cars until a road links it to a town street.';
       const places = townPlaces(state.map);
       const used = places.spaces > 0 ? Math.round((cars * Math.min(places.drive, driversNow(state))) / places.spaces) : 0;
-      return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
+      return `Holds ${cars.toLocaleString('en-US')} cars, and ${used.toLocaleString('en-US')} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
     case 'bin': {
       const broke = thingReport(state, placed);
@@ -226,7 +231,8 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'yard': {
       const status = yardStatus(state, placed);
-      return `${status.workers} of ${status.max} workers. ${yardLine(status)} Wages and benefits ${dollars(withBenefits(status.wagesPerYear))} a year.`;
+      // A yard's crew is counted in the small game's workers, and each stands for as many as the campus scale says.
+      return `${headCount(status.workers * scaleOf(state))} of ${headCount(status.max * scaleOf(state))} workers. ${yardLine(status, scaleOf(state))} Wages and benefits ${dollars(withBenefits(status.wagesPerYear))} a year.`;
     }
     case 'landmark':
       return `${spec.effect}.`;
@@ -278,14 +284,20 @@ function breakWords(state: GameState, report: BreakReport): string {
 const withBenefits = (pay: number): number => pay * (1 + BENEFITS_SHARE);
 
 /** Upkeep and utilities of a hand-placed building for a year. */
-function buildingCost(type: PlacedType): number {
-  return PLACED[type].upkeepPerYear + utilitiesOf(type);
+function buildingCost(type: PlacedType, scale: number): number {
+  return placedUpkeep(type, scale) + utilitiesOf(type, scale);
+}
+
+/** A building's one line on what it does. A car park says how many it lets in on this campus. */
+function effectLine(type: PlacedType, scale: number): string {
+  const cars = placedCars(type, scale);
+  return cars > 0 ? `Lets ${cars.toLocaleString('en-US')} locals drive in. Needs a road to a town street` : PLACED[type].effect;
 }
 
 /** A Build menu card's line on what a building costs to run, before it is built. */
-function runningLine(type: PlacedType): string {
+function runningLine(type: PlacedType, scale: number): string {
   const spec = PLACED[type];
-  const cost = buildingCost(type);
+  const cost = buildingCost(type, scale);
   const base = cost > 0 ? `Runs at ${dollarsShort(cost)} a year` : 'Costs nothing to run';
   if (spec.family === 'medical' || spec.family === 'safety') return `${base}. Staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))} once students arrive`;
   if (spec.family === 'yard') return `${base}, plus ${dollarsShort(withBenefits(WAGE_PER_YEAR))} a worker`;
@@ -295,7 +307,7 @@ function runningLine(type: PlacedType): string {
 /** The small print on a building's card: what it costs to run, and its staff where it has any. */
 export function placedFacts(state: GameState, placed: Placed): string {
   const spec = PLACED[placed.type];
-  const cost = buildingCost(placed.type);
+  const cost = buildingCost(placed.type, scaleOf(state));
   const parts: string[] = [];
   if (hasCareStaff(placed)) {
     const staff = careStaffAt(state, placed);
@@ -307,9 +319,9 @@ export function placedFacts(state: GameState, placed: Placed): string {
 }
 
 /** The line shown while a building is being placed. */
-export function placingLine(type: PlacedType): string {
+export function placingLine(type: PlacedType, scale: number): string {
   const spec = PLACED[type];
-  return `${spec.name} · ${dollarsShort(spec.cost)} · ${footprint(spec.w, spec.h)}`;
+  return `${spec.name} · ${dollarsShort(placedCost(type, scale))} · ${footprint(spec.w, spec.h)}`;
 }
 
 /** The four causes of Happiness, as the player reads them. */
@@ -390,7 +402,7 @@ export function lotFacts(state: GameState, x: number, y: number): string[] {
 
 /** What the panel of a neighbourhood says: who lives there and how they get to class. */
 export function hoodSummary(state: GameState, hood: HoodLiving): { state: string; facts: string } {
-  const lives = `${hood.living} of ${hood.capacity} local students live here.`;
+  const lives = `${headCount(hood.living)} of ${headCount(hood.capacity)} local students live here.`;
   const how =
     hood.mode === 'walk'
       ? `They walk to class, ${Math.round(hood.walkMinutes)} minutes.`

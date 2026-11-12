@@ -1,3 +1,4 @@
+import { scaleOf } from '../scale';
 import { MAX_STAGE, stageSpec, VARIANTS_PER_STAGE } from '../config/buildings';
 import { WALK_FREE_MINUTES } from '../config/desirability';
 import { DINING_STAGE } from '../config/placed';
@@ -62,7 +63,7 @@ export function lotStatus(state: GameState, x: number, y: number): LotStatus | n
   if (stage >= MAX_STAGE) return { kind: 'top', stage };
 
   const nextStage = stage + 1;
-  const needed = stageSpec(zone, nextStage).desirabilityNeeded;
+  const needed = stageSpec(zone, nextStage, scaleOf(map)).desirabilityNeeded;
   const causes: StallCause[] = [];
   if (!touchesPath(map, x, y)) causes.push('noPath');
   if (shortage(state, zone) <= 0) causes.push('noDemand');
@@ -101,7 +102,7 @@ export function cancelStrandedBuilds(state: GameState): number {
     if (!building?.rebuild) continue;
     const { x, y, zone } = building;
     const toStage = building.rebuild.toStage;
-    const needed = stageSpec(zone, toStage).desirabilityNeeded;
+    const needed = stageSpec(zone, toStage, scaleOf(map)).desirabilityNeeded;
     const stillGood = touchesPath(map, x, y) && map.score[y * map.width + x]! >= needed && !needsDining(map, x, y, zone, toStage);
     if (stillGood) continue;
     cancelTimers(state, 'buildDone', building.id);
@@ -122,6 +123,7 @@ interface Candidate {
 /** Lots of one zone that could start growing now, best first. */
 function candidates(state: GameState, zone: Zone): Candidate[] {
   const map = state.map;
+  const scale = scaleOf(map);
   const out: Candidate[] = [];
   // Lots can only be on land the campus owns, so only that land is searched. This runs in catch-up.
   for (const parcel of map.parcels) {
@@ -134,11 +136,11 @@ function candidates(state: GameState, zone: Zone): Candidate[] {
       const { stage, building } = stageOf(map, x, y);
       if (building?.rebuild || stage >= MAX_STAGE) continue;
       const nextStage = stage + 1;
-      const next = stageSpec(zone, nextStage);
+      const next = stageSpec(zone, nextStage, scale);
       const score = map.score[i]!;
       if (score < next.desirabilityNeeded || !touchesPath(map, x, y)) continue;
       if (needsDining(map, x, y, zone, nextStage)) continue;
-      const now = stage > 0 ? stageSpec(zone, stage).capacity : 0;
+      const now = stage > 0 ? stageSpec(zone, stage, scale).capacity : 0;
       out.push({ x, y, score, nextStage, gain: next.capacity - now });
       }
     }

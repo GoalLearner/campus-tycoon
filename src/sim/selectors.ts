@@ -1,3 +1,5 @@
+import { placedUpkeep } from './config/placed';
+import { scaleOf } from './scale';
 import { stageSpec } from './config/buildings';
 import { TICKS_PER_YEAR } from './config/time';
 import { PLACED } from './config/placed';
@@ -38,31 +40,34 @@ export function buildings(map: MapState): Building[] {
 
 /** Beds or seats open right now. A building under rebuild still serves at its old stage. */
 export function openCapacity(state: GameState, zone: Zone): number {
+  const scale = scaleOf(state);
   let total = 0;
   for (const b of state.map.buildings) {
-    if (b && b.zone === zone && b.stage > 0) total += stageSpec(zone, b.stage).capacity;
+    if (b && b.zone === zone && b.stage > 0) total += stageSpec(zone, b.stage, scale).capacity;
   }
   return total;
 }
 
 /** Extra beds or seats that will open when current builds finish. */
 export function pendingCapacity(state: GameState, zone: Zone): number {
+  const scale = scaleOf(state);
   let total = 0;
   for (const b of state.map.buildings) {
     if (!b || b.zone !== zone || !b.rebuild) continue;
-    const now = b.stage > 0 ? stageSpec(zone, b.stage).capacity : 0;
-    total += stageSpec(zone, b.rebuild.toStage).capacity - now;
+    const now = b.stage > 0 ? stageSpec(zone, b.stage, scale).capacity : 0;
+    total += stageSpec(zone, b.rebuild.toStage, scale).capacity - now;
   }
   return total;
 }
 
 export function upkeepPerYear(state: GameState): number {
+  const scale = scaleOf(state);
   let total = 0;
   for (const b of state.map.buildings) {
-    if (b && b.stage > 0) total += stageSpec(b.zone, b.stage).upkeepPerYear;
+    if (b && b.stage > 0) total += stageSpec(b.zone, b.stage, scale).upkeepPerYear;
   }
-  for (const placed of state.map.placed) if (placed) total += PLACED[placed.type].upkeepPerYear;
-  for (const cell of state.map.cells) if (cell.kind === 'road' || cell.kind === 'crossing') total += ROAD_UPKEEP_PER_YEAR;
+  for (const placed of state.map.placed) if (placed) total += placedUpkeep(placed.type, scale);
+  for (const cell of state.map.cells) if (cell.kind === 'road' || cell.kind === 'crossing') total += ROAD_UPKEEP_PER_YEAR * scale;
   return total;
 }
 

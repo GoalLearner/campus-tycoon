@@ -213,6 +213,19 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   });
 }
 
+/**
+ * A campus that opens with its students already there: up to `count` of them,
+ * in all four class years, locals living in town where a way to class exists,
+ * exactly as a founding class would be let in. Returns how many got a place.
+ */
+export function openWithStudents(state: GameState, count: number): number {
+  const plan = admitPlan(state, count, localsAmong(count));
+  enrol(state, plan.admitted, plan.off, true);
+  state.admissions.lastIntake = { tick: state.clock.tick, season: 'fall', expected: plan.admitted, admitted: plan.admitted, turnedAway: 0, bottleneck: null };
+  markRatesDirty(state);
+  return plan.admitted;
+}
+
 /** While a waitlist is open, any room that appears fills at once. */
 export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   const a = state.admissions;

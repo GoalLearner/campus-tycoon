@@ -21,6 +21,7 @@ How to read this document:
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 - Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
 - Section 33 is life and sound: bigger crowds and traffic now, and a Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11 and accepted the next day as the last stop before football. Not started.
+- Section 35 is the model campus: a campus the player can start from, laid out district by district like the reference campus, under invented names. Chosen by the owner on 2026-11-12. Not built: it follows the long run.
 
 ---
 
@@ -1696,7 +1697,7 @@ Every number below is expected to change. All live in `src/sim/config`.
 
 ## 23. Master building catalog
 
-Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented.
+Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented. **Changed by the owner on 2026-11-12:** he lifted the part about layout, for one thing only. A model campus may follow the reference campus district by district at the scale of the game (section 35). Everything else in this paragraph stands: no real name, logo, mascot, team, sponsor or building name, none of the map's own artwork, and the file is never committed.
 
 **Status: accepted by the owner on 2026-11-11**, with the mapping changes in 23.3, both layout fixes in 23.4 and the four additions in 23.5. Bike lanes are cut. The table is the plan for where each type lands. Nothing in it is built yet: the mechanics of this pass wait for the owner to approve the look.
 
@@ -2246,6 +2247,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | A stadium tier going up, `lot.site` | The building-site tile of a zoned lot, on the two cells where the new part will stand | Keep |
 | Rain and snow | Streaks and flakes made in code, as 33.3 allows, with a faint grey over the whole campus in rain and a faint whiteness in snow. The ground never turns white, and nobody carries an umbrella or wears a coat | Keep the particles. Penzilla commission: umbrellas and coats, and snowy ground if wanted |
 | The mascot | Nothing. The packs have no mascot, so none is shown | Penzilla commission, with the team's nickname decided first |
+| The model campus's halls | Drawn at the low tier's size, though each lecture hall there counts for 1,400 seats and each residence hall for 840 beds (35.7) | Taller halls, which come with the density tiers of 6.2 |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
 
@@ -3549,3 +3551,232 @@ One advance equals many still holds, with a football season inside the span.
 | After a daylight-saving change the day begins an hour off | The anchor is kept in UTC. The Menu moves it |
 | A decision's advisor is always the Athletic Director | The other advisors arrive with the inbox |
 | No Scorecard page, no grades on the Year-End line | The Rankings tab is the first version of both |
+
+---
+
+## 35. The model campus
+
+Asked for by the owner on 2026-11-12: "Analyze this map of this university and recreate it exactly for the game." The map is the reference of section 23. He was given three choices and took the first: **follow its layout on today's map, district by district, under invented names.** A building-for-building copy on a bigger map and "keep it as a guide only" were the other two. Not built. It is one stop, after the long run of 2026-11-12.
+
+### 35.1 What it is
+
+| Decision | Why |
+|---|---|
+| A second way to begin: "Start from the model campus", beside the empty campus of today | He asked to have the campus in the game. A new player still learns on the small one |
+| It is a whole campus from the first minute: every district in its place, enrollment to match what it holds, all four class years, and money that balances | A layout is only seen when it is built |
+| It is made by a script from the game's own buildings and rules, the same every time for the same seed | No hand-edited save to go stale. The simulate script can run it |
+| The player names the school. Every hall, street and team name comes from the game's own generators | The game's legal line: every school is fictional |
+| Nothing of the reference is copied but where things are: no name, logo, mascot, team, sponsor or building name, and none of the map's artwork. The file stays in `art/reference` and is never committed | The owner's standing rule, less the one part he lifted |
+| About one game building stands for every two or three on the reference | The reference names about 115 buildings. One cell each needs 60 cells by 40. The land is 32 by 48 with both fields |
+| An existing save is not changed | It is a way to begin, not an upgrade |
+
+One check is owed before release, by the owner and not by the game: where real buildings stand is a fact and not the map-maker's property, but his earlier rule was the cautious line, and a lawyer should say so for a game that is sold.
+
+### 35.2 The quarter turn
+
+The reference has its main street and neighbourhood on its south side. The game's town is on the east. So the layout is turned a quarter turn, with no mirroring: the reference's south becomes the game's east, its west becomes the game's south, its north the game's west, and its east the game's north. Chosen: turn the layout. The alternative: move the game's town to the south for this campus alone, which means a second town generator.
+
+The turn fits well. The reference is half again as wide as it is tall, and the game's land with both fields is 32 cells wide and 48 tall.
+
+### 35.3 The districts, in game cells
+
+x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
+
+| District on the reference | Where it lands | Built from |
+|---|---|---|
+| The academic core on its long walk | x 4 to 21, y 8 to 25, with the walk running east to west along y 19 from x 9 to x 23 | Academic lots along a strip of path and quad. The library at about x 13, y 16. A computer lab, a study center and a makerspace among them |
+| The student union and its commons | About x 18, y 12 | A food court, the campus store, a coffee stand and a dining hall together, with picnic tables |
+| The second commons | West end of the walk | A dining hall and two food places |
+| The south-east residence halls | x 22 to 28, y 3 to 10 | Housing lots with their own dining, a quad and a bench or two |
+| The hilltop residences | x 1 to 10, y 33 to 40, in the south-west field | Housing lots round a small quad |
+| The chapter houses and apartments on the main street | x 22 to 29, y 26 to 31, along the east edge | Housing lots. Chapter houses wait for Greek Row |
+| The far apartment complex | The north-east corner | Housing lots |
+| The arena and the track on its deck | About x 19 to 26, y 27 to 36 | The stadium plot stands for both. A parking structure beside it |
+| The recreation centre | About x 15, y 31 | The gym |
+| The ballpark and the softball field | About x 16, y 38 | Two recreation fields |
+| The pool complex and the tennis centre | About x 17 to 19, y 43 to 46 | The pool and two sets of courts |
+| The big parking structures | The north edge, x 12 to 28, y 0 to 2 | Parking structures on a road |
+| The surface lots | The west edge, and one in each field | Parking lots on the loop road |
+| The loop road | Round the west and north edges, joined to College Avenue | Road, with crossings where the walks meet it |
+| The transit centre | Where the long walk meets College Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
+| Facilities, receiving, the plant | The north-west corner | Facilities Yards, enough to cover every place that drops litter |
+| The health centre and campus police | Near the union and near the stadium | A Medical Center and Campus Safety, placed to cover the dorms and the places to play |
+| The tower quad | The north end of the core | The Administration building on a quad |
+
+Left out, because the game has nothing for them yet: the theatres and the music hall, the alumni centre, the children's centre, the radio station, the light-rail station, and the shuttle. Their ground is left as lawn and trees.
+
+### 35.4 The numbers it opens with
+
+| Decision | Why |
+|---|---|
+| Lots stand at their second stage. Students fill about nine tenths of the seats and beds | A campus with room to breathe, and somewhere to go |
+| Locals walk in from the streets beside the transit path and drive to the structures | The town rule, used as intended |
+| Opening cash is about a tenth of a year's spending [T], with nothing in the endowment | Enough to act, not enough to coast |
+| It opens on the first day of a fall semester, with a team whose first season is that fall and a stadium plot with nothing on it yet | The first goal is the stadium |
+| Every place that drops litter has a bin in reach and a yard that covers it | It should open clean |
+
+### 35.5 Tests and checks
+
+- The script builds the same campus twice from the same seed, and the result passes the save's own validation.
+- Every district of 35.3 is present, and its centre lies within three cells of the place given.
+- Nothing is built on town land, and no real name appears: the word list of the reference's names is checked against every string the game can show.
+- Simulate: left alone for five years the model campus keeps a surplus, needs no rescue, and stays clean. With the casual player it stays inside the margin and payroll checks.
+- Thirty days of catch-up on it stays inside one second.
+
+### 35.6 Points for the owner
+
+| Point | Chosen | The alternative |
+|---|---|---|
+| How to reach it | A second choice when a game is founded | Replace the small starting campus for everyone |
+| The town's side | Turn the layout a quarter turn | Move the town to the south |
+| The arena, ballpark and tennis centre | The stadium plot, recreation fields and courts stand for them | Wait until those sports exist |
+| How full it opens | Nine tenths full, second-stage buildings | A half-built campus to finish |
+| The stadium | An empty plot, as the first goal | A first-tier stadium already standing |
+
+### 35.7 Its size: 46,000 students
+
+Asked for by the owner on 2026-11-12, while the model campus was being built: "I want it to simulate 46,000 students." As first laid it held about 1,400 classroom seats and opened with about 1,260 students.
+
+| Decision | Why |
+|---|---|
+| The model campus opens with 46,000 students, in all four class years | His instruction |
+| It gets there by a **campus scale**: one whole number, kept in the save, that says how many of the small game's students each bed, seat, parking space, place to play and town house stands for. It is 1 for every other campus and about 37 here | The land is 32 cells by 48. Even the six stages of 6.2 would hold about 14,000 on the lots this layout has. Each hall here stands for one of the reference's big ones, which is true to the reference: about thirty lecture buildings for a school of that size |
+| Everything counted in heads or tied to a building is multiplied by it: beds and seats, places at the gym and the fields, parking spaces, town places, stadium seats, the applicant pool and its ceiling, what a bin holds and what a worker clears, and every price, upkeep and utility bill | A campus at scale 37 then behaves like the tuned small game with every count 37 times larger. Its balance is inherited and is not tuned a second time |
+| Nothing counted for each student changes: tuition, cost per student, staff ratios, Happiness, desirability, reach in cells, and every timer | They follow enrollment already |
+| Students are still counted by class year and never one by one (section 13). Catch-up costs the same at 46,000 as at 400 | The phone |
+| On screen a sample of them walks about, as it always has. The crowd limits and the frame budget of section 33 do not move | No phone draws 46,000 figures |
+| Numbers this large are written short where space is tight | Simple screens |
+| An existing save has a scale of 1 and does not change | The scale belongs to how a campus began |
+
+Anything with a head count written into a rule is checked one by one when this is built, and each is either scaled or left alone on purpose, with the list kept here: the founding class, the pool ceiling, the size rungs, stadium tiers and gate, incidents, alumni and gifts.
+
+**Chosen:** a campus scale. **The alternatives:** build the medium and high density tiers of 6.2 and pack the land with about 200 lots, which needs new building art for four stages and stops following the reference's layout; or the 80 by 80 map, which is several stops.
+
+Tests, added to 35.5:
+
+- The model campus opens with exactly 46,000 students, and that is about nine tenths of its seats.
+- The same campus run for five years at scale 1 and at its own scale ends with enrollment, cash and a year's spending in the same proportion, within a few percent [T].
+- Every earlier test passes unchanged at scale 1.
+- Thirty days of catch-up at 46,000 students stays inside one second.
+- No screen shows a number too long for its place at this size.
+
+For section 26, art to fix before release: the model campus's halls are drawn at the low tier's size though each counts for a far larger building. Taller halls come with the density tiers.
+
+### 35.8 As built
+
+Built on 2026-11-12, ahead of Stop C at the owner's word, on the branch `play-stop-model-campus`. Save version 13.
+
+**What was built.**
+
+| Part | What it is | Where |
+|---|---|---|
+| The script | Lays the whole campus on a bare map, district by district, in the game's own cells. The same seed always gives the same campus. It refuses to put anything on land that is not the campus's own, or on a cell that is taken | `src/sim/modelCampus.ts` |
+| A second way to begin | The founding screen has "Start from": a small campus, or the model campus | `newGame({ campus: 'model' })`, `src/ui/ui.ts` |
+| A visit that cannot touch a save | The Menu has "Visit the model campus". The player's own game is saved first and then left alone. Nothing on the visit is ever written. A bar on the top of the screen says so and has a Back button, and the Menu's first button is "Back to" their own campus. While visiting, the Menu puts away Export, Import and Start a new university. A skip of the clock made on a visit is undone on the way back | `store.visitModel`, `store.leaveVisit` |
+| The dev address | `?demo=model` opens the same campus, unsaved | `src/app/devtools.ts` |
+| The campus scale | One whole number on the map. 1 for every campus but this one, 28 here | `src/sim/scale.ts`, 35.9 |
+
+**The districts as laid.** x runs west to east and y north to south. Each centre is within three cells of the place 35.3 gives, and a test checks it.
+
+| District | Centre | What stands there |
+|---|---|---|
+| The academic core | 14, 17.5 | 36 lecture halls along the long walk and the walks that cross it. The library on a forecourt, a computer lab, a study center, a makerspace, a pond |
+| The tower quad | 5, 19 | The Administration building on a quad at the west end of the long walk |
+| The union and its commons | 18.5, 13.5 | A food court, the campus store, a coffee stand, a dining hall, picnic tables |
+| The second commons | 9.5, 22 | A dining hall, a burger grill and a taco stand |
+| The north-east residence halls | 27.5, 7.5 | 15 residence halls on two walks, a dining hall, a quad, courts |
+| The hill residences | 5.5, 37 | 7 residence halls round a quad in the south-west field, a dining hall, courts |
+| The houses and apartments by the avenue | 27.5, 28 | 6 residence halls on a walk that reaches College Avenue, a diner |
+| The far apartments | 4.5, 3.5 | 4 residence halls in the north-west corner, a coffee stand |
+| The halls by the fields | 15, 38.5 | 4 residence halls beside the ball fields, a smoothie bar |
+| The stadium plot | 23, 32 | The bare plot, a parking structure beside it, and its own road in from College Avenue |
+| The recreation centre | 16.5, 31 | The gym |
+| The ball fields | 16.5, 39 | Two recreation fields |
+| The pool and the courts | 17.5, 44 | The pool and two sets of courts |
+| The parking structures | 19.5, 1.5 | Three on the north edge, on the loop road |
+| The surface lots | west edge and the fields | Three on the loop road down the west edge, and one by College Avenue in the south-east field |
+| The loop road | | Down the west edge and along the north edge to College Avenue |
+| The walk to College Avenue | 27.5, 15 | A path from the east end of the campus to the avenue, with a small plaza that joins the streets on both sides of it |
+| Facilities | 2.5, 8 | A Facilities Yard on the west edge below the far apartments. Two more, east and south, so every place that drops litter has one in reach |
+| The health centre and Campus Safety | | A Medical Center north of the union and Campus Safety by the stadium, with a second of each beside the north-east halls and the gym |
+
+72 lots and 42 buildings, with bins, benches, picnic tables, quads and about 110 trees. Lawn and trees stand where the game has no building yet (35.3).
+
+**The numbers it opens with.**
+
+| | |
+|---|---|
+| Students | 46,000 exactly: 12,420 freshmen, 11,960 sophomores, 11,500 juniors and 10,120 seniors |
+| Seats | 50,400, so 91% full |
+| Beds | 30,240, with 27,600 in use: 91% full |
+| Locals living in town | 18,400. Streets on both sides of the walk to the avenue walk in (10,640 places). The rest drive: 7,760 cars for 13,440 spaces |
+| Staff | 2,300 faculty, 1,150 staff, 112 safety and medical staff, 196 maintenance workers |
+| A year's income | $470.1M |
+| A year's spending | $421.0M, so $10 of every $100 is kept |
+| Opening cash | $42.1M, a tenth of a year's spending. Nothing in the endowment |
+| Happiness | 78: walk to class 92, grounds 88, food and fun 69, safety and health 71 |
+| Football | A rented field that stands for 84,000 seats. The first season is that fall. The stadium plot is bare |
+
+### 35.9 The campus scale, as built
+
+One whole number, `map.scale`, read through `scaleOf`. A new small campus and every save that exists has 1. The model campus has the whole number that makes 46,000 students about nine tenths of its seats as laid: 28.
+
+The multiplication is in one place for each kind of thing, where its number is read. The small game's own numbers keep the names they have always had in the config, so every earlier test reads them unchanged, and a test (`tests/scale.test.ts`) fails if anything outside the config reads one directly or reads a stage, a bill, a place to play or a neighbourhood without saying whose campus it is.
+
+| Rule or number | Scaled, or left alone | How |
+|---|---|---|
+| Beds and seats of a lot, its upkeep and its utilities | Scaled | `stageSpec(zone, stage, scale)` |
+| A lot's build time and the desirability a stage asks for | Left alone | They are not heads or money |
+| Every Build price, its upkeep and its utilities | Scaled | `placedCost`, `placedUpkeep`, `utilitiesOf` |
+| Room at the gym, pool, courts, fields and makerspace | Scaled | `placedRoom` |
+| Parking spaces | Scaled | `placedCars` |
+| Lots, paths, roads, quads and trees: price, and a road's upkeep | Scaled | `paintCost` |
+| Students for each town house | Scaled | `hoodCapacity(hood, scale)` |
+| Stadium seats, what a tier costs, a stadium's upkeep and utilities | Scaled | `seatsAt`, `tierCost`, `footballBooks` |
+| The head coach's pay, and a TV deal | Scaled | `coachPay(rating, scale)`, `tvOffers`. A programme of this size pays in proportion |
+| The floors a stadium tier sets under athletics staff and operations, the cap on the field's rent, and the size at which a coach is paid in full | Scaled | `footballBooks` |
+| The applicant pool: its floor (the founding class) and its ceiling | Scaled | `fallClassDraw` |
+| The founding class of a new campus | Scaled | `classSize`. It is 400 at scale 1, and the model campus has none |
+| The least staff a Medical Center or Campus Safety building has | Scaled | One at scale 1 |
+| A yard's crew | Each of its workers stands for as many as the scale says, and is paid as that many. The yard still holds up to six of the small game's workers | `workerCount`, `wagesPerYear` |
+| Litter, what a bin holds, what a worker clears | Left alone, on purpose. How much a place drops follows how busy it is as the small game would count it (`smallCount`), so litter, bins and a worker's day stay in the small game's units at any scale | `dropOf` |
+| Incidents | Left alone, the same way: how often something happens follows the small game's count of students | `spawnIncidents` |
+| Social life on a student's card | The same way: a quad or a court is somewhere to meet for as many as the scale says | `socialLife` |
+| The roster of ninety varsity athletes | Left alone, on purpose. One team has ninety players at any size | |
+| Tuition, room fees, cost per student, staff ratios, ticket prices, Happiness, desirability, reach in cells, every timer and window | Left alone | They follow enrollment already, or are not counts |
+| The size rungs, alumni and gifts | Nothing to scale. No rung is built yet. Alumni are a head count and follow by themselves, and there is no gift rule yet | |
+| Land prices | Not scaled. The model campus owns all its land, and no other campus has a scale | |
+| Everything drawn | Divided by the scale: walkers, commuters, cars, the scenes, the move-in crowd. The crowd limits and the frame budget did not move | `smallCount` in `src/game` |
+
+**Measured.** The same campus was run for five years untended at scale 1 and at scale 28. At the end of every year enrollment was within 0.1% of proportion, cash within 0.6% and a year's spending within 0.3%. The same games were won, the same number of incidents happened, and neither took a grant. What is left is whole numbers: 46,000 students make an athletics staff of 115, where the small campus's 1,643 make 4, which is 112 in proportion. The test allows 0.5% for enrollment and 2% for cash, income and spending. Thirty days of catch-up at 46,000 took 0.19 s.
+
+**On screen.** Head counts are written with separators. Cash on the top bar is written short from $100M. The Money panel writes one decimal from $100M. The top bar, the Money panel, the building panels, the away list, the Football page and the list of what to build were looked at on a phone-sized screen at 46,000 students, and nothing runs past its place.
+
+### 35.10 Decisions made for the owner, and what is rough
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| How to look at it today | "Visit the model campus" in the Menu, unsaved, with a way back | The founding choice only, which would have meant erasing his campus to see it |
+| The far apartments and Facilities | The far apartments are in the north-west corner and the yard is on the west edge below them. 35.3 names the north-east corner for the apartments, but the quarter turn of 35.2 puts them north-west, and the north-east corner holds the parking structures and the residence halls | Squeeze the apartments into the north-east corner, against the turn |
+| The halls by the fields | Added. The reference has residence halls beside its ball fields, 35.3 left them out, and without them nobody was in reach of the fields | Leave the fields with no players |
+| Courts for the north-east halls and the hill | Added, one set each. The reference has small courts and a pool among its halls | Leave both districts with nothing to do in reach |
+| How many buildings | 36 lecture halls and 36 residence halls, with 42 other buildings. A row of two or three lots stands for one large hall. It began at 28 and 28: the last eight of each brought the opening margin from under 9% to 10% | Fewer lots at a larger scale, which opens thinner |
+| The scale | 28, worked out from the lots: the whole number that makes 46,000 about nine tenths of the seats | Fix it at the 37 first estimated, and open 69% full |
+| A second Medical Center and Campus Safety | Built. One of each cannot reach the north-east halls, the avenue houses and the places to play together. Both kinds now reach 24 of the 36 residence halls | One of each, as 35.3 says, reaching fewer |
+| The hill and the far apartments | Outside both. The first thing for a president to fix | Cover every district, at about 1% of the margin |
+| Three yards | One in the north-west as the reference has it, and two more so every place that drops litter has one in reach | One yard, and dirty corners |
+| Crews | Sized for the campus when it is full, which it is from its first fall | Sized for the day it opens, which fell behind in the second year |
+| Where the model campus's clock begins | At the tick a first class would have moved in, so no founding class is announced or arrives | A rule that skips the founding class when students are already there |
+| Which game building stands for what | The stadium plot for the arena and the track, recreation fields for the ballpark and the softball field, courts for the tennis centre, as 35.6 says | |
+| The reference's names in the test | The check reads the words out of the reference file when it is there and is skipped when it is not. The repository holds none of them. A short list of ordinary words that any campus map prints, such as library and stadium, tells a word from a name | A block list of the names in the repository, which the owner ruled out |
+| Earlier tests | Unchanged. The small game's numbers keep their names, and the helpers take the scale as a last argument that is 1 when left out | Rename the numbers so nothing can read them by accident, and edit a dozen older tests |
+
+| Rough | Why |
+|---|---|
+| The halls are drawn at the low tier's size | Each stands for a far larger building. On the art-to-fix list (section 26) |
+| The crowd is a sample | About the same number of people walk about as on a campus of 1,600. That is the design, and it reads a little thin against "46,000" on the top bar |
+| The two sets of courts by the pool have nobody in reach, and the pool has few | They are the reference's athletics quarter. The gym, the fields and the courts by the halls have players |
+| Money opens at $10 kept of every $100 | Inside the 10 to 20 the game is tuned for, at its low end. A campus this well served has more to keep up than a player's own |
+| The test player who spends every dollar took one state grant in its second summer | $1.5M, once, on a budget of several hundred million. The same thing happens on a small campus (34.5). A player who keeps anything in hand does not see it |
+| A 46,000-student campus can grow | With the casual test player it reached 147,000 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
+| The legal check | Where real buildings stand is a fact, but the owner's earlier rule was the cautious line. A lawyer should say so before the game is sold (35.1) |

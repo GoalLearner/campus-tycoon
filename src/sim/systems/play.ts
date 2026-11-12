@@ -1,3 +1,5 @@
+import { scaleOf } from '../scale';
+import { placedRoom } from '../config/placed';
 import { CROWD_LIFT_FLOOR, CROWD_WORST_AT, PLACED, PLAY_SHARE, WAIT_MINUTES_AT_WORST } from '../config/placed';
 import { enrollment } from '../selectors';
 import type { GameState, MapState, Placed } from '../types';
@@ -25,8 +27,8 @@ function gap(placed: Placed, x: number, y: number): number {
 }
 
 /** How many students a recreation building holds at once. 0 for anything else. */
-export function playCapacity(placed: Placed): number {
-  return PLACED[placed.type].family === 'recreation' ? (PLACED[placed.type].capacity ?? 0) : 0;
+export function playCapacity(placed: Placed, scale = 1): number {
+  return PLACED[placed.type].family === 'recreation' ? placedRoom(placed.type, scale) : 0;
 }
 
 /**
@@ -39,6 +41,7 @@ export function playLoads(map: MapState, recreation: readonly Placed[]): Record<
   const load: Record<number, number> = {};
   for (const placed of recreation) load[placed.id] = 0;
   if (recreation.length === 0) return load;
+  const scale = scaleOf(map);
   const { width, height, cells } = map;
   const near: Placed[] = [];
   for (let y = 0; y < height; y++) {
@@ -49,10 +52,10 @@ export function playLoads(map: MapState, recreation: readonly Placed[]): Record<
       for (const placed of recreation) {
         if (gap(placed, x, y) > PLACED[placed.type].radius) continue;
         near.push(placed);
-        holds += playCapacity(placed);
+        holds += playCapacity(placed, scale);
       }
       if (holds <= 0) continue;
-      for (const placed of near) load[placed.id]! += playCapacity(placed) / holds;
+      for (const placed of near) load[placed.id]! += playCapacity(placed, scale) / holds;
     }
   }
   return load;
@@ -82,7 +85,7 @@ export interface PlayUse {
 
 /** How busy a recreation building is at the busiest hour. null for anything else. */
 export function playUse(state: GameState, placed: Placed): PlayUse | null {
-  const capacity = playCapacity(placed);
+  const capacity = playCapacity(placed, scaleOf(state));
   if (capacity <= 0) return null;
   const care = state.map.care;
   const lots = care.lots > 0 ? (care.play?.[placed.id] ?? 0) : 0;

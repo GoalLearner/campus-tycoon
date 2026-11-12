@@ -1,6 +1,8 @@
-import { STAGES } from '../config/buildings';
+import { scaleOf } from '../scale';
+import { placedCars, placedCost } from '../config/placed';
+import { stageSpec } from '../config/buildings';
 import { WALK_MINUTES_PER_CELL } from '../config/desirability';
-import { COST } from '../config/money';
+import { paintCost } from '../config/money';
 import { PLACED } from '../config/placed';
 import { TOWN_GATE_ROWS, TOWN_WALK_EXTRA_MINUTES, TOWN_WALK_MAX_MINUTES, TOWN_X } from '../config/town';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
@@ -50,7 +52,7 @@ export function roomPlan(state: GameState): RoomPlan {
 
   const zones = {} as Record<Zone, ZonePlan>;
   for (const zone of ZONES) {
-    const perLot = STAGES[zone][0]!.capacity;
+    const perLot = stageSpec(zone, 1, scaleOf(state)).capacity;
     const needed = wanted[zone];
     const short = Math.max(0, needed - openCapacity(state, zone));
     const building = Math.min(short, pendingCapacity(state, zone));
@@ -87,7 +89,8 @@ export function housingFixes(state: GameState): HousingFixes {
   const bedsShort = need.short - need.building;
   if (bedsShort <= 0) return { bedsShort: 0, lots: null, path: null, parking: null };
   const map = state.map;
-  const lots = { count: need.lots, perLot: need.perLot, cost: need.lots * COST.zoneLot };
+  const scale = scaleOf(state);
+  const lots = { count: need.lots, perLot: need.perLot, cost: need.lots * paintCost('zoneLot', scale) };
 
   // Locals among those the plan is for who have no place in town yet. Only they can be helped by a path or parking.
   const stuck = plan.goal === 'waitlist' ? Math.max(0, state.admissions.waitlistLocals - freeTownPlaces(state)) : localsNeedingBeds(state);
@@ -117,12 +120,12 @@ export function housingFixes(state: GameState): HousingFixes {
     }
     if (!best || best.minutes > TOWN_WALK_MAX_MINUTES) continue;
     // Its places stop needing a parking space and start counting whether or not there is one.
-    const capacity = hoodCapacity(hood);
+    const capacity = hoodCapacity(hood, scale);
     const after = places.walk + capacity + Math.min(places.driveWanted - capacity, places.spaces);
     const brings = Math.min(stuck, after - places.total);
     if (brings <= 0) continue;
     if (!path || brings > path.brings || (brings === path.brings && best.cells < path.cells)) {
-      path = { hood: hood.id, street: hood.name, gate: best.gate, cells: best.cells, cost: best.cells * COST.path, minutes: best.minutes, brings };
+      path = { hood: hood.id, street: hood.name, gate: best.gate, cells: best.cells, cost: best.cells * paintCost('path', scale), minutes: best.minutes, brings };
     }
   }
 
@@ -130,9 +133,9 @@ export function housingFixes(state: GameState): HousingFixes {
   let parking: HousingFixes['parking'] = null;
   const spaces = Math.min(stuck, places.driveWanted - places.spaces);
   if (spaces > 0) {
-    const perLot = PLACED.parking.cars ?? 1;
+    const perLot = Math.max(1, placedCars('parking', scale));
     const count = Math.ceil(spaces / perLot);
-    parking = { spaces, lots: count, cost: count * PLACED.parking.cost, brings: spaces };
+    parking = { spaces, lots: count, cost: count * placedCost('parking', scale), brings: spaces };
   }
   return { bedsShort, lots, path, parking };
 }

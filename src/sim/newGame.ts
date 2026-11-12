@@ -1,3 +1,10 @@
+import { stageSpec } from './config/buildings';
+import { scaleOf } from './scale';
+import { layModelCampus, type ModelDistrict } from './modelCampus';
+import { openWithStudents } from './systems/admissions';
+import { yardStatus } from './systems/grounds';
+import { openCapacity } from './selectors';
+import { WORK_PER_WORKER, YARD_MAX_WORKERS } from './config/grounds';
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
@@ -25,6 +32,18 @@ export interface NewGameOptions {
    * week begins with the first class and there is no founding day.
    */
   anchor?: number;
+  /**
+   * Which campus to begin with: the small one every game has begun with, or
+   * the model campus of DESIGN.md section 35, whole from the first minute.
+   */
+  campus?: 'small' | 'model';
+  /**
+   * The model campus only: its campus scale. Left out, it is the scale at
+   * which the campus opens with 46,000 students in about nine tenths of its
+   * seats. The tests also open it at 1, to check that a campus behaves the
+   * same at every scale.
+   */
+  scale?: number;
 }
 
 /** The whole map, bare: the starting land, the fields for sale, and the town laid in down its east side. */
@@ -32,6 +51,7 @@ function emptyMap(width: number, height: number, seed: number): MapState {
   const cells: Cell[] = [];
   for (let i = 0; i < width * height; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
   const map: MapState = {
+    scale: 1,
     width,
     height,
     cells,
@@ -103,23 +123,34 @@ export function newTerm(tick: number): Term {
  */
 export function startFootball(state: GameState, firstYear: number): void {
   state.field = makeField(state.rng, state.school.name);
-  state.football = newFootball(state.rng, state.field, firstYear);
+  state.football = newFootball(state.rng, state.field, firstYear, scaleOf(state));
 }
 
 /** A brand-new campus, fifteen minutes before its first class moves in. */
 export function newGame(opts: NewGameOptions): GameState {
   const map = emptyMap(WORLD.width, WORLD.height, opts.seed >>> 0);
-  buildStarterCampus(map, opts.seed);
+  const model = opts.campus === 'model';
+  if (model) {
+    // The model campus owns the starting land and both fields from the start.
+    for (const parcel of map.parcels) parcel.owned = true;
+    layModelCampus(map, opts.seed >>> 0);
+    map.scale = opts.scale === undefined ? modelScale(map) : Math.max(1, Math.round(opts.scale));
+  } else buildStarterCampus(map, opts.seed);
   recomputeDesirability(map);
 
   const anchor = opts.anchor === undefined ? null : ((Math.round(opts.anchor) % TICKS_PER_DAY) + TICKS_PER_DAY) % TICKS_PER_DAY;
-  const founding = anchor === null ? 0 : minutesToAnchor(opts.now + FIRST_INTAKE_TICK * TICK_MS, anchor);
+  // The model campus opens at the moment a first class would have moved in: its students are already there, so
+  // its clock begins at that tick and no founding class is on its way. Its week still begins at the next anchor,
+  // and never on the opening tick itself, so the first day of its fall is not skipped.
+  const startTick = model ? FIRST_INTAKE_TICK : 0;
+  let founding = anchor === null ? 0 : minutesToAnchor(opts.now + (FIRST_INTAKE_TICK - startTick) * TICK_MS, anchor);
+  if (model && founding < 1) founding = anchor === null ? 1 : TICKS_PER_DAY;
   const state: GameState = {
     version: SAVE_VERSION,
     seed: opts.seed >>> 0,
     rng: seedStreams(opts.seed),
     clock: {
-      tick: 0,
+      tick: startTick,
       nextTickAt: opts.now + TICK_MS,
       lastSimulatedAt: opts.now,
       createdAt: opts.now,
@@ -163,6 +194,53 @@ export function newGame(opts: NewGameOptions): GameState {
   // A new campus has its stadium plot from the first day.
   state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
   scheduleScrimmage(state);
+  if (model) openModelCampus(state, opts.scale === undefined);
   recomputeRates(state);
   return state;
 }
+
+/**
+ * The numbers the model campus opens with (DESIGN.md 35.4): its yards
+ * staffed, students in about nine tenths of its seats, and cash worth about a
+ * tenth of a year's spending.
+ */
+function openModelCampus(state: GameState, fullSize: boolean): void {
+  // At its own scale it opens with exactly the students it was asked to hold. At any other, with as many in proportion.
+  const map = state.map;
+  const own = modelScale({ ...map, scale: 1 });
+  openWithStudents(state, fullSize ? MODEL_STUDENTS : Math.round((MODEL_STUDENTS * map.scale) / own));
+  // Each yard is given the workers it needs to keep up with what it looks after, and never fewer than one.
+  for (const yard of state.map.placed) {
+    if (!yard || yard.type !== 'yard') continue;
+    state.grounds.workers[yard.id] = 0;
+    // Enough for the campus when it is full, which it is from its first fall: a crew sized for nine tenths falls behind.
+    state.grounds.workers[yard.id] = Math.min(YARD_MAX_WORKERS, Math.max(1, Math.ceil((yardStatus(state, yard).need * MODEL_CREW_ROOM) / WORK_PER_WORKER)));
+  }
+  state.money.ratesDirty = true;
+  recomputeRates(state);
+  state.money.cash = Math.round((state.money.spendingPerYear * MODEL_CASH_SHARE) / 1000) * 1000;
+}
+
+/** The districts of the model campus as the script lays them: where each was aimed, and where it landed. */
+export function modelDistricts(seed: number): ModelDistrict[] {
+  const map = emptyMap(WORLD.width, WORLD.height, seed >>> 0);
+  for (const parcel of map.parcels) parcel.owned = true;
+  return layModelCampus(map, seed >>> 0);
+}
+
+/** The students the model campus opens with (DESIGN.md 35.7): the owner's number. */
+export const MODEL_STUDENTS = 46_000;
+
+/** The whole number that makes those students about nine tenths of the seats the campus has as laid. */
+function modelScale(map: MapState): number {
+  let seats = 0;
+  for (const building of map.buildings) if (building && building.zone === 'academic') seats += stageSpec('academic', building.stage, 1).capacity;
+  return Math.max(1, Math.round(MODEL_STUDENTS / MODEL_FULL / Math.max(1, seats)));
+}
+
+/** [T] How much more work the model campus's crews are sized for than it asks on the day it opens. */
+export const MODEL_CREW_ROOM = 1.2;
+
+/** [T] How full the model campus opens, and its cash as a share of a year's spending. */
+export const MODEL_FULL = 0.9;
+export const MODEL_CASH_SHARE = 0.1;
