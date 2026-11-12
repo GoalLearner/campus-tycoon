@@ -6,7 +6,7 @@ import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, rowBetween, smallCount, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
+import { previewPaint, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -221,9 +221,9 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeLive = store.onLive((entries) => {
       let movedIn = 0;
       for (const entry of entries) {
-        // Newcomers drawn are a sample of those who arrived, as the small game would count them.
-        if (entry.kind === 'waitlist') movedIn += smallCount(store.state, Number(entry.data?.count ?? 0));
-        else if (entry.kind === 'intake') movedIn += smallCount(store.state, Number(entry.data?.admitted ?? 0));
+        // The move-in crowd has a cap of its own, so it takes the real number who arrived.
+        if (entry.kind === 'waitlist') movedIn += Number(entry.data?.count ?? 0);
+        else if (entry.kind === 'intake') movedIn += Number(entry.data?.admitted ?? 0);
       }
       if (movedIn > 0) this.pendingArrivals += Math.ceil(movedIn);
     });
@@ -414,7 +414,7 @@ export class CampusScene extends Phaser.Scene {
       day: date.day,
       term,
       weather: this.weather,
-      students: smallCount(state, enrollment(state)),
+      students: enrollment(state),
       reduced,
       presence: day.walkers,
       exams: day.kind === 'midterms' || day.kind === 'finals',

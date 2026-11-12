@@ -9,6 +9,8 @@ import {
   campusHappiness,
   enrollment,
   expectedCrowd,
+  fanDemand,
+  footballBooks,
   fallClassDraw,
   FOUNDING_CLASS,
   MODEL_STUDENTS,
@@ -34,7 +36,8 @@ import {
   workerCount,
   type GameState,
 } from '../src/sim';
-import { paintCost } from '../src/sim/config/money';
+import { BENEFITS_SHARE, paintCost } from '../src/sim/config/money';
+import { CROWD_STEPS, QUEUE_SHOWN, queueNow, walkersWanted } from '../src/app/crowd';
 import { SEATS } from '../src/sim/config/football';
 import { freshGame, T0 } from './helpers';
 
@@ -82,9 +85,11 @@ describe('the model campus at its own size', () => {
     expect(openCapacity(state, 'housing')).toBe(openCapacity(one, 'housing') * scale);
     expect(townPlaces(state.map).total).toBe(townPlaces(one.map).total * scale);
     expect(townPlaces(state.map).spaces).toBe(townPlaces(one.map).spaces * scale);
-    expect(seatsNow(state)).toBe(SEATS[0]! * scale);
+    // The stadium is one stadium of real size at any scale, and so are its coach and its deal (DESIGN.md 35.9).
+    expect(seatsNow(state)).toBe(SEATS[0]!);
+    expect(seatsNow(one)).toBe(SEATS[0]!);
     expect(workerCount(state)).toBe(workerCount(one) * scale);
-    expect(state.football.coach.pay).toBe(one.football.coach.pay * scale);
+    expect(state.football.coach.pay).toBe(one.football.coach.pay);
     // Prices and bills.
     expect(placedCost('library', scale)).toBe(PLACED.library.cost * scale);
     expect(placedUpkeep('library', scale)).toBe(PLACED.library.upkeepPerYear * scale);
@@ -109,18 +114,46 @@ describe('the model campus at its own size', () => {
     expect(state.money.cash).toBe(before);
   });
 
-  it('feels the same at any scale: Happiness, what each student pays and what each costs do not move', () => {
+  it('feels the same at any scale: Happiness and cleanliness do not move, and the campus keeps the same share of its money apart from football', () => {
     const big = model();
     const one = model(1);
     expect(campusHappiness(big).score).toBeCloseTo(campusHappiness(one).score, 6);
     expect(campusClean(big)).toBe(campusClean(one));
-    const kept = (state: GameState): number => budget(state).kept;
-    expect(Math.abs(kept(big) - kept(one))).toBeLessThan(0.5);
-    // A home game fills the same share of the seats.
-    expect(expectedCrowd(big) / seatsNow(big)).toBeCloseTo(expectedCrowd(one) / seatsNow(one), 2);
+    // Football is one programme of real size, so its money is taken out before the two are compared.
+    expect(Math.abs(keptApart(big) - keptApart(one))).toBeLessThan(0.5);
+    // On the campus that stands for 46,000 the rented field sells out, and far more want a ticket than it holds.
+    expect(expectedCrowd(big)).toBe(seatsNow(big));
+    expect(fanDemand(big)).toBeGreaterThan(10 * seatsNow(big));
+    // Tickets are a small line there, and football costs more than it earns.
+    const ball = footballBooks(big);
+    expect(ball.tickets / budget(big).incomeTotal).toBeLessThan(0.005);
   });
 
-  it('run for five years at scale 1 and at its own scale, ends in the same proportion', () => {
+  it('with football held off, five years at scale 1 and at its own scale end in the same proportion', () => {
+    let big = noFootball(model());
+    let one = noFootball(model(1));
+    const scale = scaleOf(big);
+    const year = TICKS_PER_YEAR * TICK_MS;
+    for (let n = 0; n < 5; n++) {
+      big = advance(big, big.clock.lastSimulatedAt, big.clock.lastSimulatedAt + year).state;
+      one = advance(one, one.clock.lastSimulatedAt, one.clock.lastSimulatedAt + year).state;
+    }
+    const off = (a: number, b: number): number => Math.abs(a / (b * scale) - 1);
+    // Measured when this was built: enrollment within 0.1%, cash within 0.7%, a year's spending within 0.8%.
+    // What is left is whole numbers: a staff of 41 at scale 1 is 1,148 here, where 46,000 students make it 1,150.
+    expect(off(enrollment(big), enrollment(one)), 'enrollment').toBeLessThan(0.005);
+    expect(off(big.money.cash, one.money.cash), 'cash').toBeLessThan(0.02);
+    expect(off(budget(big).spending, budget(one).spending), "a year's spending").toBeLessThan(0.02);
+    expect(off(budget(big).incomeTotal, budget(one).incomeTotal), "a year's income").toBeLessThan(0.02);
+    // As many things happened, give or take the whole students a small campus is rounded to.
+    expect(off((big.incidents.handled + big.incidents.missed) * scale, one.incidents.handled + one.incidents.missed), 'incidents').toBeLessThan(0.05);
+    expect(big.money.grants).toBe(0);
+    expect(one.money.grants).toBe(0);
+    expect(campusClean(big)).toBeGreaterThan(0.9);
+    expect(validate(big)).toBeNull();
+  });
+
+  it('with football on, enrollment stays in proportion, and so does the money once football\'s own lines are taken out', () => {
     let big = model();
     let one = model(1);
     const scale = scaleOf(big);
@@ -130,29 +163,54 @@ describe('the model campus at its own size', () => {
       one = advance(one, one.clock.lastSimulatedAt, one.clock.lastSimulatedAt + year).state;
     }
     const off = (a: number, b: number): number => Math.abs(a / (b * scale) - 1);
-    // Measured when this was built: enrollment within 0.1%, cash within 0.7%, a year's spending within 0.8%.
-    // What is left is whole numbers: a staff of 3 at scale 1 is 96 here, where 46,000 students make it 100.
-    expect(off(enrollment(big), enrollment(one)), 'enrollment').toBeLessThan(0.005);
-    expect(off(big.money.cash, one.money.cash), 'cash').toBeLessThan(0.02);
-    expect(off(budget(big).spending, budget(one).spending), "a year's spending").toBeLessThan(0.02);
-    expect(off(budget(big).incomeTotal, budget(one).incomeTotal), "a year's income").toBeLessThan(0.02);
-    // The same games were won, the same things happened, and neither needed rescuing.
-    expect(big.football.record.w).toBe(one.football.record.w);
-    // As many things happened, give or take the whole students a small campus is rounded to.
-    expect(off((big.incidents.handled + big.incidents.missed) * scale, one.incidents.handled + one.incidents.missed), 'incidents').toBeLessThan(0.05);
+    expect(off(enrollment(big), enrollment(one)), 'enrollment').toBeLessThan(0.01);
+    expect(off(apart(big).income, apart(one).income), "a year's income apart from football").toBeLessThan(0.02);
+    expect(off(apart(big).spending, apart(one).spending), "a year's spending apart from football").toBeLessThan(0.02);
+    // The stadium is the same real stadium on both, and both earned a bigger one by filling it.
+    expect(seatsNow(big)).toBe(seatsNow(one));
+    expect(big.football.stadium.earned).toBeGreaterThanOrEqual(1);
+    // Neither needed rescuing, football's cost and all.
     expect(big.money.grants).toBe(0);
-    expect(one.money.grants).toBe(0);
-    expect(campusClean(big)).toBeGreaterThan(0.9);
-    expect(validate(big)).toBeNull();
+    expect(big.money.cash).toBeGreaterThan(model().money.cash);
   });
 
-  it('draws no more people because it stands for more: the crowd follows the small game\'s count', () => {
+  it('draws a crowd that follows the real enrollment, and never more than the limits that already hold it', () => {
     const big = model();
-    const one = model(1);
-    expect(smallCount(big, enrollment(big))).toBeCloseTo(enrollment(one), -1);
-    expect(smallCount(one, 400)).toBe(400);
+    const facts = { pathCells: 180, visiblePathCells: 180, period: 'morning' as const, weekend: false };
+    for (let step = 0; step < CROWD_STEPS.length; step++) {
+      const wanted = walkersWanted({ ...facts, students: enrollment(big), step });
+      expect(wanted).toBeLessThanOrEqual(CROWD_STEPS[step]!.inView);
+      // A campus that stands for 46,000 shows at least the crowd of a small campus of 1,600.
+      expect(wanted).toBeGreaterThanOrEqual(walkersWanted({ ...facts, students: smallCount(big, enrollment(big)), step }));
+    }
+    expect(queueNow(enrollment(big), 'dining', 'afternoon')).toBe(QUEUE_SHOWN);
+    expect(smallCount(model(1), 400)).toBe(400);
   });
 });
+
+/** A campus as it would be with no football programme yet: no season, no games, no football money. */
+function noFootball(state: GameState): GameState {
+  const copy = structuredClone(state);
+  copy.football.firstYear = 9_999;
+  copy.timers = copy.timers.filter((timer) => timer.kind !== 'scrimmage' && timer.kind !== 'kickoff' && timer.kind !== 'final');
+  return copy;
+}
+
+/** A year's income and spending with football's own lines taken out. */
+function apart(state: GameState): { income: number; spending: number } {
+  const books = budget(state);
+  const ball = footballBooks(state);
+  return {
+    income: books.incomeTotal - ball.tickets - ball.tv,
+    spending: books.spending - ball.pay * (1 + BENEFITS_SHARE) - ball.operations - ball.upkeep - ball.utilities,
+  };
+}
+
+/** Of every $100 that comes in apart from football, how much is kept. */
+function keptApart(state: GameState): number {
+  const { income, spending } = apart(state);
+  return (100 * (income - spending)) / income;
+}
 
 describe('every other campus has a scale of 1 and is unchanged', () => {
   it('a new small campus has scale 1', () => {
@@ -239,7 +297,7 @@ describe('no rule can forget the scale', () => {
   });
 
   it('every reading of a stage, a utility bill, a place to play or a neighbourhood in the game says whose campus it is', () => {
-    const wants: Record<string, number> = { stageSpec: 3, utilitiesOf: 2, playCapacity: 2, hoodCapacity: 2, coachPay: 2, buildEntries: 1 };
+    const wants: Record<string, number> = { stageSpec: 3, utilitiesOf: 2, playCapacity: 2, hoodCapacity: 2, buildEntries: 1 };
     const problems: string[] = [];
     for (const file of files) {
       const source = readFileSync(file, 'utf8');
