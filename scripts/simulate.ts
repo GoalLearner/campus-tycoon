@@ -1,5 +1,8 @@
 import {
   campusHappiness,
+  campusClean,
+  isMessSpot,
+  wagesPerYear,
   PLACED,
   advance,
   applyAction,
@@ -298,6 +301,48 @@ function assertLayerZero(runs: Run[]): void {
       'a campus joined to the town needs fewer beds per student than one that is not',
       cut.ok && joined < alone && alone === 1 && share > 0.05 && share <= 0.4 + 1e-9,
       `${joined.toFixed(2)} beds a student joined against ${alone.toFixed(2)} cut off; ${Math.round(share * 100)}% of the casual player's students live in town`,
+    );
+  }
+
+  // 13. Grounds never spirals. A campus nobody tends gets messy, loses a few points, and stops there.
+  {
+    const five = play('absent', absent.seed, 5).final;
+    const twenty = absent.final;
+    const spotless = structuredClone(twenty);
+    spotless.grounds.litter = {};
+    const lost = campusHappiness(spotless).score - campusHappiness(twenty).score;
+    const ok = campusClean(twenty) < 0.5 && Math.abs(campusClean(twenty) - campusClean(five)) < 1e-9 && lost > 1 && lost < 7;
+    check(
+      'an untended campus gets messy, loses a few points of happiness, and is the same at year five as at year twenty',
+      ok,
+      `${Math.round(campusClean(five) * 100)}% clean at year five and ${Math.round(campusClean(twenty) * 100)}% at year twenty; ${lost.toFixed(1)} points of happiness lost to litter`,
+    );
+  }
+
+  // 14. A well-staffed campus stays clean, and nothing stays broken.
+  {
+    const day = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + DAY_MS).state;
+    const broken = Object.keys(day.grounds.broken).length + Object.keys(day.grounds.lamps).length;
+    check(
+      'a well-staffed campus stays above 90% clean and has nothing left broken after a day',
+      campusClean(day) > 0.9 && broken === 0,
+      `${Math.round(campusClean(day) * 100)}% clean, ${broken} things broken, ${day.grounds.repaired} repairs so far`,
+    );
+  }
+
+  // 15. Grounds is not homework: about a bin for each place that drops litter, a yard for several of them, and a small wage bill.
+  {
+    const s = casual.final;
+    const all = s.map.placed.filter((p): p is NonNullable<typeof p> => !!p);
+    const spots = all.filter((p) => isMessSpot(p)).length;
+    const bins = all.filter((p) => p.type === 'bin').length;
+    const yards = all.filter((p) => p.type === 'yard').length;
+    const share = wagesPerYear(s) / Math.max(1, s.money.incomePerYear);
+    const ok = spots > 0 && bins <= spots * 1.5 && yards >= 1 && spots / yards >= 3 && share < 0.05 && campusClean(s) > 0.75;
+    check(
+      "the casual player's grounds stay a small job",
+      ok,
+      `${spots} places that drop litter, ${bins} bins, ${yards} yards (${(spots / Math.max(1, yards)).toFixed(1)} places a yard), wages ${(share * 100).toFixed(1)}% of income, ${Math.round(campusClean(s) * 100)}% clean`,
     );
   }
 

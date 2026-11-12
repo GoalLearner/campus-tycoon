@@ -24,6 +24,16 @@ import {
   isPathKind,
   isRoadKind,
   roadsByAccess,
+  binState,
+  enrollment,
+  isBrokenThing,
+  isMessSpot,
+  isPathKind as isWalk,
+  lampAt,
+  LITTER_CEILING,
+  spotClean,
+  workersAt,
+  yardOver,
   START_LAND,
   TOWN_X,
   townLiving,
@@ -32,6 +42,7 @@ import {
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
+import { GroundsWorkers } from './GroundsWorkers';
 import { Iso } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
 import { Walkers } from './Walkers';
@@ -44,6 +55,14 @@ const NO_TINT = 0xffffff;
 const FOR_SALE_TINT = 0x9cb39a;
 /** The light of the hour is laid over the map here: above everything on the ground, below the icons that float. */
 const LIGHT_DEPTH = 800_000;
+/** The Cleanliness overlay: clean, getting messy, dirty or in need of a worker, and where a yard's workers reach. */
+const CLEAN_OK = 0x6fe38c;
+const CLEAN_SOME = 0xffd24a;
+const CLEAN_BAD = 0xff5a4d;
+const CLEAN_REACH = 0x7ab8ff;
+/** The most pieces of litter drawn around one spot, and how near to it they lie. */
+const LITTER_SHOWN = 9;
+const LITTER_NEAR = 2;
 /** The Parking overlay: what a road reaches, what it does not, and the avenue a road has to get to. */
 const PARKING_OK = 0x6fe38c;
 const PARKING_CUT = 0xff5a4d;
@@ -87,6 +106,9 @@ export class CampusScene extends Phaser.Scene {
   private gameId = '';
   private walkers!: Walkers;
   private cars!: Cars;
+  private crew!: GroundsWorkers;
+  /** Cells with litter drawn on them, and the place it came from. A tap there opens that place. */
+  private litterCells = new Map<number, number>();
   private placed!: PlacedSprites;
   /** The light of the hour, multiplied over the whole map. */
   private lightLayer!: Phaser.GameObjects.Rectangle;
@@ -126,6 +148,7 @@ export class CampusScene extends Phaser.Scene {
     this.dpr = 1 / this.scale.zoom;
     this.walkers = new Walkers(this, this.art, this.iso);
     this.cars = new Cars(this, this.art, this.iso);
+    this.crew = new GroundsWorkers(this, this.art, this.iso);
     this.placed = new PlacedSprites(this, this.art, this.iso);
     this.lightLayer = this.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.MULTIPLY);
     // Dev builds: reach the scene from the console, for screenshots and checks.
@@ -188,6 +211,7 @@ export class CampusScene extends Phaser.Scene {
       this.syncMap(state);
       this.walkers.setMap(state);
       this.cars.setMap(state);
+      this.crew.setMap(state);
       this.placedDirty = true;
       this.dirty = false;
       this.overlayDirty = true;
@@ -203,6 +227,7 @@ export class CampusScene extends Phaser.Scene {
     }
     this.walkers.update(delta);
     this.cars.update(delta, this.light.period);
+    this.crew.update(time);
     this.moveResponders(state, time);
     this.watchStudent(delta);
     this.placed.update(time);
@@ -228,6 +253,8 @@ export class CampusScene extends Phaser.Scene {
     this.gameId = '';
     this.walkers.clear();
     this.cars.clear();
+    this.crew.clear();
+    this.litterCells.clear();
     this.placed.clear();
     for (const glow of this.glows.values()) glow.destroy();
     this.glows.clear();
@@ -372,16 +399,18 @@ export class CampusScene extends Phaser.Scene {
 
         if (cell.kind === 'path') {
           groundKey = `path.${this.pathMask(state, x, y)}`;
-          // A street lamp every few cells along a walk.
-          if (hasLamps && (x + y) % 4 === 0) {
-            objectKey = lamp;
-            lampCells.push(i);
+          // A street lamp every few cells along a walk. A broken one stays dark until a worker fixes it.
+          if (hasLamps && lampAt(state.map, x, y)) {
+            const out = (state.grounds.lamps[i] ?? 0) > 0;
+            objectKey = out ? 'lamp.off' : lamp;
+            if (!out) lampCells.push(i);
           }
         } else if (cell.kind === 'road' || cell.kind === 'street') {
           groundKey = `road.${this.roadMask(state, x, y)}`;
-          if (hasLamps && (x + y) % 5 === 2) {
-            objectKey = lamp;
-            lampCells.push(i);
+          if (hasLamps && lampAt(state.map, x, y)) {
+            const out = (state.grounds.lamps[i] ?? 0) > 0;
+            objectKey = out ? 'lamp.off' : lamp;
+            if (!out) lampCells.push(i);
           }
         } else if (cell.kind === 'crossing') {
           // The bars lie across the road, whichever way it runs.
@@ -486,8 +515,24 @@ export class CampusScene extends Phaser.Scene {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const sprite = this.spriteFor(placed.type);
-      items.push({ key: sprite.key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
+      let key = sprite.key;
+      if (placed.type === 'bin') {
+        // A bin shows how full it is: the can, then heaped, then with a bag beside it.
+        const how = binState(state, placed.id);
+        const shown = how === 'full' ? 'grounds.bin.over' : how === 'filling' ? 'grounds.bin.full' : 'grounds.bin';
+        if (this.art.has(shown)) key = shown;
+      }
+      items.push({ key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
+      // A cone stands beside anything broken until a worker has fixed it.
+      if (isBrokenThing(state, placed.id) && this.art.has('grounds.cone')) items.push({ key: 'grounds.cone', x: placed.x, y: placed.y, forward: 1 });
     }
+    if (this.art.has('grounds.cone')) {
+      for (const key of Object.keys(state.grounds.lamps)) {
+        const cell = Number(key);
+        items.push({ key: 'grounds.cone', x: cell % state.map.width, y: Math.floor(cell / state.map.width), forward: 1 });
+      }
+    }
+    this.showLitter(state, items);
     // Cars stand on a surface lot that a road reaches, more of them the fuller it is.
     const spaces = townPlaces(state.map).spaces;
     const fill = spaces > 0 ? driversNow(state) / spaces : 0;
@@ -533,6 +578,86 @@ export class CampusScene extends Phaser.Scene {
   }
 
   /** The paint preview and the selected lot. */
+  /**
+   * Litter: small pieces on the paths around each place students eat, shop or
+   * play, more of them the more is lying there, and the odd piece along paths
+   * nobody sweeps. The amount is the simulation's; where each piece lies is
+   * only for show.
+   */
+  private showLitter(state: GameState, items: PlacedItem[]): void {
+    this.litterCells.clear();
+    if (!this.art.has('litter.0')) return;
+    const { width, height, cells } = state.map;
+    for (const spot of state.map.placed) {
+      if (!spot || !isMessSpot(spot)) continue;
+      const lying = state.grounds.litter[spot.id] ?? 0;
+      if (lying < 3) continue;
+      const near: Array<{ x: number; y: number; order: number }> = [];
+      for (let y = Math.max(0, spot.y - LITTER_NEAR); y <= Math.min(height - 1, spot.y + spot.h - 1 + LITTER_NEAR); y++) {
+        for (let x = Math.max(0, spot.x - LITTER_NEAR); x <= Math.min(width - 1, spot.x + spot.w - 1 + LITTER_NEAR); x++) {
+          const kind = cells[y * width + x]!.kind;
+          // On the paths first. Where a place has no path beside it, on the grass around it.
+          if (isWalk(kind) || kind === 'empty') near.push({ x, y, order: (isWalk(kind) ? 0 : 1_000_000_000) + (cellHash(x, y) % 1_000_000) });
+        }
+      }
+      near.sort((a, b) => a.order - b.order);
+      const shown = Math.min(near.length, Math.ceil((lying / LITTER_CEILING) * LITTER_SHOWN));
+      for (const cell of near.slice(0, shown)) {
+        const piece = cellHash(cell.y, cell.x) % 6;
+        items.push({ key: `litter.${piece}`, x: cell.x, y: cell.y });
+        // Where it is deep, a second piece lies on the same cell. Each piece has its own spot on the ground.
+        if (lying > LITTER_CEILING * 0.45) items.push({ key: `litter.${(piece + 2) % 6}`, x: cell.x, y: cell.y });
+        this.litterCells.set(cell.y * width + cell.x, spot.id);
+      }
+    }
+    // The thin litter of paths nobody sweeps: a piece here and there.
+    if (enrollment(state) === 0 || state.clock.tick < state.grounds.quietUntilTick) return;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = y * width + x;
+        if (cells[i]!.kind !== 'path' || cellHash(x, y) % 23 !== 0 || this.litterCells.has(i)) continue;
+        const yard = yardOver(state.map, x, y);
+        if (yard && workersAt(state, yard.id) > 0) continue;
+        items.push({ key: `litter.${cellHash(y, x) % 6}`, x, y });
+      }
+    }
+  }
+
+  /** Green is clean, yellow is getting messy, red is dirty or needs a worker. Blue is where a yard's workers reach. */
+  private drawCleanOverlay(state: GameState): void {
+    const { width, height, cells } = state.map;
+    for (const yard of state.map.placed) {
+      if (!yard || yard.type !== 'yard') continue;
+      const reach = PLACED.yard.radius;
+      const staffed = workersAt(state, yard.id) > 0;
+      for (let y = Math.max(0, yard.y - reach); y <= Math.min(height - 1, yard.y + yard.h - 1 + reach); y++) {
+        for (let x = Math.max(0, yard.x - reach); x <= Math.min(width - 1, yard.x + yard.w - 1 + reach); x++) this.fillCell(x, y, CLEAN_REACH, staffed ? 0.2 : 0.08);
+      }
+    }
+    const colourOf = (clean: number): number => (clean >= 0.8 ? CLEAN_OK : clean >= 0.5 ? CLEAN_SOME : CLEAN_BAD);
+    for (const placed of state.map.placed) {
+      if (!placed) continue;
+      let colour: number | null = null;
+      if (isBrokenThing(state, placed.id)) colour = CLEAN_BAD;
+      else if (placed.type === 'bin') colour = { empty: CLEAN_OK, filling: CLEAN_SOME, full: CLEAN_BAD, broken: CLEAN_BAD }[binState(state, placed.id)];
+      else if (isMessSpot(placed)) {
+        colour = colourOf(spotClean(state, placed));
+        // The paths around it take its colour too.
+        for (let y = Math.max(0, placed.y - LITTER_NEAR); y <= Math.min(height - 1, placed.y + placed.h - 1 + LITTER_NEAR); y++) {
+          for (let x = Math.max(0, placed.x - LITTER_NEAR); x <= Math.min(width - 1, placed.x + placed.w - 1 + LITTER_NEAR); x++) {
+            if (isWalk(cells[y * width + x]!.kind)) this.fillCell(x, y, colour, 0.45);
+          }
+        }
+      }
+      if (colour === null) continue;
+      for (let cy = placed.y; cy < placed.y + placed.h; cy++) for (let cx = placed.x; cx < placed.x + placed.w; cx++) this.fillCell(cx, cy, colour, 0.6);
+    }
+    for (const key of Object.keys(state.grounds.lamps)) {
+      const cell = Number(key);
+      this.fillCell(cell % width, Math.floor(cell / width), CLEAN_BAD, 0.6);
+    }
+  }
+
   /** Car parks that hold no cars because no road joins them to a street. */
   private unlinkedCarParks(state: GameState): Array<NonNullable<GameState['map']['placed'][number]>> {
     const out: Array<NonNullable<GameState['map']['placed'][number]>> = [];
@@ -574,7 +699,8 @@ export class CampusScene extends Phaser.Scene {
   private drawOverlay(): void {
     const g = this.overlay;
     g.clear();
-    if (store.hasGame && this.parkingOverlayOn(store.state)) this.drawParkingOverlay(store.state);
+    if (store.hasGame && session.overlay === 'clean') this.drawCleanOverlay(store.state);
+    else if (store.hasGame && this.parkingOverlayOn(store.state)) this.drawParkingOverlay(store.state);
     for (const tint of [...this.tints, ...this.ghostTints()]) {
       for (const [x, y] of tint.cells) this.fillCell(x, y, tint.colour, tint.alpha);
     }
@@ -972,6 +1098,13 @@ export class CampusScene extends Phaser.Scene {
     }
     const cell = store.state.map.cells[y * this.mapWidth + x]!;
     const map = store.state.map;
+    // Litter on the ground belongs to a place. Tapping it opens that place, which says what would fix it.
+    const messy = this.litterCells.get(y * this.mapWidth + x);
+    const from = messy === undefined ? null : map.placed[messy];
+    if (from && cell.kind !== 'lot' && cell.kind !== 'placed') {
+      session.select(from.x, from.y);
+      return;
+    }
     const forSale = parcelAt(map, x, y)?.owned === false;
     // A lot or building shows its panel. So does a field for sale, and a street of the town.
     if (cell.kind === 'lot' || cell.kind === 'placed' || forSale || hoodAt(map, x, y)) session.select(x, y);

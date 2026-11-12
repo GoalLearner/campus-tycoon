@@ -5,7 +5,14 @@ import {
   COST,
   coverFor,
   fedAt,
+  isMessSpot,
   isPathKind,
+  previewPaint,
+  spotFix,
+  workersAt,
+  WORK_PER_WORKER,
+  yardStatus,
+  YARD_MAX_WORKERS,
   localsNeedingBeds,
   ownedAt,
   PLACED,
@@ -164,6 +171,64 @@ function nextParking(state: GameState): { type: PlacedType; x: number; y: number
 function nextLand(state: GameState): number | null {
   const forSale = state.map.parcels.filter((parcel) => !parcel.owned).sort((a, b) => a.price - b.price);
   return forSale[0]?.id ?? null;
+}
+
+// ---------------------------------------------------------------- grounds --
+
+/**
+ * Keep the campus clean, as a player who taps a messy spot and reads its one
+ * fix would: a bin beside each place that drops litter, a Facilities Yard in
+ * reach of it, and as many workers as the yard says it needs. Hiring is free,
+ * so it never counts as a purchase.
+ */
+function tendGrounds(state: GameState, reserve: number, most: number): { state: GameState; built: number } {
+  let current = state;
+  let built = 0;
+  for (let guard = 0; guard < 40 && built < most; guard++) {
+    let acted = false;
+    for (const spot of current.map.placed) {
+      if (!spot || !isMessSpot(spot)) continue;
+      const fix = spotFix(current, spot);
+      if (fix === 'noBin') {
+        if (current.money.cash - PLACED.bin.cost < reserve) continue;
+        let cell: Point | null = null;
+        for (let ring = 1; ring <= 3 && !cell; ring++) {
+          for (let y = spot.y - ring; y <= spot.y + spot.h - 1 + ring && !cell; y++) {
+            for (let x = spot.x - ring; x <= spot.x + spot.w - 1 + ring && !cell; x++) {
+              if (!onStreetPlan(x, y) && previewPaint(current, 'bin', [[x, y]]).cells.length === 1) cell = [x, y];
+            }
+          }
+        }
+        const placed = cell ? applyAction(current, { type: 'paint', tool: 'bin', cells: [cell] }) : null;
+        if (!placed?.ok) continue;
+        current = placed.state;
+        built += 1;
+        acted = true;
+        break;
+      }
+      if (fix === 'noYard') {
+        if (current.money.cash - PLACED.yard.cost < reserve) continue;
+        const at = menuSpot(current, 'yard', spot.x, spot.y);
+        const placed = at ? applyAction(current, { type: 'place', building: 'yard', x: at[0], y: at[1] }) : null;
+        if (!placed?.ok) continue;
+        current = placed.state;
+        built += 1;
+        acted = true;
+        break;
+      }
+    }
+    if (!acted) break;
+  }
+  // Hire up to what each yard says it needs, and let go of those with nothing to do.
+  for (const yard of current.map.placed) {
+    if (!yard || yard.type !== 'yard') continue;
+    const status = yardStatus(current, yard);
+    const wanted = Math.max(1, Math.min(YARD_MAX_WORKERS, Math.ceil(status.need / WORK_PER_WORKER - 1e-9)));
+    if (wanted === workersAt(current, yard.id)) continue;
+    const staffed = applyAction(current, { type: 'staff', yard: yard.id, workers: wanted });
+    if (staffed.ok) current = staffed.state;
+  }
+  return { state: current, built };
 }
 
 function neediestZone(state: GameState): Zone | null {
@@ -345,6 +410,11 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     current = placed.state;
     purchases += 1;
   }
+
+  // Grounds: bins, a yard, and the workers the yard asks for.
+  const grounds = tendGrounds(current, reserve, style === 'casual' ? 2 : style === 'daily' ? 4 : 8);
+  current = grounds.state;
+  purchases += grounds.built;
 
   // Then the Build menu, as a player who has read the Happiness panel would use it.
   // A bigger campus needs more of everything, so a visit covers more than it did before there was land to buy.

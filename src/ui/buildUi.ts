@@ -42,8 +42,9 @@ import type { BuildEntry } from './buildMenu';
 
 const footprint = (w: number, h: number): string => `${w} x ${h}`;
 
-/** The id of the Build menu card that hands over to the road tool. */
-export const ROAD_ENTRY = 'tool:road';
+/** A Build menu card whose id begins with this hands over to a drag tool: the road, a bin, a bench or a table. */
+export const TOOL_ENTRY = 'tool:';
+export const ROAD_ENTRY = `${TOOL_ENTRY}road`;
 
 /** The Build menu: what can be built now, then what is on the way. */
 export function buildEntries(): BuildEntry[] {
@@ -81,6 +82,19 @@ export function buildEntries(): BuildEntry[] {
     upkeep: `Upkeep ${dollars(ROAD_UPKEEP_PER_YEAR)} a cell a year`,
     effect: 'Links a car park to a town street. Lots like it less beside them',
   };
+  // Bins, benches and tables are one cell each and laid in rows, so their cards hand over to a drag tool too.
+  const small = (['bin', 'bench', 'table'] as const).map((type): BuildEntry => ({
+    id: `${TOOL_ENTRY}${type}`,
+    key: PLACED[type].sprite,
+    name: PLACED[type].name,
+    category: 'Grounds',
+    cost: `${dollarsShort(PLACED[type].cost)} each`,
+    footprint: 'tap or drag a row',
+    upkeep: 'No upkeep',
+    effect: PLACED[type].effect,
+  }));
+  const firstGrounds = entries.findIndex((entry) => entry.category === 'Grounds');
+  entries.splice(firstGrounds < 0 ? entries.length : firstGrounds, 0, ...small);
   const firstCarPark = entries.findIndex((entry) => entry.category === 'Roads and parking');
   entries.splice(firstCarPark < 0 ? entries.length : firstCarPark, 0, road);
   entries.push(

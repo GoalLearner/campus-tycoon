@@ -41,8 +41,24 @@ const INDOORS_BY_PERIOD: Partial<Record<DayPeriod, Record<string, string>>> = {
   night: { toClass: 'In a night class', nextClass: 'In a night class', toDorm: 'Asleep in the dorm' },
 };
 
+/** What a student is doing at a seat, by the part of the player's day. Nobody in the pack can sit, so they stand at it. */
+const SEATS: Record<string, { a: string; at: Record<DayPeriod, string> }> = {
+  Bench: {
+    a: 'a bench',
+    at: { morning: 'Having coffee at a bench', afternoon: 'Reading at a bench', evening: 'Talking with friends at a bench', night: 'Out late at a bench' },
+  },
+  'Picnic table': {
+    a: 'a picnic table',
+    at: { morning: 'Having breakfast at a picnic table', afternoon: 'Studying at a picnic table', evening: 'Talking with friends at a picnic table', night: 'Out late at a picnic table' },
+  },
+};
+
 /** A walker on the way to, or at, a named place such as the Dining hall. */
 function doingText(doing: string): string {
+  // A bench or a picnic table: what they are doing there depends on the time of day.
+  const seat = SEATS[doing.slice(8)];
+  if (seat && doing.startsWith('toPlace:')) return `Looking for ${seat.a}`;
+  if (seat && doing.startsWith('atPlace:')) return seat.at[currentDaylight().period];
   if (doing.startsWith('toPlace:')) return `Heading to the ${doing.slice(8)}`;
   if (doing.startsWith('atPlace:')) return `At the ${doing.slice(8)}`;
   return DOING_BY_PERIOD[currentDaylight().period]?.[doing] ?? DOING[doing] ?? 'Out on campus';

@@ -73,6 +73,25 @@ LAWN = on_grid(TILES + 'Grass.png', swap='rim', recolour='lawn')
 sprites['quad.0'] = {'layers': [LAWN, standing(PLANTS + 'Tree1.png', 0.5, 0.52)]}
 sprites['quad.1'] = {'layers': [LAWN, standing(PLANTS + 'Tree13.png', 0.5, 0.52)]}
 sprites['quad.2'] = {'layers': [LAWN, standing(OLD + 'Decor/Bench.png', 0.56, 0.6)]}
+# Grounds (play stop 4): bins, seating, litter and the Facilities Yard. Stand-ins are listed in DESIGN.md section 26.
+# A bin in three states: the lidded can, the pack's heaped wire basket when it is filling, and that basket with a bag beside it when full.
+sprites['grounds.bin'] = {'layers': [standing(DECOR + 'TrashCan.png', 0.5, 0.5, scale=1.35)]}
+sprites['grounds.bin.full'] = {'layers': [standing(DECOR + 'TrashCanLarge.png', 0.5, 0.5, scale=1.35)]}
+sprites['grounds.bin.over'] = {'layers': [standing(DECOR + 'TrashCanLarge.png', 0.4, 0.42, scale=1.35), standing(DECOR + 'TrashBag1.png', 0.72, 0.7, scale=1.2)]}
+sprites['grounds.bench'] = {'layers': [standing(OLD + 'Decor/Bench.png', 0.5, 0.5)]}
+# The pack has no picnic table. Its table with four chairs stands in.
+sprites['grounds.table'] = {'layers': [standing(DECOR + 'TableSet1.png', 0.5, 0.56)]}
+# Beside anything broken, as building sites already use it.
+sprites['grounds.cone'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.8, 0.74, scale=0.8)]}
+# Litter: the pack's five small pieces and a cup, each at its own spot on the cell.
+for n, (fx, fy) in enumerate([(0.3, 0.3), (0.68, 0.36), (0.42, 0.66), (0.7, 0.7), (0.26, 0.58)]):
+    sprites[f'litter.{n}'] = {'layers': [standing(OLD + f'Decor/Garbage{n + 1}.png', fx, fy, scale=1.6)]}
+sprites['litter.5'] = {'layers': [standing(OLD + 'Decor/Cup.png', 0.56, 0.5, scale=1.5)]}
+sprites['build.yard'] = {'layers': [on_grid(SHOPS + 'Workplace_Handyman_OneFloor.png', 2, 1)]}
+# What a worker has with them. No figure can hold anything, so it is drawn beside them.
+sprites['grounds.broom'] = {'layers': [standing(OLD + 'Decor/Broom.png', 0.5, 0.5)]}
+sprites['grounds.cart'] = {'layers': [standing(DECOR + 'Cart.png', 0.5, 0.5, scale=0.7)]}
+
 # Street lamps, for paths, roads and the town's streets. Off by day, lit in the evening and at night.
 # The glow is the pack's own picture of the lit lamp with its halo. The game adds it as light over the night tint.
 sprites['lamp.off'] = {'layers': [standing(DECOR + 'StreetLampOff.png', 0.14, 0.3)]}
@@ -241,9 +260,9 @@ sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]
 
 # ----------------------------------------------------------------- people --
 students = [f'Character{n}' for n in range(1, 17)] + [f'SportsPlayer{n}' for n in range(1, 5)] + ['Teacher']
-helpers = ['Doctor', 'Police']
+helpers = ['Doctor', 'Police', 'ConstructionWorker']
 people = {
-    'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last two looks are the responders, not part of the crowd.',
+    'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last three looks are the responders and the grounds worker, not part of the crowd.',
     'frames': 8,
     'frameMs': 84,
     'height': 36,
@@ -251,7 +270,7 @@ people = {
     'rows': {'sw': 1, 'nw': 3},
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
-    'roles': {'medic': len(students), 'officer': len(students) + 1, 'athlete': 16},
+    'roles': {'medic': len(students), 'officer': len(students) + 1, 'worker': len(students) + 2, 'athlete': 16},
     'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + helpers],
 }
 
@@ -281,7 +300,7 @@ recipe = {
     'trees': [name for name, _ in TREES],
     'people': people,
     'footprints': {
-        'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1],
+        'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1], 'build.yard': [2, 1],
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
         'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.pool': [2, 1], 'build.field': [2, 2], 'build.admin': [2, 2], 'pond.large': [3, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],

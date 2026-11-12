@@ -2,7 +2,9 @@ import { upgradeNotes } from './upgradeNotes';
 import {
   advance,
   applyAction,
+  campusHappiness,
   enrollment,
+  groundsLine,
   newGame,
   parseSave,
   serialize,
@@ -210,6 +212,9 @@ export class Store {
           studentsBefore: enrollment(before),
           studentsAfter: enrollment(result.state),
         });
+        // Grounds gets one line, written from everything the list now covers.
+        this.away.grounds = groundsLine(result.state, this.away.log);
+        this.away.groundsFirst = this.away.grounds !== '' && campusHappiness(result.state).worstPart === 'clean';
       } else {
         this.recent.push(...result.log);
         if (result.log.length > 0) for (const listener of this.logListeners) listener(result.log);
