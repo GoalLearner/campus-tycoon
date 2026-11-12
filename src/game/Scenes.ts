@@ -245,9 +245,10 @@ export class Scenes {
       const crowd = Math.max(1, Math.min(people.looks, people.crowd ?? people.looks));
       const look = (a: number, b: number): number => Math.floor(mix(a, b) * crowd);
       const few = this.step <= 0;
-      const shown = (asked: number, room: number): number => Math.min(room, few ? Math.min(1, asked) : asked);
+      // A scene is only set out when its own art is in the pack in use: two people standing by nothing are not a club table.
+      const shown = (asked: number, room: number, needs: string): number => (this.art.has(needs) ? Math.min(room, few ? Math.min(1, asked) : asked) : 0);
 
-      for (let n = 0; n < shown(wanted.clubTables, this.clubSpots.length); n++) {
+      for (let n = 0; n < shown(wanted.clubTables, this.clubSpots.length, 'scene.table'); n++) {
         const at = this.clubSpots[n]!;
         const key = `club:${at.x},${at.y}`;
         keep.add(key);
@@ -262,7 +263,7 @@ export class Scenes {
         this.actor(scene, look(at.x * 97 + at.y, this.day + 1), at.x + 1.08, at.y + 0.56, 'nw');
       }
 
-      for (let n = 0; n < shown(wanted.pickupGames, this.quadBlocks.length); n++) {
+      for (let n = 0; n < shown(wanted.pickupGames, this.quadBlocks.length, 'play.volleyball'); n++) {
         const at = this.quadBlocks[n]!;
         const key = `pickup:${at.x},${at.y}`;
         keep.add(key);
@@ -279,7 +280,7 @@ export class Scenes {
         }
       }
 
-      for (let n = 0; n < shown(wanted.picnics, this.picnicSpots.length); n++) {
+      for (let n = 0; n < shown(wanted.picnics, this.picnicSpots.length, 'scene.rug'); n++) {
         const at = this.picnicSpots[n]!;
         const key = `picnic:${at.x},${at.y}`;
         keep.add(key);

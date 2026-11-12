@@ -400,6 +400,16 @@ def write_credits():
                 '- **Where:** ' + where,
                 '',
             ]
+    lines += [
+        '## Sound and music',
+        '',
+        '- **By:** Made for this game, in code.',
+        '- **Licence:** None needed. The game ships no recorded audio.',
+        '- **From:** `src/app/sound.ts`. Every sound and the music are made while the game runs, from plain tones and filtered noise: footsteps and chatter, traffic, birds, crickets, rain, the bell on the hour, the sounds for taps, the busker and the background music.',
+        '- **Changes made:** None. If a recorded sound ever replaces one of these, its page, author and licence are listed here first.',
+        '- **Where:** Every build.',
+        '',
+    ]
     with open(os.path.join(ROOT, 'CREDITS.md'), 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(lines))
 
