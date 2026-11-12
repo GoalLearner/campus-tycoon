@@ -3049,6 +3049,202 @@
     }
    ]
   },
+  "icon.walkin": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Sign5.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.25
+    }
+   ]
+  },
+  "icon.drivein": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TraficSign4.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.35
+    }
+   ]
+  },
+  "shuttle.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Orange_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "shuttle.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Orange_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "shuttle.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Orange_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "shuttle.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Bus_Orange_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "truck.0.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Groceries_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "truck.0.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Groceries_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "truck.0.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Groceries_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "truck.0.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Groceries_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "truck.1.px": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Mail_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "truck.1.py": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Mail_Front.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "truck.1.nx": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Mail_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ]
+    }
+   ]
+  },
+  "truck.1.ny": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Mail_Back.png",
+     "stand": [
+      0.5,
+      0.64
+     ],
+     "flip": true
+    }
+   ]
+  },
+  "play.ball": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/SockerFootBall.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.045
+    }
+   ]
+  },
+  "pool.float": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolFloatie.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "pool.ball": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolBall.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
   "decor.car": {
    "layers": [
     {

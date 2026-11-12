@@ -254,6 +254,23 @@ sprites['icon.injury'] = {'layers': [{'file': SHOPS + 'Shop_Pharmacy_OneFloorRoo
 sprites['icon.noroad'] = {'layers': [standing(DECOR + 'GateDown.png', 0.5, 0.5, scale=1.4)]}
 sprites['icon.mischief'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.5, 0.5, scale=1.5)]}
 sprites['decor.hoop'] = {'layers': [standing(ICONS + 'BasketBallNet.png', 0.5, 0.5, scale=0.16)]}
+
+# ------------------------------------------------------------------ alive --
+# Markers at the edge of a campus the town cannot get into: the pack's arrow sign for a path, and its
+# blue square sign for parking. Both as drawn, a little larger so they read at phone zoom.
+sprites['icon.walkin'] = {'layers': [standing(DECOR + 'Sign5.png', 0.5, 0.5, scale=1.25)]}
+sprites['icon.drivein'] = {'layers': [standing(DECOR + 'TraficSign4.png', 0.5, 0.5, scale=1.35)]}
+# The campus shuttle and two delivery trucks, turned the four ways like the cars.
+for key, name in (('shuttle', 'Bus_Orange'), ('truck.0', 'Truck_Groceries'), ('truck.1', 'Truck_Mail')):
+    for way, view, mirrored in (('px', 'Front', False), ('py', 'Front', True), ('nx', 'Back', False), ('ny', 'Back', True)):
+        layer = standing(f'{CITY}Vehicles/{name}_{view}.png', 0.5, 0.64)
+        if mirrored:
+            layer['flip'] = True
+        sprites[f'{key}.{way}'] = {'layers': [layer]}
+# A football for the recreation field, and the pack's two pool toys.
+sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0.5, scale=0.045)]}
+sprites['pool.float'] = {'layers': [standing(DECOR + 'PoolFloatie.png', 0.5, 0.5)]}
+sprites['pool.ball'] = {'layers': [standing(DECOR + 'PoolBall.png', 0.5, 0.5)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
 sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]}

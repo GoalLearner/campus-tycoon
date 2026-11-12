@@ -108,9 +108,12 @@ export {
   roadReach,
   roadsByAccess,
   startingParcels,
+  townHints,
   townLiving,
   townPlaces,
   type HoodLiving,
+  type TownHint,
+  type TownHints,
   type TownPlaces,
 } from './systems/town';
 export { acceptanceRate, classRecord, spreadClassYears, startedHere } from './systems/admissions';
