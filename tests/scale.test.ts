@@ -47,6 +47,9 @@ import { freshGame, T0 } from './helpers';
  * stands for. 1 for every campus but the model campus.
  */
 
+/** The last save version before the campus scale. */
+const BEFORE_SCALE = 12;
+
 const model = (scale?: number): GameState => newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model', ...(scale === undefined ? {} : { scale }) });
 
 describe('the model campus at its own size', () => {
@@ -222,14 +225,14 @@ describe('every other campus has a scale of 1 and is unchanged', () => {
     const later = advance(state, T0, T0 + 3 * 24 * 60 * TICK_MS).state;
     const text = serialize(later, T0);
     const file = JSON.parse(text) as { v: number; state: { version: number; map: { scale?: number } } };
-    // As a save of the version before would have been: no scale at all.
-    file.v = SAVE_VERSION - 1;
-    file.state.version = SAVE_VERSION - 1;
+    // As a save of version 12 would have been, the last before the scale: no scale at all.
+    file.v = BEFORE_SCALE;
+    file.state.version = BEFORE_SCALE;
     delete file.state.map.scale;
     const back = parseSave(JSON.stringify(file));
     expect(back.ok).toBe(true);
     if (!back.ok) return;
-    expect(back.migratedFrom).toBe(SAVE_VERSION - 1);
+    expect(back.migratedFrom).toBe(BEFORE_SCALE);
     expect(back.state.map.scale).toBe(1);
     // The scale is the only thing added. Everything else is as it was saved.
     expect(back.state).toEqual(later);

@@ -1,3 +1,4 @@
+import { happyParts, stressOff } from './boosts';
 import { activeEntries, calendarAt, dateAt, marksAt, spanOf, type CalendarMark } from '../calendar';
 import { ACADEMIC_CALENDAR, type CalendarEntry } from '../config/academicCalendar';
 import { PLACED } from '../config/placed';
@@ -187,6 +188,9 @@ export function libraryShare(state: GameState): number {
 }
 
 export interface StressRead {
+  /** Points taken off by help from the desk, already out of the score, and what the help is called. 0 and '' with none. */
+  eased: number;
+  easedBy: string;
   /** 0 to 100. */
   score: number;
   /** The calendar's part, 0.1 to 1. */
@@ -234,7 +238,10 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
       cause = id;
     }
   }
-  return { score: Math.round(100 * season * factor), season, pressure, relief, crowding: crowded, unwind, support, cause, factor };
+  // Help from the desk, such as late library hours, comes straight off the top. It is the same help at any season.
+  const help = stressOff(state);
+  const raw = Math.round(100 * season * factor);
+  return { score: Math.max(0, raw - help.points), season, pressure, relief, crowding: crowded, unwind, support, cause, factor, eased: Math.min(raw, help.points), easedBy: help.label };
 }
 
 /** Faculty Stress, 0 to 100: their own calendar, and how crowded classes are. */
@@ -279,7 +286,7 @@ export function shelter(state: GameState, levels: CampusLevels): number {
 // ---------------------------------------------------------- "this week" --
 
 export interface SeasonPart {
-  id: 'exams' | 'break' | 'back' | 'weather';
+  id: 'exams' | 'break' | 'back' | 'weather' | 'desk';
   label: string;
   /** Points of Happiness, signed. */
   points: number;
@@ -327,6 +334,8 @@ export function seasonLine(state: GameState, levels: CampusLevels): SeasonLine {
     const points = sky < 0 ? sky * (1 - WEATHER_SHELTER * shelter(state, levels)) : sky;
     parts.push({ id: 'weather', label: WEATHER_NAMES[weather], points });
   }
+  // What the desk has set going: a concert, guests in the dorms. Small, dated, and capped together.
+  for (const part of happyParts(state)) parts.push({ id: 'desk', label: part.label, points: part.points });
   const delta = parts.reduce((sum, part) => sum + part.points, 0);
   return { delta, parts, stress, faculty: facultyStress(state), weather, day };
 }

@@ -35,7 +35,7 @@ function open(state: GameState, log: LogEntry[], decision: Omit<Decision, 'id' |
     tick: state.clock.tick,
     kind: 'decision',
     text: `A decision is yours: ${item.title}. It is open for ${duration(item.closes - item.opens)}. Left alone: ${fallback ? fallback.label.toLowerCase() : 'nothing changes'}.`,
-    data: { id: item.id, kind: item.kind, closes: item.closes },
+    data: { id: item.id, kind: item.kind, closes: item.closes, title: item.title },
   });
 }
 

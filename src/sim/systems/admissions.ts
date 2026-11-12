@@ -1,6 +1,7 @@
 import { calendarAt } from '../calendar';
 import { FOUNDING_SHARES } from '../config/demand';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
+import { headCount } from '../format';
 import { enrollment, openCapacity } from '../selectors';
 import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
 import { classSize, dormStudents, localsAmong } from './demand';
@@ -175,7 +176,7 @@ export function spreadClassYears(state: GameState, log: LogEntry[]): void {
     log.push({
       tick: state.clock.tick,
       kind: 'classes',
-      text: `The student body now has all four class years: ${moved} students moved up to fill them. Nobody left, and income is unchanged. Seniors graduate this spring.`,
+      text: `The student body now has all four class years: ${headCount(moved)} students moved up to fill them. Nobody left, and income is unchanged. Seniors graduate this spring.`,
       data: { moved },
     });
   }
@@ -207,8 +208,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
     kind: 'intake',
     text:
       bottleneck === null
-        ? `${label} moved in: ${admitted} students, and everyone found a place.`
-        : `${label} moved in: ${admitted} students. ${turnedAway} more are on the waitlist for want of ${ZONE_UNIT[bottleneck]}.`,
+        ? `${label} moved in: ${headCount(admitted)} students, and everyone found a place.`
+        : `${label} moved in: ${headCount(admitted)} students. ${headCount(turnedAway)} more are on the waitlist for want of ${ZONE_UNIT[bottleneck]}.`,
     data: { season, year, expected, admitted, turnedAway, bottleneck: bottleneck ?? '' },
   });
 }
@@ -240,7 +241,7 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   log.push({
     tick: state.clock.tick,
     kind: 'waitlist',
-    text: count === 1 ? '1 student came off the waitlist.' : `${count} students came off the waitlist.`,
+    text: count === 1 ? '1 student came off the waitlist.' : `${headCount(count)} students came off the waitlist.`,
     data: { count },
   });
 }
@@ -261,8 +262,8 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
       kind: 'waitlistClosed',
       text:
         lost === 0
-          ? `The waitlist closed. All ${admitted} who waited got in.`
-          : `The waitlist closed. ${admitted} got in and ${lost} went elsewhere${zone ? `, for want of ${ZONE_UNIT[zone]}` : ''}.`,
+          ? `The waitlist closed. All ${headCount(admitted)} who waited got in.`
+          : `The waitlist closed. ${admitted > 0 ? `${headCount(admitted)} got in and ` : ''}${headCount(lost)} went elsewhere${zone ? `, for want of ${ZONE_UNIT[zone]}` : ''}.`,
       data: { lost, admitted, bottleneck: zone ?? '' },
     });
   }
@@ -311,7 +312,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
       text:
         left === 0
           ? 'The semester ended and every student is staying on.'
-          : `The semester ended. ${left} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.`,
+          : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.`,
       data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress) },
     });
   }
@@ -330,7 +331,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
     log.push({
       tick: state.clock.tick,
       kind: 'graduation',
-      text: `${seniors} seniors graduated. ${state.stats.graduates} alumni so far.`,
+      text: `${headCount(seniors)} seniors graduated. ${headCount(state.stats.graduates)} alumni so far.`,
       data: { seniors, alumni: state.stats.graduates },
     });
   }

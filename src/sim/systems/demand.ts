@@ -1,3 +1,4 @@
+import { applicantsLift } from './boosts';
 import { scaleOf } from '../scale';
 import { calendarAt, GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import {
@@ -53,8 +54,9 @@ export function fallClassDraw(state: GameState): number {
   // Recruiting and marketing lifts applications. The ceiling is the wall it pushes against.
   // Athletic standing lifts it too, and so does a TV deal: football's applicants (DESIGN.md 10.1).
   // The least a campus draws and the most are head counts, so they follow the campus scale (DESIGN.md 35.7).
+  // A profile in a college guide, a spring concert: what the desk has set going, for a few days.
   const scale = scaleOf(state);
-  const pool = Math.max(FOUNDING_CLASS * scale, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state)) * (1 + athleticLift(state));
+  const pool = Math.max(FOUNDING_CLASS * scale, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state)) * (1 + athleticLift(state)) * (1 + applicantsLift(state));
   return Math.min(POOL_CEILING * scale, Math.round(pool));
 }
 

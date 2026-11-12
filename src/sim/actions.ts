@@ -10,6 +10,7 @@ import { YARD_MAX_WORKERS, YARD_START_WORKERS } from './config/grounds';
 import { minutesToAnchor, timeOfTick, yearLength } from './calendar';
 import { SCHOOL_COLOURS, TICKET_PRICE } from './config/football';
 import { choose, stretchDecisions } from './systems/decisions';
+import { chooseInbox, stretchInbox } from './systems/inbox';
 import { ANCHOR_RECHARGE_TICKS, TICKS_PER_DAY, TICKS_PER_YEAR } from './config/time';
 import { dollars, duration } from './format';
 import { inBounds } from './selectors';
@@ -46,6 +47,7 @@ export type Action =
   | { type: 'anchor'; minute: number }
   /** Answer one of the annual decisions. */
   | { type: 'decide'; id: number; option: string }
+  | { type: 'inbox'; id: number; option: string }
   /** Set the ticket price step, 0 to 4. */
   | { type: 'ticketPrice'; step: number }
   /** Choose the school's colour. */
@@ -369,6 +371,7 @@ function setAnchor(state: GameState, minute: number): ActionResult {
   next.clock.anchor = minute;
   // Decisions that close when the next fall begins stay open for the longer summer.
   stretchDecisions(next, clock.week.start + yearLength(clock.week));
+  stretchInbox(next, clock.week.start + yearLength(clock.week));
   return { ok: true, state: next, cost: 0, changed: 1 };
 }
 
@@ -377,6 +380,15 @@ function decide(state: GameState, id: number, option: string): ActionResult {
   const next = structuredClone(state);
   const before = next.money.cash;
   const error = choose(next, id, option);
+  if (error) return { ok: false, state, error };
+  return { ok: true, state: next, cost: before - next.money.cash, changed: 1 };
+}
+
+/** Answer a petition, a deal or an event on the desk. */
+function answer(state: GameState, id: number, option: string): ActionResult {
+  const next = structuredClone(state);
+  const before = next.money.cash;
+  const error = chooseInbox(next, id, option);
   if (error) return { ok: false, state, error };
   return { ok: true, state: next, cost: before - next.money.cash, changed: 1 };
 }
@@ -417,6 +429,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return setAnchor(state, action.minute);
     case 'decide':
       return decide(state, action.id, action.option);
+    case 'inbox':
+      return answer(state, action.id, action.option);
     case 'ticketPrice':
       return setTicketPrice(state, action.step);
     case 'colour':

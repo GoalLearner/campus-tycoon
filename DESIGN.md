@@ -3807,3 +3807,206 @@ The multiplication is in one place for each kind of thing, where its number is r
 | The test player who spends every dollar took one state grant in its second summer | $1.5M, once, on a budget of several hundred million. The same thing happens on a small campus (34.5). A player who keeps anything in hand does not see it |
 | A 46,000-student campus can grow | With the casual test player it reached 147,000 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
 | The legal check | Where real buildings stand is a fact, but the owner's earlier rule was the cautious line. A lawyer should say so before the game is sold (35.1) |
+
+---
+
+## 36. The daily player and the newspaper, as built
+
+Stop C of the long run of 2026-11-12. The owner's words: "The away summary built for a 24-hour gap: the three or four things that matter most first (game results, intakes, decisions waiting, problems), the rest collapsed, grouped by date. The campus newspaper as the front of the away summary. The inbox: annual decisions plus a first set of about twenty petitions, deals, and events with an advisor's pick and a marked default, 36-hour minimum windows. iOS notifications: at most two a day by default (decision about to expire, headline result), player-adjustable, scheduled on app background."
+
+This section is the record of what was built. Sections 2.3, 4.4 and 12 hold the design it follows. Where the two differ, 36.9 says so and why.
+
+### 36.1 What a player meets
+
+| Thing | What it is | Where |
+|---|---|---|
+| The newspaper | After an hour or more away the away screen is the campus paper: its name, the date, a headline with the plain fact under it, and up to four things that matter most. One button opens the rest | `src/sim/newspaper.ts`, `src/ui/deskPanels.ts` |
+| The rest of the paper | Scores with a recap each, the admissions story, the student poll, rankings day, the other lines, and then everything dated, day by day | The same |
+| The plain list | Ten minutes to an hour away gets the list it always had | `summarizeAway` |
+| The Inbox | The chip on the top bar. Three short pages: To decide, Advisors, Settled | `src/ui/deskPanels.ts`, `src/ui/deskUi.ts` |
+| This year's decisions | The annual decisions of 4.4, in their own part of To decide. They never count against the four | `state.decisions` |
+| On your desk | Up to four petitions, deals and events. Each says who sent it, what is true of the campus that brought it, when it closes, and its choices. One choice carries the advisor's name as their pick. One is marked "Happens by itself if you leave it" | `state.inbox`, `src/sim/systems/inbox.ts` |
+| The four advisors | Provost, Chief Financial Officer, Athletic Director, Dean of Students. Each has a name made the way student names are made, kept in the save, and one line: the thing holding their part of the campus back most | `src/sim/systems/advisors.ts` |
+| Notifications | iPhone app only. Off until the player turns them on in the Menu. Written and not run (36.6) | `src/sim/notify.ts`, `src/app/notices.ts` |
+
+### 36.2 The newspaper
+
+An edition is worked out from the log of the time away and the campus as it stands. Nothing about it is stored and it changes nothing, so the same absence always prints the same paper. It stays saved until "Back to campus" is tapped, as the away list always did.
+
+| Part | Rule |
+|---|---|
+| Its name | "The" and the school's short name and one of eight words (Lantern, Ledger, Courier, Quill, Bugle, Record, Clarion, Gazette), picked once from the seed |
+| The headline | The largest single thing that happened: a title game or the rivalry, then a class moving in, rankings day, a new stadium, an ordinary game, a grant, a year closing. The joke is the second half and aims at an office, never at students. The plain fact is printed under it |
+| The top | Up to four lines, by the weights of 36.3. A line about decisions opens the Inbox. A line about football opens the Football page |
+| Scores | Every game played while away, each with the recap football already writes |
+| Admissions | When a class moved in: how many wanted a place, how many got one, what drew them most (the largest of how the campus looks, football, recruiting, and good press from the desk), and what turned any away |
+| The student poll | A hundred students, twenty-five from each class year, the same ones every time. What their cards would say is wrong is added up, and the top three are printed with how many named something they like instead. It moves only when the campus does |
+| Rankings day | The line rankings day already writes, when it fell while away |
+| Day by day | Everything dated, oldest first, as the away list had it. Items arriving on the desk and closing by default are dated too |
+
+### 36.3 The ranking
+
+What goes at the top is decided by one table of weights, `TOP_WEIGHTS` in `src/sim/config/inbox.ts`. The order behind it: first what the player can still act on, then what was decided without them, then the results they were waiting for, then trouble, then the rest.
+
+| Weight | Line |
+|---|---|
+| 100 | Decisions waiting, with how long the first has left |
+| 96 | Paused: the campus stood still for whole weeks |
+| 90 | One of the year's decisions closed with its default |
+| 84 | A title game, a bowl or the rivalry |
+| 78 | A class moved in |
+| 74 | The waitlist closed and some went elsewhere |
+| 72 | An ordinary game, with the record of all played while away |
+| 68 | A shortfall the endowment or the state covered |
+| 62 and 61 | A stadium earned or opened, a division won, rankings day |
+| 58 to 55 | The year closed, litter when it is what holds Happiness back, graduation, incidents nobody came to |
+| 52 and 50 | A change of rule, a hard exam week |
+| 45 to 37 | Money earned, enrollment, the waitlist admitting, a desk item closed by default, things built, litter otherwise |
+| 30 | Incidents handled |
+
+Tested with a real day's log from the test campus for nine days running, and with a hand-made day: a decision waiting, a default taken, a class and a game come out in that order, and the money and the desk's default are under the fold.
+
+### 36.4 The desk
+
+| Rule | Number | Where |
+|---|---|---|
+| Routine items open at once | 4 at most. The year's decisions do not count | `ROUTINE_CAP` |
+| New in one real day | 2 at most, at the start of a day of the game week | `NEW_PER_DAY` |
+| Arrivals pause | While two or more of the year's decisions are open, on a campus under 100 students (as the small game counts them), and in a campus's first real day | `ANNUAL_PAUSE`, `INBOX_MIN_STUDENTS` |
+| A petition or a deal stays open | 48 hours | `ROUTINE_WINDOW_TICKS` |
+| An event stays open | 36 hours, the shortest window the game allows. Homecoming plans stay open until a day into the fall | `EVENT_WINDOW_TICKS` |
+| Left alone | The marked default applies by itself when the window closes, and the away list says so. No default spends money |
+| Chosen | It takes effect at once and the item is done. A choice the campus cannot pay for says so in words |
+| The same item again | Not for one to three game years, by item. An item is never open twice |
+
+Every item is written from something true of the campus at the moment it opens, and it is stored as written, effects and all, so a later change to the wording never alters one already on a desk. What a choice can do is one of five things: move money once, push a number for a few days, tidy litter, mend what is broken, or pay into the endowment. The pushes are capped where they are read, so no pile of choices can run away with a number:
+
+| What is pushed | Cap | Read by |
+|---|---|---|
+| Happiness | 3 points either way, everything on the desk together. Each line shows in the Happiness panel by name | `happyParts`, the season's line |
+| Stress | 12 points off at most. Two kinds of help do not add up | `stressOff` |
+| The crowd that wants a ticket | A tenth fewer to a fifth more | `fansLift`, `fanDemand` |
+| Applicants to a class | 6 in a hundred more | `applicantsLift`, the pool |
+
+**Sums follow the campus.** A price or a fee is so much for each student, to the nearest $500, with a floor that follows the campus scale (35.7). Late hours cost $2,000 on a campus of 290 and $184,000 on one of 46,000. Rules about how big a campus must be read it as the small game would count it. Every number is written with its commas.
+
+**The advisor's pick follows the money.** An advisor picks a paid choice only when the campus has twenty times its price in the bank and keeps at least $10 of every $100 (`ADVISOR_SPENDS_FROM`). An advisor takes a deal when under $8 of every $100 is kept. Otherwise they pick the choice that costs nothing. The second half of the first rule came from the long run: on the model campus, which opens just under $10 kept, picks that spent money in the first two years took a tenth of a point off the leanest year's margin.
+
+**The 22 items.** Each row is what must be true for it to arrive.
+
+| Item | Kind, from | Arrives when |
+|---|---|---|
+| Late hours at a place to play | Petition, Dean | Students queue for a turn there |
+| A clean-up day | Petition, Dean | The messiest spot is under half clean |
+| A repair crew for a day | Petition, CFO | Three or more things are broken |
+| Weekend review sessions | Petition, Provost | Term time and classes are crowded |
+| Keep the Library open late | Petition, Provost | There is a Library and finals Stress would pass 50 |
+| A pep rally | Petition, Athletic Director | Three losses in a row with a home game to come |
+| A visiting food cart | Petition, Dean | Food is the biggest gap in Happiness |
+| A night watch | Petition, Dean | Six or more incidents lately had nobody come |
+| Put the surplus to work | Petition, CFO | More than five months of spending is in the bank |
+| A choir festival wants the empty rooms | Deal, CFO | 15% of beds or more stand empty in term |
+| A name on the Dining hall | Deal, CFO | Money is tight and there is a Dining hall |
+| A college guide's profile | Deal, Provost | Happiness is 60 or more |
+| The scoreboard | Deal, Athletic Director | The campus has its own stadium, a season is on and the stands have room |
+| A booster's boat | Deal, CFO | The year after a sponsor's deal was taken. Once |
+| A film crew wants the quad | Deal, Dean | There is a quad, in term |
+| The mascot costume is missing | Event, Dean | Rivalry season with Campus Safety covering little |
+| A rival's prank | Event, Athletic Director | Rivalry season, in the years the mascot stays put |
+| A professor against the marching band | Event, Provost | A lecture hall stands inside the stadium's noise |
+| The clubs ask for the main quad | Event, Dean | The new semester, with a quad |
+| The spring concert | Event, Dean | Spring |
+| The seniors want to paint the steps | Event, Dean | Commencement is near and there is an Administration building |
+| Plans for Homecoming | Event, Athletic Director | The summer before a season, when the stands have room |
+
+### 36.5 The advisors' lines
+
+Each advisor reads the campus and says the one thing that holds their part back most. The Provost: a waitlist for seats, crowded classes, or the rank. The CFO: a thin margin with its largest cost, empty housing, or cash sitting idle. The Athletic Director: no stadium plot, a tier earned, a losing streak with its biggest gap, or a contract ending. The Dean: a waitlist for beds, or Happiness with its biggest gap and what closes it. The gaps come from the same helper the Happiness panel reads, so the line and the panel cannot disagree.
+
+### 36.6 Notifications: written and not run
+
+Nothing here has been on a phone.
+
+| Rule | As written |
+|---|---|
+| Where | The iPhone app only. In a browser tab the Menu says "Notifications come with the iPhone app. A browser tab has none." |
+| Asking | Never at launch. The phone asks the first time the player turns "Notifications" on in the Menu |
+| How many | Two a day by default. "Most in a day" steps through 1, 2 and 3. Off is one tap |
+| What | One about decisions closing, then the day's weightiest result: a final score, a class moving in, rankings day or commencement |
+| A closing decision | Told twelve hours before it closes. In the player's night it moves to the hour their day starts if that leaves two hours to act, and to the end of the evening before if not. However many are closing in a day, it is one notice, naming the first |
+| A result in the night | Waits for the hour their day starts |
+| The player's day | Fifteen hours from the hour they said their day starts |
+| When | Planned as the app goes to the background, for the next three days, and withdrawn when the app comes back |
+| How | `planNotices` plays the next three days forward on a copy of the save and returns the moments. It is a pure function, tested like the rest of the sim. `src/app/notices.ts` hands them to Capacitor's local-notifications plugin, which it reaches by name through `registerPlugin` |
+
+**What changed in the project for this.** Nothing in `ios/`, `package.json` or `package-lock.json`. The plugin is not installed: installing it is a download, which needs the owner's own yes. Until it is installed and synced, turning notifications on in the app says "This build cannot send notifications yet." The steps are in 36.8.
+
+### 36.7 Tests and long runs
+
+52 new tests (`tests/inbox.test.ts`, `tests/newspaper.test.ts`, `tests/notify.test.ts`): 529 in all. Seven new long-run checks, under "LAYER 4": 40 in all.
+
+| Check | Result |
+|---|---|
+| The check-in contract, casual and once-a-day | A paper at every visit with one to four things at its top (280 and 140 editions); 1.02 and 1.01 new routine items a day, the limit being 2; a purchase at 52% and 54% of visits |
+| The inbox cap | At most 3 open at once across 4 players and 423 items |
+| Every item has a default | 22 written items and 447 seen on a desk, none without a default and a pick among its choices; with the desk left alone 124 of 124 items that closed took their default |
+| No content line breaks the banned-word list | 29195 lines: every written item, every edition, every advisor's line and the notices |
+| No routine item is open under 36 hours | 423 items of 18 kinds, the shortest open 36 hours |
+| The once-a-day player misses no routine item | 141 items, 0 that opened and closed between two visits; 141 answered and 0 left to their default |
+| The desk gates nothing | 6782 students with every pick taken and 6871 with the desk left alone; cash $35M and $35M; the leanest year from year 3 keeps 12.9% and 13.6%; 143 answers took $2.3M out of the bank in 20 years, which is 0.17% of 20 years of spending at today's rate, and put $35M into the endowment |
+
+**How the balance moved.** Little. The casual test player was run twice for 20 game years, once taking every advisor's pick and once leaving the desk alone. It ended with 6,782 students against 6,871, and $35M in the bank both times. Its leanest year from year 3 kept $12.90 of every $100 against $13.60. The 143 answers took $2.3M out of the bank in all, which is 0.17% of what the campus spent, and put $35M into the endowment on the CFO's advice. Every size was reached in the same year as before: 500 students in year 2, 1,000 in year 3, 2,000 in year 4, 4,000 in year 6 and 8,000 in year 11. The mid-game margin of the casual and once-a-day players runs from 12.9% to 17.3%, inside the 10 to 20 the game is tuned for. The season's line on Happiness, which now carries the desk's lines, stayed between 7.1 points down and 8.5 up. On the model campus the casual test player keeps 10.0% to 14.8% in years 3 to 8, where it kept 10.1% to 14.8% before this stop, and reaches 153,664 students by year eight, where it reached 147,280.
+
+A player who looks in every 24 hours never loses a decision without having seen it open: tested for 28 days on the test campus and for 20 game years in the long run, for routine items and the year's decisions alike.
+
+Save version 14. A save from before gets four named advisors and an empty inbox, and one line in its next away list.
+
+### 36.8 For the owner to do by hand
+
+1. Say yes to installing the notifications plugin, then on the Mac, in the project folder, run `npm install @capacitor/local-notifications` and `npx cap sync ios`. It is the free official plugin. It adds one line to `package.json`, updates `package-lock.json`, and the sync adds the plugin to the iOS project.
+2. Build to the iPhone and go through the manual list on the hand-off page: turn notifications on, see the phone ask once, put the app away with a decision open, and see one notice arrive twelve hours before it closes.
+3. If the phone never asks, check that the app's notification entitlement was added by the sync.
+
+### 36.9 Decisions made for the owner, what was held back, and what is rough
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| New items a day | Two at most. Section 2.3 said about three. The note for this stop allowed fewer if three read as homework, and four open with two more each day did | Three a day |
+| How long an item stays open | 48 hours for a petition or a deal, 36 for an event of the day | 36 for all, which leaves a once-a-day player one visit and no second thought |
+| The order at the top | What can still be acted on, then what was decided without you, then results, then trouble (36.3) | Strictly by time, or results first |
+| When the paper appears | An hour or more away. Less gets the plain list | A paper every time, which after ten minutes is a headline about nothing |
+| How the paper looks | Ink on a cream page inside the usual card, with a serif masthead | The same dark list as before with a title on it |
+| The Inbox's pages | Three short pages, and a chip that is always on the top bar and turns yellow when something waits | One long page, and a chip only when something waits, which would hide the advisors |
+| The advisors' names | Made once from the seed and kept in the save | Titles only |
+| How much a choice can do | Small, dated and capped where it is read (36.4) | Larger pushes, which would make the desk the way to play |
+| What a default costs | Nothing, ever | The advisor's pick as the default, which would spend money while away |
+| The advisor's pick | Follows the money: twenty times the price in the bank, on a campus that keeps at least $10 of every $100 (36.4) | Always yes, or the bank balance alone, which the long run showed costs a thin campus a little of its margin |
+| Items that only move the crowd | Held back, or advised against, where every game sells out anyway. On the model campus that is the scoreboard deal and the Homecoming parade | Offer them, which would be free money or money wasted |
+| Notifications before they are asked for | Off. Two a day once turned on | On by default, which would mean asking at launch |
+| The player's night | Nothing is sent outside fifteen hours from their day's start | Send at the moment, whatever the hour |
+| How far ahead notices are planned | Three days. A player away longer hears no more | A week, which nags someone who has stopped playing |
+| The plugin | Reached by name, not installed | Install it now, which is a download and needs his own yes |
+| Log lines | Head counts in the away list are now written with commas, and "0 got in and" is dropped from the waitlist line | Leave them, and print 11500 in the paper |
+| Test players | Every one that looks in takes the advisor's pick on the desk. One extra run leaves the desk alone, for the comparison | Leave the desk alone in every run |
+
+| Held back | Why |
+|---|---|
+| Recruiting scandal, in two steps | Needs Athletics overfunding and a coach's trait as its risk, and a two-step chain. None exists |
+| Faculty walkout threat | Needs an Instruction budget that can be underfunded. There is no such lever |
+| Dorm flood | Needs a Rundown state and a repair timer on one building |
+| Field storming with a repair bill | The storming is shown after a rivalry win at home (34). A bill would need safety cover measured at the stadium |
+| Parking uprising | Its harm would fall on commuters' Happiness, which is not a number of its own |
+| Grade inflation exposé | Needs the Tough grading policy and an Instruction budget |
+| Every item about tuition or a policy | Policies (12.3) and price levers are not built |
+| Commencement speaker and the Board goal, of 4.4 | A speaker has nothing to change yet, and a Board goal needs milestones (layer 5) |
+| Scandals as two-step chains | No item here has a second step |
+
+| Rough | Why |
+|---|---|
+| Notifications have never run | 36.6. The planner is tested. The hand to the phone is not |
+| Twenty-two items | A once-a-day player sees about one new item a day, so the same ones come round within a few game years |
+| Headline jokes | Four for a win and four for a loss, and one each for the other kinds. They will repeat |
+| The paper has no pictures | Words only |
+| On the model campus every fall's paper says tens of thousands went elsewhere | The campus opens full, so the waitlist line is true every fall until more is built. It may read as alarm |
+| The dated list repeats the scores | A game is under Scores and again under its date |
+| The model campus's leanest year | With the casual test player its leanest year keeps 10.0%, the very bottom of the tuned range. It was 10.1% before this stop. When advisors picked paid extras whatever the margin, it fell just under 10% and the long-run check failed, which is why they now hold back on a campus that keeps under $10 of every $100. There is no room to spare there |

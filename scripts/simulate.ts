@@ -37,6 +37,17 @@ import {
   STRESS_HAPPINESS,
   teamRating,
   TICKS_PER_HOUR,
+  advisorLines,
+  edition,
+  everyWrittenItem,
+  HAPPY_CAP,
+  MIN_WINDOW_TICKS,
+  NEW_PER_DAY,
+  newspaperLines,
+  planNotices,
+  ROUTINE_CAP,
+  TOP_ITEMS,
+  toneProblem,
   type GameState,
   type LogEntry,
 } from '../src/sim';
@@ -118,16 +129,71 @@ interface Seen {
   /** Football seasons finished, and how many of them had ten games for every team and a table that added up. */
   seasons: number;
   seasonsSound: number;
+  /** The desk (DESIGN.md section 36). Every routine item that opened: what it was, when it opened and when it closes. */
+  desk: Array<{ opens: number; closes: number; key: string }>;
+  /** The most routine items ever open at once, whenever the campus was looked at. */
+  deskMost: number;
+  /** Routine items that took their default, and that the player answered. */
+  deskDefaults: number;
+  deskAnswered: number;
+  /** What the answers took out of the bank over the whole run, less what they brought in, and what went into the endowment. */
+  deskSpent: number;
+  deskEndowed: number;
+  /** Items seen on a desk, and how many had a default or a pick that was not one of their choices. */
+  deskSeen: number;
+  deskUnsound: number;
+  /** Editions of the paper printed at a visit, how many had nothing at the top, and how many had more than four things. */
+  editions: number;
+  editionsEmpty: number;
+  editionsOver: number;
+  /** Lines checked against the tone guide, and the ones that broke it. */
+  lines: number;
+  toneBroken: string[];
 }
 
-const newSeen = (): Seen => ({ visits: [], decisions: [], exams: {}, stressMax: 0, stressOutsideExams: 0, stressOnBreak: 0, deltaMin: 0, deltaMax: 0, seasons: 0, seasonsSound: 0 });
+const newSeen = (): Seen => ({
+  visits: [],
+  decisions: [],
+  exams: {},
+  stressMax: 0,
+  stressOutsideExams: 0,
+  stressOnBreak: 0,
+  deltaMin: 0,
+  deltaMax: 0,
+  seasons: 0,
+  seasonsSound: 0,
+  desk: [],
+  deskMost: 0,
+  deskDefaults: 0,
+  deskAnswered: 0,
+  deskSpent: 0,
+  deskEndowed: 0,
+  deskSeen: 0,
+  deskUnsound: 0,
+  editions: 0,
+  editionsEmpty: 0,
+  editionsOver: 0,
+  lines: 0,
+  toneBroken: [],
+});
+
+/** Check lines against the tone guide's banned and retired words. */
+function tone(seen: Seen, lines: readonly string[]): void {
+  for (const line of lines) {
+    seen.lines += 1;
+    if (toneProblem(line) !== null && seen.toneBroken.length < 20) seen.toneBroken.push(line);
+  }
+}
 
 /** Read what a stretch of time left in the log, and how the campus stands at the end of it. */
 function look(seen: Seen, state: GameState, log: LogEntry[]): void {
   for (const entry of log) {
     if (entry.kind === 'decision' && entry.data?.closes !== undefined) seen.decisions.push({ opens: entry.tick, closes: Number(entry.data.closes), kind: String(entry.data.kind) });
     if (entry.kind === 'exam') seen.exams[String(entry.data?.id)] = (seen.exams[String(entry.data?.id)] ?? 0) + 1;
+    if (entry.kind === 'inbox' && entry.data?.closes !== undefined) seen.desk.push({ opens: entry.tick, closes: Number(entry.data.closes), key: String(entry.data.key) });
+    if (entry.kind === 'inbox' && entry.data?.byDefault === 1) seen.deskDefaults += 1;
   }
+  seen.deskMost = Math.max(seen.deskMost, state.inbox.open.length);
   const season = campusHappiness(state).season;
   seen.stressMax = Math.max(seen.stressMax, season.stress.score);
   if (season.day.kind !== 'finals' && season.day.kind !== 'midterms') seen.stressOutsideExams = Math.max(seen.stressOutsideExams, season.stress.score);
@@ -174,6 +240,9 @@ function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
   };
 }
 
+/** False for one comparison run: the player looks in as usual and leaves the desk alone, so every item takes its default. */
+let answersDesk = true;
+
 function play(style: Style, seed: number, years: number, campus: 'small' | 'model' = 'small'): Run {
   let state = newGame({ seed, name: `Sim ${style}`, now: T0, campus });
   const rows: YearRow[] = [];
@@ -194,10 +263,14 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
   let nextRowAt = T0 + 2 * DAY_MS;
 
   for (let now = Math.min(T0 + step, end); ; now = Math.min(now + step, end)) {
+    // Everything since the last visit, for the paper that greets this one.
+    const before = state;
+    const gap: LogEntry[] = [];
     // Stop at each row mark on the way, so the numbers are read at the same point every year.
     while (nextRowAt <= now) {
       const r = advance(state, state.clock.lastSimulatedAt, nextRowAt);
       state = r.state;
+      gap.push(...r.log);
       lostThisYear += lostToWaitlist(r.log);
       look(seen, state, r.log);
       if (rows.length < years) rows.push(yearRow(state, rows.length + 1, lostThisYear));
@@ -208,6 +281,16 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     state = result.state;
     lostThisYear += lostToWaitlist(result.log);
     look(seen, state, result.log);
+    gap.push(...result.log);
+    // The paper that greets this visit (DESIGN.md 36.2): something at its top, never more than four, every line inside the tone guide.
+    const away = state.clock.tick - before.clock.tick;
+    if (style !== 'absent' && away >= 60) {
+      const paper = edition(state, gap, { minutes: away, cashBefore: before.money.cash, cashAfter: state.money.cash, studentsBefore: enrollment(before), studentsAfter: enrollment(state) });
+      seen.editions += 1;
+      if (paper.top.length === 0 || paper.headline === '') seen.editionsEmpty += 1;
+      if (paper.top.length > TOP_ITEMS) seen.editionsOver += 1;
+      tone(seen, [paper.headline, paper.deck, ...paper.top.map((item) => item.text), ...paper.more, ...paper.scores, ...(paper.admissions ? [paper.admissions] : []), ...paper.poll.map((line) => line.label)]);
+    }
     // A football season that has just finished is checked once, while its table is still there.
     const season = state.football.season;
     if (season && season.closed && season.year > seasonCounted) {
@@ -229,6 +312,22 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
         const picked = applyAction(state, { type: 'decide', id: decision.id, option: decision.advised });
         if (picked.ok) state = picked.state;
       }
+      // The desk: every item is read, checked, and given the advisor's pick. One the campus cannot pay for is left to its default.
+      for (const item of [...state.inbox.open]) {
+        seen.deskSeen += 1;
+        const ids = item.options.map((choice) => choice.id);
+        if (item.options.length < 2 || !ids.includes(item.fallback) || !ids.includes(item.advised)) seen.deskUnsound += 1;
+        tone(seen, [item.title, item.body, ...item.options.flatMap((choice) => [choice.label, choice.detail])]);
+        if (!answersDesk) continue;
+        const picked = applyAction(state, { type: 'inbox', id: item.id, option: item.advised });
+        if (picked.ok) {
+          seen.deskEndowed += picked.state.money.endowment - state.money.endowment;
+          seen.deskSpent += state.money.cash - picked.state.money.cash - (picked.state.money.endowment - state.money.endowment);
+          state = picked.state;
+          seen.deskAnswered += 1;
+        }
+      }
+      tone(seen, advisorLines(state).map((advisor) => advisor.issue));
     }
     if (now >= end) break;
   }
@@ -676,7 +775,8 @@ function assertLayerOne(runs: Run[]): void {
     const top = runs.reduce((most, run) => Math.max(most, run.seen.stressMax), 0);
     const low = runs.reduce((least, run) => Math.min(least, run.seen.deltaMin), 0);
     const high = runs.reduce((most, run) => Math.max(most, run.seen.deltaMax), 0);
-    const ok = Math.max(...breaks) <= 15 && Math.max(...outside) <= 62 && top <= 100 && low >= -(STRESS_HAPPINESS + 4) && high <= BREAK_LIFT + 1.5;
+    // The desk can add or take three points on top of the calendar's and the sky's (DESIGN.md 36.4).
+    const ok = Math.max(...breaks) <= 15 && Math.max(...outside) <= 62 && top <= 100 && low >= -(STRESS_HAPPINESS + 4 + HAPPY_CAP) && high <= BREAK_LIFT + 1.5 + HAPPY_CAP;
     check(
       'Stress and weather never spiral and stay inside their caps',
       ok,
@@ -688,6 +788,88 @@ function assertLayerOne(runs: Run[]): void {
   {
     const counts = ['fallMidterms', 'fallFinals', 'springMidterms', 'springFinals'].map((id) => daily.seen.exams[id] ?? 0);
     check('the once-a-day player gets an exam report for every exam period', counts.every((count) => count === YEARS), `${counts.join(', ')} reports for the four exam periods over ${YEARS} years`);
+  }
+}
+
+/** Advisors, the inbox and the newspaper (DESIGN.md section 18, layer 4, and section 36). */
+function assertLayerFour(runs: Run[], seed: number): void {
+  console.log('\nLAYER 4 ASSERTIONS: THE DESK AND THE NEWSPAPER');
+  const daily = runs.find((r) => r.style === 'daily')!;
+  const casual = runs.find((r) => r.style === 'casual')!;
+  const tended = runs.filter((r) => r.style !== 'absent');
+  const realDays = YEARS * 7;
+  // The casual player again, looking in as often and never answering the desk: every item takes its default.
+  answersDesk = false;
+  const alone = play('casual', seed, YEARS);
+  answersDesk = true;
+
+  // The check-in contract: a paper greets every visit after an hour or more away, with one to four things at its top.
+  {
+    const perDay = (run: Run): number => run.seen.desk.length / realDays;
+    const ok = [daily, casual].every((run) => run.seen.editions === run.checkIns && run.seen.editionsEmpty === 0 && run.seen.editionsOver === 0 && perDay(run) >= 0.5 && perDay(run) <= NEW_PER_DAY);
+    check(
+      'the check-in contract holds for the casual and the once-a-day player',
+      ok,
+      `a paper at every visit with one to four things at its top (${casual.seen.editions} and ${daily.seen.editions} editions); ${perDay(casual).toFixed(2)} and ${perDay(daily).toFixed(2)} new routine items a day, the limit being ${NEW_PER_DAY}; a purchase at ${Math.round((100 * casual.checkInsWithPurchase) / Math.max(1, casual.checkIns))}% and ${Math.round((100 * daily.checkInsWithPurchase) / Math.max(1, daily.checkIns))}% of visits`,
+    );
+  }
+
+  // The cap: never more than four routine items open, for anyone, the player who never looks included.
+  {
+    const most = Math.max(...runs.map((run) => run.seen.deskMost));
+    const total = runs.reduce((sum, run) => sum + run.seen.desk.length, 0);
+    check('the inbox never holds more than four routine items', total > 0 && most <= ROUTINE_CAP, `at most ${most} open at once across ${runs.length} players and ${total} items`);
+  }
+
+  // Every item has a default, and its default and its pick are among its choices.
+  {
+    const written = everyWrittenItem(daily.final);
+    const unsoundWritten = written.filter(({ draft }) => draft.options.length < 2 || !draft.options.some((choice) => choice.id === draft.fallback) || !draft.options.some((choice) => choice.id === draft.advised)).length;
+    const seenCount = tended.reduce((sum, run) => sum + run.seen.deskSeen, 0);
+    const unsound = tended.reduce((sum, run) => sum + run.seen.deskUnsound, 0);
+    // Left alone, every item that closed took its default, and nothing else happened to it.
+    const closed = alone.seen.desk.filter((item) => item.closes <= alone.final.clock.tick).length;
+    check(
+      'every item has a default, and an item left alone takes it',
+      written.length >= 20 && unsoundWritten === 0 && seenCount > 0 && unsound === 0 && closed > 0 && alone.seen.deskDefaults === closed && alone.seen.deskAnswered === 0,
+      `${written.length} written items and ${seenCount} seen on a desk, none without a default and a pick among its choices; with the desk left alone ${alone.seen.deskDefaults} of ${closed} items that closed took their default`,
+    );
+  }
+
+  // Nothing written breaks the tone guide: the items, the paper, the advisors and the notices.
+  {
+    const written = everyWrittenItem(daily.final).flatMap((item) => item.lines);
+    const notices = planNotices(daily.final, { perDay: 3, wakeHour: 7, offsetMinutes: 0 }).flatMap((notice) => [notice.title, notice.body]);
+    const fixed = [...written, ...newspaperLines(), ...notices];
+    const brokenFixed = fixed.filter((line) => toneProblem(line) !== null);
+    const broken = [...brokenFixed, ...tended.flatMap((run) => run.seen.toneBroken)];
+    const lines = fixed.length + tended.reduce((sum, run) => sum + run.seen.lines, 0);
+    check('no content line breaks the banned-word list', broken.length === 0, broken.length === 0 ? `${lines} lines: every written item, every edition, every advisor's line and the notices` : `${broken.length} lines, the first: ${broken[0]}`);
+  }
+
+  // Windows: no routine item is open for less than 36 hours, and the once-a-day player sees every one while it is open.
+  {
+    const all = runs.flatMap((run) => run.seen.desk);
+    const shortest = all.reduce((least, item) => Math.min(least, item.closes - item.opens), Infinity);
+    check('no routine item is open for less than 36 hours', all.length > 0 && shortest >= MIN_WINDOW_TICKS, `${all.length} items of ${new Set(all.map((item) => item.key)).size} kinds, the shortest open ${(shortest / TICKS_PER_HOUR).toFixed(0)} hours`);
+    const last = daily.seen.visits[daily.seen.visits.length - 1] ?? 0;
+    const missed = daily.seen.desk.filter((item) => item.opens <= last - MIN_WINDOW_TICKS && !daily.seen.visits.some((visit) => visit >= item.opens && visit < item.closes));
+    check('the once-a-day player misses no routine item', daily.seen.desk.length > 0 && missed.length === 0, `${daily.seen.desk.length} items, ${missed.length} that opened and closed between two visits; ${daily.seen.deskAnswered} answered and ${daily.seen.deskDefaults} left to their default`);
+  }
+
+  // The desk gates nothing: the same player who never answers it ends on much the same campus. Two runs that buy
+  // different things on different days drift apart by a few students in a hundred whatever the cause, so the band
+  // is a tenth either way. What the answers cost is said beside it.
+  {
+    const students = enrollment(casual.final) / Math.max(1, enrollment(alone.final));
+    const lowAnswered = Math.min(...casual.rows.filter((row) => row.year >= 3).map((row) => row.kept));
+    const lowAlone = Math.min(...alone.rows.filter((row) => row.year >= 3).map((row) => row.kept));
+    const spending = budget(casual.final).spending;
+    check(
+      'the desk gates nothing: answered or left alone, the casual player ends on much the same campus',
+      students > 0.9 && students < 1.1 && Math.abs(lowAnswered - lowAlone) < 2 && casual.final.money.grants <= alone.final.money.grants + 1,
+      `${enrollment(casual.final)} students with every pick taken and ${enrollment(alone.final)} with the desk left alone; cash ${dollarsShort(casual.final.money.cash)} and ${dollarsShort(alone.final.money.cash)}; the leanest year from year 3 keeps ${lowAnswered.toFixed(1)}% and ${lowAlone.toFixed(1)}%; ${casual.seen.deskAnswered} answers took ${dollarsShort(casual.seen.deskSpent)} out of the bank in ${YEARS} years, which is ${((100 * casual.seen.deskSpent) / Math.max(1, spending * YEARS)).toFixed(2)}% of ${YEARS} years of spending at today's rate, and put ${dollarsShort(casual.seen.deskEndowed)} into the endowment`,
+    );
   }
 }
 
@@ -752,6 +934,7 @@ for (const seed of SEEDS) {
 }
 assertLayerZero(allRuns.filter((r) => r.seed === SEEDS[0]));
 assertLayerOne(allRuns.filter((r) => r.seed === SEEDS[0]));
+assertLayerFour(allRuns.filter((r) => r.seed === SEEDS[0]), SEEDS[0]!);
 assertModelCampus(SEEDS[0]!);
 console.log(`\n${failures.length === 0 ? 'All assertions passed' : `${failures.length} assertion(s) failed`} in ${((performance.now() - started) / 1000).toFixed(1)} s.`);
 process.exit(failures.length === 0 ? 0 : 1);

@@ -38,5 +38,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: the year has a calendar. Holidays, breaks and exam weeks come and go, and what happened while you were away is listed by date. Exams raise Stress, which costs a little Happiness until they end. Recreation, quads, a library and a Medical Center ease it.',
     );
   }
+  if (fromVersion < 14) {
+    notes.push(
+      'New: a campus newspaper greets you after an hour or more away, with what matters most first. Your four advisors now send petitions, deals and events to an inbox on the top bar. Each stays open at least a day and a half, shows an advisor\'s pick, and has a default that happens by itself.',
+    );
+  }
   return notes;
 }

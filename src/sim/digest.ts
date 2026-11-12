@@ -1,5 +1,6 @@
 import { TICKS_PER_YEAR } from './config/time';
-import { dollars, duration } from './format';
+import { TOP_WEIGHTS } from './config/inbox';
+import { dollars, duration, headCount } from './format';
 import type { LogEntry } from './types';
 
 /**
@@ -36,7 +37,7 @@ const MAX_LINES = 10;
 /** The most dated lines shown. A week away is about sixty. */
 const MAX_DATED = 60;
 /** What is told by date: the calendar, exams, the weather, football, decisions and rankings. */
-const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weather', 'anchor', 'game', 'football', 'decision', 'rankings']);
+const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weather', 'anchor', 'game', 'football', 'decision', 'inbox', 'rankings']);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
@@ -82,32 +83,60 @@ export function datedDays(log: readonly LogEntry[]): { days: AwayDay[]; earlier:
 }
 
 /** The most recent entry of a kind. After a long absence only the latest of each is worth reading. */
-function latestText(log: LogEntry[], kind: LogEntry['kind']): string[] {
+function latestText(log: readonly LogEntry[], kind: LogEntry['kind']): string[] {
   for (let i = log.length - 1; i >= 0; i--) {
     if (log[i]!.kind === kind) return [log[i]!.text];
   }
   return [];
 }
 
-export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
-  const lines: string[] = [];
+/** One undated line of the away list, with how much it matters and what kind of news it is. */
+export interface AwayLine {
+  text: string;
+  weight: number;
+  kind: 'money' | 'intake' | 'problem' | 'news';
+}
 
+/**
+ * The undated lines of the away list, in the order the plain list tells
+ * them, each with how much it matters. The newspaper puts the weightiest at
+ * its top. The plain list tells them all in this order.
+ */
+export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[] {
+  const out: AwayLine[] = [];
+  const lines = {
+    push: (...texts: string[]): void => {
+      for (const text of texts) out.push({ text, weight: next.weight, kind: next.kind });
+    },
+  };
+  // What the next lines pushed are worth, and what kind of news they are.
+  const next: { weight: number; kind: AwayLine['kind'] } = { weight: 0, kind: 'news' };
+  const as = (weight: number, kind: AwayLine['kind']): void => {
+    next.weight = weight;
+    next.kind = kind;
+  };
+
+  as(TOP_WEIGHTS.paused, 'problem');
   for (const entry of log) if (entry.kind === 'paused') lines.push(entry.text);
 
+  as(TOP_WEIGHTS.money, 'money');
   const net = facts.cashAfter - facts.cashBefore;
   if (Math.abs(net) >= 1) {
     lines.push(net >= 0 ? `The campus earned ${dollars(net)}.` : `The campus spent ${dollars(-net)} more than it earned.`);
   }
 
   // A change of rule that happened while away is said once, near the top.
+  as(TOP_WEIGHTS.rules, 'news');
   for (const entry of log) if (entry.kind === 'classes') lines.push(entry.text);
   // Costs phasing in: where they stand now. One line, however many steps were taken while away.
   lines.push(...latestText(log, 'costs'));
 
+  as(TOP_WEIGHTS.enrollment, 'news');
   if (facts.studentsAfter !== facts.studentsBefore) {
-    lines.push(`Enrollment went from ${facts.studentsBefore} to ${facts.studentsAfter}.`);
+    lines.push(`Enrollment went from ${headCount(facts.studentsBefore)} to ${headCount(facts.studentsAfter)}.`);
   }
 
+  as(TOP_WEIGHTS.built, 'news');
   const built = log.filter((e) => e.kind === 'built');
   const opened = built.filter((e) => e.data?.stage === 1).length;
   const grew = built.length - opened;
@@ -119,8 +148,10 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
     lines.push(grew === 1 ? '1 building grew a stage.' : `${grew} buildings grew a stage.`);
   }
 
+  as(TOP_WEIGHTS.intake, 'intake');
   lines.push(...latestText(log, 'intake'));
 
+  as(TOP_WEIGHTS.waitlistIn, 'intake');
   let offWaitlist = 0;
   for (const entry of log) {
     if (entry.kind === 'waitlist') offWaitlist += Number(entry.data?.count ?? 0);
@@ -128,6 +159,7 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
   if (offWaitlist > 0) {
     lines.push(offWaitlist === 1 ? '1 student came off a waitlist.' : `${offWaitlist} students came off waitlists.`);
   }
+  as(TOP_WEIGHTS.waitlistLost, 'intake');
   const lostToWaitlist = log.filter((e) => e.kind === 'waitlistClosed' && Number(e.data?.lost ?? 0) > 0);
   if (lostToWaitlist.length > 0) lines.push(lostToWaitlist[lostToWaitlist.length - 1]!.text);
 
@@ -144,12 +176,16 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
       missed.set(key, (missed.get(key) ?? 0) + 1);
     }
   }
+  as(TOP_WEIGHTS.handled, 'news');
   if (handled > 0) lines.push(handled === 1 ? '1 incident was handled.' : `${handled} incidents were handled.`);
+  as(TOP_WEIGHTS.missed, 'problem');
   for (const [fix, count] of [...missed].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
     lines.push(`${count} ${count === 1 ? 'incident' : 'incidents'} had nobody come. ${fix} would have handled ${count === 1 ? 'it' : 'them'}.`);
   }
 
+  as(TOP_WEIGHTS.graduation, 'news');
   lines.push(...latestText(log, 'graduation'));
+  as(TOP_WEIGHTS.yearEnd, 'news');
   lines.push(...latestText(log, 'yearEnd'));
 
   let grants = 0;
@@ -159,11 +195,17 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
     grants += Number(entry.data?.amount ?? 0);
     drawn += Number(entry.data?.endowment ?? 0);
   }
+  as(TOP_WEIGHTS.grant, 'problem');
   if (drawn > 0) lines.push(`The endowment covered ${dollars(drawn)} in shortfalls.`);
   if (grants > 0) lines.push(`The state covered ${dollars(grants)} in shortfalls.`);
 
-  if (lines.length === 0) lines.push('A quiet stretch. Nothing changed on campus.');
+  as(TOP_WEIGHTS.quiet, 'news');
+  if (out.length === 0) lines.push('A quiet stretch. Nothing changed on campus.');
+  return out;
+}
 
+export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
+  const lines = awayLines(log, facts).map((line) => line.text);
   const shown = lines.slice(0, MAX_LINES);
   if (lines.length > MAX_LINES) shown.push(`And ${lines.length - MAX_LINES} more.`);
   return { headline: `While you were away: ${duration(facts.minutes)}`, lines: shown, ...datedDays(log) };

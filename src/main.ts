@@ -1,4 +1,5 @@
 import './ui/ui.css';
+import { startNotices } from './app/notices';
 import { isNative } from './app/platform';
 import { store } from './app/store';
 import { installSound } from './app/sound';
@@ -14,6 +15,8 @@ async function boot(): Promise<void> {
   }
   await store.load();
   store.start();
+  // Notifications are planned when the iPhone app is put away. A browser tab has none.
+  startNotices();
 
   const gameRoot = document.getElementById('game');
   const uiRoot = document.getElementById('ui');
