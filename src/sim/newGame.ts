@@ -1,3 +1,8 @@
+import { layModelCampus } from './modelCampus';
+import { openWithStudents } from './systems/admissions';
+import { yardStatus } from './systems/grounds';
+import { openCapacity } from './selectors';
+import { YARD_MAX_WORKERS } from './config/grounds';
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
@@ -25,6 +30,11 @@ export interface NewGameOptions {
    * week begins with the first class and there is no founding day.
    */
   anchor?: number;
+  /**
+   * Which campus to begin with: the small one every game has begun with, or
+   * the model campus of DESIGN.md section 35, whole from the first minute.
+   */
+  campus?: 'small' | 'model';
 }
 
 /** The whole map, bare: the starting land, the fields for sale, and the town laid in down its east side. */
@@ -109,17 +119,27 @@ export function startFootball(state: GameState, firstYear: number): void {
 /** A brand-new campus, fifteen minutes before its first class moves in. */
 export function newGame(opts: NewGameOptions): GameState {
   const map = emptyMap(WORLD.width, WORLD.height, opts.seed >>> 0);
-  buildStarterCampus(map, opts.seed);
+  const model = opts.campus === 'model';
+  if (model) {
+    // The model campus owns the starting land and both fields from the start.
+    for (const parcel of map.parcels) parcel.owned = true;
+    layModelCampus(map, opts.seed >>> 0);
+  } else buildStarterCampus(map, opts.seed);
   recomputeDesirability(map);
 
   const anchor = opts.anchor === undefined ? null : ((Math.round(opts.anchor) % TICKS_PER_DAY) + TICKS_PER_DAY) % TICKS_PER_DAY;
-  const founding = anchor === null ? 0 : minutesToAnchor(opts.now + FIRST_INTAKE_TICK * TICK_MS, anchor);
+  // The model campus opens at the moment a first class would have moved in: its students are already there, so
+  // its clock begins at that tick and no founding class is on its way. Its week still begins at the next anchor,
+  // and never on the opening tick itself, so the first day of its fall is not skipped.
+  const startTick = model ? FIRST_INTAKE_TICK : 0;
+  let founding = anchor === null ? 0 : minutesToAnchor(opts.now + (FIRST_INTAKE_TICK - startTick) * TICK_MS, anchor);
+  if (model && founding < 1) founding = anchor === null ? 1 : TICKS_PER_DAY;
   const state: GameState = {
     version: SAVE_VERSION,
     seed: opts.seed >>> 0,
     rng: seedStreams(opts.seed),
     clock: {
-      tick: 0,
+      tick: startTick,
       nextTickAt: opts.now + TICK_MS,
       lastSimulatedAt: opts.now,
       createdAt: opts.now,
@@ -163,6 +183,29 @@ export function newGame(opts: NewGameOptions): GameState {
   // A new campus has its stadium plot from the first day.
   state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
   scheduleScrimmage(state);
+  if (model) openModelCampus(state);
   recomputeRates(state);
   return state;
 }
+
+/**
+ * The numbers the model campus opens with (DESIGN.md 35.4): its yards
+ * staffed, students in about nine tenths of its seats, and cash worth about a
+ * tenth of a year's spending.
+ */
+function openModelCampus(state: GameState): void {
+  openWithStudents(state, Math.round(openCapacity(state, 'academic') * MODEL_FULL));
+  // Each yard is given the workers it needs to keep up with what it looks after, and never fewer than one.
+  for (const yard of state.map.placed) {
+    if (!yard || yard.type !== 'yard') continue;
+    state.grounds.workers[yard.id] = 0;
+    state.grounds.workers[yard.id] = Math.min(YARD_MAX_WORKERS, Math.max(1, yardStatus(state, yard).hire));
+  }
+  state.money.ratesDirty = true;
+  recomputeRates(state);
+  state.money.cash = Math.round((state.money.spendingPerYear * MODEL_CASH_SHARE) / 1000) * 1000;
+}
+
+/** [T] How full the model campus opens, and its cash as a share of a year's spending. */
+export const MODEL_FULL = 0.9;
+export const MODEL_CASH_SHARE = 0.1;

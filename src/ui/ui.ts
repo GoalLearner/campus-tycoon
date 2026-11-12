@@ -320,7 +320,12 @@ export function mountUi(root: HTMLElement): void {
     });
   });
   updateRow.append(el('span', '', 'A new version is ready.'), updateButton);
-  hud.append(top, calendar, chips, bars, status, upcoming, updateRow);
+  // Shown while the model campus is being visited: where the player is, and the way home.
+  const visitRow = el('div', 'update-row visit-row');
+  const visitText = el('span', '', '');
+  const visitButton = button('Back', 'update-button', () => void store.leaveVisit());
+  visitRow.append(visitText, visitButton);
+  hud.append(top, calendar, chips, bars, status, upcoming, updateRow, visitRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -555,7 +560,8 @@ export function mountUi(root: HTMLElement): void {
   function openSetup(): void {
     openModal((close, card) => {
       card.append(el('h1', '', 'Found your university'));
-      card.append(el('p', '', 'Your first class moves in fifteen minutes from now.'));
+      const first = el('p', '', 'Your first class moves in fifteen minutes from now.');
+      card.append(first);
       const input = el('input', 'name-input');
       input.type = 'text';
       input.maxLength = 40;
@@ -564,15 +570,26 @@ export function mountUi(root: HTMLElement): void {
       input.autocomplete = 'off';
       const wake = hourSelect(DEFAULT_WAKE_HOUR);
       const colour = colourSelect(DEFAULT_COLOUR);
+      // Two ways to begin: the small campus to grow from nothing, or the model campus, whole from the first minute.
+      const campus = document.createElement('select');
+      for (const [value, label] of [['small', 'A small campus to grow'], ['model', 'The model campus, already built']] as const) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        campus.append(option);
+      }
       const start = (): void => {
         const name = input.value.trim() || 'Larkspur University';
-        store.startNewGame(name, Number(wake.value), colour.value);
+        store.startNewGame(name, Number(wake.value), colour.value, campus.value === 'model' ? 'model' : 'small');
         close();
       };
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') start();
       });
-      card.append(input, pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
+      campus.addEventListener('change', () => {
+        setText(first, campus.value === 'model' ? 'The model campus opens whole: every district built, and students in nine seats of ten.' : 'Your first class moves in fifteen minutes from now.');
+      });
+      card.append(input, pick('Start from', campus), pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
       if (store.loadProblem) card.append(el('p', 'fine', store.loadProblem));
     }, false);
   }
@@ -639,7 +656,25 @@ export function mountUi(root: HTMLElement): void {
       tellStorage();
       card.append(remind);
 
-      card.append(
+      if (store.visiting !== null) {
+        // On a visit nothing is saved, and the things that act on a save are put away until the player is home.
+        card.append(
+          button(`Back to ${store.visiting}`, 'primary', () => {
+            close();
+            void store.leaveVisit();
+          }),
+          el('p', 'fine', 'This is the model campus. Nothing you do here is saved, and your own campus is untouched.'),
+        );
+      } else {
+        card.append(
+          button('Visit the model campus', 'wide', () => {
+            close();
+            void store.visitModel();
+          }),
+        );
+      }
+
+      if (store.visiting === null) card.append(
         button('Export save', 'wide', () => {
           void exportSave(store.exportText(), store.state.school.name).then((how) => {
             if (how === 'downloaded') pushToast('Save file downloaded.');
@@ -755,7 +790,7 @@ export function mountUi(root: HTMLElement): void {
           openSetup();
         });
       });
-      card.append(startOver, note);
+      if (store.visiting === null) card.append(startOver, note);
 
       if (testerToolsOn()) {
         const dev = el('div', 'dev');
@@ -1383,6 +1418,8 @@ export function mountUi(root: HTMLElement): void {
     renderTools();
 
     updateRow.classList.toggle('show', updates.ready);
+    visitRow.classList.toggle('show', store.visiting !== null);
+    if (store.visiting !== null) setText(visitText, 'Visiting the model campus. Nothing here is saved.');
     // Toasts sit just under the HUD, however tall it is.
     const hudBottom = `${Math.round(hud.getBoundingClientRect().bottom)}px`;
     if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);

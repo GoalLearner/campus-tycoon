@@ -174,8 +174,8 @@ function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
   };
 }
 
-function play(style: Style, seed: number, years: number): Run {
-  let state = newGame({ seed, name: `Sim ${style}`, now: T0 });
+function play(style: Style, seed: number, years: number, campus: 'small' | 'model' = 'small'): Run {
+  let state = newGame({ seed, name: `Sim ${style}`, now: T0, campus });
   const rows: YearRow[] = [];
   const step = CHECK_IN_MS[style];
   const end = T0 + years * YEAR_MS;
@@ -691,6 +691,56 @@ function assertLayerOne(runs: Run[]): void {
   }
 }
 
+/** The model campus (DESIGN.md 35.5): whole from the first minute, so it has to stand up by itself. */
+function assertModelCampus(seed: number): void {
+  console.log('');
+  console.log('THE MODEL CAMPUS');
+  const alone = play('absent', seed, 5, 'model');
+  const tended = play('casual', seed, 8, 'model');
+  printRun(alone);
+  printRun(tended);
+
+  // Left alone for five years it keeps a surplus, needs no rescue and stays clean.
+  {
+    const worst = Math.min(...alone.rows.map((row) => row.netPerYear));
+    const clean = campusClean(alone.final);
+    const grew = alone.final.money.cash - alone.rows[0]!.cash;
+    check(
+      'the model campus, left alone for five years, keeps a surplus, needs no rescue and stays clean',
+      alone.rows.length === 5 && worst > 0 && grew > 0 && alone.final.money.grants === 0 && clean >= 0.9,
+      `${alone.rows[4]!.students} students at year five; the leanest year nets ${dollarsShort(worst)}; cash grew by ${dollarsShort(grew)}; grants ${dollarsShort(alone.final.money.grants)}; ${Math.round(clean * 100)}% clean`,
+    );
+  }
+
+  // With the casual player it stays inside the margin and payroll checks.
+  {
+    const mid = tended.rows.filter((row) => row.year >= 3 && row.year <= 8);
+    const low = Math.min(...mid.map((row) => row.kept));
+    const high = Math.max(...mid.map((row) => row.kept));
+    const books = budget(tended.final);
+    const payroll = (books.groups.find((group) => group.id === 'payroll')?.amount ?? 0) / Math.max(1, books.fullSpending);
+    check(
+      'the model campus with the casual player stays inside the margin and payroll checks',
+      mid.length === 6 && low >= 10 && high <= 20 && payroll >= 0.5 && tended.final.money.grants === 0,
+      `years 3 to 8: ${low.toFixed(1)}% kept at the least and ${high.toFixed(1)}% at the most; payroll ${Math.round(payroll * 100)}% of spending; ${tended.rows[7]!.students} students at year eight; grants ${dollarsShort(tended.final.money.grants)}`,
+    );
+  }
+
+  // Thirty days of catch-up on it stays inside one second.
+  {
+    const fresh = newGame({ seed, name: 'Sim model', now: T0, campus: 'model' });
+    let best = Infinity;
+    for (let n = 0; n < 3; n++) {
+      const t = performance.now();
+      advance(fresh, fresh.clock.lastSimulatedAt, fresh.clock.lastSimulatedAt + 30 * DAY_MS);
+      best = Math.min(best, performance.now() - t);
+    }
+    check('30 days of catch-up on the model campus runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${buildings(fresh.map).length} lots and ${fresh.map.placed.filter(Boolean).length} placed things`);
+  }
+
+  check('the model campus validates when it opens and after eight years with a player', validate(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })) === null && validate(tended.final) === null, 'checked by the validation every save goes through, both times');
+}
+
 // ------------------------------------------------------------------- main --
 
 const started = performance.now();
@@ -702,5 +752,6 @@ for (const seed of SEEDS) {
 }
 assertLayerZero(allRuns.filter((r) => r.seed === SEEDS[0]));
 assertLayerOne(allRuns.filter((r) => r.seed === SEEDS[0]));
+assertModelCampus(SEEDS[0]!);
 console.log(`\n${failures.length === 0 ? 'All assertions passed' : `${failures.length} assertion(s) failed`} in ${((performance.now() - started) / 1000).toFixed(1)} s.`);
 process.exit(failures.length === 0 ? 0 : 1);
