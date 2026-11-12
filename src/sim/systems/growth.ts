@@ -123,8 +123,11 @@ interface Candidate {
 function candidates(state: GameState, zone: Zone): Candidate[] {
   const map = state.map;
   const out: Candidate[] = [];
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
+  // Lots can only be on land the campus owns, so only that land is searched. This runs in catch-up.
+  for (const parcel of map.parcels) {
+    if (!parcel.owned) continue;
+    for (let y = parcel.y; y < parcel.y + parcel.h; y++) {
+      for (let x = parcel.x; x < parcel.x + parcel.w; x++) {
       const i = y * map.width + x;
       const cell = map.cells[i]!;
       if (cell.kind !== 'lot' || cell.zone !== zone) continue;
@@ -137,6 +140,7 @@ function candidates(state: GameState, zone: Zone): Candidate[] {
       if (needsDining(map, x, y, zone, nextStage)) continue;
       const now = stage > 0 ? stageSpec(zone, stage).capacity : 0;
       out.push({ x, y, score, nextStage, gain: next.capacity - now });
+      }
     }
   }
   // Highest desirability first. Ties go to the lot nearest the top-left, so the order is fixed.

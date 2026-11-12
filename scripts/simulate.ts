@@ -2,6 +2,13 @@ import {
   campusHappiness,
   PLACED,
   advance,
+  applyAction,
+  bedsWanted,
+  offCampusNow,
+  rowBetween,
+  STARTER,
+  studentsWanted,
+  townPlaces,
   averageDesirability,
   buildings,
   dollarsShort,
@@ -275,6 +282,40 @@ function assertLayerZero(runs: Run[]): void {
       'a once-a-day player is never more than half again as slow as a twice-a-day one, and needs no rescue',
       sizes.length >= 3 && slow.length === 0 && grants === 0,
       `${sizes.map((size) => `${size} students: year ${yearReached(daily, size)} against ${yearReached(casual, size)}`).join('; ')}; grants ${dollarsShort(grants)}`,
+    );
+  }
+
+  // 11. Living in town saves beds, and only a way in makes it count.
+  {
+    const fresh = newGame({ seed: casual.seed, name: 'Simulated University', now: T0 });
+    const link = STARTER.townLink;
+    const cut = applyAction(fresh, { type: 'paint', tool: 'clear', cells: rowBetween([link.x0, link.y], [link.x1, link.y]) });
+    const joined = bedsWanted(fresh) / studentsWanted(fresh);
+    const alone = cut.ok ? bedsWanted(cut.state) / studentsWanted(cut.state) : 0;
+    const grown = casual.final;
+    const share = offCampusNow(grown) / Math.max(1, enrollment(grown));
+    check(
+      'a campus joined to the town needs fewer beds per student than one that is not',
+      cut.ok && joined < alone && alone === 1 && share > 0.05 && share <= 0.4 + 1e-9,
+      `${joined.toFixed(2)} beds a student joined against ${alone.toFixed(2)} cut off; ${Math.round(share * 100)}% of the casual player's students live in town`,
+    );
+  }
+
+  // 12. A car park with no road lets nobody in. With a road to the street it does.
+  {
+    let state = newGame({ seed: casual.seed, name: 'Simulated University', now: T0 });
+    state.money.cash = 1_000_000;
+    const before = bedsWanted(state);
+    const lot = applyAction(state, { type: 'place', building: 'parking', x: 26, y: 20 });
+    if (lot.ok) state = lot.state;
+    const noRoad = { spaces: townPlaces(state.map).spaces, beds: bedsWanted(state) };
+    const road = applyAction(state, { type: 'paint', tool: 'road', cells: rowBetween([28, 20], [31, 20]) });
+    if (road.ok) state = road.state;
+    const withRoad = { spaces: townPlaces(state.map).spaces, beds: bedsWanted(state) };
+    check(
+      'an unconnected car park lets nobody in',
+      lot.ok && road.ok && noRoad.spaces === 0 && noRoad.beds === before && withRoad.spaces === 20 && withRoad.beds === before - 20,
+      `no road: ${noRoad.spaces} spaces and ${noRoad.beds} beds wanted; with a road: ${withRoad.spaces} spaces and ${withRoad.beds} beds wanted`,
     );
   }
 }

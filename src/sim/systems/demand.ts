@@ -25,14 +25,14 @@ import { freeTownPlaces, offCampusNow, townPlaces } from './town';
 
 /** Average desirability of every lot that has a building, from 0 to 100. */
 export function averageDesirability(state: GameState): number {
-  const { cells, score } = state.map;
+  // Read from the list of buildings, not from every cell: most of the map is not a lot, and this runs in catch-up.
+  const { buildings, score, width } = state.map;
   let sum = 0;
   let n = 0;
-  for (let i = 0; i < cells.length; i++) {
-    if (cells[i]!.buildingId !== null) {
-      sum += score[i]!;
-      n += 1;
-    }
+  for (const building of buildings) {
+    if (!building) continue;
+    sum += score[building.y * width + building.x]!;
+    n += 1;
   }
   return n === 0 ? 0 : sum / n;
 }
