@@ -100,6 +100,8 @@ export function foodCampus(students = 1200): GameState {
   state = place(state, 'convenience', 13, 12);
   state = place(state, 'truck', 26, 18);
   state = paint(state, 'bin', [[8, 11], [14, 12], [27, 18]]);
+  // A road in from College Avenue along the south side of the food court, so deliveries can pull up at it.
+  state = paint(state, 'road', rowBetween([19, 22], [31, 22]));
   // A Facilities Yard with hands enough for all of it.
   state = place(state, 'yard', 15, 11);
   const yard = state.map.placed.find((placed) => placed?.type === 'yard');

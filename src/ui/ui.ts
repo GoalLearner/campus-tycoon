@@ -59,6 +59,7 @@ import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSu
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
+import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -375,6 +376,7 @@ export function mountUi(root: HTMLElement): void {
   inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorStaff, inspectorAction);
 
   const studentPanel = mountStudentCard();
+  const personPanel = mountPersonCard();
 
   // ---------------------------------------------------------------- build --
   const buildButton = button('Build', 'build-fab', () => openBuild());
@@ -442,7 +444,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, modeBar, clearer, buildButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1202,6 +1204,7 @@ export function mountUi(root: HTMLElement): void {
       chip.classList.remove('show');
       inspector.classList.remove('show');
       studentPanel.render(null);
+      personPanel.render(null);
       if (!modalOpen) openSetup();
       return;
     }
@@ -1211,6 +1214,7 @@ export function mountUi(root: HTMLElement): void {
     renderHud(state);
     renderInspector(state);
     studentPanel.render(state);
+    personPanel.render(state);
     renderModeBar();
     renderPlacer(state);
     renderClearer();

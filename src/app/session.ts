@@ -1,4 +1,4 @@
-import type { PaintPreview, PlacedType, StudentRef, Tool } from '../sim';
+import type { PaintPreview, PersonRef, PlacedType, StudentRef, Tool } from '../sim';
 
 /**
  * What the player is doing right now: the tool in hand, the lot they tapped,
@@ -28,6 +28,8 @@ class Session {
   selected: { x: number; y: number } | null = null;
   /** The student whose card is open. */
   student: StudentRef | null = null;
+  /** Someone who is not a student whose card is open: a professor, a worker, a visitor. Never both at once. */
+  person: PersonRef | null = null;
   /** True while the camera keeps that student in view. */
   following = false;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
@@ -63,6 +65,7 @@ class Session {
     if (tool !== 'look') {
       this.selected = null;
       this.student = null;
+      this.person = null;
       this.following = false;
     }
     this.emit();
@@ -76,6 +79,7 @@ class Session {
     this.preview = null;
     this.selected = null;
     this.student = null;
+    this.person = null;
     this.following = false;
     this.emit();
   }
@@ -119,21 +123,35 @@ class Session {
   select(x: number, y: number): void {
     this.selected = { x, y };
     this.student = null;
+    this.person = null;
     this.following = false;
     this.emit();
   }
 
   openStudent(ref: StudentRef): void {
     this.student = ref;
+    this.person = null;
     this.following = false;
     this.doing = null;
     this.selected = null;
     this.emit();
   }
 
-  closeStudent(): void {
-    if (!this.student) return;
+  /** Open the card of someone who is not a student. */
+  openPerson(ref: PersonRef): void {
+    this.person = ref;
     this.student = null;
+    this.following = false;
+    this.doing = null;
+    this.selected = null;
+    this.emit();
+  }
+
+  /** Put away whichever card is open: a student's, or anyone else's. */
+  closeStudent(): void {
+    if (!this.student && !this.person) return;
+    this.student = null;
+    this.person = null;
     this.following = false;
     this.emit();
   }

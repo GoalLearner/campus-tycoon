@@ -13,7 +13,9 @@ import {
   type GameState,
   type Point,
   type Zone,
+  personKey,
   studentKey,
+  type PersonRef,
   PLACED,
   previewPlace,
   reachCells,
@@ -137,6 +139,8 @@ export class CampusScene extends Phaser.Scene {
   private workFrom = 0;
   /** Dev screenshots: keep the crowd at the setting whatever the frame rate. A screenshot machine draws slowly. */
   private crowdHeld = false;
+  /** Dev screenshots: a weekend's visitors on any day. */
+  private weekendHeld = false;
   /** Cells with litter drawn on them, and the place it came from. A tap there opens that place. */
   private litterCells = new Map<number, number>();
   private placed!: PlacedSprites;
@@ -212,7 +216,8 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
       this.placedDirty = true;
-      this.walkers.setMarked(session.student ? studentKey(session.student) : null);
+      // The ring goes under whoever's card is open: a student, or anyone else out walking.
+      this.walkers.setMarked(session.student ? studentKey(session.student) : session.person ? `p:${personKey(session.person)}` : null);
     });
     // Students who get a place while the player is watching are shown walking in.
     const unsubscribeLive = store.onLive((entries) => {
@@ -255,7 +260,7 @@ export class CampusScene extends Phaser.Scene {
       this.walkers.setMap(state);
       // A Saturday or Sunday in the game's own calendar is quieter on the paths.
       const weekday = dateAt(state.clock.tick).weekday;
-      this.walkers.setWeekend(weekday === 0 || weekday === 6);
+      this.walkers.setWeekend(this.weekendHeld || weekday === 0 || weekday === 6);
       this.cars.setMap(state);
       this.crew.setMap(state);
       this.activity.setMap(state);
@@ -405,6 +410,50 @@ export class CampusScene extends Phaser.Scene {
     // A tab in the background draws no frames at all. That is not a slow phone.
     // Nor is one that draws a frame or two a second: that is a tab the browser has put to sleep.
     if (!this.crowdHeld && span < 2500 && this.fps >= 5 && this.budget.second(this.fps) !== before) this.applyStep(this.budget.step);
+  }
+
+  /** Dev screenshots: show a weekend's visitors whatever the day of the game's week. */
+  holdWeekend(): void {
+    this.weekendHeld = true;
+    this.walkers.setWeekend(true);
+  }
+
+  /**
+   * Dev screenshots: someone on the map who is not a student, by role, nearest
+   * the middle of the view first. null when nobody of that role is out.
+   */
+  personInView(role: string): PersonRef | null {
+    const camera = this.cameras.main;
+    const midX = camera.scrollX + camera.width / 2;
+    const midY = camera.scrollY + camera.height / 2;
+    const far = (at: { x: number; y: number }): number => Math.hypot(at.x - midX, at.y - midY);
+    if (role === 'worker') {
+      const out = [...this.crew.workersOut].sort((a, b) => far(a) - far(b))[0];
+      return out ? { role: 'worker', n: out.n, at: out.yard, job: out.thing } : null;
+    }
+    if (role === 'driver') {
+      const out = [...this.cars.driversOut].sort((a, b) => far(a) - far(b))[0];
+      return out ? { role: 'driver', n: out.n } : null;
+    }
+    if (role === 'medic' || role === 'officer') {
+      for (const incident of store.state.incidents.active) {
+        if (incident.responder === null || (incident.kind === 'injury') !== (role === 'medic') || !this.responders.has(incident.id)) continue;
+        return { role, n: 0, at: incident.responder, job: incident.id };
+      }
+      return null;
+    }
+    return this.walkers.peopleNear(midX, midY).find((person) => person.role === role) ?? null;
+  }
+
+  /** Dev screenshots: put the middle of the view on a person who is out on the map. */
+  lookAtPerson(ref: PersonRef): void {
+    let at: { x: number; y: number } | null = this.walkers.spot(`p:${personKey(ref)}`);
+    if (ref.role === 'worker') at = this.crew.workersOut.find((one) => one.yard === ref.at && one.n === ref.n) ?? null;
+    else if (ref.role === 'driver') at = this.cars.driversOut.find((one) => one.n === ref.n) ?? null;
+    else if ((ref.role === 'medic' || ref.role === 'officer') && ref.job !== undefined) at = this.responders.get(ref.job) ?? null;
+    if (!at) return;
+    const camera = this.cameras.main;
+    camera.setScroll(at.x - camera.width / 2, at.y - camera.height / 2 + (camera.height * 0.12) / camera.zoom);
   }
 
   /** Dev screenshots: show the crowd the setting asks for, and stop stepping it down when frames are short. */
@@ -1253,8 +1302,29 @@ export class CampusScene extends Phaser.Scene {
     const walker = this.walkers.walkerAt(world.x, world.y, (14 * this.dpr) / this.cameras.main.zoom);
     if (walker) {
       if (walker.student) session.openStudent(walker.student);
+      else if (walker.person) session.openPerson(walker.person);
       else if (walker.neighbour) session.notify('A neighbour from the town. Townspeople are not students.');
       else session.notify('Staff. Students arrive with the first class.');
+      return;
+    }
+    // The people already at work on the map have cards too: a maintenance worker, a responder on a call, a driver.
+    const near = (14 * this.dpr) / this.cameras.main.zoom;
+    const worker = this.crew.workerAt(world.x, world.y, near);
+    if (worker) {
+      session.openPerson({ role: 'worker', n: worker.n, at: worker.yard, job: worker.thing });
+      return;
+    }
+    for (const [id, sprite] of this.responders) {
+      const box = sprite.getBounds();
+      if (world.x < box.x - near || world.x > box.right + near || world.y < box.y - near || world.y > box.bottom + near) continue;
+      const incident = store.state.incidents.active.find((one) => one.id === id);
+      if (!incident || incident.responder === null) continue;
+      session.openPerson({ role: incident.kind === 'injury' ? 'medic' : 'officer', n: 0, at: incident.responder, job: incident.id });
+      return;
+    }
+    const driver = this.cars.driverAt(world.x, world.y, near);
+    if (driver !== null) {
+      session.openPerson({ role: 'driver', n: driver });
       return;
     }
     session.closeStudent();

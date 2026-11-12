@@ -26,6 +26,10 @@ interface Trip {
   cart: boolean;
   /** So two workers from one yard do not walk in step. */
   offsetMs: number;
+  /** Whose worker this is, which of that yard's, and the thing they are walking to: what their card needs. */
+  yard: number;
+  n: number;
+  thing: number;
   body: Phaser.GameObjects.Image;
   tool: Phaser.GameObjects.Image;
 }
@@ -66,6 +70,9 @@ export class GroundsWorkers {
           toY: job.thing.y + job.thing.h + 0.2,
           cart: job.thing.type === 'bin',
           offsetMs: n * 2600 + yard.id * 700,
+          yard: yard.id,
+          n,
+          thing: job.thing.id,
         });
       });
     }
@@ -130,6 +137,21 @@ export class GroundsWorkers {
       trip.body.setVisible(!indoors);
       trip.tool.setVisible(!indoors);
     }
+  }
+
+  /** The worker under a point of the world, or null. `reach` widens the figure, because it is small under a thumb. */
+  workerAt(worldX: number, worldY: number, reach: number): { yard: number; n: number; thing: number } | null {
+    for (const trip of this.trips) {
+      if (!trip.body.visible) continue;
+      const box = trip.body.getBounds();
+      if (worldX >= box.x - reach && worldX <= box.right + reach && worldY >= box.y - reach && worldY <= box.bottom + reach) return { yard: trip.yard, n: trip.n, thing: trip.thing };
+    }
+    return null;
+  }
+
+  /** The workers out now and where they are in the world. For the dev screenshot helper. */
+  get workersOut(): Array<{ yard: number; n: number; thing: number; x: number; y: number }> {
+    return this.trips.filter((trip) => trip.body.visible).map((trip) => ({ yard: trip.yard, n: trip.n, thing: trip.thing, x: trip.body.x, y: trip.body.y }));
   }
 
   get count(): number {
