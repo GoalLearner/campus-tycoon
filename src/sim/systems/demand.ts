@@ -66,6 +66,8 @@ export interface Applicants {
   total: number;
   /** True when the base and the causes add up to the total, to the student. */
   exact: boolean;
+  /** The most a fall class can be on a small campus, when that is what holds this one. null otherwise. */
+  ceiling: number | null;
 }
 
 /** What a rank adds to applicants: nothing at 200th, the most at 1st. A school not yet ranked counts as 200th. */
@@ -105,7 +107,8 @@ export function fallApplicants(state: GameState): Applicants {
       running = next;
       return cause;
     });
-    return { base, baseName: 'Reach', causes, total: running, exact: true };
+    // The old ceiling does not apply: the four causes are the whole of it, and the most they can make is far under it.
+    return { base, baseName: 'Reach', causes, total: running, exact: true, ceiling: null };
   }
   const students = enrollment(state);
   // Recruiting and marketing lifts applications. The ceiling is the wall it pushes against.
@@ -120,7 +123,7 @@ export function fallApplicants(state: GameState): Applicants {
     { id: 'marketing', name: 'Marketing', factor: (1 + marketingLift(state)) * (1 + applicantsLift(state)), students: 0 },
     { id: 'football', name: 'Football', factor: 1 + athleticLift(state), students: 0 },
   ];
-  return { base: Math.round(base), baseName: 'Word of mouth', causes, total, exact: false };
+  return { base: Math.round(base), baseName: 'Word of mouth', causes, total, exact: false, ceiling: total < Math.round(pool) ? total : null };
 }
 
 /** A fall class as the campus would draw it today. */

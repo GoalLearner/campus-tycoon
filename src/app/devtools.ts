@@ -483,6 +483,8 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           }, 1900);
         }
       }
+      // &panel=size opens the Size panel as a tap on the student count would.
+      if (panel === 'size') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
       // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
       if (panel === 'inbox') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('.hud-chips .hud-chip:last-child')?.click(), 1400);
@@ -567,6 +569,15 @@ export function installDevTools(): void {
       if (params.has('answer')) for (const item of [...store.state.inbox.open]) store.dispatch({ type: 'inbox', id: item.id, option: item.advised });
     }
     store.away = null;
+    // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.
+    const grow = Number(params.get('grow') ?? 0);
+    if (grow > 0 && store.hasGame) {
+      const share = grow / Math.max(1, store.state.cohorts.reduce((sum, n) => sum + n, 0));
+      const grown = structuredClone(store.state);
+      grown.cohorts = grown.cohorts.map((n) => Math.round(n * share)) as typeof grown.cohorts;
+      grown.offCampus = grown.offCampus.map((n) => Math.round(n * share)) as typeof grown.offCampus;
+      store.adopt(grown, { ephemeral: true });
+    }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);
       store.catchUp();

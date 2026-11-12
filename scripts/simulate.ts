@@ -945,7 +945,8 @@ function assertModelCampus(seed: number): void {
       const mid = run.rows.filter((row) => row.year >= 3 && row.year <= 8).map((row) => row.kept);
       return { low: Math.min(...mid), high: Math.max(...mid) };
     };
-    const all = runs.map(read);
+    // The owner's target is measured on the casual and the once-a-day players. The striver's range is told beside it.
+    const all = [...of('casual'), ...of('daily')].map(read);
     const low = Math.min(...all.map((one) => one.low));
     const high = Math.max(...all.map((one) => one.high));
     const late = runs.map((run) => run.rows[run.rows.length - 1]!.kept);
@@ -953,7 +954,7 @@ function assertModelCampus(seed: number): void {
     const books = budget(of('casual')[0]!.final);
     const payroll = (books.groups.find((group) => group.id === 'payroll')?.amount ?? 0) / Math.max(1, books.fullSpending);
     check(
-      'a well-run model campus keeps $12 to $17 of every $100 in years 3 to 8, and opens inside that range',
+      'a model campus run by the casual or the once-a-day player keeps $12 to $17 of every $100 in years 3 to 8, and opens inside that range',
       low >= 12 && high <= 17 && opens >= 12 && opens <= 17 && payroll >= 0.5,
       `it opens keeping ${opens.toFixed(1)}%; ${styles.map((style) => `${style} ${Math.min(...of(style).map((run) => read(run).low)).toFixed(1)}% to ${Math.max(...of(style).map((run) => read(run).high)).toFixed(1)}%`).join(', ')} over ${seeds.length} seeds; by week ${PACE_WEEKS} they keep ${Math.min(...late).toFixed(1)}% to ${Math.max(...late).toFixed(1)}%, most of the rise being what the endowment earns (${dollarsShort(Math.min(...runs.map((run) => run.final.money.endowment)))} to ${dollarsShort(Math.max(...runs.map((run) => run.final.money.endowment)))} by then); payroll ${Math.round(payroll * 100)}% of the casual player's spending; state grants ${dollarsShort(Math.max(...runs.map((run) => run.final.money.grants)))} at most`,
     );

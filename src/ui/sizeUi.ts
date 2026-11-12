@@ -76,6 +76,7 @@ export function sizeView(state: GameState): SizeView {
       rows: [
         { name: applicants.baseName, value: headCount(applicants.base) },
         ...applicants.causes.map((cause) => ({ name: cause.name, value: applicants.exact ? signed(cause.students) : percent(cause.factor) })),
+        ...(applicants.ceiling !== null ? [{ name: 'The most a fall class can be', value: headCount(applicants.ceiling) }] : []),
       ],
     },
     rank: rank > 0 ? `No. ${rank} of 200 for academics` : 'Not yet ranked. The first rankings come out in the spring.',
