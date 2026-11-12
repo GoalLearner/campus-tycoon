@@ -313,7 +313,7 @@ function applyViewParams(params: URLSearchParams): void {
       }
     }, 2600);
   }
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person')) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -403,6 +403,22 @@ function applyViewParams(params: URLSearchParams): void {
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
+      // &weather=rain sets the sky, which the calendar layer will do by itself: rain is heard and empties the lawns.
+      const sky = params.get('weather');
+      if (sky === 'rain' || sky === 'snow' || sky === 'clear') (scene as unknown as { setWeather?: (weather: string) => void }).setWeather?.(sky);
+      // &scene=club puts the middle of the view on the first small scene of that kind: club, pickup, busker or boxes.
+      const kind = params.get('scene');
+      if (kind) {
+        const look = (tries: number): void => {
+          const at = (scene as unknown as { sceneSpot?: (kind: string) => { x: number; y: number } | null }).sceneSpot?.(kind);
+          if (at) {
+            const camera = scene.cameras.main;
+            const world = scene.iso.toWorld(at.x, at.y);
+            camera.setScroll(world.x - camera.width / 2, world.y - camera.height / 2);
+          } else if (tries > 0) setTimeout(() => look(tries - 1), 600);
+        };
+        setTimeout(() => look(20), 1500);
+      }
       // &truck brings a delivery truck to its door at once, for a screenshot of its driver.
       if (params.has('truck')) (scene as unknown as { cars?: { truckNow?: () => void } }).cars?.truckNow?.();
       // &weekend shows a weekend's visitors, tour groups and boosters, on any day of the game's week.

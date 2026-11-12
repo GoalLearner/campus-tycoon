@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { clock } from '../app/clock';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
+import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
+import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
@@ -47,6 +49,8 @@ import {
   type Incident,
 } from '../sim';
 import { Activity } from './Activity';
+import { Ambient } from './Ambient';
+import { Scenes } from './Scenes';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
 import { GroundsWorkers } from './GroundsWorkers';
@@ -122,6 +126,19 @@ export class CampusScene extends Phaser.Scene {
   private cars!: Cars;
   private crew!: GroundsWorkers;
   private activity!: Activity;
+  /** Small scenes that come and go: club tables, pickup games, a busker, the boxes of move-in day. */
+  private scenes!: Scenes;
+  /** Ripples and sprinklers. */
+  private ambient!: Ambient;
+  /** Trees that sway, by cell. */
+  private swayers = new Map<number, Phaser.GameObjects.Image>();
+  /** What the rule for small scenes asks for now, and when it is next read. */
+  private life: LifeScenes | null = null;
+  private nextLifeAt = 0;
+  /** The sky. Clear until the calendar layer brings weather: everything here already answers to it. */
+  private weather: Weather = 'clear';
+  /** The zoom the map opened at: sound is fullest there and closer, and quieter zoomed out. */
+  private homeZoom = 1;
   /** The sentence that stands with each edge marker, by which marker it is. */
   private hintTexts = new Map<'walk' | 'drive', Phaser.GameObjects.Text>();
   /** Where each edge marker stands, for taps. */
@@ -137,6 +154,7 @@ export class CampusScene extends Phaser.Scene {
   private workSum = 0;
   private workFrames = 0;
   private workFrom = 0;
+  private swaying = false;
   /** Dev screenshots: keep the crowd at the setting whatever the frame rate. A screenshot machine draws slowly. */
   private crowdHeld = false;
   /** Dev screenshots: a weekend's visitors on any day. */
@@ -184,8 +202,11 @@ export class CampusScene extends Phaser.Scene {
     this.cars = new Cars(this, this.art, this.iso);
     this.crew = new GroundsWorkers(this, this.art, this.iso);
     this.activity = new Activity(this, this.art, this.iso);
-    // A car waits at a crossing while somebody is walking over it.
+    this.scenes = new Scenes(this, this.art, this.iso);
+    this.ambient = new Ambient(this, this.iso);
+    // A car waits at a crossing while somebody is walking over it, and a walker waits at the kerb for a car.
     this.cars.watchCrossings((cell) => this.walkers.onCrossing(cell));
+    this.walkers.watchCars((cell) => this.cars.onCrossing(cell));
     this.applyStep(this.budget.step);
     if (import.meta.env.DEV) {
       // How long a frame's work takes, for the report: a frame rate says nothing once the screen caps it.
@@ -264,14 +285,22 @@ export class CampusScene extends Phaser.Scene {
       this.cars.setMap(state);
       this.crew.setMap(state);
       this.activity.setMap(state);
+      this.scenes.setMap(state);
+      this.ambient.setMap(state);
+      this.nextLifeAt = 0;
       this.placedDirty = true;
       this.dirty = false;
       this.overlayDirty = true;
       this.nextBarsAt = 0;
     }
     if (this.pendingArrivals > 0) {
-      this.walkers.arrive(this.pendingArrivals);
+      // Move-in: the newcomers walk in with a parent or two, and boxes are stacked by their dorms.
+      this.scenes.moveIn(this.walkers.arrive(this.pendingArrivals), time);
       this.pendingArrivals = 0;
+    }
+    if (time >= this.nextLifeAt) {
+      this.nextLifeAt = time + 400;
+      this.showLife(state);
     }
     if (this.placedDirty) {
       this.showPlaced(state);
@@ -281,6 +310,9 @@ export class CampusScene extends Phaser.Scene {
     this.cars.update(delta, this.light.period);
     this.crew.update(time);
     this.activity.update(time, delta);
+    this.scenes.update(time, delta);
+    this.ambient.update(time);
+    this.sway(time);
     this.showHintTexts();
     this.moveResponders(state, time);
     this.watchStudent(delta);
@@ -309,6 +341,9 @@ export class CampusScene extends Phaser.Scene {
     this.cars.clear();
     this.crew.clear();
     this.activity.clear();
+    this.scenes.clear();
+    this.ambient.clear();
+    this.swayers.clear();
     for (const text of this.hintTexts.values()) text.destroy();
     this.hintTexts.clear();
     this.hintSpots.clear();
@@ -376,8 +411,59 @@ export class CampusScene extends Phaser.Scene {
     this.activity.setPeriod(light.period);
   }
 
+  /**
+   * Life and sound, a few times a second: which small scenes are on, how much
+   * the trees sway, and what the soundscape should be for what is on screen.
+   * The hour is the player's own and is only seen. The season and the weekday
+   * are the game's.
+   */
+  private showLife(state: GameState): void {
+    const date = dateAt(state.clock.tick);
+    const weekend = this.weekendHeld || date.weekday === 0 || date.weekday === 6;
+    const life = scenesFor({ period: this.light.period, weekend, month: date.month, day: date.day, weather: this.weather, students: enrollment(state), reduced: effectsSetting() === 'reduced' });
+    this.life = life;
+    this.scenes.setLife(life);
+    this.ambient.setLife(life.ripples, life.sprinklers);
+    this.activity.setStudy(life.studyGroups);
+    this.walkers.setWind(life.wind);
+    sound.setFacts({
+      walkersInView: this.walkers.onScreen,
+      vehiclesInView: this.cars.inView,
+      zoom: this.cameras.main.zoom / this.homeZoom,
+      period: this.light.period,
+      month: date.month,
+      weather: this.weather,
+      hidden: document.hidden,
+    });
+  }
+
+  /** Dev pages and the calendar layer: set the sky. Rain empties the lawns and is heard. */
+  setWeather(weather: Weather): void {
+    this.weather = weather;
+    this.nextLifeAt = 0;
+  }
+
+  /** Trees move a little in the wind: more in fall, hardly at all in summer, and not at all with Reduce effects on. */
+  private sway(time: number): void {
+    const wind = this.life?.wind ?? 0;
+    if (wind <= 0) {
+      if (this.swaying) for (const tree of this.swayers.values()) tree.setRotation(0);
+      this.swaying = false;
+      return;
+    }
+    this.swaying = true;
+    const view = this.cameras.main.worldView;
+    const seconds = time / 1000;
+    for (const [cell, tree] of this.swayers) {
+      if (tree.x < view.x - 80 || tree.x > view.right + 80 || tree.y < view.y - 40 || tree.y > view.bottom + 160) continue;
+      // A slow lean and a quicker shiver, each tree in its own time.
+      tree.setRotation((Math.sin(seconds * 0.9 + cell * 0.71) * 0.026 + Math.sin(seconds * 2.3 + cell * 1.3) * 0.008) * wind);
+    }
+  }
+
   /** Show the crowd step in force on everything that draws people or cars. */
   private applyStep(step: number): void {
+    this.scenes.setStep(step);
     this.walkers.setStep(step);
     this.cars.setStep(step);
     this.activity.setStep(step);
@@ -443,6 +529,11 @@ export class CampusScene extends Phaser.Scene {
       return null;
     }
     return this.walkers.peopleNear(midX, midY).find((person) => person.role === role) ?? null;
+  }
+
+  /** Dev screenshots: the cell of the first small scene of a kind, or null when none is on. */
+  sceneSpot(kind: 'club' | 'pickup' | 'busker' | 'boxes'): { x: number; y: number } | null {
+    return this.scenes.where(kind);
   }
 
   /** Dev screenshots: put the middle of the view on a person who is out on the map. */
@@ -618,9 +709,18 @@ export class CampusScene extends Phaser.Scene {
             visual.object = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(this.iso.depth(x, y, 1));
           }
           this.art.apply(visual.object, objectKey);
-          visual.object.setVisible(true);
+          visual.object.setVisible(true).setPosition(pos.x, pos.y).setRotation(0);
+          if (objectKey.startsWith('tree.') || objectKey === 'quad.tree') {
+            // A tree turns about the foot of its trunk, so it can sway without its roots sliding.
+            const foot = this.iso.toWorld(x + 0.5, y + 0.56);
+            const tree = visual.object;
+            tree.setOrigin(tree.originX + (foot.x - pos.x) / tree.width, tree.originY + (foot.y - pos.y) / tree.height);
+            tree.setPosition(foot.x, foot.y);
+            this.swayers.set(i, tree);
+          } else this.swayers.delete(i);
         } else if (visual.object) {
           visual.object.setVisible(false);
+          this.swayers.delete(i);
         }
 
         if (works) {
@@ -1058,6 +1158,7 @@ export class CampusScene extends Phaser.Scene {
     const cellsAcross = Phaser.Math.Clamp(cssWidth / 62, 6.5, 18);
     const zoom = cam.width / (cellsAcross * this.iso.halfWidth * 2);
     cam.setZoom(Phaser.Math.Clamp(zoom, this.minZoom(), MAX_ZOOM_FACTOR * this.dpr));
+    this.homeZoom = cam.zoom;
     // The view opens on the campus's own land, not on the middle of the whole map.
     const centre = this.iso.toWorld(START_LAND.x + START_LAND.w / 2, START_LAND.y + START_LAND.h / 2);
     cam.setScroll(centre.x - cam.width / 2, centre.y - cam.height / 2);

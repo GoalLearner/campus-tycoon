@@ -3465,6 +3465,78 @@
     }
    ]
   },
+  "scene.tent": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Tent.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.82
+    }
+   ]
+  },
+  "scene.table": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Table.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.62
+    }
+   ]
+  },
+  "scene.sign": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Sign2.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.6
+    }
+   ]
+  },
+  "scene.book": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Book.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.55
+    }
+   ]
+  },
+  "scene.lute": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/MusicLute.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.7
+    }
+   ]
+  },
+  "play.volleyball": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/VolleyBall.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.05
+    }
+   ]
+  },
   "decor.car": {
    "layers": [
     {

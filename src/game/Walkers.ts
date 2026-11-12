@@ -235,6 +235,12 @@ export class Walkers {
   private weekend = false;
   /** The crowd step in force: the player's setting, or lower while frames are short. */
   private step = 2;
+  /** How much a pennant sways, from 0 for still. */
+  private wind = 0;
+  /** Everyone on screen at the last frame, for the sound of the crowd. */
+  private seenAll = 0;
+  /** Asked before stepping onto a crossing: is a car on it, or driving onto it? */
+  private carOn: (cell: number) => boolean = () => false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -257,6 +263,21 @@ export class Walkers {
   /** The crowd step to show: 0 is sparse, 1 Low, 2 Normal, 3 High. */
   setStep(step: number): void {
     this.step = Math.max(0, Math.min(CROWD_STEPS.length - 1, step));
+  }
+
+  /** Walkers wait at the kerb while this says a car is on the crossing ahead. */
+  watchCars(busy: (cell: number) => boolean): void {
+    this.carOn = busy;
+  }
+
+  /** How much things sway in the wind. 0 with Reduce effects on. */
+  setWind(wind: number): void {
+    this.wind = wind;
+  }
+
+  /** Everyone on screen now: students, staff, visitors and neighbours. */
+  get onScreen(): number {
+    return this.seenAll;
   }
 
   /** True while somebody is walking over that crossing. */
@@ -404,10 +425,10 @@ export class Walkers {
   }
 
   /** New students moving in: a group walks in from the edge of campus to the dorms. */
-  arrive(count: number): void {
-    if (!this.people || count <= 0) return;
+  arrive(count: number): Array<{ x: number; y: number }> {
+    if (!this.people || count <= 0) return [];
     const homes = this.stops.filter((stop) => stop.zone === 'housing');
-    if (homes.length === 0) return;
+    if (homes.length === 0) return [];
 
     const view = this.scene.cameras.main.worldView;
     const centre = { x: view.centerX, y: view.centerY };
@@ -418,7 +439,7 @@ export class Walkers {
     // Come in by the way onto campus nearest to where the player is looking.
     const ways = this.gates.length > 0 ? this.gates : this.stops;
     const gate = [...ways].sort((a, b) => distance(a) - distance(b))[0];
-    if (!gate) return;
+    if (!gate) return [];
 
     const near = [...homes].sort((a, b) => distance(a) - distance(b)).slice(0, 6);
     const size = Phaser.Math.Clamp(Math.round(count / 6), 3, 18);
@@ -439,6 +460,13 @@ export class Walkers {
         taken.add(studentKey(student));
       }
       this.queue.push({ from: gate, to, inMs: n * 230, student });
+      // Move-in day: every third newcomer has a parent beside them with the boxes. Nobody can carry anything,
+      // so the boxes are drawn at the parent's side.
+      const parent = this.people.roles?.parent;
+      if (parent !== undefined && n % 3 === 0) {
+        const who = Math.floor(Math.random() * 100_000);
+        this.queue.push({ from: gate, to, inMs: n * 230 + 320, student: null, kind: 'parent', extra: { person: { role: 'parent', n: who }, look: parent + (who % 2), prop: 'people.boxes' } });
+      }
     }
 
     const at = this.iso.toWorld(gate.cell.x + 0.5, gate.cell.y + 0.5);
@@ -454,6 +482,8 @@ export class Walkers {
       .setOrigin(0.5, 1)
       .setDepth(1_000_002);
     this.banners.push({ text, ageMs: 0 });
+    // The dorms they are walking to, where the boxes are stacked.
+    return near.map((stop) => ({ x: stop.cell.x, y: stop.cell.y }));
   }
 
   // -------------------------------------------------------------- routes --
@@ -610,7 +640,8 @@ export class Walkers {
     if (extra.prop && this.art.has(extra.prop)) {
       prop = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(prop, extra.prop);
-      prop.setAlpha(0);
+      // It stands on its own base, so it can sway about it.
+      prop.setOrigin(0.5, 1).setAlpha(0);
     }
     // Someone already part of the way along, so a view fills with people mid-stride.
     const leg = partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1;
@@ -668,9 +699,10 @@ export class Walkers {
     walker.sprite.setDepth((walker.x + walker.y - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
     if (walker.prop) {
-      // Beside them, a little behind: no figure in the pack can hold anything.
-      const beside = this.iso.toWorld(walker.x - 0.32, walker.y - 0.18);
-      walker.prop.setPosition(beside.x, beside.y).setDepth(walker.sprite.depth - 0.1).setAlpha(walker.alpha);
+      // Beside them: no figure in the pack can hold anything. A pennant moves in the wind.
+      const beside = this.iso.toWorld(walker.x + 0.2, walker.y + 0.04);
+      const sway = walker.kind === 'guide' ? Math.sin(this.scene.time.now / 420 + walker.stride / 400) * 0.1 * this.wind : 0;
+      walker.prop.setPosition(beside.x, beside.y).setRotation(sway).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
     }
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
@@ -945,6 +977,7 @@ export class Walkers {
     // Walk.
     let seen = 0;
     let neighboursSeen = 0;
+    this.seenAll = 0;
     this.crossingNow.clear();
     for (let i = this.walkers.length - 1; i >= 0; i--) {
       const walker = this.walkers[i]!;
@@ -978,6 +1011,14 @@ export class Walkers {
         }
       } else if (walker.fading !== 'out' || walker.leg < walker.route.length) {
         let step = (walker.pace * dt) / 1000;
+        // At a crossing with a car on it, or one driving onto it, they wait at the kerb.
+        const ahead = walker.route[walker.leg];
+        if (ahead) {
+          const there = Math.floor(ahead.y) * this.width + Math.floor(ahead.x);
+          const here = Math.floor(walker.y) * this.width + Math.floor(walker.x);
+          if (there !== here && this.isCrossing[there] && this.carOn(there)) step = 0;
+        }
+        const waiting = step === 0;
         while (step > 0 && walker.leg < walker.route.length) {
           const target = walker.route[walker.leg]!;
           const dx = target.x - walker.x;
@@ -996,7 +1037,7 @@ export class Walkers {
             step = 0;
           }
         }
-        walker.stride += dt * (walker.pace / PACE);
+        if (!waiting) walker.stride += dt * (walker.pace / PACE);
         if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           const stays = walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play');
@@ -1009,6 +1050,7 @@ export class Walkers {
       if (this.isCrossing[cell]) this.crossingNow.add(cell);
 
       if (this.inView(view, walker.x, walker.y, 40)) {
+        this.seenAll += 1;
         if (walker.kind === 'student') seen += 1;
         else if (walker.kind === 'neighbour') neighboursSeen += 1;
         walker.offscreenMs = 0;

@@ -59,6 +59,8 @@ import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSu
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
+import { effectsSetting, musicVolume, setEffectsSetting, setMusicVolume, setSoundVolume, soundVolume } from '../app/life';
+import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
 
@@ -612,6 +614,36 @@ export function mountUi(root: HTMLElement): void {
       });
       setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
       card.append(crowd);
+
+      // Reduce effects: no swaying trees, ripples or sprinklers, and fewer small scenes. For an older phone or a still map.
+      const effects = button('', 'wide', () => {
+        setEffectsSetting(effectsSetting() === 'full' ? 'reduced' : 'full');
+        setText(effects, effectsSetting() === 'full' ? 'Reduce effects: off' : 'Reduce effects: on');
+      });
+      setText(effects, effectsSetting() === 'full' ? 'Reduce effects: off' : 'Reduce effects: on');
+      card.append(effects);
+
+      // Sound and music each have a volume of their own. Both start low, and zero is off.
+      const volume = (label: string, value: number, set: (value: number) => void): HTMLElement => {
+        const row = el('label', 'volume');
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '100';
+        slider.step = '5';
+        slider.value = String(Math.round(value * 100));
+        const shown = el('span', 'volume-value', slider.value === '0' ? 'Off' : `${slider.value}%`);
+        slider.addEventListener('input', () => {
+          set(Number(slider.value) / 100);
+          sound.applyVolumes();
+          setText(shown, slider.value === '0' ? 'Off' : `${slider.value}%`);
+        });
+        // Let go, and hear what that level sounds like.
+        slider.addEventListener('change', () => sound.ui('tap'));
+        row.append(el('span', 'volume-name', label), slider, shown);
+        return row;
+      };
+      card.append(volume('Sound', soundVolume(), setSoundVolume), volume('Music', musicVolume(), setMusicVolume));
 
       const startOver = button('Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {

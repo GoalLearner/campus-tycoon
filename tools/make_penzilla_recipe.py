@@ -293,6 +293,15 @@ sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0
 # admissions guide leads a tour with, and the boxes a delivery driver unloads.
 sprites['people.pennant'] = {'layers': [standing(OLD + 'Decor/Banner.png', 0.5, 0.5, scale=0.75)]}
 sprites['people.boxes'] = {'layers': [standing(DECOR + 'Boxes1.png', 0.5, 0.5, scale=0.85)]}
+# Small scenes (DESIGN.md section 33): a club's table on a lawn is the Medieval pack's tent, the city pack's table
+# and its sandwich board, set out together on the cell. Each stays its own sprite, so the game stands them side by side.
+sprites['scene.tent'] = {'layers': [standing(OLD + 'Decor/Tent.png', 0.5, 0.5, scale=0.82)]}
+sprites['scene.table'] = {'layers': [standing(DECOR + 'Table.png', 0.5, 0.5, scale=0.62)]}
+sprites['scene.sign'] = {'layers': [standing(DECOR + 'Sign2.png', 0.5, 0.5, scale=0.6)]}
+# A study group's book on a picnic table, a busker's lute beside them, and a volleyball for a game on a quad.
+sprites['scene.book'] = {'layers': [standing(OLD + 'Decor/Book.png', 0.5, 0.5, scale=0.55)]}
+sprites['scene.lute'] = {'layers': [standing(OLD + 'Decor/MusicLute.png', 0.5, 0.5, scale=0.7)]}
+sprites['play.volleyball'] = {'layers': [standing(ICONS + 'VolleyBall.png', 0.5, 0.5, scale=0.05)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
 sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]}

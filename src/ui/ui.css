@@ -1283,3 +1283,37 @@ button.money {
   gap: 6px;
   flex: 0 0 auto;
 }
+
+/* ------------------------------------------------- sound and music volume */
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 15px;
+}
+
+.volume-name {
+  flex: none;
+  width: 56px;
+  font-weight: 600;
+}
+
+.volume input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  accent-color: var(--accent);
+  touch-action: pan-y;
+}
+
+.volume-value {
+  flex: none;
+  width: 44px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 13px;
+}

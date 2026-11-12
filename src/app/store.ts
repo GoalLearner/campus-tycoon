@@ -15,6 +15,7 @@ import {
 } from '../sim';
 import { mergeAway, readSavedApp, type AwayReport, type SavedApp } from './away';
 import { clock } from './clock';
+import { sound } from './sound';
 import { clearSaves, readSaves, requestPersistentStorage, writeSave } from './persistence';
 
 /**
@@ -232,6 +233,8 @@ export class Store {
       this.current = result.state;
       this.scheduleSave(300);
       this.emit();
+      // Something built or laid has a soft sound. Clearing, hiring and the Money panel's choices have the tap's.
+      if (result.changed > 0 && (action.type === 'place' || (action.type === 'paint' && action.tool !== 'clear'))) sound.ui('place');
     }
     return result;
   }
