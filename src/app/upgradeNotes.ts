@@ -13,7 +13,7 @@ export function upgradeNotes(fromVersion: number): string[] {
   }
   if (fromVersion < 6) {
     notes.push(
-      'New: a town now stands along the east edge of campus. Locals in new classes live there and need a way in: a path to College Avenue to walk, or parking with a road to drive. Without one they need a bed. Students already enrolled are not affected.',
+      'New: a town now stands along the east edge of campus. Locals in new classes live there and need a way in: a path to Lantern Avenue to walk, or parking with a road to drive. Without one they need a bed. Students already enrolled are not affected.',
     );
   }
   if (fromVersion < 7) {

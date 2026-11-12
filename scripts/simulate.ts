@@ -38,6 +38,9 @@ import {
   teamRating,
   TICKS_PER_HOUR,
   advisorLines,
+  FIRST_INTAKE_TICK,
+  RANK_GOALS,
+  SIZE_GOALS,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -81,6 +84,8 @@ const CHECK_IN_MS: Record<Style, number> = {
   // Once a day is the slowest rhythm the game supports (DESIGN.md 2.3).
   daily: 24 * 60 * TICK_MS,
   optimizer: 2 * 60 * TICK_MS,
+  // The striver looks in once a day, as the once-a-day player does (DESIGN.md 37.8).
+  striver: 24 * 60 * TICK_MS,
 };
 
 interface YearRow {
@@ -149,6 +154,11 @@ interface Seen {
   /** Lines checked against the tone guide, and the ones that broke it. */
   lines: number;
   toneBroken: string[];
+  /** The real week each size goal and each rank goal was reached, counting the first week as 1. 0 when not reached. */
+  sizeWeeks: number[];
+  rankWeeks: number[];
+  /** Goals whose headline was not in the paper of the visit after they were reached. */
+  goalsUnsaid: number;
 }
 
 const newSeen = (): Seen => ({
@@ -175,6 +185,9 @@ const newSeen = (): Seen => ({
   editionsOver: 0,
   lines: 0,
   toneBroken: [],
+  sizeWeeks: SIZE_GOALS.map(() => 0),
+  rankWeeks: RANK_GOALS.map(() => 0),
+  goalsUnsaid: 0,
 });
 
 /** Check lines against the tone guide's banned and retired words. */
@@ -192,6 +205,12 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'exam') seen.exams[String(entry.data?.id)] = (seen.exams[String(entry.data?.id)] ?? 0) + 1;
     if (entry.kind === 'inbox' && entry.data?.closes !== undefined) seen.desk.push({ opens: entry.tick, closes: Number(entry.data.closes), key: String(entry.data.key) });
     if (entry.kind === 'inbox' && entry.data?.byDefault === 1) seen.deskDefaults += 1;
+  }
+  for (const entry of log) {
+    if (entry.kind !== 'goal') continue;
+    const week = Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
+    const weeks = entry.data?.ladder === 'size' ? seen.sizeWeeks : seen.rankWeeks;
+    for (let n = Number(entry.data?.from ?? 0); n < Number(entry.data?.count ?? 0); n++) weeks[n] = week;
   }
   seen.deskMost = Math.max(seen.deskMost, state.inbox.open.length);
   const season = campusHappiness(state).season;
@@ -287,6 +306,8 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     if (style !== 'absent' && away >= 60) {
       const paper = edition(state, gap, { minutes: away, cashBefore: before.money.cash, cashAfter: state.money.cash, studentsBefore: enrollment(before), studentsAfter: enrollment(state) });
       seen.editions += 1;
+      const reached = gap.filter((entry) => entry.kind === 'goal');
+      seen.goalsUnsaid += reached.filter((entry) => paper.deck !== entry.text && !paper.top.some((item) => item.text === entry.text)).length;
       if (paper.top.length === 0 || paper.headline === '') seen.editionsEmpty += 1;
       if (paper.top.length > TOP_ITEMS) seen.editionsOver += 1;
       tone(seen, [paper.headline, paper.deck, ...paper.top.map((item) => item.text), ...paper.more, ...paper.scores, ...(paper.admissions ? [paper.admissions] : []), ...paper.poll.map((line) => line.label)]);
@@ -873,14 +894,21 @@ function assertLayerFour(runs: Run[], seed: number): void {
   }
 }
 
-/** The model campus (DESIGN.md 35.5): whole from the first minute, so it has to stand up by itself. */
+/** How long the pace runs last, in real weeks. A game year is a real week. */
+const PACE_WEEKS = 44;
+
+const weekOf = (week: number): string => (week > 0 ? `week ${week}` : 'not reached');
+
+/**
+ * The model campus (DESIGN.md 35.5 and section 37): whole from the first
+ * minute, so it has to stand up by itself, keep what a well-run campus should
+ * keep, and climb its goals over months and not weeks.
+ */
 function assertModelCampus(seed: number): void {
   console.log('');
   console.log('THE MODEL CAMPUS');
   const alone = play('absent', seed, 5, 'model');
-  const tended = play('casual', seed, 8, 'model');
   printRun(alone);
-  printRun(tended);
 
   // Left alone for five years it keeps a surplus, needs no rescue and stays clean.
   {
@@ -894,18 +922,80 @@ function assertModelCampus(seed: number): void {
     );
   }
 
-  // With the casual player it stays inside the margin and payroll checks.
+  // The pace: three kinds of player, two seeds, long enough to show months.
+  const seeds = [seed, seed + 1];
+  const styles = ['casual', 'daily', 'striver'] as const;
+  const runs = seeds.flatMap((one) => styles.map((style) => play(style, one, PACE_WEEKS, 'model')));
+  const of = (style: Style): Run[] => runs.filter((run) => run.style === style);
+  for (const run of runs.filter((one) => one.seed === seed)) printRun({ ...run, rows: run.rows.filter((row) => row.year <= 12 || row.year % 4 === 0) });
+
+  console.log('');
+  console.log(`THE PACE OF THE GOALS: the real week each is reached, over ${PACE_WEEKS} weeks`);
+  const head = runs.map((run) => `${run.style} ${run.seed}`.padStart(14)).join('');
+  console.log(`${'goal'.padEnd(18)}${head}`);
+  SIZE_GOALS.forEach((goal, n) => console.log(`${`${goal.toLocaleString('en-US')} students`.padEnd(18)}${runs.map((run) => weekOf(run.seen.sizeWeeks[n]!).padStart(14)).join('')}`));
+  RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${runs.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
+  console.log('');
+
+  const sizeBy = (run: Run, week: number): number => run.seen.sizeWeeks.filter((at) => at > 0 && at <= week).length;
+
+  // A well-run model campus keeps $12 to $17 of every $100 (the owner's target, 37.10), measured in years 3 to 8.
   {
-    const mid = tended.rows.filter((row) => row.year >= 3 && row.year <= 8);
-    const low = Math.min(...mid.map((row) => row.kept));
-    const high = Math.max(...mid.map((row) => row.kept));
-    const books = budget(tended.final);
+    const read = (run: Run): { low: number; high: number } => {
+      const mid = run.rows.filter((row) => row.year >= 3 && row.year <= 8).map((row) => row.kept);
+      return { low: Math.min(...mid), high: Math.max(...mid) };
+    };
+    const all = runs.map(read);
+    const low = Math.min(...all.map((one) => one.low));
+    const high = Math.max(...all.map((one) => one.high));
+    const late = runs.map((run) => run.rows[run.rows.length - 1]!.kept);
+    const opens = budget(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })).kept;
+    const books = budget(of('casual')[0]!.final);
     const payroll = (books.groups.find((group) => group.id === 'payroll')?.amount ?? 0) / Math.max(1, books.fullSpending);
     check(
-      'the model campus with the casual player stays inside the margin and payroll checks',
-      mid.length === 6 && low >= 10 && high <= 20 && payroll >= 0.5,
-      `years 3 to 8: ${low.toFixed(1)}% kept at the least and ${high.toFixed(1)}% at the most; payroll ${Math.round(payroll * 100)}% of spending; ${tended.rows[7]!.students} students at year eight; state grants ${dollarsShort(tended.final.money.grants)}, which is ${((100 * tended.final.money.grants) / Math.max(1, budget(tended.final).spending)).toFixed(1)}% of a year's spending, to a player who spends every dollar`,
+      'a well-run model campus keeps $12 to $17 of every $100 in years 3 to 8, and opens inside that range',
+      low >= 12 && high <= 17 && opens >= 12 && opens <= 17 && payroll >= 0.5,
+      `it opens keeping ${opens.toFixed(1)}%; ${styles.map((style) => `${style} ${Math.min(...of(style).map((run) => read(run).low)).toFixed(1)}% to ${Math.max(...of(style).map((run) => read(run).high)).toFixed(1)}%`).join(', ')} over ${seeds.length} seeds; by week ${PACE_WEEKS} they keep ${Math.min(...late).toFixed(1)}% to ${Math.max(...late).toFixed(1)}%, most of the rise being what the endowment earns (${dollarsShort(Math.min(...runs.map((run) => run.final.money.endowment)))} to ${dollarsShort(Math.max(...runs.map((run) => run.final.money.endowment)))} by then); payroll ${Math.round(payroll * 100)}% of the casual player's spending; state grants ${dollarsShort(Math.max(...runs.map((run) => run.final.money.grants)))} at most`,
     );
+  }
+
+  // The once-a-day player: three to five size goals by week 9, and none of the last three before week 12.
+  {
+    const ok = of('daily').every((run) => sizeBy(run, 9) >= 3 && sizeBy(run, 9) <= 5 && run.seen.sizeWeeks.slice(5).every((at) => at === 0 || at >= 12));
+    check('the once-a-day player has three to five size goals by week 9 and none of the last three before week 12', ok, of('daily').map((run) => `seed ${run.seed}: ${sizeBy(run, 9)} by week 9, 81,000 at ${weekOf(run.seen.sizeWeeks[5]!)}`).join('; '));
+  }
+
+  // Any regular player has four size goals in the first two months.
+  {
+    const ok = runs.every((run) => sizeBy(run, 9) >= 4);
+    check('every regular player has four size goals in the first two months', ok, runs.map((run) => `${run.style} ${run.seed}: the fourth at ${weekOf(run.seen.sizeWeeks[3]!)}`).join('; '));
+  }
+
+  // Nobody has the last goal before month five, and the player who works all four causes does get there.
+  {
+    const last = SIZE_GOALS.length - 1;
+    const early = runs.filter((run) => run.seen.sizeWeeks[last]! > 0 && run.seen.sizeWeeks[last]! < 20);
+    check('nobody has the last size goal before month five', early.length === 0, runs.map((run) => `${run.style} ${run.seed}: ${weekOf(run.seen.sizeWeeks[last]!)}`).join('; '));
+    const strivers = of('striver');
+    check(
+      'the last size goal can be reached: the player who works all four causes of applicants gets there, in months',
+      strivers.every((run) => run.seen.sizeWeeks[last]! >= 20),
+      strivers.map((run) => `seed ${run.seed}: 100,000 students at ${weekOf(run.seen.sizeWeeks[last]!)}, with ${enrollment(run.final)} at the end, looks ${averageDesirability(run.final).toFixed(0)} of 100, marketing at step ${run.final.money.marketing}, a tier ${run.final.football.stadium.tier} stadium and rank ${run.final.field.rank}`).join('; '),
+    );
+  }
+
+  // Rank: Top 100 in about month two, and the Top 10 not before month five.
+  {
+    const strivers = of('striver');
+    const ok = strivers.every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 13 && (run.seen.rankWeeks[7]! === 0 || run.seen.rankWeeks[7]! >= 20));
+    check('the rank climbs a little a year: Top 100 in about month two, and the Top 10 not before month five', ok, strivers.map((run) => `seed ${run.seed}: first rank ${weekOf(run.seen.rankWeeks[0]!)} in the Top 175, Top 100 at ${weekOf(run.seen.rankWeeks[3]!)}, Top 50 at ${weekOf(run.seen.rankWeeks[5]!)}, Top 10 ${weekOf(run.seen.rankWeeks[7]!)}`).join('; '));
+  }
+
+  // A goal reached while away is in the paper of the next visit, for every player.
+  {
+    const unsaid = runs.reduce((sum, run) => sum + run.seen.goalsUnsaid, 0);
+    const reached = runs.reduce((sum, run) => sum + run.seen.sizeWeeks.filter((at) => at > 0).length + run.seen.rankWeeks.filter((at) => at > 0).length, 0);
+    check('a goal reached while away is in the paper of the next visit', reached > 0 && unsaid === 0, `${reached} goals reached across ${runs.length} runs, ${unsaid} missing from the paper`);
   }
 
   // Thirty days of catch-up on it stays inside one second.
@@ -920,7 +1010,7 @@ function assertModelCampus(seed: number): void {
     check('30 days of catch-up on the model campus runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${buildings(fresh.map).length} lots and ${fresh.map.placed.filter(Boolean).length} placed things`);
   }
 
-  check('the model campus validates when it opens and after eight years with a player', validate(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })) === null && validate(tended.final) === null, 'checked by the validation every save goes through, both times');
+  check('the model campus validates when it opens and after its longest run', validate(newGame({ seed, name: 'Sim model', now: T0, campus: 'model' })) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
 }
 
 // ------------------------------------------------------------------- main --

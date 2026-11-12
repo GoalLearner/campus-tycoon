@@ -105,6 +105,8 @@ function results(log: readonly LogEntry[]): Result[] {
       out.push({ tick: entry.tick, weight: big ? TOP_WEIGHTS.bigGame : TOP_WEIGHTS.game, title: 'Final score', body: short(entry.text) });
     } else if (entry.kind === 'intake') {
       out.push({ tick: entry.tick, weight: TOP_WEIGHTS.intake, title: 'Move-in day', body: short(entry.text) });
+    } else if (entry.kind === 'goal') {
+      out.push({ tick: entry.tick, weight: TOP_WEIGHTS.goal, title: 'A goal reached', body: short(entry.text) });
     } else if (entry.kind === 'rankings') {
       out.push({ tick: entry.tick, weight: TOP_WEIGHTS.goodNews, title: 'Rankings day', body: short(entry.text) });
     } else if (entry.kind === 'graduation') {

@@ -608,7 +608,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Coverage | A service picker, each circle, and a ghost outline of its full size |
 | Money | Each lot's net income per real hour |
 | Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). Built on 2026-11-11 with play stop 4a. It opens from "Show cleanliness" on the Happiness panel and stays until Done |
-| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and College Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
+| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and Lantern Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
 
 ### 8.5 Recreation holds so many at once
 
@@ -2151,8 +2151,8 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 | Piece | Built |
 |---|---|
 | The map | 42 cells wide by 48 tall. The starting land is the same 32 by 32. The town is the ten columns east of it, for the full height. Two fields of 16 by 16 lie south of the starting land |
-| The town | "College Avenue" runs down the campus edge. Eight side streets run east from it, each a neighbourhood with 9 to 14 house plots. A plot stands for 10 local students [T]. About 900 places in all, so the town fills as the school grows |
-| Locals | Four in ten of every class. A neighbourhood walks when a path meets College Avenue within two rows of its side street and the walk to class is 12 minutes or less [T]. From any other it drives, one parking space each |
+| The town | "Lantern Avenue" runs down the campus edge. Eight side streets run east from it, each a neighbourhood with 9 to 14 house plots. A plot stands for 10 local students [T]. About 900 places in all, so the town fills as the school grows |
+| Locals | Four in ten of every class. A neighbourhood walks when a path meets Lantern Avenue within two rows of its side street and the walk to class is 12 minutes or less [T]. From any other it drives, one parking space each |
 | A local's place | Decided when they enrol and kept until they graduate. Clearing the path or car park later strands nobody, and the next class finds fewer places. Each class year's count is stored |
 | Parking | Parking lot: 2 by 1, $20K, 20 cars. Parking structure: 2 by 2, $160K, 100 cars. Either holds cars only when a road joins it to a street, or it touches the avenue itself |
 | Roads | $3,000 a cell and $150 a year. A road over a path, or a path over a road, makes a crossing that both use. Reached from a Road card in the Build menu, because the tool bar is full |
@@ -2176,19 +2176,19 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 
 Asked for by the owner on 2026-11-11, after the money stop: "No one walks or drives in from the town", and "The town looks dead." Built the same day. All of it is for show: nothing here is saved, no number changes, and nothing runs while the game is closed.
 
-**Was it a bug?** Yes, in what was shown, not in the numbers. The locals were enrolled and counted correctly all along. On the map, nobody ever came out of a house: a commuter appeared already on campus, a car appeared only when students drove, which needs a car park a road reaches, and a house stood only where locals were enrolled. A campus from an older save also has no walk to College Avenue, because that walk is laid for new campuses only (25.4), and the only place that said so was a panel. Both halves are fixed: the map says at its edge when the town cannot get in, and when it can, people and cars are seen coming and going.
+**Was it a bug?** Yes, in what was shown, not in the numbers. The locals were enrolled and counted correctly all along. On the map, nobody ever came out of a house: a commuter appeared already on campus, a car appeared only when students drove, which needs a car park a road reaches, and a house stood only where locals were enrolled. A campus from an older save also has no walk to Lantern Avenue, because that walk is laid for new campuses only (25.4), and the only place that said so was a panel. Both halves are fixed: the map says at its edge when the town cannot get in, and when it can, people and cars are seen coming and going.
 
 | Piece | Built [T] |
 |---|---|
 | The town | Every plot has its house. The few spots along a street with no house are a driveway with a car, a garden, a pool or trees, and the ground behind the houses is lawn and trees. It is read from numbers the save already holds, so a town always looks the same |
-| Townspeople | Neighbours walk the sidewalks of College Avenue and the side streets, about seven at a time by day and one at night. A tap says "A neighbour from the town. Townspeople are not students." |
+| Townspeople | Neighbours walk the sidewalks of Lantern Avenue and the side streets, about seven at a time by day and one at night. A tap says "A neighbour from the town. Townspeople are not students." |
 | Town cars | Between driveways and the ends of the streets: four in the morning and evening, three in the afternoon, one at night. Cars stand in driveways: nearly all at night, about a third in the afternoon |
-| Walking in | From each street that walks: out of a house, along its sidewalk, over College Avenue and up the path to class. Nearly all inbound in the morning, home again in the evening. About one walker for every 14 locals who walk, never more than 26 at once, and fewer on a weekend. Their card says "Walking in from home" and "Walking home" |
-| Driving in | A car leaves a driveway, drives its street, College Avenue and the player's road, and pulls into a car park a road reaches. Later it drives home. One car for about ten students who drive, never more than nine at once at Normal |
+| Walking in | From each street that walks: out of a house, along its sidewalk, over Lantern Avenue and up the path to class. Nearly all inbound in the morning, home again in the evening. About one walker for every 14 locals who walk, never more than 26 at once, and fewer on a weekend. Their card says "Walking in from home" and "Walking home" |
+| Driving in | A car leaves a driveway, drives its street, Lantern Avenue and the player's road, and pulls into a car park a road reaches. Later it drives home. One car for about ten students who drive, never more than nine at once at Normal |
 | Crossings and gaps | A car stops short of a crossing while a walker is on it. A car keeps a gap behind the one in front, so they queue behind a bus at its stop |
 | The shuttle | The pack's orange bus loops the campus roads, pausing at each car park's door, each crossing and where a road runs beside a path. Scenery until the shuttle service is built (8.3). It needs at least two such places |
 | Delivery trucks | A grocery truck or a mail truck drives in from the edge of the map, stands seven seconds beside a dining hall or the campus store, and leaves. Only where a road is beside one of them, and never at night |
-| Edge markers | When no street can walk in, the pack's arrow sign stands at the campus edge beside College Avenue, on the row of the side street nearest the lecture halls, with "Connect a path here so locals can walk in". When no car park has a road, the pack's blue road sign stands on another row with "Build parking with a road here so locals can drive in". Each reads at normal phone zoom with no panel open and goes when the campus is joined. A tap puts the path tool in hand, or begins placing a parking lot. Both are worked out by `townHints` from the access data the rules use |
+| Edge markers | When no street can walk in, the pack's arrow sign stands at the campus edge beside Lantern Avenue, on the row of the side street nearest the lecture halls, with "Connect a path here so locals can walk in". When no car park has a road, the pack's blue road sign stands on another row with "Build parking with a road here so locals can drive in". Each reads at normal phone zoom with no panel open and goes when the campus is joined. A tap puts the path tool in hand, or begins placing a parking lot. Both are worked out by `townHints` from the access data the rules use |
 | Bikes and skateboards | Left out. No figure in the packs rides anything. Listed in section 26 |
 
 `?demo=unjoined` shows the markers, `?demo=stop3&hour=8` the morning rush, and `?demo=play` recreation in use.
@@ -3585,7 +3585,7 @@ The turn fits well. The reference is half again as wide as it is tall, and the g
 
 ### 35.3 The districts, in game cells
 
-x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
+x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. Lantern Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
 
 | District on the reference | Where it lands | Built from |
 |---|---|---|
@@ -3602,8 +3602,8 @@ x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College
 | The pool complex and the tennis centre | About x 17 to 19, y 43 to 46 | The pool and two sets of courts |
 | The big parking structures | The north edge, x 12 to 28, y 0 to 2 | Parking structures on a road |
 | The surface lots | The west edge, and one in each field | Parking lots on the loop road |
-| The loop road | Round the west and north edges, joined to College Avenue | Road, with crossings where the walks meet it |
-| The transit centre | Where the long walk meets College Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
+| The loop road | Round the west and north edges, joined to Lantern Avenue | Road, with crossings where the walks meet it |
+| The transit centre | Where the long walk meets Lantern Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
 | Facilities, receiving, the plant | The north-west corner | Facilities Yards, enough to cover every place that drops litter |
 | The health centre and campus police | Near the union and near the stadium | A Medical Center and Campus Safety, placed to cover the dorms and the places to play |
 | The tower quad | The north end of the core | The Administration building on a quad |
@@ -3709,17 +3709,17 @@ Built on 2026-11-12, ahead of Stop C at the owner's word, on the branch `play-st
 | The second commons | 9.5, 22 | A dining hall, a burger grill and a taco stand |
 | The north-east residence halls | 27.5, 7.5 | 15 residence halls on two walks, a dining hall, a quad, courts |
 | The hill residences | 5.5, 37 | 7 residence halls round a quad in the south-west field, a dining hall, courts |
-| The houses and apartments by the avenue | 27.5, 28 | 6 residence halls on a walk that reaches College Avenue, a diner |
+| The houses and apartments by the avenue | 27.5, 28 | 6 residence halls on a walk that reaches Lantern Avenue, a diner |
 | The far apartments | 4.5, 3.5 | 4 residence halls in the north-west corner, a coffee stand |
 | The halls by the fields | 15, 38.5 | 4 residence halls beside the ball fields, a smoothie bar |
-| The stadium plot | 23, 32 | The bare plot, a parking structure beside it, and its own road in from College Avenue |
+| The stadium plot | 23, 32 | The bare plot, a parking structure beside it, and its own road in from Lantern Avenue |
 | The recreation centre | 16.5, 31 | The gym |
 | The ball fields | 16.5, 39 | Two recreation fields |
 | The pool and the courts | 17.5, 44 | The pool and two sets of courts |
 | The parking structures | 19.5, 1.5 | Three on the north edge, on the loop road |
-| The surface lots | west edge and the fields | Three on the loop road down the west edge, and one by College Avenue in the south-east field |
-| The loop road | | Down the west edge and along the north edge to College Avenue |
-| The walk to College Avenue | 27.5, 15 | A path from the east end of the campus to the avenue, with a small plaza that joins the streets on both sides of it |
+| The surface lots | west edge and the fields | Three on the loop road down the west edge, and one by Lantern Avenue in the south-east field |
+| The loop road | | Down the west edge and along the north edge to Lantern Avenue |
+| The walk to Lantern Avenue | 27.5, 15 | A path from the east end of the campus to the avenue, with a small plaza that joins the streets on both sides of it |
 | Facilities | 2.5, 8 | A Facilities Yard on the west edge below the far apartments. Two more, east and south, so every place that drops litter has one in reach |
 | The health centre and Campus Safety | | A Medical Center north of the union and Campus Safety by the stadium, with a second of each beside the north-east halls and the gym |
 

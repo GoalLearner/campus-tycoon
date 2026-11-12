@@ -24,6 +24,10 @@ export {
   localsNeedingBeds,
   shortage,
   studentsWanted,
+  fallApplicants,
+  rankLift,
+  type ApplicantCause,
+  type Applicants,
 } from './systems/demand';
 export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCause } from './systems/growth';
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
@@ -41,6 +45,8 @@ export {
   firstClassArrived,
   hasCareStaff,
   marketingLift,
+  marketingCost,
+  tuitionRate,
   staffCount,
   studentsInCircle,
   workerCount,
@@ -178,6 +184,8 @@ export * from './systems/decisions';
 export * from './systems/inbox';
 export * from './systems/boosts';
 export * from './systems/advisors';
+export * from './systems/goals';
+export * from './config/goals';
 export * from './newspaper';
 export * from './notify';
 export * from './config/inbox';

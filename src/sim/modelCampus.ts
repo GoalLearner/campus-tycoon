@@ -9,13 +9,13 @@ import type { Cell, MapState, PlacedType, Zone } from './types';
 /**
  * The model campus (DESIGN.md section 35): a whole campus from the first
  * minute, laid out district by district like the reference campus of section
- * 23, turned a quarter turn so its main street meets College Avenue.
+ * 23, turned a quarter turn so its main street meets Lantern Avenue.
  *
  * Nothing of the reference is here but where things are. Every building is
  * one of the game's own, every name comes from the game's own generators, and
  * the plan below is written in the game's cells: x runs 0 to 31 from west to
  * east and y runs 0 to 47 from north to south, the starting land and both
- * fields. College Avenue is the column just east of x 31.
+ * fields. Lantern Avenue is the column just east of x 31.
  *
  * It is laid by this script and never by hand, so the same seed always gives
  * the same campus. The script refuses to put anything on ground that is not
@@ -126,7 +126,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   };
 
   // ------------------------------------------------------ roads and walks
-  // The loop road: down the west edge and along the north edge to College Avenue.
+  // The loop road: down the west edge and along the north edge to Lantern Avenue.
   district('loop', 'The loop road', { x: 15.5, y: 22.5 }, () => {
     ground('road', row(0, 0, 31));
     ground('road', col(0, 1, 45));
@@ -143,7 +143,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   ground('path', row(14, 15, 23), false);
   ground('path', row(34, 15, 23), false);
 
-  district('transit', 'The walk to College Avenue', { x: 26, y: 15 }, () => {
+  district('transit', 'The walk to Lantern Avenue', { x: 26, y: 15 }, () => {
     ground('path', row(15, 23, 31));
     // A small plaza where it meets the avenue, wide enough to join the streets on both sides of it.
     ground('path', [[31, 14], [30, 14], [31, 16], [30, 16]], false);
@@ -254,7 +254,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   district('stadium', 'The stadium plot', { x: 22.5, y: 31.5 }, () => {
     put('stadium', 21, 31);
     put('garage', 24, 32);
-    // The garage's own road in from College Avenue.
+    // The garage's own road in from Lantern Avenue.
     ground('road', row(34, 24, 31), false);
     ground('tree', [[20, 30], [22, 30], [26, 31], [28, 31], [30, 31]], false);
   });

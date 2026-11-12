@@ -323,6 +323,21 @@ export interface Stats {
   peakEnrollment: number;
 }
 
+/**
+ * Size goals, rank goals and eras (DESIGN.md section 37). Only a game begun
+ * on the model campus has them.
+ */
+export interface Goals {
+  /** How many of the eight size goals are reached. Kept for good. */
+  size: number;
+  /** How many of the eight rank goals are reached. Kept for good. */
+  rank: number;
+  /** Each goal and era as it was reached, oldest first. `n` counts from 0 on a ladder, and is the era's number for an era. */
+  reached: Array<{ ladder: 'size' | 'rank' | 'era'; n: number; year: number }>;
+  /** Free buildings taken for size goals so far. Nothing gives one yet (37.7). */
+  rewards: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -363,6 +378,8 @@ export interface GameState {
   football: Football;
   decisions: Decisions;
   inbox: Inbox;
+  /** The goals of a game begun on the model campus. null on a game begun on the small campus, which has none. */
+  goals: Goals | null;
 }
 
 // ------------------------------------------------------------- football --
@@ -706,6 +723,7 @@ export interface Term {
 
 export type LogKind =
   | 'inbox'
+  | 'goal'
   | 'built'
   | 'intake'
   | 'waitlist'

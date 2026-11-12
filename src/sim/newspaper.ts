@@ -1,5 +1,6 @@
 import { dateAt, formatDate } from './calendar';
 import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand';
+import { ERAS, RANK_GOALS } from './config/goals';
 import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
@@ -10,6 +11,7 @@ import { applicantsLift } from './systems/boosts';
 import { budget, marketingLift } from './systems/budget';
 import { averageDesirability, capacityWanted } from './systems/demand';
 import { athleticLift, seatsNow } from './systems/football';
+import { nextSizeGoal, sizeGoal } from './systems/goals';
 import { inReach } from './systems/placed';
 import { roomPlan } from './systems/plan';
 import { sampleStudents, studentCard } from './systems/students';
@@ -172,6 +174,8 @@ function pickLine(state: GameState, tick: number, lines: readonly string[]): str
   return lines[hashInts(state.seed, tick, 611) % lines.length]!;
 }
 
+const GREW = ['Registrar Requests a Longer List', 'Mail Room Declares an Emergency', 'Bookstore Orders More Lanyards', 'Parking Office Declines to Comment'];
+const CLIMBED = ['Provost Seen Practising a Modest Smile', 'Rival Deans Request the Method', 'Admissions Office Reprints the Brochure', 'Trustees Take Full Credit'];
 const WON = ['Band Takes Full Credit', 'Trustees Suddenly Remember Their Seats', 'Bookstore Runs Out of Scarves', 'Parking Office Declares It a Coincidence'];
 const LOST = ['Coach Praises "Several Good Minutes"', 'Band Reported in Fine Form', 'Fans Admire the Weather', 'Athletics Office Points to the Schedule'];
 
@@ -202,6 +206,15 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
           headline: turnedAway > 0 ? `${admitted.toLocaleString('en-US')} Move In; ${turnedAway.toLocaleString('en-US')} More Wait for ${unit === 'beds' ? 'Beds' : 'Classroom Seats'}` : `${admitted.toLocaleString('en-US')} Move In; Housing Office Surprised to Find Room for All`,
           deck: entry.text,
         });
+        break;
+      }
+      case 'goal': {
+        // A goal or an era reached is the headline of its day (DESIGN.md 37.7).
+        const era = Number(entry.data?.era ?? -1);
+        const size = entry.data?.ladder === 'size';
+        const n = Number(entry.data?.count ?? 1) - 1;
+        const what = era > 0 ? `The ${ERAS[era]} Era Begins at ${school}` : size ? `${school} Passes ${headCount(sizeGoal(state, n))} Students` : `${school} Enters the Top ${RANK_GOALS[n]}`;
+        out.push({ weight: era > 0 ? 106 : size ? 104 : 103, headline: `${what}; ${pickLine(state, entry.tick, size ? GREW : CLIMBED)}`, deck: entry.text });
         break;
       }
       case 'rankings': {
@@ -304,6 +317,7 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
   for (const entry of log) {
     if (entry.kind === 'football' && (entry.data?.tier !== undefined || entry.data?.earned !== undefined || entry.data?.title === 1)) offer(TOP_WEIGHTS.goodNews, 'news', entry.text, 'football');
     else if (entry.kind === 'rankings') offer(TOP_WEIGHTS.goodNews - 1, 'news', entry.text);
+    else if (entry.kind === 'goal') offer(TOP_WEIGHTS.goal, 'news', entry.text);
     else if (entry.kind === 'exam' && Number(entry.data?.peak ?? 0) >= 60) offer(TOP_WEIGHTS.exams, 'problem', entry.text);
   }
 
@@ -361,6 +375,10 @@ export function welcomeEdition(state: GameState): Edition {
   const students = enrollment(state);
   const top: TopItem[] = [];
 
+  // The first goal, on a game that has goals.
+  const goal = nextSizeGoal(state);
+  if (goal) top.push({ kind: 'news', text: `${state.school.name} has ${headCount(students)} students. The first goal is ${headCount(goal.goal)}.` });
+
   // The next class, and what the campus is short of to fit it.
   const next = roomPlan(state).students;
   if (next > 0) {
@@ -408,7 +426,7 @@ export function welcomeEdition(state: GameState): Edition {
 
 /** Every line an edition could print that is written here, for the tone check. */
 export function newspaperLines(): string[] {
-  return [...WON, ...LOST, ...Object.values(COMPLAINT), ...WELCOME.map((line) => line('Larkspur'))];
+  return [...WON, ...LOST, ...GREW, ...CLIMBED, ...ERAS.map((era) => `The ${era} Era Begins at Larkspur`), ...Object.values(COMPLAINT), ...WELCOME.map((line) => line('Larkspur'))];
 }
 
 /** Used by the tests: the number of students on campus the poll could ask. */

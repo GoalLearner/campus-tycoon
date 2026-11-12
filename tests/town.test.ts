@@ -220,7 +220,7 @@ describe('locals', () => {
 });
 
 describe('roads and parking', () => {
-  /** A car park south of the spine, with a road east to College Avenue. */
+  /** A car park south of the spine, with a road east to Lantern Avenue. */
   const LOT: readonly [number, number] = [26, 20];
   const ROAD = rowBetween([28, 20], [31, 20]);
 
@@ -262,7 +262,7 @@ describe('roads and parking', () => {
 
     // Zone room for everyone, along walks, so only the town's places decide who lives off campus.
     state = act(state, { type: 'paint', tool: 'path', cells: [...rowBetween([0, 14], [7, 14]), ...rowBetween([0, 17], [7, 17]), ...rowBetween([24, 14], [30, 14])] });
-    // That last walk stops a cell short of College Avenue, so it joins no second neighbourhood.
+    // That last walk stops a cell short of Lantern Avenue, so it joins no second neighbourhood.
     expect(townPlaces(state.map).walk).toBe(places.walk);
     state = act(state, { type: 'paint', tool: 'housing', cells: [...rowBetween([0, 18], [18, 18]), ...rowBetween([22, 18], [31, 18])] });
     state = act(state, { type: 'paint', tool: 'academic', cells: [...rowBetween([0, 13], [9, 13]), ...rowBetween([20, 13], [31, 13])] });
@@ -524,7 +524,7 @@ describe('the Parking overlay', () => {
 });
 
 describe('what the map points at while the town cannot get in', () => {
-  /** A campus from before the town was joined: the path to College Avenue is not there. */
+  /** A campus from before the town was joined: the path to Lantern Avenue is not there. */
   const unjoined = (): GameState => act(rich(), { type: 'paint', tool: 'clear', cells: rowBetween([24, STARTER.townLink.y], [31, STARTER.townLink.y]) });
 
   it('points at nothing to walk by on a new campus, whose path already meets the street', () => {

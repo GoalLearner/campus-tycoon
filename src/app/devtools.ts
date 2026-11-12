@@ -113,7 +113,7 @@ function incidentCampus(covered: boolean): GameState {
 
 /**
  * The third play stop on one screen. Room for the whole founding class, a car
- * park and a parking structure with roads to College Avenue, so the locals of
+ * park and a parking structure with roads to Lantern Avenue, so the locals of
  * the streets too far to walk drive in, and a second car park with no road,
  * which holds nobody.
  */

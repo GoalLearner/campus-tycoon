@@ -25,7 +25,7 @@ function place(state: GameState, building: PlacedType, x: number, y: number): Ga
  *   full court and a line beside it.
  * - South: dorms around a track, a recreation field and a pool.
  *
- * Joined to the town by its walk, with a car park and a road to College Avenue.
+ * Joined to the town by its walk, with a car park and a road to Lantern Avenue.
  */
 export function playCampus(students = 1500): GameState {
   const now = clock.now();
@@ -49,7 +49,7 @@ export function playCampus(students = 1500): GameState {
   // Somewhere to sit beside the south walk.
   state = paint(state, 'bench', [[14, 20], [14, 24]]);
   state = paint(state, 'table', [[12, 23], [12, 24]]);
-  // A car park with a road east to College Avenue.
+  // A car park with a road east to Lantern Avenue.
   state = place(state, 'parking', 27, 20);
   state = paint(state, 'road', rowBetween([29, 20], [31, 20]));
   state = advance(state, started, now).state;
@@ -100,7 +100,7 @@ export function foodCampus(students = 1200): GameState {
   state = place(state, 'convenience', 13, 12);
   state = place(state, 'truck', 26, 18);
   state = paint(state, 'bin', [[8, 11], [14, 12], [27, 18]]);
-  // A road in from College Avenue along the south side of the food court, so deliveries can pull up at it.
+  // A road in from Lantern Avenue along the south side of the food court, so deliveries can pull up at it.
   state = paint(state, 'road', rowBetween([19, 22], [31, 22]));
   // A Facilities Yard with hands enough for all of it.
   state = place(state, 'yard', 15, 11);
@@ -141,7 +141,7 @@ export function lifeCampus(students = 1200): GameState {
   // A pond west of the quad with lawn around it, and a fountain: a quad of one cell.
   state = place(state, 'pondMedium', 10, 15);
   state = paint(state, 'quad', [[24, 16]]);
-  // A car park with a road east to College Avenue.
+  // A car park with a road east to Lantern Avenue.
   state = place(state, 'parking', 27, 20);
   state = paint(state, 'road', rowBetween([29, 20], [31, 20]));
   state = paint(state, 'path', rowBetween([27, 18], [27, 19]));
@@ -220,7 +220,7 @@ export function footballCampus(at = 'live', students = 2400, tier = 2): GameStat
 }
 
 /**
- * A campus the town cannot get into: no walk to College Avenue and no parking.
+ * A campus the town cannot get into: no walk to Lantern Avenue and no parking.
  * `?demo=unjoined`. The map says so at its edge.
  */
 export function unjoinedCampus(): GameState {

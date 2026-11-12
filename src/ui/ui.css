@@ -1815,3 +1815,47 @@ button.money {
   flex: 0 0 auto;
   font-weight: 700;
 }
+
+/* ------------------------------------------------------- the Size panel */
+
+button.students {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+
+.size-goal {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.size-bar {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.size-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.size-row.total {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.size-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}

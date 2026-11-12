@@ -852,7 +852,7 @@ export class CampusScene extends Phaser.Scene {
     for (const placed of this.unlinkedCarParks(state)) {
       items.push({ key: 'icon.noroad', x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: 'float', lift: placed.type === 'garage' ? BADGE_LIFT.tall : BADGE_LIFT.low });
     }
-    // A campus the town cannot get into says so at its edge: a sign beside College Avenue where a path,
+    // A campus the town cannot get into says so at its edge: a sign beside Lantern Avenue where a path,
     // or a road to parking, would let locals in. Worked out from the same access data the rules use.
     const hints = townHints(state);
     this.hintSpots.clear();

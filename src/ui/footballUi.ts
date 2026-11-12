@@ -1,5 +1,6 @@
 import {
   academicInputs,
+  academicRating,
   athleticLift,
   budget,
   dateAt,
@@ -161,7 +162,10 @@ export function footballView(state: GameState): FootballView {
     tv: f.tv.perYear > 0 && f.tv.until >= state.clock.week.year ? `TV and conference deal: ${dollars(f.tv.perYear)} a year, to the end of year ${f.tv.until}.` : stadium.tier === 0 ? 'No TV deal. Offers come once there is a stadium.' : 'No TV deal. Offers come in the spring.',
     standing: `Athletic standing ${Math.round(f.standing)} of 100. It brings ${Math.round(lift * 100)}% more applicants: about ${people((fallClassDraw(state) * lift) / (1 + lift))} of the next fall class.`,
     academic: {
-      line: field.rank > 0 ? `No. ${field.rank} of 200 for academics, published on rankings day of year ${field.rankYear}.` : 'The first academic ranking is published on rankings day, in the spring.',
+      line:
+        (field.rank > 0 ? `No. ${field.rank} of 200 for academics, published on rankings day of year ${field.rankYear}.` : 'The first academic ranking is published on rankings day, in the spring.') +
+        // On a game with goals the published rating follows the year's measure a part of the way (DESIGN.md 37.4).
+        (state.goals ? ` The published rating is ${Math.round(field.academic)}. This year's measure is ${Math.round(academicRating(state))}, and the published one moves toward it a little each rankings day.` : ''),
       rows: inputs.map((input) => ({ name: input.name, weight: `${input.weight}%`, level: input.level === null ? 'Not yet' : `${Math.round(input.level)}`, detail: input.detail })),
       grades:
         field.rank > 0 && happy !== undefined
