@@ -578,7 +578,7 @@ export function mountUi(root: HTMLElement): void {
       const colour = colourSelect(DEFAULT_COLOUR);
       // Two ways to begin: the small campus to grow from nothing, or the model campus, whole from the first minute.
       const campus = document.createElement('select');
-      for (const [value, label] of [['small', 'A small campus to grow'], ['model', 'The model campus, already built']] as const) {
+      for (const [value, label] of [['small', 'A small campus'], ['model', 'The model campus']] as const) {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = label;
@@ -918,18 +918,18 @@ export function mountUi(root: HTMLElement): void {
       card.append(el('h1', '', tight ? `${ZONE_LABEL[tight]} is the bottleneck` : 'There is room for everyone'));
       let lead: string;
       if (plan.goal === 'waitlist') {
-        lead = `${plan.students} students are waiting for a place. The waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)}.`;
+        lead = `${headCount(plan.students)} students are waiting for a place. The waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)}.`;
       } else if (tick < FIRST_INTAKE_TICK) {
         lead = `${headCount(plan.students)} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
       } else {
-        lead = `The next class is ${plan.students} students.`;
+        lead = `The next class is ${headCount(plan.students)} students.`;
       }
       card.append(el('p', '', lead));
       const rate = acceptanceRate(state);
       const lastIntake = state.admissions.lastIntake;
       if (rate !== null && lastIntake) {
         const placed = lastIntake.admitted + state.admissions.waitlistAdmitted;
-        card.append(el('p', 'fine', `Acceptance rate ${Math.round(rate * 100)}%: ${placed} of the ${lastIntake.expected} who applied got a place.`));
+        card.append(el('p', 'fine', `Acceptance rate ${Math.round(rate * 100)}%: ${headCount(placed)} of the ${headCount(lastIntake.expected)} who applied got a place.`));
       }
 
       const list = el('ul', 'away-list');
