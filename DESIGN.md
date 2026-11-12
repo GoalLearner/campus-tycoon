@@ -1324,7 +1324,7 @@ Saves are versioned JSON behind one persistence interface. On the web that is In
 
 **The away list is saved with the game** (2026-11-11). It is kept beside the state in the same file, so the two can never disagree, and it stays until the player taps "Back to campus". If the app is closed first it is still there next time, with anything newer added to it. An exported backup does not carry it.
 
-**Backups on the web** (2026-11-11). The app asks the browser for persistent storage when a game is founded and again every time one is loaded. The Menu shows a gentle reminder to export a backup when the browser has not agreed, or when the last export, or the founding of the game if there has been none, is more than five days old. The iOS app never shows it: its files are not the browser's to clear.
+**Backups on the web** (2026-11-11). The app asks the browser for persistent storage when a game is founded and again every time one is loaded. The Menu shows a gentle reminder to export a backup when the browser has not agreed, or when the last export, or the founding of the game if there has been none, is more than five days old. The iOS app never shows it: its files are not the browser's to clear. On an iPhone or iPad, a browser tab also shows one tip, once, on a return visit: to add the game to the Home Screen, because Safari keeps the saves of Home Screen games. It never shows in the iOS app or when the game is already running from the Home Screen.
 
 | Browser | Without a grant | How a grant is given |
 |---|---|---|
@@ -1399,7 +1399,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1619,9 +1619,11 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Town | Share of each class who are locals | About four in ten |
 | Town | Neighbourhoods at the start, house plots in each, students per house | 3, about 12, 4 |
 | Town | Walking range from a neighbourhood gate to the nearest Academic lot | 10 minutes |
-| Money | Tuition and room fee once neighbourhoods arrive | $8,200 a student and $3,000 an occupied bed |
-| Roads | Cost a cell, upkeep a cell, the desirability a road takes from a lot beside it | To be set. Small |
-| Parking | Cars in a surface lot, cars in a structure, their costs and penalties | About 20 on two cells; several times that on four; the structure costs much more and offends less |
+| Money | Tuition and room fee | $8,200 a student and $3,000 an occupied bed |
+| Roads | Cost a cell, upkeep a cell, the desirability a road takes from a lot beside it | $3,000, $150 a year, 3 points |
+| Parking | Cars in a surface lot, cars in a structure, their costs and penalties | 20 on two cells for $20K, 6 points off a lot beside it; 100 on four cells for $160K, 3 points off |
+| Town | Locals in a class, students a house plot, plots a neighbourhood, the longest walk from town | Four in ten, 10, 9 to 14, 12 minutes |
+| Land | The map, and the fields for sale | 42 by 48 cells; two fields of 16 by 16 at $250K and $400K |
 | Greek Row | Beds per stage, target share of enrollment | The table in 6.2; share to be set |
 | Simulate | Optimizer check-in interval | 2 hours |
 | Performance | 30 days of catch-up | Under one second on a desktop |
@@ -1987,7 +1989,7 @@ Accepted by the owner on 2026-11-11 as the defaults:
 
 ## 25. Off-campus neighbourhoods, roads and parking
 
-Asked for by the owner on 2026-11-11 as item 8 of the feedback pass, and settled the same day. It is the third play stop of that pass. Nothing here is built: its art waits in the look review (`?demo=town`).
+Asked for by the owner on 2026-11-11 as item 8 of the feedback pass, and settled the same day. **Built the same day as play stop 3** (`?demo=stop3` shows it). 25.1 to 25.5 are the decisions. 25.6 is what was built, and where it differs.
 
 ### 25.1 Decisions
 
@@ -2039,13 +2041,13 @@ The owner overrode the proposal of no road tool. Traffic simulation stays cut.
 
 Saves are versioned and upgraded one step at a time by pure functions (17.5). This stop is one more step, written so that a player who opens an old save loses nothing and is surprised by nothing.
 
-1. **The map grows, and nothing moves.** The town is a band of new rows added beyond one edge of the land. Cell indexes are row by row, so every existing cell, building and timer keeps its place and its index. Nothing the player built can be in the way, because the band is land that did not exist.
+1. **The map grows, and nothing moves.** The town is a band of new columns beyond the east edge of the land, and the fields for sale are new rows to its south. Every cell keeps its x and y, so every building and timer is where it was. The row-by-row indexes do change, because the map is wider, and the upgrade rebuilds them. Nothing the player built can be in the way, because the new ground did not exist. (This point first said the indexes were kept. That held only for a band of rows.)
 2. **The town is made once and stored.** Neighbourhoods, plots, street names and streets are generated from the save's own seed by hashing, without drawing from any random stream, so the same save always upgrades to the same town and other systems' streams are untouched.
 3. **Money is unchanged at the moment of the upgrade.** Under the old rule six in ten students held a bed. Tuition and the room fee are set so that six in ten paying both equals the old flat tuition.
 4. **Beds are unchanged.** The old rule asked for beds for six in ten. The new rule asks for beds for the students who are not locals: the same six in ten.
 5. **Nobody enrolled is turned out.** Locals already enrolled keep coming until they graduate, whether or not a path or a parking space reaches them yet. The new rule binds new classes only. This follows the house rule that growing must never punish the player.
 6. **The player is told once.** The first load shows one line in the away list: the town now stands beside campus, locals in new classes need a path or parking, and current students are unaffected.
-7. **Tests.** A fixture save from before the upgrade is kept in `tests/fixtures`. It must load with the same enrollment, cash, yearly income and buildings, every old cell at the same index, a town in the new rows, and the same result when upgraded twice.
+7. **Tests.** A fixture save from before the upgrade is kept in `tests/fixtures`. It must load with the same enrollment, cash, yearly income and buildings, every old cell at the same x and y, a town in the new rows, and the same result when upgraded twice.
 
 The highway does not exist on the map until layer 3. Until then a road counts when it reaches a town street.
 
@@ -2061,6 +2063,32 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 | Noise | Brings one piece of layer 3 forward. Desirability reads only green space and walk time today, so "a road beside the lot" is the first noise the lot inspector names |
 | Size of the stop | The largest of the three. Neighbourhoods, the locals rule, room fees, the road tool, two kinds of parking, cars, a new stall cause and a save upgrade arrive together because none of them means anything alone |
 | Neglect-safe and cheap catch-up | Passes. Town houses never decay and cost nothing. Who walks and who drives is worked out when the player builds and at each intake |
+
+### 25.6 As built
+
+| Piece | Built |
+|---|---|
+| The map | 42 cells wide by 48 tall. The starting land is the same 32 by 32. The town is the ten columns east of it, for the full height. Two fields of 16 by 16 lie south of the starting land |
+| The town | "College Avenue" runs down the campus edge. Eight side streets run east from it, each a neighbourhood with 9 to 14 house plots. A plot stands for 10 local students [T]. About 900 places in all, so the town fills as the school grows |
+| Locals | Four in ten of every class. A neighbourhood walks when a path meets College Avenue within two rows of its side street and the walk to class is 12 minutes or less [T]. From any other it drives, one parking space each |
+| A local's place | Decided when they enrol and kept until they graduate. Clearing the path or car park later strands nobody, and the next class finds fewer places. Each class year's count is stored |
+| Parking | Parking lot: 2 by 1, $20K, 20 cars. Parking structure: 2 by 2, $160K, 100 cars. Either holds cars only when a road joins it to a street, or it touches the avenue itself |
+| Roads | $3,000 a cell and $150 a year. A road over a path, or a path over a road, makes a crossing that both use. Reached from a Road card in the Build menu, because the tool bar is full |
+| Noise | A lot loses 3 points of desirability for a road or street beside it, 6 for a parking lot within a cell and 3 for a structure |
+| Money | Tuition $8,200 a student and a room fee of $3,000 for each occupied bed |
+| Land | Tap a field to see its price and buy it: $250K and $400K. Nothing can be built on a field before it is bought, and the town can never be changed |
+| On screen | Houses stand on as many plots as there are locals living there. Cars drive between those houses and the car parks a road reaches, more in the morning and evening. Tapping a house or side street shows who lives there, whether they walk or drive, and what would let more come |
+| Old saves | Upgraded as 25.4 says, with one line in the away list |
+
+**Where it differs from the decisions above, and what is rough.**
+
+- The town is on the east side, not below the campus. A walk from the starter campus reaches the avenue along a row no test or layout used.
+- Houses appear when a class arrives, not over real hours.
+- The Housing bar does not offer three fixes with numbers. The room plan has one line that names the nearest street and says a path or parking would save beds.
+- Land purchase is two fields. The full map of 25 parcels (5.2) waits, because growing the map again means another upgrade step.
+- Cars pass through one another and turn on the spot. There is no highway.
+- A car park with no road says so in its panel and in a note when it is placed. Nothing marks it on the map.
+- Town relations, landlords and the freshman live-on policy are not built.
 
 ---
 
@@ -2222,6 +2250,19 @@ Lit windows would have to be made here, as an overlay cut from each building's o
 | The guard for night-only players | A minimum number of walkers at night, and a setting that shows daylight at any hour |
 
 Lit windows, umbrellas, coats and snow wait, because their art has to be made. Weather, and everything in 28.2, stays in layer 1 with the calendar.
+
+**Built with play stop 3 on 2026-11-11.**
+
+| Piece | Built |
+|---|---|
+| The light | One colour multiplied over the map, blended between ten points of the day: plain from 11 to 16, warm toward evening, blue and at most six tenths strong at night, so the campus stays readable. Read from the device's clock once a second |
+| Street lamps | The pack's lamp on every fourth cell of path and every fifth of road or street. Lit from early evening until after dawn. Its glow is the pack's own picture of the lit lamp, added as light over the night |
+| Walkers | Against a steady afternoon: a third more in the morning and nearly all heading to class, a fifth fewer in the evening and heading to dining, the gym and home, and three tenths at night |
+| The night guard | Never fewer than four walkers in view at any hour, and a Menu switch, "Daylight at any hour" |
+| Cars | Busiest in the morning, heading in, and in the evening, heading home |
+| The student card | "Doing now" reads by period: hurrying to class in the morning, an evening or night class later, asleep in the dorm at night |
+
+`&hour=22` on a dev page shows any hour. Nothing here is simulation, and nothing is saved but the switch.
 
 ---
 
