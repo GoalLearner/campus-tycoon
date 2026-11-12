@@ -1585,6 +1585,8 @@ It includes a web app manifest, an icon, and a service worker so it opens withou
 | Advisors | Advisors with loyalty, hired and fired |
 | Goals | A reset that founds a new campus with legacy bonuses |
 | Students | The rest of the archetype and quirk catalogue, as content updates |
+| Students | Student mode: play as one student of your own university (20.3) |
+| Far future | A campus to walk through in 3D, perhaps as a companion game on Roblox (20.4) |
 
 ### 20.2 Cut order if v1 slips
 
@@ -1594,6 +1596,49 @@ It includes a web app manifest, an icon, and a service worker so it opens withou
 4. Greek Row, last
 
 Before any system is cut, the inbox cadence drops from three items a day to two.
+
+### 20.3 Student mode (later, not built)
+
+Asked for by the owner on 2026-11-12, for the later roadmap. Nothing here is built or scheduled. In his words:
+
+"Play as one student at my university. Start by picking a student from the campus or creating one, then live their semesters: choose classes and a major, join clubs, rush Greek Row, relationships, intramurals, jobs, exams, and breaks, ending at graduation as an alumnus in the hall of fame. Everything that happens comes from the real state of the campus I built (dining, safety, recreation, class sizes, football results, Stress, weather). Built on the existing student card data and 2D art, with the camera following the student."
+
+**What it would reuse.**
+
+| Exists today | What Student mode gets from it |
+|---|---|
+| The student card (13.8): a seeded name, major, nature, quirk and club, where they live, a GPA, a relationship status that moves by the semester, and happiness with its causes | Every student on campus is already a character to pick. The card is the character sheet |
+| The numbers a card reads: the causes of Happiness at the spot where a student lives, teaching quality, tutoring, social life and Stress (27) | The campus the player built is what happens to the student. Nothing is invented for the mode |
+| Dining, recreation, Campus Safety and medical buildings with their reach, and incidents (30, 32) | What a day is like follows from what stands near the student's hall |
+| The calendar (4.8 and 34): terms, finals weeks, breaks, home games and graduation day | The shape of each semester |
+| Football results and game days (34) | Game-day scenes that follow the real season |
+| Weather and time of day (28), seen and never counted | The look of each scene |
+| Walkers, the 2D art, and the camera that already follows a tapped walker | The view. Following one student is built |
+| The newspaper and the Inbox (36) | A way to tell the student's week and to put choices to the player |
+| The count of graduates each year (24) | The day the student graduates |
+
+**What it would need that does not exist.**
+
+| Needed | Why it is new |
+|---|---|
+| One stored student | Nothing is stored for any student today: a card is worked out when it is opened. A played student makes choices that have to be kept. It is one student in the save, never thousands, so catch-up stays fast (13.1) |
+| Creating a student | An identity comes from the seed. There is no editor |
+| Classes, and a size for each class | The simulation has seats in a hall and one teaching-quality number. It has no courses, no timetable and no size for a single class |
+| Choosing and changing a major | A major is a seeded label with no rules |
+| Clubs with something to do | A club is a name only |
+| Greek Row and rush | Designed in section 14 and not built |
+| Intramurals and jobs | Neither exists. Recreation buildings and food places are there to hang them on |
+| Exams with a result | Finals week exists in the calendar and in Stress. No one student sits an exam |
+| Relationships that are played | The status on a card is a seeded story. Other students would have to be characters who remember |
+| Alumni and a hall of fame | A graduate is a number. The legacy screen of 15.5 is not built |
+| A pace for one life | The game gives a president a year a week. A semester lived as a student needs its own answer: scenes at their own speed, or days that keep the game's clock |
+| A second way to play | Every screen today is the president's. A student needs their own: a day, a timetable, the choices |
+| Who runs the campus meanwhile | The campus has to keep running under the same save while the player is a student |
+| A tone pass | Relationships and Greek life under the 4+ rule of section 16 |
+
+### 20.4 A campus to walk through in 3D (far future)
+
+Noted for the owner on 2026-11-12. An idea only: a 3D version of a player's own campus to walk through, possibly as a companion game on Roblox. What could carry over is the save's map, meaning which building stands on which cell, and its names. The art would all be new, because the game's art is 2D.
 
 ---
 
