@@ -32,6 +32,8 @@ import {
   demandBar,
   desirabilityHint,
   dollars,
+  dollarsTop,
+  headCount,
   dollarsShort,
   duration,
   enrollment,
@@ -836,11 +838,11 @@ export function mountUi(root: HTMLElement): void {
   // --------------------------------------------------------------- render --
 
   function renderHud(state: GameState): void {
-    setText(cash, dollars(state.money.cash));
+    setText(cash, dollarsTop(state.money.cash));
     const perHour = netPerRealHour(state);
     setText(rate, `${perHour >= 0 ? '+' : '-'}${dollarsShort(Math.abs(perHour))}/hr`);
     rate.className = perHour >= 0 ? 'rate up' : 'rate down';
-    setText(studentCount, String(enrollment(state)));
+    setText(studentCount, headCount(enrollment(state)));
     const mood = happinessView(state);
     setText(happyCount, String(mood.score));
     if (mood.mood !== shownMood) {
@@ -874,7 +876,7 @@ export function mountUi(root: HTMLElement): void {
       parts.row.classList.toggle('tight', tight === zone);
       setText(
         parts.amount,
-        gap > 0 ? `short ${gap} ${ZONE_UNIT[zone]}` : gap < 0 ? `${-gap} spare ${ZONE_UNIT[zone]}` : 'just enough',
+        gap > 0 ? `short ${headCount(gap)} ${ZONE_UNIT[zone]}` : gap < 0 ? `${headCount(-gap)} spare ${ZONE_UNIT[zone]}` : 'just enough',
       );
     }
 
@@ -888,15 +890,15 @@ export function mountUi(root: HTMLElement): void {
     let action: string;
     let later: string;
     if (plan.goal === 'waitlist') {
-      action = add ? `${plan.students} waiting: add ${add} to admit them` : `${plan.students} waiting: their room is being built`;
+      action = add ? `${headCount(plan.students)} waiting: add ${add} to admit them` : `${headCount(plan.students)} waiting: their room is being built`;
       later = `Waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)} · ${coming}`;
     } else if (tick < FIRST_INTAKE_TICK) {
       const arrives = duration(FIRST_INTAKE_TICK - tick);
-      action = add ? `${plan.students} students arrive in ${arrives}: add ${add}` : `${plan.students} students arrive in ${arrives}`;
+      action = add ? `${headCount(plan.students)} students arrive in ${arrives}: add ${add}` : `${headCount(plan.students)} students arrive in ${arrives}`;
       const fits = Math.min(plan.students, roomForNewStudents(state).room);
       later = fits >= plan.students ? 'There is room for all of them.' : `There is room for ${fits} of them so far.`;
     } else {
-      action = add ? `Next class is ${plan.students}: add ${add} to fit them all` : `Room for the whole next class of ${plan.students}`;
+      action = add ? `Next class is ${headCount(plan.students)}: add ${add} to fit them all` : `Room for the whole next class of ${headCount(plan.students)}`;
       later = coming;
     }
     setText(status, action);
@@ -918,7 +920,7 @@ export function mountUi(root: HTMLElement): void {
       if (plan.goal === 'waitlist') {
         lead = `${plan.students} students are waiting for a place. The waitlist closes in ${duration(state.admissions.waitlistUntilTick - tick)}.`;
       } else if (tick < FIRST_INTAKE_TICK) {
-        lead = `${plan.students} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
+        lead = `${headCount(plan.students)} students arrive in ${duration(FIRST_INTAKE_TICK - tick)}.`;
       } else {
         lead = `The next class is ${plan.students} students.`;
       }
@@ -938,11 +940,11 @@ export function mountUi(root: HTMLElement): void {
         if (need.short === 0) {
           text = `${ZONE_LABEL[zone]}: enough ${unit}.`;
         } else if (need.lots === 0) {
-          text = `${ZONE_LABEL[zone]}: ${need.short} ${unit} short, and all of them are being built.`;
+          text = `${ZONE_LABEL[zone]}: ${headCount(need.short)} ${unit} short, and all of them are being built.`;
         } else {
           const lots = `${need.lots} more ${ZONE_LOT[zone][need.lots === 1 ? 0 : 1]}`;
-          const already = need.building > 0 ? ` ${need.building} ${unit} are already being built.` : '';
-          text = `${ZONE_LABEL[zone]}: ${need.short} ${unit} short.${already} ${lots} would cover it: ${need.perLot} ${unit} each, ${dollarsShort(need.lots * paintCost('zoneLot', scaleOf(state)))} in all.`;
+          const already = need.building > 0 ? ` ${headCount(need.building)} ${unit} are already being built.` : '';
+          text = `${ZONE_LABEL[zone]}: ${headCount(need.short)} ${unit} short.${already} ${lots} would cover it: ${headCount(need.perLot)} ${unit} each, ${dollarsShort(need.lots * paintCost('zoneLot', scaleOf(state)))} in all.`;
         }
         list.append(el('li', '', text));
       }
@@ -955,7 +957,7 @@ export function mountUi(root: HTMLElement): void {
       const fixes = housingFixes(state);
       const lines = housingFixLines(fixes);
       if (fixes.bedsShort > 0 && (lines.path || lines.parking)) {
-        card.append(el('p', 'fix-head', `Three ways to find ${fixes.bedsShort} beds`));
+        card.append(el('p', 'fix-head', `Three ways to find ${headCount(fixes.bedsShort)} beds`));
         const ways = el('ol', 'fix-list');
         for (const line of [lines.lots, lines.path, lines.parking]) if (line) ways.append(el('li', '', line));
         card.append(ways);

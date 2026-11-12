@@ -135,7 +135,8 @@ describe('the model campus at its own size', () => {
     expect(off(budget(big).incomeTotal, budget(one).incomeTotal), "a year's income").toBeLessThan(0.02);
     // The same games were won, the same things happened, and neither needed rescuing.
     expect(big.football.record.w).toBe(one.football.record.w);
-    expect(big.incidents.handled + big.incidents.missed).toBe(one.incidents.handled + one.incidents.missed);
+    // As many things happened, give or take the whole students a small campus is rounded to.
+    expect(off((big.incidents.handled + big.incidents.missed) * scale, one.incidents.handled + one.incidents.missed), 'incidents').toBeLessThan(0.05);
     expect(big.money.grants).toBe(0);
     expect(one.money.grants).toBe(0);
     expect(campusClean(big)).toBeGreaterThan(0.9);

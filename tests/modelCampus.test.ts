@@ -65,7 +65,7 @@ describe('the model campus is laid by a script', () => {
   it('has every district of the design, each within three cells of the place given', () => {
     const districts = modelDistricts(35);
     const ids = districts.map((district) => district.id);
-    for (const id of ['core', 'tower', 'union', 'commons', 'northEastHalls', 'hill', 'avenueHouses', 'farApartments', 'stadium', 'recreation', 'fields', 'pool', 'structures', 'lots', 'loop', 'transit', 'facilities', 'care']) {
+    for (const id of ['core', 'tower', 'union', 'commons', 'northEastHalls', 'hill', 'avenueHouses', 'farApartments', 'fieldHalls', 'stadium', 'recreation', 'fields', 'pool', 'structures', 'lots', 'loop', 'transit', 'facilities', 'care']) {
       expect(ids, id).toContain(id);
     }
     for (const district of districts) {
@@ -76,8 +76,8 @@ describe('the model campus is laid by a script', () => {
     const state = model();
     const lots = state.map.buildings.filter(Boolean).length;
     const placed = state.map.placed.filter((item) => item && !['bin', 'seat'].includes(PLACED[item.type].family)).length;
-    expect(lots + placed).toBeGreaterThanOrEqual(80);
-    expect(lots + placed).toBeLessThanOrEqual(110);
+    expect(lots + placed).toBeGreaterThanOrEqual(90);
+    expect(lots + placed).toBeLessThanOrEqual(120);
   });
 
   it('has the long walk, the walk to College Avenue and the loop road, each joined up', () => {
@@ -130,7 +130,7 @@ describe('the model campus follows the game\'s own rules', () => {
       expect(map.score[building.y * map.width + building.x]!, `${at} is desirable enough`).toBeGreaterThanOrEqual(stageSpec(building.zone, MODEL_STAGE).desirabilityNeeded);
       if (building.zone === 'housing') expect(fedAt(map, building.x, building.y), `${at} has food in reach`).toBe(true);
     }
-    expect(lots).toBe(64);
+    expect(lots).toBe(72);
     expect(state.timers.filter((timer) => timer.kind === 'buildDone').length).toBe(0);
   });
 

@@ -629,8 +629,8 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
 }
 
 /** One line on a yard: keeping up, or how many more to hire. */
-export function yardLine(status: YardStatus): string {
-  if (status.workers === 0) return status.need > 0 ? `Nobody works here. Hire ${Math.min(status.max, Math.max(1, status.hire))} to start.` : 'Nobody works here.';
+export function yardLine(status: YardStatus, scale = 1): string {
+  if (status.workers === 0) return status.need > 0 ? `Nobody works here. Hire ${Math.min(status.max, Math.max(1, status.hire)) * scale} to start.` : 'Nobody works here.';
   if (status.hire === 0) return 'Keeping up.';
   const room = status.max - status.workers;
   if (room <= 0) return status.beyond ? 'Understaffed, and full. Build another yard near the busiest places.' : 'Full crew, catching up.';

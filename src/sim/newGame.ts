@@ -4,7 +4,7 @@ import { layModelCampus, type ModelDistrict } from './modelCampus';
 import { openWithStudents } from './systems/admissions';
 import { yardStatus } from './systems/grounds';
 import { openCapacity } from './selectors';
-import { YARD_MAX_WORKERS } from './config/grounds';
+import { WORK_PER_WORKER, YARD_MAX_WORKERS } from './config/grounds';
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
@@ -213,7 +213,8 @@ function openModelCampus(state: GameState, fullSize: boolean): void {
   for (const yard of state.map.placed) {
     if (!yard || yard.type !== 'yard') continue;
     state.grounds.workers[yard.id] = 0;
-    state.grounds.workers[yard.id] = Math.min(YARD_MAX_WORKERS, Math.max(1, yardStatus(state, yard).hire));
+    // Enough for the campus when it is full, which it is from its first fall: a crew sized for nine tenths falls behind.
+    state.grounds.workers[yard.id] = Math.min(YARD_MAX_WORKERS, Math.max(1, Math.ceil((yardStatus(state, yard).need * MODEL_CREW_ROOM) / WORK_PER_WORKER)));
   }
   state.money.ratesDirty = true;
   recomputeRates(state);
@@ -236,6 +237,9 @@ function modelScale(map: MapState): number {
   for (const building of map.buildings) if (building && building.zone === 'academic') seats += stageSpec('academic', building.stage, 1).capacity;
   return Math.max(1, Math.round(MODEL_STUDENTS / MODEL_FULL / Math.max(1, seats)));
 }
+
+/** [T] How much more work the model campus's crews are sized for than it asks on the day it opens. */
+export const MODEL_CREW_ROOM = 1.2;
 
 /** [T] How full the model campus opens, and its cash as a share of a year's spending. */
 export const MODEL_FULL = 0.9;

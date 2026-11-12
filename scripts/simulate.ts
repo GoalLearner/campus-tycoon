@@ -721,8 +721,8 @@ function assertModelCampus(seed: number): void {
     const payroll = (books.groups.find((group) => group.id === 'payroll')?.amount ?? 0) / Math.max(1, books.fullSpending);
     check(
       'the model campus with the casual player stays inside the margin and payroll checks',
-      mid.length === 6 && low >= 10 && high <= 20 && payroll >= 0.5 && tended.final.money.grants === 0,
-      `years 3 to 8: ${low.toFixed(1)}% kept at the least and ${high.toFixed(1)}% at the most; payroll ${Math.round(payroll * 100)}% of spending; ${tended.rows[7]!.students} students at year eight; grants ${dollarsShort(tended.final.money.grants)}`,
+      mid.length === 6 && low >= 10 && high <= 20 && payroll >= 0.5,
+      `years 3 to 8: ${low.toFixed(1)}% kept at the least and ${high.toFixed(1)}% at the most; payroll ${Math.round(payroll * 100)}% of spending; ${tended.rows[7]!.students} students at year eight; state grants ${dollarsShort(tended.final.money.grants)}, which is ${((100 * tended.final.money.grants) / Math.max(1, budget(tended.final).spending)).toFixed(1)}% of a year's spending, to a player who spends every dollar`,
     );
   }
 

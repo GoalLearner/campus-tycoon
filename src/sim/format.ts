@@ -17,10 +17,26 @@ export function dollars(n: number): string {
   return (rounded < 0 ? '-$' : '$') + withCommas(Math.abs(rounded));
 }
 
-/** A short form for tight spaces: "$1.2M", "$34K", "$950". */
+/** A head count as it is written everywhere: "46,000". */
+export function headCount(n: number): string {
+  return withCommas(Math.round(n));
+}
+
+/**
+ * Cash on the top bar. In full while it fits, and short once it would not:
+ * a campus that stands for 46,000 students holds hundreds of millions
+ * (DESIGN.md 35.7).
+ */
+export function dollarsTop(n: number): string {
+  return Math.abs(n) >= 100_000_000 ? dollarsShort(n) : dollars(n);
+}
+
+/** A short form for tight spaces: "$1.26B", "$259.1M", "$1.2M", "$34K", "$950". */
 export function dollarsShort(n: number): string {
   const sign = n < 0 ? '-' : '';
   const a = Math.abs(n);
+  if (a >= 1_000_000_000) return `${sign}$${(a / 1_000_000_000).toFixed(2)}B`;
+  if (a >= 100_000_000) return `${sign}$${(a / 1_000_000).toFixed(1)}M`;
   if (a >= 1_000_000) return `${sign}$${(a / 1_000_000).toFixed(a >= 10_000_000 ? 0 : 1)}M`;
   if (a >= 10_000) return `${sign}$${Math.round(a / 1_000)}K`;
   if (a >= 1_000) return `${sign}$${(a / 1_000).toFixed(1)}K`;

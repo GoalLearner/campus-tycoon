@@ -41,6 +41,7 @@ import {
   type HoodLiving,
   type Parcel,
   dollars,
+  headCount,
   driversNow,
   hasRoadAccess,
   townPlaces,
@@ -230,7 +231,8 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'yard': {
       const status = yardStatus(state, placed);
-      return `${status.workers} of ${status.max} workers. ${yardLine(status)} Wages and benefits ${dollars(withBenefits(status.wagesPerYear))} a year.`;
+      // A yard's crew is counted in the small game's workers, and each stands for as many as the campus scale says.
+      return `${headCount(status.workers * scaleOf(state))} of ${headCount(status.max * scaleOf(state))} workers. ${yardLine(status, scaleOf(state))} Wages and benefits ${dollars(withBenefits(status.wagesPerYear))} a year.`;
     }
     case 'landmark':
       return `${spec.effect}.`;
@@ -400,7 +402,7 @@ export function lotFacts(state: GameState, x: number, y: number): string[] {
 
 /** What the panel of a neighbourhood says: who lives there and how they get to class. */
 export function hoodSummary(state: GameState, hood: HoodLiving): { state: string; facts: string } {
-  const lives = `${hood.living} of ${hood.capacity} local students live here.`;
+  const lives = `${headCount(hood.living)} of ${headCount(hood.capacity)} local students live here.`;
   const how =
     hood.mode === 'walk'
       ? `They walk to class, ${Math.round(hood.walkMinutes)} minutes.`

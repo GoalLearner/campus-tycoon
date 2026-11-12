@@ -160,6 +160,8 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     // Up the cross walk toward the union, and down it.
     zone('academic', [[16, 10], [14, 11], [14, 12], [14, 13], [14, 14], [14, 15], [16, 16], [16, 17]]);
     zone('academic', [[14, 21], [14, 22], [14, 23], [16, 21], [16, 22]]);
+    // And below the tower quad, on the walk down to the hill.
+    zone('academic', [[7, 22], [7, 23], [7, 24], [7, 25]]);
     // The library on its forecourt, north of the walk.
     put('library', 13, 16);
     ground('path', [[13, 18], [14, 18]]);
@@ -167,7 +169,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     put('studyCenter', 16, 23);
     put('makerspace', 16, 24);
     // Green between the halls, and the pond by the old garden.
-    ground('quad', [[12, 18], [18, 18], [22, 18], [11, 20], [19, 20]]);
+    ground('quad', [[12, 18], [18, 18], [22, 18], [11, 20], [19, 20], [6, 23], [6, 24]]);
     put('pondMedium', 12, 22);
     ground('tree', [[10, 17], [11, 17], [12, 17], [17, 17], [19, 17], [21, 17], [11, 21], [12, 21], [13, 21], [18, 21], [19, 21], [20, 21], [21, 21], [12, 24], [13, 24]]);
     small('table', [[17, 22], [17, 21]]);
@@ -209,9 +211,10 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     zone('housing', [[24, 9], [25, 9], [24, 11], [25, 11], [26, 11]]);
     put('dining', 26, 7);
     ground('quad', block(26, 8, 2, 2));
+    put('courts', 30, 8);
     small('bench', [[28, 9]]);
     small('bin', [[28, 8]]);
-    ground('tree', [[29, 9], [24, 4], [26, 4], [28, 4], [30, 6], [30, 8]]);
+    ground('tree', [[29, 9], [24, 4], [26, 4], [28, 4], [30, 6]]);
   });
 
   district('hill', 'The hill residences', { x: 5.5, y: 36.5 }, () => {
@@ -220,6 +223,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     zone('housing', [[2, 37], [3, 37], [4, 37]]);
     put('dining', 6, 35);
     ground('quad', block(5, 37, 2, 2));
+    put('courts', 5, 39);
     small('bench', [[7, 37]]);
     small('bin', [[7, 38]]);
     ground('tree', [[2, 34], [4, 34], [6, 34], [2, 38], [3, 38], [4, 38], [9, 35], [9, 37]]);
@@ -266,8 +270,15 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     put('field', 16, 37);
     put('field', 16, 40);
     small('bin', [[16, 39], [14, 40]]);
-    small('bench', [[14, 38], [17, 39]]);
-    ground('tree', [[18, 36], [19, 38], [19, 41], [13, 37], [13, 41]], false);
+    small('bench', [[17, 39]]);
+    ground('tree', [[18, 36], [19, 38], [19, 41]], false);
+  });
+
+  district('fieldHalls', 'The halls by the fields', { x: 14, y: 37.5 }, () => {
+    zone('housing', [[14, 36], [14, 37], [14, 38], [14, 39]]);
+    put('smoothie', 17, 36);
+    ground('quad', [[13, 36], [13, 38]]);
+    ground('tree', [[13, 37], [13, 39], [13, 41]]);
   });
 
   district('pool', 'The pool and the courts', { x: 18, y: 44.5 }, () => {
