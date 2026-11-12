@@ -566,8 +566,8 @@ export function mountUi(root: HTMLElement): void {
   function openSetup(): void {
     openModal((close, card) => {
       card.append(el('h1', '', 'Found your university'));
-      const first = el('p', '', 'Your first class moves in fifteen minutes from now.');
-      card.append(first);
+      // Every new game begins on the model campus (DESIGN.md 35.6): whole from the first minute.
+      card.append(el('p', '', 'Your campus opens whole: every district built, and 46,000 students already there. It is yours to change.'));
       const input = el('input', 'name-input');
       input.type = 'text';
       input.maxLength = 40;
@@ -576,26 +576,15 @@ export function mountUi(root: HTMLElement): void {
       input.autocomplete = 'off';
       const wake = hourSelect(DEFAULT_WAKE_HOUR);
       const colour = colourSelect(DEFAULT_COLOUR);
-      // Two ways to begin: the small campus to grow from nothing, or the model campus, whole from the first minute.
-      const campus = document.createElement('select');
-      for (const [value, label] of [['small', 'A small campus'], ['model', 'The model campus']] as const) {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        campus.append(option);
-      }
       const start = (): void => {
         const name = input.value.trim() || 'Larkspur University';
-        store.startNewGame(name, Number(wake.value), colour.value, campus.value === 'model' ? 'model' : 'small');
+        store.startNewGame(name, Number(wake.value), colour.value, 'model');
         close();
       };
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') start();
       });
-      campus.addEventListener('change', () => {
-        setText(first, campus.value === 'model' ? 'The model campus opens whole: every district built, and students in nine seats of ten.' : 'Your first class moves in fifteen minutes from now.');
-      });
-      card.append(input, pick('Start from', campus), pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
+      card.append(input, pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
       if (store.loadProblem) card.append(el('p', 'fine', store.loadProblem));
     }, false);
   }
@@ -671,7 +660,8 @@ export function mountUi(root: HTMLElement): void {
           }),
           el('p', 'fine', 'This is the model campus. Nothing you do here is saved, and your own campus is untouched.'),
         );
-      } else {
+      } else if (scaleOf(store.state) === 1) {
+        // A game that began on the small campus can look at the model campus. One that began on it is already there.
         card.append(
           button('Visit the model campus', 'wide', () => {
             close();
