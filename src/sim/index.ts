@@ -34,6 +34,7 @@ export {
   careStaffAt,
   careStaffCount,
   facultyCount,
+  firstClassArrived,
   hasCareStaff,
   marketingLift,
   staffCount,

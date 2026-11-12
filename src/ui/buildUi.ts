@@ -250,7 +250,7 @@ function runningLine(type: PlacedType): string {
   const spec = PLACED[type];
   const cost = buildingCost(type);
   const base = cost > 0 ? `Runs at ${dollarsShort(cost)} a year` : 'Costs nothing to run';
-  if (spec.family === 'medical' || spec.family === 'safety') return `${base}, plus staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))}`;
+  if (spec.family === 'medical' || spec.family === 'safety') return `${base}. Staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))} once students arrive`;
   if (spec.family === 'yard') return `${base}, plus ${dollarsShort(withBenefits(WAGE_PER_YEAR))} a worker`;
   return base;
 }
@@ -262,7 +262,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
   const parts: string[] = [];
   if (hasCareStaff(placed)) {
     const staff = careStaffAt(state, placed);
-    parts.push(`Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits`);
+    parts.push(staff > 0 ? `Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits` : 'No staff to pay until the first class arrives');
   }
   parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
   if (spec.buildable) parts.push('The Clear tool removes it');
