@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DayPeriod } from '../src/app/daylight';
@@ -374,7 +374,10 @@ describe('life and sound are for show', () => {
     expect(engine).toContain('clearInterval(this.timer)');
     expect(engine).toContain("document.addEventListener('visibilitychange'");
     expect(engine).toContain("window.addEventListener('pagehide'");
-    // The game ships no recorded audio: nothing is fetched or decoded.
-    for (const word of ['fetch(', 'decodeAudioData', '.mp3', '.ogg', '.wav', 'new Audio(']) expect(engine.includes(word), `sound.ts uses ${word}`).toBe(false);
+    // The only recorded audio is the six small files in public/assets/sound, fetched after the first tap.
+    expect(engine.match(/fetch\(/g)?.length).toBe(1);
+    expect(engine).toContain('./assets/sound/');
+    for (const word of ['.mp3', '.ogg', 'new Audio(', 'http']) expect(engine.includes(word), `sound.ts uses ${word}`).toBe(false);
+    for (const name of ['tap', 'built', 'cannot', 'win', 'loss', 'reward']) expect(existsSync(join(root, 'public/assets/sound', `${name}.wav`)), `${name}.wav ships`).toBe(true);
   });
 });

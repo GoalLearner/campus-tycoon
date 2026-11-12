@@ -6,10 +6,13 @@ import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, t
  * what is on screen, soft sounds for taps, a bell on the hour of the player's
  * own clock, and light music.
  *
- * Every sound is made here, in code, from tones and filtered noise. The game
- * ships no recorded audio, so there is nothing to download, nothing to
- * license and nothing to credit. A recorded file can take the place of any
- * one of these later: each sound is one small function below.
+ * The soundscape, the bell, the busker and the music are made here, in code,
+ * from tones and filtered noise: there is no free ambience pack, and nobody
+ * can listen to choose recordings. The sounds for a tap, for something built
+ * and for something that could not be done, and three short tunes for a win,
+ * a loss and a reward, are Kenney's public-domain recordings (CREDITS.md).
+ * They are six small files in `public/assets/sound`. Until one has loaded, or
+ * if a phone cannot read it, the code-made sound it replaced plays instead.
  *
  * It is for show: nothing here is saved and nothing here changes a number.
  * How loud each part is comes from the plain rule `soundMix`. This file only
@@ -33,6 +36,11 @@ const SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
 const ROOTS = [130.81, 110.0, 87.31, 98.0];
 const BEAT_S = 1.7;
 
+/** The recorded sounds, by what they are for, and how loud each plays before the player's volume. */
+const FILES = { tap: 0.16, built: 0.3, cannot: 0.3, win: 0.5, loss: 0.5, reward: 0.5 } as const;
+type FileName = keyof typeof FILES;
+export type Jingle = 'win' | 'loss' | 'reward';
+
 /** The hour on the player's own clock. The bell follows it whatever light the map is showing. */
 const clockHour = (): number => new Date().getHours();
 
@@ -41,6 +49,8 @@ class SoundEngine {
   private soundBus: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private meter: AnalyserNode | null = null;
+  /** The recorded sounds that have loaded. */
+  private files: Partial<Record<FileName, AudioBuffer>> = {};
   private loops: Partial<Record<Loop, GainNode>> = {};
   private noise: AudioBuffer | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -101,6 +111,36 @@ class SoundEngine {
     this.applyVolumes();
     this.lastHour = clockHour();
     this.wake();
+    this.loadFiles();
+  }
+
+  /** Fetch the six recorded sounds, once, after the first tap. A file that cannot be read is simply not used. */
+  private loadFiles(): void {
+    const ctx = this.ctx;
+    if (!ctx || typeof fetch !== 'function') return;
+    for (const name of Object.keys(FILES) as FileName[]) {
+      fetch(`./assets/sound/${name}.wav`)
+        .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error('missing'))))
+        .then((bytes) => ctx.decodeAudioData(bytes))
+        .then((buffer) => {
+          this.files[name] = buffer;
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  /** Play one recorded sound. False when it has not loaded, so the caller can play the code-made one. */
+  private playFile(name: FileName): boolean {
+    const ctx = this.ctx;
+    const buffer = this.files[name];
+    if (!ctx || !buffer || !this.soundBus) return false;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.value = FILES[name];
+    source.connect(gain).connect(this.soundBus);
+    source.start();
+    return true;
   }
 
   /** A steady layer: the noise through one filter, silent until the mix raises it. */
@@ -324,12 +364,24 @@ class SoundEngine {
   ui(kind: 'tap' | 'place' | 'error'): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running' || this.hidden) return;
+    if (this.playFile(kind === 'tap' ? 'tap' : kind === 'place' ? 'built' : 'cannot')) return;
     const at = ctx.currentTime + 0.005;
     if (kind === 'tap') this.tone(this.soundBus, 'sine', 720, 560, at, 0.07, 0.1, 0.004);
     else if (kind === 'place') {
       this.tone(this.soundBus, 'triangle', 392, 392, at, 0.16, 0.13, 0.006);
       this.tone(this.soundBus, 'triangle', 587.33, 587.33, at + 0.09, 0.22, 0.12, 0.006);
     } else this.tone(this.soundBus, 'triangle', 196, 164.81, at, 0.2, 0.12, 0.01);
+  }
+
+  /** A short tune for a result: a win, a loss, or something earned. */
+  jingle(kind: Jingle): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running' || this.hidden) return;
+    if (this.playFile(kind)) return;
+    // The code-made tune: three notes up for a win or a reward, three down for a loss.
+    const at = ctx.currentTime + 0.01;
+    const notes = kind === 'loss' ? [392, 329.63, 261.63] : kind === 'win' ? [261.63, 329.63, 392] : [329.63, 392, 523.25];
+    notes.forEach((pitch, n) => this.tone(this.soundBus, 'triangle', pitch, pitch, at + n * 0.14, 0.4, 0.12, 0.006));
   }
 }
 
