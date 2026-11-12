@@ -169,6 +169,10 @@ for mask, (piece, mirrored) in ROAD_PIECES.items():
 # (tools/make_crosswalk.py).
 sprites['road.cross.5'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png')]}
 sprites['road.cross.10'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png', flip=True)]}
+# Order on the streets: the pack's round red sign stands at every way into a junction, as a stop sign, and its
+# blue square sign marks a crossing that stands by itself. Both as drawn.
+sprites['sign.stop'] = {'layers': [standing(DECOR + 'TraficSign3.png', 0.5, 0.5)]}
+sprites['sign.crossing'] = {'layers': [standing(DECOR + 'TraficSign4.png', 0.5, 0.5)]}
 
 HOUSES = CITY + 'Houses/'
 TOWN_HOUSES = [('Blue', 1), ('Red', 5), ('Yellow', 9), ('Green', 13), ('Pink', 17), ('White', 20), ('Brown', 3), ('Grey', 7),

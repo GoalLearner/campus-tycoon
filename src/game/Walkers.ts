@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
+import { avenueCrossing, avenueCrossingBack, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
 import {
   enrollment,
   isPathKind,
@@ -77,6 +78,8 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
 /** How far from the middle of a street its sidewalk runs. */
 const SIDEWALK = 0.36;
+/** Which sidewalk of its street a house is on: -1 above the street on the map, 1 below. */
+const sideOf = (house: Stop): number => (house.row !== undefined && house.cell.y < house.row ? -1 : 1);
 /** A tour ambles. */
 const TOUR_PACE = 0.6;
 /** On a home game day this share of walkers setting out are going to the stadium, and this many times the usual crowd is out. */
@@ -92,6 +95,8 @@ type Use = 'food' | 'play' | 'seat' | 'office' | 'other';
 interface Spot {
   x: number;
   y: number;
+  /** The crossing the walk up to this spot goes over: they wait before it while a car has that crossing. */
+  cross?: number;
 }
 
 interface Stop {
@@ -202,6 +207,8 @@ export class Walkers {
   private isWalk: boolean[] = [];
   private isCrossing: boolean[] = [];
   private isStreet: boolean[] = [];
+  /** Where the junctions and the marked crossings are (src/app/traffic.ts). */
+  private plan: TrafficPlan | null = null;
   private pathCells = 0;
   private stops: Stop[] = [];
   private gates: Stop[] = [];
@@ -310,7 +317,14 @@ export class Walkers {
     return this.seenAll;
   }
 
-  /** True while somebody is walking over that crossing. */
+  /** Is this spot on the road itself, at a crossing or a junction? */
+  private onRoad(x: number, y: number): boolean {
+    const cell = Math.floor(y) * this.width + Math.floor(x);
+    if (this.isCrossing[cell]) return true;
+    return !!this.plan && onRoadway(this.plan, x, y) >= 0;
+  }
+
+  /** True while somebody is walking over that crossing, or stepping onto it. */
   onCrossing(cell: number): boolean {
     return this.crossingNow.has(cell);
   }
@@ -330,6 +344,7 @@ export class Walkers {
     this.isPath = cells.map((cell) => isPathKind(cell.kind));
     this.isStreet = cells.map((cell) => cell.kind === 'street');
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
+    this.plan = planTraffic(this.width, this.height, cells.map((cell) => cell.kind), TOWN_X);
     this.isWalk = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'street');
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
@@ -575,7 +590,7 @@ export class Walkers {
     const y = (cell - x) / this.width;
     if (!this.isStreet[cell]) return { x: x + 0.5 + side.x, y: y + 0.5 + side.y };
     // The avenue runs up and down beside the campus: its campus side. A side street runs away from it.
-    if (x <= TOWN_X) return { x: x + 0.5 - SIDEWALK, y: y + 0.5 + side.y * 0.4 };
+    if (x <= TOWN_X) return { x: x + KERB_NEAR, y: y + 0.5 + side.y * 0.4 };
     return { x: x + 0.5 + side.x * 0.4, y: y + 0.5 + sidewalk * SIDEWALK };
   }
 
@@ -585,11 +600,24 @@ export class Walkers {
     if (!cells || cells.length > (town ? MAX_COMMUTE_CELLS : MAX_ROUTE_CELLS)) return null;
     // Each walker keeps a little to one side, so a crowd is not a single file.
     const side = { x: (Math.random() - 0.5) * 0.44, y: (Math.random() - 0.5) * 0.44 };
-    // On a street they keep to the sidewalk on their own house's side.
-    const house = from.kind === 'house' ? from : to.kind === 'house' ? to : null;
-    const sidewalk = house && house.row !== undefined ? (house.cell.y < house.row ? -1 : 1) : Math.random() < 0.5 ? -1 : 1;
+    // On a street they keep to the sidewalk of the house they are leaving or going to on that street, so nobody
+    // crosses a street in the middle of a block.
+    const rows = new Map<number, number>();
+    for (const house of [from, to]) if (house.kind === 'house' && house.row !== undefined) rows.set(house.row, sideOf(house));
+    const any = Math.random() < 0.5 ? -1 : 1;
     const route: Spot[] = [this.threshold(from)];
-    for (const i of cells) route.push(this.footing(i, side, sidewalk));
+    for (let k = 0; k < cells.length; k++) {
+      const i = cells[k]!;
+      const x = i % this.width;
+      const y = (i - x) / this.width;
+      // Where a side street meets the avenue they cross at the marked crossing beside the junction, not through it.
+      if (this.plan && this.isStreet[i] && x === TOWN_X && (cells[k - 1] === i + 1 || cells[k + 1] === i + 1)) {
+        const sidewalk = rows.get(y) ?? any;
+        route.push(...(cells[k - 1] === i + 1 ? avenueCrossing(this.plan, y, sidewalk, SIDEWALK) : avenueCrossingBack(this.plan, y, sidewalk, SIDEWALK)));
+        continue;
+      }
+      route.push(this.footing(i, side, rows.get(y) ?? any));
+    }
     // People walk right onto a court or a field, to its middle. Anywhere else they stop at the edge.
     if (to.kind === 'place' && to.use === 'play' && to.flat && to.middle) {
       route.push({ x: to.middle.x + (Math.random() - 0.5) * 0.6, y: to.middle.y + (Math.random() - 0.5) * 0.6 });
@@ -875,8 +903,8 @@ export class Walkers {
       if (out < wanted) {
         const from = pick(this.houses)!;
         // Mostly to a house on the same street or the next: a short walk, not a march across town.
-        const near = this.houses.filter((house) => house !== from && Math.abs((house.row ?? 0) - (from.row ?? 0)) <= 6);
-        const to = pick(near.length > 0 ? near : this.houses);
+        const near = this.houses.filter((house) => house !== from && Math.abs((house.row ?? 0) - (from.row ?? 0)) <= 6 && (house.row !== from.row || sideOf(house) === sideOf(from)));
+        const to = pick(near.length > 0 ? near : this.houses.filter((house) => house.row !== from.row || sideOf(house) === sideOf(from)));
         // A neighbour wears one of the two looks kept for the town, and has a card: who they are follows their house.
         const townie = this.people?.roles?.townie;
         const n = from.cell.y * this.width + from.cell.x;
@@ -1064,12 +1092,17 @@ export class Walkers {
         }
       } else if (walker.fading !== 'out' || walker.leg < walker.route.length) {
         let step = (walker.pace * dt) / 1000;
-        // At a crossing with a car on it, or one driving onto it, they wait at the kerb.
+        // At a crossing a car has, or is due, they wait at the kerb. Once on it they keep going.
         const ahead = walker.route[walker.leg];
         if (ahead) {
           const there = Math.floor(ahead.y) * this.width + Math.floor(ahead.x);
           const here = Math.floor(walker.y) * this.width + Math.floor(walker.x);
-          if (there !== here && this.isCrossing[there] && this.carOn(there)) step = 0;
+          const crossing = ahead.cross !== undefined ? ahead.cross : there !== here && this.isCrossing[there] ? there : -1;
+          if (crossing >= 0 && !this.onRoad(walker.x, walker.y)) {
+            if (this.carOn(crossing)) step = 0;
+            // Stepping onto it: a car coming up to the line sees them this frame.
+            else this.crossingNow.add(crossing);
+          }
         }
         const waiting = step === 0;
         while (step > 0 && walker.leg < walker.route.length) {
@@ -1101,6 +1134,11 @@ export class Walkers {
 
       const cell = Math.floor(walker.y) * this.width + Math.floor(walker.x);
       if (this.isCrossing[cell]) this.crossingNow.add(cell);
+      // On the road at a town crossing or a junction: cars wait for them.
+      else if (this.plan && this.isStreet[cell]) {
+        const on = onRoadway(this.plan, walker.x, walker.y);
+        if (on >= 0) this.crossingNow.add(on);
+      }
 
       if (this.inView(view, walker.x, walker.y, 40)) {
         this.seenAll += 1;

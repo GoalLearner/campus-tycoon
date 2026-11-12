@@ -4335,7 +4335,7 @@ The player who works every cause is a new test player, `striver`: once a day, ma
 | The top goal leans on the rank | With looks capped near 63 of 100, the rank is most of the last 15,000 students. When more can lift how a campus looks, the rank's 55 should come back toward 25 |
 | Nobody reaches the Top 25 or the Top 10 in ten months | A test player that turns applicants away to be selective does not exist. The estimate is that the Top 10 costs about a quarter of a campus's size |
 | An era is still only a name | 37.5 and the owner's note in 15.2 |
-| The headline and the first line of the paper repeat a goal | The goal is both the plain fact under the headline and the line beneath it |
+| The headline and the first line of the paper repeated a goal | Fixed with the next stop (section 39): a goal that is the headline is said once, in the line under it |
 | The published rating and the year's measure are two numbers | The Rankings page says both in one line. It may read as one too many |
 
 ---

@@ -1978,6 +1978,28 @@
     }
    ]
   },
+  "sign.stop": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TraficSign3.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "sign.crossing": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TraficSign4.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
   "town.house.0": {
    "layers": [
     {

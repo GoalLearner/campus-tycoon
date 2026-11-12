@@ -317,7 +317,8 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
   for (const entry of log) {
     if (entry.kind === 'football' && (entry.data?.tier !== undefined || entry.data?.earned !== undefined || entry.data?.title === 1)) offer(TOP_WEIGHTS.goodNews, 'news', entry.text, 'football');
     else if (entry.kind === 'rankings') offer(TOP_WEIGHTS.goodNews - 1, 'news', entry.text);
-    else if (entry.kind === 'goal') offer(TOP_WEIGHTS.goal, 'news', entry.text);
+    // A goal that is the headline is said once: in the line under the headline. Any other goal of the day is at the top.
+    else if (entry.kind === 'goal' && entry.text !== lead.deck) offer(TOP_WEIGHTS.goal, 'news', entry.text);
     else if (entry.kind === 'exam' && Number(entry.data?.peak ?? 0) >= 60) offer(TOP_WEIGHTS.exams, 'problem', entry.text);
   }
 
