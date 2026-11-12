@@ -111,28 +111,9 @@ export function buildTown(map: MapState, seed: number): Town {
 
 const drivable = (kind: string): boolean => kind === 'road' || kind === 'crossing' || kind === 'street';
 
-/**
- * Refresh who can walk in and which car parks a road reaches. `steps` is the
- * count of walked cells from every path cell to the nearest Academic lot, as
- * desirability works it out.
- */
-export function refreshTownAccess(map: MapState, steps: Int32Array): void {
+/** Every cell a car can reach from the town: the streets themselves, and each road or crossing joined to one. 1 where reached. */
+export function roadReach(map: MapState): Uint8Array {
   const { width, height, cells } = map;
-  const town = map.town;
-
-  // Walking: a path that meets the main street near a neighbourhood's side street joins it to campus.
-  const gateX = TOWN_X - 1;
-  town.access.walk = town.neighbourhoods.map((hood) => {
-    let best = -1;
-    for (let y = hood.row - TOWN_GATE_ROWS; y <= hood.row + TOWN_GATE_ROWS; y++) {
-      if (y < 0 || y >= height) continue;
-      const walked = steps[y * width + gateX]!;
-      if (walked > 0 && (best === -1 || walked < best)) best = walked;
-    }
-    return best === -1 ? -1 : (best + 1) * WALK_MINUTES_PER_CELL + TOWN_WALK_EXTRA_MINUTES;
-  });
-
-  // Driving: every road cell that links back to a town street.
   const reached = new Uint8Array(width * height);
   const queue: number[] = [];
   for (let i = 0; i < cells.length; i++) {
@@ -156,6 +137,46 @@ export function refreshTownAccess(map: MapState, steps: Int32Array): void {
       }
     }
   }
+  return reached;
+}
+
+/** The player's own road and crossing cells, split by whether a car from the town can reach them. For the Parking overlay. */
+export function roadsByAccess(map: MapState): { linked: Array<[number, number]>; cut: Array<[number, number]> } {
+  const reached = roadReach(map);
+  const linked: Array<[number, number]> = [];
+  const cut: Array<[number, number]> = [];
+  for (let i = 0; i < map.cells.length; i++) {
+    const kind = map.cells[i]!.kind;
+    if (kind !== 'road' && kind !== 'crossing') continue;
+    const x = i % map.width;
+    (reached[i] === 1 ? linked : cut).push([x, (i - x) / map.width]);
+  }
+  return { linked, cut };
+}
+
+/**
+ * Refresh who can walk in and which car parks a road reaches. `steps` is the
+ * count of walked cells from every path cell to the nearest Academic lot, as
+ * desirability works it out.
+ */
+export function refreshTownAccess(map: MapState, steps: Int32Array): void {
+  const { width, height, cells } = map;
+  const town = map.town;
+
+  // Walking: a path that meets the main street near a neighbourhood's side street joins it to campus.
+  const gateX = TOWN_X - 1;
+  town.access.walk = town.neighbourhoods.map((hood) => {
+    let best = -1;
+    for (let y = hood.row - TOWN_GATE_ROWS; y <= hood.row + TOWN_GATE_ROWS; y++) {
+      if (y < 0 || y >= height) continue;
+      const walked = steps[y * width + gateX]!;
+      if (walked > 0 && (best === -1 || walked < best)) best = walked;
+    }
+    return best === -1 ? -1 : (best + 1) * WALK_MINUTES_PER_CELL + TOWN_WALK_EXTRA_MINUTES;
+  });
+
+  // Driving: every road cell that links back to a town street.
+  const reached = roadReach(map);
 
   // A car park holds cars when a linked road, or a street, touches any side of it.
   let spaces = 0;

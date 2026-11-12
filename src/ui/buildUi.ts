@@ -4,8 +4,7 @@ import {
   COST,
   ROAD_UPKEEP_PER_YEAR,
   hoodAdvice,
-  localsNeedingBeds,
-  townLiving,
+  type HousingFixes,
   type HoodLiving,
   type Parcel,
   dollars,
@@ -230,15 +229,21 @@ export function parcelSummary(state: GameState, parcel: Parcel): { state: string
 }
 
 /**
- * For the room plan when beds are short: the cheaper fix of letting locals
- * live at home. '' when the town already takes every local.
+ * For the room plan when beds are short: the three fixes, each with its
+ * numbers (DESIGN.md 25.2). Every number comes from housingFixes() in the
+ * simulation. An entry is left out when it would bring nobody in.
  */
-export function townFix(state: GameState): string {
-  const stuck = localsNeedingBeds(state);
-  if (stuck <= 0) return '';
-  const unjoined = townLiving(state).filter((hood) => hood.mode !== 'walk' && hood.living < hood.capacity);
-  const nearest = unjoined[0];
-  const who = `${stuck} of those beds are for locals with no way in from town.`;
-  if (!nearest) return `${who} The town is full, so they need beds.`;
-  return `${who} A path from campus to ${state.map.town.street} beside ${nearest.name}, or parking with a road to the street, would let them live at home instead.`;
+export function housingFixLines(fixes: HousingFixes): { lots: string; path: string; parking: string } {
+  const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+  const beds = (n: number): string => `${plural(n, 'fewer bed is', 'fewer beds are')} needed`;
+  const lots = fixes.lots
+    ? `Zone ${plural(fixes.lots.count, 'more Housing lot', 'more Housing lots')}: ${fixes.lots.perLot} beds each, ${dollarsShort(fixes.lots.cost)} in all. That covers all ${fixes.bedsShort}.`
+    : '';
+  const path = fixes.path
+    ? `Lay a path to ${fixes.path.street}: about ${plural(fixes.path.cells, 'path cell', 'path cells')}, ${dollars(fixes.path.cost)}. ${plural(fixes.path.brings, 'local could', 'locals could')} walk in, a ${Math.round(fixes.path.minutes)} minute walk, so ${beds(fixes.path.brings)}.`
+    : '';
+  const parking = fixes.parking
+    ? `Build ${plural(fixes.parking.spaces, 'parking space', 'parking spaces')} with a road to a street: ${plural(fixes.parking.lots, 'Parking lot', 'Parking lots')}, ${dollarsShort(fixes.parking.cost)}. ${plural(fixes.parking.brings, 'local could', 'locals could')} drive in, so ${beds(fixes.parking.brings)}.`
+    : '';
+  return { lots, path, parking };
 }

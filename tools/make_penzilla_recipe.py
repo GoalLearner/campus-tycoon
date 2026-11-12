@@ -231,6 +231,8 @@ sprites['build.admin'] = {'layers': [on_grid(PUBLIC + 'Public_Townhall.png', 2, 
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
 sprites['icon.injury'] = {'layers': [{'file': SHOPS + 'Shop_Pharmacy_OneFloorRoofed.png', 'crop': [632, 416, 772, 606], 'stand': [0.5, 0.5], 'recolour': 'cross'}]}
+# The badge over a car park that no road reaches: the pack's lowered barrier gate, as drawn.
+sprites['icon.noroad'] = {'layers': [standing(DECOR + 'GateDown.png', 0.5, 0.5, scale=1.4)]}
 sprites['icon.mischief'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.5, 0.5, scale=1.5)]}
 sprites['decor.hoop'] = {'layers': [standing(ICONS + 'BasketBallNet.png', 0.5, 0.5, scale=0.16)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}

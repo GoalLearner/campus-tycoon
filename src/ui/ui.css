@@ -1091,3 +1091,28 @@ button.student-reason {
 .backup-reminder.show {
   display: block;
 }
+
+/* The bar for laying road and for the Parking overlay: one clear Done button. */
+.mode-bar .placer-buttons {
+  display: flex;
+}
+.mode-bar .mode-done {
+  flex: 1;
+  min-height: 46px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* The three ways to find beds, in the room plan. */
+.fix-head {
+  margin: 12px 0 4px;
+  font-weight: 700;
+}
+.fix-list {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+.fix-list li {
+  margin: 6px 0;
+  line-height: 1.4;
+}

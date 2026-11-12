@@ -15,6 +15,7 @@ import {
   formatDate,
   capacityWanted,
   hasRoadAccess,
+  housingFixes,
   hoodAt,
   parcelAt,
   townLiving,
@@ -51,7 +52,7 @@ import {
 } from '../sim';
 import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
-import { hoodSummary, parcelSummary, ROAD_ENTRY, townFix } from './buildUi';
+import { hoodSummary, housingFixLines, parcelSummary, ROAD_ENTRY } from './buildUi';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -94,8 +95,6 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'clear', label: 'Clear', hint: 'Drag over what to clear · you see what comes back before it goes' },
 ];
 
-/** The road tool has no button in the bar: it is picked from the Build menu. */
-const ROAD_HINT = `Drag to lay a road · ${dollars(COST.road)} a cell · tap Look when done`;
 
 const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]> = {
   housing: ['lot', 'lots'],
@@ -371,6 +370,19 @@ export function mountUi(root: HTMLElement): void {
   placerButtons.append(placeButton, button('Cancel', '', () => session.setTool('look')));
   placer.append(placerTitle, placerState, placerButtons);
 
+  // The road tool is picked from the Build menu and stays in hand until Done. The Parking overlay closes the same way.
+  const modeBar = el('div', 'placer mode-bar');
+  const modeTitle = el('div', 'placer-title');
+  const modeState = el('div', 'placer-state');
+  const modeButtons = el('div', 'placer-buttons');
+  modeButtons.append(
+    button('Done', 'primary mode-done', () => {
+      if (session.tool === 'road') session.setTool('look');
+      else session.setOverlay(null);
+    }),
+  );
+  modeBar.append(modeTitle, modeState, modeButtons);
+
   const clearer = el('div', 'placer clearer');
   const clearerTitle = el('div', 'placer-title');
   const clearerState = el('div', 'placer-state');
@@ -397,7 +409,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, clearer, buildButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, placer, modeBar, clearer, buildButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -710,9 +722,15 @@ export function mountUi(root: HTMLElement): void {
         // The bars look ahead to the next class too, so they can show more than this list.
         card.append(el('p', 'fine', `The bars also count the next class of about ${expectedClass(state)}, so they show a little more.`));
       }
-      // Beds are also saved by letting locals live at home.
-      const fix = plan.zones.housing.short > 0 ? townFix(state) : '';
-      if (fix) card.append(el('p', '', fix));
+      // When beds are short: the three fixes, each with its numbers. Locals who live at home need no bed.
+      const fixes = housingFixes(state);
+      const lines = housingFixLines(fixes);
+      if (fixes.bedsShort > 0 && (lines.path || lines.parking)) {
+        card.append(el('p', 'fix-head', `Three ways to find ${fixes.bedsShort} beds`));
+        const ways = el('ol', 'fix-list');
+        for (const line of [lines.lots, lines.path, lines.parking]) if (line) ways.append(el('li', '', line));
+        card.append(ways);
+      }
       card.append(el('p', 'fine', 'A lot must touch a path. Lots near a quad grow bigger by themselves.'));
 
       for (const zone of order) {
@@ -720,6 +738,33 @@ export function mountUi(root: HTMLElement): void {
         card.append(
           button(`Zone ${ZONE_LOT[zone][1]}`, 'primary', () => {
             session.setTool(zone);
+            close();
+          }),
+        );
+      }
+      if (fixes.path) {
+        const way = fixes.path;
+        card.append(
+          button(`Lay a path to ${way.street}`, 'wide', () => {
+            session.setTool('path');
+            session.lookAt(way.gate[0], way.gate[1]);
+            close();
+          }),
+        );
+      }
+      if (fixes.parking) {
+        card.append(
+          button('Build a Parking lot', 'wide', () => {
+            session.startPlacing('parking');
+            close();
+          }),
+        );
+      }
+      if (state.map.placed.some((placed) => placed && PLACED[placed.type].cars)) {
+        card.append(
+          button('Show car parks', 'wide', () => {
+            session.setTool('look');
+            session.setOverlay('parking');
             close();
           }),
         );
@@ -849,10 +894,27 @@ export function mountUi(root: HTMLElement): void {
     setText(clearerState, text);
   }
 
+  /** The bar for a mode that lasts until Done: laying road, or looking at the Parking overlay. */
+  function renderModeBar(): boolean {
+    const road = session.tool === 'road';
+    const parking = !road && session.overlay === 'parking' && session.tool === 'look';
+    const show = (road || parking) && session.clearing === null;
+    modeBar.classList.toggle('show', show);
+    if (!show) return false;
+    if (road) {
+      setText(modeTitle, `Road · ${dollars(COST.road)} a cell`);
+      setText(modeState, 'Drag to lay road. Green road reaches a street. Red does not yet. The street to reach is blue.');
+    } else {
+      setText(modeTitle, 'Parking');
+      setText(modeState, 'Green car parks have a road to a street. Red ones hold no cars until a road joins them to the blue street.');
+    }
+    return true;
+  }
+
   function renderPlacer(state: GameState): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
-    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null);
+    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || session.tool === 'road' || session.overlay !== null);
     if (!type) return;
     setText(placerTitle, placingLine(type));
     const ghost = session.ghost;
@@ -904,7 +966,8 @@ export function mountUi(root: HTMLElement): void {
 
     const picking = tool === 'tree' && treeButtons.length > 0;
     treePicker.classList.toggle('show', picking);
-    chip.classList.toggle('raised', picking);
+    // The tree picker and the road bar both sit where the chip would be, so it moves up.
+    chip.classList.toggle('raised', picking || tool === 'road');
     treeButtons.forEach((b, kind) => b.classList.toggle('active', kind === session.treeKind));
     if (tool === 'look' || tool === 'place') {
       chip.classList.remove('show', 'bad');
@@ -928,9 +991,10 @@ export function mountUi(root: HTMLElement): void {
       const name = picking ? treeNames[session.treeKind] : undefined;
       setText(
         chip,
-        name ? `${name} · tap or drag to plant · ${dollars(COST.tree)} each` : tool === 'road' ? ROAD_HINT : (TOOLS.find((t) => t.id === tool)?.hint ?? ''),
+        name ? `${name} · tap or drag to plant · ${dollars(COST.tree)} each` : (TOOLS.find((t) => t.id === tool)?.hint ?? ''),
       );
-      chip.classList.add('show');
+      // The road tool says what to do in its own bar, so there is nothing for the chip to say until a drag begins.
+      chip.classList.toggle('show', chip.textContent !== '');
       chip.classList.remove('bad');
     }
   }
@@ -951,6 +1015,7 @@ export function mountUi(root: HTMLElement): void {
     renderHud(state);
     renderInspector(state);
     studentPanel.render(state);
+    renderModeBar();
     renderPlacer(state);
     renderClearer();
     renderTools();
