@@ -43,5 +43,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: a campus newspaper greets you after an hour or more away, with what matters most first. Your four advisors now send petitions, deals and events to an inbox on the top bar. Each stays open at least a day and a half, shows an advisor\'s pick, and has a default that happens by itself.',
     );
   }
+  if (fromVersion < 15) {
+    notes.push(
+      "New: tap the student count to see this fall's applicants and what makes them. A game begun on the model campus has size goals and rank goals there, kept for good once reached. The main street is Lantern Avenue.",
+    );
+  }
   return notes;
 }

@@ -44,6 +44,7 @@ import { MAIN_STREET } from '../src/sim/config/town';
 import { averageDesirability, classSize } from '../src/sim/systems/demand';
 import { marketingLift } from '../src/sim/systems/budget';
 import { athleticLift } from '../src/sim/systems/football';
+import { upgradeNotes } from '../src/app/upgradeNotes';
 import { sizeView } from '../src/ui/sizeUi';
 import { DAY, freshGame, T0 } from './helpers';
 
@@ -409,6 +410,11 @@ describe('the main street', () => {
     expect(loaded.state.goals).toEqual({ size: 0, rank: 0, reached: [], rewards: 0 });
     expect(loaded.state.field.academic).toBe(state.field.academic);
     expect(loaded.state).toEqual(state);
+  });
+
+  it('tells an upgraded save once what is new, and says nothing to a save that is up to date', () => {
+    expect(upgradeNotes(14).some((note) => /tap the student count/.test(note) && /Lantern Avenue/.test(note))).toBe(true);
+    expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
   });
 
   it('is the only name any current file uses', () => {

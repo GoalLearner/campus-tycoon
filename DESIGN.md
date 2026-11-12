@@ -4308,7 +4308,7 @@ Against the targets: the once-a-day player has five size goals by week 9 and rea
 
 The player who works every cause is a new test player, `striver`: once a day, marketing at its top step, every stadium the team earns, green beside its least pleasant halls, and seats to spare so classes are not crowded. On a model campus a test player whose street plan is used up now builds on any open ground beside a walk, and lays a walk into open ground when there is none.
 
-**Tests and long runs.** 26 new tests in `tests/goals.test.ts`: 568 in all. Six new long-run checks on the model campus, and the old margin check there re-set to his target: 46 in all.
+**Tests and long runs.** 27 new tests in `tests/goals.test.ts`: 569 in all. Six new long-run checks on the model campus, and the old margin check there re-set to his target: 46 in all.
 
 **Decisions made for the owner.**
 
