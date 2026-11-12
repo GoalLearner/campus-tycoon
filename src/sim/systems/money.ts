@@ -1,17 +1,25 @@
 import {
   OPERATING_COST_PER_STUDENT_PER_YEAR,
+  ROOM_FEE_PER_BED_PER_YEAR,
   TUITION_PER_STUDENT_PER_YEAR,
 } from '../config/money';
 import { TICKS_PER_YEAR } from '../config/time';
 import { dollars } from '../format';
-import { enrollment, upkeepPerYear } from '../selectors';
+import { enrollment, openCapacity, upkeepPerYear } from '../selectors';
 import type { GameState, LogEntry } from '../types';
 import { placedIncomePerYear } from './placed';
+import { offCampusNow } from './town';
 
 /**
- * First playable money: flat tuition in, upkeep and a flat running cost out.
- * Rates are yearly and accrue every tick. See DESIGN.md section 9.
+ * First playable money: tuition from every student and a room fee from every
+ * occupied bed in, upkeep and a flat running cost out. Rates are yearly and
+ * accrue every tick. See DESIGN.md sections 9 and 25.1.
  */
+
+/** Beds with a student in them: the students who do not live in town, as far as there are beds. */
+export function occupiedBeds(state: GameState): number {
+  return Math.max(0, Math.min(enrollment(state) - offCampusNow(state), openCapacity(state, 'housing')));
+}
 
 /** Call after anything that changes enrollment or the buildings that stand. */
 export function markRatesDirty(state: GameState): void {
@@ -20,7 +28,7 @@ export function markRatesDirty(state: GameState): void {
 
 export function recomputeRates(state: GameState): void {
   const students = enrollment(state);
-  state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR + placedIncomePerYear(state);
+  state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR + occupiedBeds(state) * ROOM_FEE_PER_BED_PER_YEAR + placedIncomePerYear(state);
   state.money.spendingPerYear =
     upkeepPerYear(state) + students * OPERATING_COST_PER_STUDENT_PER_YEAR;
   state.money.ratesDirty = false;

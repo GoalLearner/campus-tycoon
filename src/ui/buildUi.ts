@@ -1,7 +1,17 @@
 import {
   BUILD_ORDER,
   campusHappiness,
+  COST,
+  ROAD_UPKEEP_PER_YEAR,
+  hoodAdvice,
+  localsNeedingBeds,
+  townLiving,
+  type HoodLiving,
+  type Parcel,
   dollars,
+  driversNow,
+  hasRoadAccess,
+  townPlaces,
   dollarsShort,
   fedAt,
   inReach,
@@ -23,6 +33,9 @@ import type { BuildEntry } from './buildMenu';
  */
 
 const footprint = (w: number, h: number): string => `${w} x ${h}`;
+
+/** The id of the Build menu card that hands over to the road tool. */
+export const ROAD_ENTRY = 'tool:road';
 
 /** The Build menu: what can be built now, then what is on the way. */
 export function buildEntries(): BuildEntry[] {
@@ -49,11 +62,20 @@ export function buildEntries(): BuildEntry[] {
     effect,
     locked,
   });
+  // Roads are laid by dragging, like paths. The card hands over to that tool. It sits with the car parks it serves.
+  const road: BuildEntry = {
+    id: ROAD_ENTRY,
+    key: 'road.5',
+    name: 'Road',
+    category: 'Roads and parking',
+    cost: `${dollarsShort(COST.road)} a cell`,
+    footprint: 'drag to lay',
+    upkeep: `Upkeep ${dollars(ROAD_UPKEEP_PER_YEAR)} a cell a year`,
+    effect: 'Links a car park to a town street. Lots like it less beside them',
+  };
+  const firstCarPark = entries.findIndex((entry) => entry.category === 'Roads and parking');
+  entries.splice(firstCarPark < 0 ? entries.length : firstCarPark, 0, road);
   entries.push(
-    soon('build.parking', 'Parking lot', 'Spaces for locals who drive in', 'Coming with the town'),
-    soon('build.garage', 'Parking structure', 'Several times the cars of a parking lot', 'Coming with the town'),
-    soon('road.15', 'Roads', 'Link parking to the town streets', 'Coming with the town'),
-    soon('ground.grass', 'Land purchase', 'More ground to build on', 'Coming with the town'),
     soon('build.stadium', 'Stadium', 'Home games and a football team', 'Coming with football'),
     soon('build.studentlife', 'Student Life', 'A zone for clubs and events', 'Coming later'),
   );
@@ -97,6 +119,13 @@ export function placedSummary(state: GameState, placed: Placed): string {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       const job = spec.family === 'medical' ? 'Treats injuries' : 'Handles mischief';
       return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.`;
+    }
+    case 'parking': {
+      const cars = spec.cars ?? 0;
+      if (!hasRoadAccess(state.map, placed)) return 'No road access. It holds no cars until a road links it to a town street.';
+      const places = townPlaces(state.map);
+      const used = places.spaces > 0 ? Math.round((cars * Math.min(places.drive, driversNow(state))) / places.spaces) : 0;
+      return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
     case 'landmark':
       return `${spec.effect}.`;
@@ -176,4 +205,40 @@ export function lotFacts(state: GameState, x: number, y: number): string[] {
   const fun = recreationAt(state.map, x, y);
   facts.push(fun > 0 ? `Things to do ${Math.round(fun * 100)}%` : 'Nothing to do nearby');
   return facts;
+}
+
+/** What the panel of a neighbourhood says: who lives there and how they get to class. */
+export function hoodSummary(state: GameState, hood: HoodLiving): { state: string; facts: string } {
+  const lives = `${hood.living} of ${hood.capacity} local students live here.`;
+  const how =
+    hood.mode === 'walk'
+      ? `They walk to class, ${Math.round(hood.walkMinutes)} minutes.`
+      : hood.mode === 'drive'
+        ? 'They drive, and each needs a parking space on campus.'
+        : 'Nobody can get to class from here yet.';
+  return { state: `${lives} ${how}`, facts: hoodAdvice(state, hood) || 'Locals who live here need no bed on campus.' };
+}
+
+/** What the panel of a field for sale says. */
+export function parcelSummary(state: GameState, parcel: Parcel): { state: string; facts: string; affordable: boolean } {
+  const affordable = state.money.cash >= parcel.price;
+  return {
+    state: `For sale: ${dollars(parcel.price)} for ${parcel.w} by ${parcel.h} cells of land to build on.`,
+    facts: affordable ? 'It borders the town, so paths and roads from here reach more streets.' : `You have ${dollars(state.money.cash)}.`,
+    affordable,
+  };
+}
+
+/**
+ * For the room plan when beds are short: the cheaper fix of letting locals
+ * live at home. '' when the town already takes every local.
+ */
+export function townFix(state: GameState): string {
+  const stuck = localsNeedingBeds(state);
+  if (stuck <= 0) return '';
+  const unjoined = townLiving(state).filter((hood) => hood.mode !== 'walk' && hood.living < hood.capacity);
+  const nearest = unjoined[0];
+  const who = `${stuck} of those beds are for locals with no way in from town.`;
+  if (!nearest) return `${who} The town is full, so they need beds.`;
+  return `${who} A path from campus to ${state.map.town.street} beside ${nearest.name}, or parking with a road to the street, would let them live at home instead.`;
 }

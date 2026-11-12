@@ -95,7 +95,8 @@ describe('a real save from version 1', () => {
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.migratedFrom).toBe(1);
     expect(loaded.state.version).toBe(SAVE_VERSION);
-    expect(loaded.state.map.cells.every((cell) => cell.variant === 0)).toBe(true);
+    // The town that was added since has its own looks. Everything the old save held has 0.
+    expect(loaded.state.map.cells.every((cell) => cell.variant === 0 || cell.kind === 'town' || cell.kind === 'house')).toBe(true);
     expect(loaded.state.school.name).toBe('Old Save University');
   });
 

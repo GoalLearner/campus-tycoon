@@ -53,6 +53,7 @@ import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, partLevel, type Approval, type Cause } from './happiness';
+import { townLiving } from './town';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -296,6 +297,8 @@ export interface StudentCard {
   home: number | null;
   /** Where they live, for the card's first line. */
   residence: 'dorm' | 'offCampus';
+  /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
+  street: string | null;
   /** On a 4.0 scale, to one decimal. */
   gpa: number;
   /** null for a student in no club. */
@@ -401,6 +404,19 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
 }
 
+/** The street a student living off campus lives on: one of the neighbourhoods with students in it, more often a fuller one. */
+function streetOf(state: GameState, ref: StudentRef): string | null {
+  const hoods = townLiving(state).filter((hood) => hood.living > 0);
+  const total = hoods.reduce((sum, hood) => sum + hood.living, 0);
+  if (total === 0) return null;
+  let at = roll(state.seed, ref, SALT.bed) * total;
+  for (const hood of hoods) {
+    at -= hood.living;
+    if (at < 0) return hood.name;
+  }
+  return hoods[hoods.length - 1]!.name;
+}
+
 /** Everything the card shows, or null when no such student is enrolled now. */
 export function studentCard(state: GameState, ref: StudentRef): StudentCard | null {
   const classYear = classYearOf(state, ref);
@@ -460,6 +476,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     quirk,
     home,
     residence: resident ? 'dorm' : 'offCampus',
+    street: resident ? null : streetOf(state, ref),
     gpa,
     club: clubOf(seed, ref, nature, major.group, quirk),
     relationship,

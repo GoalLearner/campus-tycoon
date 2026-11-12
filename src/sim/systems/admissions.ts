@@ -1,8 +1,9 @@
 import { calendarAt } from '../calendar';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
 import { enrollment, openCapacity } from '../selectors';
-import { ZONES, type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
-import { classSize, NEED } from './demand';
+import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
+import { classSize, dormStudents, localsAmong } from './demand';
+import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 
@@ -14,20 +15,48 @@ import { markRatesDirty } from './money';
 const ZONE_NAME: Record<Zone, string> = { housing: 'Housing', academic: 'Academics' };
 const ZONE_UNIT: Record<Zone, string> = { housing: 'beds', academic: 'classroom seats' };
 
-/** New students each zone still has room for, and the tightest of them. */
-export function roomForNewStudents(state: GameState): { room: number; tightest: Zone } {
-  const students = enrollment(state);
-  let room = Infinity;
-  let tightest: Zone = 'academic';
-  for (const zone of ZONES) {
-    const free = openCapacity(state, zone) - students * NEED[zone];
-    const fits = Math.floor(free / NEED[zone] + 1e-9);
-    if (fits < room) {
-      room = fits;
-      tightest = zone;
-    }
+export interface Admit {
+  /** How many of the group get a place now. */
+  admitted: number;
+  /** Locals among them. */
+  locals: number;
+  /** Of those locals, how many will live in town. The rest take beds. */
+  off: number;
+  /** What caps the group: beds, or classroom seats. */
+  tightest: Zone;
+}
+
+/**
+ * How many of a group can be let in now. Everyone needs a seat. `locals` of
+ * the `count` live in town if a place there is free, and everyone else needs
+ * a bed. The group is let in at its own mix of locals, so an intake short of
+ * seats does not fill up with locals alone.
+ */
+export function admitPlan(state: GameState, count: number, locals: number): Admit {
+  const seats = Math.max(0, openCapacity(state, 'academic') - enrollment(state));
+  const beds = Math.max(0, openCapacity(state, 'housing') - dormStudents(state));
+  const places = freeTownPlaces(state);
+  const localsIn = (admitted: number): number => (count <= 0 ? 0 : Math.round((locals * admitted) / count));
+  const bedsFor = (admitted: number): number => admitted - Math.min(localsIn(admitted), places);
+
+  // Beds needed never fall as more are let in, so the most that fit can be found by halving.
+  let low = 0;
+  let high = Math.max(0, Math.min(count, seats));
+  while (low < high) {
+    const mid = (low + high + 1) >> 1;
+    if (bedsFor(mid) <= beds) low = mid;
+    else high = mid - 1;
   }
-  return { room: Math.max(0, room), tightest };
+  const admitted = low;
+  const housingBinds = admitted < count && bedsFor(admitted + 1) > beds;
+  return { admitted, locals: localsIn(admitted), off: Math.min(localsIn(admitted), places), tightest: housingBinds ? 'housing' : 'academic' };
+}
+
+/** How many more students could be let in right now, at the mix of a normal class, and what would stop the next one. */
+export function roomForNewStudents(state: GameState): { room: number; tightest: Zone } {
+  const many = 1_000_000;
+  const plan = admitPlan(state, many, localsAmong(many));
+  return { room: plan.admitted, tightest: plan.tightest };
 }
 
 /** The record of the class that entered in a given year, made on first use. */
@@ -41,8 +70,9 @@ export function classRecord(state: GameState, entryYear: number): ClassRecord {
   return record;
 }
 
-function enrol(state: GameState, count: number): void {
+function enrol(state: GameState, count: number, offCampus: number): void {
   state.cohorts[0] += count;
+  state.offCampus[0] += Math.min(count, offCampus);
   if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year)).entered += count;
   state.stats.peakEnrollment = Math.max(state.stats.peakEnrollment, enrollment(state));
   markRatesDirty(state);
@@ -52,14 +82,16 @@ function enrol(state: GameState, count: number): void {
 export function runIntake(state: GameState, season: Season, log: LogEntry[]): void {
   const tick = state.clock.tick;
   const expected = classSize(state, season, tick === FIRST_INTAKE_TICK);
-  const { room, tightest } = roomForNewStudents(state);
-  const admitted = Math.min(expected, room);
+  const locals = localsAmong(expected);
+  const plan = admitPlan(state, expected, locals);
+  const admitted = plan.admitted;
   const turnedAway = expected - admitted;
-  const bottleneck = turnedAway > 0 ? tightest : null;
+  const bottleneck = turnedAway > 0 ? plan.tightest : null;
 
-  enrol(state, admitted);
+  enrol(state, admitted, plan.off);
   state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck };
   state.admissions.waitlist = turnedAway;
+  state.admissions.waitlistLocals = locals - plan.locals;
   state.admissions.waitlistUntilTick = turnedAway > 0 ? tick + WAITLIST_TICKS : 0;
   state.admissions.waitlistAdmitted = 0;
 
@@ -80,11 +112,12 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   const a = state.admissions;
   if (a.waitlist <= 0 || state.clock.tick >= a.waitlistUntilTick) return;
-  const { room } = roomForNewStudents(state);
-  const count = Math.min(a.waitlist, room);
+  const plan = admitPlan(state, a.waitlist, Math.min(a.waitlist, a.waitlistLocals));
+  const count = plan.admitted;
   if (count <= 0) return;
-  enrol(state, count);
+  enrol(state, count, plan.off);
   a.waitlist -= count;
+  a.waitlistLocals = Math.max(0, Math.min(a.waitlist, a.waitlistLocals - plan.locals));
   a.waitlistAdmitted += count;
   log.push({
     tick: state.clock.tick,
@@ -94,7 +127,7 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   });
 }
 
-/** Nine hours after an intake, whoever is still waiting gives up. */
+/** A day and a half after an intake, whoever is still waiting gives up. */
 export function closeWaitlist(state: GameState, log: LogEntry[]): void {
   const a = state.admissions;
   if (a.waitlistUntilTick === 0) return;
@@ -102,6 +135,7 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
   const admitted = a.waitlistAdmitted;
   const zone = a.lastIntake?.bottleneck ?? null;
   a.waitlist = 0;
+  a.waitlistLocals = 0;
   a.waitlistUntilTick = 0;
   if (lost > 0 || admitted > 0) {
     log.push({
@@ -129,17 +163,18 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   for (let classYear = 0; classYear < 4; classYear++) {
     const was = c[classYear]!;
     next[classYear] = Math.round(was * mood.retention);
+    // Those living in town leave at the same rate as everyone else.
+    state.offCampus[classYear] = Math.min(next[classYear]!, Math.round(state.offCampus[classYear]! * mood.retention));
     if (was > next[classYear]!) classRecord(state, Math.max(1, year - classYear)).left += was - next[classYear]!;
   }
   state.cohorts = next;
 
-  // Students with no bed do not come back. Room only limits who is admitted, so this is what
-  // stops a full dorm being cleared and its students kept.
-  const room = Math.floor(openCapacity(state, 'housing') / NEED.housing + 1e-9);
-  let homeless = enrollment(state) - room;
+  // Dorm students with no bed do not come back. Room only limits who is admitted, so this is what
+  // stops a full dorm being cleared and its students kept. Those living in town are not affected.
+  let homeless = dormStudents(state) - openCapacity(state, 'housing');
   for (let classYear = 0; classYear < 4 && homeless > 0; classYear++) {
-    const go = Math.min(homeless, state.cohorts[classYear]!);
-    if (go === 0) continue;
+    const go = Math.min(homeless, state.cohorts[classYear]! - state.offCampus[classYear]!);
+    if (go <= 0) continue;
     state.cohorts[classYear]! -= go;
     classRecord(state, Math.max(1, year - classYear)).left += go;
     homeless -= go;
@@ -166,6 +201,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   semesterEnd(state, log);
   const seniors = state.cohorts[3];
   state.cohorts[3] = 0;
+  state.offCampus[3] = 0;
   if (seniors > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year - 3)).finishedOnTime += seniors;
   state.stats.graduates += seniors;
   markRatesDirty(state);
@@ -183,6 +219,8 @@ export function graduate(state: GameState, log: LogEntry[]): void {
 export function promote(state: GameState): void {
   const c = state.cohorts;
   state.cohorts = [0, c[0], c[1], c[2] + c[3]];
+  const o = state.offCampus;
+  state.offCampus = [0, o[0], o[1], o[2] + o[3]];
 }
 
 /**

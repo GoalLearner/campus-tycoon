@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+import type { DayPeriod } from '../app/daylight';
 import {
   enrollment,
+  isPathKind,
   PLACED,
   placeIndex,
   sampleStudents,
@@ -40,6 +42,14 @@ const MAX_WALKERS = 90;
 const MAX_IN_VIEW = 64;
 /** Staff and faculty: a campus with buildings is never quite empty. */
 const MIN_IN_VIEW = 4;
+/**
+ * How busy the paths are in each part of the player's day, against a steady
+ * afternoon. Night is quiet but never empty: MIN_IN_VIEW still holds, so
+ * someone who only ever plays at night finds people about.
+ */
+const BUSY: Record<DayPeriod, number> = { morning: 1.35, afternoon: 1, evening: 0.8, night: 0.3 };
+/** In the morning rush people hurry. */
+const HURRY: Record<DayPeriod, number> = { morning: 1.2, afternoon: 1, evening: 0.95, night: 0.9 };
 /** Path cells per student sample: lower means a busier campus. */
 const STUDENTS_PER_PATH_CELL = 9;
 const MIN_DENSITY = 0.07;
@@ -134,6 +144,8 @@ export class Walkers {
   private out = new Set<string>();
   private marked: string | null = null;
   private ring: Phaser.GameObjects.Ellipse | null = null;
+  /** The part of the player's own day. It sets how many are out and where they go. */
+  private period: DayPeriod = 'afternoon';
 
   constructor(
     private scene: Phaser.Scene,
@@ -141,6 +153,11 @@ export class Walkers {
     private iso: Iso,
   ) {
     this.people = art.people;
+  }
+
+  /** Told by the map when the hour moves into another part of the day. */
+  setPeriod(period: DayPeriod): void {
+    this.period = period;
   }
 
   // ------------------------------------------------------------- the map --
@@ -151,7 +168,7 @@ export class Walkers {
     this.width = width;
     this.height = height;
     this.students = enrollment(state);
-    this.isPath = cells.map((cell) => cell.kind === 'path');
+    this.isPath = cells.map((cell) => isPathKind(cell.kind));
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
     const doorOf = (x: number, y: number): number => {
@@ -197,7 +214,7 @@ export class Walkers {
         } else if (cell.kind === 'quad') {
           const door = doorOf(x, y);
           if (door >= 0) this.stops.push({ kind: 'quad', zone: null, cell: { x, y }, door });
-        } else if (cell.kind === 'path') {
+        } else if (isPathKind(cell.kind)) {
           // A path that stops dead is a way onto campus.
           let links = 0;
           for (const [dx, dy] of NEIGHBOURS) {
@@ -370,9 +387,25 @@ export class Walkers {
     } else {
       homes = others.filter((stop) => stop.zone === 'housing');
     }
+    const places = others.filter((stop) => stop.kind === 'place');
+    const out = places.length > 0 ? places : quads;
     const roll = Math.random();
     let choice: readonly Stop[];
-    if (origin.zone === 'housing') choice = roll < 0.7 ? classes : quads;
+    if (this.period === 'morning') {
+      // The rush: nearly everyone is on the way to class.
+      if (origin.zone === 'housing') choice = roll < 0.9 ? classes : quads;
+      else if (origin.zone === 'academic') choice = roll < 0.65 ? classes : roll < 0.8 ? homes : quads;
+      else choice = roll < 0.8 ? classes : homes;
+    } else if (this.period === 'evening') {
+      // Dinner, the gym, clubs. Few are going to class.
+      if (origin.zone === 'housing') choice = roll < 0.15 ? classes : out;
+      else if (origin.zone === 'academic') choice = roll < 0.55 ? homes : out;
+      else choice = roll < 0.65 ? homes : out;
+    } else if (this.period === 'night') {
+      // A few head to a night class or the library. Everyone else is going home.
+      if (origin.zone === 'housing') choice = roll < 0.5 ? classes : out;
+      else choice = roll < 0.85 ? homes : out;
+    } else if (origin.zone === 'housing') choice = roll < 0.7 ? classes : quads;
     else if (origin.zone === 'academic') choice = roll < 0.5 ? homes : roll < 0.75 ? classes : quads;
     else choice = roll < 0.5 ? classes : homes;
     if (choice.length === 0) choice = classes.length > 0 ? classes : quads.length > 0 ? quads : homes;
@@ -414,7 +447,7 @@ export class Walkers {
       leg,
       x: begin.x,
       y: begin.y,
-      pace: PACE * (0.8 + Math.random() * 0.45),
+      pace: PACE * HURRY[this.period] * (0.8 + Math.random() * 0.45),
       direction: 'se',
       stride: Math.random() * 1000,
       alpha: 0,
@@ -655,7 +688,7 @@ export class Walkers {
       MIN_DENSITY,
       MAX_DENSITY,
     );
-    return Phaser.Math.Clamp(Math.round(visible * density), Math.min(MIN_IN_VIEW, visible), MAX_IN_VIEW);
+    return Phaser.Math.Clamp(Math.round(visible * density * BUSY[this.period]), Math.min(MIN_IN_VIEW, visible), MAX_IN_VIEW);
   }
 
   /** How many walkers are alive. For tests and the dev console. */

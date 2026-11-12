@@ -1,5 +1,7 @@
 import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
+import { alwaysDaylight, setAlwaysDaylight } from '../app/daylight';
+import { HOME_SCREEN_TIP, markHomeScreenTipShown, shouldShowHomeScreenTip } from '../app/homeScreenTip';
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
 import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
@@ -12,6 +14,10 @@ import {
   dateAt,
   formatDate,
   capacityWanted,
+  hasRoadAccess,
+  hoodAt,
+  parcelAt,
+  townLiving,
   cellAt,
   COST,
   demandBar,
@@ -45,6 +51,7 @@ import {
 } from '../sim';
 import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
+import { hoodSummary, parcelSummary, ROAD_ENTRY, townFix } from './buildUi';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -87,10 +94,14 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
   { id: 'clear', label: 'Clear', hint: 'Drag over what to clear · you see what comes back before it goes' },
 ];
 
+/** The road tool has no button in the bar: it is picked from the Build menu. */
+const ROAD_HINT = `Drag to lay a road · ${dollars(COST.road)} a cell · tap Look when done`;
+
 const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]> = {
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
+  road: ['road cell', 'road cells'],
   quad: ['quad cell', 'quad cells'],
   tree: ['tree', 'trees'],
   clear: ['cell', 'cells'],
@@ -309,7 +320,17 @@ export function mountUi(root: HTMLElement): void {
   const inspectorClose = button('Close', 'inspector-close', () => session.clearSelection());
   // Shown on a dorm held back for want of dining: a shortcut to placing a hall beside it.
   let actionLot: { x: number; y: number } | null = null;
+  // Set instead when the panel is a field for sale: the button buys it.
+  let actionLand: number | null = null;
   const inspectorAction = button('Build a dining hall here', 'primary inspector-action', () => {
+    if (actionLand !== null) {
+      const result = store.dispatch({ type: 'buyLand', parcel: actionLand });
+      if (result.ok) {
+        session.notify('The land is yours. You can build on it now.');
+        session.clearSelection();
+      } else session.notify(result.error, 'error');
+      return;
+    }
     if (!actionLot) return;
     const spot = nearestSpot(store.state, 'dining', actionLot.x, actionLot.y);
     if (!spot) {
@@ -340,7 +361,11 @@ export function mountUi(root: HTMLElement): void {
       session.notify(result.error, 'error');
       return;
     }
-    session.notify(`${PLACED[type].name} built.`);
+    // A car park is no use until a road reaches it. Say so at once, not at the next intake.
+    const built = store.state.map.placed[store.state.map.placed.length - 1];
+    if (built && PLACED[type].cars && !hasRoadAccess(store.state.map, built)) {
+      session.notify(`${PLACED[type].name} built. No road access yet: lay a road from it to a town street.`);
+    } else session.notify(`${PLACED[type].name} built.`);
     session.setTool('look');
   });
   placerButtons.append(placeButton, button('Cancel', '', () => session.setTool('look')));
@@ -365,7 +390,8 @@ export function mountUi(root: HTMLElement): void {
 
   function openBuild(): void {
     openBuildMenu(root, buildEntries(), (entry) => {
-      if (entry.id) session.startPlacing(entry.id as PlacedType);
+      if (entry.id === ROAD_ENTRY) session.setTool('road');
+      else if (entry.id) session.startPlacing(entry.id as PlacedType);
     });
   }
 
@@ -406,6 +432,8 @@ export function mountUi(root: HTMLElement): void {
 
   // --------------------------------------------------------------- modals --
   let modalOpen = false;
+  /** The Home Screen tip is looked at once a visit, after any away list. */
+  let tipChecked = false;
 
   function openModal(build: (close: () => void, card: HTMLElement) => void, dismissable = true): void {
     modalRoot.textContent = '';
@@ -516,6 +544,13 @@ export function mountUi(root: HTMLElement): void {
           });
         }),
       );
+      // Day and night follow the player's own clock. This shows the campus in daylight at any hour.
+      const daylight = button('', 'wide', () => {
+        setAlwaysDaylight(!alwaysDaylight());
+        setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
+      });
+      setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
+      card.append(daylight);
 
       const startOver = button('Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {
@@ -675,6 +710,9 @@ export function mountUi(root: HTMLElement): void {
         // The bars look ahead to the next class too, so they can show more than this list.
         card.append(el('p', 'fine', `The bars also count the next class of about ${expectedClass(state)}, so they show a little more.`));
       }
+      // Beds are also saved by letting locals live at home.
+      const fix = plan.zones.housing.short > 0 ? townFix(state) : '';
+      if (fix) card.append(el('p', '', fix));
       card.append(el('p', 'fine', 'A lot must touch a path. Lots near a quad grow bigger by themselves.'));
 
       for (const zone of order) {
@@ -701,6 +739,33 @@ export function mountUi(root: HTMLElement): void {
     const selected = session.selected;
     const cell = selected ? cellAt(state.map, selected.x, selected.y) : null;
     const placedHere = selected ? placedAt(state.map, selected.x, selected.y) : null;
+    actionLand = null;
+    setText(inspectorAction, 'Build a dining hall here');
+    // A field for sale: its price, and a button to buy it.
+    const parcel = selected ? parcelAt(state.map, selected.x, selected.y) : null;
+    if (selected && parcel && !parcel.owned) {
+      const sale = parcelSummary(state, parcel);
+      setText(inspectorTitle, parcel.name);
+      setText(inspectorState, sale.state);
+      setText(inspectorFacts, sale.facts);
+      actionLand = parcel.id;
+      setText(inspectorAction, `Buy for ${dollarsShort(parcel.price)}`);
+      inspectorAction.classList.add('show');
+      inspector.classList.add('show');
+      return;
+    }
+    // A neighbourhood in town: who lives there and how they get to class.
+    const hood = selected ? hoodAt(state.map, selected.x, selected.y) : null;
+    if (hood) {
+      const living = townLiving(state)[hood.id]!;
+      const text = hoodSummary(state, living);
+      setText(inspectorTitle, hood.name);
+      setText(inspectorState, text.state);
+      setText(inspectorFacts, text.facts);
+      inspectorAction.classList.remove('show');
+      inspector.classList.add('show');
+      return;
+    }
     if (placedHere) {
       setText(inspectorTitle, PLACED[placedHere.type].name);
       setText(inspectorState, placedSummary(state, placedHere));
@@ -863,7 +928,7 @@ export function mountUi(root: HTMLElement): void {
       const name = picking ? treeNames[session.treeKind] : undefined;
       setText(
         chip,
-        name ? `${name} · tap or drag to plant · ${dollars(COST.tree)} each` : (TOOLS.find((t) => t.id === tool)?.hint ?? ''),
+        name ? `${name} · tap or drag to plant · ${dollars(COST.tree)} each` : tool === 'road' ? ROAD_HINT : (TOOLS.find((t) => t.id === tool)?.hint ?? ''),
       );
       chip.classList.add('show');
       chip.classList.remove('bad');
@@ -896,6 +961,16 @@ export function mountUi(root: HTMLElement): void {
     if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);
 
     if ((store.away || store.upgradeNotes.length > 0) && !modalOpen) openAway();
+    // Once, on a return visit in an iPhone or iPad browser tab: the Home Screen keeps saves safe there.
+    if (store.returning && !modalOpen && !tipChecked) {
+      tipChecked = true;
+      if (shouldShowHomeScreenTip()) {
+        markHomeScreenTipShown();
+        openModal((close, card) => {
+          card.append(el('h1', '', 'A tip'), el('p', '', HOME_SCREEN_TIP), button('OK', 'primary', close));
+        });
+      }
+    }
 
     if (store.recent.length > 0) {
       for (const entry of store.recent) {

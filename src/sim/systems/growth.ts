@@ -1,7 +1,7 @@
 import { MAX_STAGE, stageSpec, VARIANTS_PER_STAGE } from '../config/buildings';
 import { WALK_FREE_MINUTES } from '../config/desirability';
 import { DINING_STAGE } from '../config/placed';
-import { cellAt } from '../selectors';
+import { cellAt, isPathKind } from '../selectors';
 import { ZONES, type Building, type GameState, type MapState, type Zone } from '../types';
 import { cancelTimers } from '../timers';
 import { startBuild } from './construction';
@@ -36,7 +36,7 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
 ];
 
 export function touchesPath(map: MapState, x: number, y: number): boolean {
-  return NEIGHBOURS.some(([dx, dy]) => cellAt(map, x + dx, y + dy)?.kind === 'path');
+  return NEIGHBOURS.some(([dx, dy]) => isPathKind(cellAt(map, x + dx, y + dy)?.kind));
 }
 
 function stageOf(map: MapState, x: number, y: number): { stage: number; building: Building | null } {
@@ -123,8 +123,11 @@ interface Candidate {
 function candidates(state: GameState, zone: Zone): Candidate[] {
   const map = state.map;
   const out: Candidate[] = [];
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
+  // Lots can only be on land the campus owns, so only that land is searched. This runs in catch-up.
+  for (const parcel of map.parcels) {
+    if (!parcel.owned) continue;
+    for (let y = parcel.y; y < parcel.y + parcel.h; y++) {
+      for (let x = parcel.x; x < parcel.x + parcel.w; x++) {
       const i = y * map.width + x;
       const cell = map.cells[i]!;
       if (cell.kind !== 'lot' || cell.zone !== zone) continue;
@@ -137,6 +140,7 @@ function candidates(state: GameState, zone: Zone): Candidate[] {
       if (needsDining(map, x, y, zone, nextStage)) continue;
       const now = stage > 0 ? stageSpec(zone, stage).capacity : 0;
       out.push({ x, y, score, nextStage, gain: next.capacity - now });
+      }
     }
   }
   // Highest desirability first. Ties go to the lot nearest the top-left, so the order is fixed.

@@ -49,6 +49,8 @@ export class Store {
   lastExportAt: number | null = null;
   /** True during the first catch-up after a save is loaded. */
   private opening = false;
+  /** True when this visit began by loading a saved game: a return visit, not the one that founded it. */
+  returning = false;
   /** Things that happened while the app was open, newest last. The UI drains it. */
   recent: LogEntry[] = [];
   /** Rules that are new to a save made by an older version. The UI shows them once and clears them. */
@@ -103,6 +105,7 @@ export class Store {
         this.opening = true;
         this.catchUp();
         this.opening = false;
+        this.returning = true;
         return true;
       }
       this.loadProblem = result.reason;

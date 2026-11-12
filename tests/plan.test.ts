@@ -4,6 +4,10 @@ import {
   applyAction,
   enrollment,
   FOUNDING_CLASS,
+  freeTownPlaces,
+  localsAmong,
+  offCampusNow,
+  townPlaces,
   openCapacity,
   roomPlan,
   rowBetween,
@@ -27,11 +31,16 @@ const SOUTH = [...rowBetween([8, 18], [18, 18]), ...rowBetween([22, 18], [23, 18
 
 describe('the room plan', () => {
   it('plans for the founding class before anyone has arrived', () => {
-    const plan = roomPlan(freshGame());
+    const state = freshGame();
+    const plan = roomPlan(state);
     expect(plan.goal).toBe('nextClass');
     expect(plan.students).toBe(FOUNDING_CLASS);
-    // 400 students need 240 beds and 400 seats. The starter campus has 36 and 60.
-    expect(plan.zones.housing).toEqual({ short: 204, building: 0, lots: 17, perLot: 12 });
+    // 400 students need 400 seats. 160 of them are locals, and the ones the first neighbourhood
+    // has room for live there. Everyone else needs a bed. The starter campus has 36 beds and 60 seats.
+    const places = townPlaces(state.map).total;
+    expect(places).toBeGreaterThanOrEqual(90);
+    const short = 400 - Math.min(localsAmong(400), places) - 36;
+    expect(plan.zones.housing).toEqual({ short, building: 0, lots: Math.ceil(short / 12), perLot: 12 });
     expect(plan.zones.academic).toEqual({ short: 340, building: 0, lots: 17, perLot: 20 });
   });
 
@@ -43,7 +52,9 @@ describe('the room plan', () => {
     expect(plan.students).toBe(state.admissions.waitlist);
     // Everyone enrolled plus everyone waiting is the founding class again.
     expect(enrollment(state) + plan.students).toBe(FOUNDING_CLASS);
-    expect(plan.zones.housing.short).toBe(240 - openCapacity(state, 'housing'));
+    // Beds are for everyone who will not be living in town.
+    const inTown = offCampusNow(state) + Math.min(state.admissions.waitlistLocals, freeTownPlaces(state));
+    expect(plan.zones.housing.short).toBe(400 - inTown - openCapacity(state, 'housing'));
     expect(plan.zones.academic.short).toBe(400 - openCapacity(state, 'academic'));
   });
 

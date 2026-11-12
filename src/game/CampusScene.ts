@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { clock } from '../app/clock';
+import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
 import {
@@ -16,9 +17,19 @@ import {
   previewPlace,
   reachCells,
   incidentText,
+  hoodAt,
+  parcelAt,
+  driversNow,
+  hasRoadAccess,
+  isPathKind,
+  isRoadKind,
+  START_LAND,
+  townLiving,
+  townPlaces,
   type Incident,
 } from '../sim';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
+import { Cars } from './Cars';
 import { Iso } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
 import { Walkers } from './Walkers';
@@ -26,6 +37,13 @@ import { Walkers } from './Walkers';
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
 const ZONE_TINT: Record<Zone, number> = { housing: 0x9cc3ff, academic: 0xffc27a };
 const NO_TINT = 0xffffff;
+
+/** Land the campus does not own yet is dimmed. */
+const FOR_SALE_TINT = 0x9cb39a;
+/** The light of the hour is laid over the map here: above everything on the ground, below the icons that float. */
+const LIGHT_DEPTH = 800_000;
+/** Where cars park on a surface lot, as steps along it from its top corner. */
+const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
 const MAX_ZOOM_FACTOR = 2.2;
 const WHEEL_STEP = 1.12;
@@ -60,7 +78,15 @@ export class CampusScene extends Phaser.Scene {
   private mapHeight = 0;
   private gameId = '';
   private walkers!: Walkers;
+  private cars!: Cars;
   private placed!: PlacedSprites;
+  /** The light of the hour, multiplied over the whole map. */
+  private lightLayer!: Phaser.GameObjects.Rectangle;
+  /** The glow of each lit street lamp, by cell. Drawn over the night so the lamps shine. */
+  private glows = new Map<number, Phaser.GameObjects.Image>();
+  private light: Daylight = currentDaylight();
+  private lampsLit = false;
+  private nextLightAt = 0;
   /** Extra tinted cells: the reach of a building being placed, or a coverage overlay. */
   private tints: Array<{ cells: Point[]; colour: number; alpha: number }> = [];
   private overlay!: Phaser.GameObjects.Graphics;
@@ -91,7 +117,9 @@ export class CampusScene extends Phaser.Scene {
     this.iso = new Iso(this.art.halfWidth, this.art.halfHeight);
     this.dpr = 1 / this.scale.zoom;
     this.walkers = new Walkers(this, this.art, this.iso);
+    this.cars = new Cars(this, this.art, this.iso);
     this.placed = new PlacedSprites(this, this.art, this.iso);
+    this.lightLayer = this.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.MULTIPLY);
     // Dev builds: reach the scene from the console, for screenshots and checks.
     if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__scene = this;
 
@@ -143,9 +171,15 @@ export class CampusScene extends Phaser.Scene {
       this.gameId = id;
       this.dirty = true;
     }
+    // The hour moves slowly. Once a second is plenty.
+    if (time >= this.nextLightAt) {
+      this.nextLightAt = time + 1000;
+      this.showLight();
+    }
     if (this.dirty) {
       this.syncMap(state);
       this.walkers.setMap(state);
+      this.cars.setMap(state);
       this.placedDirty = true;
       this.dirty = false;
       this.overlayDirty = true;
@@ -160,6 +194,7 @@ export class CampusScene extends Phaser.Scene {
       this.placedDirty = false;
     }
     this.walkers.update(delta);
+    this.cars.update(delta, this.light.period);
     this.moveResponders(state, time);
     this.watchStudent(delta);
     this.placed.update(time);
@@ -184,7 +219,10 @@ export class CampusScene extends Phaser.Scene {
     this.visuals = [];
     this.gameId = '';
     this.walkers.clear();
+    this.cars.clear();
     this.placed.clear();
+    for (const glow of this.glows.values()) glow.destroy();
+    this.glows.clear();
     for (const sprite of this.responders.values()) sprite.destroy();
     this.responders.clear();
     this.tints = [];
@@ -211,10 +249,57 @@ export class CampusScene extends Phaser.Scene {
   private pathMask(state: GameState, x: number, y: number): number {
     const { width, height, cells } = state.map;
     const isPath = (cx: number, cy: number): boolean =>
-      cx >= 0 && cy >= 0 && cx < width && cy < height && cells[cy * width + cx]!.kind === 'path';
+      cx >= 0 && cy >= 0 && cx < width && cy < height && isPathKind(cells[cy * width + cx]!.kind);
     return (
       (isPath(x, y - 1) ? 1 : 0) | (isPath(x + 1, y) ? 2 : 0) | (isPath(x, y + 1) ? 4 : 0) | (isPath(x - 1, y) ? 8 : 0)
     );
+  }
+
+  /** Which sides of a road cell join more road: the player's roads, crossings and the town's streets. */
+  private roadMask(state: GameState, x: number, y: number): number {
+    const { width, height, cells } = state.map;
+    const isRoad = (cx: number, cy: number): boolean =>
+      cx >= 0 && cy >= 0 && cx < width && cy < height && isRoadKind(cells[cy * width + cx]!.kind);
+    return (
+      (isRoad(x, y - 1) ? 1 : 0) | (isRoad(x + 1, y) ? 2 : 0) | (isRoad(x, y + 1) ? 4 : 0) | (isRoad(x - 1, y) ? 8 : 0)
+    );
+  }
+
+  /**
+   * The light of the hour, from the player's own clock: a tint over the map,
+   * the street lamps, and how busy the paths and roads are. For show only.
+   */
+  private showLight(): void {
+    const light = currentDaylight();
+    this.light = light;
+    this.lightLayer.setFillStyle(light.colour, light.strength);
+    const lit = light.lamps > 0.05;
+    if (lit !== this.lampsLit) {
+      this.lampsLit = lit;
+      this.dirty = true;
+    }
+    for (const glow of this.glows.values()) glow.setAlpha(light.lamps).setVisible(lit);
+    this.walkers.setPeriod(light.period);
+  }
+
+  /** Keep one glow for each street lamp, and drop those whose lamp has gone. */
+  private syncGlows(lampCells: readonly number[], width: number): void {
+    const wanted = new Set(lampCells);
+    for (const [cell, glow] of this.glows) {
+      if (wanted.has(cell)) continue;
+      glow.destroy();
+      this.glows.delete(cell);
+    }
+    if (!this.art.has('lamp.glow')) return;
+    for (const cell of lampCells) {
+      if (this.glows.has(cell)) continue;
+      const x = cell % width;
+      const pos = this.iso.toWorld(x, (cell - x) / width);
+      const glow = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(LIGHT_DEPTH + 1).setBlendMode(Phaser.BlendModes.ADD);
+      this.art.apply(glow, 'lamp.glow');
+      glow.setAlpha(this.light.lamps).setVisible(this.lampsLit);
+      this.glows.set(cell, glow);
+    }
   }
 
   private variantKey(prefix: string, variant: number): string {
@@ -258,6 +343,16 @@ export class CampusScene extends Phaser.Scene {
   /** Bring every sprite in line with the state. Only cells whose look changed are touched. */
   private syncMap(state: GameState): void {
     const { width, height, cells, buildings } = state.map;
+    // Houses stand on as many plots as there are locals to live in them.
+    const standing = new Set<number>();
+    const living = townLiving(state);
+    for (const hood of state.map.town.neighbourhoods) {
+      for (const plot of hood.plots.slice(0, living[hood.id]?.houses ?? 0)) standing.add(plot.y * width + plot.x);
+    }
+    const forSale = state.map.parcels.filter((parcel) => !parcel.owned);
+    const hasLamps = this.art.has('lamp.off') && this.art.has('lamp.on');
+    const lamp = this.lampsLit ? 'lamp.on' : 'lamp.off';
+    const lampCells: number[] = [];
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = y * width + x;
@@ -269,6 +364,30 @@ export class CampusScene extends Phaser.Scene {
 
         if (cell.kind === 'path') {
           groundKey = `path.${this.pathMask(state, x, y)}`;
+          // A street lamp every few cells along a walk.
+          if (hasLamps && (x + y) % 4 === 0) {
+            objectKey = lamp;
+            lampCells.push(i);
+          }
+        } else if (cell.kind === 'road' || cell.kind === 'street') {
+          groundKey = `road.${this.roadMask(state, x, y)}`;
+          if (hasLamps && (x + y) % 5 === 2) {
+            objectKey = lamp;
+            lampCells.push(i);
+          }
+        } else if (cell.kind === 'crossing') {
+          // The bars lie across the road, whichever way it runs.
+          groundKey = this.roadMask(state, x, y) & 5 ? 'road.cross.5' : 'road.cross.10';
+        } else if (cell.kind === 'house') {
+          if (standing.has(i)) objectKey = `town.house.${cell.variant}`;
+        } else if (cell.kind === 'town') {
+          // Gardens: mostly lawn, a tree here and there, the odd flower bed.
+          if (cell.variant < 2) objectKey = this.variantKey('tree', cellHash(x, y));
+          else if (cell.variant === 2 && this.art.has('town.garden')) groundKey = 'town.garden';
+        } else if (cell.kind === 'empty' && forSale.some((p) => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h)) {
+          // A field the campus has not bought: dimmer, and still wild.
+          tint = FOR_SALE_TINT;
+          if (cellHash(x, y) % 6 === 0) objectKey = this.variantKey('tree', cellHash(y, x));
         } else if (cell.kind === 'quad') {
           if (this.art.has('quad.lawn')) {
             groundKey = 'quad.lawn';
@@ -330,6 +449,7 @@ export class CampusScene extends Phaser.Scene {
         }
       }
     }
+    this.syncGlows(lampCells, width);
   }
 
   // ------------------------------------------------------------- overlays --
@@ -359,6 +479,16 @@ export class CampusScene extends Phaser.Scene {
       if (!placed) continue;
       const sprite = this.spriteFor(placed.type);
       items.push({ key: sprite.key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
+    }
+    // Cars stand on a surface lot that a road reaches, more of them the fuller it is.
+    const spaces = townPlaces(state.map).spaces;
+    const fill = spaces > 0 ? driversNow(state) / spaces : 0;
+    for (const placed of state.map.placed) {
+      if (!placed || placed.type !== 'parking' || !hasRoadAccess(state.map, placed)) continue;
+      const parked = Math.min(PARKED_AT.length, Math.ceil(fill * PARKED_AT.length));
+      for (let k = 0; k < parked; k++) {
+        items.push({ key: `car.${(placed.id * 3 + k * 2) % 7}.ny`, x: placed.x + PARKED_AT[k]!, y: placed.y, forward: 2 });
+      }
     }
     // An icon floats over every open incident.
     for (const incident of state.incidents.active) {
@@ -592,7 +722,8 @@ export class CampusScene extends Phaser.Scene {
     const cellsAcross = Phaser.Math.Clamp(cssWidth / 62, 6.5, 18);
     const zoom = cam.width / (cellsAcross * this.iso.halfWidth * 2);
     cam.setZoom(Phaser.Math.Clamp(zoom, this.minZoom(), MAX_ZOOM_FACTOR * this.dpr));
-    const centre = this.iso.toWorld(this.mapWidth / 2, this.mapHeight / 2);
+    // The view opens on the campus's own land, not on the middle of the whole map.
+    const centre = this.iso.toWorld(START_LAND.x + START_LAND.w / 2, START_LAND.y + START_LAND.h / 2);
     cam.setScroll(centre.x - cam.width / 2, centre.y - cam.height / 2);
   }
 
@@ -780,7 +911,10 @@ export class CampusScene extends Phaser.Scene {
       return;
     }
     const cell = store.state.map.cells[y * this.mapWidth + x]!;
-    if (cell.kind === 'lot' || cell.kind === 'placed') session.select(x, y);
+    const map = store.state.map;
+    const forSale = parcelAt(map, x, y)?.owned === false;
+    // A lot or building shows its panel. So does a field for sale, and a street of the town.
+    if (cell.kind === 'lot' || cell.kind === 'placed' || forSale || hoodAt(map, x, y)) session.select(x, y);
     else session.clearSelection();
   }
 

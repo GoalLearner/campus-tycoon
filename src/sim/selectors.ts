@@ -1,7 +1,8 @@
 import { stageSpec } from './config/buildings';
 import { TICKS_PER_YEAR } from './config/time';
 import { PLACED } from './config/placed';
-import type { Building, Cell, GameState, MapState, Zone } from './types';
+import { ROAD_UPKEEP_PER_YEAR } from './config/town';
+import type { Building, Cell, CellKind, GameState, MapState, Zone } from './types';
 
 /** Read-only views of the state. The UI reads the game through these. */
 
@@ -61,7 +62,18 @@ export function upkeepPerYear(state: GameState): number {
     if (b && b.stage > 0) total += stageSpec(b.zone, b.stage).upkeepPerYear;
   }
   for (const placed of state.map.placed) if (placed) total += PLACED[placed.type].upkeepPerYear;
+  for (const cell of state.map.cells) if (cell.kind === 'road' || cell.kind === 'crossing') total += ROAD_UPKEEP_PER_YEAR;
   return total;
+}
+
+/** True for ground a student walks along: a path, or a crossing where a path and a road share a cell. */
+export function isPathKind(kind: CellKind | undefined): boolean {
+  return kind === 'path' || kind === 'crossing';
+}
+
+/** True for ground a car drives along: the player's roads, crossings, and the town's streets. */
+export function isRoadKind(kind: CellKind | undefined): boolean {
+  return kind === 'road' || kind === 'crossing' || kind === 'street';
 }
 
 /** Net income per real hour at the current rates. The HUD's headline number. */

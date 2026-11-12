@@ -633,6 +633,39 @@
     }
    ]
   },
+  "lamp.off": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/StreetLampOff.png",
+     "stand": [
+      0.14,
+      0.3
+     ]
+    }
+   ]
+  },
+  "lamp.on": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/StreetLampOn.png",
+     "stand": [
+      0.14,
+      0.3
+     ]
+    }
+   ]
+  },
+  "lamp.glow": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/StreetLampGlow.png",
+     "stand": [
+      0.14,
+      0.3
+     ]
+    }
+   ]
+  },
   "quad.bench": {
    "layers": [
     {
