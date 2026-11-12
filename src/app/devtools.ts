@@ -4,8 +4,9 @@ import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { setCrowdSetting } from './crowd';
-import { foodCampus, playCampus, unjoinedCampus } from './demoAlive';
+import { foodCampus, lifeCampus, playCampus, unjoinedCampus } from './demoAlive';
 import { session } from './session';
+import { sound } from './sound';
 import { store } from './store';
 
 /**
@@ -313,7 +314,7 @@ function applyViewParams(params: URLSearchParams): void {
       }
     }, 2600);
   }
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person')) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather') && !params.has('movein') && !params.has('sound')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -403,6 +404,30 @@ function applyViewParams(params: URLSearchParams): void {
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
+      // &weather=rain sets the sky, which the calendar layer will do by itself: rain is heard and empties the lawns.
+      const sky = params.get('weather');
+      if (sky === 'rain' || sky === 'snow' || sky === 'clear') (scene as unknown as { setWeather?: (weather: string) => void }).setWeather?.(sky);
+      // &sound starts the sound without a tap, for measuring the work of a frame with it on. A browser only allows
+      // this where it has been told to, as the screenshot browser has.
+      if (params.has('sound')) setTimeout(() => sound.unlock(), 1500);
+      // &movein=120 has that many students move in now, with parents and boxes, as on the first day of a semester.
+      if (params.has('movein')) {
+        const count = Number(params.get('movein')) || 120;
+        setTimeout(() => (scene as unknown as { moveInNow?: (count: number) => void }).moveInNow?.(count), 2500);
+      }
+      // &scene=club puts the middle of the view on the first small scene of that kind: club, pickup, busker or boxes.
+      const kind = params.get('scene');
+      if (kind) {
+        const look = (tries: number): void => {
+          const at = (scene as unknown as { sceneSpot?: (kind: string) => { x: number; y: number } | null }).sceneSpot?.(kind);
+          if (at) {
+            const camera = scene.cameras.main;
+            const world = scene.iso.toWorld(at.x, at.y);
+            camera.setScroll(world.x - camera.width / 2, world.y - camera.height / 2);
+          } else if (tries > 0) setTimeout(() => look(tries - 1), 600);
+        };
+        setTimeout(() => look(20), 1500);
+      }
       // &truck brings a delivery truck to its door at once, for a screenshot of its driver.
       if (params.has('truck')) (scene as unknown as { cars?: { truckNow?: () => void } }).cars?.truckNow?.();
       // &weekend shows a weekend's visitors, tour groups and boosters, on any day of the game's week.
@@ -512,6 +537,8 @@ export function installDevTools(): void {
     store.adopt(playCampus(Number(params.get('students') ?? 1500)), { ephemeral: true });
   } else if (params.get('demo') === 'food') {
     store.adopt(foodCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
+  } else if (params.get('demo') === 'life') {
+    store.adopt(lifeCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
   } else if (params.get('demo') === 'unjoined') {
     store.adopt(unjoinedCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'mature') {

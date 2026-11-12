@@ -1,4 +1,5 @@
 import type { PaintPreview, PersonRef, PlacedType, StudentRef, Tool } from '../sim';
+import { sound } from './sound';
 
 /**
  * What the player is doing right now: the tool in hand, the lot they tapped,
@@ -187,6 +188,8 @@ class Session {
   }
 
   notify(text: string, kind: Toast['kind'] = 'info'): void {
+    // Something that could not be done has a soft sound of its own.
+    if (kind === 'error') sound.ui('error');
     this.toastId += 1;
     this.toast = { text, kind, id: this.toastId };
     this.emit();

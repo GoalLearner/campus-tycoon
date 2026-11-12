@@ -81,6 +81,8 @@ interface Site {
   eaters: number;
   /** A bench or a table: the kinds of food within a few cells, whose customers eat at it. */
   foodNear: string[];
+  /** A picnic table by a lecture hall, a library or a study center: a study group sits at it. */
+  study: boolean;
   /** Where its line stands: beside a path that touches it, or to its west. */
   line: { x: number; y: number; dx: number; dy: number };
   /** True when the line stands on the south or the east side: in front of the building, whatever its width. */
@@ -104,6 +106,7 @@ export class Activity {
   private period: DayPeriod = 'afternoon';
   private step = 2;
   private students = 0;
+  private studyShare = 0;
   private recountAt = 0;
   /** Figures drawn at the last count, for the dev readout. */
   private drawn = 0;
@@ -119,6 +122,12 @@ export class Activity {
   setPeriod(period: DayPeriod): void {
     if (period !== this.period) this.recountAt = 0;
     this.period = period;
+  }
+
+  /** The share of study tables with a group at them now, from the rule for small scenes. */
+  setStudy(share: number): void {
+    if (Math.abs(share - this.studyShare) > 1e-9) this.recountAt = 0;
+    this.studyShare = share;
   }
 
   /** The crowd step to show: fewer figures when frames are short. */
@@ -175,7 +184,19 @@ export class Activity {
         }
       }
       const eaters = family === 'dining' ? (foodTrade(state, placed)?.students ?? 0) : 0;
-      next.push({ placed, use: playUse(state, placed), eaters, foodNear, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [] });
+      // A study group meets at a picnic table within a few cells of a lecture hall, a library or a study center.
+      let study = false;
+      if (placed.type === 'table') {
+        for (let y = Math.max(0, placed.y - SEAT_REACH); y <= Math.min(height - 1, placed.y + SEAT_REACH) && !study; y++) {
+          for (let x = Math.max(0, placed.x - SEAT_REACH); x <= Math.min(width - 1, placed.x + SEAT_REACH) && !study; x++) {
+            const cell = cells[y * width + x]!;
+            if (cell.kind === 'lot' && cell.zone === 'academic') study = true;
+            const other = cell.placedId === null ? null : state.map.placed[cell.placedId];
+            if (other && (PLACED[other.type].family === 'library' || PLACED[other.type].family === 'tutoring')) study = true;
+          }
+        }
+      }
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [] });
     }
     // Whatever was cleared takes its people with it.
     for (const gone of kept.values()) this.empty(gone);
@@ -202,6 +223,8 @@ export class Activity {
       // Beside food that is busy now, most seats are taken by people eating.
       let share = SEATED[this.period];
       for (const kind of site.foodNear) share = Math.max(share, EATING_SHARE * mealNow(kind, this.period));
+      // A study group fills a table by the lecture halls when the rule says they are out.
+      if (site.study) share = Math.max(share, this.studyShare);
       if (type === 'bench') return [['seat', mix(site.placed.id, this.period.length) < share ? 1 : 0]];
       let sitting = 0;
       for (let n = 0; n < TABLE_SEATS; n++) if (mix(site.placed.id * 7 + n, this.period.length) < share) sitting += 1;
@@ -261,17 +284,20 @@ export class Activity {
     }
   }
 
-  /** A ball on a field with a game on it. The pool's own art has its toys. */
+  /** A ball on a field with a game on it, and a book on a table with a study group at it. The pool's own art has its toys. */
   private setProps(site: Site, seen: boolean): void {
     const type = site.placed.type;
     const playing = site.figures.some((figure) => !figure.leaving && figure.role === 'field');
-    const keys = seen && playing && type === 'field' ? ['play.ball'] : [];
+    const studying = site.study && this.studyShare > 0 && site.figures.filter((figure) => !figure.leaving && figure.role === 'seat').length >= 2;
+    const keys = !seen ? [] : playing && type === 'field' ? ['play.ball'] : studying ? ['scene.book'] : [];
     const have = keys.filter((key) => this.art.has(key));
     if (site.props.length === have.length) return;
     for (const prop of site.props) prop.destroy();
     site.props = have.map((key) => {
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, key);
+      // It rests on its own base, where it is put.
+      sprite.setOrigin(0.5, 1);
       return sprite;
     });
   }
@@ -429,6 +455,13 @@ export class Activity {
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
       }
       for (const prop of site.props) {
+        if (site.placed.type !== 'field') {
+          // A study group's book lies open on the table.
+          // The table's top is about 21 pixels of the map above where its picture stands.
+          const at = this.iso.toWorld(site.placed.x + 0.5, site.placed.y + 0.56);
+          prop.setPosition(at.x, at.y - 21).setDepth((site.placed.x + site.placed.y) * 4 + 2.7);
+          continue;
+        }
         const spot = this.ballAt(site, seconds);
         const at = this.iso.toWorld(spot.x, spot.y);
         prop.setPosition(at.x, at.y).setDepth((spot.x + spot.y - 1) * 4 + 2.45);

@@ -75,6 +75,8 @@ const AHEAD: Record<Heading, { x: number; y: number }> = {
 const GAP = 0.85;
 const LONG_GAP = 0.3;
 
+const NO_LANE = { x: 0, y: 0 };
+
 /** One step of a route: a cell, and whether it is road. Driveways and car parks are not. */
 interface Node {
   x: number;
@@ -150,6 +152,10 @@ export class Cars {
   private spawnClock = 0;
   private truckClock = TRUCK_EVERY_MS * 0.5;
   private step = 2;
+  /** Crossings a vehicle is on or is driving onto. Walkers wait for them. */
+  private taken = new Set<number>();
+  /** Vehicles on screen at the last frame, for the sound of traffic. */
+  private seen = 0;
   /** Asked each frame: is somebody walking over this crossing? */
   private busyCrossing: (cell: number) => boolean = () => false;
 
@@ -408,22 +414,42 @@ export class Cars {
       const facing = this.art.people?.flip?.sw ?? 'sw';
       this.art.apply(body, `person.${look}.${facing}.0`);
       body.setFlipX(this.art.people?.flip?.sw !== undefined);
-      if (this.art.has('people.boxes')) this.art.apply(boxes, 'people.boxes');
+      if (this.art.has('people.boxes')) {
+        this.art.apply(boxes, 'people.boxes');
+        boxes.setOrigin(0.5, 1);
+      }
       truck.driver = { n: Math.floor(Math.random() * 40), x: drop.x, y: drop.y, front: drop.front, body, boxes };
     }
+  }
+
+  /**
+   * Where in the road a vehicle is as it passes one step of its route: in the
+   * lane of the way it came, the lane of the way it leaves, or, at a corner,
+   * half way between the two. Off the road there is no lane.
+   */
+  private laneAt(vehicle: Vehicle, index: number): { x: number; y: number } {
+    const route = vehicle.route;
+    const here = route[index]!;
+    if (!here.road) return NO_LANE;
+    const way = (p: Node, q: Node): Heading | null => (q.x > p.x ? 'px' : q.x < p.x ? 'nx' : q.y > p.y ? 'py' : q.y < p.y ? 'ny' : null);
+    const before = index > 0 ? way(route[index - 1]!, here) : null;
+    const after = index < route.length - 1 ? way(here, route[index + 1]!) : null;
+    const first = LANE[before ?? after ?? vehicle.heading];
+    const second = LANE[after ?? before ?? vehicle.heading];
+    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
   }
 
   private draw(vehicle: Vehicle): void {
     const from = vehicle.route[vehicle.leg]!;
     const to = vehicle.route[Math.min(vehicle.leg + 1, vehicle.route.length - 1)]!;
     if (to.x !== from.x || to.y !== from.y) vehicle.heading = to.x > from.x ? 'px' : to.x < from.x ? 'nx' : to.y > from.y ? 'py' : 'ny';
-    const lane = LANE[vehicle.heading];
-    // On the road it keeps to its lane. Turning into a driveway or a car park it leaves the lane behind.
-    const laneFrom = from.road ? 1 : 0;
-    const laneTo = to.road ? 1 : 0;
-    const inLane = laneFrom + (laneTo - laneFrom) * vehicle.along;
-    const x = from.x + (to.x - from.x) * vehicle.along + lane.x * inLane;
-    const y = from.y + (to.y - from.y) * vehicle.along + lane.y * inLane;
+    // On the road it keeps to its lane. At a corner it cuts across from the lane it was in to the lane it is
+    // turning into, so it turns through the corner and does not jump sideways on the spot. Turning into a
+    // driveway or a car park it leaves the lane behind.
+    const a = this.laneAt(vehicle, vehicle.leg);
+    const b = this.laneAt(vehicle, Math.min(vehicle.leg + 1, vehicle.route.length - 1));
+    const x = from.x + a.x + (to.x + b.x - from.x - a.x) * vehicle.along;
+    const y = from.y + a.y + (to.y + b.y - from.y - a.y) * vehicle.along;
     vehicle.x = x;
     vehicle.y = y;
     vehicle.onRoad = from.road && to.road;
@@ -490,8 +516,20 @@ export class Cars {
     const dt = Math.min(deltaMs, 100);
     this.showParked(period);
     const count = { student: 0, town: 0, shuttle: 0, truck: 0 };
+    this.taken.clear();
+    this.seen = 0;
+    const view = this.scene.cameras.main.worldView;
     for (let i = this.vehicles.length - 1; i >= 0; i--) {
       const vehicle = this.vehicles[i]!;
+      // On a crossing, or past the point where it could still stop short of the next one.
+      if (vehicle.onRoad && vehicle.fading !== 'out') {
+        const cell = Math.floor(vehicle.y + 0.5) * this.width + Math.floor(vehicle.x + 0.5);
+        if (this.crossing[cell]) this.taken.add(cell);
+        const ahead = vehicle.route[Math.min(vehicle.leg + 1, vehicle.route.length - 1)]!;
+        const next = ahead.y * this.width + ahead.x;
+        if (vehicle.along >= 0.6 && this.crossing[next]) this.taken.add(next);
+      }
+      if (vehicle.sprite.x >= view.x && vehicle.sprite.x <= view.right && vehicle.sprite.y >= view.y && vehicle.sprite.y <= view.bottom) this.seen += 1;
       if (vehicle.fading === 'in') {
         vehicle.alpha = Math.min(1, vehicle.alpha + dt / FADE_MS);
         if (vehicle.alpha >= 1) vehicle.fading = null;
@@ -579,6 +617,16 @@ export class Cars {
       this.truckClock = 0;
       if (count.truck < (this.step >= 3 ? 2 : 1) && period !== 'night') this.startTruck();
     }
+  }
+
+  /** True while a vehicle is on that crossing or driving onto it. */
+  onCrossing(cell: number): boolean {
+    return this.taken.has(cell);
+  }
+
+  /** Vehicles on screen now. */
+  get inView(): number {
+    return this.seen;
   }
 
   /** Dev screenshots: a delivery truck that is nearly at its door, so its driver is seen without a wait. */

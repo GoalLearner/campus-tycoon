@@ -119,6 +119,42 @@ export function foodCampus(students = 1200): GameState {
 }
 
 /**
+ * Life and sound on one screen. `?demo=life`.
+ *
+ * The starting campus with what the small scenes need: a coffee stand with
+ * open ground in front of it for the busker, picnic tables beside the lecture
+ * halls for study groups, a pond and a fountain for ripples, benches, more
+ * dorms, and a car park with a road so there is traffic to hear.
+ */
+export function lifeCampus(students = 1200): GameState {
+  const now = clock.now();
+  const started = now - 50 * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 9_000_000;
+  state = paint(state, 'housing', [[8, 13], [9, 13], [13, 13]]);
+  // A coffee stand east of the quad, with the walk in front of it.
+  state = place(state, 'coffee', 18, 15);
+  // Picnic tables beside the lecture halls, for study groups.
+  state = paint(state, 'table', [[22, 15], [22, 16], [22, 18]]);
+  state = paint(state, 'bench', [[13, 16]]);
+  state = paint(state, 'bin', [[19, 15], [23, 18]]);
+  // A pond west of the quad with lawn around it, and a fountain: a quad of one cell.
+  state = place(state, 'pondMedium', 10, 15);
+  state = paint(state, 'quad', [[24, 16]]);
+  // A car park with a road east to College Avenue.
+  state = place(state, 'parking', 27, 20);
+  state = paint(state, 'road', rowBetween([29, 20], [31, 20]));
+  state = paint(state, 'path', rowBetween([27, 18], [27, 19]));
+  state = advance(state, started, now).state;
+  if (students > 0) {
+    state = structuredClone(state);
+    const year = Math.round(students / 4);
+    state.cohorts = [students - year * 3, year, year, year];
+  }
+  return state;
+}
+
+/**
  * A campus the town cannot get into: no walk to College Avenue and no parking.
  * `?demo=unjoined`. The map says so at its edge.
  */

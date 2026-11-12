@@ -1,6 +1,7 @@
 import './ui/ui.css';
 import { isNative } from './app/platform';
 import { store } from './app/store';
+import { installSound } from './app/sound';
 import { registerServiceWorker } from './app/updates';
 import { createGame } from './game/createGame';
 import { mountUi } from './ui/ui';
@@ -20,6 +21,8 @@ async function boot(): Promise<void> {
 
   createGame(gameRoot);
   mountUi(uiRoot);
+  // Sound starts at the player's first tap and stops whenever the page is hidden.
+  installSound();
 
   // The service worker lets the web build open with no connection and offers updates.
   // The iOS app ships its files inside the app, so it has no service worker.
