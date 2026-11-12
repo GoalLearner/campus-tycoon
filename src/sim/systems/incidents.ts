@@ -40,6 +40,17 @@ function cellsFrom(placed: Placed, x: number, y: number): number {
 /** The nearest building of a family whose circle covers a spot, with its distance in cells. */
 export function coverFor(map: MapState, family: 'medical' | 'safety', x: number, y: number): { placed: Placed; cells: number } | null {
   let best: { placed: Placed; cells: number } | null = null;
+  // Only the buildings of that family are looked at. An old save being upgraded has no such list yet.
+  const ids = map.care?.byFamily?.[family];
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (!placed) continue;
+      const cells = cellsFrom(placed, x, y);
+      if (cells <= PLACED[placed.type].radius && (!best || cells < best.cells)) best = { placed, cells };
+    }
+    return best;
+  }
   for (const placed of map.placed) {
     if (!placed) continue;
     const spec = PLACED[placed.type];

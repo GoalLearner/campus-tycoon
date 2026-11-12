@@ -399,6 +399,19 @@ function assertLayerZero(runs: Run[]): void {
     s = advance(s, s.clock.lastSimulatedAt, s.clock.lastSimulatedAt + 6 * DAY_MS).state;
     const filthy = campusClean(s);
     const brokenBins = Object.keys(s.grounds.broken).filter((id) => s.map.placed[Number(id)]?.type === 'bin').length;
+    // A filthy campus is the dear one to catch up: every dirty place rolls for breakage on every beat, and each
+    // roll that depends on it reads how the students around the place feel. It still has to be quick.
+    {
+      const from = s.clock.lastSimulatedAt;
+      let best = Infinity;
+      for (let i = 0; i < 3; i++) {
+        const t = performance.now();
+        advance(s, from, from + 30 * DAY_MS);
+        best = Math.min(best, performance.now() - t);
+      }
+      const places = s.map.placed.filter((p) => !!p && isMessSpot(p)).length;
+      check('30 days of catch-up on a campus nobody tends runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${places} places that drop litter and no workers`);
+    }
     // Twice a day, as the casual player would: read each yard's line and hire up to it.
     for (let visit = 0; visit < 10; visit++) {
       staff((yard) => {

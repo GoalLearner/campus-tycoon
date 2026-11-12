@@ -70,6 +70,9 @@ export function isMessSpot(placed: Placed): boolean {
   return messStrength(placed) > 0;
 }
 
+/** The families of building that drop litter. */
+const MESS_FAMILIES = Object.keys(LITTER_STRENGTH);
+
 /** How far a mess spot's litter is felt: as far as the building itself reaches, and never less than a few cells. */
 function messReach(placed: Placed): number {
   return Math.max(PLACED[placed.type].radius, MESS_REACH_MIN);
@@ -137,6 +140,20 @@ export function refreshCare(map: MapState): void {
 export function yardOver(map: MapState, x: number, y: number): Placed | null {
   let best: Placed | null = null;
   let bestGap = Infinity;
+  // Only the yards are looked at. This runs for every lot whose Happiness is read, on every beat of catch-up.
+  const ids = map.care?.byFamily?.yard;
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (!placed) continue;
+      const gap = gapTo(placed, x, y);
+      if (gap <= PLACED.yard.radius && gap < bestGap) {
+        best = placed;
+        bestGap = gap;
+      }
+    }
+    return best;
+  }
   for (const placed of map.placed) {
     if (!placed || placed.type !== 'yard') continue;
     const gap = gapTo(placed, x, y);
@@ -485,6 +502,20 @@ function swept(state: GameState, x: number, y: number): boolean {
  */
 export function cleanAt(state: GameState, x: number, y: number): number {
   let clean = swept(state, x, y) ? 1 : 1 - PATH_DIRT;
+  // Only the places that drop litter are looked at, by their families.
+  const families = state.map.care?.byFamily;
+  if (families) {
+    for (const family of MESS_FAMILIES) {
+      const ids = families[family];
+      if (!ids) continue;
+      for (const id of ids) {
+        const placed = state.map.placed[id];
+        if (!placed || gapTo(placed, x, y) > messReach(placed)) continue;
+        clean = Math.min(clean, spotClean(state, placed));
+      }
+    }
+    return clean;
+  }
   for (const placed of state.map.placed) {
     if (!placed || !isMessSpot(placed) || gapTo(placed, x, y) > messReach(placed)) continue;
     clean = Math.min(clean, spotClean(state, placed));

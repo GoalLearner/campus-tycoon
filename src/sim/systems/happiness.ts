@@ -1,13 +1,13 @@
 import { BED_NEED, RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
 import { GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
+import { VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
 import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } from '../config/students';
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
-import { varietyAt } from './food';
+import { foodKindsAt } from './food';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
-import { fedAt } from './placed';
 import { recreationAt } from './play';
 
 /**
@@ -112,13 +112,15 @@ export function approvalAt(state: GameState, cell: number): Approval {
   felt.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]) });
   felt.push({ id: 'clean', level: cleanAt(state, x, y) });
   felt.push({ id: 'seating', level: seatingAt(state, x, y) });
-  felt.push({ id: 'dining', level: fedAt(map, x, y) ? 1 : 0 });
+  // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
+  const kinds = foodKindsAt(map, x, y);
+  felt.push({ id: 'dining', level: kinds > 0 ? 1 : 0 });
   felt.push({ id: 'recreation', level: recreationAt(state, x, y) });
   // Medical Center and Campus Safety coverage are read together, as one level.
   felt.push({ id: 'safety', level: safetyAt(state, x, y) });
   const causes = gathered(felt);
   // Variety: three kinds of food in reach add a tenth to Food & fun, never past full.
-  const variety = varietyAt(map, x, y);
+  const variety = kinds >= VARIETY_KINDS ? VARIETY_BONUS : 0;
   if (variety > 0) {
     for (const cause of causes) {
       if (cause.id !== 'life') continue;

@@ -46,10 +46,32 @@ export function foodTypesAt(map: MapState, x: number, y: number): PlacedType[] {
   return types;
 }
 
-/** How many kinds of food reach a spot. Two dining halls are one kind. The food court counts as three. */
+/** Every kind of food, each with a bit of its own, so the kinds in reach of a lot can be counted without a list. */
+const FOOD_TYPES = (Object.keys(PLACED) as PlacedType[]).filter((type) => PLACED[type].family === 'dining');
+const FOOD_BIT: Partial<Record<PlacedType, number>> = {};
+FOOD_TYPES.forEach((type, n) => (FOOD_BIT[type] = 1 << n));
+
+/**
+ * How many kinds of food reach a spot. Two dining halls are one kind. The
+ * food court counts as three. 0 means nothing to eat is in reach. This is
+ * read for every lot whose Happiness is read, so it makes no lists.
+ */
 export function foodKindsAt(map: MapState, x: number, y: number): number {
+  let seen = 0;
+  const ids = map.care?.byFamily?.dining;
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (placed && gap(placed, x, y) <= PLACED[placed.type].radius) seen |= FOOD_BIT[placed.type] ?? 0;
+    }
+  } else {
+    for (const placed of map.placed) {
+      if (placed && PLACED[placed.type].family === 'dining' && gap(placed, x, y) <= PLACED[placed.type].radius) seen |= FOOD_BIT[placed.type] ?? 0;
+    }
+  }
+  if (seen === 0) return 0;
   let kinds = 0;
-  for (const type of foodTypesAt(map, x, y)) kinds += PLACED[type].kinds ?? 1;
+  for (let n = 0; n < FOOD_TYPES.length; n++) if (seen & (1 << n)) kinds += PLACED[FOOD_TYPES[n]!].kinds ?? 1;
   return kinds;
 }
 
