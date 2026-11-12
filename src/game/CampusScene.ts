@@ -470,7 +470,10 @@ export class CampusScene extends Phaser.Scene {
     const colour = SCHOOL_COLOURS.find((one) => one.id === state.football.colour)?.hex ?? 0xffffff;
     const tint = home ? softened(colour) : null;
     const storming = this.stormHeld || (state.football.bigWin > 0 && state.clock.tick - state.football.bigWin < STORM_TICKS);
-    this.walkers.setGameDay(tint);
+    // Before the first stadium the team plays at a rented field in town (DESIGN.md 10.2): nobody walks to the bare
+    // plot, and no game is heard from it. The tailgates in the car parks are the day's only sign on the map.
+    const built = state.football.stadium.tier >= 1;
+    this.walkers.setGameDay(built ? tint : null);
     this.walkers.setPresence(day.walkers);
     this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
     this.ambient.setWeather(this.weather, reduced);
@@ -485,7 +488,7 @@ export class CampusScene extends Phaser.Scene {
       vehiclesInView: this.cars.inView,
       buskerInView: this.scenes.buskerSeen,
       // The crowd is heard from kickoff to the final whistle: fully with the stadium on screen, faintly from across campus.
-      stadium: home && state.clock.tick >= home.kick ? (this.walkers.stadiumSeen ? 1 : 0.3) : 0,
+      stadium: home && built && state.clock.tick >= home.kick ? (this.walkers.stadiumSeen ? 1 : 0.3) : 0,
       zoom: this.cameras.main.zoom / this.homeZoom,
       period: this.light.period,
       month: date.month,
