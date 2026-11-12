@@ -24,6 +24,7 @@ import {
   type CellKind,
   type DriverId,
   partLevel,
+  type Placed,
   type PlacedType,
   ZONES,
   type GameState,
@@ -176,6 +177,36 @@ function nextLand(state: GameState): number | null {
 // ---------------------------------------------------------------- grounds --
 
 /**
+ * Where to put a Facilities Yard for a place: on free ground within its reach,
+ * where it covers the most places no yard covers yet. A second yard for a
+ * place whose first is full goes as near to it as it can, so it takes over.
+ */
+function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | null {
+  if (nearest) return menuSpot(state, 'yard', spot.x, spot.y);
+  const spec = PLACED.yard;
+  const uncovered = state.map.placed.filter((p): p is Placed => !!p && isMessSpot(p) && (state.map.care.yard[p.id] ?? -1) < 0);
+  const gap = (px: number, py: number, p: Placed): number =>
+    Math.max(Math.max(p.x - (px + spec.w - 1), px - (p.x + p.w - 1), 0), Math.max(p.y - (py + spec.h - 1), py - (p.y + p.h - 1), 0));
+  let best: Point | null = null;
+  let bestCount = 0;
+  let bestFar = Infinity;
+  for (let py = spot.y - spec.radius; py <= spot.y + spot.h - 1 + spec.radius; py++) {
+    for (let px = spot.x - spec.radius - spec.w + 1; px <= spot.x + spot.w - 1 + spec.radius; px++) {
+      const far = gap(px, py, spot);
+      if (far < 1 || far > spec.radius) continue;
+      if (onStreetPlan(px, py) || onStreetPlan(px + 1, py) || previewPlace(state, 'yard', px, py).problem !== null) continue;
+      const count = uncovered.filter((p) => gap(px, py, p) <= spec.radius).length;
+      if (count > bestCount || (count === bestCount && far < bestFar)) {
+        best = [px, py];
+        bestCount = count;
+        bestFar = far;
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * Keep the campus clean, as a player who taps a messy spot and reads its one
  * fix would: a bin beside each place that drops litter, a Facilities Yard in
  * reach of it, and as many workers as the yard says it needs. Hiring is free,
@@ -206,9 +237,12 @@ function tendGrounds(state: GameState, reserve: number, most: number): { state: 
         acted = true;
         break;
       }
-      if (fix === 'noYard') {
+      // No yard in reach, or the one in reach is full and still short of hands: build one where it covers the most.
+      const yardId = current.map.care.yard[spot.id] ?? -1;
+      const full = fix === 'understaffed' && yardId >= 0 && workersAt(current, yardId) >= YARD_MAX_WORKERS;
+      if (fix === 'noYard' || full) {
         if (current.money.cash - PLACED.yard.cost < reserve) continue;
-        const at = menuSpot(current, 'yard', spot.x, spot.y);
+        const at = yardSpot(current, spot, full);
         const placed = at ? applyAction(current, { type: 'place', building: 'yard', x: at[0], y: at[1] }) : null;
         if (!placed?.ok) continue;
         current = placed.state;

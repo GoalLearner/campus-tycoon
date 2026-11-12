@@ -67,6 +67,7 @@ export function addPlaced(map: MapState, type: PlacedType, x: number, y: number,
   const spec = PLACED[type];
   const placed: Placed = { id: map.placed.length, type, x, y, w: spec.w, h: spec.h, builtTick };
   map.placed.push(placed);
+  if (map.care?.byFamily) (map.care.byFamily[spec.family] ??= []).push(placed.id);
   for (let cy = y; cy < y + spec.h; cy++) {
     for (let cx = x; cx < x + spec.w; cx++) {
       const cell = map.cells[cy * map.width + cx]!;
@@ -111,6 +112,18 @@ function cellsFrom(placed: Placed, x: number, y: number): number {
 /** The buildings of one family whose reach covers a spot. */
 export function inReach(map: MapState, family: PlacedFamily, x: number, y: number): Placed[] {
   const out: Placed[] = [];
+  // Only the things of that family are looked at. This runs for every lot in catch-up.
+  // An old save being upgraded has no such list yet, and everything is looked at.
+  const ids = map.care?.byFamily?.[family];
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (!placed) continue;
+      const spec = PLACED[placed.type];
+      if (spec.radius > 0 && cellsFrom(placed, x, y) <= spec.radius) out.push(placed);
+    }
+    return out;
+  }
   for (const placed of map.placed) {
     if (!placed) continue;
     const spec = PLACED[placed.type];

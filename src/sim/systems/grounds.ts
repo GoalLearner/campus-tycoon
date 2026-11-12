@@ -121,7 +121,9 @@ export function refreshCare(map: MapState): void {
     }
     yard[placed.id] = best;
   }
-  map.care = { users, bins, yard, lots };
+  const byFamily: Record<string, number[]> = {};
+  for (const placed of all) (byFamily[PLACED[placed.type].family] ??= []).push(placed.id);
+  map.care = { users, bins, yard, lots, byFamily };
 }
 
 /** The yard whose circle covers a cell, nearest first. null when none does. */
@@ -171,11 +173,6 @@ export function litterTilt(_state: GameState): number {
 
 const isBroken = (state: GameState, id: number): boolean => (state.grounds.broken[id] ?? 0) > 0;
 
-/** The bins beside a spot that can still take litter. */
-function openBins(state: GameState, spot: Placed): number[] {
-  return (state.map.care.bins[spot.id] ?? []).filter((id) => !isBroken(state, id) && (state.grounds.bins[id] ?? 0) < BIN_CAPACITY);
-}
-
 function nameOf(placed: Placed): string {
   return PLACED[placed.type].name;
 }
@@ -199,12 +196,15 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     const lying = g.litter[spot.id] ?? 0;
     const drop = dropOf(state, spot) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
     if (drop <= 0) continue;
-    const bins = openBins(state, spot);
+    const beside = map.care.bins[spot.id];
+    let open = 0;
+    if (beside) for (const id of beside) if (!((g.broken[id] ?? 0) > 0) && (g.bins[id] ?? 0) < BIN_CAPACITY) open += 1;
     let ground = drop;
-    if (bins.length > 0) {
-      const each = (drop * BIN_CATCH) / bins.length;
+    if (open > 0) {
+      const each = (drop * BIN_CATCH) / open;
       ground = drop * (1 - BIN_CATCH);
-      for (const id of bins) {
+      for (const id of beside!) {
+        if ((g.broken[id] ?? 0) > 0 || (g.bins[id] ?? 0) >= BIN_CAPACITY) continue;
         const before = g.bins[id] ?? 0;
         const after = Math.min(BIN_CAPACITY, before + each);
         g.bins[id] = after;
@@ -218,61 +218,116 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
   }
 
   // 2. Workers: the fullest bins first, then the dirtiest spot, then what is broken.
+  // What each yard has to do is sorted out once, with plain loops: this runs on every beat of catch-up.
+  const binsOf = new Map<number, number[]>();
+  for (const key in g.bins) {
+    const id = Number(key);
+    if (!map.placed[id] || g.bins[id]! <= 0) continue;
+    const yardId = map.care.yard[id] ?? -1;
+    if (yardId < 0) continue;
+    const list = binsOf.get(yardId);
+    if (list) list.push(id);
+    else binsOf.set(yardId, [id]);
+  }
+  const spotsOf = new Map<number, Placed[]>();
+  for (const spot of spots) {
+    if ((g.litter[spot.id] ?? 0) <= 0) continue;
+    const yardId = map.care.yard[spot.id] ?? -1;
+    if (yardId < 0) continue;
+    const list = spotsOf.get(yardId);
+    if (list) list.push(spot);
+    else spotsOf.set(yardId, [spot]);
+  }
+  const brokenOf = new Map<number, number[]>();
+  for (const key in g.broken) {
+    const id = Number(key);
+    if (!map.placed[id]) {
+      delete g.broken[id];
+      continue;
+    }
+    const yardId = map.care.yard[id] ?? -1;
+    if (yardId < 0) continue;
+    const list = brokenOf.get(yardId);
+    if (list) list.push(id);
+    else brokenOf.set(yardId, [id]);
+  }
+  /** Broken lamps under each yard, worked out the first time a yard has hands free for them. */
+  let lampsOf: Map<number, number[]> | null = null;
+
   for (const yard of yards) {
     let work = workersAt(state, yard.id) * WORK_PER_WORKER;
     if (work <= 0) continue;
-    const mine = (id: number): boolean => map.care.yard[id] === yard.id;
-    const myBins = Object.keys(g.bins).map(Number).filter((id) => mine(id) && map.placed[id] && (g.bins[id] ?? 0) > 0);
-    myBins.sort((a, b) => g.bins[b]! - g.bins[a]! || a - b);
-    const emptyBin = (id: number): void => {
-      const used = Math.min(work, g.bins[id]! / BIN_PER_WORK);
-      g.bins[id] = Math.max(0, g.bins[id]! - used * BIN_PER_WORK);
-      work -= used;
-    };
-    for (const id of myBins) if (work > 0 && g.bins[id]! > BIN_CAPACITY / 2) emptyBin(id);
-
-    const mySpots = spots.filter((spot) => mine(spot.id) && (g.litter[spot.id] ?? 0) > 0);
-    mySpots.sort((a, b) => g.litter[b.id]! - g.litter[a.id]! || a.id - b.id);
-    for (const spot of mySpots) {
-      if (work <= 0) break;
-      const swept = Math.min(work, g.litter[spot.id]!);
-      g.litter[spot.id] = g.litter[spot.id]! - swept;
-      work -= swept;
-    }
-
-    // Broken things in the circle, and broken lamps under it.
-    const fix = (left: number): number => {
-      const used = Math.min(work, left);
-      work -= used;
-      return left - used;
-    };
-    for (const key of Object.keys(g.broken)) {
-      const id = Number(key);
-      const thing = map.placed[id];
-      if (!thing) {
-        delete g.broken[id];
-        continue;
+    const myBins = binsOf.get(yard.id);
+    if (myBins) {
+      myBins.sort((x, y) => g.bins[y]! - g.bins[x]! || x - y);
+      for (const id of myBins) {
+        if (work <= 0 || g.bins[id]! <= BIN_CAPACITY / 2) break;
+        const used = Math.min(work, g.bins[id]! / BIN_PER_WORK);
+        g.bins[id] = Math.max(0, g.bins[id]! - used * BIN_PER_WORK);
+        work -= used;
       }
-      if (work <= 0 || !mine(id)) continue;
-      const left = fix(g.broken[id]!);
-      if (left <= 1e-9) {
-        delete g.broken[id];
-        g.repaired += 1;
-        log.push({ tick, kind: 'grounds', text: `A worker fixed a ${nameOf(thing).toLowerCase()}.`, data: { event: 'fixed', thing: thing.type } });
-      } else g.broken[id] = left;
     }
-    for (const key of Object.keys(g.lamps)) {
-      const cell = Number(key);
-      const x = cell % map.width;
-      if (work <= 0 || yardOver(map, x, (cell - x) / map.width)?.id !== yard.id) continue;
-      const left = fix(g.lamps[cell]!);
-      if (left <= 1e-9) {
-        delete g.lamps[cell];
-        g.repaired += 1;
-        log.push({ tick, kind: 'grounds', text: 'A worker fixed a street lamp.', data: { event: 'fixed', thing: 'lamp' } });
-      } else g.lamps[cell] = left;
+    const mySpots = spotsOf.get(yard.id);
+    if (mySpots && work > 0) {
+      mySpots.sort((x, y) => g.litter[y.id]! - g.litter[x.id]! || x.id - y.id);
+      for (const spot of mySpots) {
+        if (work <= 0) break;
+        const swept = Math.min(work, g.litter[spot.id]!);
+        g.litter[spot.id] = g.litter[spot.id]! - swept;
+        work -= swept;
+      }
     }
-    for (const id of myBins) if (work > 0 && g.bins[id]! > 0) emptyBin(id);
+    // Broken things in the circle, and broken lamps under it.
+    const myBroken = brokenOf.get(yard.id);
+    if (myBroken) {
+      for (const id of myBroken) {
+        if (work <= 0) break;
+        const used = Math.min(work, g.broken[id]!);
+        work -= used;
+        const left = g.broken[id]! - used;
+        if (left <= 1e-9) {
+          delete g.broken[id];
+          g.repaired += 1;
+          log.push({ tick, kind: 'grounds', text: `A worker fixed a ${nameOf(map.placed[id]!).toLowerCase()}.`, data: { event: 'fixed', thing: map.placed[id]!.type } });
+        } else g.broken[id] = left;
+      }
+    }
+    if (work > 0 && lampsOf === null) {
+      lampsOf = new Map();
+      for (const key in g.lamps) {
+        const cell = Number(key);
+        const x = cell % map.width;
+        const over = yardOver(map, x, (cell - x) / map.width);
+        if (!over) continue;
+        const list = lampsOf.get(over.id);
+        if (list) list.push(cell);
+        else lampsOf.set(over.id, [cell]);
+      }
+    }
+    const myLamps = lampsOf?.get(yard.id);
+    if (myLamps) {
+      for (const cell of myLamps) {
+        if (work <= 0) break;
+        const used = Math.min(work, g.lamps[cell]!);
+        work -= used;
+        const left = g.lamps[cell]! - used;
+        if (left <= 1e-9) {
+          delete g.lamps[cell];
+          g.repaired += 1;
+          log.push({ tick, kind: 'grounds', text: 'A worker fixed a street lamp.', data: { event: 'fixed', thing: 'lamp' } });
+        } else g.lamps[cell] = left;
+      }
+    }
+    // Hands still free: the bins that were not yet half full.
+    if (myBins) {
+      for (const id of myBins) {
+        if (work <= 0) break;
+        if (g.bins[id]! <= 0) continue;
+        const used = Math.min(work, g.bins[id]! / BIN_PER_WORK);
+        g.bins[id] = Math.max(0, g.bins[id]! - used * BIN_PER_WORK);
+        work -= used;
+      }
+    }
   }
 
   // 3. Where litter is deep, something nearby may get broken: at most one thing a day at each spot.
@@ -282,7 +337,8 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     // Two draws at every check for every spot this dirty, whatever comes of them, so the stream never depends on the outcome.
     const roll = nextFloat(state.rng, 'events');
     const pick = nextFloat(state.rng, 'events');
-    if (roll >= breakChance(state, spot)) continue;
+    // The most the chance can ever be is checked first, so the search for a Campus Safety circle is rarely made.
+    if (roll >= BREAK_RATE * 1.5 || roll >= breakChance(state, spot)) continue;
     const things: Array<{ placed: Placed } | { lamp: number }> = [];
     for (const placed of map.placed) {
       if (!placed || isBroken(state, placed.id)) continue;
@@ -425,7 +481,8 @@ export function yardLine(status: YardStatus): string {
 
 /** The one fix a mess spot needs, or null when it is looked after. */
 export function spotFix(state: GameState, spot: Placed): GroundsFix {
-  const bins = (state.map.care.bins[spot.id] ?? []).filter((id) => !isBroken(state, id));
+  // A broken bin is still a bin: what it needs is a worker, not a second bin beside it.
+  const bins = state.map.care.bins[spot.id] ?? [];
   const yardId = state.map.care.yard[spot.id] ?? -1;
   const yard = yardId >= 0 ? state.map.placed[yardId] : null;
   if (bins.length === 0) return 'noBin';

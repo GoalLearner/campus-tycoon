@@ -142,6 +142,18 @@ export interface Care {
   yard: Record<number, number>;
   /** Every zoned lot on the map. */
   lots: number;
+  /**
+   * Ids of the placed things of each family, so a search for "dining in reach" does not walk every bin and bench.
+   * Missing on a save written before it existed, until the next action rebuilds it.
+   */
+  byFamily?: Record<string, number[]>;
+  /**
+   * Set for a zone when no lot of it could start growing. Until a build
+   * finishes or the player changes the map, none can, so growth need not look
+   * again. Without this a campus of stalled lots is searched on every beat of
+   * catch-up for nothing.
+   */
+  idle?: Partial<Record<Zone, boolean>>;
 }
 
 export interface MapState {

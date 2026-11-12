@@ -171,7 +171,15 @@ export function evaluateGrowth(state: GameState, only?: Zone): void {
     if (only && zone !== only) continue;
     let short = shortage(state, zone);
     if (short <= 0) continue;
-    for (const c of candidates(state, zone)) {
+    // Nothing could grow last time, and nothing has been built or changed since.
+    const care = state.map.care;
+    if (care?.idle?.[zone]) continue;
+    const ready = candidates(state, zone);
+    if (ready.length === 0) {
+      if (care) (care.idle ??= {})[zone] = true;
+      continue;
+    }
+    for (const c of ready) {
       if (short <= 0) break;
       startBuild(state, ensureBuilding(state, c.x, c.y, zone), c.nextStage);
       short -= c.gain;
