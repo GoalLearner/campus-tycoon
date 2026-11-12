@@ -40,6 +40,9 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
     lines.push(net >= 0 ? `The campus earned ${dollars(net)}.` : `The campus spent ${dollars(-net)} more than it earned.`);
   }
 
+  // A change of rule that happened while away is said once, near the top.
+  for (const entry of log) if (entry.kind === 'classes') lines.push(entry.text);
+
   if (facts.studentsAfter !== facts.studentsBefore) {
     lines.push(`Enrollment went from ${facts.studentsBefore} to ${facts.studentsAfter}.`);
   }

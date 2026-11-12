@@ -122,7 +122,9 @@ describe('locals', () => {
 
     const state = atIntake(before);
     expect(enrollment(state)).toBe(60);
-    expect(state.offCampus).toEqual([24, 0, 0, 0]);
+    // The 24 who live in town are spread across the four class years like everyone else.
+    expect(state.offCampus.reduce((sum, n) => sum + n, 0)).toBe(24);
+    for (let classYear = 0; classYear < 4; classYear++) expect(state.offCampus[classYear]).toBeLessThanOrEqual(state.cohorts[classYear]!);
     expect(dormStudents(state)).toBe(36);
     expect(state.admissions.lastIntake?.bottleneck).toBe('housing');
     // 160 of the 400 were locals. 24 are in, so 136 of those waiting are locals.

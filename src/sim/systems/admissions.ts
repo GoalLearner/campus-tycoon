@@ -1,4 +1,5 @@
 import { calendarAt } from '../calendar';
+import { FOUNDING_SHARES } from '../config/demand';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
 import { enrollment, openCapacity } from '../selectors';
 import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
@@ -70,12 +71,113 @@ export function classRecord(state: GameState, entryYear: number): ClassRecord {
   return record;
 }
 
-function enrol(state: GameState, count: number, offCampus: number): void {
-  state.cohorts[0] += count;
-  state.offCampus[0] += Math.min(count, offCampus);
-  if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year)).entered += count;
+/** True for a record of students who began here as freshmen. The founding upper classes began elsewhere. */
+export function startedHere(record: ClassRecord): boolean {
+  return record.entryYear >= 1;
+}
+
+
+/**
+ * Add one to whichever class year is furthest below its share. Done a student
+ * at a time, so the mix is right however the founders trickle in.
+ */
+function nextFounderYear(have: readonly number[], limit?: readonly number[]): number {
+  const total = have[0]! + have[1]! + have[2]! + have[3]! + 1;
+  let best = -1;
+  let most = -Infinity;
+  for (let classYear = 0; classYear < 4; classYear++) {
+    if (limit && have[classYear]! >= limit[classYear]!) continue;
+    const short = FOUNDING_SHARES[classYear]! * total - have[classYear]!;
+    if (short > most + 1e-9) {
+      most = short;
+      best = classYear;
+    }
+  }
+  return best;
+}
+
+/**
+ * Let newcomers in. `founders` is true for the founding class, at move-in and
+ * for as long as its waitlist is open: everyone admitted from it is spread
+ * across the four class years. Every later class comes in as freshmen.
+ */
+function enrol(state: GameState, count: number, offCampus: number, founders: boolean): void {
+  const off = Math.min(count, offCampus);
+  if (count > 0 && founders && state.fourYears) {
+    // The founding class: freshmen through seniors, and those living in town in the same shares.
+    const year = Math.max(1, calendarAt(state.clock.tick).year);
+    for (let n = 0; n < count; n++) {
+      const classYear = nextFounderYear(state.cohorts);
+      state.cohorts[classYear]! += 1;
+      classRecord(state, year - classYear).entered += 1;
+    }
+    for (let n = 0; n < off; n++) {
+      const classYear = nextFounderYear(state.offCampus, state.cohorts);
+      if (classYear < 0) break;
+      state.offCampus[classYear]! += 1;
+    }
+  } else {
+    state.cohorts[0] += count;
+    state.offCampus[0] += off;
+    if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year)).entered += count;
+  }
   state.stats.peakEnrollment = Math.max(state.stats.peakEnrollment, enrollment(state));
   markRatesDirty(state);
+}
+
+/**
+ * A save from before campuses opened with all four class years. At its next
+ * fall intake, once classes have moved up, its continuing students are spread
+ * so that no class year is empty: the oldest become seniors, the next juniors,
+ * and nobody moves down a year. Nobody is added or removed, those living in
+ * town move with their class, and each class's record moves with its students.
+ * A campus four years old has every class already and is left alone.
+ */
+export function spreadClassYears(state: GameState, log: LogEntry[]): void {
+  if (state.fourYears) return;
+  state.fourYears = true;
+  const { year } = calendarAt(state.clock.tick);
+  const c = state.cohorts;
+  const continuing = c[1] + c[2] + c[3];
+  if (continuing <= 0 || (c[1] > 0 && c[2] > 0 && c[3] > 0)) return;
+
+  // What each upper class would hold at the founding shares, to the nearest student.
+  const upper = FOUNDING_SHARES[1] + FOUNDING_SHARES[2] + FOUNDING_SHARES[3];
+  const seniors = Math.round((continuing * FOUNDING_SHARES[3]) / upper);
+  const juniors = Math.round((continuing * FOUNDING_SHARES[2]) / upper);
+
+  let moved = 0;
+  /** Move students up from one class year to another, with their share of those living in town and of their record. */
+  const moveUp = (from: number, to: number, want: number): number => {
+    const n = Math.max(0, Math.min(want, state.cohorts[from]!));
+    if (n === 0 || from === to) return n;
+    const off = Math.min(state.offCampus[from]!, Math.round((state.offCampus[from]! * n) / state.cohorts[from]!));
+    state.cohorts[from]! -= n;
+    state.cohorts[to]! += n;
+    state.offCampus[from]! -= off;
+    state.offCampus[to]! += off;
+    const source = classRecord(state, year - from);
+    const taken = Math.min(n, source.entered);
+    source.entered -= taken;
+    classRecord(state, year - to).entered += taken;
+    moved += n;
+    return n;
+  };
+  // Seniors first, from the oldest students there are. Then juniors. Whoever is left stays where they are.
+  let need = Math.max(0, seniors - state.cohorts[3]);
+  need -= moveUp(2, 3, need);
+  moveUp(1, 3, need);
+  need = Math.max(0, juniors - state.cohorts[2]);
+  moveUp(1, 2, need);
+
+  if (moved > 0) {
+    log.push({
+      tick: state.clock.tick,
+      kind: 'classes',
+      text: `The student body now has all four class years: ${moved} students moved up to fill them. Nobody left, and income is unchanged. Seniors graduate this spring.`,
+      data: { moved },
+    });
+  }
 }
 
 /** A class arrives. Whoever does not fit goes on the waitlist. */
@@ -88,7 +190,7 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   const turnedAway = expected - admitted;
   const bottleneck = turnedAway > 0 ? plan.tightest : null;
 
-  enrol(state, admitted, plan.off);
+  enrol(state, admitted, plan.off, tick === FIRST_INTAKE_TICK);
   state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck };
   state.admissions.waitlist = turnedAway;
   state.admissions.waitlistLocals = locals - plan.locals;
@@ -115,7 +217,7 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   const plan = admitPlan(state, a.waitlist, Math.min(a.waitlist, a.waitlistLocals));
   const count = plan.admitted;
   if (count <= 0) return;
-  enrol(state, count, plan.off);
+  enrol(state, count, plan.off, a.lastIntake?.tick === FIRST_INTAKE_TICK);
   a.waitlist -= count;
   a.waitlistLocals = Math.max(0, Math.min(a.waitlist, a.waitlistLocals - plan.locals));
   a.waitlistAdmitted += count;
@@ -165,7 +267,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
     next[classYear] = Math.round(was * mood.retention);
     // Those living in town leave at the same rate as everyone else.
     state.offCampus[classYear] = Math.min(next[classYear]!, Math.round(state.offCampus[classYear]! * mood.retention));
-    if (was > next[classYear]!) classRecord(state, Math.max(1, year - classYear)).left += was - next[classYear]!;
+    if (was > next[classYear]!) classRecord(state, year - classYear).left += was - next[classYear]!;
   }
   state.cohorts = next;
 
@@ -176,7 +278,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
     const go = Math.min(homeless, state.cohorts[classYear]! - state.offCampus[classYear]!);
     if (go <= 0) continue;
     state.cohorts[classYear]! -= go;
-    classRecord(state, Math.max(1, year - classYear)).left += go;
+    classRecord(state, year - classYear).left += go;
     homeless -= go;
   }
   const stayed = enrollment(state);
@@ -202,7 +304,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   const seniors = state.cohorts[3];
   state.cohorts[3] = 0;
   state.offCampus[3] = 0;
-  if (seniors > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year - 3)).finishedOnTime += seniors;
+  if (seniors > 0) classRecord(state, calendarAt(state.clock.tick).year - 3).finishedOnTime += seniors;
   state.stats.graduates += seniors;
   markRatesDirty(state);
   if (seniors > 0) {

@@ -168,6 +168,10 @@ export const MIGRATIONS: Record<number, Migration> = {
     const grounds = state.grounds as Record<string, unknown>;
     if (typeof grounds.brokenFrom !== 'object' || grounds.brokenFrom === null) grounds.brokenFrom = {};
     recomputeDesirability(state.map as unknown as MapState);
+    // A campus now opens with all four class years. One whose founders have not moved in yet gets them
+    // that way. Any other is spread at its next fall intake (spreadClassYears).
+    const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
+    if (typeof state.fourYears !== 'boolean') state.fourYears = tick < FIRST_INTAKE_TICK;
     return state;
   },
 };
@@ -225,6 +229,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(map.town) || !Array.isArray(map.town.neighbourhoods) || !isObject(map.town.access)) return 'The map has no town.';
   if ((state.offCampus as unknown[]).length !== 4) return 'The save has the wrong number of class years living off campus.';
   if (!Array.isArray(state.classes)) return 'The save has no class records.';
+  if (typeof state.fourYears !== 'boolean') return 'The save does not say whether it has all four class years.';
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';
   if ((state.cohorts as unknown[]).length !== 4) return 'The save has the wrong number of class years.';

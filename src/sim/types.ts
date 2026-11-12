@@ -275,8 +275,19 @@ export interface GameState {
    * needs a bed.
    */
   offCampus: [number, number, number, number];
-  /** One record per entering class, oldest first. */
+  /**
+   * One record per entering class, oldest first. A campus opens with all four
+   * class years, so its founding sophomores, juniors and seniors have entry
+   * years 0, -1 and -2: they began somewhere else. Graduation rates leave
+   * those records out (see `startedHere`).
+   */
   classes: ClassRecord[];
+  /**
+   * True once the student body has all four class years. A new campus has it
+   * from the first day. A save from before that rule gets it at its next fall
+   * intake, when its students are spread across the years.
+   */
+  fourYears: boolean;
   admissions: Admissions;
   timers: Timer[];
   timerSeq: number;
@@ -347,6 +358,7 @@ export type LogKind =
   | 'waitlist'
   | 'waitlistClosed'
   | 'graduation'
+  | 'classes'
   | 'semester'
   | 'incident'
   | 'grounds'

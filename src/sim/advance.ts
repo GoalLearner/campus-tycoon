@@ -9,6 +9,7 @@ import {
   promote,
   runIntake,
   semesterEnd,
+  spreadClassYears,
 } from './systems/admissions';
 import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
@@ -117,7 +118,10 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       dailyCashCheck(state, log);
       break;
     case 'fallIntake':
-      if (calendarAt(state.clock.tick).year > 1) promote(state);
+      if (calendarAt(state.clock.tick).year > 1) {
+        promote(state);
+        spreadClassYears(state, log);
+      }
       runIntake(state, 'fall', log);
       evaluateGrowth(state);
       break;

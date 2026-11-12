@@ -97,7 +97,7 @@ export {
   type HoodLiving,
   type TownPlaces,
 } from './systems/town';
-export { acceptanceRate, classRecord } from './systems/admissions';
+export { acceptanceRate, classRecord, spreadClassYears, startedHere } from './systems/admissions';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
 export * from './config/incidents';
 export {

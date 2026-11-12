@@ -113,6 +113,7 @@ export function newGame(opts: NewGameOptions): GameState {
     cohorts: [0, 0, 0, 0],
     offCampus: [0, 0, 0, 0],
     classes: [],
+    fourYears: true,
     admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null },
     timers: [],
     timerSeq: 0,
