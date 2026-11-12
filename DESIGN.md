@@ -3294,6 +3294,8 @@ The scenes with no art are left out until it exists. They are not faked.
 
 **Changed on 2026-11-12, when the owner first heard it.** The crowd's murmur, footsteps and traffic had been made in code from filtered noise, and under the music they sounded like static. They are switched off (`NOISE_AMBIENCE` in `src/app/sound.ts`). Birds, crickets, the bell, the busker, taps and the music are tones, and stay. Chosen: silence those three until recorded sound replaces them. The alternative: keep them, much quieter.
 
+**And the rain, the same day.** It was the last sound made from noise, and the owner did not like it. It is off too. Rain and snow are still seen. Chosen: no rain sound until a recording replaces it. The alternative: a softer, quieter rain made in code.
+
 **What is free, from a first look on 2026-11-11.** The choosing is done when the stop is built, and every licence is read on its own page then.
 
 | Need | Free | Notes |
