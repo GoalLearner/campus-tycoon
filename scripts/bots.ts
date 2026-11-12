@@ -5,7 +5,9 @@ import {
   fallClassDraw,
   FIRST_INTAKE_TICK,
   POOL_CEILING,
-  COST,
+  paintCost,
+  placedCost,
+  scaleOf,
   coverFor,
   fedAt,
   foodKindsAt,
@@ -148,7 +150,8 @@ function nextPathStretch(state: GameState): Point[] | null {
 }
 
 function tryPaint(state: GameState, tool: Tool, cells: Point[], reserve: number): GameState | null {
-  const cost = cells.length * (tool === 'path' ? COST.path : tool === 'quad' ? COST.quad : tool === 'tree' ? COST.tree : tool === 'clear' ? COST.clear : COST.zoneLot);
+  const scale = scaleOf(state);
+  const cost = cells.length * (tool === 'path' || tool === 'quad' || tool === 'tree' || tool === 'clear' ? paintCost(tool, scale) : paintCost('zoneLot', scale));
   if (state.money.cash - cost < reserve) return null;
   const result = applyAction(state, { type: 'paint', tool, cells });
   return result.ok ? result.state : null;
@@ -195,7 +198,7 @@ function setMarketing(state: GameState, style: Style): GameState {
   // Wait until the last waitlist has closed: only then is it known whether anyone was turned away for good.
   if (!a.lastIntake || a.waitlistUntilTick !== 0) return state;
   const lost = a.lastIntake.turnedAway - a.waitlistAdmitted > 0;
-  const atCeiling = fallClassDraw(state) >= POOL_CEILING;
+  const atCeiling = fallClassDraw(state) >= POOL_CEILING * scaleOf(state);
   const step = lost || atCeiling ? 0 : style === 'optimizer' ? 4 : 2;
   if (step === state.money.marketing) return state;
   const result = applyAction(state, { type: 'marketing', step });
@@ -209,9 +212,9 @@ function setMarketing(state: GameState, style: Style): GameState {
  * its cash for the next class.
  */
 function payIntoEndowment(state: GameState, style: Style): GameState {
-  const keep = Math.max(1_000_000, state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5));
+  const keep = Math.max(1_000_000 * scaleOf(state), state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5));
   const spare = Math.floor(state.money.cash - keep);
-  if (spare < 100_000) return state;
+  if (spare < 100_000 * scaleOf(state)) return state;
   const result = applyAction(state, { type: 'endow', amount: spare });
   return result.ok ? result.state : state;
 }
@@ -287,7 +290,7 @@ function tendGrounds(state: GameState, reserve: number, most: number): { state: 
       if (!spot || !isMessSpot(spot)) continue;
       const fix = spotFix(current, spot);
       if (fix === 'noBin') {
-        if (current.money.cash - PLACED.bin.cost < reserve) continue;
+        if (current.money.cash - placedCost('bin', scaleOf(current)) < reserve) continue;
         let cell: Point | null = null;
         for (let ring = 1; ring <= 3 && !cell; ring++) {
           for (let y = spot.y - ring; y <= spot.y + spot.h - 1 + ring && !cell; y++) {
@@ -308,7 +311,7 @@ function tendGrounds(state: GameState, reserve: number, most: number): { state: 
       const over = yardId >= 0 ? current.map.placed[yardId] : null;
       const full = fix === 'understaffed' && !!over && workersAt(current, yardId) >= YARD_MAX_WORKERS && yardStatus(current, over).beyond;
       if (fix === 'noYard' || full) {
-        if (current.money.cash - PLACED.yard.cost < reserve) continue;
+        if (current.money.cash - placedCost('yard', scaleOf(current)) < reserve) continue;
         const at = full ? splitSpot(current, over!) : yardSpot(current, spot, false);
         const placed = at ? applyAction(current, { type: 'place', building: 'yard', x: at[0], y: at[1] }) : null;
         if (!placed?.ok) continue;
@@ -400,7 +403,7 @@ function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedTyp
     if (b && b.zone === 'housing' && b.stage === 1 && !fedAt(state.map, b.x, b.y)) {
       // A dining hall feeds four times the ground a coffee stand does and takes two cells. A campus that
       // only ever buys the stand ends up with dozens of them where its Medical Centers should have gone.
-      wants.push({ type: state.money.cash >= PLACED.dining.cost + 20_000 ? 'dining' : 'coffee', x: b.x, y: b.y });
+      wants.push({ type: state.money.cash >= placedCost('dining', scaleOf(state)) + 20_000 * scaleOf(state) ? 'dining' : 'coffee', x: b.x, y: b.y });
       hungry += 1;
     }
   }
@@ -454,7 +457,7 @@ function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedTyp
   }
   // The Academics buildings, once there is money to spare: a computer lab for lecture halls no library
   // reaches, and a study center by the dorms.
-  if (state.money.cash > ACADEMICS_CASH) {
+  if (state.money.cash > ACADEMICS_CASH * scaleOf(state)) {
     const hall = state.map.buildings.find((b) => b && b.zone === 'academic' && b.stage > 0 && libraryLift(state.map, b.x, b.y) === 0);
     if (hall) wants.push({ type: 'computerLab', x: hall.x, y: hall.y });
     const dorm = state.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !tutoredAt(state.map, b.x, b.y));
@@ -470,7 +473,7 @@ function buildFromMenu(state: GameState, reserve: number, most: number, extras =
     let placed = false;
     let blocked = false;
     for (const want of wantsFromMenu(current, extras)) {
-      if (current.money.cash - PLACED[want.type].cost < reserve) {
+      if (current.money.cash - placedCost(want.type, scaleOf(current)) < reserve) {
         blocked = true;
         continue;
       }
@@ -502,7 +505,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   const maxPurchases = style === 'casual' ? 5 : style === 'daily' ? 10 : 60;
   // A little is kept back: $20,000, or enough for the quiet day between graduation and the fall class, when a
   // quarter of the students have left, the summer term earns little and the bills are what they were.
-  const reserve = style === 'optimizer' ? 0 : Math.max(20_000, Math.round(state.money.spendingPerYear * 0.006));
+  const reserve = style === 'optimizer' ? 0 : Math.max(20_000 * scaleOf(state), Math.round(state.money.spendingPerYear * 0.006));
 
   let current = state;
   let purchases = 0;
@@ -520,7 +523,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     purchases += first.built;
     const waiting = wantsFromMenu(current, false).filter((want) => menuSpot(current, want.type, want.x, want.y) !== null);
     // Hold back the dearest of them, so a Campus Safety office is not for ever outbid by a coffee stand.
-    if (waiting.length > 0) lotReserve += Math.max(...waiting.map((want) => (want.type === 'coffee' ? PLACED.dining.cost : PLACED[want.type].cost)));
+    if (waiting.length > 0) lotReserve += Math.max(...waiting.map((want) => placedCost(want.type === 'coffee' ? 'dining' : want.type, scaleOf(current))));
   }
 
   while (purchases < maxPurchases) {
@@ -555,7 +558,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   for (let n = 0; n < 2; n++) {
     const park = nextParking(current);
     if (!park) break;
-    if (current.money.cash - PLACED[park.type].cost < reserve) {
+    if (current.money.cash - placedCost(park.type, scaleOf(current)) < reserve) {
       blockedByCash = true;
       break;
     }

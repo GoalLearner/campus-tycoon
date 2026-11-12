@@ -15,6 +15,7 @@ import {
   MODEL_CASH_SHARE,
   MODEL_FULL,
   MODEL_STAGE,
+  MODEL_STUDENTS,
   modelDistricts,
   newGame,
   openCapacity,
@@ -129,7 +130,7 @@ describe('the model campus follows the game\'s own rules', () => {
       expect(map.score[building.y * map.width + building.x]!, `${at} is desirable enough`).toBeGreaterThanOrEqual(stageSpec(building.zone, MODEL_STAGE).desirabilityNeeded);
       if (building.zone === 'housing') expect(fedAt(map, building.x, building.y), `${at} has food in reach`).toBe(true);
     }
-    expect(lots).toBe(56);
+    expect(lots).toBe(64);
     expect(state.timers.filter((timer) => timer.kind === 'buildDone').length).toBe(0);
   });
 
@@ -167,7 +168,8 @@ describe('the model campus opens balanced', () => {
     const seats = openCapacity(state, 'academic');
     const beds = openCapacity(state, 'housing');
     const students = enrollment(state);
-    expect(students).toBe(Math.round(seats * MODEL_FULL));
+    expect(students).toBe(MODEL_STUDENTS);
+    expect(Math.abs(students / seats - MODEL_FULL)).toBeLessThan(0.02);
     for (const year of state.cohorts) expect(year).toBeGreaterThan(students / 6);
     const inTown = state.offCampus.reduce((a, b) => a + b, 0);
     const inDorms = students - inTown;

@@ -1,3 +1,4 @@
+import { scaleOf, smallCount } from '../scale';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
@@ -143,10 +144,11 @@ export interface PlaceIndex {
 export function placeIndex(state: GameState, zone: Zone): PlaceIndex {
   const cells: number[] = [];
   const upTo: number[] = [];
+  const scale = scaleOf(state);
   let total = 0;
   for (const b of state.map.buildings) {
     if (!b || b.zone !== zone || b.stage < 1) continue;
-    total += stageSpec(zone, b.stage).capacity;
+    total += stageSpec(zone, b.stage, scale).capacity;
     cells.push(b.y * state.map.width + b.x);
     upTo.push(total);
   }
@@ -254,7 +256,8 @@ export function socialLife(state: GameState): number {
   }
   // A picnic table near dining or a lecture hall is somewhere to meet.
   spots += socialTables(state) * SOCIAL_SPOTS_PER_TABLE;
-  const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / students));
+  // A quad or a court is somewhere to meet for as many students as the campus scale says.
+  const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / smallCount(state, students)));
   // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
   return Math.round(level * 20) / 20;
 }

@@ -33,8 +33,24 @@ export const MAX_STAGE = 2;
 /** How many looks each zone has per stage. The art manifest must supply this many. */
 export const VARIANTS_PER_STAGE = 3;
 
-export function stageSpec(zone: Zone, stage: number): StageSpec {
-  const spec = STAGES[zone][stage - 1];
+/** A stage as one campus has it: its beds or seats and its bills at that campus's scale. */
+const scaled = new Map<number, Record<Zone, StageSpec[]>>();
+
+/**
+ * A stage of a zoned lot on a campus of a given scale (DESIGN.md 35.7). Its
+ * beds or seats, its upkeep and its utilities are multiplied by the scale.
+ * Its build time and the desirability it asks for are not. Left out, the
+ * scale is 1: the small game. Every rule in the game passes its campus's own,
+ * and a test checks that none forgets (tests/scale.test.ts).
+ */
+export function stageSpec(zone: Zone, stage: number, scale = 1): StageSpec {
+  let table = scaled.get(scale);
+  if (!table) {
+    const at = (spec: StageSpec): StageSpec => ({ ...spec, capacity: spec.capacity * scale, upkeepPerYear: spec.upkeepPerYear * scale, utilitiesPerYear: spec.utilitiesPerYear * scale });
+    table = { housing: STAGES.housing.map(at), academic: STAGES.academic.map(at) };
+    scaled.set(scale, table);
+  }
+  const spec = table[zone][stage - 1];
   if (!spec) throw new Error(`No stage ${stage} for zone ${zone}`);
   return spec;
 }

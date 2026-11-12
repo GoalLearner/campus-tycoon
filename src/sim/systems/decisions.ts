@@ -1,10 +1,11 @@
+import { scaleOf } from '../scale';
 import { calendarAt, yearLength } from '../calendar';
 import { CONTRACT_YEARS, MAX_TIER, SEATS, TIER_BUILD_TICKS, TIER_COST, TRAITS, TV_BASE, TV_BET, TV_BET_YEARS, TV_ROLL, TV_SAFE_YEARS } from '../config/football';
 import { TICKS_PER_DAY, TICKS_PER_HOUR } from '../config/time';
 import { dollars, duration } from '../format';
 import { addTimer } from '../timers';
 import type { Decision, GameState, LogEntry } from '../types';
-import { coachPay, hasSeason, makeCandidates, signingDay, starChance, teamRating } from './football';
+import { coachPay, hasSeason, makeCandidates, seatsAt, signingDay, starChance, teamRating, tierCost } from './football';
 import { markRatesDirty } from './money';
 
 /**
@@ -62,7 +63,7 @@ function openCoach(state: GameState, log: LogEntry[]): void {
   const f = state.football;
   const coach = f.coach;
   f.candidates = makeCandidates(state);
-  const market = coachPay(coach.rating);
+  const market = coachPay(coach.rating, scaleOf(state));
   const long = Math.round((market * 1.1) / 1000) * 1000;
   const options: Decision['options'] = [
     { id: 'extend3', label: `Keep ${coach.name} for three more years`, detail: `Rated ${coach.rating}, a ${TRAITS[coach.trait].name}. ${dollars(long)} a year.`, cost: 0 },
@@ -89,14 +90,14 @@ function openCoach(state: GameState, log: LogEntry[]): void {
 function openStadium(state: GameState, log: LogEntry[]): void {
   const stadium = state.football.stadium;
   const tier = stadium.tier + 1;
-  const cost = TIER_COST[tier] ?? 0;
+  const cost = tierCost(state, tier);
   const hours = Math.round((TIER_BUILD_TICKS[tier] ?? 0) / TICKS_PER_HOUR);
   const noPlot = stadium.plot === null;
   open(state, log, {
     kind: 'stadium',
     title: tier === 1 ? 'Build the first stadium' : 'Build a bigger stadium',
     body:
-      `Home games sold out all season, which earned ${tier === 1 ? 'a stadium of your own' : `tier ${tier}`}: ${SEATS[tier]!.toLocaleString('en-US')} seats against ${SEATS[stadium.tier]!.toLocaleString('en-US')} today. ` +
+      `Home games sold out all season, which earned ${tier === 1 ? 'a stadium of your own' : `tier ${tier}`}: ${seatsAt(state, tier).toLocaleString('en-US')} seats against ${seatsAt(state, stadium.tier).toLocaleString('en-US')} today. ` +
       `Work takes ${hours} hours and only starts out of season. A bigger stadium is louder for the dorms around it.` +
       (noPlot ? ' First place the stadium plot from the Build menu: two cells by three.' : ''),
     closes: fallAnchor(state),
@@ -114,7 +115,8 @@ function openStadium(state: GameState, log: LogEntry[]): void {
 export function tvOffers(state: GameState): { safe: number; bet: number; roll: number } {
   const f = state.football;
   // A stadium going up counts as built: it opens before the season the deal is for.
-  const base = TV_BASE[f.stadium.work?.tier ?? f.stadium.tier] ?? 0;
+  // A deal is for a programme of this campus's size.
+  const base = (TV_BASE[f.stadium.work?.tier ?? f.stadium.tier] ?? 0) * scaleOf(state);
   const wins = f.last?.w ?? 5;
   const round = (value: number): number => Math.round(value / 1000) * 1000;
   return { safe: round(base), bet: round(base * (TV_BET.floor + TV_BET.perWin * wins)), roll: round(f.tv.perYear > 0 ? f.tv.perYear * TV_ROLL : base * TV_ROLL * 0.9) };
@@ -177,10 +179,10 @@ function carryOut(state: GameState, decision: Decision, option: string, log: Log
     case 'coach': {
       if (option === 'extend3') {
         f.coach.until = year + 3;
-        f.coach.pay = Math.round((coachPay(f.coach.rating) * 1.1) / 1000) * 1000;
+        f.coach.pay = Math.round((coachPay(f.coach.rating, scaleOf(state)) * 1.1) / 1000) * 1000;
       } else if (option === 'extend1') {
         f.coach.until = year + 1;
-        f.coach.pay = coachPay(f.coach.rating);
+        f.coach.pay = coachPay(f.coach.rating, scaleOf(state));
       } else {
         const hired = f.candidates[Number(option.replace('hire', ''))];
         if (hired) f.coach = { ...hired, until: year + CONTRACT_YEARS };

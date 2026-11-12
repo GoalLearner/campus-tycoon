@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, SEAT_REACH, type GameState, type Placed, type PlayUse } from '../sim';
+import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, SEAT_REACH, type GameState, type Placed, type PlayUse, smallCount } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
 
@@ -138,7 +138,8 @@ export class Activity {
   /** Read the recreation buildings, benches and tables again, with their numbers. Called whenever the game changes. */
   setMap(state: GameState): void {
     const { width, height, cells } = state.map;
-    this.students = enrollment(state);
+    // What is drawn is a sample: it follows how busy the campus is, never how many it stands for (DESIGN.md 35.7).
+    this.students = smallCount(state, enrollment(state));
     const kept = new Map<number, Site>();
     for (const site of this.sites) kept.set(site.placed.id, site);
     const next: Site[] = [];

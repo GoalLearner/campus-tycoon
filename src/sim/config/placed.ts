@@ -18,6 +18,7 @@ export interface PlacedSpec {
   family: PlacedFamily;
   w: number;
   h: number;
+  /** Its price and upkeep in the small game. Read them through `placedCost` and `placedUpkeep`, which apply the campus scale. */
   cost: number;
   upkeepPerYear: number;
   /** Cells its effect reaches from its edge. 0 for none. */
@@ -32,11 +33,11 @@ export interface PlacedSpec {
   flat: boolean;
   /** False for things that come with the campus and cannot be bought or cleared. */
   buildable: boolean;
-  /** Car parks only: the cars it holds once a road links it to a town street. */
+  /** Car parks only: the cars it holds in the small game once a road links it to a town street. Read it through `placedCars`. */
   cars?: number;
-  /** Its utilities for a game year, where the rule by size does not fit. The pool uses far more than its size. */
+  /** Its utilities for a game year in the small game, where the rule by size does not fit. The pool uses far more than its size. */
   utilitiesPerYear?: number;
-  /** Recreation only: how many students it holds at once. A court fits a game or two, the gym most. */
+  /** Recreation only: how many students it holds at once in the small game. Read it through `placedRoom`. */
   capacity?: number;
   /** Food only: how many kinds of food it counts as toward variety. The food court is three. One when left out. */
   kinds?: number;
@@ -186,6 +187,32 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
 };
 
 /** The order of the Build menu. */
+/** What a building costs on a campus of a given scale (DESIGN.md 35.7). */
+export function placedCost(type: PlacedType, scale: number): number {
+  return PLACED[type].cost * scale;
+}
+
+/** Its upkeep for a game year. */
+export function placedUpkeep(type: PlacedType, scale: number): number {
+  return PLACED[type].upkeepPerYear * scale;
+}
+
+/** Its own utilities bill for a game year, where it has one. undefined for a building billed by its size. */
+export function placedUtilities(type: PlacedType, scale: number): number | undefined {
+  const bill = PLACED[type].utilitiesPerYear;
+  return bill === undefined ? undefined : bill * scale;
+}
+
+/** How many students a place to play holds at once. 0 for anything else. */
+export function placedRoom(type: PlacedType, scale: number): number {
+  return (PLACED[type].capacity ?? 0) * scale;
+}
+
+/** How many cars a car park holds. 0 for anything else. */
+export function placedCars(type: PlacedType, scale: number): number {
+  return (PLACED[type].cars ?? 0) * scale;
+}
+
 export const BUILD_ORDER: readonly PlacedType[] = [
   'library', 'computerLab', 'studyCenter', 'makerspace',
   'dining', 'foodcourt', 'diner', 'burger', 'pizza', 'taco', 'coffee', 'smoothie', 'convenience', 'truck',
@@ -243,9 +270,10 @@ export const SOCIAL_SPOTS_PER_RECREATION = 4;
  * stands on. Something that lies open on the ground, a court or a field,
  * has lights and little else. Water, bins and seats use nothing.
  */
-export function utilitiesOf(type: PlacedType): number {
+export function utilitiesOf(type: PlacedType, scale = 1): number {
   const spec = PLACED[type];
-  if (spec.utilitiesPerYear !== undefined) return spec.utilitiesPerYear;
+  const own = placedUtilities(type, scale);
+  if (own !== undefined) return own;
   if (spec.family === 'water' || spec.family === 'bin' || spec.family === 'seat' || spec.family === 'landmark') return 0;
-  return spec.w * spec.h * (spec.flat ? UTILITIES_PER_OPEN_CELL : UTILITIES_PER_CELL);
+  return spec.w * spec.h * (spec.flat ? UTILITIES_PER_OPEN_CELL : UTILITIES_PER_CELL) * scale;
 }

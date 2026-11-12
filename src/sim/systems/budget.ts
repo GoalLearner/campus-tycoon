@@ -1,3 +1,5 @@
+import { scaleOf } from '../scale';
+import { placedUpkeep } from '../config/placed';
 import { stageSpec } from '../config/buildings';
 import { WAGE_PER_YEAR } from '../config/grounds';
 import {
@@ -91,7 +93,8 @@ export function firstClassArrived(state: GameState): boolean {
  */
 export function careStaffAt(state: GameState, placed: Placed): number {
   if (!hasCareStaff(placed) || !firstClassArrived(state)) return 0;
-  return Math.max(1, Math.ceil(studentsInCircle(state, placed) / STUDENTS_PER_CARE_STAFF));
+  // Never fewer than one in the small game, and a building here stands for as many as the campus scale says.
+  return Math.max(scaleOf(state), Math.ceil(studentsInCircle(state, placed) / STUDENTS_PER_CARE_STAFF));
 }
 
 /** Every member of safety and medical staff on the campus. */
@@ -101,11 +104,15 @@ export function careStaffCount(state: GameState): number {
   return total;
 }
 
-/** Every maintenance worker hired, across all yards. */
+/**
+ * Every maintenance worker hired, across all yards. A yard's crew is counted
+ * in the small game's workers, and each stands for as many as the campus
+ * scale says (DESIGN.md 35.7), so the head count and the wage bill follow it.
+ */
 export function workerCount(state: GameState): number {
   let total = 0;
   for (const placed of state.map.placed) if (placed && placed.type === 'yard') total += state.grounds.workers[placed.id] ?? 0;
-  return total;
+  return total * scaleOf(state);
 }
 
 /** Beds with a student in them: the students who do not live in town, as far as there are beds. */
@@ -156,6 +163,7 @@ function legacySpending(state: GameState): number {
 /** The whole budget for a game year, at today's enrollment and buildings. */
 export function budget(state: GameState): Budget {
   const students = enrollment(state);
+  const scale = scaleOf(state);
   const m = state.money;
 
   // ---- income
@@ -206,7 +214,7 @@ export function budget(state: GameState): Budget {
   let standing = 0;
   for (const b of state.map.buildings) {
     if (!b || b.stage <= 0) continue;
-    utilities += stageSpec(b.zone, b.stage).utilitiesPerYear;
+    utilities += stageSpec(b.zone, b.stage, scale).utilitiesPerYear;
     standing += 1;
   }
   let roads = 0;
@@ -214,14 +222,14 @@ export function budget(state: GameState): Budget {
   let placedCount = 0;
   for (const placed of state.map.placed) {
     if (!placed) continue;
-    const bill = utilitiesOf(placed.type);
+    const bill = utilitiesOf(placed.type, scale);
     utilities += bill;
-    if (bill > 0 || PLACED[placed.type].upkeepPerYear > 0) placedCount += 1;
+    if (bill > 0 || placedUpkeep(placed.type, scale) > 0) placedCount += 1;
   }
   const upkeep = upkeepPerYear(state) + ball.upkeep;
   utilities += ball.utilities;
   const count = standing + placedCount;
-  const roadNote = roads > 0 ? ` and ${people(roads, 'cell', 'cells')} of road at ${dollars(ROAD_UPKEEP_PER_YEAR)}` : '';
+  const roadNote = roads > 0 ? ` and ${people(roads, 'cell', 'cells')} of road at ${dollars(ROAD_UPKEEP_PER_YEAR * scale)}` : '';
   const buildings: BudgetLine[] = [
     { id: 'upkeep', name: 'Upkeep and repairs', amount: upkeep, detail: `${people(count, 'building', 'buildings')}${roadNote}` },
     { id: 'utilities', name: 'Utilities', amount: utilities, detail: `${people(count, 'building', 'buildings')}, by size. A pool uses more` },

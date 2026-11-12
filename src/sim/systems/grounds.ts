@@ -1,3 +1,4 @@
+import { scaleOf, smallCount } from '../scale';
 import {
   BIN_CAPACITY,
   BIN_CATCH,
@@ -173,7 +174,8 @@ export function workersAt(state: GameState, yardId: number): number {
 export function wagesPerYear(state: GameState): number {
   let workers = 0;
   for (const placed of state.map.placed) if (placed && placed.type === 'yard') workers += workersAt(state, placed.id);
-  return workers * WAGE_PER_YEAR;
+  // Each of a yard's workers stands for as many as the campus scale says, and is paid as that many.
+  return workers * WAGE_PER_YEAR * scaleOf(state);
 }
 
 // ---------------------------------------------------------------- litter --
@@ -182,7 +184,8 @@ export function wagesPerYear(state: GameState): number {
 export function dropOf(state: GameState, spot: Placed): number {
   const care = state.map.care;
   const students = care.lots > 0 ? (enrollment(state) * (care.users[spot.id] ?? 0)) / care.lots : 0;
-  return Math.min(1, students / SPOT_FULL_AT) * messStrength(spot) * DROP_BUSY * litterTilt(state);
+  // How busy a place is, as the small game counts it: litter, bins and a worker's day are in its units at any scale.
+  return Math.min(1, smallCount(state, students) / SPOT_FULL_AT) * messStrength(spot) * DROP_BUSY * litterTilt(state);
 }
 
 /**
@@ -444,7 +447,8 @@ export function moodNear(state: GameState, spot: Placed): number | null {
       if (cell.kind !== 'lot' || cell.buildingId === null) continue;
       const building = map.buildings[cell.buildingId];
       if (!building || building.stage < 1) continue;
-      const size = stageSpec(building.zone, building.stage).capacity;
+      // Used as a weight, so the campus scale cancels.
+      const size = stageSpec(building.zone, building.stage, 1).capacity;
       sum += approvalAt(state, index).score * size;
       people += size;
     }
@@ -621,7 +625,7 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   const supply = workers * WORK_PER_WORKER;
   const hire = need > supply + 1e-9 ? Math.ceil((need - supply) / WORK_PER_WORKER - 1e-9) : 0;
   const beyond = falling > YARD_MAX_WORKERS * WORK_PER_WORKER + 1e-9;
-  return { workers, max: YARD_MAX_WORKERS, need, supply, hire, beyond, wagesPerYear: workers * WAGE_PER_YEAR };
+  return { workers, max: YARD_MAX_WORKERS, need, supply, hire, beyond, wagesPerYear: workers * WAGE_PER_YEAR * scaleOf(state) };
 }
 
 /** One line on a yard: keeping up, or how many more to hire. */

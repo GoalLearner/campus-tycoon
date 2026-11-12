@@ -1,3 +1,5 @@
+import { stageSpec } from './config/buildings';
+import { scaleOf } from './scale';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
 import { openWithStudents } from './systems/admissions';
 import { yardStatus } from './systems/grounds';
@@ -35,6 +37,13 @@ export interface NewGameOptions {
    * the model campus of DESIGN.md section 35, whole from the first minute.
    */
   campus?: 'small' | 'model';
+  /**
+   * The model campus only: its campus scale. Left out, it is the scale at
+   * which the campus opens with 46,000 students in about nine tenths of its
+   * seats. The tests also open it at 1, to check that a campus behaves the
+   * same at every scale.
+   */
+  scale?: number;
 }
 
 /** The whole map, bare: the starting land, the fields for sale, and the town laid in down its east side. */
@@ -42,6 +51,7 @@ function emptyMap(width: number, height: number, seed: number): MapState {
   const cells: Cell[] = [];
   for (let i = 0; i < width * height; i++) cells.push({ kind: 'empty', zone: null, buildingId: null, variant: 0, placedId: null, builtTick: -1 });
   const map: MapState = {
+    scale: 1,
     width,
     height,
     cells,
@@ -113,7 +123,7 @@ export function newTerm(tick: number): Term {
  */
 export function startFootball(state: GameState, firstYear: number): void {
   state.field = makeField(state.rng, state.school.name);
-  state.football = newFootball(state.rng, state.field, firstYear);
+  state.football = newFootball(state.rng, state.field, firstYear, scaleOf(state));
 }
 
 /** A brand-new campus, fifteen minutes before its first class moves in. */
@@ -124,6 +134,7 @@ export function newGame(opts: NewGameOptions): GameState {
     // The model campus owns the starting land and both fields from the start.
     for (const parcel of map.parcels) parcel.owned = true;
     layModelCampus(map, opts.seed >>> 0);
+    map.scale = opts.scale === undefined ? modelScale(map) : Math.max(1, Math.round(opts.scale));
   } else buildStarterCampus(map, opts.seed);
   recomputeDesirability(map);
 
@@ -183,7 +194,7 @@ export function newGame(opts: NewGameOptions): GameState {
   // A new campus has its stadium plot from the first day.
   state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
   scheduleScrimmage(state);
-  if (model) openModelCampus(state);
+  if (model) openModelCampus(state, opts.scale === undefined);
   recomputeRates(state);
   return state;
 }
@@ -193,8 +204,11 @@ export function newGame(opts: NewGameOptions): GameState {
  * staffed, students in about nine tenths of its seats, and cash worth about a
  * tenth of a year's spending.
  */
-function openModelCampus(state: GameState): void {
-  openWithStudents(state, Math.round(openCapacity(state, 'academic') * MODEL_FULL));
+function openModelCampus(state: GameState, fullSize: boolean): void {
+  // At its own scale it opens with exactly the students it was asked to hold. At any other, with as many in proportion.
+  const map = state.map;
+  const own = modelScale({ ...map, scale: 1 });
+  openWithStudents(state, fullSize ? MODEL_STUDENTS : Math.round((MODEL_STUDENTS * map.scale) / own));
   // Each yard is given the workers it needs to keep up with what it looks after, and never fewer than one.
   for (const yard of state.map.placed) {
     if (!yard || yard.type !== 'yard') continue;
@@ -211,6 +225,16 @@ export function modelDistricts(seed: number): ModelDistrict[] {
   const map = emptyMap(WORLD.width, WORLD.height, seed >>> 0);
   for (const parcel of map.parcels) parcel.owned = true;
   return layModelCampus(map, seed >>> 0);
+}
+
+/** The students the model campus opens with (DESIGN.md 35.7): the owner's number. */
+export const MODEL_STUDENTS = 46_000;
+
+/** The whole number that makes those students about nine tenths of the seats the campus has as laid. */
+function modelScale(map: MapState): number {
+  let seats = 0;
+  for (const building of map.buildings) if (building && building.zone === 'academic') seats += stageSpec('academic', building.stage, 1).capacity;
+  return Math.max(1, Math.round(MODEL_STUDENTS / MODEL_FULL / Math.max(1, seats)));
 }
 
 /** [T] How full the model campus opens, and its cash as a share of a year's spending. */

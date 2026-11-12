@@ -1,9 +1,11 @@
+import { scaleOf } from './scale';
+import { placedCost } from './config/placed';
 import { PLACED } from './config/placed';
 import { REFUND_SHARE, UNDO_TICKS, MARKETING_LIFT } from './config/money';
 import { addPlaced, previewPlace, removePlaced } from './systems/placed';
 import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
-import { COST } from './config/money';
+import { paintCost } from './config/money';
 import { YARD_MAX_WORKERS, YARD_START_WORKERS } from './config/grounds';
 import { minutesToAnchor, timeOfTick, yearLength } from './calendar';
 import { SCHOOL_COLOURS, TICKET_PRICE } from './config/football';
@@ -69,18 +71,20 @@ export type ActionResult =
   | { ok: true; state: GameState; cost: number; changed: number }
   | { ok: false; state: GameState; error: string };
 
-const UNIT_COST: Record<Tool, number> = {
-  housing: COST.zoneLot,
-  academic: COST.zoneLot,
-  path: COST.path,
-  road: COST.road,
-  quad: COST.quad,
-  tree: COST.tree,
-  clear: COST.clear,
-  bin: PLACED.bin.cost,
-  bench: PLACED.bench.cost,
-  table: PLACED.table.cost,
-};
+/** What one cell of a tool costs on a campus of a given scale (DESIGN.md 35.7). */
+function unitCost(tool: Tool, scale: number): number {
+  switch (tool) {
+    case 'housing':
+    case 'academic':
+      return paintCost('zoneLot', scale);
+    case 'bin':
+    case 'bench':
+    case 'table':
+      return placedCost(tool, scale);
+    default:
+      return paintCost(tool, scale);
+  }
+}
 
 function canPaint(kind: CellKind, tool: Tool): boolean {
   if (tool === 'clear') return kind !== 'empty';
@@ -116,11 +120,27 @@ export function refundFor(state: GameState, cost: number, builtTick: number): { 
   return { amount: undo ? cost : Math.floor(cost * REFUND_SHARE), undo };
 }
 
-const PAINT_COST: Partial<Record<CellKind, number>> = { path: COST.path, quad: COST.quad, tree: COST.tree, lot: COST.zoneLot, road: COST.road, crossing: COST.road + COST.path };
+/** What the ground on a cell cost to lay, for the refund when it is cleared. */
+function laidCost(kind: CellKind, scale: number): number {
+  switch (kind) {
+    case 'path':
+    case 'quad':
+    case 'tree':
+    case 'road':
+      return paintCost(kind, scale);
+    case 'lot':
+      return paintCost('zoneLot', scale);
+    case 'crossing':
+      return paintCost('road', scale) + paintCost('path', scale);
+    default:
+      return 0;
+  }
+}
 
 /** What a paint would do and cost, without doing it. Drives the live preview while dragging. */
 export function previewPaint(state: GameState, tool: Tool, cells: readonly Point[]): PaintPreview {
   const map = state.map;
+  const scale = scaleOf(map);
   const seen = new Set<number>();
   const valid: Point[] = [];
   let skipped = 0;
@@ -151,18 +171,18 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
         const placed = map.placed[cell.placedId];
         if (placed) {
           buildings.push(placed.type);
-          back = refundFor(state, PLACED[placed.type].cost, placed.builtTick);
+          back = refundFor(state, placedCost(placed.type, scale), placed.builtTick);
           // The food truck drives off: its whole price comes back whenever it is cleared, so moving it is free.
-          if (PLACED[placed.type].fullRefund && placed.builtTick >= 0) back = { amount: PLACED[placed.type].cost, undo: back.undo };
+          if (PLACED[placed.type].fullRefund && placed.builtTick >= 0) back = { amount: placedCost(placed.type, scale), undo: back.undo };
         }
       } else {
-        back = refundFor(state, PAINT_COST[cell.kind] ?? 0, cell.builtTick);
+        back = refundFor(state, laidCost(cell.kind, scale), cell.builtTick);
       }
       refund += back.amount;
       if (!back.undo) undo = false;
     }
   }
-  const cost = valid.length * UNIT_COST[tool];
+  const cost = valid.length * unitCost(tool, scale);
   return { tool, cells: valid, skipped, cost, affordable: cost <= state.money.cash, refund, undo, buildings };
 }
 
@@ -252,7 +272,7 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   }
   const preview = previewPlace(state, type, x, y);
   if (preview.problem === 'cash') {
-    return { ok: false, state, error: `That costs ${dollars(spec.cost)}. You have ${dollars(state.money.cash)}.` };
+    return { ok: false, state, error: `That costs ${dollars(preview.cost)}. You have ${dollars(state.money.cash)}.` };
   }
   if (preview.problem) return { ok: false, state, error: PLACE_ERROR[preview.problem] };
 
@@ -261,12 +281,12 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   // A yard opens with a worker on its books.
   if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
   if (type === 'stadium') next.football.stadium.plot = built.id;
-  next.money.cash -= spec.cost;
-  next.money.yearSpent += spec.cost;
+  next.money.cash -= preview.cost;
+  next.money.yearSpent += preview.cost;
   recomputeDesirability(next.map);
   markRatesDirty(next);
   evaluateGrowth(next);
-  return { ok: true, state: next, cost: spec.cost, changed: 1 };
+  return { ok: true, state: next, cost: preview.cost, changed: 1 };
 }
 
 /** Buy a field. It becomes land the campus can build on. */

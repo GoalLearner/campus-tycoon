@@ -143,8 +143,9 @@ export {
 } from './systems/students';
 export type { ArchetypeId, CauseId, DriverId, RelationshipId } from './config/students';
 export { PART_WEIGHTS } from './config/students';
-export { newGame, modelDistricts, MODEL_CASH_SHARE, MODEL_FULL, type NewGameOptions } from './newGame';
+export { newGame, modelDistricts, MODEL_CASH_SHARE, MODEL_FULL, MODEL_STUDENTS, type NewGameOptions } from './newGame';
 export { MODEL_STAGE, type ModelDistrict } from './modelCampus';
+export { scaleOf, smallCount } from './scale';
 export {
   activeEntries,
   calendarAt,

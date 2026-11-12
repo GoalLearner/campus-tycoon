@@ -1,3 +1,5 @@
+import { scaleOf } from '../scale';
+import { placedCost, placedUpkeep } from '../config/placed';
 import {
   PLACED,
   STORE_INCOME_PER_PASSER,
@@ -58,8 +60,9 @@ export function previewPlace(state: GameState, type: PlacedType, x: number, y: n
       if (map.cells[cy * map.width + cx]!.kind !== 'empty' && problem === null) problem = 'blocked';
     }
   }
-  if (problem === null && spec.cost > state.money.cash) problem = 'cash';
-  return { type, x, y, cells, cost: spec.cost, problem };
+  const cost = placedCost(type, scaleOf(state));
+  if (problem === null && cost > state.money.cash) problem = 'cash';
+  return { type, x, y, cells, cost, problem };
 }
 
 /** Put a building on the map. The caller has checked the spot and paid. `builtTick` is -1 for one the campus begins with. */
@@ -247,7 +250,7 @@ export function storePassers(state: GameState, placed: Placed): number {
       const ny = building.y + dy;
       return nx >= 0 && ny >= 0 && nx < width && ny < height && depth[ny * width + nx]! >= 0;
     });
-    if (beside) capacity += stageSpec(building.zone, building.stage).capacity;
+    if (beside) capacity += stageSpec(building.zone, building.stage, scaleOf(state)).capacity;
   }
   return Math.min(enrollment(state), Math.round(capacity * STORE_PASSING_SHARE));
 }
@@ -259,7 +262,7 @@ export function storeIncomePerYear(state: GameState, placed: Placed): number {
 /** Yearly upkeep of every hand-placed building. */
 export function placedUpkeepPerYear(map: MapState): number {
   let total = 0;
-  for (const placed of map.placed) if (placed) total += PLACED[placed.type].upkeepPerYear;
+  for (const placed of map.placed) if (placed) total += placedUpkeep(placed.type, scaleOf(map));
   return total;
 }
 

@@ -60,7 +60,7 @@ export const LEGACY_COST_PER_STUDENT_PER_YEAR = 6_500;
 export const LEGACY_WAGE_PER_YEAR = 6_000;
 export const PHASE_STEPS = 7;
 
-/** One-off costs the player pays for permission and conditions. */
+/** One-off costs the player pays for permission and conditions, in the small game. Read them through `paintCost`. */
 export const COST = {
   path: 2_000,
   /** A cell of road. Its upkeep is in config/town.ts. */
@@ -72,6 +72,11 @@ export const COST = {
   /** Clearing is free. What comes back is set by the refund rule below. */
   clear: 0,
 } as const;
+
+/** What laying one cell costs on a campus of a given scale (DESIGN.md 35.7). */
+export function paintCost(what: keyof typeof COST, scale: number): number {
+  return COST[what] * scale;
+}
 
 /**
  * Refunds. Clearing something within this many ticks of paying for it is an
