@@ -4107,6 +4107,8 @@ On the model campus it reads: the next class is 9,942 strong and the campus is 3
 
 Asked for by the owner on 2026-11-12: "A new game opens at 46,000 students, above the whole current ladder (500 to 40,000). Propose a new size ladder that starts above the model campus and still takes months to climb, and check the prestige ladder, eras, and land unlocks still make sense from this start." **This section was the proposal. He approved it on 2026-11-12, with a money target of his own (37.10).**
 
+**Changed by him later the same day: enrollment is capped at 50,000 students (38.4).** When that is built, the size goals above 50,000 go and the rank goals are the long climb. Until then the game is as this section says.
+
 ### 37.1 What was measured first
 
 The once-a-day test player on the model campus, as the game stands, one game year to a real week:
@@ -4341,9 +4343,9 @@ The player who works every cause is a new test player, `striver`: once a day, ma
 
 ---
 
-## 38. Capacity and faculty: scaling with enrollment (proposed)
+## 38. Capacity and faculty: scaling with enrollment
 
-Asked for by the owner on 2026-11-12, typed to the build session while the size goals were being built: "Make scaling with enrollment a core, visible mechanic. Much of it exists; unify it and fill the gaps." **This section is a proposal. Nothing in it is built. It waits for his go.**
+Asked for by the owner on 2026-11-12, typed to the build session while the size goals were being built: "Make scaling with enrollment a core, visible mechanic. Much of it exists; unify it and fill the gaps." **He said yes on 2026-11-12: it is the next stop after the streets (section 39), with the recommended options of 38.3, and with a cap on enrollment that he added the same day (38.4). Nothing in it is built yet.**
 
 ### 38.1 What he asked for
 
@@ -4393,6 +4395,28 @@ Two things his brief leans on are not built: **decay** of empty buildings, and t
 | Decay of empty buildings | Left for its own stop | Built here, with the rules of section 6 |
 | The money target | Measured again at the end of the stop against $12 to $17, with what moved | Left as tuned for the size goals |
 | What a faculty shortfall lowers | Class size first, and through it GPA, Stress and the rating, each naming the ratio | Its own new penalty on each |
+
+### 38.4 A cap of 50,000 students (the owner, 2026-11-12)
+
+His words: "I think there should be max student capacity honestly at 50,000?" He was told that it replaces seven of the eight size goals he had approved that morning (37.2), and asked: "Cap enrollment at 50,000 and make rank the long climb?" He answered: "Yes, cap at 50,000". It is built in the same stop as the rest of this section, because both move the same money. **Not built yet.**
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The cap | On a game begun on the model campus, enrollment never passes 50,000 students, however much is built. It is a head count, so it follows the campus scale | A cap that rises with each era, which keeps some growth and is more to explain. Offered to him, and not taken |
+| Applicants past the room | Turned away. The school grows more selective, and selectivity lifts the rank, as it already does | A waitlist carried over to the next year |
+| The size goals of 37.2 | One is left: 50,000 students, a full campus. The seven above it go | Keep them, out of reach |
+| The long climb | The eight rank goals of 37.4 | A new ladder beside them |
+| Eras | Opened by the rank alone: the Top 125, the Top 75 and the Top 25 | Left hanging on sizes nobody can reach |
+| A free building for a goal | Moves from the size goals to the rank goals. Still off until he has picked from the sheet | Dropped |
+| A game already above 50,000 | Keeps every student it has, and every goal it has reached. It admits nobody until commencement brings it back under the cap | Cut down to the cap on the day it loads |
+| What a rank adds to applicants | Back toward the 25 in a hundred he approved [T]. It was raised to 55 only so that 100,000 could be reached (37.11) | Left at 55 |
+| The Size panel | Students against the cap, this fall's applicants with their four causes, how many are admitted and how many turned away, and the rank with its next goal. It becomes the Goals page of the screen of 38.2 | Its own panel beside the Capacity screen |
+
+To measure in the build, and to report to him:
+
+- The rank goals must still take months now that every full campus turns applicants away: the Top 100 in about month two, and the Top 10 not before month five.
+- Rank, applicants and selectivity must not feed each other without end. A better rank brings more applicants, more applicants make a school more selective, and a more selective school ranks better.
+- The money against his $12 to $17 kept of every $100, since income no longer grows with the head count.
 
 ---
 
