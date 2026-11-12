@@ -19,6 +19,7 @@ How to read this document:
 - Section 29 is Grounds: litter, bins, seating and maintenance workers. Accepted by the owner on 2026-11-11 as play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
+- Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
 
 ---
 
@@ -1027,6 +1028,8 @@ Flavour walkers with small thought pools, each tied to a stat.
 | The mascot | Happiness, game day |
 | A campus squirrel | Green space |
 
+On 2026-11-11 the owner asked for more of these, each with a card. Section 32 has the full list and the rules. The coach, the mascot and the squirrel above stay for their own layers.
+
 ### 13.7 Tone for personalities
 
 Jokes aim at types and institutions and never demean a student. The Party Animal carries no alcohol reference: they are always coming from a party and sleep through morning class. The Charmer stays at harmless flirting. Homesick, Stressed-Out, Heartbroken and Broke Student stay comic and never imply a crisis.
@@ -1425,7 +1428,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -2809,3 +2812,89 @@ One piece could come sooner if wanted: the read-only panel alone, in the first h
 | Class-size target | 20 students to one member of faculty |
 | The phase-in | Seven daily steps over one game year, each in the away summary |
 | When | Play stop 5, after stop 4. Or the read-only panel alone in the first half of stop 4 |
+
+---
+
+## 32. People on campus
+
+Asked for by the owner on 2026-11-11, in two parts. He asked whether it was cheap enough to fold into the money stop. **The first part is, and is being built with it. The second is the next small stop, after money.**
+
+### 32.1 Four class years from the first day
+
+Folded into the money stop, because it moves the balance of the first years and the rebalance of section 31 should be done once.
+
+| Decision | Why |
+|---|---|
+| A new campus's founding class is spread over all four years: 27% freshmen, 26% sophomores, 25% juniors and 22% seniors [T] | The owner's rule: "roughly even, slightly fewer seniors" |
+| It covers everyone admitted from the founding class, at move-in and off its waitlist. Every later class arrives as freshmen | One founding body |
+| The total and the money on day one are exactly what they were | His rule. Income follows the count of students, not their year |
+| Seniors graduate at the first commencement, so alumni start in year one | His rule. Donations and the legacy numbers get a three-year head start |
+| The founding upper classes carry entry years of 0, -1 and -2 in the class records and on their cards. They are left out of graduation rates | They did not start here, so they say nothing about how well the school graduates its own |
+| The first three years grow more slowly than before, because a quarter of the founders now leave each spring. It is measured with the test players and re-tuned inside the money rebalance | The one place this does shift the balance. Day one is unchanged; years one to three are not |
+| **Old saves:** at the next fall intake, after classes move up, a save younger than four years has its continuing students spread again so that no year is empty. Nobody is removed, off-campus counts and income are unchanged, the class records move with the students, and the away list says so once | The owner's own proposal, kept. Its one cost: some student cards change who they are that day, because a card is made from a class and a number. That already happens to every class at every intake |
+| The card's first line shows the right year, and types follow it as designed: Lost Freshman in year one only, Super Senior at the end | Nothing new. The rules of 13.3 read the class year |
+
+### 32.2 People who are not students
+
+The next small stop. It extends the flavour walkers of 13.6 into people the player can tap, each with a card in the style of the student card.
+
+| Rule | Why |
+|---|---|
+| Nobody is simulated. A card is made when it is opened, from the save's seed and the campus's own numbers, as a student card is | The owner's rule, and the house rule for walkers. Nothing is saved and catch-up never sees them |
+| Every card ends on one line tied to a real number, and tapping that line goes to what it is about | The rule of the student card: something the player can act on |
+| How many are on screen follows the size of the campus and the time of day: more staff by day, mostly students at night, visitors at weekends and on game days | The owner's rule. The hour comes from the player's clock and changes only who is seen (28.1). Weekends come from the date in the game |
+| Students stay most of the crowd. No more than about a quarter of the people on screen are anyone else [T] | His rule |
+| Professors and staff on screen follow the payroll counts of section 31 | The reason this comes after the money stop: the counts are real by then |
+
+| Who | Seen as | Card | The line tied to a number |
+|---|---|---|---|
+| Professor | The pack's teacher, in a mortarboard | Name, department, and what they are doing: teaching in a named hall, office hours, marking in the library | Class size. Later, Instruction funding (layer 2) and faculty Stress (layer 1) |
+| Advisor | The waiter, in a bow tie | Role and what they are doing | Students to each member of staff |
+| Admissions guide | The bellhop, in a red cap, leading a tour with a pennant | Role and what they are doing | The acceptance rate, or the size of the next class |
+| Dining worker | The chef | Which food place, and what they are doing | The students that place feeds |
+| Campus store clerk | The bus driver's figure, in a cap | The store, and what they are doing | Who passes its door and what it earns |
+| Maintenance worker | The worker in a hard hat, with a broom or cart beside him. Already on the map | Their yard and the job in hand: emptying a bin, sweeping a named place, mending a bench | Whether the yard is keeping up, in the yard's own words |
+| Campus Safety officer | The police figure. Already on the map | Their building, and the call they are on or "on patrol" | Incidents handled and missed |
+| Medic | The nurse. Already on the map | Their building and the call they are on | The same |
+| Tour-group parents | Two townsfolk behind the guide | One line | The applicant forecast and how the campus looks. "Lovely quad. Where would she sleep?" when beds are short |
+| A booster | The figure in a top hat | One line | The alumni count now. Donations and deals when they exist |
+| A townie | A figure in a trucker cap | One line | How many locals from their street are enrolled, or the road beside their house |
+| A delivery driver | The mail carrier with boxes, and the mail truck on roads | One line | How many food places and stores they supply |
+
+### 32.3 Art
+
+Checked in the owner's packs on 2026-11-11. The people pack has a ready-made figure for most roles, each with a hat that reads at phone zoom.
+
+| Wanted | In the packs | Gap, and the stand-in |
+|---|---|---|
+| Professor | Yes: the teacher, in a mortarboard | |
+| Dining worker | Yes: the chef | |
+| Officer, medic, maintenance worker | Yes, and already used | |
+| Booster | Yes: a figure in a top hat | |
+| Delivery driver | Yes: a mail carrier, a mail truck, and stacks of boxes | |
+| Tour flag | A red pennant on a pole | It is drawn beside the guide. No figure holds anything, because the figures have no hands |
+| Advisor, admissions guide, store clerk | No figures of their own | The waiter, the bellhop and the bus driver, who each wear something distinct |
+| Lanyards | None, and too small to see at this size | A hat or uniform is the tell |
+| Parents who look older than students | None. Every figure is the same build | Two looks kept for visitors alone |
+| Townie | A figure in a trucker cap among the sixteen plain ones | That look is kept for townies alone |
+
+Nothing here has to be assembled. If a stand-in looks wrong in play, a drawn advisor and a guide holding a flag join the Penzilla request.
+
+### 32.4 Where it lands
+
+| When | What |
+|---|---|
+| The money stop | Four class years (32.1). The faculty and staff counts that this stop reads |
+| The People stop, small, next after money | The cards and walkers of 32.2, with visitors at weekends |
+| Layer 1 | Visitors on game days. The coach and the mascot. Faculty Stress on the professor's card |
+| Layer 2 | Instruction funding on the professor's card. The booster's line about donations and deals |
+
+The People stop changes no rule and no number. It needs no rebalance, which is why it does not have to ride with the money stop, and why the money stop is not held up by it.
+
+### 32.5 Tests
+
+- A card for the same person is the same every time it is opened, and differs between saves.
+- Every card's last line quotes a number the simulation reports at that moment.
+- No card line breaks the tone guide's word list.
+- Opening cards, and the people on screen, change nothing in the saved game.
+- Non-students stay under their share of the crowd at every time of day.
