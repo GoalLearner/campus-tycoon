@@ -3562,7 +3562,7 @@ Asked for by the owner on 2026-11-12: "Analyze this map of this university and r
 
 | Decision | Why |
 |---|---|
-| A second way to begin: "Start from the model campus", beside the empty campus of today | He asked to have the campus in the game. A new player still learns on the small one |
+| A second way to begin: "Start from the model campus", beside the empty campus of today | He asked to have the campus in the game. A new player still learns on the small one. **Changed by the owner on 2026-11-12: it is the start for every new game (35.6)** |
 | It is a whole campus from the first minute: every district in its place, enrollment to match what it holds, all four class years, and money that balances | A layout is only seen when it is built |
 | It is made by a script from the game's own buildings and rules, the same every time for the same seed | No hand-edited save to go stale. The simulate script can run it |
 | The player names the school. Every hall, street and team name comes from the game's own generators | The game's legal line: every school is fictional |
@@ -3627,11 +3627,29 @@ Left out, because the game has nothing for them yet: the theatres and the music 
 
 | Point | Chosen | The alternative |
 |---|---|---|
-| How to reach it | A second choice when a game is founded | Replace the small starting campus for everyone |
+| How to reach it | First built as a second choice when a game is founded. **Changed by the owner on 2026-11-12: it is the start for every new game** (below) | Keep the small campus as the start for everyone, with this one beside it |
 | The town's side | Turn the layout a quarter turn | Move the town to the south |
 | The arena, ballpark and tennis centre | The stadium plot, recreation fields and courts stand for them | Wait until those sports exist |
 | How full it opens | Nine tenths full, second-stage buildings | A half-built campus to finish |
 | The stadium | An empty plot, as the first goal | A first-tier stadium already standing |
+
+**The start for every new game.** Chosen by the owner on 2026-11-12, after visiting it: "I want this model campus to be the start for all users... they can play off that one and change it if they like."
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| What a new game begins with | The model campus, for everyone. The founding screen asks for a name, when the day starts and a colour, and nothing else | Offer the small campus beside it as a harder start |
+| The small campus | Kept in the code for the tests and the long runs, where the rules were tuned at scale 1. No player is offered it | Remove it and rewrite the earlier tests |
+| A game already begun on the small campus | Left as it is. Its Menu keeps "Visit the model campus", and "Start a new university" now gives the model campus | Move it over, which would erase a campus somebody built |
+| "Visit the model campus" | Gone from a game that began on the model campus | Keep it in every Menu |
+| A first lesson | None added. The top bar already names the first jobs: beds and seats for the next class, then the stadium | A tutorial for a campus this size |
+| What the player may change | Everything, with the game's ordinary tools. Nothing on the model campus is locked | Lock the layout |
+
+What this changes elsewhere, to settle when each is built:
+
+- **The size ladder (15.2).** Every rung, 500 to 40,000 students, is below the size a game now opens at. Recommended: count the rungs upward from where a game opens, or let the eras follow prestige alone.
+- **The legal check of 35.1 matters more.** The layout that follows a real campus is now every player's first screen and not an option.
+- **Every phone draws the whole campus from the first minute.** The frame rate check on a real iPhone covers it, and the frame budget of section 33 is the guard.
+- **Section 35.1's "a new player still learns on the small one" no longer holds.** If first sessions go badly, the first lesson above is the thing to revisit.
 
 ### 35.7 Its size: 46,000 students
 
@@ -3711,11 +3729,11 @@ Built on 2026-11-12, ahead of Stop C at the owner's word, on the branch `play-st
 | Beds | 30,240, with 27,600 in use: 91% full |
 | Locals living in town | 18,400. Streets on both sides of the walk to the avenue walk in (10,640 places). The rest drive: 7,760 cars for 13,440 spaces |
 | Staff | 2,300 faculty, 1,150 staff, 112 safety and medical staff, 196 maintenance workers |
-| A year's income | $470.1M |
-| A year's spending | $421.0M, so $10 of every $100 is kept |
-| Opening cash | $42.1M, a tenth of a year's spending. Nothing in the endowment |
+| A year's income | $462.5M |
+| A year's spending | $417.0M, so $9.80 of every $100 is kept |
+| Opening cash | $41.7M, a tenth of a year's spending. Nothing in the endowment |
 | Happiness | 78: walk to class 92, grounds 88, food and fun 69, safety and health 71 |
-| Football | A rented field that stands for 84,000 seats. The first season is that fall. The stadium plot is bare |
+| Football | A rented field of 3,000 seats, which sells out: about 100,000 want a ticket. The first season is that fall. The stadium plot is bare |
 
 ### 35.9 The campus scale, as built
 
@@ -3732,9 +3750,10 @@ The multiplication is in one place for each kind of thing, where its number is r
 | Parking spaces | Scaled | `placedCars` |
 | Lots, paths, roads, quads and trees: price, and a road's upkeep | Scaled | `paintCost` |
 | Students for each town house | Scaled | `hoodCapacity(hood, scale)` |
-| Stadium seats, what a tier costs, a stadium's upkeep and utilities | Scaled | `seatsAt`, `tierCost`, `footballBooks` |
-| The head coach's pay, and a TV deal | Scaled | `coachPay(rating, scale)`, `tvOffers`. A programme of this size pays in proportion |
-| The floors a stadium tier sets under athletics staff and operations, the cap on the field's rent, and the size at which a coach is paid in full | Scaled | `footballBooks` |
+| Stadium seats, what a tier costs, a stadium's upkeep and utilities | Left alone. The stadium is one stadium of real size at any scale (see the change below) | `seatsAt`, `tierCost`, `footballBooks` |
+| The head coach's pay, and a TV deal | Left alone. One programme of real size | `coachPay`, `tvOffers` |
+| The floors a stadium tier sets under athletics staff and operations, the cap on the field's rent, and the size at which a coach is paid in full | Left alone, with the stadium | `footballBooks` |
+| How many want a ticket | Follows the real enrollment and alumni, as it always did. It is the one part of football that grows with the campus | `fanDemand` |
 | The applicant pool: its floor (the founding class) and its ceiling | Scaled | `fallClassDraw` |
 | The founding class of a new campus | Scaled | `classSize`. It is 400 at scale 1, and the model campus has none |
 | The least staff a Medical Center or Campus Safety building has | Scaled | One at scale 1 |
@@ -3746,9 +3765,13 @@ The multiplication is in one place for each kind of thing, where its number is r
 | Tuition, room fees, cost per student, staff ratios, ticket prices, Happiness, desirability, reach in cells, every timer and window | Left alone | They follow enrollment already, or are not counts |
 | The size rungs, alumni and gifts | Nothing to scale. No rung is built yet. Alumni are a head count and follow by themselves, and there is no gift rule yet | |
 | Land prices | Not scaled. The model campus owns all its land, and no other campus has a scale | |
-| Everything drawn | Divided by the scale: walkers, commuters, cars, the scenes, the move-in crowd. The crowd limits and the frame budget did not move | `smallCount` in `src/game` |
+| Everything drawn | Follows the real enrollment, up to the limits that already hold it (see the change below). No limit moved | `src/app/crowd.ts` |
 
-**Measured.** The same campus was run for five years untended at scale 1 and at scale 28. At the end of every year enrollment was within 0.1% of proportion, cash within 0.6% and a year's spending within 0.3%. The same games were won, the same number of incidents happened, and neither took a grant. What is left is whole numbers: 46,000 students make an athletics staff of 115, where the small campus's 1,643 make 4, which is 112 in proportion. The test allows 0.5% for enrollment and 2% for cash, income and spending. Thirty days of catch-up at 46,000 took 0.19 s.
+**Measured.** The same campus was run for five years untended at scale 1 and at scale 28, with football held off so that only what follows the scale is compared. At the end of every year enrollment was within 0.1% of proportion, cash within 0.7%, a year's spending within 0.2% and a year's income within 0.1%. The same number of incidents happened and neither took a grant. What is left is whole numbers: 46,000 students make a staff of 1,150, where the small campus's 1,643 make 41, which is 1,148 in proportion. The test allows 0.5% for enrollment and 2% for cash, income and spending. With football on, enrollment still stays within 0.1%, and income and spending stay in proportion once football's own lines are taken out, which a second test checks. Left in, football puts cash up to 5.5% out of proportion over five years, as it should: it is the same real programme on both. Thirty days of catch-up at 46,000 took 0.13 to 0.19 s.
+
+**Changed on 2026-11-12, after the owner saw it: the stadium is one stadium of real size.** As first built, seats, tier costs, the coach's pay and the TV deal followed the scale, so the model campus's rented field held 84,000 and its top tier would have held almost two million. Now none of football's own numbers is multiplied. How many want a ticket still follows enrollment and alumni, so the model campus fills the small tiers and earns the larger ones season by season, and its first goal is still the stadium. Football's money becomes a small line on a campus of this size, and a cost: the staff and the travel follow the 46,000 students, and a field of 3,000 seats cannot pay for them. That took the opening margin from $10.40 kept of every $100 to $9.80. Chosen: a stadium of real size. The alternative: seats that follow the scale, which is what was built first.
+
+**Changed the same day: the crowd.** As first built every drawn count was divided by the scale, so the model campus drew what a campus of 1,643 would. Now walkers, commuters walking in, cars, queues, players, the scenes and the move-in crowd follow the real enrollment, each up to the limit it already had: the Crowd density setting, the caps of each step in `CROWD_STEPS`, the frame budget, and the caps on commuters, student cars, queues, scenes and arrivals. No cap moved. In practice the numbers on screen did not change: at Normal the model campus already filled its limits (about 130 people in a close view and 170 in a wide one, with 26 commuters and 19 cars). Work in a frame on this PC at Normal, over three runs of two views: 3.5 to 5.6 ms before and 3.7 to 5.6 ms after. The spread between runs is larger than any difference between before and after. To see more people the owner can set Crowd density to High. Chosen: follow the real enrollment up to the existing limits. The alternative: divide by the scale, which was built first.
 
 **On screen.** Head counts are written with separators. Cash on the top bar is written short from $100M. The Money panel writes one decimal from $100M. The top bar, the Money panel, the building panels, the away list, the Football page and the list of what to build were looked at on a phone-sized screen at 46,000 students, and nothing runs past its place.
 
@@ -3770,13 +3793,17 @@ The multiplication is in one place for each kind of thing, where its number is r
 | Which game building stands for what | The stadium plot for the arena and the track, recreation fields for the ballpark and the softball field, courts for the tennis centre, as 35.6 says | |
 | The reference's names in the test | The check reads the words out of the reference file when it is there and is skipped when it is not. The repository holds none of them. A short list of ordinary words that any campus map prints, such as library and stadium, tells a word from a name | A block list of the names in the repository, which the owner ruled out |
 | Earlier tests | Unchanged. The small game's numbers keep their names, and the helpers take the scale as a last argument that is 1 when left out | Rename the numbers so nothing can read them by accident, and edit a dozen older tests |
+| The stadium, since 2026-11-12 | One stadium of real size at any scale: seats, tier costs, bills, the coach and the TV deal are not multiplied (35.9) | Seats that follow the scale, which was built first |
+| The crowd, since 2026-11-12 | Follows the real enrollment up to the limits that already exist (35.9) | Divided by the scale, which was built first |
+| What the scale test compares, since 2026-11-12 | The whole campus with football held off, and with football on the campus apart from football's own lines | Drop the comparison of money, and compare enrollment only |
 
 | Rough | Why |
 |---|---|
 | The halls are drawn at the low tier's size | Each stands for a far larger building. On the art-to-fix list (section 26) |
-| The crowd is a sample | About the same number of people walk about as on a campus of 1,600. That is the design, and it reads a little thin against "46,000" on the top bar |
+| The crowd is a sample | At Normal about 130 people are on a close view. That is the limit of the setting, not of the campus, and it reads a little thin against "46,000" on the top bar. High shows more |
 | The two sets of courts by the pool have nobody in reach, and the pool has few | They are the reference's athletics quarter. The gym, the fields and the courts by the halls have players |
-| Money opens at $10 kept of every $100 | Inside the 10 to 20 the game is tuned for, at its low end. A campus this well served has more to keep up than a player's own |
+| Money opens at $9.80 kept of every $100 | Just under the 10 to 20 the game is tuned for, since football became a cost here. Two days into the first fall it reads 10, the casual test player's years 3 to 8 run from 10.1 to 14.8, and the untended campus nets $44M in its leanest year. A campus this well served has more to keep up than a player's own |
+| Football loses money on a campus this size | About $10M a year at the rented field: 115 staff and the travel against 3,000 seats. Each tier it earns and builds narrows that |
 | The test player who spends every dollar took one state grant in its second summer | $1.5M, once, on a budget of several hundred million. The same thing happens on a small campus (34.5). A player who keeps anything in hand does not see it |
 | A 46,000-student campus can grow | With the casual test player it reached 147,000 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
 | The legal check | Where real buildings stand is a fact, but the owner's earlier rule was the cautious line. A lawyer should say so before the game is sold (35.1) |
