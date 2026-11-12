@@ -20,6 +20,7 @@ How to read this document:
 - Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 - Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
+- Section 33 is life and sound: bigger crowds and traffic now, and a proposed Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11.
 
 ---
 
@@ -2964,3 +2965,117 @@ The People stop changes no rule and no number. It needs no rebalance, which is w
 - No card line breaks the tone guide's word list.
 - Opening cards, and the people on screen, change nothing in the saved game.
 - Non-students stay under their share of the crowd at every time of day.
+
+---
+
+## 33. Life and sound
+
+Asked for by the owner on 2026-11-11: "give the campus more life and soul. All visual and audio only, never touching the numbers, deterministic where it matters, and cheap on a phone." He split it himself: three items go with the fixes being built now, and three need a place. **This section records the split and proposes the place. The Life and sound stop is not started and waits for his word.**
+
+### 33.1 The split
+
+| Item | What | When |
+|---|---|---|
+| 1 | More people: walker counts raised and scaled by enrollment, zoom and time of day, with a Crowd density setting of Low, Normal and High | Now, with the fixes after the money stop |
+| 2 | Commuters walking in from town and home again, cars from driveways to parking spaces and back, cars waiting at crossings, a shuttle bus, delivery trucks | Now |
+| 6 | A frame budget, pooled sprites, and crowd density that drops by itself when frames fall | Now |
+| 3 | Small scenes that come and go | The Life and sound stop |
+| 4 | Ambient motion | The Life and sound stop |
+| 5 | Sound | The Life and sound stop |
+
+### 33.2 Where the Life and sound stop fits
+
+**Proposed: its own stop, the last one before football.** The order would be: the fixes now, the People stop, the second half of stop 4 (food and Academics), Life and sound, then layer 1.
+
+| Reason | |
+|---|---|
+| It leans on what comes before it | The tour group and its pennant come with the People stop. The busker stands by a food place and queues form at them, which is stop 4b. Study groups sit at Grounds's picnic tables |
+| Football needs it | Game days are the loudest and busiest thing in the game. If scenes, crowds and sound exist first, layer 1 only has to add tailgates and the stadium crowd |
+| It changes no rule and no number | It needs no rebalance and can be played for feel alone |
+
+What it leaves for layer 1: tailgates, the stadium crowd, rain and its sound, and scenes that follow the season.
+
+### 33.3 Rules for all of it
+
+| Rule | Why |
+|---|---|
+| For show only. Nothing here is saved, nothing changes a number, and nothing runs in catch-up | The owner's rule |
+| The hour comes from the player's clock and the weekday and season from the date in the game. Neither is ever counted (28.1) | The same rule as day and night |
+| Every visible thing is a real sprite. Motion may be made in code on a real sprite, and spray, ripples and rain may be light particles, as weather's already are (28.3). Nothing is drawn to stand in for a missing figure | The art rule |
+| One setting reduces effects, one sets crowd density, and two set volume | Old phones, and players who want quiet |
+
+### 33.4 Small scenes
+
+Checked in the owner's packs on 2026-11-11. The figures only stand and walk, and hold nothing, which decides most of this table.
+
+| Scene | With the art there is | Gap |
+|---|---|---|
+| Study groups at picnic tables | Yes: figures standing at the Grounds tables | Seated figures |
+| Club tables with signs | Yes: the pack's tables, its sandwich-board sign and a tent, set out together | |
+| A tour group behind a guide with a flag | Yes, from the People stop: the pennant is drawn beside the guide | A guide holding it |
+| Move-in day, families with boxes | Yes: stacks of boxes, cars and trucks by the dorms | |
+| Pickup games on a quad | Partly: figures can run about | A ball and a frisbee |
+| People lying on the grass | No | A lying figure |
+| Someone walking a dog | No | A dog |
+| A busker by the coffee stand | No | A figure with an instrument |
+| Tailgates on game day | Yes: tents and tables. Layer 1 | A grill |
+
+The scenes with no art are left out until it exists. They are not faked.
+
+### 33.5 Ambient motion
+
+| Wanted | In the packs | How |
+|---|---|---|
+| Wheels turning and headlights | Yes: animation sheets for cars, the bus and trucks | The pack's own frames |
+| A fan and a windmill | Yes: animation sheets | The pack's own frames, where such a building stands |
+| Trees swaying, a pennant moving | No animation | A gentle sway made in code on the real sprite |
+| Pond and fountain ripples, sprinklers on lawns in the morning | No animation. A fountain exists as a still picture, and no sprinkler head | Light particles, as rain will be. The sprinkler has spray and no head until one is drawn |
+| Birds and the campus squirrel | None | Left out until drawn |
+| Lights coming on in windows at dusk | None, as found in 28.3 | Left out until window art is made. Street lamps already light |
+
+### 33.6 Sound
+
+| Decision | Why |
+|---|---|
+| Sound follows what is on screen and how far the view is zoomed: footsteps and chatter grow with the walkers in view, traffic is heard near roads, birds by day and crickets at night | The owner's design. It is worked out from what is drawn, so it costs almost nothing |
+| A bell chimes on the hour of the player's own clock. Soft sounds for taps. Light music under it all | His list |
+| Rain, the stadium crowd and anything tied to weather or game days arrive with layer 1 | Their systems are not built |
+| Two volumes in Settings, music and sound. Both start low | His instruction |
+| Silent means silent | His instruction. In the iPhone app the sound is set to follow the ring switch. In a browser tab the phone decides, and it is not the same on every phone, so this is on the list to try on a real iPhone |
+| No sound plays until the first tap | Browsers do not allow it |
+| Short loops, compressed, a few megabytes in all, and never more than a handful playing at once | Cheap on a phone, and a small download |
+| Only licensed or public-domain sound, every one listed in CREDITS.md | His rule |
+
+**What is free, from a first look on 2026-11-11.** The choosing is done when the stop is built, and every licence is read on its own page then.
+
+| Need | Free | Notes |
+|---|---|---|
+| Taps and menus | Kenney's Interface Sounds (100 files) and UI Audio (50), public domain | No credit required. Credited anyway |
+| Short tunes for a result or a reward | Kenney's Music Jingles (85), public domain | |
+| Background music | Blippy Bits, public domain, pay what you want. Gentle Exploration, free with credit | Free music is the weakest part. It may not suit the game |
+| Birds, crickets, chatter, footsteps, traffic, a bell | Nothing found as one free public-domain pack. Kenney has no ambience | Single public-domain recordings exist on Freesound and OpenGameArt and are picked one by one |
+
+**What might be worth buying.** Prices as listed on 2026-11-11, to be confirmed before any purchase. Nothing is bought without the owner's word.
+
+| Thing | Price seen | Why |
+|---|---|---|
+| One cosy music pack: the Cozy Casual series, or the Cozy Gaming Music Asset Pack | About $12 to $16 a pack | Loopable, licensed for commercial games. The single purchase most likely to be worth it |
+| Plucky Plucks music pack | About $30 | The same, dearer |
+| Cozy Adventure Lo Fi pack | About $2 | Five loops. Cheap enough to try |
+| An ambience pack, such as the Environment Sounds Pack | Not seen | Rain, birds, crickets, city and crowd in one licence, if picking single free recordings proves slow |
+
+The recommendation is to start with free sound only, and buy at most one music pack if the free music does not fit.
+
+### 33.7 Design tests
+
+| Test | Verdict |
+|---|---|
+| Exact catch-up | Holds. Nothing here is counted or saved |
+| Cheap on a phone | The risk. Crowds, cars, particles and sound all cost frames. The frame budget and the automatic drop in density built with the fixes are the guard, and each later piece is measured against them |
+| The art rule | Holds, because scenes with no art are left out, not faked |
+| Simple screens | Three settings are added: crowd density, music volume and sound volume. Reduce effects already exists in the design (28.3) |
+| Tone | Holds. Music without words, a bell, birds. Nothing loud by default |
+
+### 33.8 Art to ask for
+
+For the Penzilla request, in the order they would add most: seated and lying figures, a ball and a frisbee, a dog, birds and a squirrel, a figure with an instrument, a guide holding a flag, a sprinkler head, a grill, and lit windows.
