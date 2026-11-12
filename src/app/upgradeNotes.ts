@@ -30,5 +30,13 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 11) {
     notes.push('New: eight more places to eat and three Academics buildings are in the Build menu. Three different kinds of food in reach lift Food & fun a little. Every place to eat, your dining halls and coffee stands too, now earns a little from the students in reach: the Money panel shows it.');
   }
+  if (fromVersion < 12) {
+    notes.push(
+      'New: the campus has a football team, in a conference of twelve. Its first season opens with the next fall. Each spring brings a few decisions, in a list on the top bar. Each has a default that happens by itself, so nothing is lost if you miss one.',
+    );
+    notes.push(
+      'New: the year has a calendar. Holidays, breaks and exam weeks come and go, and what happened while you were away is listed by date. Exams raise Stress, which costs a little Happiness until they end. Recreation, quads, a library and a Medical Center ease it.',
+    );
+  }
   return notes;
 }

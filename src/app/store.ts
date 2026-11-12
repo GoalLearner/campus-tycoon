@@ -1,6 +1,10 @@
 import { upgradeNotes } from './upgradeNotes';
 import {
   advance,
+  ANCHOR_AFTER_WAKE_TICKS,
+  DEFAULT_WAKE_HOUR,
+  duration,
+  TICKS_PER_DAY,
   applyAction,
   campusHappiness,
   enrollment,
@@ -102,6 +106,7 @@ export class Store {
         this.away = kept.away;
         this.lastExportAt = kept.lastExportAt;
         clock.follow(result.state.clock.lastSimulatedAt);
+        this.chooseAnchor();
         if (label === 'backup') this.loadProblem = 'Your latest save could not be read, so an earlier one was loaded.';
         // Ask again on every open: a browser that said no last week may say yes once the game is used more.
         void requestPersistentStorage();
@@ -116,6 +121,25 @@ export class Store {
     return false;
   }
 
+  /**
+   * A save from before the anchor has none. It is given one here, the first
+   * time it is opened: a day that starts at seven, so every day of the campus
+   * week begins at nine. Nothing is shortened: its next summer runs longer to
+   * get there. The player is told once, and can change it in the Menu.
+   */
+  private chooseAnchor(): void {
+    const state = this.current;
+    if (!state || state.clock.anchor !== null) return;
+    const before = state.clock.week.extra;
+    const result = applyAction(state, { type: 'anchor', minute: anchorFor(DEFAULT_WAKE_HOUR) });
+    if (!result.ok || result.changed === 0) return;
+    this.current = result.state;
+    const longer = result.state.clock.week.extra - before;
+    this.upgradeNotes.push(
+      `New: every day of the campus week now begins at ${hourName(DEFAULT_WAKE_HOUR + 2)} your time, so classes arrive and home games kick off while you are up. Nothing is cut short: this summer runs ${duration(longer)} longer, and the new hours start with the fall. If your day starts earlier or later than ${hourName(DEFAULT_WAKE_HOUR)}, change it in the Menu.`,
+    );
+  }
+
   /** Show a game that was built elsewhere, such as the dev demo. */
   adopt(state: GameState, options: { ephemeral: boolean }): void {
     this.current = state;
@@ -125,11 +149,16 @@ export class Store {
     this.emit();
   }
 
-  startNewGame(name: string): void {
+  /** `wakeHour` is the hour of the player's own clock their day usually starts. `colour` is the school's. */
+  startNewGame(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string): void {
     clock.reset();
     this.ephemeral = false;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
-    this.current = newGame({ seed, name, now: clock.now() });
+    this.current = newGame({ seed, name, now: clock.now(), anchor: anchorFor(wakeHour) });
+    if (colour) {
+      const picked = applyAction(this.current, { type: 'colour', colour });
+      if (picked.ok) this.current = picked.state;
+    }
     this.away = null;
     this.lastExportAt = null;
     this.recent = [];
@@ -146,6 +175,7 @@ export class Store {
     this.current = result.state;
     this.upgradeNotes = result.migratedFrom !== null ? upgradeNotes(result.migratedFrom) : [];
     clock.follow(result.state.clock.lastSimulatedAt);
+    this.chooseAnchor();
     this.away = null;
     // The file that was just loaded is itself a backup, as old as the day it was made.
     this.lastExportAt = result.savedAt > 0 ? result.savedAt : null;
@@ -273,6 +303,27 @@ export class Store {
     });
     window.addEventListener('pagehide', () => this.saveNow());
   }
+}
+
+/** The anchor for a day that starts at an hour of the player's own clock: two hours later, as a minute of the UTC day. */
+export function anchorFor(wakeHour: number): number {
+  const local = wakeHour * 60 + ANCHOR_AFTER_WAKE_TICKS;
+  return (((local + new Date().getTimezoneOffset()) % TICKS_PER_DAY) + TICKS_PER_DAY) % TICKS_PER_DAY;
+}
+
+/** The hour of the player's own clock their day starts at, read back from the anchor a game has. */
+export function wakeHourOf(anchor: number | null): number {
+  if (anchor === null) return DEFAULT_WAKE_HOUR;
+  const local = (((anchor - new Date().getTimezoneOffset() - ANCHOR_AFTER_WAKE_TICKS) % TICKS_PER_DAY) + TICKS_PER_DAY) % TICKS_PER_DAY;
+  return Math.round(local / 60) % 24;
+}
+
+/** "7 AM", "12 noon", "9 PM". */
+export function hourName(hour: number): string {
+  const h = ((hour % 24) + 24) % 24;
+  if (h === 0) return '12 midnight';
+  if (h === 12) return '12 noon';
+  return h < 12 ? `${h} AM` : `${h - 12} PM`;
 }
 
 export const store = new Store();

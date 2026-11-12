@@ -160,10 +160,10 @@ export function facultyCurve(clock: Pick<Clock, 'tick' | 'week'>): number {
   return curve;
 }
 
-/** The share of students with a library, a computer lab or a study center in reach of where they live or study. */
+/** The share of students with a library or a computer lab in reach of where they live or study. */
 export function libraryShare(state: GameState): number {
   const map = state.map;
-  const ids = [...(map.care.byFamily?.library ?? []), ...(map.care.byFamily?.tutoring ?? [])];
+  const ids = map.care.byFamily?.library ?? [];
   let people = 0;
   let served = 0;
   for (const building of map.buildings) {

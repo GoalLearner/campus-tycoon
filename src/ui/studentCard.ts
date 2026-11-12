@@ -1,6 +1,6 @@
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { studentCard, studentKey, studentLook, type GameState } from '../sim';
+import { studentCard, studentFigure, studentKey, type GameState } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -210,7 +210,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     const people = atlas?.people;
     if (atlas && people) {
       const looks = Math.min(people.looks, people.crowd ?? people.looks);
-      const sprite = `person.${studentLook(state, ref) % looks}.${people.flip?.sw ?? 'sw'}.0`;
+      const sprite = `person.${studentFigure(state, ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`;
       if (sprite !== shownLook) {
         shownLook = sprite;
         portrait.classList.toggle('missing', !drawSprite(portrait, atlas, sprite));

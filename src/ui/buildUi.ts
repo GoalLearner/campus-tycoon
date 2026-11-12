@@ -42,6 +42,7 @@ import {
   dollarsShort,
   fedAt,
   FOOD_INCOME_PER_STUDENT,
+  STRESS_CAUSES,
   duration,
   MAX_TIER,
   NOISE_RADIUS,
@@ -124,10 +125,7 @@ export function buildEntries(): BuildEntry[] {
   entries.splice(firstGrounds < 0 ? entries.length : firstGrounds, 0, ...small);
   const firstCarPark = entries.findIndex((entry) => entry.category === 'Roads and parking');
   entries.splice(firstCarPark < 0 ? entries.length : firstCarPark, 0, road);
-  entries.push(
-    soon('build.stadium', 'Stadium', 'Home games and a football team', 'Coming with football'),
-    soon('build.studentlife', 'Student Life', 'A zone for clubs and events', 'Coming later'),
-  );
+  entries.push(soon('build.studentlife', 'Student Life', 'A zone for clubs and events', 'Coming later'));
   return entries;
 }
 
@@ -335,6 +333,10 @@ const PART_FIX: Record<DriverId, string> = {
 };
 
 export interface HappinessView {
+  /** Stress, 0 to 100, with the thing that would ease it most. */
+  stress: { score: number; note: string };
+  /** What the calendar and the sky add or take this week, each with its points. Empty on an ordinary day. */
+  week: Array<{ label: string; points: string }>;
   score: number;
   /** 4 is delighted, 0 is miserable. The same steps as a student card. */
   mood: number;
@@ -357,7 +359,11 @@ export function happinessView(state: GameState): HappinessView {
     worst: cause.id === mood.worst,
   }));
   const last = state.admissions.lastSemester;
+  const stress = mood.season.stress;
+  const cause = STRESS_CAUSES[stress.cause];
   return {
+    stress: { score: stress.score, note: stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}` },
+    week: mood.season.parts.map((part) => ({ label: part.label, points: `${part.points > 0 ? '+' : '\u2212'}${Math.abs(Math.round(part.points))}` })),
     score,
     mood: score >= 80 ? 4 : score >= 62 ? 3 : score >= 45 ? 2 : score >= 28 ? 1 : 0,
     rows,

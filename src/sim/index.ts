@@ -133,6 +133,8 @@ export {
   studentHome,
   studentKey,
   studentLook,
+  studentFigure,
+  isVarsity,
   teachingQuality,
   type Relationship,
   type StudentCard,

@@ -58,7 +58,7 @@ export const STRESS_SUSTAINED = 20;
 export const STRESS_WORST = 36;
 export const STRESS_RETENTION = 0.01;
 /** [T] How hard each kind of student takes Stress, against 1 for most. */
-export const STRESS_TILT: Partial<Record<string, number>> = { stressed: 1.6, scholar: 1.4, slacker: 0.3 };
+export const STRESS_TILT: Partial<Record<string, number>> = { stressed: 1.6, scholar: 1.4, allNighter: 1.5, slacker: 0.3 };
 
 /** Faculty Stress: the same calendar, and one more peak around the days grades are due. */
 export const FACULTY_GRADES_CURVE = 0.85;

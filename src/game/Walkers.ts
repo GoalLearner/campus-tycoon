@@ -11,7 +11,7 @@ import {
   sampleStudents,
   studentHome,
   studentKey,
-  studentLook,
+  studentFigure,
   TOWN_X,
   townLiving,
   type GameState,
@@ -654,7 +654,7 @@ export class Walkers {
       prop,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
-      look: extra.look ?? (student && this.state ? studentLook(this.state, student) % looks : Math.floor(Math.random() * looks)),
+      look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
       from,
       route,
       leg,
