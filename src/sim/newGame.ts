@@ -1,3 +1,4 @@
+import { newInbox } from './systems/inbox';
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
@@ -158,6 +159,7 @@ export function newGame(opts: NewGameOptions): GameState {
     field: { schools: [], reputation: 0, academic: 0, rank: 0, rankYear: 0, moved: null },
     football: null as unknown as Football,
     decisions: { open: [], nextId: 1, past: [] },
+    inbox: newInbox(opts.seed),
   };
   startFootball(state, 1);
   // A new campus has its stadium plot from the first day.

@@ -1,3 +1,4 @@
+import { applicantsLift } from './boosts';
 import { calendarAt, GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import {
   DESIRABILITY_DRAW_FLOOR,
@@ -51,7 +52,8 @@ export function fallClassDraw(state: GameState): number {
   const draw = DESIRABILITY_DRAW_FLOOR + DESIRABILITY_DRAW_SPAN * (averageDesirability(state) / 100);
   // Recruiting and marketing lifts applications. The ceiling is the wall it pushes against.
   // Athletic standing lifts it too, and so does a TV deal: football's applicants (DESIGN.md 10.1).
-  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state)) * (1 + athleticLift(state));
+  // A profile in a college guide, a spring concert: what the desk has set going, for a few days.
+  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state)) * (1 + athleticLift(state)) * (1 + applicantsLift(state));
   return Math.min(POOL_CEILING, Math.round(pool));
 }
 

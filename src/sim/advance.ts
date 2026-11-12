@@ -1,3 +1,4 @@
+import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
@@ -96,6 +97,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
   stepSeason(state, log, () => campusLevels(state));
   stepDecisions(state, log);
+  stepInbox(state, log);
 
   if (clock.tick % GROWTH_EVAL_TICKS === 0) {
     fillFromWaitlist(state, log);
@@ -161,6 +163,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
         if (hasSeason(state)) addTimer(state, state.clock.tick + 10 * TICKS_PER_HOUR, 'scrimmage', 1);
       }
       openAnnualDecisions(state, day, log);
+      // The desk, after the year's own decisions: routine items wait while two of those are open.
+      openRoutine(state, day, log);
       break;
     }
     case 'fallIntake':

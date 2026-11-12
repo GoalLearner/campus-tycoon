@@ -357,6 +357,7 @@ export interface GameState {
   field: Field;
   football: Football;
   decisions: Decisions;
+  inbox: Inbox;
 }
 
 // ------------------------------------------------------------- football --
@@ -548,6 +549,75 @@ export interface Decisions {
   past: Array<{ kind: Decision['kind']; year: number; title: string; outcome: string; byDefault: boolean; tick: number }>;
 }
 
+// ---------------------------------------------------------------- inbox --
+
+export type AdvisorId = 'provost' | 'cfo' | 'athletics' | 'dean';
+
+/**
+ * A small, capped, dated push on a number the game already has (DESIGN.md
+ * section 36): points of Happiness on the week's line, points of Stress taken
+ * off, or a share added to the crowd at a game or to a class's applicants.
+ */
+export interface Boost {
+  kind: 'happy' | 'stress' | 'fans' | 'applicants';
+  amount: number;
+  /** The tick it begins, when that is later than the moment it was chosen. */
+  from?: number;
+  /** The tick it ends. */
+  until: number;
+  /** A few words for wherever the number is shown: "Spring concert". */
+  label: string;
+}
+
+/** What a choice on the desk does. Every one moves something that already exists. */
+export type InboxEffect =
+  | { t: 'boost'; kind: Boost['kind']; amount: number; ticks: number; label: string; fromClose?: boolean }
+  | { t: 'endow'; amount: number }
+  | { t: 'tidy'; share: number }
+  | { t: 'fix' }
+  | { t: 'mark'; key: 'donor' | 'boat' };
+
+export interface InboxOption {
+  id: string;
+  label: string;
+  detail: string;
+  /** Cash that changes hands when it is chosen: below zero is a cost, above zero comes in. */
+  cash: number;
+  effects: InboxEffect[];
+}
+
+/** A petition, a deal with strings or an event (DESIGN.md 12.1). Written once when it opens, and stored as written. */
+export interface InboxItem {
+  id: number;
+  /** Which of the written items this is. */
+  key: string;
+  kind: 'petition' | 'deal' | 'event';
+  advisor: AdvisorId;
+  title: string;
+  body: string;
+  opens: number;
+  closes: number;
+  options: InboxOption[];
+  /** The option that applies by itself when the window closes. */
+  fallback: string;
+  /** The advisor's pick. */
+  advised: string;
+}
+
+export interface Inbox {
+  open: InboxItem[];
+  nextId: number;
+  /** The game year each written item last opened in, by key. */
+  last: Record<string, number>;
+  /** How the last few were settled, newest last. */
+  past: Array<{ key: string; title: string; outcome: string; byDefault: boolean; tick: number }>;
+  boosts: Boost[];
+  /** The four advisors' names, made once for this campus. */
+  advisors: Record<AdvisorId, string>;
+  /** Counters as they stood when an item about them last opened: incidents nobody came to, and the years of a sponsor's deal and of the boat. */
+  marks: { missed: number; donor: number; boat: number };
+}
+
 /** Litter, bins, workers and broken things. Keys are ids of placed things unless said otherwise. See DESIGN.md section 29. */
 export interface Grounds {
   /** Litter lying around each mess spot, from nothing up to its ceiling. */
@@ -630,6 +700,7 @@ export interface Term {
 }
 
 export type LogKind =
+  | 'inbox'
   | 'built'
   | 'intake'
   | 'waitlist'

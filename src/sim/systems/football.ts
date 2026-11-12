@@ -1,3 +1,4 @@
+import { fansLift } from './boosts';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -379,6 +380,8 @@ export function fanDemand(state: GameState, big = false): number {
   fans *= 1 + SUPERFAN_ATTENDANCE * (SUPERFAN_SHARE.floor + (SUPERFAN_SHARE.top - SUPERFAN_SHARE.floor) * (f.standing / 100));
   if (f.coach.trait === 'showman') fans *= 1 + TRAIT_BONUS.showman;
   if (big) fans *= FANS.bigGame;
+  // A pep rally, a parade, adverts on the scoreboard: what the desk has set going, for a few days.
+  fans *= 1 + fansLift(state);
   return Math.round(fans);
 }
 

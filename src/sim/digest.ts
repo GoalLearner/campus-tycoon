@@ -36,7 +36,7 @@ const MAX_LINES = 10;
 /** The most dated lines shown. A week away is about sixty. */
 const MAX_DATED = 60;
 /** What is told by date: the calendar, exams, the weather, football, decisions and rankings. */
-const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weather', 'anchor', 'game', 'football', 'decision', 'rankings']);
+const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weather', 'anchor', 'game', 'football', 'decision', 'inbox', 'rankings']);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
