@@ -1,12 +1,13 @@
 import { BED_NEED, RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
 import { GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
+import { VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
 import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } from '../config/students';
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
+import { foodKindsAt } from './food';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
-import { fedAt } from './placed';
 import { recreationAt } from './play';
 
 /**
@@ -38,6 +39,12 @@ export interface Cause {
   weight: number;
   /** What it is made of. Advice and student thoughts name the weakest part, so they stay something to act on. */
   parts: CausePart[];
+  /**
+   * What was added on top of the average of its parts, already inside `level`.
+   * Only Food & fun has one: a tenth where three kinds of food are in reach,
+   * and never past full (DESIGN.md 30.2). Left out when nothing was added.
+   */
+  bonus?: number;
 }
 
 export interface Approval {
@@ -105,11 +112,23 @@ export function approvalAt(state: GameState, cell: number): Approval {
   felt.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]) });
   felt.push({ id: 'clean', level: cleanAt(state, x, y) });
   felt.push({ id: 'seating', level: seatingAt(state, x, y) });
-  felt.push({ id: 'dining', level: fedAt(map, x, y) ? 1 : 0 });
+  // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
+  const kinds = foodKindsAt(map, x, y);
+  felt.push({ id: 'dining', level: kinds > 0 ? 1 : 0 });
   felt.push({ id: 'recreation', level: recreationAt(state, x, y) });
   // Medical Center and Campus Safety coverage are read together, as one level.
   felt.push({ id: 'safety', level: safetyAt(state, x, y) });
   const causes = gathered(felt);
+  // Variety: three kinds of food in reach add a tenth to Food & fun, never past full.
+  const variety = kinds >= VARIETY_KINDS ? VARIETY_BONUS : 0;
+  if (variety > 0) {
+    for (const cause of causes) {
+      if (cause.id !== 'life') continue;
+      const lifted = Math.min(1, cause.level + variety);
+      cause.bonus = lifted - cause.level;
+      cause.level = lifted;
+    }
+  }
   return { score: scoreOf(causes), causes, walkMinutes };
 }
 
@@ -127,8 +146,9 @@ export interface CampusHappiness {
 }
 
 /** The average of a zone's lots, each counted by how many students it holds. */
-function zoneAverage(state: GameState, zone: Zone): { people: number; score: number; levels: Map<DriverId, number> } {
+function zoneAverage(state: GameState, zone: Zone): { people: number; score: number; levels: Map<DriverId, number>; bonus: Map<CauseId, number> } {
   const levels = new Map<DriverId, number>();
+  const bonus = new Map<CauseId, number>();
   let people = 0;
   let score = 0;
   for (const building of state.map.buildings) {
@@ -137,12 +157,16 @@ function zoneAverage(state: GameState, zone: Zone): { people: number; score: num
     const here = approvalAt(state, building.y * state.map.width + building.x);
     for (const cause of here.causes) {
       for (const part of cause.parts) levels.set(part.id, (levels.get(part.id) ?? 0) + part.level * size);
+      if (cause.bonus) bonus.set(cause.id, (bonus.get(cause.id) ?? 0) + cause.bonus * size);
     }
     score += here.score * size;
     people += size;
   }
-  if (people > 0) for (const [id, sum] of levels) levels.set(id, sum / people);
-  return { people, score: people > 0 ? score / people : 0, levels };
+  if (people > 0) {
+    for (const [id, sum] of levels) levels.set(id, sum / people);
+    for (const [id, sum] of bonus) bonus.set(id, sum / people);
+  }
+  return { people, score: people > 0 ? score / people : 0, levels, bonus };
 }
 
 export function campusHappiness(state: GameState): CampusHappiness {
@@ -171,7 +195,11 @@ export function campusHappiness(state: GameState): CampusHappiness {
       share = Math.max(share, touched);
     }
     if (parts.length === 0) continue;
-    causes.push({ id, level: weighed(parts), weight: CAUSE_WEIGHTS[id] * share, parts });
+    // What variety added at each lot, averaged the same way, so the panel and the cards agree.
+    const added = share > 0 ? ((dorms.bonus.get(id) ?? 0) * residents + (halls.bonus.get(id) ?? 0) * others) / share : 0;
+    const cause: Cause = { id, level: Math.min(1, weighed(parts) + added), weight: CAUSE_WEIGHTS[id] * share, parts };
+    if (added > 0) cause.bonus = added;
+    causes.push(cause);
   }
   // The same as averaging every student's card.
   const score = residents * dorms.score + others * halls.score;

@@ -12,7 +12,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface SaveFile {
   v: number;
@@ -183,6 +183,13 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 10: recreation fills up. Who shares which court is worked out with the rest of the map's care.
   9: (state) => {
     recomputeDesirability(state.map as unknown as MapState);
+    return state;
+  },
+  // Version 11: places to eat earn a little, shared among those that reach a student. Who shares whom is
+  // worked out with the rest of the map's care, and the income rates are read again.
+  10: (state) => {
+    recomputeDesirability(state.map as unknown as MapState);
+    (state.money as Record<string, unknown>).ratesDirty = true;
     return state;
   },
 };

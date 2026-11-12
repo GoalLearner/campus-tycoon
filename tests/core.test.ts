@@ -185,9 +185,10 @@ describe('money', () => {
     const ticks = end.clock.tick;
     expect(ticks).toBe(FIRST_INTAKE_TICK - 1);
     // Every student pays tuition. The 36 beds of the starter dorms are all full, and each pays a room fee.
+    // The starter dining hall reaches the three dorms, half the lots, so it has 200 students to itself (tests/food.test.ts).
     // What goes out is the budget, line by line (tests/money.test.ts).
     const spent = budget(state);
-    expect(spent.incomeTotal).toBe(400 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR);
+    expect(spent.incomeTotal).toBe(400 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR + 200 * 30);
     expect(spent.spending).toBe(spent.fullSpending);
     expect(spent.spending).toBeGreaterThan(upkeepPerYear(state));
     const perTick = (spent.incomeTotal - spent.spending) / TICKS_PER_YEAR;

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  foodIncomePerYear,
   advance,
   applyAction,
   BENEFITS_SHARE,
@@ -321,7 +322,10 @@ describe('a save from before these costs', () => {
     expect(state.money.phase).toBe(0);
     expect(state.money.cash).toBe(old.money.cash);
     recomputeRates(state);
-    expect(state.money.incomePerYear).toBe(old.money.incomePerYear);
+    // Income is what it was, and since play stop 4b the dining halls and coffee stands it already had earn a little.
+    expect(foodIncomePerYear(state)).toBeGreaterThan(0);
+    expect(foodIncomePerYear(state)).toBeLessThan(old.money.incomePerYear * 0.005);
+    expect(state.money.incomePerYear).toBeCloseTo(old.money.incomePerYear + foodIncomePerYear(state), 6);
     expect(state.money.spendingPerYear).toBe(old.money.spendingPerYear);
     expect(state.money.spendingPerYear).toBe(upkeepPerYear(state) + workerCount(state) * LEGACY_WAGE_PER_YEAR + enrollment(state) * LEGACY_COST_PER_STUDENT_PER_YEAR);
     const b = budget(state);
@@ -409,7 +413,7 @@ describe('the Money panel, in words', () => {
   it('lists income, then spending in groups that open to their lines, largest first', () => {
     const state = act(campus(1000), { type: 'place', building: 'medical', x: 14, y: 10 });
     const view = moneyView(state);
-    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees']);
+    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees', 'Food places']);
     expect(view.income[0]).toEqual({ name: 'Tuition', detail: '1,000 students at $8,200', amount: '$8.2M' });
     expect(view.groups[0]!.name).toBe('Payroll');
     expect(view.groups.map((group) => group.name).sort()).toEqual(['Buildings and utilities', 'Other', 'Payroll']);

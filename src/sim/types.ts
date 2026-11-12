@@ -54,7 +54,19 @@ export type PlacedType =
   | 'bench'
   | 'table'
   | 'yard'
-  | 'admin';
+  | 'admin'
+  // Play stop 4b: eight more places to eat, and three Academics buildings.
+  | 'truck'
+  | 'convenience'
+  | 'taco'
+  | 'smoothie'
+  | 'pizza'
+  | 'burger'
+  | 'diner'
+  | 'foodcourt'
+  | 'computerLab'
+  | 'makerspace'
+  | 'studyCenter';
 
 /** A hand-placed building. It is whole from the moment it is placed. */
 export interface Placed {
@@ -160,6 +172,12 @@ export interface Care {
    * catch-up for nothing.
    */
   idle?: Partial<Record<Zone, boolean>>;
+  /**
+   * For each place to eat, how many lots' worth of students it has to itself
+   * once every lot has shared its custom equally among the places that reach
+   * it. Missing on a save from before food earned anything.
+   */
+  food?: Record<number, number>;
 }
 
 export interface MapState {

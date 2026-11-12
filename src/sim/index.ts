@@ -30,6 +30,7 @@ export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
 export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
+export { besideRecreation, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, tutoredAt, tutoringLift, varietyAt, type FoodTrade } from './systems/food';
 export {
   budget,
   careStaffAt,

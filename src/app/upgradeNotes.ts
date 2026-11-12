@@ -27,5 +27,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 10) {
     notes.push('New: a court, a field, a pool, the track and the gym each hold so many students at once. Where one is crowded, students wait their turn and Happiness there can dip a little. Tap it to see how busy it is. A second one nearby clears the line.');
   }
+  if (fromVersion < 11) {
+    notes.push('New: eight more places to eat and three Academics buildings are in the Build menu. Three different kinds of food in reach lift Food & fun a little. Every place to eat, your dining halls and coffee stands too, now earns a little from the students in reach: the Money panel shows it.');
+  }
   return notes;
 }

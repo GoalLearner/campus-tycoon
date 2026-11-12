@@ -8,6 +8,11 @@ import {
   COST,
   coverFor,
   fedAt,
+  foodKindsAt,
+  foodTypesAt,
+  libraryLift,
+  tutoredAt,
+  VARIETY_KINDS,
   isMessSpot,
   isPathKind,
   previewPaint,
@@ -372,7 +377,14 @@ function neediestLot(state: GameState, part: DriverId): { x: number; y: number; 
   return worst;
 }
 
-const PLAY: readonly PlacedType[] = ['courts', 'gym', 'field', 'pool', 'track'];
+const PLAY: readonly PlacedType[] = ['courts', 'gym', 'field', 'pool', 'track', 'makerspace'];
+/**
+ * For variety: the kinds a dorm with food already in reach is offered, tried in turn until one is found
+ * that it does not have. The two that feed a wide area come first, so one of them serves many dorms.
+ */
+const VARIETY: readonly PlacedType[] = ['burger', 'diner', 'taco', 'pizza', 'coffee', 'smoothie', 'convenience', 'truck'];
+/** The Academics buildings are bought once there is this much cash to spare. */
+const ACADEMICS_CASH = 400_000;
 
 /**
  * What a player who reads the Happiness panel would build, most wanted first:
@@ -380,7 +392,7 @@ const PLAY: readonly PlacedType[] = ['courts', 'gym', 'field', 'pool', 'track'];
  * as the biggest gap, put in reach of the lot that lacks it most, then the
  * gaps in coverage. A list, because the first choice may have no free ground.
  */
-function wantsFromMenu(state: GameState): Array<{ type: PlacedType; x: number; y: number }> {
+function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedType; x: number; y: number }> {
   const wants: Array<{ type: PlacedType; x: number; y: number }> = [];
   let hungry = 0;
   for (const b of state.map.buildings) {
@@ -424,16 +436,40 @@ function wantsFromMenu(state: GameState): Array<{ type: PlacedType; x: number; y
       gaps += 1;
     }
   }
+  // Everything above is a need. What follows is a nicety, bought last and only on the visit's final pass.
+  if (!extras) return wants;
+  // Variety: three kinds of food in reach lift Food & fun a little. A dorm with food but fewer kinds than
+  // that gets one it does not have yet.
+  let varied = 0;
+  for (const b of state.map.buildings) {
+    if (varied >= 1) break;
+    if (!b || b.zone !== 'housing' || b.stage < 1) continue;
+    const kinds = foodKindsAt(state.map, b.x, b.y);
+    if (kinds === 0 || kinds >= VARIETY_KINDS) continue;
+    const have = foodTypesAt(state.map, b.x, b.y);
+    const next = VARIETY.find((type) => !have.includes(type));
+    if (!next) continue;
+    wants.push({ type: next, x: b.x, y: b.y });
+    varied += 1;
+  }
+  // The Academics buildings, once there is money to spare: a computer lab for lecture halls no library
+  // reaches, and a study center by the dorms.
+  if (state.money.cash > ACADEMICS_CASH) {
+    const hall = state.map.buildings.find((b) => b && b.zone === 'academic' && b.stage > 0 && libraryLift(state.map, b.x, b.y) === 0);
+    if (hall) wants.push({ type: 'computerLab', x: hall.x, y: hall.y });
+    const dorm = state.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !tutoredAt(state.map, b.x, b.y));
+    if (dorm) wants.push({ type: 'studyCenter', x: dorm.x, y: dorm.y });
+  }
   return wants;
 }
 
-function buildFromMenu(state: GameState, reserve: number, most: number): { state: GameState; built: number; blocked: boolean } {
+function buildFromMenu(state: GameState, reserve: number, most: number, extras = true): { state: GameState; built: number; blocked: boolean } {
   let current = state;
   let built = 0;
   for (; built < most; built++) {
     let placed = false;
     let blocked = false;
-    for (const want of wantsFromMenu(current)) {
+    for (const want of wantsFromMenu(current, extras)) {
       if (current.money.cash - PLACED[want.type].cost < reserve) {
         blocked = true;
         continue;
@@ -477,10 +513,10 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   // cash, so they shop for these after zoning, as before.
   let lotReserve = reserve;
   if (style === 'optimizer') {
-    const first = buildFromMenu(current, reserve, 4);
+    const first = buildFromMenu(current, reserve, 4, false);
     current = first.state;
     purchases += first.built;
-    const waiting = wantsFromMenu(current).filter((want) => menuSpot(current, want.type, want.x, want.y) !== null);
+    const waiting = wantsFromMenu(current, false).filter((want) => menuSpot(current, want.type, want.x, want.y) !== null);
     // Hold back the dearest of them, so a Campus Safety office is not for ever outbid by a coffee stand.
     if (waiting.length > 0) lotReserve += Math.max(...waiting.map((want) => (want.type === 'coffee' ? PLACED.dining.cost : PLACED[want.type].cost)));
   }

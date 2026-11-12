@@ -224,7 +224,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
 
-    setText(grades.value, card.gpa.toFixed(1));
+    // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
+    setText(grades.value, card.tutored ? `${card.gpa.toFixed(1)}, with tutoring` : card.gpa.toFixed(1));
     setText(club.value, card.club ?? 'None');
     setText(relationship.value, card.relationship.name);
     setText(relationshipNote, card.relationship.note);

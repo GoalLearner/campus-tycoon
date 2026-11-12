@@ -9,12 +9,12 @@ import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -38,6 +38,10 @@ export interface PlacedSpec {
   utilitiesPerYear?: number;
   /** Recreation only: how many students it holds at once. A court fits a game or two, the gym most. */
   capacity?: number;
+  /** Food only: how many kinds of food it counts as toward variety. The food court is three. One when left out. */
+  kinds?: number;
+  /** Clearing it returns the whole price, whenever it is cleared. The food truck drives off. */
+  fullRefund?: boolean;
 }
 
 export const PLACED: Record<PlacedType, PlacedSpec> = {
@@ -46,12 +50,60 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     radius: 6, strength: 14, effect: 'Lifts nearby Academic lots', sprite: 'build.library', flat: false, buildable: true,
   },
   dining: {
-    name: 'Dining hall', category: 'Campus life', family: 'dining', w: 2, h: 1, cost: 45_000, upkeepPerYear: 6_000,
+    name: 'Dining hall', category: 'Food', family: 'dining', w: 2, h: 1, cost: 45_000, upkeepPerYear: 6_000,
     radius: 6, strength: 1, effect: 'Feeds Housing within 6 cells', sprite: 'build.dining', flat: false, buildable: true,
   },
   coffee: {
-    name: 'Coffee stand', category: 'Campus life', family: 'dining', w: 1, h: 1, cost: 12_000, upkeepPerYear: 1_500,
+    name: 'Coffee stand', category: 'Food', family: 'dining', w: 1, h: 1, cost: 12_000, upkeepPerYear: 1_500,
     radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells', sprite: 'build.coffee', flat: false, buildable: true,
+  },
+  // Play stop 4b (DESIGN.md section 30). Every one is the dining rule at its own size: a look, a price and
+  // a reach. Upkeep is about a twelfth of the price. When each is busy is seen on the map and never counted.
+  foodcourt: {
+    name: 'Food court', category: 'Food', family: 'dining', w: 2, h: 2, cost: 140_000, upkeepPerYear: 11_500,
+    radius: 7, strength: 1, effect: 'Feeds Housing within 7 cells. Counts as three kinds of food', sprite: 'build.foodcourt', flat: false, buildable: true, kinds: 3,
+  },
+  diner: {
+    name: 'Late-night diner', category: 'Food', family: 'dining', w: 2, h: 1, cost: 36_000, upkeepPerYear: 3_000,
+    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busiest at night', sprite: 'build.diner', flat: false, buildable: true,
+  },
+  burger: {
+    name: 'Burger grill', category: 'Food', family: 'dining', w: 2, h: 1, cost: 30_000, upkeepPerYear: 2_500,
+    radius: 5, strength: 1, effect: 'Feeds Housing within 5 cells. Busy at lunch', sprite: 'build.burger', flat: false, buildable: true,
+  },
+  pizza: {
+    name: 'Pizza place', category: 'Food', family: 'dining', w: 2, h: 1, cost: 14_000, upkeepPerYear: 1_200,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Busiest in the evening and at night', sprite: 'build.pizza', flat: false, buildable: true,
+  },
+  taco: {
+    name: 'Taco stand', category: 'Food', family: 'dining', w: 2, h: 1, cost: 10_000, upkeepPerYear: 850,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. The cheap lunch spot', sprite: 'build.taco', flat: false, buildable: true,
+  },
+  smoothie: {
+    name: 'Smoothie and juice bar', category: 'Food', family: 'dining', w: 1, h: 1, cost: 10_000, upkeepPerYear: 850,
+    radius: 3, strength: 1, effect: 'Feeds Housing within 3 cells. Earns double with recreation within 2 cells', sprite: 'build.smoothie', flat: false, buildable: true,
+  },
+  convenience: {
+    name: 'Convenience store', category: 'Food', family: 'dining', w: 1, h: 1, cost: 9_000, upkeepPerYear: 750,
+    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Snacks, open late', sprite: 'build.convenience', flat: false, buildable: true,
+  },
+  truck: {
+    name: 'Food truck', category: 'Food', family: 'dining', w: 1, h: 1, cost: 8_000, upkeepPerYear: 650,
+    radius: 2, strength: 1, effect: 'Feeds Housing within 2 cells. Clear it and the whole price comes back, so moving it is free', sprite: 'build.truck', flat: false, buildable: true,
+    fullRefund: true, utilitiesPerYear: 500,
+  },
+  // Academics (30.3). One effect each: the library's rule, the recreation rule, and tutoring.
+  computerLab: {
+    name: 'Computer lab', category: 'Academics', family: 'library', w: 2, h: 1, cost: 30_000, upkeepPerYear: 2_500,
+    radius: 4, strength: 9, effect: 'Lifts Academic lots within 4 cells. The best lift in reach counts', sprite: 'build.computerlab', flat: false, buildable: true,
+  },
+  makerspace: {
+    name: 'Makerspace', category: 'Academics', family: 'recreation', w: 2, h: 1, cost: 28_000, upkeepPerYear: 2_300,
+    radius: 5, strength: 0.5, effect: 'Things to do and somewhere to meet within 5 cells', sprite: 'build.makerspace', flat: false, buildable: true, capacity: 16,
+  },
+  studyCenter: {
+    name: 'Study center', category: 'Academics', family: 'tutoring', w: 2, h: 1, cost: 35_000, upkeepPerYear: 3_000,
+    radius: 6, strength: 1, effect: 'Tutoring: a better GPA on the cards of students within 6 cells. It changes only student cards for now', sprite: 'build.studycenter', flat: false, buildable: true,
   },
   store: {
     name: 'Campus store', category: 'Campus life', family: 'store', w: 2, h: 1, cost: 35_000, upkeepPerYear: 3_000,
@@ -129,13 +181,31 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
 
 /** The order of the Build menu. */
 export const BUILD_ORDER: readonly PlacedType[] = [
-  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard',
+  'library', 'computerLab', 'studyCenter', 'makerspace',
+  'dining', 'foodcourt', 'diner', 'burger', 'pizza', 'taco', 'coffee', 'smoothie', 'convenience', 'truck',
+  'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard',
 ];
 
 /** A pond cell counts as this share of a quad cell in the one green-space input, which is capped. */
 export const POND_GREEN_SHARE = 0.8;
 /** A Housing lot needs dining in reach before it can grow to this stage. */
 export const DINING_STAGE = 2;
+
+/**
+ * Food earns a little from foot traffic (DESIGN.md 30.2). Each student in
+ * reach of food is worth this much a game year, shared equally among the
+ * places that reach them, so a second stall beside the first halves what each
+ * earns [T].
+ */
+export const FOOD_INCOME_PER_STUDENT = 30;
+/** A lot with this many kinds of food in reach gets VARIETY_BONUS added to its Food & fun, never past full [T]. */
+export const VARIETY_KINDS = 3;
+export const VARIETY_BONUS = 0.1;
+/** The smoothie and juice bar earns this many times as much with a recreation building within SMOOTHIE_CELLS [T]. */
+export const SMOOTHIE_CELLS = 2;
+export const SMOOTHIE_TIMES = 2;
+/** Tutoring: what a study center in reach adds to the GPA on a student's card [T]. Nothing reads GPA until layer 2. */
+export const TUTORING_GPA = 0.3;
 
 /** The store's passers-by: students living or studying within this many path cells of its door. */
 export const STORE_REACH_CELLS = 10;

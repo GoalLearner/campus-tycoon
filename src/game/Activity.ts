@@ -1,15 +1,16 @@
 import Phaser from 'phaser';
-import { CROWD_STEPS, playingNow } from '../app/crowd';
+import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { enrollment, isBrokenThing, isPathKind, PLACED, playUse, type GameState, type Placed, type PlayUse } from '../sim';
+import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, SEAT_REACH, type GameState, type Placed, type PlayUse } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
 
 /**
  * People using the campus, for show: a game on the courts, runners circling
  * the track, swimmers in the pool, a match on the recreation field, a line
- * beside a building with more players than room, and people at benches and
- * picnic tables.
+ * beside a building with more players than room, people at benches and
+ * picnic tables, a line at each place to eat when its kind of food is busy,
+ * and people among the stalls of the food court.
  *
  * How many are there comes from the simulation's own numbers: each
  * building's demand at the busiest hour and what it holds (see
@@ -40,11 +41,21 @@ const LINE_SHOWN = 6;
 /** The share of benches and of picnic-table places taken in each part of the day. */
 const SEATED: Record<DayPeriod, number> = { morning: 0.3, afternoon: 0.6, evening: 0.5, night: 0 };
 const TABLE_SEATS = 3;
+/** A table or a bench beside food that is busy is this full of people eating, at that food's busiest. */
+const EATING_SHARE = 0.9;
+/** Where people stand among the food court's stalls, in cells from its north corner, and the most that do. */
+const STALL_SPOTS: ReadonlyArray<readonly [number, number]> = [
+  [1.0, 1.5],
+  [1.55, 1.1],
+  [0.6, 1.75],
+  [1.2, 0.75],
+  [1.75, 1.6],
+];
 /** How often who is where is worked out again. The figures themselves move every frame. */
 const RECOUNT_MS = 900;
 const FADE_MS = 350;
 
-type Role = 'court' | 'field' | 'runner' | 'swimmer' | 'door' | 'line' | 'seat';
+type Role = 'court' | 'field' | 'runner' | 'swimmer' | 'door' | 'line' | 'seat' | 'stall';
 
 interface Figure {
   sprite: Phaser.GameObjects.Image;
@@ -64,10 +75,16 @@ interface Figure {
 
 interface Site {
   placed: Placed;
-  /** The building's numbers at the busiest hour. null for a bench or a table. */
+  /** The building's numbers at the busiest hour. null for a bench, a table or a place to eat. */
   use: PlayUse | null;
+  /** A place to eat: the students it has to itself. 0 for anything else. */
+  eaters: number;
+  /** A bench or a table: the kinds of food within a few cells, whose customers eat at it. */
+  foodNear: string[];
   /** Where its line stands: beside a path that touches it, or to its west. */
   line: { x: number; y: number; dx: number; dy: number };
+  /** True when the line stands on the south or the east side: in front of the building, whatever its width. */
+  lineInFront: boolean;
   figures: Figure[];
   /** Things floating in a pool, and the ball on a field. */
   props: Phaser.GameObjects.Image[];
@@ -119,28 +136,46 @@ export class Activity {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const family = PLACED[placed.type].family;
-      if (family !== 'recreation' && family !== 'seat') continue;
+      if (family !== 'recreation' && family !== 'seat' && family !== 'dining') continue;
       if (family === 'seat' && isBrokenThing(state, placed.id)) continue;
-      // The line forms on a path beside the building, where there is one.
+      // Where its line stands. A court and a field leave a strip of their own lawn down one side: the line
+      // stands there, beside the game. Anything else has its line along one side, on open ground: in front
+      // of it where it can be seen, on the south or the east side, and on a side with a path before one without.
       let line = { x: placed.x - 0.35, y: placed.y + placed.h - 0.25, dx: 0, dy: -LINE_GAP };
-      // A court and a field leave a strip of their own lawn down one side: the line stands there, beside the game.
-      const lawn = placed.type === 'courts' || placed.type === 'field';
-      if (lawn) line = { x: placed.x + 0.44, y: placed.y + 0.3, dx: 0, dy: LINE_GAP };
-      search: for (let y = placed.y - 1; !lawn && y <= placed.y + placed.h; y++) {
-        for (let x = placed.x - 1; x <= placed.x + placed.w; x++) {
-          const beside = (x < placed.x || x >= placed.x + placed.w) !== (y < placed.y || y >= placed.y + placed.h);
-          if (!beside || x < 0 || y < 0 || x >= width || y >= height || !isPathKind(cells[y * width + x]!.kind)) continue;
-          // Along the path's edge nearest the building.
-          if (y < placed.y) line = { x: placed.x + 0.25, y: y + 0.78, dx: LINE_GAP, dy: 0 };
-          else if (y >= placed.y + placed.h) line = { x: placed.x + 0.25, y: y + 0.22, dx: LINE_GAP, dy: 0 };
-          else if (x < placed.x) line = { x: x + 0.78, y: placed.y + 0.25, dx: 0, dy: LINE_GAP };
-          else line = { x: x + 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP };
-          break search;
+      let lineInFront = false;
+      if (placed.type === 'courts' || placed.type === 'field') {
+        line = { x: placed.x + 0.44, y: placed.y + 0.3, dx: 0, dy: LINE_GAP };
+      } else {
+        const kindAt = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
+        const sides = [
+          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y + placed.h] as const), front: true, line: { x: placed.x + 0.25, y: placed.y + placed.h + 0.22, dx: LINE_GAP, dy: 0 } },
+          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x + placed.w, placed.y + n] as const), front: true, line: { x: placed.x + placed.w + 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
+          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x - 1, placed.y + n] as const), front: false, line: { x: placed.x - 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
+          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y - 1] as const), front: false, line: { x: placed.x + 0.25, y: placed.y - 0.22, dx: LINE_GAP, dy: 0 } },
+        ];
+        const open = sides.filter((side) => side.cells.every(([x, y]) => ['empty', 'path', 'quad', 'crossing'].includes(kindAt(x, y))));
+        const paved = (side: (typeof sides)[number]): boolean => side.cells.some(([x, y]) => ['path', 'crossing'].includes(kindAt(x, y)));
+        // In front first, so the line can be seen. Then a paved side before a bare one.
+        const chosen = open.find((side) => side.front && paved(side)) ?? open.find((side) => side.front) ?? open.find(paved) ?? open[0];
+        if (chosen) {
+          line = chosen.line;
+          lineInFront = chosen.front;
         }
       }
       const before = kept.get(placed.id);
       kept.delete(placed.id);
-      next.push({ placed, use: playUse(state, placed), line, figures: before?.figures ?? [], props: before?.props ?? [] });
+      // People eat at the benches and tables within a few cells of food.
+      const foodNear: string[] = [];
+      if (family === 'seat') {
+        for (const other of state.map.placed) {
+          if (!other || PLACED[other.type].family !== 'dining') continue;
+          const dx = Math.max(other.x - placed.x, 0, placed.x - (other.x + other.w - 1));
+          const dy = Math.max(other.y - placed.y, 0, placed.y - (other.y + other.h - 1));
+          if (Math.max(dx, dy) <= SEAT_REACH && !foodNear.includes(other.type)) foodNear.push(other.type);
+        }
+      }
+      const eaters = family === 'dining' ? (foodTrade(state, placed)?.students ?? 0) : 0;
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [] });
     }
     // Whatever was cleared takes its people with it.
     for (const gone of kept.values()) this.empty(gone);
@@ -164,11 +199,23 @@ export class Activity {
     if (PLACED[type].family === 'seat') {
       // A bench or a picnic table: taken or not, the same until the part of the day changes.
       if (this.students <= 0) return [['seat', 0]];
-      const share = SEATED[this.period];
+      // Beside food that is busy now, most seats are taken by people eating.
+      let share = SEATED[this.period];
+      for (const kind of site.foodNear) share = Math.max(share, EATING_SHARE * mealNow(kind, this.period));
       if (type === 'bench') return [['seat', mix(site.placed.id, this.period.length) < share ? 1 : 0]];
       let sitting = 0;
       for (let n = 0; n < TABLE_SEATS; n++) if (mix(site.placed.id * 7 + n, this.period.length) < share) sitting += 1;
       return [['seat', sitting]];
+    }
+    if (PLACED[type].family === 'dining') {
+      // A line at the door when its kind of food is busy. At the food court they stand among the stalls first.
+      const queue = queueNow(site.eaters, type, this.period);
+      if (type !== 'foodcourt') return [['line', queue]];
+      const among = Math.min(STALL_SPOTS.length, queue);
+      return [
+        ['stall', among],
+        ['line', queue - among],
+      ];
     }
     const use = site.use;
     if (!use) return [];
@@ -292,6 +339,12 @@ export class Activity {
       x = site.line.x + site.line.dx * figure.slot;
       y = site.line.y + site.line.dy * figure.slot;
       figure.moving = false;
+    } else if (figure.role === 'stall') {
+      // Among the stalls and umbrellas of the food court.
+      const at = STALL_SPOTS[figure.slot % STALL_SPOTS.length]!;
+      x = placed.x + at[0];
+      y = placed.y + at[1];
+      figure.moving = false;
     } else if (figure.role === 'door') {
       x = site.line.x - site.line.dx * (figure.slot + 1) * 0.8;
       y = site.line.y - site.line.dy * (figure.slot + 1) * 0.8;
@@ -370,7 +423,9 @@ export class Activity {
         const sink = figure.role === 'swimmer' ? figure.sprite.displayHeight * 0.5 : 0;
         figure.sprite.setPosition(at.x, at.y + sink);
         const own = (figure.x + figure.y - 1) * 4 + 2.5;
-        figure.sprite.setDepth(flat || figure.role === 'line' || figure.role === 'door' || figure.role === 'seat' ? own : Math.max(own, front));
+        // A line on the south or east side stands in front of its building, however wide the building is.
+        const beside = figure.role === 'line' || figure.role === 'door';
+        figure.sprite.setDepth(flat || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front));
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
       }
       for (const prop of site.props) {

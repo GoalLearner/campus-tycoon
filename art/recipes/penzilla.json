@@ -2984,6 +2984,224 @@
     }
    ]
   },
+  "build.burger": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Burger.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Burger_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.diner": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Breakfast.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Breakfast_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.pizza": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Pizza.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Pizza_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.taco": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Mexican.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Restaurants/Restaurant_Mexican_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.foodcourt": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Groceries_Market.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Groceries_Market_Front1.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Groceries_Market_Front2.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Groceries_Market_Front3.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "build.smoothie": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_Icecream.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_Icecream_Front.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "build.convenience": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_NewsPaper.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_NewsPaper_Front.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "build.truck": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Vehicles/Truck_Groceries_Front.png",
+     "stand": [
+      0.5,
+      0.78
+     ]
+    }
+   ]
+  },
+  "build.computerlab": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Workplace_Electrician_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.makerspace": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Tools_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Tools_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.studycenter": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Empty_OneFloorRoofed.png",
+     "footprint": [
+      2,
+      1
+     ],
+     "paste": [
+      {
+       "file": "penzilla/Medieval/Decor/Book.png",
+       "box": [
+        668,
+        480,
+        748,
+        560
+       ]
+      },
+      {
+       "file": "penzilla/Medieval/Decor/Book.png",
+       "box": [
+        436,
+        444,
+        492,
+        492
+       ]
+      }
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Shop_Empty_Front.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
   "build.admin": {
    "layers": [
     {
@@ -3337,6 +3555,38 @@
    2,
    1
   ],
+  "build.burger": [
+   2,
+   1
+  ],
+  "build.diner": [
+   2,
+   1
+  ],
+  "build.pizza": [
+   2,
+   1
+  ],
+  "build.taco": [
+   2,
+   1
+  ],
+  "build.foodcourt": [
+   2,
+   2
+  ],
+  "build.computerlab": [
+   2,
+   1
+  ],
+  "build.makerspace": [
+   2,
+   1
+  ],
+  "build.studycenter": [
+   2,
+   1
+  ],
   "build.parking": [
    2,
    1
@@ -3438,7 +3688,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away."
   },
   {
    "name": "Football stadium (3D model)",
