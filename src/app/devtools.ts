@@ -183,7 +183,7 @@ function applyViewParams(params: URLSearchParams): void {
   const incident = params.get('incident');
   const select = params.get('select')?.split(',').map(Number);
   if (select && select.length === 2 && select.every(Number.isFinite)) setTimeout(() => session.select(select[0]!, select[1]!), 2600);
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -253,6 +253,11 @@ function applyViewParams(params: URLSearchParams): void {
         session.setGhost(Number(x), Number(y));
       }
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
+      // &panel=plan opens the room plan as a tap on the Housing bar would.
+      if (panel === 'plan') setTimeout(() => document.querySelector<HTMLElement>('.bars .bar')?.click(), 1400);
+      // &tool=road puts the road tool in hand, and &overlay=parking shows the Parking overlay.
+      if (params.get('tool') === 'road') setTimeout(() => session.setTool('road'), 1400);
+      if (params.get('overlay') === 'parking') setTimeout(() => session.setOverlay('parking'), 1400);
       if (card !== null) {
         // After the view has been aimed for the last time.
         setTimeout(() => {
@@ -291,6 +296,11 @@ export function installDevTools(): void {
     store.adopt(townCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stop3') {
     store.adopt(stop3Campus(), { ephemeral: true });
+  } else if (params.get('demo') === 'founding') {
+    // A brand-new campus a minute after its first class moved in: beds short, a waitlist open, locals with no way in.
+    const started = clock.now() - 16 * 60_000;
+    const fresh = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+    store.adopt(advance(fresh, started, clock.now()).state, { ephemeral: true });
   } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });
   }
