@@ -47,6 +47,29 @@ export {
 } from './systems/placed';
 export * from './config/placed';
 export * from './config/town';
+export * from './config/grounds';
+export {
+  binState,
+  campusClean,
+  cleanAt,
+  fixText,
+  groundsLine,
+  isBrokenThing,
+  isMessSpot,
+  lampAt,
+  messiestSpot,
+  seatingAt,
+  spotClean,
+  spotFix,
+  thingFix,
+  wagesPerYear,
+  workersAt,
+  yardLine,
+  yardOver,
+  yardStatus,
+  type GroundsFix,
+  type YardStatus,
+} from './systems/grounds';
 export {
   buildTown,
   driversNow,
@@ -88,6 +111,7 @@ export {
   type StudentRef,
 } from './systems/students';
 export type { ArchetypeId, CauseId, DriverId, RelationshipId } from './config/students';
+export { PART_WEIGHTS } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
 export { calendarAt, dateAt, eventsAt, formatDate, nextMilestone, type CalendarEvent, type CalendarPos, type GameDate, type Phase } from './calendar';
 export * from './config/academicCalendar';

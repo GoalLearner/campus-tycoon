@@ -54,6 +54,8 @@ import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, partLevel, type Approval, type Cause } from './happiness';
 import { townLiving } from './town';
+import { socialTables } from './grounds';
+import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -224,6 +226,8 @@ export function socialLife(state: GameState): number {
   for (const placed of state.map.placed) {
     if (placed && PLACED[placed.type].family === 'recreation') spots += SOCIAL_SPOTS_PER_RECREATION;
   }
+  // A picnic table near dining or a lecture hall is somewhere to meet.
+  spots += socialTables(state) * SOCIAL_SPOTS_PER_TABLE;
   const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / students));
   // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
   return Math.round(level * 20) / 20;
@@ -399,6 +403,8 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   else if (part === 'green') pool = resident ? (content ? THOUGHTS.greenGood : THOUGHTS.greenLow) : content ? THOUGHTS.commuterGreenGood : THOUGHTS.commuterGreenLow;
   else if (part === 'dining') pool = resident ? (content ? THOUGHTS.diningGood : THOUGHTS.diningLow) : content ? THOUGHTS.commuterDiningGood : THOUGHTS.commuterDiningLow;
   else if (part === 'recreation') pool = resident ? (content ? THOUGHTS.recreationGood : THOUGHTS.recreationLow) : content ? THOUGHTS.commuterRecreationGood : THOUGHTS.commuterRecreationLow;
+  else if (part === 'clean') pool = resident ? (content ? THOUGHTS.cleanGood : THOUGHTS.cleanLow) : content ? THOUGHTS.commuterCleanGood : THOUGHTS.commuterCleanLow;
+  else if (part === 'seating') pool = resident ? (content ? THOUGHTS.seatingGood : THOUGHTS.seatingLow) : content ? THOUGHTS.commuterSeatingGood : THOUGHTS.commuterSeatingLow;
   else pool = resident ? (content ? THOUGHTS.safetyGood : THOUGHTS.safetyLow) : content ? THOUGHTS.commuterSafetyGood : THOUGHTS.commuterSafetyLow;
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
   return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };

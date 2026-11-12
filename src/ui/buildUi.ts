@@ -1,6 +1,15 @@
 import {
   BUILD_ORDER,
   campusHappiness,
+  binState,
+  fixText,
+  isBrokenThing,
+  isMessSpot,
+  spotClean,
+  spotFix,
+  thingFix,
+  yardLine,
+  yardStatus,
   COST,
   ROAD_UPKEEP_PER_YEAR,
   hoodAdvice,
@@ -95,6 +104,14 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 
 /** What a placed building is doing right now, in one line. */
 export function placedSummary(state: GameState, placed: Placed): string {
+  const base = baseSummary(state, placed);
+  // A place to eat, shop or play also says how clean it is, and the one thing that would fix it.
+  if (!isMessSpot(placed)) return base;
+  const fix = fixText(state, placed, spotFix(state, placed));
+  return `${base} ${Math.round(spotClean(state, placed) * 100)}% clean.${fix ? ` ${fix}` : ''}`;
+}
+
+function baseSummary(state: GameState, placed: Placed): string {
   const spec = PLACED[placed.type];
   switch (spec.family) {
     case 'library':
@@ -126,6 +143,23 @@ export function placedSummary(state: GameState, placed: Placed): string {
       const used = places.spaces > 0 ? Math.round((cars * Math.min(places.drive, driversNow(state))) / places.spaces) : 0;
       return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
+    case 'bin': {
+      const fix = fixText(state, placed, thingFix(state, placed));
+      const how = { empty: 'Catching litter.', filling: 'Filling up.', full: 'Full. It catches nothing until it is emptied.', broken: 'Broken. It catches nothing until it is fixed.' }[binState(state, placed.id)];
+      return fix ? `${how} ${fix}` : how;
+    }
+    case 'seat': {
+      if (isBrokenThing(state, placed.id)) {
+        const fix = fixText(state, placed, thingFix(state, placed));
+        return `Broken. Nobody can sit here until it is fixed.${fix ? ` ${fix}` : ' A worker is on the way.'}`;
+      }
+      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      return `Somewhere to sit for ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.`;
+    }
+    case 'yard': {
+      const status = yardStatus(state, placed);
+      return `${status.workers} of ${status.max} workers. ${yardLine(status)} Wages ${dollars(status.wagesPerYear)} a year.`;
+    }
     case 'landmark':
       return `${spec.effect}.`;
   }
@@ -146,7 +180,7 @@ export function placingLine(type: PlacedType): string {
 /** The four causes of Happiness, as the player reads them. */
 export const CAUSE_NAME: Record<CauseId, string> = {
   walk: 'Walk to class',
-  green: 'Green space',
+  grounds: 'Grounds',
   life: 'Food & fun',
   safety: 'Safety & health',
 };
@@ -155,6 +189,8 @@ export const CAUSE_NAME: Record<CauseId, string> = {
 const PART_FIX: Record<DriverId, string> = {
   walk: 'Zone Academic lots nearer the dorms, or lay a shorter path.',
   green: 'Add quads, trees or a pond near dorms and lecture halls.',
+  clean: 'Litter is building up. Put a Trash bin beside each place to eat or play, and a Facilities Yard with workers in reach.',
+  seating: 'Students have nowhere to sit outside. Add benches or picnic tables near dorms and lecture halls.',
   dining: 'Students have nowhere to eat nearby. Build a Dining hall or a Coffee stand near dorms and lecture halls.',
   recreation: 'Students have nothing to do nearby. Build a gym, courts, a field, a pool or a track near dorms and lecture halls.',
   safety: 'Build a Medical Center and Campus Safety so their circles cover dorms and lecture halls.',
@@ -188,7 +224,7 @@ export function happinessView(state: GameState): HappinessView {
     mood: score >= 80 ? 4 : score >= 62 ? 3 : score >= 45 ? 2 : score >= 28 ? 1 : 0,
     rows,
     advice: mood.worst && mood.worstPart ? `Biggest gap: ${CAUSE_NAME[mood.worst].toLowerCase()}. ${PART_FIX[mood.worstPart]}` : '',
-    build: mood.worst === 'life' || mood.worst === 'safety',
+    build: mood.worst === 'life' || mood.worst === 'safety' || mood.worstPart === 'clean' || mood.worstPart === 'seating',
     staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.`,
     lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${last.stayed} stayed. Happiness was ${last.happiness}.` : '',
   };

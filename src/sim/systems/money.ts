@@ -9,6 +9,7 @@ import { enrollment, openCapacity, upkeepPerYear } from '../selectors';
 import type { GameState, LogEntry } from '../types';
 import { placedIncomePerYear } from './placed';
 import { offCampusNow } from './town';
+import { wagesPerYear } from './grounds';
 
 /**
  * First playable money: tuition from every student and a room fee from every
@@ -30,7 +31,7 @@ export function recomputeRates(state: GameState): void {
   const students = enrollment(state);
   state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR + occupiedBeds(state) * ROOM_FEE_PER_BED_PER_YEAR + placedIncomePerYear(state);
   state.money.spendingPerYear =
-    upkeepPerYear(state) + students * OPERATING_COST_PER_STUDENT_PER_YEAR;
+    upkeepPerYear(state) + wagesPerYear(state) + students * OPERATING_COST_PER_STUDENT_PER_YEAR;
   state.money.ratesDirty = false;
 }
 

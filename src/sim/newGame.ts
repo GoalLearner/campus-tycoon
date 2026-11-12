@@ -30,6 +30,7 @@ function emptyMap(width: number, height: number, seed: number): MapState {
     placed: [],
     parcels: startingParcels(),
     town: { street: '', neighbourhoods: [], access: { walk: [], spaces: 0, linked: [] } },
+    care: { users: {}, bins: {}, yard: {}, lots: 0 },
     score: new Array<number>(width * height).fill(0),
     walkMinutes: new Array<number>(width * height).fill(-1),
   };
@@ -117,6 +118,7 @@ export function newGame(opts: NewGameOptions): GameState {
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
+    grounds: { litter: {}, bins: {}, broken: {}, lamps: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
   };
   recomputeRates(state);
   return state;

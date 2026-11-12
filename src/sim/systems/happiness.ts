@@ -1,9 +1,10 @@
 import { BED_NEED, RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
 import { GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
-import { CAUSE_OF, CAUSE_WEIGHTS, type CauseId, type DriverId } from '../config/students';
+import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } from '../config/students';
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
+import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
 import { fedAt, recreationAt } from './placed';
 
@@ -56,14 +57,24 @@ function scoreOf(causes: readonly Cause[]): number {
   return weights === 0 ? 0 : (100 * sum) / weights;
 }
 
+/** A cause's level: the average of its parts, each counted by its weight. */
+function weighed(parts: readonly CausePart[]): number {
+  let sum = 0;
+  let weights = 0;
+  for (const part of parts) {
+    sum += part.level * PART_WEIGHTS[part.id];
+    weights += PART_WEIGHTS[part.id];
+  }
+  return weights === 0 ? 0 : sum / weights;
+}
+
 /** Gather what is felt at a spot into its named causes, in the order the causes are listed. */
 function gathered(parts: readonly CausePart[]): Cause[] {
   const causes: Cause[] = [];
   for (const id of Object.keys(CAUSE_WEIGHTS) as CauseId[]) {
     const mine = parts.filter((part) => CAUSE_OF[part.id] === id);
     if (mine.length === 0) continue;
-    const level = mine.reduce((sum, part) => sum + part.level, 0) / mine.length;
-    causes.push({ id, level, weight: CAUSE_WEIGHTS[id], parts: mine });
+    causes.push({ id, level: weighed(mine), weight: CAUSE_WEIGHTS[id], parts: mine });
   }
   return causes;
 }
@@ -89,7 +100,10 @@ export function approvalAt(state: GameState, cell: number): Approval {
   const felt: CausePart[] = [];
   // The walk is from a dorm to class, so only a dorm has it.
   if (zone === 'housing') felt.push({ id: 'walk', level: 1 - parts.walkPenalty / WALK_MAX_PENALTY });
+  // Grounds: green space, how clean it is, and somewhere to sit.
   felt.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]) });
+  felt.push({ id: 'clean', level: cleanAt(state, x, y) });
+  felt.push({ id: 'seating', level: seatingAt(state, x, y) });
   felt.push({ id: 'dining', level: fedAt(map, x, y) ? 1 : 0 });
   felt.push({ id: 'recreation', level: recreationAt(map, x, y) });
   // Medical Center and Campus Safety coverage are read together, as one level.
@@ -156,8 +170,7 @@ export function campusHappiness(state: GameState): CampusHappiness {
       share = Math.max(share, touched);
     }
     if (parts.length === 0) continue;
-    const level = parts.reduce((sum, part) => sum + part.level, 0) / parts.length;
-    causes.push({ id, level, weight: CAUSE_WEIGHTS[id] * share, parts });
+    causes.push({ id, level: weighed(parts), weight: CAUSE_WEIGHTS[id] * share, parts });
   }
   // The same as averaging every student's card.
   const score = residents * dorms.score + others * halls.score;
@@ -172,10 +185,12 @@ export function campusHappiness(state: GameState): CampusHappiness {
   }
   let worstPart: DriverId | null = null;
   if (worst) {
-    let lowest = Infinity;
+    // The part with the most to gain, counting how much it weighs inside the cause.
+    let most = -1;
     for (const part of worst.parts) {
-      if (part.level < lowest - 1e-9) {
-        lowest = part.level;
+      const toGain = PART_WEIGHTS[part.id] * (1 - part.level);
+      if (toGain > most + 1e-9) {
+        most = toGain;
         worstPart = part.id;
       }
     }

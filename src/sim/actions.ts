@@ -4,6 +4,7 @@ import { addPlaced, previewPlace, removePlaced } from './systems/placed';
 import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
 import { COST } from './config/money';
+import { YARD_MAX_WORKERS, YARD_START_WORKERS } from './config/grounds';
 import { dollars } from './format';
 import { inBounds } from './selectors';
 import { ownedAt } from './systems/town';
@@ -20,7 +21,8 @@ import type { CellKind, GameState, MapState, Zone } from './types';
  */
 
 /** What a drag paints onto the map. */
-export type Tool = Zone | 'path' | 'road' | 'quad' | 'tree' | 'clear';
+/** 'bin', 'bench' and 'table' lay small things one cell each, a row at a drag, as trees are planted. */
+export type Tool = Zone | 'path' | 'road' | 'quad' | 'tree' | 'clear' | 'bin' | 'bench' | 'table';
 
 export type Point = readonly [number, number];
 
@@ -28,7 +30,8 @@ export type Point = readonly [number, number];
 export type Action =
   | { type: 'paint'; tool: Tool; cells: readonly Point[]; variant?: number }
   | { type: 'place'; building: PlacedType; x: number; y: number }
-  | { type: 'buyLand'; parcel: number };
+  | { type: 'buyLand'; parcel: number }
+  | { type: 'staff'; yard: number; workers: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -58,6 +61,9 @@ const UNIT_COST: Record<Tool, number> = {
   quad: COST.quad,
   tree: COST.tree,
   clear: COST.clear,
+  bin: PLACED.bin.cost,
+  bench: PLACED.bench.cost,
+  table: PLACED.table.cost,
 };
 
 function canPaint(kind: CellKind, tool: Tool): boolean {
@@ -183,6 +189,11 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
       case 'quad':
         cell.kind = 'quad';
         break;
+      case 'bin':
+      case 'bench':
+      case 'table':
+        addPlaced(map, tool, x, y, next.clock.tick);
+        break;
       case 'tree':
         cell.kind = 'tree';
         cell.variant = Number.isInteger(variant) && variant >= 0 && variant < TREE_KINDS ? variant : 0;
@@ -220,7 +231,9 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   if (preview.problem) return { ok: false, state, error: PLACE_ERROR[preview.problem] };
 
   const next = structuredClone(state);
-  addPlaced(next.map, type, x, y, next.clock.tick);
+  const built = addPlaced(next.map, type, x, y, next.clock.tick);
+  // A yard opens with a worker on its books.
+  if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
   next.money.cash -= spec.cost;
   next.money.yearSpent += spec.cost;
   recomputeDesirability(next.map);
@@ -243,6 +256,19 @@ function buyLand(state: GameState, id: number): ActionResult {
   return { ok: true, state: next, cost: parcel.price, changed: 1 };
 }
 
+/** Set how many workers a Facilities Yard has. Hiring and letting go are instant and free; the wage is the cost. */
+function staff(state: GameState, yardId: number, workers: number): ActionResult {
+  const yard = state.map.placed[yardId];
+  if (!yard || yard.type !== 'yard') return { ok: false, state, error: 'That is not a Facilities Yard.' };
+  if (!Number.isInteger(workers) || workers < 0 || workers > YARD_MAX_WORKERS) {
+    return { ok: false, state, error: `A yard holds up to ${YARD_MAX_WORKERS} workers.` };
+  }
+  const next = structuredClone(state);
+  next.grounds.workers[yardId] = workers;
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 export function applyAction(state: GameState, action: Action): ActionResult {
   switch (action.type) {
     case 'paint':
@@ -251,6 +277,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return place(state, action.building, action.x, action.y);
     case 'buyLand':
       return buyLand(state, action.parcel);
+    case 'staff':
+      return staff(state, action.yard, action.workers);
   }
 }
 

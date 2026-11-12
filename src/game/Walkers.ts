@@ -231,7 +231,8 @@ export class Walkers {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
-      if (spec.family === 'water' || spec.family === 'landmark') continue;
+      // Places to go: not ponds, landmarks, car parks, bins or the yard.
+      if (['water', 'landmark', 'parking', 'bin', 'yard'].includes(spec.family)) continue;
       let found = false;
       for (let cy = placed.y; cy < placed.y + placed.h && !found; cy++) {
         for (let cx = placed.x; cx < placed.x + placed.w && !found; cx++) {

@@ -14,6 +14,7 @@ import { PARKING_NOISE, ROAD_NOISE } from '../config/town';
 import type { MapState, Zone } from '../types';
 import { libraryLift } from './placed';
 import { refreshTownAccess } from './town';
+import { refreshCare } from './grounds';
 
 /**
  * Desirability and walk time for every lot. Only player actions change the
@@ -200,4 +201,6 @@ export function recomputeDesirability(map: MapState): void {
   }
   // Who can walk in from town, and which car parks a road reaches, change with the same actions.
   refreshTownAccess(map, steps);
+  // So do the bins beside each place to eat, and the yard that looks after each thing.
+  refreshCare(map);
 }
