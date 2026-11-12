@@ -3814,6 +3814,12 @@ The multiplication is in one place for each kind of thing, where its number is r
 | A 46,000-student campus can grow | With the casual test player it reached 156,352 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
 | The legal check | Where real buildings stand is a fact, but the owner's earlier rule was the cautious line. A lawyer should say so before the game is sold (35.1) |
 
+### 35.11 Checked against the reference files (2026-11-12)
+
+Asked for by the owner. Every distinctive word in the two reference files (85 from the map and 22 from the calendar), every label, and every label printed over several lines was searched for in every tracked file and in the whole history of every branch, commit messages included. None was found. Neither file was ever committed, on any branch. The repository holds no image from the map.
+
+What the game does take, by the owner's own decisions: where the districts stand (35.3), and the structure and dates of the calendar (4.8). Whether that is safe for a game that is sold is still the question of 35.1, and it is a lawyer's to answer.
+
 ---
 
 ## 36. The daily player and the newspaper, as built
@@ -4042,3 +4048,117 @@ On the model campus it reads: the next class is 9,942 strong and the campus is 3
 | Whether it is saved | Not saved. Closing the app before the button is tapped loses it | Keep it until read, like an away list |
 
 **The walk through a brand-new game, as a new player.** The founding screen asks for a name, when the day starts and a colour, and says the campus opens whole. The first screen is the first issue. Behind it the top bar reads "Move-in week", "Next class is 9,942: add Housing beds and Academic seats to fit them all" and when the spring class arrives. There is no founding-day wait, since the clock opens at the tick a first class would have moved in. Nothing speaks of a first class arriving in fifteen minutes, and no tip points at a starter quad. The lines that say "until the first class arrives" are only shown on a campus with nobody on it, which no player now meets. The Menu of a new game has no "Visit the model campus". The Menu of a game begun on the small campus keeps it.
+
+---
+
+## 37. Size goals from a 46,000 start (proposed, not built)
+
+Asked for by the owner on 2026-11-12: "A new game opens at 46,000 students, above the whole current ladder (500 to 40,000). Propose a new size ladder that starts above the model campus and still takes months to climb, and check the prestige ladder, eras, and land unlocks still make sense from this start." **This section is the proposal. Nothing in it is built, and it waits for his word.**
+
+### 37.1 What was measured first
+
+The once-a-day test player on the model campus, as the game stands, one game year to a real week:
+
+| Week | Students | Academic rank |
+|---|---|---|
+| 1 | 46,000 | Not yet ranked |
+| 2 | 72,856 | 181st |
+| 4 | 114,688 | 95th |
+| 6 | 156,184 | 12th |
+| 8 and after | 156,520 | 5th to 9th |
+
+It stops at 156,520 only because the test player runs out of open ground beside a path. A person would lay more path and go on.
+
+**The cause.** Each fall, as many students would enrol as are already there: about 49,700 in the first fall. That rule was a stand-in for the first playable (section 7 calls it one), written to grow a campus from 400. At 46,000 it means the only limit is how fast halls go up. It also turns so many away that selectivity sits at its best, which is why the rank reaches the top ten in two months for a player who is not trying.
+
+So a ladder of far-apart rungs alone would not last months. Its top would have to be near half a million students.
+
+### 37.2 The size ladder
+
+Eight rungs [T]: **50,000, 55,000, 60,000, 66,000, 73,000, 81,000, 90,000 and 100,000 students.** A rung lands at an intake and is kept for good, as 15.1 says.
+
+### 37.3 What makes it take months: applicants follow the school's reach
+
+| Decision | Why |
+|---|---|
+| On a game begun on the model campus, a fall's applicants are the school's **reach** times four named causes. The head count no longer feeds them | A school of 46,000 is not sought by 46,000 more each fall. This is the ceiling of 7.1, in the one pool the game has today |
+| Reach is 11,000 on the model campus [T]. It is a head count, so it follows the campus scale | With the causes as a new campus has them it gives a first fall of about 12,000, or 13,000 with some marketing, which holds a campus of 53,000 to 57,000 |
+| The four causes: **how the campus looks** (as today, from six tenths to fourteen tenths), **marketing** (as today, up to 14 in a hundred), **football** (as today, up to 14 in a hundred), and **academic rank** (new: nothing at 200th, up to 25 in a hundred at 1st [T]) | The owner's rule of four named causes for a number. Three exist. Rank is the one section 7.3 already asks for |
+| What the desk sets going for a few days is counted inside marketing | It stays four |
+| The spring class stays a fifth of a fall class. The small campus keeps its old rule | The tests and the long runs at scale 1 are the tuned base, and no player is offered it |
+
+**Tried in a copy of the simulation, outside the project.** The same once-a-day test player, who builds for every class and never works on looks, the stadium or the rank:
+
+| Week | 2 | 3 | 5 | 8 | 12 | 26 |
+|---|---|---|---|---|---|---|
+| Students | 51,352 | 55,674 | 60,853 | 66,554 | 69,000 | 70,850 |
+
+Four rungs in the first two months, and then nothing more without the four causes. With all four near their best a fall brings about 22,500 applicants, which holds about 100,000 students: the top rung asks for nearly everything at once. Football standing and rank move by the season and the year, so the estimate for the best player is five to six months. The build measures it and tunes to this target: any regular player has four rungs in the first two months, and nobody has the last before month five.
+
+**One thing the trial showed.** With growth this slow the test player keeps $5 to $7 of every $100, under the 10 to 20 the game is tuned for. The build brings that back inside the range and says what it moved.
+
+### 37.4 The prestige ladder
+
+Its eight rungs stand as they are: Top 175, 150, 125, 100, 75, 50, 25 and 10 of the 200. They do not depend on size. Three things were found from this start.
+
+| Found | Proposed |
+|---|---|
+| As the game stands the rank reaches the top ten in two months without trying (37.1) | The applicant rule of 37.3 ends it. A campus that builds a seat for everyone accepts everyone, so the top rungs cost size, which is the choice 15.1 is built on |
+| In the trial the rank sat near 180th for four years and then jumped about 110 places in a day, when the first class to begin there graduated | The four classes a model campus opens with count as begun there, so the graduation rate exists from the first spring and the rank moves a little each year |
+| A campus that admits everyone settles between 45th and 60th | Left as it is. The first rank is tuned to land near 150th [T], so the ladder is there to climb |
+
+Target for the build to measure: a player who chases rank passes Top 100 in about month two and Top 10 not before month five.
+
+### 37.5 Eras
+
+| Era | Size | Rank | Was |
+|---|---|---|---|
+| Arrival | The start | The start | Founding |
+| Growth | 55,000 students | Top 125 | 6,000 students |
+| Flagship | 66,000 students | Top 75 | 15,000 students |
+| Legacy | 81,000 students | Top 25 | 30,000 students |
+
+Reaching an era on either ladder still opens it. On the size ladder that is weeks 3 and 8 in the trial and, by estimate, about week 16, against the 5, 12 and 20 of 15.2.
+
+**What an era unlocks today: nothing that is built.** Its lists are medium and high density, Greek Row, the shuttle, policies, tradition slots, prestige landmarks and land. A model campus has the Medical Center, Campus Safety, the library and parking from its first minute, so those leave the lists. Until the first of the others is built an era is a name, a headline in the paper and a line on the goals panel. Nothing a player has is ever taken away to be given back.
+
+### 37.6 Land
+
+| Found | Proposed |
+|---|---|
+| The model campus owns every parcel in today's world: the starting land and both fields, six parcels of 16 by 16. Section 5.2 planned four at the start | The start is six |
+| The ladder does not need more. In 37.1 the test player fitted 156,000 students with about 190 cells to spare | No new land in this stop |
+| "More land" in the Growth, Flagship and Legacy lists has nothing to give until the map is larger than 42 by 48 | It stays in the design for that map. Parcels a campus may own by era become 6, 10, 17 and 25 (was 4, 10, 17, 25) |
+| The town has room for about 25,200 local students. Past that every new student needs a bed | Left as it is. It is the nearest thing to a land limit today, and the Housing bar already shows it |
+
+### 37.7 What the player sees, and what a rung gives
+
+| Decision | Why |
+|---|---|
+| Tapping the student count opens a Size panel: students, the next goal, this fall's applicants with their four causes, and the rank with its next goal | The same shape as the Happiness panel. No new button |
+| A rung reached is the paper's headline at that intake or rankings day, and is kept in a short list of goals reached | The trophy case of 15.5 comes later |
+| Each size rung gives one free building, as 15.3 says, taken from art the owner already has. He sees them on one sheet before any is used. It lifts desirability near it | His standing rule for new art. Looks are one of the four causes, so the reward helps the next rung |
+| If his packs hold fewer than eight that suit, the rest of the rungs give none until one is drawn | Never a stand-in |
+| A game begun on the small campus has no ladder | No player is offered that start |
+
+### 37.8 Tests and long runs
+
+- A rung is never lost once reached. Size rungs land only at intakes and rank rungs only on rankings day.
+- The applicants shown are the reach times the four causes shown, to the student.
+- The once-a-day player on the model campus has three to five size rungs by week 9, and none of the last three before week 12 [T].
+- The model campus still keeps a surplus left alone for five years, and the casual and once-a-day players stay inside 10 to 20 kept of every 100 in years 3 to 8.
+- The campus scale still holds: the same campus at scale 1 and at 28 stays in proportion.
+- The once-a-day player misses nothing: a rung reached while away is in the paper.
+
+### 37.9 Points for the owner
+
+| Point | Chosen | The alternative |
+|---|---|---|
+| The top of the ladder | 100,000 students | Higher, such as 150,000. It needs nothing new, and reads less like a real school |
+| What paces it | Applicants follow reach and four causes | Far-apart rungs with applicants as they are. The top would have to be near 500,000 to last months |
+| Rank and applicants | A better rank brings up to a quarter more | Rank has no pull on applicants, and the top rung comes down to about 85,000 |
+| Eras | Kept, with new thresholds | Left out until something exists for them to unlock |
+| The first era's name | Arrival | Founding |
+| What a size rung gives | A free building from art he has, shown to him first | A headline only |
+| Games begun on the small campus | No ladder | The old ladder of 15.2 for them |
+| The first rank | Near 150th | Wherever its numbers put it, about 70th, with half the ladder already passed |
