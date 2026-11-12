@@ -5,9 +5,11 @@ import { HOME_SCREEN_TIP, markHomeScreenTipShown, shouldShowHomeScreenTip } from
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
 import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
+import { noticeSetting, setNoticesPerDay, turnNoticesOff, turnNoticesOn } from '../app/notices';
 import { anchorFor, hourName, store, wakeHourOf } from '../app/store';
 import { updates } from '../app/updates';
 import {
+  NOTICES_MOST,
   bottleneck,
   buildingAt,
   calendarAt,
@@ -57,7 +59,6 @@ import {
   type LogEntry,
   type PlacedType,
   type StallCause,
-  summarizeAway,
   type Zone,
   anchorFreeAt,
   dayRead,
@@ -66,8 +67,10 @@ import {
   SCHOOL_COLOURS,
   weatherAt,
 } from '../sim';
-import { decisionsChip, footballChip, footballMoney } from './footballUi';
-import { openDecisions, openFootball } from './footballPanels';
+import { footballChip, footballMoney } from './footballUi';
+import { openAwayScreen, openInbox } from './deskPanels';
+import { inboxChip } from './deskUi';
+import { openFootball } from './footballPanels';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
@@ -287,11 +290,11 @@ export function mountUi(root: HTMLElement): void {
   const next = el('span', 'next');
   calendar.append(when, next);
 
-  // Football and the year's decisions: one chip each, shown when there is something behind it.
+  // Football has a chip when there is a season behind it. The Inbox always has one, and says so when something waits.
   const chips = el('div', 'hud-chips');
   const footballButton = button('', 'hud-chip', () => openFootball(openModal));
-  const decisionsButton = button('', 'hud-chip urgent', () => openDecisions(openModal));
-  chips.append(footballButton, decisionsButton);
+  const inboxButton = button('', 'hud-chip', () => openInbox(openModal));
+  chips.append(footballButton, inboxButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -593,41 +596,12 @@ export function mountUi(root: HTMLElement): void {
     const report = store.away;
     const notes = store.upgradeNotes;
     if (!report && notes.length === 0) return;
-    // The away list stays saved until the button below is tapped. Closing the app first loses nothing.
+    // The away list stays saved until its button is tapped. Closing the app first loses nothing.
     store.upgradeNotes = [];
-    const summary = report ? summarizeAway(report.log, report) : null;
-    openModal((close, card) => {
-      card.append(el('h1', '', summary ? summary.headline : 'New since your last visit'));
-      const list = el('ul', 'away-list');
-      const lines = [...(summary?.lines ?? [])];
-      // Grounds has one line. It leads only when cleanliness is what is holding Happiness back.
-      if (report?.grounds) {
-        if (report.groundsFirst) lines.unshift(report.grounds);
-        else lines.push(report.grounds);
-      }
-      for (const line of lines) list.append(el('li', '', line));
-      // Rules that are new to an older save, told once.
-      for (const note of notes) list.append(el('li', 'away-note', note));
-      // The calendar, football and decisions, by the date in the game.
-      const dated = el('div', 'away-days');
-      if (summary && summary.days.length > 0) {
-        if (summary.earlier > 0) dated.append(el('p', 'fine', `${summary.earlier} earlier ${summary.earlier === 1 ? 'line is' : 'lines are'} left out.`));
-        for (const day of summary.days) {
-          dated.append(el('div', 'away-date', day.date));
-          const lines = el('ul', 'away-list');
-          for (const line of day.lines) lines.append(el('li', '', line));
-          dated.append(lines);
-        }
-      }
-      card.append(
-        list,
-        dated,
-        button('Back to campus', 'primary', () => {
-          if (report) store.awaySeen(report);
-          close();
-        }),
-      );
-    }, false);
+    openAwayScreen(openModal, report, notes, (where) => {
+      if (where === 'inbox') openInbox(openModal);
+      else openFootball(openModal);
+    });
   }
 
   function openMenu(): void {
@@ -707,6 +681,37 @@ export function mountUi(root: HTMLElement): void {
       });
       setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
       card.append(crowd);
+
+      // Notifications are the iPhone app's. A browser tab has none, and says so.
+      if (!isNative) {
+        card.append(el('p', 'fine', 'Notifications come with the iPhone app. A browser tab has none.'));
+      } else {
+        const notices = button('', 'wide', () => {
+          if (noticeSetting().on) {
+            turnNoticesOff();
+            drawNotices();
+            return;
+          }
+          // The phone asks for permission here, the first time they are turned on, and never before.
+          void turnNoticesOn().then((answer) => {
+            if (answer === 'refused') pushToast('Notifications are turned off for this app in Settings.', 'error');
+            else if (answer === 'unavailable') pushToast('This build cannot send notifications yet.', 'error');
+            drawNotices();
+          });
+        });
+        const most = button('', 'wide', () => {
+          setNoticesPerDay((noticeSetting().perDay % NOTICES_MOST) + 1);
+          drawNotices();
+        });
+        const drawNotices = (): void => {
+          const setting = noticeSetting();
+          setText(notices, setting.on ? 'Notifications: on' : 'Notifications: off');
+          setText(most, `Most in a day: ${setting.perDay}`);
+          most.style.display = setting.on ? '' : 'none';
+        };
+        drawNotices();
+        card.append(notices, most);
+      }
 
       // Reduce effects: no swaying trees, ripples or sprinklers, and fewer small scenes. For an older phone or a still map.
       const effects = button('', 'wide', () => {
@@ -851,10 +856,11 @@ export function mountUi(root: HTMLElement): void {
     const ball = footballChip(state);
     setText(footballButton, ball ?? '');
     footballButton.classList.toggle('show', ball !== null);
-    const waiting = decisionsChip(state);
-    setText(decisionsButton, waiting ?? '');
-    decisionsButton.classList.toggle('show', waiting !== null);
-    chips.classList.toggle('show', ball !== null || waiting !== null);
+    const desk = inboxChip(state);
+    setText(inboxButton, desk.text);
+    inboxButton.classList.toggle('urgent', desk.urgent);
+    inboxButton.classList.add('show');
+    chips.classList.add('show');
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {

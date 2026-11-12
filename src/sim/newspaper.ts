@@ -188,7 +188,7 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         const slot = Number(entry.data?.slot ?? 0);
         const won = entry.data?.won === 1;
         const big = slot >= 10 ? 96 : slot === 9 ? 92 : 70;
-        out.push({ weight: big + (won ? 1 : 0), headline: `${scoreLine(entry.text)}; ${pickLine(state, entry.tick, won ? WON : LOST)}`, deck: entry.text });
+        out.push({ weight: big + (won ? 1 : 0), headline: `${scoreLine(entry.text).replace(state.school.name, school)}; ${pickLine(state, entry.tick, won ? WON : LOST)}`, deck: entry.text });
         break;
       }
       case 'intake': {

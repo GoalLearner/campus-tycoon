@@ -786,7 +786,7 @@ export function openRoutine(state: GameState, day: number, log: LogEntry[]): voi
       tick: state.clock.tick,
       kind: 'inbox',
       text: `On your desk: ${opened.title}. Open for ${duration(opened.closes - opened.opens)}. Left alone: ${fallback ? lowerFirst(fallback.label) : 'nothing changes'}.`,
-      data: { id: opened.id, key: opened.key, closes: opened.closes },
+      data: { id: opened.id, key: opened.key, closes: opened.closes, title: opened.title },
     });
   }
 }

@@ -1,5 +1,5 @@
 import { calendarAt } from '../calendar';
-import { dollars } from '../format';
+import { dollars, headCount } from '../format';
 import { enrollment } from '../selectors';
 import type { GameState, LogEntry } from '../types';
 import { closeYear } from './money';
@@ -13,7 +13,7 @@ export function yearEnd(state: GameState, log: LogEntry[]): void {
   log.push({
     tick: state.clock.tick,
     kind: 'yearEnd',
-    text: `Year ${year} closed with ${enrollment(state)} students and a net of ${dollars(net)}.`,
+    text: `Year ${year} closed with ${headCount(enrollment(state))} students and a net of ${dollars(net)}.`,
     data: { year, enrollment: enrollment(state), earned: Math.round(earned), spent: Math.round(spent) },
   });
 }
