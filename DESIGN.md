@@ -1198,6 +1198,8 @@ Rungs [T]: size at 500, 2,000, 6,000, 10,000, 15,000, 22,000, 30,000 and 40,000 
 
 Pacing targets [T]: Growth around week 5, Flagship around week 12, Legacy around week 20. A perfect player should not top both ladders before about six real months.
 
+A game begun on the model campus uses the thresholds of 37.5. **For the milestones layer (the owner, 2026-11-12): an era should unlock something real: buildings, policies, land or landmarks.** What each one unlocks is to be proposed to him when that layer is reached. Until then an era is a name and a headline.
+
 ### 15.3 Rewards
 
 | Class | Rules |
@@ -1610,6 +1612,7 @@ Settled on 2026-11-11 and no longer open: the personalities addition (section 13
 9. **Game title.** "Campus Tycoon" is a working title.
 10. **One word for how students feel.** Settled on 2026-11-11: the word on screen is Happiness, everywhere (section 16.2).
 11. **Off-campus neighbourhoods.** Settled on 2026-11-11, with a road tool added by the owner. Section 25.
+12. **Legal review before App Store submission.** Asked for by the owner on 2026-11-12: a lawyer reviews the use of a real campus map and calendar as references (35.1 and 35.11). Not a blocker for building. It is on the owner's list for the store, with the other things only he can do.
 
 ### First-playable stand-ins
 
@@ -3572,6 +3575,8 @@ Asked for by the owner on 2026-11-12: "Analyze this map of this university and r
 
 One check is owed before release, by the owner and not by the game: where real buildings stand is a fact and not the map-maker's property, but his earlier rule was the cautious line, and a lawyer should say so for a game that is sold.
 
+**Before App Store submission (the owner, 2026-11-12):** have a lawyer review the use of a real campus map and calendar as references. It does not block building now.
+
 ### 35.2 The quarter turn
 
 The reference has its main street and neighbourhood on its south side. The game's town is on the east. So the layout is turned a quarter turn, with no mirroring: the reference's south becomes the game's east, its west becomes the game's south, its north the game's west, and its east the game's north. Chosen: turn the layout. The alternative: move the game's town to the south for this campus alone, which means a second town generator.
@@ -4051,9 +4056,9 @@ On the model campus it reads: the next class is 9,942 strong and the campus is 3
 
 ---
 
-## 37. Size goals from a 46,000 start (proposed, not built)
+## 37. Size goals from a 46,000 start
 
-Asked for by the owner on 2026-11-12: "A new game opens at 46,000 students, above the whole current ladder (500 to 40,000). Propose a new size ladder that starts above the model campus and still takes months to climb, and check the prestige ladder, eras, and land unlocks still make sense from this start." **This section is the proposal. Nothing in it is built, and it waits for his word.**
+Asked for by the owner on 2026-11-12: "A new game opens at 46,000 students, above the whole current ladder (500 to 40,000). Propose a new size ladder that starts above the model campus and still takes months to climb, and check the prestige ladder, eras, and land unlocks still make sense from this start." **This section was the proposal. He approved it on 2026-11-12, with a money target of his own (37.10).**
 
 ### 37.1 What was measured first
 
@@ -4146,7 +4151,7 @@ Reaching an era on either ladder still opens it. On the size ladder that is week
 - A rung is never lost once reached. Size rungs land only at intakes and rank rungs only on rankings day.
 - The applicants shown are the reach times the four causes shown, to the student.
 - The once-a-day player on the model campus has three to five size rungs by week 9, and none of the last three before week 12 [T].
-- The model campus still keeps a surplus left alone for five years, and the casual and once-a-day players stay inside 10 to 20 kept of every 100 in years 3 to 8.
+- The model campus still keeps a surplus left alone for five years. A well-run model campus keeps roughly $12 to $17 of every $100: the owner's target (37.10), in place of the 10 to 20 this line first said. The casual and once-a-day players are measured against it in years 3 to 8.
 - The campus scale still holds: the same campus at scale 1 and at 28 stays in proportion.
 - The once-a-day player misses nothing: a rung reached while away is in the paper.
 
@@ -4162,3 +4167,20 @@ Reaching an era on either ladder still opens it. On the size ladder that is week
 | What a size rung gives | A free building from art he has, shown to him first | A headline only |
 | Games begun on the small campus | No ladder | The old ladder of 15.2 for them |
 | The first rank | Near 150th | Wherever its numbers put it, about 70th, with half the ladder already passed |
+
+### 37.10 Approved by the owner (2026-11-12)
+
+| He said | What it means for the build |
+|---|---|
+| The eight goals from 50,000 to 100,000 | 37.2 as written |
+| Applicants driven by the four causes: campus appeal, marketing, football and academic rank | 37.3 as written |
+| The two changes that smooth the rank | 37.4: the opening classes count as begun there, and the first rank lands near 150th |
+| New era thresholds at 55,000, 66,000 and 81,000 | 37.5 as written |
+| "Re-tune money so a well-run model campus keeps roughly $12 to $17 of every $100" | His target, and it replaces the 10 to 20 of 37.8. The build says what it moved |
+| "Measure the pace in the long run and report how long each goal takes the casual and once-a-day players; the top goal should take months" | The report gives one table: each goal, and the week each of the two players reaches it, or that they do not |
+| The main street | Lantern Avenue, everywhere in the game |
+| The list of real school names that an invented name is checked against | Kept (`NAME_BLOCKLIST` in `src/sim/config/football.ts`, the blocklist of section 11) |
+| A lawyer's review before App Store submission | Noted in 35.1 and in section 21. Not a blocker now |
+| Eras should unlock something real | Noted in 15.2, for the milestones layer |
+
+The points of 37.9 he did not name stand as chosen, on his rule that the recommended option is taken and recorded: the first era is named Arrival, a game begun on the small campus has no ladder, and a size goal gives a free building only once he has seen the sheet. Until he has, a goal reached gives the headline and its place in the list.
