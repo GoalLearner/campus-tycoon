@@ -1454,7 +1454,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 5, Money, built (31.10, 29.16, 32.1):** payroll and every other cost as its own line, the Money panel, recruiting and marketing, the plain endowment, a seven-day phase-in for older saves, a yard that reaches sixteen cells with six workers, a card for anything broken, and a campus that opens with all four class years. Save version 9. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it. **Fixes after the money stop, built 2026-11-11 before the owner played it:** recreation buildings are seen in use and hold so many at once (8.5); the town is always built and lived in, with commuters on foot, cars that park and queue, a shuttle and delivery trucks, and markers at the edge of a campus the town cannot get into (25.7); a Crowd density setting with a frame budget (28.5); the Money panel scrolls on the shortest phone; and a Medical Center or Campus Safety office has no staff to pay before the first class (31.10). Save version 10. **Stop 4b, built 2026-11-11:** eight more places to eat with variety and a shared income, the computer lab, the makerspace and the study center, and lines at food by the time of day (30.8). Save version 11. The People stop (32.2) is next.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 5, Money, built (31.10, 29.16, 32.1):** payroll and every other cost as its own line, the Money panel, recruiting and marketing, the plain endowment, a seven-day phase-in for older saves, a yard that reaches sixteen cells with six workers, a card for anything broken, and a campus that opens with all four class years. Save version 9. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it. **Fixes after the money stop, built 2026-11-11 before the owner played it:** recreation buildings are seen in use and hold so many at once (8.5); the town is always built and lived in, with commuters on foot, cars that park and queue, a shuttle and delivery trucks, and markers at the edge of a campus the town cannot get into (25.7); a Crowd density setting with a frame budget (28.5); the Money panel scrolls on the shortest phone; and a Medical Center or Campus Safety office has no staff to pay before the first class (31.10). Save version 10. **Stop 4b, built 2026-11-11:** eight more places to eat with variety and a shared income, the computer lab, the makerspace and the study center, and lines at food by the time of day (30.8). Save version 11. **The People stop, built 2026-11-11:** cards for professors, staff, maintenance workers, officers, medics and visitors, who walk among the students in their own figures and are never more than a quarter of the crowd (32.6). No save version change. Nothing else is approved: Life and sound (section 33) waits for the owner's word.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -2224,7 +2224,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
 
-Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The face on the student card is drawn in code, and the owner approved it.
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it.
 
 **Planned.** The stand-ins of play stop 4b moved into the table above when it was built, on 2026-11-11. The pizza place and the taco stand are used as drawn, two cells wide with their patios, which was the owner's choice. One is left:
 
@@ -3027,7 +3027,7 @@ Play stop 5, 2026-11-11. `src/sim/systems/budget.ts` works out every line, `src/
 
 ## 32. People on campus
 
-Asked for by the owner on 2026-11-11, in two parts. He asked whether it was cheap enough to fold into the money stop. **The first part is, and is being built with it. The second is the next small stop, after money.**
+Asked for by the owner on 2026-11-11, in two parts. He asked whether it was cheap enough to fold into the money stop. **The first part was, and was built with it. The second was built on 2026-11-11 as the People stop, on his go-ahead: 32.6 says what was built and what is rough.**
 
 ### 32.1 Four class years from the first day
 
@@ -3108,6 +3108,78 @@ The People stop changes no rule and no number. It needs no rebalance, which is w
 - No card line breaks the tone guide's word list.
 - Opening cards, and the people on screen, change nothing in the saved game.
 - Non-students stay under their share of the crowd at every time of day.
+
+### 32.6 As built
+
+The People stop, 2026-11-11. `src/sim/systems/people.ts` makes the cards and `src/sim/config/people.ts` holds their words. How many are on screen is a plain rule, `othersWanted` in `src/app/crowd.ts`. No save version change: nothing about a person is stored.
+
+**The cards.** A person is a role, a number, and what they belong to: a kitchen, a store, a yard, a street. `personCard` makes the card from that, the save's seed and the campus's numbers, each time it is drawn. The card has a portrait, a name from the pools the student cards use, what they are, what they are doing, and one line in their own words under "Says". Tapping that line goes to what it is about.
+
+| Who | The number their line quotes | Their line goes to |
+|---|---|---|
+| Professor | Class size: students for each member of faculty | The lecture hall they teach in, which has a made-up name of its own: "Quillwell Hall" |
+| Academic advisor | Students to each member of staff | The Administration building |
+| Admissions guide | Of every 100 who applied, how many got a place. Before the first class, the size of the next one | The Administration building |
+| Dining worker | The students their kitchen feeds (30.8) | Their food place |
+| Store clerk | Who passes the door, and what the store takes a year | The store |
+| Maintenance worker | How many work at their yard, then the yard's own words: "4 of us at this yard. Keeping up." | The yard |
+| Campus Safety officer, medic | Calls handled and missed | Their building |
+| Visiting parent | The beds the campus is short. With room for everyone, the size of the next class | A dorm, or the Administration building |
+| Booster | Alumni so far | The Administration building |
+| Neighbour | How many from their street are enrolled | Their street, which opens the neighbourhood's panel |
+| Delivery driver | The kitchens and stores they supply | One of them |
+
+What a professor, an advisor or a dining worker is doing changes every twenty minutes of the game's own time. A worker's card says the job the map shows them walking to, and a responder's says the call they are on.
+
+**On the map.**
+
+| Piece | Built [T] |
+|---|---|
+| Professors and staff | They walk among the students: as many as the payroll has for each student in view, seen two and a half times as often, because one person in twenty would rarely be on a phone screen. All of them by morning and afternoon, a third in the evening, one in twenty at night, and three in ten at a weekend |
+| Whose a member of staff is | It follows where they step out from: a food place makes a dining worker of that kitchen, the store a clerk, anywhere else an advisor |
+| Visitors | At weekends of the game's own calendar, never at night: a tour group for every 45 students in view, three at most, each an admissions guide with two parents behind, and one or two boosters. A tour walks from a way onto campus to a lecture hall, something worth seeing and a dorm, and back |
+| The share | Everyone who is not a student, together, is never more than a quarter of the people on screen, at any hour and any Crowd density level. A neighbour who has wandered into view counts. When a view is small, visitors give way first, then staff, then professors |
+| Already on the map | The maintenance workers and the responders walking to a call were drawn before. They are tappable now. No second set was added, so a Campus Safety officer is only seen on a call |
+| Delivery drivers | While a delivery truck stands at a kitchen or the store, its driver stands on the kerb with boxes |
+| Neighbours | The townspeople of 25.7 have cards now, and say how many from their street are enrolled |
+| The ring | The gold ring of the student card goes under whoever's card is open |
+
+**Who wears what.** Each is the people pack's own figure, used as drawn.
+
+| Who | Figure |
+|---|---|
+| Professor | The teacher, in a mortarboard. It was one of the student looks until this stop |
+| Academic advisor | The waiter, in a bow tie |
+| Admissions guide | The bellhop, in a red cap, with the Medieval pack's red banner beside them as the pennant |
+| Dining worker | The chef |
+| Store clerk | The bus driver, in a yellow cap |
+| Booster | The figure in a top hat |
+| Delivery driver | The mail carrier, with the pack's boxes beside them |
+| Neighbour | The two plain figures in trucker caps |
+| Visiting parent | The two plain figures who look older: grey hair and glasses, and a white beard under a hat |
+| Students | The other twelve plain figures and the four athletes |
+
+**Where it differs from 32.2 and 32.3.**
+
+- Neighbours have two looks, both in trucker caps, where the design kept one. One look made a street of the same man.
+- Tour groups and boosters come at weekends only. No tour walks on a weekday.
+- A professor's class size is nearly always 20, because faculty are hired at one for every 20 students (31.10). It will move when Instruction funding arrives in layer 2.
+- Person cards have no Follow button.
+- The staff seen before the first class arrives are as they were: plain walkers with no card.
+
+**Tests.** `tests/people.test.ts`, 31 of them: a card for every role; the same card every time and a different person in another save; names from the student pools; each card's number checked against the simulation's own; a card gone when its job is; every line against the tone guide's word list; cards and a day of looking at them changing nothing in the saved game; and the quarter share held at every hour, size and setting.
+
+**Rough.**
+
+- Everyone only walks. Nobody is seen teaching, serving or selling.
+- What a professor's card says they are doing is not what the figure is seen doing: the figure walks where the crowd rules send it.
+- Parents are the same build as students. Only their hair and hats say they are older.
+- The pennant and the boxes are small.
+- A tour that walks out of view is put away, and another sets out where the player is looking.
+- In a view of the town alone, everyone is a neighbour. The quarter share is about who walks the campus.
+- Tapping was checked through the code path the dev pages use. It is on the list to try with a thumb on a real iPhone.
+
+`&person=professor` on a dev page opens the card of the nearest person of that role, `&centre` puts them in the middle, `&weekend` shows a weekend's visitors on any day, and `&truck` brings a delivery to its door.
 
 ---
 

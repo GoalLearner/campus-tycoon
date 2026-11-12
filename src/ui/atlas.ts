@@ -11,7 +11,7 @@ export interface Atlas {
   sheet: HTMLImageElement;
   frames: Record<string, Frame>;
   /** The pack's walking people, when it has them. */
-  people: { looks: number; crowd?: number; flip?: Record<string, string> } | null;
+  people: { looks: number; crowd?: number; flip?: Record<string, string>; roles?: Record<string, number> } | null;
 }
 
 let once: Promise<Atlas | null> | null = null;

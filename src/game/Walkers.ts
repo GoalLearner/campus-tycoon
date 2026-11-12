@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { CROWD_STEPS, walkersWanted } from '../app/crowd';
+import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
 import {
   enrollment,
   isPathKind,
+  peopleCounts,
+  personKey,
   PLACED,
   placeIndex,
   sampleStudents,
@@ -13,6 +15,7 @@ import {
   TOWN_X,
   townLiving,
   type GameState,
+  type PersonRef,
   type StudentRef,
   type Zone,
 } from '../sim';
@@ -38,6 +41,12 @@ import type { Iso } from './iso';
  * a neighbourhood joined to campus by a path: they walk in from their houses
  * in the morning and home in the evening. Townspeople are neighbours, and are
  * never students: they walk the streets whether or not the campus is joined.
+ *
+ * And a few people on campus are not students (DESIGN.md section 32.2):
+ * professors and staff by day, as many as the payroll has for each student,
+ * and at weekends tour groups behind a guide with a pennant, and a booster.
+ * Each has a look of their own and a card. Together they are never more than
+ * about a quarter of the people on screen.
  */
 
 /** What a walker is doing, for the student card. */
@@ -68,10 +77,14 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
 /** How far from the middle of a street its sidewalk runs. */
 const SIDEWALK = 0.36;
+/** A tour ambles. */
+const TOUR_PACE = 0.6;
+/** How far behind the one in front each member of a tour walks, in milliseconds. */
+const TOUR_GAP_MS = 750;
 
 type StopKind = 'building' | 'quad' | 'gate' | 'place' | 'house';
 /** What a place is for, which decides when people go there. */
-type Use = 'food' | 'play' | 'seat' | 'other';
+type Use = 'food' | 'play' | 'seat' | 'office' | 'other';
 
 interface Spot {
   x: number;
@@ -95,14 +108,33 @@ interface Stop {
   commuters?: boolean;
   /** The middle of a place that covers more than one cell. */
   middle?: Spot;
+  /** A hand-placed building: which one, and its family, so staff can be told whose they are. */
+  placedId?: number;
+  family?: string;
+  /** A house: the neighbourhood it stands in. */
+  hood?: number;
+}
+
+/** What a walker can be given beyond the usual: who they are, how they look, and where exactly they walk. */
+interface Extra {
+  person?: PersonRef;
+  look?: number;
+  route?: Spot[];
+  pace?: number;
+  /** A sprite drawn beside them, because no figure can hold anything: the guide's pennant. */
+  prop?: string;
 }
 
 interface Walker {
   sprite: Phaser.GameObjects.Image;
-  /** A student, a commuter (also a student), or a neighbour from the town. */
-  kind: 'student' | 'commuter' | 'neighbour';
-  /** The student this is, or null for staff and neighbours. */
+  /** A student, a commuter (also a student), a neighbour from the town, or one of the people who work at or visit the campus. */
+  kind: 'student' | 'commuter' | 'neighbour' | 'professor' | 'staff' | 'guide' | 'parent' | 'booster';
+  /** The student this is, or null for everyone else. */
   student: StudentRef | null;
+  /** Who this is, when they are not a student and have a card. */
+  person: PersonRef | null;
+  /** Something drawn beside them. */
+  prop: Phaser.GameObjects.Image | null;
   key: string | null;
   look: number;
   /** Where this trip began. */
@@ -177,7 +209,10 @@ export class Walkers {
   private spawnClock = 0;
   private townClock = 0;
   /** Arrivals still to step onto the map: each is a route and a delay. */
-  private queue: Array<{ from: Stop; to: Stop; inMs: number; student: StudentRef | null }> = [];
+  private queue: Array<{ from: Stop; to: Stop; inMs: number; student: StudentRef | null; kind?: Walker['kind']; extra?: Extra }> = [];
+  /** Faculty and staff on the payroll: how many professors and staff there are to be seen. */
+  private faculty = 0;
+  private staffOnBooks = 0;
   private readonly people: PeopleSpec | null;
   private state: GameState | null = null;
   /** The students walkers are drawn from. */
@@ -237,6 +272,9 @@ export class Walkers {
     this.width = width;
     this.height = height;
     this.students = enrollment(state);
+    const onBooks = peopleCounts(state);
+    this.faculty = onBooks.faculty;
+    this.staffOnBooks = onBooks.staff;
     this.isPath = cells.map((cell) => isPathKind(cell.kind));
     this.isStreet = cells.map((cell) => cell.kind === 'street');
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
@@ -307,9 +345,12 @@ export class Walkers {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
-      // Places to go: not ponds, landmarks, car parks, bins, the yard, or the offices people are sent from.
-      if (['water', 'landmark', 'parking', 'bin', 'yard', 'medical', 'safety'].includes(spec.family)) continue;
-      const use: Use = spec.family === 'recreation' ? 'play' : spec.family === 'seat' ? 'seat' : spec.family === 'dining' || spec.family === 'store' ? 'food' : 'other';
+      // Places to go: not ponds, car parks, bins, the yard, or the offices people are sent from. The
+      // Administration building is where staff work: they go there, and students do not.
+      if (['water', 'parking', 'bin', 'yard', 'medical', 'safety'].includes(spec.family)) continue;
+      if (spec.family === 'landmark' && placed.type !== 'admin') continue;
+      const use: Use =
+        spec.family === 'landmark' ? 'office' : spec.family === 'recreation' ? 'play' : spec.family === 'seat' ? 'seat' : spec.family === 'dining' || spec.family === 'store' ? 'food' : 'other';
       let found = false;
       for (let cy = placed.y; cy < placed.y + placed.h && !found; cy++) {
         for (let cx = placed.x; cx < placed.x + placed.w && !found; cx++) {
@@ -324,6 +365,8 @@ export class Walkers {
             cell: { x: cx, y: cy },
             door,
             middle: { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 },
+            placedId: placed.id,
+            family: spec.family,
           });
           found = true;
         }
@@ -342,7 +385,7 @@ export class Walkers {
       hood.plots.forEach((plot, n) => {
         const door = hood.row * width + plot.x;
         if (!this.isStreet[door]) return;
-        const stop: Stop = { kind: 'house', zone: null, cell: { x: plot.x, y: plot.y }, door, row: hood.row, commuters: walks && n < (here?.houses ?? 0) };
+        const stop: Stop = { kind: 'house', zone: null, cell: { x: plot.x, y: plot.y }, door, row: hood.row, hood: hood.id, commuters: walks && n < (here?.houses ?? 0) };
         this.houses.push(stop);
         if (stop.commuters) this.commuterHouses.push(stop);
       });
@@ -550,18 +593,25 @@ export class Walkers {
     );
   }
 
-  private start(from: Stop, to: Stop, partWay: boolean, student: StudentRef | null, kind: Walker['kind'] = 'student'): boolean {
+  private start(from: Stop, to: Stop, partWay: boolean, student: StudentRef | null, kind: Walker['kind'] = 'student', extra: Extra = {}): boolean {
     const people = this.people;
     if (!people || this.walkers.length >= CROWD_STEPS[this.step]!.alive) return false;
-    const key = student ? studentKey(student) : null;
+    // Nobody is in two places: a student by who they are, anyone else by their own card.
+    const key = student ? studentKey(student) : extra.person ? `p:${personKey(extra.person)}` : null;
     if (key !== null && this.out.has(key)) return false;
-    const route = this.routeBetween(from, to);
-    if (!route) return false;
+    const route = extra.route ?? this.routeBetween(from, to);
+    if (!route || route.length < 2) return false;
     const looks = Math.min(people.looks, people.crowd ?? people.looks);
     if (key !== null) this.out.add(key);
 
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
     sprite.setVisible(true).setAlpha(0);
+    let prop: Phaser.GameObjects.Image | null = null;
+    if (extra.prop && this.art.has(extra.prop)) {
+      prop = this.scene.add.image(0, 0, '__DEFAULT');
+      this.art.apply(prop, extra.prop);
+      prop.setAlpha(0);
+    }
     // Someone already part of the way along, so a view fills with people mid-stride.
     const leg = partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1;
     const begin = route[leg - 1]!;
@@ -569,15 +619,17 @@ export class Walkers {
       sprite,
       kind,
       student,
+      person: extra.person ?? null,
+      prop,
       key,
-      // A student's look is part of who they are.
-      look: student && this.state ? studentLook(this.state, student) % looks : Math.floor(Math.random() * looks),
+      // A student's look is part of who they are. Anyone with a job wears it.
+      look: extra.look ?? (student && this.state ? studentLook(this.state, student) % looks : Math.floor(Math.random() * looks)),
       from,
       route,
       leg,
       x: begin.x,
       y: begin.y,
-      pace: PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period]) * (0.8 + Math.random() * 0.45),
+      pace: extra.pace ?? PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period]) * (0.8 + Math.random() * 0.45),
       direction: 'se',
       stride: Math.random() * 1000,
       alpha: 0,
@@ -595,6 +647,7 @@ export class Walkers {
     if (walker.key !== null) this.out.delete(walker.key);
     if (walker.key !== null && walker.key === this.marked) this.ring?.setVisible(false);
     walker.sprite.setVisible(false);
+    walker.prop?.destroy();
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
   }
@@ -614,6 +667,11 @@ export class Walkers {
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((walker.x + walker.y - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
+    if (walker.prop) {
+      // Beside them, a little behind: no figure in the pack can hold anything.
+      const beside = this.iso.toWorld(walker.x - 0.32, walker.y - 0.18);
+      walker.prop.setPosition(beside.x, beside.y).setDepth(walker.sprite.depth - 0.1).setAlpha(walker.alpha);
+    }
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
       const ring = this.ring ?? this.scene.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
@@ -629,7 +687,7 @@ export class Walkers {
    * The walker at a point of the world, or null. `reach` widens each sprite,
    * because a walker is a small thing to hit with a thumb.
    */
-  walkerAt(worldX: number, worldY: number, reach: number): { student: StudentRef | null; neighbour: boolean } | null {
+  walkerAt(worldX: number, worldY: number, reach: number): { student: StudentRef | null; person: PersonRef | null; neighbour: boolean } | null {
     let found: Walker | null = null;
     let nearest = Infinity;
     for (const walker of this.walkers) {
@@ -642,7 +700,7 @@ export class Walkers {
         found = walker;
       }
     }
-    return found ? { student: found.student, neighbour: found.kind === 'neighbour' } : null;
+    return found ? { student: found.student, person: found.person, neighbour: found.kind === 'neighbour' } : null;
   }
 
   private walkerOf(key: string): Walker | undefined {
@@ -680,7 +738,19 @@ export class Walkers {
       .map((walker) => walker.student!);
   }
 
-  /** Ring the student whose card is open. */
+  /** The people who are not students and are out walking, nearest to a point of the world first. For the dev screenshot helper. */
+  peopleNear(worldX: number, worldY: number): PersonRef[] {
+    const far = (walker: Walker): number => {
+      const at = this.iso.toWorld(walker.x, walker.y);
+      return Math.hypot(at.x - worldX, at.y - worldY);
+    };
+    return this.walkers
+      .filter((walker) => walker.person !== null && walker.fading !== 'out')
+      .sort((a, b) => far(a) - far(b))
+      .map((walker) => walker.person!);
+  }
+
+  /** Ring the walker whose card is open: a student by their key, anyone else by `p:` and their own. */
   setMarked(key: string | null): void {
     this.marked = key;
     if (key === null || !this.walkerOf(key)) this.ring?.setVisible(false);
@@ -722,8 +792,137 @@ export class Walkers {
         // Mostly to a house on the same street or the next: a short walk, not a march across town.
         const near = this.houses.filter((house) => house !== from && Math.abs((house.row ?? 0) - (from.row ?? 0)) <= 6);
         const to = pick(near.length > 0 ? near : this.houses);
-        if (to && to !== from) this.start(from, to, out < wanted * 0.6, null, 'neighbour');
+        // A neighbour wears one of the two looks kept for the town, and has a card: who they are follows their house.
+        const townie = this.people?.roles?.townie;
+        const n = from.cell.y * this.width + from.cell.x;
+        const extra: Extra = townie === undefined || from.hood === undefined ? {} : { person: { role: 'townie', n, at: from.hood }, look: townie + (n % 2) };
+        if (to && to !== from) this.start(from, to, out < wanted * 0.6, null, 'neighbour', extra);
       }
+    }
+  }
+
+  /** Somewhere for a professor or a member of staff to be going. */
+  private workDestination(kind: 'professor' | 'staff', origin: Stop): Stop | undefined {
+    const others = this.stops.filter((stop) => stop !== origin);
+    const classes = others.filter((stop) => stop.zone === 'academic');
+    const dorms = others.filter((stop) => stop.zone === 'housing');
+    const quads = others.filter((stop) => stop.kind === 'quad');
+    const places = others.filter((stop) => stop.kind === 'place');
+    const food = places.filter((stop) => stop.family === 'dining');
+    const office = places.filter((stop) => stop.use === 'office');
+    const books = places.filter((stop) => stop.family === 'library' || stop.family === 'tutoring');
+    const lunch = this.period === 'afternoon' ? 22 : 10;
+    const choice =
+      kind === 'professor'
+        ? pickWeighted([[classes, 55], [books, 15], [food, lunch], [office, 8], [quads, 5]])
+        : pickWeighted([[office, 30], [classes, 25], [food, lunch], [dorms, 15], [quads, 10]]);
+    return pick(choice.length > 0 ? choice : classes.length > 0 ? classes : others);
+  }
+
+  /** A guide with a pennant and two parents behind, on a walk round the campus and back to where they came in. */
+  private startTour(here: readonly Stop[]): boolean {
+    const roles = this.people?.roles;
+    if (!roles || roles.guide === undefined || roles.parent === undefined) return false;
+    // They set out where the player is looking: from a way onto campus when one is in view, or from any door.
+    const gatesHere = this.gates.filter((gate) => here.some((stop) => stop.door === gate.door));
+    const begin = pick(gatesHere.length > 0 ? gatesHere : here.filter((stop) => stop.kind !== 'quad'));
+    if (!begin) return false;
+    const others = this.stops.filter((stop) => stop !== begin);
+    const classes = others.filter((stop) => stop.zone === 'academic');
+    const dorms = others.filter((stop) => stop.zone === 'housing');
+    const sights = others.filter((stop) => stop.kind === 'quad' || (stop.kind === 'place' && stop.use !== 'seat'));
+    // A lecture hall, something worth seeing, a dorm, and back.
+    const calls = [pick(classes), pick(sights), pick(dorms)].filter((stop): stop is Stop => !!stop);
+    const route: Spot[] = [];
+    let at = begin;
+    for (const next of [...calls, begin]) {
+      if (next === at) continue;
+      const leg = this.routeBetween(at, next);
+      if (!leg) continue;
+      route.push(...(route.length === 0 ? leg : leg.slice(1)));
+      at = next;
+    }
+    if (route.length < 4) return false;
+    const tour = Math.floor(Math.random() * 100_000);
+    const led = this.start(begin, begin, false, null, 'guide', {
+      person: { role: 'guide', n: tour % Math.max(1, this.staffOnBooks) },
+      look: roles.guide,
+      route,
+      pace: PACE * TOUR_PACE,
+      prop: 'people.pennant',
+    });
+    if (!led) return false;
+    for (let k = 1; k < TOUR_SIZE; k++) {
+      const n = tour * 2 + k;
+      this.queue.push({
+        from: begin,
+        to: begin,
+        inMs: k * TOUR_GAP_MS,
+        student: null,
+        kind: 'parent',
+        extra: { person: { role: 'parent', n }, look: roles.parent + (n % 2), route: route.map((spot) => ({ ...spot })), pace: PACE * TOUR_PACE },
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Keep the people who are not students among the crowd: professors and
+   * staff by day, visitors at weekends. How many is a plain rule (see
+   * `othersWanted`): what the payroll has for each student, and never more
+   * than about a quarter of the people on screen.
+   */
+  private topUpOthers(here: readonly Stop[], studentsSeen: number, neighboursSeen: number): void {
+    const roles = this.people?.roles;
+    if (!roles || roles.professor === undefined || this.students <= 0) return;
+    const want = othersWanted({ studentsInView: studentsSeen, students: this.students, faculty: this.faculty, staff: this.staffOnBooks, period: this.period, weekend: this.weekend });
+    let professors = 0;
+    let staff = 0;
+    let tours = 0;
+    let boosters = 0;
+    let people = 0;
+    for (const walker of this.walkers) {
+      if (walker.fading === 'out') continue;
+      if (walker.kind === 'professor') professors += 1;
+      else if (walker.kind === 'staff') staff += 1;
+      else if (walker.kind === 'guide') tours += 1;
+      else if (walker.kind === 'booster') boosters += 1;
+      else if (walker.kind !== 'parent') continue;
+      people += 1;
+    }
+    for (const waiting of this.queue) if (waiting.kind === 'parent') people += 1;
+    // A neighbour who has wandered into view counts against the share too.
+    const room = Math.floor(studentsSeen / 3) - people - neighboursSeen;
+    if (room <= 0) return;
+
+    // One newcomer at a time. A kind that cannot be started just now does not hold up the next.
+    if (professors < want.professors) {
+      const origin = pick(here.filter((stop) => stop.zone === 'academic' || stop.family === 'library')) ?? pick(here.filter((stop) => stop.kind === 'building'));
+      const to = origin ? this.workDestination('professor', origin) : undefined;
+      const n = Math.floor(Math.random() * Math.max(1, this.faculty));
+      if (origin && to && this.start(origin, to, professors < want.professors * 0.6, null, 'professor', { person: { role: 'professor', n }, look: roles.professor })) return;
+    }
+    if (staff < want.staff) {
+      const origin = pick(here.filter((stop) => stop.kind === 'building' || (stop.kind === 'place' && (stop.use === 'office' || stop.use === 'food'))));
+      const to = origin ? this.workDestination('staff', origin) : undefined;
+      // Whose they are follows where they step out from: a kitchen, the store, or an office.
+      let person: PersonRef = { role: 'advisor', n: Math.floor(Math.random() * Math.max(1, this.staffOnBooks)) };
+      let look = roles.advisor;
+      if (origin?.family === 'dining' && origin.placedId !== undefined && roles.chef !== undefined) {
+        person = { role: 'chef', n: 0, at: origin.placedId };
+        look = roles.chef;
+      } else if (origin?.family === 'store' && origin.placedId !== undefined && roles.clerk !== undefined) {
+        person = { role: 'clerk', n: 0, at: origin.placedId };
+        look = roles.clerk;
+      }
+      if (origin && to && look !== undefined && this.start(origin, to, staff < want.staff * 0.6, null, 'staff', { person, look })) return;
+    }
+    if (tours < want.tours && room >= TOUR_SIZE && this.startTour(here)) return;
+    if (boosters < want.boosters && roles.booster !== undefined) {
+      const from = pick(here.filter((stop) => stop.kind !== 'quad'));
+      const office = this.stops.filter((stop) => stop.use === 'office');
+      const to = pick(office.length > 0 ? office : this.stops.filter((stop) => stop.kind === 'quad'));
+      if (from && to && from !== to) this.start(from, to, false, null, 'booster', { person: { role: 'booster', n: Math.floor(Math.random() * 60) }, look: roles.booster, pace: PACE * 0.8 });
     }
   }
 
@@ -739,12 +938,13 @@ export class Walkers {
       const arrival = this.queue[i]!;
       arrival.inMs -= dt;
       if (arrival.inMs > 0) continue;
-      this.start(arrival.from, arrival.to, false, arrival.student);
+      this.start(arrival.from, arrival.to, false, arrival.student, arrival.kind ?? 'student', arrival.extra ?? {});
       this.queue.splice(i, 1);
     }
 
     // Walk.
     let seen = 0;
+    let neighboursSeen = 0;
     this.crossingNow.clear();
     for (let i = this.walkers.length - 1; i >= 0; i--) {
       const walker = this.walkers[i]!;
@@ -810,9 +1010,11 @@ export class Walkers {
 
       if (this.inView(view, walker.x, walker.y, 40)) {
         if (walker.kind === 'student') seen += 1;
+        else if (walker.kind === 'neighbour') neighboursSeen += 1;
         walker.offscreenMs = 0;
-      } else if (walker.kind === 'student') {
-        // Students fill the view the player is looking at. The few who walk the town keep going unseen.
+      } else if (walker.kind !== 'commuter' && walker.kind !== 'neighbour') {
+        // Students, and the staff and visitors among them, fill the view the player is looking at. The few
+        // who walk the town keep going unseen.
         walker.offscreenMs += dt;
         if (walker.offscreenMs > OFFSCREEN_LIMIT_MS && this.queue.length === 0) {
           this.retire(i);
@@ -840,6 +1042,8 @@ export class Walkers {
           if (from && to) this.start(from, to, seen < wanted * 0.6, student);
         }
       }
+      // And among them, the people who work here or are visiting.
+      this.topUpOthers(this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0)), seen, neighboursSeen);
     }
     this.townClock += dt;
     if (this.townClock >= 450) {
@@ -880,13 +1084,17 @@ export class Walkers {
   }
 
   /** How many of each kind are out. For the dev readout. */
-  get counts(): { students: number; commuters: number; neighbours: number } {
-    const counts = { students: 0, commuters: 0, neighbours: 0 };
-    for (const walker of this.walkers) counts[walker.kind === 'student' ? 'students' : walker.kind === 'commuter' ? 'commuters' : 'neighbours'] += 1;
+  get counts(): { students: number; commuters: number; neighbours: number; professors: number; staff: number; visitors: number } {
+    const counts = { students: 0, commuters: 0, neighbours: 0, professors: 0, staff: 0, visitors: 0 };
+    for (const walker of this.walkers) {
+      const kind = walker.kind;
+      counts[kind === 'student' ? 'students' : kind === 'commuter' ? 'commuters' : kind === 'neighbour' ? 'neighbours' : kind === 'professor' ? 'professors' : kind === 'staff' ? 'staff' : 'visitors'] += 1;
+    }
     return counts;
   }
 
   clear(): void {
+    for (const walker of this.walkers) walker.prop?.destroy();
     for (const walker of this.walkers) walker.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
     for (const banner of this.banners) banner.text.destroy();

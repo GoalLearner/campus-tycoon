@@ -289,15 +289,44 @@ for key, name in (('shuttle', 'Bus_Orange'), ('truck.0', 'Truck_Groceries'), ('t
         sprites[f'{key}.{way}'] = {'layers': [layer]}
 # A football for the recreation field. The pool's own picture already has its toys.
 sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0.5, scale=0.045)]}
+# What goes beside two of the people on campus, because no figure can hold anything: the red pennant an
+# admissions guide leads a tour with, and the boxes a delivery driver unloads.
+sprites['people.pennant'] = {'layers': [standing(OLD + 'Decor/Banner.png', 0.5, 0.5, scale=0.75)]}
+sprites['people.boxes'] = {'layers': [standing(DECOR + 'Boxes1.png', 0.5, 0.5, scale=0.85)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
 sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]}
 
 # ----------------------------------------------------------------- people --
-students = [f'Character{n}' for n in range(1, 17)] + [f'SportsPlayer{n}' for n in range(1, 5)] + ['Teacher']
-helpers = ['Doctor', 'Police', 'ConstructionWorker']
+# The crowd is the students: twelve plain looks and the four athletes. Everyone else has a look of their own,
+# so a hat or a uniform tells the player who they are (DESIGN.md section 32.3). Nothing here is assembled:
+# each is the pack's own figure.
+#   Two older-looking figures are kept for visiting parents, and the two in trucker caps for neighbours from the town.
+PARENTS = [1, 4]
+TOWNIES = [5, 6]
+plain = [n for n in range(1, 17) if n not in PARENTS + TOWNIES]
+students = [f'Character{n}' for n in plain] + [f'SportsPlayer{n}' for n in range(1, 5)]
+jobs = [
+    ('professor', ['Teacher']),
+    ('advisor', ['Waiter']),
+    ('guide', ['BellHop']),
+    ('chef', ['Chef']),
+    ('clerk', ['Busdriver']),
+    ('booster', ['Mayor']),
+    ('driver', ['Mailman']),
+    ('townie', [f'Character{n}' for n in TOWNIES]),
+    ('parent', [f'Character{n}' for n in PARENTS]),
+    ('medic', ['Doctor']),
+    ('officer', ['Police']),
+    ('worker', ['ConstructionWorker']),
+]
+roles = {'athlete': len(plain)}
+others = []
+for role, names in jobs:
+    roles[role] = len(students) + len(others)
+    others += names
 people = {
-    'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last three looks are the responders and the grounds worker, not part of the crowd.',
+    'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The first looks are the student crowd. The rest each have a job, named under roles: a role with two looks uses its number and the next.',
     'frames': 8,
     'frameMs': 84,
     'height': 36,
@@ -305,8 +334,8 @@ people = {
     'rows': {'sw': 1, 'nw': 3},
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
-    'roles': {'medic': len(students), 'officer': len(students) + 1, 'worker': len(students) + 2, 'athlete': 16},
-    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + helpers],
+    'roles': roles,
+    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + others],
 }
 
 recipe = {

@@ -143,6 +143,83 @@ export function queueNow(students: number, kind: string, period: DayPeriod): num
 }
 
 /**
+ * People who are not students (DESIGN.md section 32.2): professors, staff and
+ * visitors. Students stay most of the crowd: everyone else together is never
+ * more than this share of the people on screen, at any hour and any setting.
+ */
+export const OTHERS_SHARE = 0.25;
+/**
+ * A professor or a member of staff is seen this many times more often than
+ * their numbers alone would give. One in twenty people on a real campus is
+ * faculty, and at that rate a phone screen would rarely show one.
+ */
+export const OTHERS_SEEN_MORE = 2.5;
+/** How much of the working day it is: staff by day, a few in the evening, almost nobody at night. */
+export const WORKDAY: Record<DayPeriod, number> = { morning: 1, afternoon: 1, evening: 0.35, night: 0.05 };
+/** On a weekend of the game's calendar few of the staff are in. */
+export const WEEKEND_STAFF = 0.3;
+/** A tour group for this many students in view, at a weekend, and the most groups at once. */
+export const STUDENTS_PER_TOUR = 45;
+export const MAX_TOURS = 3;
+/** A tour is a guide and two parents. */
+export const TOUR_SIZE = 3;
+/** Boosters come at weekends: one, and a second on a busy view. */
+export const STUDENTS_PER_BOOSTER = 60;
+export const MAX_BOOSTERS = 2;
+
+export interface OthersFacts {
+  /** Students wanted on screen now: the crowd everyone else is measured against. */
+  studentsInView: number;
+  /** Students enrolled, and the faculty and staff the campus pays: the payroll's own counts. */
+  students: number;
+  faculty: number;
+  staff: number;
+  period: DayPeriod;
+  /** Saturday or Sunday in the game's calendar. */
+  weekend: boolean;
+}
+
+export interface Others {
+  professors: number;
+  /** Advisors, dining workers and store clerks. */
+  staff: number;
+  /** Tour groups, each a guide and two parents. Weekends only. */
+  tours: number;
+  /** Weekends only. */
+  boosters: number;
+  /** Everyone above, counted as people. */
+  people: number;
+}
+
+/**
+ * How many people who are not students to show among the students on screen.
+ * Professors and staff follow the payroll: as many as the campus employs for
+ * each student, seen a little more often than that, by day. Visitors come at
+ * weekends. All of them together stay under their share of the crowd.
+ */
+export function othersWanted(facts: OthersFacts): Others {
+  const crowd = Math.max(0, Math.floor(facts.studentsInView));
+  // Others over everyone is at most the share: so others are at most this many for the students there are.
+  const most = Math.floor((crowd * OTHERS_SHARE) / (1 - OTHERS_SHARE));
+  if (most <= 0 || facts.students <= 0) return { professors: 0, staff: 0, tours: 0, boosters: 0, people: 0 };
+  const day = WORKDAY[facts.period] * (facts.weekend ? WEEKEND_STAFF : 1);
+  const perStudent = (employed: number): number => (crowd * employed * OTHERS_SEEN_MORE * day) / facts.students;
+  // Nobody can be seen who is not on the books.
+  let professors = Math.min(facts.faculty, Math.round(perStudent(facts.faculty)));
+  let staff = Math.min(facts.staff, Math.round(perStudent(facts.staff)));
+  const visiting = facts.weekend && facts.period !== 'night' ? (facts.period === 'evening' ? 0.5 : 1) : 0;
+  let tours = Math.min(MAX_TOURS, Math.round((crowd / STUDENTS_PER_TOUR) * visiting));
+  let boosters = visiting > 0 ? Math.min(MAX_BOOSTERS, Math.max(1, Math.round((crowd / STUDENTS_PER_BOOSTER) * visiting))) : 0;
+  // Over the share: visitors give way first, a group at a time, then staff, then professors.
+  const people = (): number => professors + staff + tours * TOUR_SIZE + boosters;
+  while (people() > most && boosters > 0) boosters -= 1;
+  while (people() > most && tours > 0) tours -= 1;
+  while (people() > most && staff > 0) staff -= 1;
+  while (people() > most && professors > 0) professors -= 1;
+  return { professors, staff, tours, boosters, people: people() };
+}
+
+/**
  * How far the frame rate may fall before the crowd steps down, and how good it
  * must be to step back up, as shares of the best rate this screen has shown.
  * A phone in Low Power Mode draws 30 frames a second however little there is

@@ -3441,6 +3441,30 @@
     }
    ]
   },
+  "people.pennant": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.75
+    }
+   ]
+  },
+  "people.boxes": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Boxes1.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.85
+    }
+   ]
+  },
   "decor.car": {
    "layers": [
     {
@@ -3484,7 +3508,7 @@
   "Elm"
  ],
  "people": {
-  "comment": "Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last three looks are the responders and the grounds worker, not part of the crowd.",
+  "comment": "Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The first looks are the student crowd. The rest each have a job, named under roles: a role with two looks uses its number and the next.",
   "frames": 8,
   "frameMs": 84,
   "height": 36,
@@ -3500,20 +3524,25 @@
    "se": "sw",
    "ne": "nw"
   },
-  "crowd": 21,
+  "crowd": 16,
   "roles": {
-   "medic": 21,
-   "officer": 22,
-   "worker": 23,
-   "athlete": 16
+   "athlete": 12,
+   "professor": 16,
+   "advisor": 17,
+   "guide": 18,
+   "chef": 19,
+   "clerk": 20,
+   "booster": 21,
+   "driver": 22,
+   "townie": 23,
+   "parent": 25,
+   "medic": 27,
+   "officer": 28,
+   "worker": 29
   },
   "looks": [
-   "penzilla/NPC/NpcReadymade_Character1.png",
    "penzilla/NPC/NpcReadymade_Character2.png",
    "penzilla/NPC/NpcReadymade_Character3.png",
-   "penzilla/NPC/NpcReadymade_Character4.png",
-   "penzilla/NPC/NpcReadymade_Character5.png",
-   "penzilla/NPC/NpcReadymade_Character6.png",
    "penzilla/NPC/NpcReadymade_Character7.png",
    "penzilla/NPC/NpcReadymade_Character8.png",
    "penzilla/NPC/NpcReadymade_Character9.png",
@@ -3529,6 +3558,16 @@
    "penzilla/NPC/NpcReadymade_SportsPlayer3.png",
    "penzilla/NPC/NpcReadymade_SportsPlayer4.png",
    "penzilla/NPC/NpcReadymade_Teacher.png",
+   "penzilla/NPC/NpcReadymade_Waiter.png",
+   "penzilla/NPC/NpcReadymade_BellHop.png",
+   "penzilla/NPC/NpcReadymade_Chef.png",
+   "penzilla/NPC/NpcReadymade_Busdriver.png",
+   "penzilla/NPC/NpcReadymade_Mayor.png",
+   "penzilla/NPC/NpcReadymade_Mailman.png",
+   "penzilla/NPC/NpcReadymade_Character5.png",
+   "penzilla/NPC/NpcReadymade_Character6.png",
+   "penzilla/NPC/NpcReadymade_Character1.png",
+   "penzilla/NPC/NpcReadymade_Character4.png",
    "penzilla/NPC/NpcReadymade_Doctor.png",
    "penzilla/NPC/NpcReadymade_Police.png",
    "penzilla/NPC/NpcReadymade_ConstructionWorker.png"

@@ -105,6 +105,8 @@ interface Vehicle {
   x: number;
   y: number;
   onRoad: boolean;
+  /** A delivery truck: its driver, who steps out with boxes while it stands at the kitchen or the store. */
+  driver: { n: number; x: number; y: number; front: number; body: Phaser.GameObjects.Image; boxes: Phaser.GameObjects.Image } | null;
 }
 
 const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
@@ -142,6 +144,8 @@ export class Cars {
   private stops: number[] = [];
   /** Road cells beside a dining hall or a store. */
   private deliveries: number[] = [];
+  /** For each of those, the middle of the building's nearest cell: where the driver carries the boxes. */
+  private dropAt = new Map<number, { x: number; y: number; front: number }>();
   private drivers = 0;
   private spawnClock = 0;
   private truckClock = TRUCK_EVERY_MS * 0.5;
@@ -187,6 +191,7 @@ export class Cars {
 
     this.parks = [];
     this.deliveries = [];
+    this.dropAt.clear();
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
@@ -197,7 +202,19 @@ export class Cars {
       // A truck calls where there is food or a shop, and a road to pull up on.
       if (spec.family === 'dining' || spec.family === 'store') {
         const door = roadBeside(placed.x, placed.y, placed.w, placed.h);
-        if (door >= 0) this.deliveries.push(door);
+        if (door >= 0) {
+          this.deliveries.push(door);
+          // The driver stands between the truck and the building, at the building's edge.
+          const rx = door % width;
+          const ry = Math.floor(door / width);
+          const bx = Math.max(placed.x, Math.min(placed.x + placed.w - 1, rx));
+          const by = Math.max(placed.y, Math.min(placed.y + placed.h - 1, ry));
+          // On the road's kerb, outside the building's own ground. South or east of a building is in front
+          // of it, however wide it is, so there the driver is drawn over it.
+          const inFront = ry >= placed.y + placed.h || rx >= placed.x + placed.w;
+          const front = inFront ? (placed.x + placed.w - 1 + placed.y + placed.h - 1) * 4 + 3.1 : 0;
+          this.dropAt.set(door, { x: rx + 0.5 + (bx - rx) * 0.36, y: ry + 0.5 + (by - ry) * 0.36, front });
+        }
       }
     }
 
@@ -308,7 +325,7 @@ export class Cars {
     if (route.length < 2) return null;
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
     sprite.setVisible(true);
-    const vehicle: Vehicle = { sprite, kind, look, route, leg: 0, along: 0, alpha: 0, fading: 'in', pauseMs: 0, pauseAt, loop: 0, heading: 'px', x: 0, y: 0, onRoad: false };
+    const vehicle: Vehicle = { sprite, kind, look, route, leg: 0, along: 0, alpha: 0, fading: 'in', pauseMs: 0, pauseAt, loop: 0, heading: 'px', x: 0, y: 0, onRoad: false, driver: null };
     if (partWay) {
       // The first cars are already on their way, so the roads are not empty when the map opens.
       vehicle.leg = Math.floor(Math.random() * (route.length - 1));
@@ -381,7 +398,19 @@ export class Cars {
     if (!there || !back || there.length < 2) return;
     const route = [...this.nodes(there), ...this.nodes(back.slice(1))];
     if (route.length < 3) return;
-    this.launch('truck', `truck.${Math.floor(Math.random() * 2)}`, route, false, new Map([[there.length - 2, TRUCK_PAUSE_MS]]));
+    const truck = this.launch('truck', `truck.${Math.floor(Math.random() * 2)}`, route, false, new Map([[there.length - 2, TRUCK_PAUSE_MS]]));
+    // Its driver: the pack's mail carrier, with boxes beside them, seen only while the truck stands at the door.
+    const look = this.art.people?.roles?.driver;
+    const drop = this.dropAt.get(at);
+    if (truck && look !== undefined && drop) {
+      const body = this.scene.add.image(0, 0, '__DEFAULT').setVisible(false);
+      const boxes = this.scene.add.image(0, 0, '__DEFAULT').setVisible(false);
+      const facing = this.art.people?.flip?.sw ?? 'sw';
+      this.art.apply(body, `person.${look}.${facing}.0`);
+      body.setFlipX(this.art.people?.flip?.sw !== undefined);
+      if (this.art.has('people.boxes')) this.art.apply(boxes, 'people.boxes');
+      truck.driver = { n: Math.floor(Math.random() * 40), x: drop.x, y: drop.y, front: drop.front, body, boxes };
+    }
   }
 
   private draw(vehicle: Vehicle): void {
@@ -429,6 +458,8 @@ export class Cars {
 
   private retire(index: number): void {
     const vehicle = this.vehicles[index]!;
+    vehicle.driver?.body.destroy();
+    vehicle.driver?.boxes.destroy();
     vehicle.sprite.setVisible(false);
     this.pool.push(vehicle.sprite);
     this.vehicles.splice(index, 1);
@@ -472,6 +503,21 @@ export class Cars {
         }
       }
       count[vehicle.kind] += 1;
+      if (vehicle.driver) {
+        // Out with the boxes while the truck stands at the door, and back in the cab when it moves.
+        const out = vehicle.pauseMs > 0 && vehicle.fading !== 'out';
+        const who = vehicle.driver;
+        who.body.setVisible(out);
+        who.boxes.setVisible(out && this.art.has('people.boxes'));
+        if (out) {
+          const at = this.iso.toWorld(who.x, who.y);
+          const depth = Math.max((who.x + who.y - 1) * 4 + 2.6, who.front);
+          who.body.setPosition(at.x, at.y).setDepth(depth);
+          // The boxes go down on the kerb beside them.
+          const beside = this.iso.toWorld(who.x + 0.34, who.y + 0.08);
+          who.boxes.setPosition(beside.x, beside.y).setDepth(depth + 0.05);
+        }
+      }
       if (vehicle.fading !== 'out') {
         if (vehicle.pauseMs > 0) vehicle.pauseMs -= dt;
         else {
@@ -535,6 +581,39 @@ export class Cars {
     }
   }
 
+  /** Dev screenshots: a delivery truck that is nearly at its door, so its driver is seen without a wait. */
+  truckNow(): void {
+    const before = this.vehicles.length;
+    this.startTruck();
+    const truck = this.vehicles[before];
+    const stop = truck ? [...truck.pauseAt.keys()][0] : undefined;
+    if (!truck || truck.kind !== 'truck' || stop === undefined) return;
+    // It stands a full minute, so a screenshot taken on a slow machine still finds it there.
+    truck.pauseAt.set(stop, 60_000);
+    truck.leg = stop;
+    truck.along = 0.8;
+    truck.alpha = 1;
+    truck.fading = null;
+  }
+
+  /** The delivery driver under a point of the world, by their number, or null. `reach` widens the figure for a thumb. */
+  driverAt(worldX: number, worldY: number, reach: number): number | null {
+    for (const vehicle of this.vehicles) {
+      const who = vehicle.driver;
+      if (!who || !who.body.visible) continue;
+      const box = who.body.getBounds();
+      if (worldX >= box.x - reach && worldX <= box.right + reach && worldY >= box.y - reach && worldY <= box.bottom + reach) return who.n;
+    }
+    return null;
+  }
+
+  /** Where each delivery driver stands now, in the world. For the dev screenshot helper. */
+  get driversOut(): Array<{ n: number; x: number; y: number }> {
+    const out: Array<{ n: number; x: number; y: number }> = [];
+    for (const vehicle of this.vehicles) if (vehicle.driver?.body.visible) out.push({ n: vehicle.driver.n, x: vehicle.driver.body.x, y: vehicle.driver.body.y });
+    return out;
+  }
+
   /** How many vehicles are out. For the dev console. */
   get count(): number {
     return this.vehicles.length;
@@ -548,6 +627,10 @@ export class Cars {
   }
 
   clear(): void {
+    for (const vehicle of this.vehicles) {
+      vehicle.driver?.body.destroy();
+      vehicle.driver?.boxes.destroy();
+    }
     for (const vehicle of this.vehicles) vehicle.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
     for (const sprite of this.parked) sprite.destroy();
