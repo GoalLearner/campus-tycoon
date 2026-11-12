@@ -1,3 +1,4 @@
+import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { studentCard, studentKey, studentLook, type GameState } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
@@ -29,11 +30,26 @@ const INDOORS: Record<string, string> = {
   movingIn: 'Unpacking in the dorm',
 };
 
+/** The same, by the part of the player's day where it reads differently. */
+const DOING_BY_PERIOD: Partial<Record<DayPeriod, Record<string, string>>> = {
+  morning: { toClass: 'Hurrying to class' },
+  evening: { toClass: 'Walking to an evening class', nextClass: 'Walking to an evening class' },
+  night: { toClass: 'Walking to a night class', nextClass: 'Walking to a night class', toDorm: 'Heading back to the dorm for the night' },
+};
+const INDOORS_BY_PERIOD: Partial<Record<DayPeriod, Record<string, string>>> = {
+  evening: { toClass: 'In an evening class', nextClass: 'In an evening class' },
+  night: { toClass: 'In a night class', nextClass: 'In a night class', toDorm: 'Asleep in the dorm' },
+};
+
 /** A walker on the way to, or at, a named place such as the Dining hall. */
 function doingText(doing: string): string {
   if (doing.startsWith('toPlace:')) return `Heading to the ${doing.slice(8)}`;
   if (doing.startsWith('atPlace:')) return `At the ${doing.slice(8)}`;
-  return DOING[doing] ?? 'Out on campus';
+  return DOING_BY_PERIOD[currentDaylight().period]?.[doing] ?? DOING[doing] ?? 'Out on campus';
+}
+
+function indoorsText(doing: string): string {
+  return INDOORS_BY_PERIOD[currentDaylight().period]?.[doing] ?? INDOORS[doing] ?? 'Out of sight';
 }
 
 const MOOD_NAMES = ['Miserable', 'Unhappy', 'Fine', 'Happy', 'Delighted'];
@@ -157,7 +173,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     }
 
     setText(name, card.name);
-    const lives = card.residence === 'dorm' ? 'Lives in a dorm' : 'Lives off campus';
+    const lives = card.residence === 'dorm' ? 'Lives in a dorm' : card.street ? `Lives off campus on ${card.street}` : 'Lives off campus';
     setText(about, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
 
     const people = atlas?.people;
@@ -172,7 +188,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
 
     if (session.doing) lastDoing = session.doing;
     const outside = session.doing !== null;
-    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? (INDOORS[lastDoing] ?? 'Out of sight') : 'Out of sight');
+    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : 'Out of sight');
     follow.disabled = !outside;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');

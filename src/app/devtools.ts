@@ -1,5 +1,6 @@
 import { advance, applyAction, incidentText, nearestSpot, newGame, PLACED, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
+import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { session } from './session';
@@ -15,6 +16,9 @@ import { store } from './store';
  * - `?demo=look` shows every hand-placed item for approving the art, and
  *   `?demo=stadium` shows the rendered stadium between drawn buildings, and
  *   `?demo=town` shows the town, roads, cars and parking of the third play stop.
+ * - `?demo=stop3` is the third play stop as built: locals who walk and who
+ *   drive, a car park with a road and one without. `&hour=22` shows any page
+ *   at that hour of the day, and `&select=x,y` opens the panel of a cell.
  */
 
 function paint(state: GameState, tool: Tool, cells: Point[], variant = 0): GameState {
@@ -104,6 +108,36 @@ function incidentCampus(covered: boolean): GameState {
   return state;
 }
 
+/**
+ * The third play stop on one screen. Room for the whole founding class, a car
+ * park and a parking structure with roads to College Avenue, so the locals of
+ * the streets too far to walk drive in, and a second car park with no road,
+ * which holds nobody.
+ */
+function stop3Campus(): GameState {
+  const now = clock.now();
+  const started = now - 50 * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 5_000_000;
+  state = paint(state, 'path', [...rowBetween([0, 14], [7, 14]), ...rowBetween([0, 17], [7, 17]), ...rowBetween([24, 14], [30, 14])]);
+  state = paint(state, 'quad', [...rowBetween([4, 15], [9, 15]), ...rowBetween([4, 16], [9, 16]), ...rowBetween([22, 15], [27, 15]), ...rowBetween([22, 16], [27, 16])]);
+  state = paint(state, 'academic', [...rowBetween([0, 13], [9, 13]), ...rowBetween([20, 13], [30, 13])]);
+  state = paint(state, 'housing', [...rowBetween([0, 18], [18, 18]), ...rowBetween([22, 18], [30, 18])]);
+  const place = (building: 'parking' | 'garage', x: number, y: number): void => {
+    const result = applyAction(state, { type: 'place', building, x, y });
+    if (result.ok) state = result.state;
+  };
+  // A car park with a road east to the street, and a road that crosses a walk on the way.
+  place('parking', 27, 20);
+  state = paint(state, 'road', rowBetween([29, 20], [31, 20]));
+  place('garage', 28, 24);
+  state = paint(state, 'road', [...rowBetween([30, 21], [30, 23]), [30, 24], [31, 24]]);
+  state = paint(state, 'path', rowBetween([27, 22], [31, 22]));
+  // And one that nobody can drive to.
+  place('parking', 24, 21);
+  return advance(state, started, now).state;
+}
+
 interface DevScene {
   cameras: { main: { zoom: number; width: number; height: number; scrollX: number; scrollY: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
@@ -147,6 +181,8 @@ function applyViewParams(params: URLSearchParams): void {
   const placing = params.get('place');
   const panel = params.get('panel');
   const incident = params.get('incident');
+  const select = params.get('select')?.split(',').map(Number);
+  if (select && select.length === 2 && select.every(Number.isFinite)) setTimeout(() => session.select(select[0]!, select[1]!), 2600);
   if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
@@ -240,6 +276,9 @@ function applyViewParams(params: URLSearchParams): void {
 export function installDevTools(): void {
   (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
   const params = new URLSearchParams(window.location.search);
+  // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
+  const hour = Number(params.get('hour') ?? NaN);
+  if (Number.isFinite(hour)) forceHour(hour);
   if (params.get('demo') === 'look') {
     store.adopt(lookCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stadium') {
@@ -250,6 +289,8 @@ export function installDevTools(): void {
     store.adopt(builtCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'town') {
     store.adopt(townCampus(clock.now()), { ephemeral: true });
+  } else if (params.get('demo') === 'stop3') {
+    store.adopt(stop3Campus(), { ephemeral: true });
   } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });
   }

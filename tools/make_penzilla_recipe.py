@@ -73,6 +73,11 @@ LAWN = on_grid(TILES + 'Grass.png', swap='rim', recolour='lawn')
 sprites['quad.0'] = {'layers': [LAWN, standing(PLANTS + 'Tree1.png', 0.5, 0.52)]}
 sprites['quad.1'] = {'layers': [LAWN, standing(PLANTS + 'Tree13.png', 0.5, 0.52)]}
 sprites['quad.2'] = {'layers': [LAWN, standing(OLD + 'Decor/Bench.png', 0.56, 0.6)]}
+# Street lamps, for paths, roads and the town's streets. Off by day, lit in the evening and at night.
+# The glow is the pack's own picture of the lit lamp with its halo. The game adds it as light over the night tint.
+sprites['lamp.off'] = {'layers': [standing(DECOR + 'StreetLampOff.png', 0.14, 0.3)]}
+sprites['lamp.on'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.14, 0.3)]}
+sprites['lamp.glow'] = {'layers': [standing(DECOR + 'StreetLampGlow.png', 0.14, 0.3)]}
 sprites['quad.bench'] = {'layers': [standing(PLANTS + 'Plant1.png', 0.26, 0.3), standing(OLD + 'Decor/Bench.png', 0.56, 0.6)]}
 sprites['quad.flowers'] = {'layers': [
     standing(PLANTS + 'Plant1.png', 0.5, 0.32),

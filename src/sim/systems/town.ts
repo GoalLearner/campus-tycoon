@@ -248,7 +248,8 @@ export interface HoodLiving {
 /**
  * Who lives where, for the map and the neighbourhood card. Students are not
  * tracked one by one: those living off campus fill the walking neighbourhoods
- * nearest first, then the driving ones as far as parking allows. Students who
+ * nearest first, then the driving ones as far as parking allows, those beside
+ * the car parks first. Students who
  * were let in before a path or car park was cleared keep coming, and are shown
  * wherever there is still room.
  */
@@ -265,7 +266,10 @@ export function townLiving(state: GameState): HoodLiving[] {
     left -= take;
   }
   let spaces = map.town.access.spaces;
-  const driving = hoods.filter((hood) => !hoodWalks(map, hood));
+  // Drivers are shown on the streets nearest the car parks they drive to.
+  const parks = map.town.access.linked.map((id) => map.placed[id]).filter((placed): placed is Placed => !!placed);
+  const farFromParking = (hood: Neighbourhood): number => (parks.length === 0 ? 0 : Math.min(...parks.map((placed) => Math.abs(hood.row - placed.y))));
+  const driving = hoods.filter((hood) => !hoodWalks(map, hood)).sort((a, b) => farFromParking(a) - farFromParking(b) || a.id - b.id);
   for (const hood of driving) {
     const take = Math.min(left, hoodCapacity(hood), spaces);
     living[hood.id] = take;
@@ -314,8 +318,8 @@ export function hoodAdvice(state: GameState, hood: HoodLiving): string {
   if (hood.mode === 'walk') return '';
   if (hood.walkMinutes < 0) {
     return hood.mode === 'drive'
-      ? `Its students drive. Lay a path from campus to ${state.map.town.street} beside it and they could walk instead.`
-      : `Nobody can get to class from here. Lay a path from campus to ${state.map.town.street} beside it, or build parking with a road to the street.`;
+      ? `Its students drive. A path from ${state.map.town.street} beside it to an Academic lot would let them walk instead.`
+      : `Nobody can get to class from here. Lay a path from ${state.map.town.street} beside it to an Academic lot, or build parking with a road to the street.`;
   }
   const far = `The walk to class is ${Math.round(hood.walkMinutes)} minutes, and ${TOWN_WALK_MAX_MINUTES} is as far as anyone walks.`;
   return hood.mode === 'drive' ? `${far} Its students drive. Academic lots nearer the street would let them walk.` : `${far} Zone Academic lots nearer the street, or build parking with a road.`;

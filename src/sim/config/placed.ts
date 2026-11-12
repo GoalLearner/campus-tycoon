@@ -94,7 +94,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   parking: {
     name: 'Parking lot', category: 'Roads and parking', family: 'parking', w: 2, h: 1, cost: 20_000, upkeepPerYear: 1_000,
-    radius: 0, strength: 0, effect: 'Lets 20 locals drive in. Needs a road to a town street', sprite: 'build.parking', flat: true, buildable: true, cars: 20,
+    radius: 0, strength: 0, effect: 'Lets 20 locals drive in. Needs a road to a town street', sprite: 'build.parking', flat: false, buildable: true, cars: 20,
   },
   garage: {
     name: 'Parking structure', category: 'Roads and parking', family: 'parking', w: 2, h: 2, cost: 160_000, upkeepPerYear: 6_000,
