@@ -483,6 +483,12 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           }, 1900);
         }
       }
+      // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
+      if (panel === 'inbox') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('.hud-chips .hud-chip:last-child')?.click(), 1400);
+        const tab = params.get('tab');
+        if (tab) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.fb-tab')].find((b) => b.textContent === tab)?.click(), 1900);
+      }
       // &tool=road puts the road tool in hand, and &overlay=parking shows the Parking overlay.
       if (params.get('tool') === 'road') setTimeout(() => session.setTool('road'), 1400);
       const overlay = params.get('overlay');
@@ -551,6 +557,20 @@ export function installDevTools(): void {
   } else if (params.get('demo') === 'model') {
     // The model campus of DESIGN.md section 35, unsaved. The same thing the Menu's visit opens.
     store.adopt(newGame({ seed: Number(params.get('seed') ?? 20261112), name: 'Larkspur University', now: clock.now(), campus: 'model' }), { ephemeral: true });
+    // &days=9 lets that many days pass with nobody looking in, and puts the away list aside. &answer takes the
+    // advisor's pick on the desk each of those days, as a player would. &away=24 then lets that many hours pass
+    // at once, so the newspaper opens as it would after a day away.
+    const days = Number(params.get('days') ?? 0);
+    for (let day = 0; day < days; day++) {
+      clock.skip(86_400_000);
+      store.catchUp();
+      if (params.has('answer')) for (const item of [...store.state.inbox.open]) store.dispatch({ type: 'inbox', id: item.id, option: item.advised });
+    }
+    store.away = null;
+    if (params.has('away')) {
+      clock.skip((Number(params.get('away')) || 24) * 3_600_000);
+      store.catchUp();
+    }
   } else if (params.get('demo') === 'unjoined') {
     store.adopt(unjoinedCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'mature') {

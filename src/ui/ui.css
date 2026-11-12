@@ -1685,7 +1685,7 @@ button.money {
   line-height: 1.18;
 }
 
-.paper-deck {
+.paper .paper-deck {
   margin: 0;
   font-size: 13.5px;
   color: #4d4636;
@@ -1767,13 +1767,14 @@ button.money {
   font-weight: 700;
 }
 
-.paper-line {
+.paper .paper-line {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.32;
+  color: #2b2619;
 }
 
-.paper-small {
+.paper .paper-small {
   margin: 0;
   font-size: 12px;
   color: #6a614c;

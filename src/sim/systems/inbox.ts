@@ -1,6 +1,7 @@
 import { calendarAt, yearLength } from '../calendar';
 import {
   ANNUAL_PAUSE,
+  ADVISOR_SPENDS_FROM,
   EVENT_WINDOW_TICKS,
   INBOX_MIN_STUDENTS,
   INBOX_PAST_KEPT,
@@ -19,7 +20,7 @@ import type { AdvisorId, Boost, GameState, InboxEffect, InboxItem, InboxOption, 
 import { scaleOf, smallCount } from '../scale';
 import { pruneBoosts } from './boosts';
 import { budget, occupiedBeds } from './budget';
-import { hasSeason, noiseAt, teamName } from './football';
+import { fanDemand, hasSeason, noiseAt, seatsNow, teamName } from './football';
 import { messiestSpot, spotClean } from './grounds';
 import { campusHappiness, campusLevels, type CampusHappiness } from './happiness';
 import { markRatesDirty } from './money';
@@ -81,6 +82,12 @@ interface Facts {
   homeAhead: boolean;
   rival: string;
   tier: number;
+  /**
+   * True when the stands have room: fewer want a ticket than there are seats, give or take a tenth. Where
+   * every game sells out anyway, a choice that only moves the crowd would be free money or money wasted, so
+   * such a choice is not offered or not advised there.
+   */
+  standsHaveRoom(): boolean;
   /** A lecture hall inside the stadium's noise, by name. */
   noisyHall(): string | null;
   /** Incidents nobody came to since the last item about them. */
@@ -161,6 +168,7 @@ function read(state: GameState, day: number): Facts {
     homeAhead,
     rival: teamName(state, f.rival),
     tier: f.stadium.tier,
+    standsHaveRoom: once(() => fanDemand(state) < 1.1 * seatsNow(state)),
     noisyHall: once(() => {
       if (f.stadium.tier < 1) return null;
       for (const building of state.map.buildings) {
@@ -207,8 +215,12 @@ function option(id: string, label: string, detail: string, cash = 0, effects: In
 /** True in the years the mascot goes missing instead of a prank: rivalry season with Campus Safety covering little. */
 const mascotYear = (facts: Facts): boolean => facts.season && facts.safety() < 0.4 && facts.pick(21) % 2 === 1;
 
-/** A cost the campus would hardly notice: twenty of them in the bank. */
-const easily = (facts: Facts, cost: number): boolean => facts.cash >= 20 * cost;
+/**
+ * A cost the campus would hardly notice: twenty of them in the bank, on a campus that keeps at least $10 of
+ * every $100. An advisor does not pick an extra for a campus whose margin is under the range the game is tuned
+ * for, however much is in the bank that day.
+ */
+const easily = (facts: Facts, cost: number): boolean => facts.cash >= 20 * cost && facts.kept() >= ADVISOR_SPENDS_FROM;
 
 // -------------------------------------------------------- written items --
 
@@ -494,7 +506,7 @@ export const WRITTEN: readonly Written[] = [
     advisor: 'athletics',
     rest: 3,
     when: (f) => {
-      if (f.tier < 1 || !f.season) return null;
+      if (f.tier < 1 || !f.season || !f.standsHaveRoom()) return null;
       const fee = amount(f, 15, 8000);
       const sponsor = SPONSORS[f.pick(12) % SPONSORS.length]!;
       return {
@@ -596,7 +608,7 @@ export const WRITTEN: readonly Written[] = [
           option('answer', `Fund an answer: ${dollars(answer)}`, `A banner appears on their bridge. A tenth more fans want a ticket for ${days(2)}.`, -answer, [fans(0.1, 2, 'Rivalry season')]),
         ],
         fallback: 'clean',
-        advised: easily(f, answer) ? 'answer' : 'clean',
+        advised: !f.standsHaveRoom() ? (easily(f, leave) ? 'leave' : 'clean') : easily(f, answer) ? 'answer' : 'clean',
         closes: f.state.clock.tick + EVENT_WINDOW_TICKS,
       };
     },
@@ -700,7 +712,7 @@ export const WRITTEN: readonly Written[] = [
     rest: 1,
     days: [7],
     when: (f) => {
-      if (!hasSeason(f.state) || f.small < INBOX_MIN_STUDENTS) return null;
+      if (!hasSeason(f.state) || f.small < INBOX_MIN_STUDENTS || !f.standsHaveRoom()) return null;
       const cost = amount(f, 3, 1500);
       // It closes a day into the fall, before Homecoming is played, and its crowd comes for that game.
       const closes = nextFall(f.state) + DAY;
@@ -936,6 +948,7 @@ export function everyWrittenItem(from: GameState): Array<{ key: string; draft: {
       homeAhead: true,
       rival: teamName(state, state.football.rival),
       tier: 2,
+      standsHaveRoom: () => true,
       noisyHall: () => 'Fernwick Hall',
       missedNew: 8,
       pick: () => parity,

@@ -683,7 +683,9 @@ export function mountUi(root: HTMLElement): void {
       card.append(crowd);
 
       // Notifications are the iPhone app's. A browser tab has none, and says so.
-      if (!isNative) {
+      // On the dev server only, &notices=1 shows the iPhone app's two rows, to see how they read. They send nothing.
+      const staged = import.meta.env.DEV && window.location.search.includes('notices=1');
+      if (!isNative && !staged) {
         card.append(el('p', 'fine', 'Notifications come with the iPhone app. A browser tab has none.'));
       } else {
         const notices = button('', 'wide', () => {

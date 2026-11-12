@@ -9,6 +9,7 @@ import {
   campusHappiness,
   enrollment,
   everyWrittenItem,
+  fanDemand,
   FANS_CAP,
   fansLift,
   HAPPY_CAP,
@@ -24,6 +25,7 @@ import {
   ROUTINE_CAP,
   SAVE_VERSION,
   scaleOf,
+  seatsNow,
   serialize,
   STRESS_OFF_CAP,
   stressOff,
@@ -335,6 +337,14 @@ describe('the desk at 46,000 students', () => {
     }
     for (const entry of big.log) if (entry.kind === 'intake' || entry.kind === 'inbox' || entry.kind === 'yearEnd' || entry.kind === 'graduation') expect(entry.text, entry.text).not.toMatch(/\d{5,}/);
     for (const advisor of advisorLines(big.state)) expect(advisor.issue, advisor.issue).not.toMatch(/\d{5,}/);
+  });
+
+  it('holds back the items that only move the crowd where every game sells out anyway', () => {
+    // 46,000 students want far more tickets than the stadium has seats, so a deal that costs a few fans would be free money.
+    expect(fanDemand(big.state)).toBeGreaterThan(2 * seatsNow(big.state));
+    expect(big.opened.filter((item) => item.key === 'scoreboard' || item.key === 'homecoming')).toEqual([]);
+    // The small campus has empty seats, and its parade is offered.
+    expect(one.opened.some((item) => item.key === 'homecoming')).toBe(true);
   });
 
   it('keeps the same rhythm: the cap, the windows and the visits hold there too', () => {

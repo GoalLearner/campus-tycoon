@@ -263,7 +263,7 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
       text:
         lost === 0
           ? `The waitlist closed. All ${headCount(admitted)} who waited got in.`
-          : `The waitlist closed. ${headCount(admitted)} got in and ${headCount(lost)} went elsewhere${zone ? `, for want of ${ZONE_UNIT[zone]}` : ''}.`,
+          : `The waitlist closed. ${admitted > 0 ? `${headCount(admitted)} got in and ` : ''}${headCount(lost)} went elsewhere${zone ? `, for want of ${ZONE_UNIT[zone]}` : ''}.`,
       data: { lost, admitted, bottleneck: zone ?? '' },
     });
   }

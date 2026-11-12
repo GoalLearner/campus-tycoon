@@ -144,6 +144,8 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
     const toggle = button(paper.restLabel, 'paper-more', () => {
       const open = rest.classList.toggle('show');
       toggle.classList.toggle('open', open);
+      // The rest opens under the button, so the button goes to the top of what can be seen.
+      if (open && typeof toggle.scrollIntoView === 'function') toggle.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
     const section = (name: string): void => void rest.append(el('div', 'paper-section', name));
     if (edition.scores.length > 0) {

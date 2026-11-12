@@ -28,6 +28,9 @@ export const STRESS_OFF_CAP = 12;
 export const FANS_CAP = { down: -0.1, up: 0.2 } as const;
 export const APPLICANTS_CAP = 0.06;
 
+/** An advisor picks a choice that costs money only on a campus that keeps at least this much of every $100. */
+export const ADVISOR_SPENDS_FROM = 10;
+
 /** Who the four advisors are (12.2). Their names are made once for each campus and stored. */
 export const ADVISORS: Record<AdvisorId, { title: string; domain: string }> = {
   provost: { title: 'Provost', domain: 'Classes, exams and rankings' },
