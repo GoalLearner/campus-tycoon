@@ -288,7 +288,7 @@ export class CampusScene extends Phaser.Scene {
       this.syncMap(state);
       this.walkers.setMap(state);
       // A Saturday or Sunday in the game's own calendar is quieter on the paths.
-      const weekday = dateAt(state.clock.tick).weekday;
+      const weekday = dateAt(state.clock).weekday;
       this.walkers.setWeekend(this.weekendHeld || weekday === 0 || weekday === 6);
       this.cars.setMap(state);
       this.crew.setMap(state);
@@ -428,9 +428,9 @@ export class CampusScene extends Phaser.Scene {
    * are the game's.
    */
   private showLife(state: GameState): void {
-    const date = dateAt(state.clock.tick);
+    const date = dateAt(state.clock);
     const weekend = this.weekendHeld || date.weekday === 0 || date.weekday === 6;
-    const term = calendarAt(state.clock.tick).phase !== 'summer';
+    const term = calendarAt(state.clock).phase !== 'summer';
     const life = scenesFor({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced: effectsSetting() === 'reduced' });
     this.life = life;
     this.scenes.setLife(life);

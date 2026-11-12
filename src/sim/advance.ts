@@ -1,6 +1,6 @@
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
-import { calendarAt, eventsAt, type CalendarEvent } from './calendar';
+import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_YEAR } from './config/time';
 import {
   closeWaitlist,
@@ -13,6 +13,8 @@ import {
 } from './systems/admissions';
 import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
+import { campusLevels } from './systems/happiness';
+import { stepSeason } from './systems/season';
 import { accrue, dailyCashCheck, stepPhase } from './systems/money';
 import { yearEnd } from './systems/year';
 import { popDue } from './timers';
@@ -83,9 +85,13 @@ function tick(state: GameState, log: LogEntry[]): void {
   const clock = state.clock;
   clock.tick += 1;
   clock.nextTickAt += TICK_MS;
+  // A new game year begins the moment the last one has run its length, stretched summer and all.
+  rollWeek(clock);
+  const said = log.length;
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
-  for (const event of eventsAt(clock.tick)) onCalendarEvent(state, event, log);
+  for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
+  stepSeason(state, log, () => campusLevels(state));
 
   if (clock.tick % GROWTH_EVAL_TICKS === 0) {
     fillFromWaitlist(state, log);
@@ -97,6 +103,15 @@ function tick(state: GameState, log: LogEntry[]): void {
   stepGrounds(state, log);
 
   accrue(state);
+
+  // Everything said this tick carries the date in the game, so the away list can be read by date.
+  if (log.length > said) {
+    const date = dateAt(clock);
+    for (let i = said; i < log.length; i++) {
+      log[i]!.date = date.month * 100 + date.day;
+      log[i]!.year = clock.week.year;
+    }
+  }
 }
 
 function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
@@ -119,7 +134,7 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       stepPhase(state, log);
       break;
     case 'fallIntake':
-      if (calendarAt(state.clock.tick).year > 1) {
+      if (calendarAt(state.clock).year > 1) {
         promote(state);
         spreadClassYears(state, log);
       }

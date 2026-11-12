@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   foodIncomePerYear,
+  dayRead,
+  placedIncomePerYear,
   advance,
   applyAction,
   BENEFITS_SHARE,
@@ -325,7 +327,10 @@ describe('a save from before these costs', () => {
     // Income is what it was, and since play stop 4b the dining halls and coffee stands it already had earn a little.
     expect(foodIncomePerYear(state)).toBeGreaterThan(0);
     expect(foodIncomePerYear(state)).toBeLessThan(old.money.incomePerYear * 0.005);
-    expect(state.money.incomePerYear).toBeCloseTo(old.money.incomePerYear + foodIncomePerYear(state), 6);
+    // Food and the stores earn by who is on campus that day (4.8): the save was made in the summer term.
+    const here = dayRead(state.clock).presence;
+    expect(here).toBeLessThan(1);
+    expect(state.money.incomePerYear).toBeCloseTo(old.money.incomePerYear + foodIncomePerYear(state) * here - placedIncomePerYear(state) * (1 - here), 6);
     expect(state.money.spendingPerYear).toBe(old.money.spendingPerYear);
     expect(state.money.spendingPerYear).toBe(upkeepPerYear(state) + workerCount(state) * LEGACY_WAGE_PER_YEAR + enrollment(state) * LEGACY_COST_PER_STUDENT_PER_YEAR);
     const b = budget(state);

@@ -76,6 +76,7 @@ const ZONE_UNIT: Record<Zone, string> = { housing: 'beds', academic: 'seats' };
 /** What is happening right now, in words a first-time player reads at a glance. */
 const NOW_LABEL = {
   moveIn: 'Founding day',
+  founding: 'Founding day',
   fall: 'Fall semester in session',
   spring: 'Spring semester in session',
   graduation: 'Graduation day',
@@ -712,9 +713,9 @@ export function mountUi(root: HTMLElement): void {
 
     // Lead with what is happening now. The date is the small print.
     const tick = state.clock.tick;
-    const pos = calendarAt(tick);
+    const pos = calendarAt(state.clock);
     setText(when, NOW_LABEL[pos.phase]);
-    setText(next, pos.year === 0 ? formatDate(dateAt(tick)) : `${formatDate(dateAt(tick))} · Year ${pos.year}`);
+    setText(next, pos.year === 0 ? formatDate(dateAt(state.clock)) : `${formatDate(dateAt(state.clock))} · Year ${pos.year}`);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
@@ -734,7 +735,7 @@ export function mountUi(root: HTMLElement): void {
     const plan = roomPlan(state);
     const asks = ZONES.filter((zone) => plan.zones[zone].lots > 0).map((zone) => ZONE_ASK[zone]);
     const add = asks.join(' and ');
-    const milestone = nextMilestone(tick);
+    const milestone = nextMilestone(state.clock);
     const coming = `${MILESTONE_LABEL[milestone.event]} in ${duration(milestone.inTicks)}`;
 
     let action: string;

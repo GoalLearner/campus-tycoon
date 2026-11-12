@@ -34,3 +34,10 @@ export const WAITLIST_TICKS = MIN_WINDOW_TICKS;
 
 /** [T] Forecasts and growth are re-evaluated this often. */
 export const GROWTH_EVAL_TICKS = 15;
+
+/** [T] The anchor hour is this long after the player's day usually starts (DESIGN.md 4.2). */
+export const ANCHOR_AFTER_WAKE_TICKS = 2 * TICKS_PER_HOUR;
+/** The hour a day is taken to start when the player has not said: seven in the morning, their own time. */
+export const DEFAULT_WAKE_HOUR = 7;
+/** The anchor can be moved again this long after it was last moved: four real weeks. */
+export const ANCHOR_RECHARGE_TICKS = 4 * TICKS_PER_YEAR;

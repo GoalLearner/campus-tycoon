@@ -7,6 +7,7 @@ import { classSize, dormStudents, localsAmong } from './demand';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
+import { closeSemester, stressLoss } from './season';
 
 /**
  * Intakes, the waitlist, retention, graduation and promotion.
@@ -105,7 +106,7 @@ function enrol(state: GameState, count: number, offCampus: number, founders: boo
   const off = Math.min(count, offCampus);
   if (count > 0 && founders && state.fourYears) {
     // The founding class: freshmen through seniors, and those living in town in the same shares.
-    const year = Math.max(1, calendarAt(state.clock.tick).year);
+    const year = Math.max(1, calendarAt(state.clock).year);
     for (let n = 0; n < count; n++) {
       const classYear = nextFounderYear(state.cohorts);
       state.cohorts[classYear]! += 1;
@@ -119,7 +120,7 @@ function enrol(state: GameState, count: number, offCampus: number, founders: boo
   } else {
     state.cohorts[0] += count;
     state.offCampus[0] += off;
-    if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock.tick).year)).entered += count;
+    if (count > 0) classRecord(state, Math.max(1, calendarAt(state.clock).year)).entered += count;
   }
   state.stats.peakEnrollment = Math.max(state.stats.peakEnrollment, enrollment(state));
   markRatesDirty(state);
@@ -136,7 +137,7 @@ function enrol(state: GameState, count: number, offCampus: number, founders: boo
 export function spreadClassYears(state: GameState, log: LogEntry[]): void {
   if (state.fourYears) return;
   state.fourYears = true;
-  const { year } = calendarAt(state.clock.tick);
+  const { year } = calendarAt(state.clock);
   const c = state.cohorts;
   const continuing = c[1] + c[2] + c[3];
   if (continuing <= 0 || (c[1] > 0 && c[2] > 0 && c[3] > 0)) return;
@@ -199,7 +200,7 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   state.admissions.waitlistUntilTick = turnedAway > 0 ? tick + WAITLIST_TICKS : 0;
   state.admissions.waitlistAdmitted = 0;
 
-  const { year } = calendarAt(tick);
+  const { year } = calendarAt(state.clock);
   const label = season === 'fall' ? `The fall class of year ${year}` : `The spring class of year ${year}`;
   log.push({
     tick,
@@ -261,14 +262,17 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
 export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const before = enrollment(state);
   const mood = campusHappiness(state);
+  // A semester of sustained high Stress costs a few more students: a hundredth at the very worst.
+  const stress = closeSemester(state);
+  const stays = mood.retention * (1 - stressLoss(stress));
   const c = state.cohorts;
-  const { year } = calendarAt(state.clock.tick);
+  const { year } = calendarAt(state.clock);
   const next: [number, number, number, number] = [0, 0, 0, 0];
   for (let classYear = 0; classYear < 4; classYear++) {
     const was = c[classYear]!;
-    next[classYear] = Math.round(was * mood.retention);
+    next[classYear] = Math.round(was * stays);
     // Those living in town leave at the same rate as everyone else.
-    state.offCampus[classYear] = Math.min(next[classYear]!, Math.round(state.offCampus[classYear]! * mood.retention));
+    state.offCampus[classYear] = Math.min(next[classYear]!, Math.round(state.offCampus[classYear]! * stays));
     if (was > next[classYear]!) classRecord(state, year - classYear).left += was - next[classYear]!;
   }
   state.cohorts = next;
@@ -285,7 +289,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   }
   const stayed = enrollment(state);
   const left = before - stayed;
-  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.score) };
+  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
   markRatesDirty(state);
   if (log && before > 0) {
     log.push({
@@ -294,8 +298,8 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
       text:
         left === 0
           ? 'The semester ended and every student is staying on.'
-          : `The semester ended. ${left} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.score)}.`,
-      data: { left, stayed, happiness: Math.round(mood.score), worst: mood.worst ?? '' },
+          : `The semester ended. ${left} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.`,
+      data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress) },
     });
   }
 }
@@ -306,7 +310,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   const seniors = state.cohorts[3];
   state.cohorts[3] = 0;
   state.offCampus[3] = 0;
-  if (seniors > 0) classRecord(state, calendarAt(state.clock.tick).year - 3).finishedOnTime += seniors;
+  if (seniors > 0) classRecord(state, calendarAt(state.clock).year - 3).finishedOnTime += seniors;
   state.stats.graduates += seniors;
   markRatesDirty(state);
   if (seniors > 0) {

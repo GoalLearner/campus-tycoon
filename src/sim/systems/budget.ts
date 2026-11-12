@@ -27,6 +27,7 @@ import { enrollment, openCapacity, upkeepPerYear } from '../selectors';
 import type { GameState, Placed } from '../types';
 import { foodIncomePerYear, foodPlaces } from './food';
 import { placedIncomePerYear } from './placed';
+import { dayRead } from './season';
 import { offCampusNow } from './town';
 
 /**
@@ -160,12 +161,15 @@ export function budget(state: GameState): Budget {
   const beds = occupiedBeds(state);
   income.push({ id: 'tuition', name: 'Tuition', amount: students * TUITION_PER_STUDENT_PER_YEAR, detail: `${people(students, 'student', 'students')} at ${dollars(TUITION_PER_STUDENT_PER_YEAR)}` });
   income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}` });
-  const stores = placedIncomePerYear(state);
-  if (stores > 0) income.push({ id: 'stores', name: 'Campus stores', amount: stores, detail: 'More on a busy path' });
-  const food = foodIncomePerYear(state);
+  // Food and the stores earn by who is on campus: a quarter of students in a break, fewer in the summer term.
+  const day = dayRead(state.clock);
+  const away = day.presence < 1 ? ` ${day.name ?? 'This week'}: ${Math.round(day.presence * 100)}% of students are here` : '';
+  const stores = placedIncomePerYear(state) * day.presence;
+  if (stores > 0) income.push({ id: 'stores', name: 'Campus stores', amount: stores, detail: `More on a busy path.${away}`.replace(/\.$/, '') });
+  const food = foodIncomePerYear(state) * day.presence;
   if (food > 0) {
     const places = foodPlaces(state);
-    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared among the places that reach them` });
+    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared among the places that reach them.${away}`.replace(/\.$/, '') });
   }
   if (m.endowment > 0) {
     income.push({ id: 'endowment', name: 'Endowment income', amount: m.endowment * ENDOWMENT_YIELD, detail: `${Math.round(ENDOWMENT_YIELD * 100)}% of ${dollars(m.endowment)}, every year` });

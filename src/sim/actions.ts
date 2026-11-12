@@ -5,7 +5,9 @@ import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
 import { COST } from './config/money';
 import { YARD_MAX_WORKERS, YARD_START_WORKERS } from './config/grounds';
-import { dollars } from './format';
+import { minutesToAnchor, timeOfTick } from './calendar';
+import { ANCHOR_RECHARGE_TICKS, TICKS_PER_DAY, TICKS_PER_YEAR } from './config/time';
+import { dollars, duration } from './format';
 import { inBounds } from './selectors';
 import { ownedAt } from './systems/town';
 import { recomputeDesirability } from './systems/desirability';
@@ -35,7 +37,9 @@ export type Action =
   /** Set the recruiting and marketing step: 0 is off, 4 the most. */
   | { type: 'marketing'; step: number }
   /** Pay cash into the endowment. It never comes back out. */
-  | { type: 'endow'; amount: number };
+  | { type: 'endow'; amount: number }
+  /** Choose or move the anchor: the minute of the UTC day at which each day of the campus week begins. */
+  | { type: 'anchor'; minute: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -298,6 +302,37 @@ function endow(state: GameState, amount: number): ActionResult {
   return { ok: true, state: next, cost: amount, changed: 1 };
 }
 
+/** When the anchor can next be moved, as a tick. 0 when it can be moved now. */
+export function anchorFreeAt(state: GameState): number {
+  const clock = state.clock;
+  if (clock.anchor === null || clock.anchorMovedTick < 0) return 0;
+  const free = clock.anchorMovedTick + ANCHOR_RECHARGE_TICKS;
+  return free > clock.tick ? free : 0;
+}
+
+/**
+ * Choose or move the anchor. The year in progress keeps every hour it had:
+ * its summer is stretched, by up to a day, so the next fall begins at the new
+ * anchor. Nothing is ever shortened, so no window closes early.
+ */
+function setAnchor(state: GameState, minute: number): ActionResult {
+  if (!Number.isInteger(minute) || minute < 0 || minute >= TICKS_PER_DAY) return { ok: false, state, error: 'Choose a time of day.' };
+  const clock = state.clock;
+  if (clock.anchor === minute) return { ok: true, state, cost: 0, changed: 0 };
+  const free = anchorFreeAt(state);
+  if (free > 0) return { ok: false, state, error: `You can change this again in ${duration(free - clock.tick)}.` };
+  const next = structuredClone(state);
+  const week = next.clock.week;
+  // The earliest the next fall could begin: when this year's seven days are up, or now if they already are.
+  const plain = week.start + TICKS_PER_YEAR;
+  const base = Math.max(plain, next.clock.tick + 1);
+  week.extra = base - plain + minutesToAnchor(timeOfTick(next.clock, base), minute);
+  // The first choice on a game that had none is free. After that, moving it starts the four-week wait.
+  if (next.clock.anchor !== null) next.clock.anchorMovedTick = next.clock.tick;
+  next.clock.anchor = minute;
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 export function applyAction(state: GameState, action: Action): ActionResult {
   switch (action.type) {
     case 'paint':
@@ -312,6 +347,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return setMarketing(state, action.step);
     case 'endow':
       return endow(state, action.amount);
+    case 'anchor':
+      return setAnchor(state, action.minute);
   }
 }
 

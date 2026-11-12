@@ -41,7 +41,7 @@ export function averageDesirability(state: GameState): number {
 export function nextIntakeSeason(state: GameState): Season {
   const tick = state.clock.tick;
   if (tick < FIRST_INTAKE_TICK) return 'fall';
-  return calendarAt(tick).tickInYear < SPRING_INTAKE_TICK_IN_YEAR ? 'spring' : 'fall';
+  return calendarAt(state.clock).tickInYear < SPRING_INTAKE_TICK_IN_YEAR ? 'spring' : 'fall';
 }
 
 /** A fall class as the campus would draw it today. */
@@ -83,7 +83,7 @@ export function dormStudents(state: GameState): number {
 function seniorsLeaveFirst(state: GameState): boolean {
   const tick = state.clock.tick;
   if (tick < FIRST_INTAKE_TICK) return false;
-  const { tickInYear } = calendarAt(tick);
+  const { tickInYear } = calendarAt(state.clock);
   // Graduation falls between the spring intake and the next fall.
   return tickInYear >= SPRING_INTAKE_TICK_IN_YEAR && tickInYear < GRADUATION_TICK_IN_YEAR;
 }

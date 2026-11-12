@@ -203,6 +203,16 @@ export interface MapState {
 export type RngStream = 'growth' | 'intake' | 'names' | 'events';
 export type RngState = Record<RngStream, number>;
 
+/** Where the game year stands. See calendar.ts. */
+export interface Week {
+  /** The game year this is: 1 for the first. */
+  year: number;
+  /** The tick day 1 of this year begins: the fall anchor. In year 1 it is the first intake plus the founding day. */
+  start: number;
+  /** Ticks added to this year's summer by a shift of the anchor: 0 up to a day. */
+  extra: number;
+}
+
 export interface Clock {
   /** Whole ticks since the game was created. One tick is one real minute. */
   tick: number;
@@ -213,6 +223,17 @@ export interface Clock {
   createdAt: number;
   /** Whole weeks dropped by the catch-up cap, over the life of the save. */
   weeksSkipped: number;
+  /** The game year in progress: which it is, when it began, and how far its summer is stretched. */
+  week: Week;
+  /**
+   * The anchor: the minute of the UTC day, 0 to 1439, at which each day of
+   * the week begins. It is two hours after the player's day usually starts.
+   * null when none has been chosen, on a game made without one: its week
+   * began fifteen minutes after it was made, at whatever hour that was.
+   */
+  anchor: number | null;
+  /** The tick the anchor was last moved, or -1 when it never has been. It can be moved again four weeks later. */
+  anchorMovedTick: number;
 }
 
 export interface Money {
@@ -328,6 +349,7 @@ export interface GameState {
   stats: Stats;
   incidents: Incidents;
   grounds: Grounds;
+  term: Term;
 }
 
 /** Litter, bins, workers and broken things. Keys are ids of placed things unless said otherwise. See DESIGN.md section 29. */
@@ -386,6 +408,31 @@ export interface Incidents {
   missed: number;
 }
 
+/**
+ * The little the academic year keeps (DESIGN.md 27): the semester's running
+ * Stress, the peak of the exam period in progress, and the year the first
+ * snow was last reported. Stress itself is worked out, never stored.
+ */
+export interface Term {
+  /** Stress added up tick by tick over the semester in progress. */
+  stressSum: number;
+  /** The tick that semester began, and the tick the sum was last brought up to. */
+  since: number;
+  lastTick: number;
+  /** Stress as it stood at that tick. */
+  lastStress: number;
+  /** The campus's part of Stress, read once a day: what Stress would be at the height of finals, out of 1. */
+  factor: number;
+  /** The highest Stress of the exam period in progress, its main cause, and the faculty's. 0 outside one. */
+  examPeak: number;
+  examCause: string;
+  facultyPeak: number;
+  /** The average Stress of the semester that last ended. */
+  lastAverage: number;
+  /** The game year the first snow was last reported in. */
+  snowYear: number;
+}
+
 export type LogKind =
   | 'built'
   | 'intake'
@@ -399,7 +446,16 @@ export type LogKind =
   | 'yearEnd'
   | 'costs'
   | 'grant'
-  | 'paused';
+  | 'paused'
+  // The football and calendar layer.
+  | 'calendar'
+  | 'exam'
+  | 'weather'
+  | 'anchor'
+  | 'game'
+  | 'football'
+  | 'decision'
+  | 'rankings';
 
 /** Something notable that happened. The away list is built from these. */
 export interface LogEntry {
@@ -408,6 +464,9 @@ export interface LogEntry {
   text: string;
   /** Numbers the UI may want without parsing the text. */
   data?: Record<string, number | string>;
+  /** The date in the game when it happened, as month * 100 + day, and the game year. Stamped by advance(). */
+  date?: number;
+  year?: number;
 }
 
 export interface AdvanceInfo {

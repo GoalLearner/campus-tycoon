@@ -9,6 +9,7 @@ import { foodKindsAt } from './food';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
 import { recreationAt } from './play';
+import { seasonLine, type CampusLevels, type SeasonLine } from './season';
 
 /**
  * Happiness: how students feel about the school. In the code the number is
@@ -133,8 +134,12 @@ export function approvalAt(state: GameState, cell: number): Approval {
 }
 
 export interface CampusHappiness {
-  /** 0 to 100. */
+  /** 0 to 100: the four causes, and what the calendar and the sky add or take this week. */
   score: number;
+  /** 0 to 100: the four causes alone. Retention follows this, so no spell of weather decides who stays. */
+  base: number;
+  /** The one signed line beside the causes: exams, a break, the weather. */
+  season: SeasonLine;
   /** Each cause across the campus, with the share of students it touches as its weight. */
   causes: Cause[];
   /** The cause whose fix would lift happiness most. null on an empty campus. */
@@ -176,7 +181,10 @@ export function campusHappiness(state: GameState): CampusHappiness {
   let residents = dorms.people > 0 ? BED_NEED : 0;
   let others = halls.people > 0 ? 1 - BED_NEED : 0;
   const total = residents + others;
-  if (total === 0) return { score: 50, causes: [], worst: null, worstPart: null, retention: RETENTION_FLOOR + RETENTION_SPAN * 0.5 };
+  if (total === 0) {
+    const season = seasonLine(state, { recreation: 0, green: 0, safety: 0, dining: 0 });
+    return { score: 50, base: 50, season, causes: [], worst: null, worstPart: null, retention: RETENTION_FLOOR + RETENTION_SPAN * 0.5 };
+  }
   residents /= total;
   others /= total;
 
@@ -224,7 +232,64 @@ export function campusHappiness(state: GameState): CampusHappiness {
       }
     }
   }
-  return { score, causes, worst: worst?.id ?? null, worstPart, retention: RETENTION_FLOOR + RETENTION_SPAN * (score / 100) };
+  const season = seasonLine(state, campusLevels(state));
+  return {
+    score: Math.max(0, Math.min(100, score + season.delta)),
+    base: score,
+    season,
+    causes,
+    worst: worst?.id ?? null,
+    worstPart,
+    retention: RETENTION_FLOOR + RETENTION_SPAN * (score / 100),
+  };
+}
+
+/** The most buildings of each zone that are read for the levels below. */
+const LEVEL_SAMPLE = 40;
+
+/**
+ * What the campus offers against Stress and bad weather: recreation, green
+ * space, safety and food in reach, each from 0 to 1.
+ *
+ * The academic year asks for this a few times every game year, catch-up
+ * included, so it is kept light: only these four things are read, and on a
+ * large campus at an even sample of its buildings, always the same ones.
+ * Stress on the panel, in the exam report and at the end of a semester all
+ * read it here, so they agree.
+ */
+export function campusLevels(state: GameState): CampusLevels {
+  const map = state.map;
+  const sums: Record<Zone, { people: number; recreation: number; green: number; safety: number; dining: number }> = {
+    housing: { people: 0, recreation: 0, green: 0, safety: 0, dining: 0 },
+    academic: { people: 0, recreation: 0, green: 0, safety: 0, dining: 0 },
+  };
+  for (const zone of ['housing', 'academic'] as const) {
+    const built = map.buildings.filter((building): building is NonNullable<typeof building> => !!building && building.zone === zone && building.stage >= 1);
+    const stride = Math.max(1, Math.ceil(built.length / LEVEL_SAMPLE));
+    const sum = sums[zone];
+    for (let i = 0; i < built.length; i += stride) {
+      const building = built[i]!;
+      const { x, y } = building;
+      const size = stageSpec(zone, building.stage).capacity;
+      const walk = zone === 'housing' ? (map.walkMinutes[y * map.width + x] ?? -1) : -1;
+      sum.people += size;
+      sum.green += size * Math.min(1, scoreParts(map, x, y, zone, walk).green / GREEN_CAP[zone]);
+      sum.recreation += size * recreationAt(state, x, y);
+      sum.safety += size * safetyAt(state, x, y);
+      sum.dining += size * (foodKindsAt(map, x, y) > 0 ? 1 : 0);
+    }
+  }
+  const dorms = sums.housing;
+  const halls = sums.academic;
+  let residents = dorms.people > 0 ? BED_NEED : 0;
+  let others = halls.people > 0 ? 1 - BED_NEED : 0;
+  const total = residents + others;
+  if (total === 0) return { recreation: 0, green: 0, safety: 0, dining: 0 };
+  residents /= total;
+  others /= total;
+  const level = (key: 'recreation' | 'green' | 'safety' | 'dining'): number =>
+    (dorms.people > 0 ? (dorms[key] / dorms.people) * residents : 0) + (halls.people > 0 ? (halls[key] / halls.people) * others : 0);
+  return { recreation: level('recreation'), green: level('green'), safety: level('safety'), dining: level('dining') };
 }
 
 /** The share of every class that returns after a semester. It follows happiness. */

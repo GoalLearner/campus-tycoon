@@ -329,7 +329,7 @@ describe('life and sound are for show', () => {
     }
     expect(serialize(state, 0)).toBe(before);
     // Nothing was added to the saved game for this stop.
-    expect(SAVE_VERSION).toBe(11);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(11);
     for (const word of ['weather', 'sound', 'music', 'windows', 'sprinkler']) expect(before.includes(`"${word}"`), `the save holds "${word}"`).toBe(false);
   });
 

@@ -127,7 +127,7 @@ export class Scenes {
   /** Read the map again: where a club table, a ring, a rug and a busker could go today. */
   setMap(state: GameState): void {
     const { width, height, cells, buildings, placed } = state.map;
-    const date = dateAt(state.clock.tick);
+    const date = dateAt(state.clock);
     this.day = date.month * 32 + date.day;
     const kind = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
     const lots: Array<{ x: number; y: number }> = [];

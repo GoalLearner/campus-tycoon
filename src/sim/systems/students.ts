@@ -111,14 +111,14 @@ function pickWeighted<T>(items: ReadonlyArray<readonly [T, number]>, at: number)
 
 /** 0 for a freshman to 3 for a senior, or null when no such student is enrolled now. */
 export function classYearOf(state: GameState, ref: StudentRef): number | null {
-  const classYear = calendarAt(state.clock.tick).year - ref.entryYear;
+  const classYear = calendarAt(state.clock).year - ref.entryYear;
   if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear > 3) return null;
   return ref.index < state.cohorts[classYear]! ? classYear : null;
 }
 
 /** Students to draw walkers from: up to `perClass` from each class year. */
 export function sampleStudents(state: GameState, perClass = 400): StudentRef[] {
-  const year = calendarAt(state.clock.tick).year;
+  const year = calendarAt(state.clock).year;
   const out: StudentRef[] = [];
   for (let classYear = 0; classYear < 4; classYear++) {
     const size = Math.min(perClass, state.cohorts[classYear]!);
@@ -238,7 +238,7 @@ export function socialLife(state: GameState): number {
 
 /** Semesters since the game began: it steps at every fall and spring intake. */
 export function semesterOf(state: GameState): number {
-  const { year, tickInYear } = calendarAt(state.clock.tick);
+  const { year, tickInYear } = calendarAt(state.clock);
   return Math.max(0, (year - 1) * 2 + (tickInYear >= SPRING_INTAKE_TICK_IN_YEAR ? 1 : 0));
 }
 
@@ -346,7 +346,7 @@ function clubOf(seed: number, ref: StudentRef, nature: ArchetypeId, group: strin
 function archetypeNow(state: GameState, ref: StudentRef, classYear: number, nature: ArchetypeId, resident: boolean): ArchetypeId {
   const at = roll(state.seed, ref, SALT.phase);
   if (classYear === 0) {
-    const fall = calendarAt(state.clock.tick).phase === 'fall';
+    const fall = calendarAt(state.clock).phase === 'fall';
     const lost = fall ? LOST_SHARE.fall : LOST_SHARE.later;
     const homesick = resident ? (fall ? HOMESICK_SHARE.fall : HOMESICK_SHARE.later) : 0;
     if (at < lost) return 'lost';

@@ -15,12 +15,66 @@ export interface AwayFacts {
   studentsAfter: number;
 }
 
-export interface AwaySummary {
-  headline: string;
+/** What happened on one date of the game's calendar, in the order it happened. */
+export interface AwayDay {
+  /** "Sep 7", or "Year 3" for a whole earlier year told in a line or two. */
+  date: string;
   lines: string[];
 }
 
+export interface AwaySummary {
+  headline: string;
+  lines: string[];
+  /** The calendar's days, football and decisions, grouped by date, oldest first. Empty when nothing dated happened. */
+  days: AwayDay[];
+  /** How many dated lines were left out because the list was long. */
+  earlier: number;
+}
+
 const MAX_LINES = 10;
+/** The most dated lines shown. A week away is about sixty. */
+const MAX_DATED = 60;
+/** What is told by date: the calendar, exams, the weather, football, decisions and rankings. */
+const DATED: ReadonlySet<LogEntry['kind']> = new Set(['calendar', 'exam', 'weather', 'anchor', 'game', 'football', 'decision', 'rankings']);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * The dated part of the away list. The game year in progress is told day by
+ * day. Earlier years are told in the few lines that still matter: a season's
+ * record, a title, a decision that was made for the player.
+ */
+export function datedDays(log: readonly LogEntry[]): { days: AwayDay[]; earlier: number } {
+  const dated = log.filter((entry) => DATED.has(entry.kind) && entry.date !== undefined);
+  if (dated.length === 0) return { days: [], earlier: 0 };
+  const latest = dated[dated.length - 1]!.year ?? 0;
+  const days: AwayDay[] = [];
+  const push = (date: string, text: string): void => {
+    const last = days[days.length - 1];
+    if (last && last.date === date) last.lines.push(text);
+    else days.push({ date, lines: [text] });
+  };
+  for (const entry of dated) {
+    const year = entry.year ?? latest;
+    if (year < latest) {
+      // An earlier year: only what was marked as worth keeping.
+      if (entry.data?.keep === 1) push(`Year ${year}`, entry.text);
+      continue;
+    }
+    const date = entry.date!;
+    push(`${MONTHS[Math.floor(date / 100) - 1] ?? ''} ${date % 100}`, entry.text);
+  }
+  // A long list keeps its most recent lines.
+  let total = days.reduce((sum, day) => sum + day.lines.length, 0);
+  let earlier = 0;
+  while (total > MAX_DATED && days.length > 0) {
+    const first = days[0]!;
+    first.lines.shift();
+    if (first.lines.length === 0) days.shift();
+    total -= 1;
+    earlier += 1;
+  }
+  return { days, earlier };
+}
 
 /** The most recent entry of a kind. After a long absence only the latest of each is worth reading. */
 function latestText(log: LogEntry[], kind: LogEntry['kind']): string[] {
@@ -107,5 +161,5 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
 
   const shown = lines.slice(0, MAX_LINES);
   if (lines.length > MAX_LINES) shown.push(`And ${lines.length - MAX_LINES} more.`);
-  return { headline: `While you were away: ${duration(facts.minutes)}`, lines: shown };
+  return { headline: `While you were away: ${duration(facts.minutes)}`, lines: shown, ...datedDays(log) };
 }
