@@ -10,6 +10,19 @@ export const START_CASH = 400_000;
  * in a dorm the two come to the flat $10,000 a student they replaced.
  */
 export const TUITION_PER_STUDENT_PER_YEAR = 8_200;
+/**
+ * [T] Tuition at a school that was already standing: a game begun on the
+ * model campus (DESIGN.md 37.11). Its size is held by its applicants, so it
+ * cannot outgrow its costs as a small campus does, and it is tuned to keep
+ * $12 to $17 of every $100 when it is run well.
+ */
+export const TUITION_ESTABLISHED_PER_YEAR = 8_750;
+/**
+ * On such a game marketing is priced by the school's reach and not by its
+ * head count, since reach is what it lifts: so much for each student of the
+ * size a model campus opens at.
+ */
+export const MARKETING_PRICED_FOR_STUDENTS = 46_000;
 export const ROOM_FEE_PER_BED_PER_YEAR = 3_000;
 
 /**

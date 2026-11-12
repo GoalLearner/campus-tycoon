@@ -1,3 +1,4 @@
+import { GOAL_SCALE } from '../config/goals';
 import { scaleOf } from '../scale';
 import { placedUpkeep } from '../config/placed';
 import { stageSpec } from '../config/buildings';
@@ -12,6 +13,8 @@ import {
   LEGACY_COST_PER_STUDENT_PER_YEAR,
   LEGACY_WAGE_PER_YEAR,
   MARKETING_COST_PER_STUDENT,
+  MARKETING_PRICED_FOR_STUDENTS,
+  TUITION_ESTABLISHED_PER_YEAR,
   MARKETING_LIFT,
   PHASE_STEPS,
   PROGRAMS_PER_STUDENT,
@@ -169,7 +172,7 @@ export function budget(state: GameState): Budget {
   // ---- income
   const income: BudgetLine[] = [];
   const beds = occupiedBeds(state);
-  income.push({ id: 'tuition', name: 'Tuition', amount: students * TUITION_PER_STUDENT_PER_YEAR, detail: `${people(students, 'student', 'students')} at ${dollars(TUITION_PER_STUDENT_PER_YEAR)}` });
+  income.push({ id: 'tuition', name: 'Tuition', amount: students * tuitionRate(state), detail: `${people(students, 'student', 'students')} at ${dollars(tuitionRate(state))}` });
   income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}` });
   // Food and the stores earn by who is on campus: a quarter of students in a break, fewer in the summer term.
   const day = dayRead(state.clock);
@@ -237,11 +240,11 @@ export function budget(state: GameState): Budget {
 
   // ---- other
   const step = Math.max(0, Math.min(MARKETING_LIFT.length - 1, m.marketing));
-  const marketing = students * MARKETING_COST_PER_STUDENT[step]!;
+  const marketing = marketingCost(state, step);
   const other: BudgetLine[] = [
     { id: 'supplies', name: 'Teaching supplies and the library', amount: students * SUPPLIES_PER_STUDENT, detail: `${dollars(SUPPLIES_PER_STUDENT)} a student` },
     { id: 'programs', name: 'Student programs and events', amount: students * PROGRAMS_PER_STUDENT, detail: `${dollars(PROGRAMS_PER_STUDENT)} a student` },
-    { id: 'marketing', name: 'Recruiting and marketing', amount: marketing, detail: step === 0 ? 'Off' : `Step ${step} of ${MARKETING_LIFT.length - 1}: ${dollars(MARKETING_COST_PER_STUDENT[step]!)} a student` },
+    { id: 'marketing', name: 'Recruiting and marketing', amount: marketing, detail: step === 0 ? 'Off' : state.goals ? `Step ${step} of ${MARKETING_LIFT.length - 1}: priced by the school's reach` : `Step ${step} of ${MARKETING_LIFT.length - 1}: ${dollars(MARKETING_COST_PER_STUDENT[step]!)} a student` },
     { id: 'insurance', name: 'Insurance and legal', amount: students * INSURANCE_PER_STUDENT, detail: `${dollars(INSURANCE_PER_STUDENT)} a student` },
     { id: 'athletics', name: 'Athletics operations', amount: ball.operations, detail: state.football.stadium.tier === 0 ? 'Travel, kit, game days and the rent of a field in town' : 'Travel, kit and game days' },
   ];
@@ -273,6 +276,23 @@ export function budget(state: GameState): Budget {
 }
 
 /** How much recruiting and marketing lifts applications at the step the player has set: 0, 5, 9, 12 or 14 in a hundred. */
+/** What a student pays in tuition for a year. More at a school that was already standing (DESIGN.md 37.11). */
+export function tuitionRate(state: GameState): number {
+  return state.goals ? TUITION_ESTABLISHED_PER_YEAR : TUITION_PER_STUDENT_PER_YEAR;
+}
+
+/**
+ * What a step of recruiting and marketing costs for a year. On a small campus
+ * it is so much a student. On a game with goals it lifts the school's reach,
+ * so it is priced for the size a model campus opens at, whatever its head
+ * count is now (DESIGN.md 37.11).
+ */
+export function marketingCost(state: GameState, step: number): number {
+  const rate = MARKETING_COST_PER_STUDENT[Math.max(0, Math.min(MARKETING_COST_PER_STUDENT.length - 1, step))]!;
+  if (state.goals) return Math.round((MARKETING_PRICED_FOR_STUDENTS * scaleOf(state)) / GOAL_SCALE) * rate;
+  return enrollment(state) * rate;
+}
+
 export function marketingLift(state: GameState): number {
   return MARKETING_LIFT[Math.max(0, Math.min(MARKETING_LIFT.length - 1, state.money.marketing))]!;
 }

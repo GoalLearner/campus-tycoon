@@ -5,6 +5,7 @@ import { headCount } from '../format';
 import { enrollment, openCapacity } from '../selectors';
 import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
 import { classSize, dormStudents, localsAmong } from './demand';
+import { landSizeGoals } from './goals';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
@@ -76,6 +77,15 @@ export function classRecord(state: GameState, entryYear: number): ClassRecord {
 /** True for a record of students who began here as freshmen. The founding upper classes began elsewhere. */
 export function startedHere(record: ClassRecord): boolean {
   return record.entryYear >= 1;
+}
+
+/**
+ * True for a record that counts toward this campus's graduation rate. On a
+ * game begun on the model campus the four classes it opened with count as
+ * begun there (DESIGN.md 37.4): it is a school that was already standing.
+ */
+export function begunHere(state: GameState, record: ClassRecord): boolean {
+  return state.goals !== null || startedHere(record);
 }
 
 
@@ -212,6 +222,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
         : `${label} moved in: ${headCount(admitted)} students. ${headCount(turnedAway)} more are on the waitlist for want of ${ZONE_UNIT[bottleneck]}.`,
     data: { season, year, expected, admitted, turnedAway, bottleneck: bottleneck ?? '' },
   });
+  // A size goal lands here, at an intake, and nowhere else (DESIGN.md 37.2).
+  landSizeGoals(state, log);
 }
 
 /**

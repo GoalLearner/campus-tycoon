@@ -1,4 +1,7 @@
 import {
+  averageDesirability,
+  budget,
+  crowding,
   applyAction,
   approvalAt,
   campusHappiness,
@@ -49,7 +52,19 @@ import {
  */
 
 /** Daily is the casual player looking in half as often: once a day, the slowest rhythm the game supports. */
-export type Style = 'absent' | 'daily' | 'casual' | 'optimizer';
+/**
+ * 'striver' is a once-a-day player on a game with goals who works every cause of applicants: looks, marketing,
+ * football and the academic rank (DESIGN.md 37.8). It shows what the best regular player can reach, and when.
+ */
+export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver';
+
+/**
+ * On a game with goals a campus is run well when it keeps $12 to $17 of every $100 (the owner's target, 37.10).
+ * A test player there watches the Money panel: under the first of these it takes on no new yearly cost, and it
+ * starts again once it keeps the second.
+ */
+const KEEPS_ENOUGH = 13;
+const KEEPS_PLENTY = 14.5;
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
@@ -89,6 +104,44 @@ const onStreetPlan = (x: number, y: number): boolean => STREET_ROWS.includes(y) 
  * A person learns to leave such gaps the first time a full campus has no room.
  */
 const keptForServices = (x: number, y: number): boolean => (x % 16 === 5 || x % 16 === 6) && (y % 6 === 0 || y % 6 === 1);
+
+/**
+ * Free cells beside a path on a campus whose street plan is used up, one in four left open as a way through.
+ * The street plan was drawn for the small campus. A model campus is laid out already, so its player builds
+ * wherever there is open ground by a walk.
+ */
+function anyLotSpots(state: GameState): Point[] {
+  const { width, height } = state.map;
+  const spots: Point[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (freeAt(state, x, y) && !keptForServices(x, y) && (x + 2 * y) % 4 !== 0 && besidePath(state, x, y)) spots.push([x, y]);
+    }
+  }
+  return spots;
+}
+
+/** A walk into open ground: from a free cell beside a path, up to eight free cells in a line, the longest there is. */
+function anyPathStretch(state: GameState): Point[] | null {
+  const { width, height } = state.map;
+  let best: Point[] | null = null;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!freeAt(state, x, y) || !besidePath(state, x, y)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const stretch: Point[] = [];
+        for (let n = 0; n < 8; n++) {
+          const sx = x + dx * n;
+          const sy = y + dy * n;
+          if (!freeAt(state, sx, sy)) break;
+          stretch.push([sx, sy]);
+        }
+        if (stretch.length >= 3 && (!best || stretch.length > best.length)) best = stretch;
+      }
+    }
+  }
+  return best;
+}
 
 /** Empty cells that touch a path and are not reserved for a street, nearest the middle first. */
 function lotSpots(state: GameState): Point[] {
@@ -161,7 +214,7 @@ function tryPaint(state: GameState, tool: Tool, cells: Point[], reserve: number)
 
 /**
  * Parking for locals who cannot walk in: a car park on the campus's east edge,
- * where it touches College Avenue and needs no road of its own. A surface lot
+ * where it touches Lantern Avenue and needs no road of its own. A surface lot
  * while there is room for one, then a parking structure.
  */
 function nextParking(state: GameState): { type: PlacedType; x: number; y: number } | null {
@@ -198,8 +251,14 @@ function setMarketing(state: GameState, style: Style): GameState {
   // Wait until the last waitlist has closed: only then is it known whether anyone was turned away for good.
   if (!a.lastIntake || a.waitlistUntilTick !== 0) return state;
   const lost = a.lastIntake.turnedAway - a.waitlistAdmitted > 0;
-  const atCeiling = fallClassDraw(state) >= POOL_CEILING * scaleOf(state);
-  const step = lost || atCeiling ? 0 : style === 'optimizer' ? 4 : 2;
+  const atCeiling = !state.goals && fallClassDraw(state) >= POOL_CEILING * scaleOf(state);
+  let step = lost || atCeiling ? 0 : style === 'optimizer' || style === 'striver' ? 4 : 2;
+  // On a game with goals the player keeps an eye on the margin: marketing stops while the campus keeps too little.
+  if (state.goals && step > 0) {
+    const kept = budget(state).kept;
+    if (kept < KEEPS_ENOUGH) step = 0;
+    else if (kept < KEEPS_PLENTY) step = Math.min(step, state.money.marketing);
+  }
   if (step === state.money.marketing) return state;
   const result = applyAction(state, { type: 'marketing', step });
   return result.ok ? result.state : state;
@@ -499,8 +558,48 @@ export interface TurnResult {
 }
 
 /** One check-in. The absent player does nothing. */
-export function takeTurn(state: GameState, style: Style): TurnResult {
-  if (style === 'absent') return { state, purchases: 0, blockedByCash: false };
+/** A quad beside the least pleasant lot, a few a visit: how the campus looks is one of the four causes of applicants. */
+function plantGreen(state: GameState, reserve: number, most: number): { state: GameState; planted: number } {
+  let current = state;
+  let planted = 0;
+  for (let n = 0; n < most; n++) {
+    const map = current.map;
+    const lots = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot).sort((a, b) => map.score[a.y * map.width + a.x]! - map.score[b.y * map.width + b.x]!);
+    let done = false;
+    for (const lot of lots.slice(0, 12)) {
+      let spot: Point | null = null;
+      for (let r = 1; r <= 3 && !spot; r++) {
+        for (let dy = -r; dy <= r && !spot; dy++) {
+          for (let dx = -r; dx <= r && !spot; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            if (freeAt(current, lot.x + dx, lot.y + dy) && !keptForServices(lot.x + dx, lot.y + dy)) spot = [lot.x + dx, lot.y + dy];
+          }
+        }
+      }
+      if (!spot) continue;
+      const before = averageDesirability(current);
+      const next = tryPaint(current, 'quad', [spot], reserve);
+      if (!next) return { state: current, planted };
+      // Green past a lot's cap does nothing: keep a quad only when it lifts the campus.
+      if (averageDesirability(next) <= before + 0.001) continue;
+      current = next;
+      planted += 1;
+      done = true;
+      break;
+    }
+    if (!done) break;
+  }
+  return { state: current, planted };
+}
+
+export function takeTurn(state: GameState, as: Style): TurnResult {
+  if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
+  // The striver looks in once a day and buys as the once-a-day player does. What it adds comes after.
+  const striver = as === 'striver';
+  const style: Style = striver ? 'daily' : as;
+  // On a game with goals: no new yearly cost while the campus keeps too little (the owner's target, 37.10).
+  const margin = state.goals ? budget(state).kept : 100;
+  const thrifty = margin < KEEPS_PLENTY;
   // The once-a-day player has a day's income to spend, so buys twice as much in a visit as the twice-a-day one.
   const maxPurchases = style === 'casual' ? 5 : style === 'daily' ? 10 : 60;
   // A little is kept back: $20,000, or enough for the quiet day between graduation and the fall class, when a
@@ -534,7 +633,11 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     let next: GameState | null;
     if (spots.length === 0) {
       const stretch = nextPathStretch(current);
+      const open = !stretch && current.goals ? anyLotSpots(current) : [];
+      const walk = !stretch && current.goals && open.length === 0 ? anyPathStretch(current) : null;
       if (stretch) next = tryPaint(current, 'path', stretch, lotReserve);
+      else if (open.length > 0) next = tryPaint(current, zone, [open[0]!], lotReserve);
+      else if (walk) next = tryPaint(current, 'path', walk, lotReserve);
       else {
         // Out of room on the land the campus has: buy the next field.
         const land = nextLand(current);
@@ -575,17 +678,34 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
 
   // Then the Build menu, as a player who has read the Happiness panel would use it.
   // A bigger campus needs more of everything, so a visit covers more than it did before there was land to buy.
-  const menu = buildFromMenu(current, reserve, style === 'casual' ? 2 : style === 'daily' ? 4 : 8);
+  const menu = thrifty ? { state: current, built: 0, blocked: false } : buildFromMenu(current, reserve, style === 'casual' ? 2 : style === 'daily' ? 4 : 8);
   current = menu.state;
   purchases += menu.built;
   if (menu.blocked) blockedByCash = true;
+  if (striver && !thrifty) {
+    // Looks: green where the campus is least pleasant. Rank: seats to spare, so classes are not crowded.
+    // Open ground is what the next halls go on, so green is only planted while there is plenty of it left.
+    const ground = lotSpots(current).length + anyLotSpots(current).length;
+    const green = ground >= 40 ? plantGreen(current, reserve, 2) : { state: current, planted: 0 };
+    current = green.state;
+    purchases += green.planted;
+    if (crowding(current) > 0.2) {
+      const spots = lotSpots(current);
+      const spot = spots[0] ?? anyLotSpots(current)[0];
+      const roomy = spot ? tryPaint(current, 'academic', [spot], reserve) : null;
+      if (roomy) {
+        current = roomy;
+        purchases += 1;
+      }
+    }
+  }
   // A place built on this visit gets its bin, and its yard the hands for it, before the player leaves.
   if (menu.built > 0) {
     const after = tendGrounds(current, reserve, menu.built);
     current = after.state;
     purchases += after.built;
   }
-  current = setMarketing(current, style);
+  current = setMarketing(current, as);
   if (!blockedByCash) current = payIntoEndowment(current, style);
   return { state: current, purchases, blockedByCash };
 }

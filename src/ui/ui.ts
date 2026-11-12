@@ -71,6 +71,7 @@ import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { openFootball } from './footballPanels';
+import { sizeView } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
@@ -269,9 +270,12 @@ export function mountUi(root: HTMLElement): void {
   const cash = el('span', 'cash');
   const rate = el('span', 'rate');
   money.append(cash, rate);
-  const students = el('div', 'students');
+  // The student count. Tapping it opens the Size panel: the next goal, and this fall's applicants with what makes them.
+  const students = el('button', 'students');
+  students.type = 'button';
   const studentCount = el('span', 'count');
   students.append(studentCount, el('span', 'label', 'students'));
+  students.addEventListener('click', () => openSize());
   // Happiness: a face and a number. Tapping it shows the causes.
   const happy = el('button', 'students happy');
   happy.type = 'button';
@@ -506,7 +510,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -1303,6 +1307,37 @@ export function mountUi(root: HTMLElement): void {
         if (shown && typeof shown.scrollIntoView === 'function') shown.scrollIntoView({ block: 'nearest' });
       };
       draw();
+    });
+  }
+
+  function openSize(): void {
+    const view = sizeView(store.state);
+    openModal((close, card) => {
+      card.append(el('h1', '', view.title));
+      if (view.next) {
+        const bar = el('div', 'cause-bar size-bar');
+        const fill = el('div', 'cause-fill');
+        fill.style.width = `${view.next.percent}%`;
+        bar.append(fill);
+        card.append(el('div', 'size-goal', view.next.line), bar, el('p', 'fine', view.next.toGo));
+      } else if (view.done) card.append(el('p', '', view.done));
+      // This fall's applicants, from where they start to what each cause adds.
+      const total = el('div', 'size-row total');
+      total.append(el('span', '', view.applicants.head), el('span', 'size-value', view.applicants.total));
+      card.append(total);
+      for (const row of view.applicants.rows) {
+        const line = el('div', 'size-row');
+        line.append(el('span', '', row.name), el('span', 'size-value', row.value));
+        card.append(line);
+      }
+      card.append(el('div', 'size-goal', view.rank));
+      if (view.rankNext) card.append(el('p', 'fine', view.rankNext));
+      if (view.era) card.append(el('div', 'size-goal', view.era));
+      if (view.reached.length > 0) {
+        card.append(el('div', 'money-head', 'Goals reached'));
+        for (const line of view.reached) card.append(el('p', 'fine', line));
+      }
+      card.append(button('Close', 'wide', close));
     });
   }
 

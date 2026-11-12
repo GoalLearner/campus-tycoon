@@ -17,7 +17,7 @@ import {
   ENDOWMENT_YIELD,
   enrollment,
   hasCareStaff,
-  MARKETING_COST_PER_STUDENT,
+  marketingCost,
   MARKETING_LIFT,
   lampReport,
   thingReport,
@@ -494,7 +494,7 @@ export function moneyView(state: GameState): MoneyView {
   const marketingLine =
     step === 0
       ? `Off. Each step brings more applications: ${lifts.slice(0, -1).join(', ')}, then ${lifts[lifts.length - 1]}%.`
-      : `Step ${step} of ${max} · ${Math.round(MARKETING_LIFT[step]! * 100)}% more applications · ${dollarsShort(enrollment(state) * MARKETING_COST_PER_STUDENT[step]!)} a year`;
+      : `Step ${step} of ${max} · ${Math.round(MARKETING_LIFT[step]! * 100)}% more applications · ${dollarsShort(marketingCost(state, step))} a year`;
 
   const pays = Math.round(ENDOWMENT_YIELD * 100);
   const endowmentLine =

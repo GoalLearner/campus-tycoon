@@ -80,13 +80,13 @@ describe('the model campus is laid by a script', () => {
     expect(lots + placed).toBeLessThanOrEqual(120);
   });
 
-  it('has the long walk, the walk to College Avenue and the loop road, each joined up', () => {
+  it('has the long walk, the walk to Lantern Avenue and the loop road, each joined up', () => {
     const state = model();
     const map = state.map;
     const kind = (x: number, y: number): string => map.cells[y * map.width + x]!.kind;
     for (let x = 9; x <= 23; x++) expect(['path', 'crossing'], `the long walk at ${x}, 19`).toContain(kind(x, 19));
     for (let x = 23; x <= 31; x++) expect(kind(x, 15), `the walk to the avenue at ${x}, 15`).toBe('path');
-    // The loop road runs down the west edge and along the north edge, and a car can drive it from College Avenue.
+    // The loop road runs down the west edge and along the north edge, and a car can drive it from Lantern Avenue.
     const reached = roadReach(map);
     for (const [x, y] of [[0, 40], [0, 20], [0, 0], [16, 0], [31, 0]] as const) expect(reached[y * map.width + x], `road at ${x}, ${y}`).toBe(1);
     // Every car park holds cars: a road or the avenue reaches each.

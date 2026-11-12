@@ -17,7 +17,8 @@ import { recomputeDesirability } from './systems/desirability';
 import { addPlaced } from './systems/placed';
 import { recomputeRates } from './systems/money';
 import { buildTown, startingParcels } from './systems/town';
-import { makeField } from './systems/field';
+import { makeField, openingStanding } from './systems/field';
+import { newGoals } from './systems/goals';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
@@ -190,8 +191,12 @@ export function newGame(opts: NewGameOptions): GameState {
     football: null as unknown as Football,
     decisions: { open: [], nextId: 1, past: [] },
     inbox: newInbox(opts.seed),
+    // Goals belong to a game begun on the model campus (DESIGN.md 37.2). This is the mark of one.
+    goals: model ? newGoals() : null,
   };
   startFootball(state, 1);
+  // A model campus is a school already standing: it opens with a standing, near the foot of the ladder (DESIGN.md 37.4).
+  if (model) state.field.academic = openingStanding(state.field);
   // A new campus has its stadium plot from the first day.
   state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
   scheduleScrimmage(state);

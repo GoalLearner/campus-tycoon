@@ -608,7 +608,7 @@ Campus Safety handles mischief, not crime (section 16).
 | Coverage | A service picker, each circle, and a ghost outline of its full size |
 | Money | Each lot's net income per real hour |
 | Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). Built on 2026-11-11 with play stop 4a. It opens from "Show cleanliness" on the Happiness panel and stays until Done |
-| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and College Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
+| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and Lantern Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
 
 ### 8.5 Recreation holds so many at once
 
@@ -2196,8 +2196,8 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 | Piece | Built |
 |---|---|
 | The map | 42 cells wide by 48 tall. The starting land is the same 32 by 32. The town is the ten columns east of it, for the full height. Two fields of 16 by 16 lie south of the starting land |
-| The town | "College Avenue" runs down the campus edge. Eight side streets run east from it, each a neighbourhood with 9 to 14 house plots. A plot stands for 10 local students [T]. About 900 places in all, so the town fills as the school grows |
-| Locals | Four in ten of every class. A neighbourhood walks when a path meets College Avenue within two rows of its side street and the walk to class is 12 minutes or less [T]. From any other it drives, one parking space each |
+| The town | "Lantern Avenue" runs down the campus edge. Eight side streets run east from it, each a neighbourhood with 9 to 14 house plots. A plot stands for 10 local students [T]. About 900 places in all, so the town fills as the school grows |
+| Locals | Four in ten of every class. A neighbourhood walks when a path meets Lantern Avenue within two rows of its side street and the walk to class is 12 minutes or less [T]. From any other it drives, one parking space each |
 | A local's place | Decided when they enrol and kept until they graduate. Clearing the path or car park later strands nobody, and the next class finds fewer places. Each class year's count is stored |
 | Parking | Parking lot: 2 by 1, $20K, 20 cars. Parking structure: 2 by 2, $160K, 100 cars. Either holds cars only when a road joins it to a street, or it touches the avenue itself |
 | Roads | $3,000 a cell and $150 a year. A road over a path, or a path over a road, makes a crossing that both use. Reached from a Road card in the Build menu, because the tool bar is full |
@@ -2221,19 +2221,19 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 
 Asked for by the owner on 2026-11-11, after the money stop: "No one walks or drives in from the town", and "The town looks dead." Built the same day. All of it is for show: nothing here is saved, no number changes, and nothing runs while the game is closed.
 
-**Was it a bug?** Yes, in what was shown, not in the numbers. The locals were enrolled and counted correctly all along. On the map, nobody ever came out of a house: a commuter appeared already on campus, a car appeared only when students drove, which needs a car park a road reaches, and a house stood only where locals were enrolled. A campus from an older save also has no walk to College Avenue, because that walk is laid for new campuses only (25.4), and the only place that said so was a panel. Both halves are fixed: the map says at its edge when the town cannot get in, and when it can, people and cars are seen coming and going.
+**Was it a bug?** Yes, in what was shown, not in the numbers. The locals were enrolled and counted correctly all along. On the map, nobody ever came out of a house: a commuter appeared already on campus, a car appeared only when students drove, which needs a car park a road reaches, and a house stood only where locals were enrolled. A campus from an older save also has no walk to Lantern Avenue, because that walk is laid for new campuses only (25.4), and the only place that said so was a panel. Both halves are fixed: the map says at its edge when the town cannot get in, and when it can, people and cars are seen coming and going.
 
 | Piece | Built [T] |
 |---|---|
 | The town | Every plot has its house. The few spots along a street with no house are a driveway with a car, a garden, a pool or trees, and the ground behind the houses is lawn and trees. It is read from numbers the save already holds, so a town always looks the same |
-| Townspeople | Neighbours walk the sidewalks of College Avenue and the side streets, about seven at a time by day and one at night. A tap says "A neighbour from the town. Townspeople are not students." |
+| Townspeople | Neighbours walk the sidewalks of Lantern Avenue and the side streets, about seven at a time by day and one at night. A tap says "A neighbour from the town. Townspeople are not students." |
 | Town cars | Between driveways and the ends of the streets: four in the morning and evening, three in the afternoon, one at night. Cars stand in driveways: nearly all at night, about a third in the afternoon |
-| Walking in | From each street that walks: out of a house, along its sidewalk, over College Avenue and up the path to class. Nearly all inbound in the morning, home again in the evening. About one walker for every 14 locals who walk, never more than 26 at once, and fewer on a weekend. Their card says "Walking in from home" and "Walking home" |
-| Driving in | A car leaves a driveway, drives its street, College Avenue and the player's road, and pulls into a car park a road reaches. Later it drives home. One car for about ten students who drive, never more than nine at once at Normal |
+| Walking in | From each street that walks: out of a house, along its sidewalk, over Lantern Avenue and up the path to class. Nearly all inbound in the morning, home again in the evening. About one walker for every 14 locals who walk, never more than 26 at once, and fewer on a weekend. Their card says "Walking in from home" and "Walking home" |
+| Driving in | A car leaves a driveway, drives its street, Lantern Avenue and the player's road, and pulls into a car park a road reaches. Later it drives home. One car for about ten students who drive, never more than nine at once at Normal |
 | Crossings and gaps | A car stops short of a crossing while a walker is on it. A car keeps a gap behind the one in front, so they queue behind a bus at its stop |
 | The shuttle | The pack's orange bus loops the campus roads, pausing at each car park's door, each crossing and where a road runs beside a path. Scenery until the shuttle service is built (8.3). It needs at least two such places |
 | Delivery trucks | A grocery truck or a mail truck drives in from the edge of the map, stands seven seconds beside a dining hall or the campus store, and leaves. Only where a road is beside one of them, and never at night |
-| Edge markers | When no street can walk in, the pack's arrow sign stands at the campus edge beside College Avenue, on the row of the side street nearest the lecture halls, with "Connect a path here so locals can walk in". When no car park has a road, the pack's blue road sign stands on another row with "Build parking with a road here so locals can drive in". Each reads at normal phone zoom with no panel open and goes when the campus is joined. A tap puts the path tool in hand, or begins placing a parking lot. Both are worked out by `townHints` from the access data the rules use |
+| Edge markers | When no street can walk in, the pack's arrow sign stands at the campus edge beside Lantern Avenue, on the row of the side street nearest the lecture halls, with "Connect a path here so locals can walk in". When no car park has a road, the pack's blue road sign stands on another row with "Build parking with a road here so locals can drive in". Each reads at normal phone zoom with no panel open and goes when the campus is joined. A tap puts the path tool in hand, or begins placing a parking lot. Both are worked out by `townHints` from the access data the rules use |
 | Bikes and skateboards | Left out. No figure in the packs rides anything. Listed in section 26 |
 
 `?demo=unjoined` shows the markers, `?demo=stop3&hour=8` the morning rush, and `?demo=play` recreation in use.
@@ -3630,7 +3630,7 @@ The turn fits well. The reference is half again as wide as it is tall, and the g
 
 ### 35.3 The districts, in game cells
 
-x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
+x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. Lantern Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
 
 | District on the reference | Where it lands | Built from |
 |---|---|---|
@@ -3647,8 +3647,8 @@ x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College
 | The pool complex and the tennis centre | About x 17 to 19, y 43 to 46 | The pool and two sets of courts |
 | The big parking structures | The north edge, x 12 to 28, y 0 to 2 | Parking structures on a road |
 | The surface lots | The west edge, and one in each field | Parking lots on the loop road |
-| The loop road | Round the west and north edges, joined to College Avenue | Road, with crossings where the walks meet it |
-| The transit centre | Where the long walk meets College Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
+| The loop road | Round the west and north edges, joined to Lantern Avenue | Road, with crossings where the walks meet it |
+| The transit centre | Where the long walk meets Lantern Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
 | Facilities, receiving, the plant | The north-west corner | Facilities Yards, enough to cover every place that drops litter |
 | The health centre and campus police | Near the union and near the stadium | A Medical Center and Campus Safety, placed to cover the dorms and the places to play |
 | The tower quad | The north end of the core | The Administration building on a quad |
@@ -3754,17 +3754,17 @@ Built on 2026-11-12, ahead of Stop C at the owner's word, on the branch `play-st
 | The second commons | 9.5, 22 | A dining hall, a burger grill and a taco stand |
 | The north-east residence halls | 27.5, 7.5 | 15 residence halls on two walks, a dining hall, a quad, courts |
 | The hill residences | 5.5, 37 | 7 residence halls round a quad in the south-west field, a dining hall, courts |
-| The houses and apartments by the avenue | 27.5, 28 | 6 residence halls on a walk that reaches College Avenue, a diner |
+| The houses and apartments by the avenue | 27.5, 28 | 6 residence halls on a walk that reaches Lantern Avenue, a diner |
 | The far apartments | 4.5, 3.5 | 4 residence halls in the north-west corner, a coffee stand |
 | The halls by the fields | 15, 38.5 | 4 residence halls beside the ball fields, a smoothie bar |
-| The stadium plot | 23, 32 | The bare plot, a parking structure beside it, and its own road in from College Avenue |
+| The stadium plot | 23, 32 | The bare plot, a parking structure beside it, and its own road in from Lantern Avenue |
 | The recreation centre | 16.5, 31 | The gym |
 | The ball fields | 16.5, 39 | Two recreation fields |
 | The pool and the courts | 17.5, 44 | The pool and two sets of courts |
 | The parking structures | 19.5, 1.5 | Three on the north edge, on the loop road |
-| The surface lots | west edge and the fields | Three on the loop road down the west edge, and one by College Avenue in the south-east field |
-| The loop road | | Down the west edge and along the north edge to College Avenue |
-| The walk to College Avenue | 27.5, 15 | A path from the east end of the campus to the avenue, with a small plaza that joins the streets on both sides of it |
+| The surface lots | west edge and the fields | Three on the loop road down the west edge, and one by Lantern Avenue in the south-east field |
+| The loop road | | Down the west edge and along the north edge to Lantern Avenue |
+| The walk to Lantern Avenue | 27.5, 15 | A path from the east end of the campus to the avenue, with a small plaza that joins the streets on both sides of it |
 | Facilities | 2.5, 8 | A Facilities Yard on the west edge below the far apartments. Two more, east and south, so every place that drops litter has one in reach |
 | The health centre and Campus Safety | | A Medical Center north of the union and Campus Safety by the stadium, with a second of each beside the north-east halls and the gym |
 
@@ -4229,3 +4229,165 @@ Reaching an era on either ladder still opens it. On the size ladder that is week
 | Eras should unlock something real | Noted in 15.2, for the milestones layer |
 
 The points of 37.9 he did not name stand as chosen, on his rule that the recommended option is taken and recorded: the first era is named Arrival, a game begun on the small campus has no ladder, and a size goal gives a free building only once he has seen the sheet. Until he has, a goal reached gives the headline and its place in the list.
+
+### 37.11 As built
+
+Built on 2026-11-12, on the owner's approval of 37.10. Where a number differs from the proposal above, this part is what the game does.
+
+**What is built.**
+
+| Thing | As built | Where |
+|---|---|---|
+| The mark of a game begun on the model campus | `state.goals` is there. It is null on a game begun on the small campus, which has no goals and keeps every old rule | `newGame`, `src/sim/systems/goals.ts` |
+| Size goals | Eight: 50,000, 55,000, 60,000, 66,000, 73,000, 81,000, 90,000 and 100,000 students. One lands only as a class moves in, and is kept for good. Several can land at one intake | `landSizeGoals`, called at the end of `runIntake` |
+| Rank goals | Eight: Top 175, 150, 125, 100, 75, 50, 25 and 10. One lands only on rankings day, and is kept for good | `landRankGoals`, called at the end of `rankingsDay` |
+| Eras | Arrival, then Growth at 55,000 students or the Top 125, Flagship at 66,000 or the Top 75, Legacy at 81,000 or the Top 25. An era is worked out from the goals kept, so it cannot be lost either. It unlocks nothing: a name, a headline and a line on the panel | `eraOf` |
+| Applicants | Reach times four causes, each applied in turn and rounded to a whole student, so the reach and the four lines add up to the total exactly, and the intake uses that same total. Head count does not feed them | `fallApplicants` in `src/sim/systems/demand.ts` |
+| The four causes | How the campus looks, 0.6 to 1.4 as before. Marketing, up to 14 in a hundred, with what the desk sets going counted inside it. Football, up to 14 in a hundred as before. Academic rank, nothing at 200th or before the first rankings day | The same |
+| The old ceiling on a class | Does not apply on a game with goals. The most the four causes can make is about 26,000, far under it. On a small campus it stands, and the Size panel says so when it is what holds a class | The same |
+| The rank, first change | The classes a model campus opens with count toward its graduation rate, from their own commencement. A rate exists from the first spring | `begunHere`, `academicInputs` |
+| The rank, second change | A model campus opens with the rating of the school that stands 150th in its own field. Each rankings day the published rating moves a part of the way from where it was toward that year's measure. The first rank lands between 151st and 157th on the seeds tried, and no year moves it more than about twenty places | `openingStanding`, `RANK_PULL`, `rankingsDay` |
+| The Size panel | Opens from the student count on the top bar. Students, the next goal with a bar, this fall's applicants with the reach and the four causes in students, the rank and its next goal, the era, and the goals reached | `src/ui/sizeUi.ts`, `openSize` in `src/ui/ui.ts` |
+| The paper | A goal or an era reached is the headline of its day and one of the lines at the top. It is in the dated list too. The first issue of a new game names the first goal | `src/sim/newspaper.ts` |
+| A reward for a goal | None is switched on. `goals.rewards` counts free buildings taken, so one can be attached later with no save change. The candidates are on one sheet for the owner | `docs/handoff/size-goal-rewards.html` |
+| The main street | Lantern Avenue | `MAIN_STREET` |
+| Saves | Version 15. The main street takes its name in every save that has one, since no player could ever rename it. A game begun on the model campus is known by its campus scale, which only that campus has above 1: it gets its goals, none reached. A game begun on the small campus gets none, and nothing else in it changes | `src/sim/save.ts`, `tests/fixtures/save-v14.json` |
+
+**What was tuned, and why.**
+
+| Number | Proposed | As built | Why |
+|---|---|---|---|
+| Reach | 11,000 | 11,000 | As approved |
+| The most a rank adds to applicants | 25 in a hundred | 55 in a hundred | With 25 the top goal could not be reached. The player who worked every cause stopped near 87,000 students: looks top out near 63 of 100 with the green a campus can hold, and a campus holds about 4.2 students for each fall applicant, so 100,000 needs about 23,800 applicants. Raising reach instead brought the middle goals too soon. Rank is the slow cause, so it is the one that makes the top goal take months |
+| How far the published rating moves toward the year's measure | Not in the proposal | 8 in a hundred of the gap, each rankings day | It is how the first rank can land near 150th without a jump the year after. At 8 a regular player passes the Top 100 in week 8 to 12 |
+| Tuition on a game with goals | $8,200, as everywhere | $8,750 | The owner's money target. See below |
+| What marketing costs on a game with goals | So much for each student enrolled | So much for each student of the size a model campus opens at: $5.5M a year at step 2 and $11.0M at step 4, whatever the head count | Marketing now lifts reach, which does not grow with the head count. Priced by head count it cost more each year for the same lift |
+
+**Money: the owner's target of $12 to $17 kept of every $100.**
+
+The cause of the low margin in the trial was found. Per student, costs are about 92 cents of each dollar that comes in. On the old rule a campus kept doubling, so it outgrew what it had bought. Held near 55,000 to 90,000 students by its applicants it cannot, and a test player who also bought everything the Happiness panel asked for kept $4 to $8.
+
+Three things were moved, all only on a game with goals. Nothing moved on a small campus, whose long runs print the same numbers as before.
+
+1. Tuition is $8,750 a student (was $8,200). A school that was already standing charges more than one founded this morning.
+2. Marketing is priced by reach (the table above).
+3. The test players watch the Money panel. Under $13 kept they take on no marketing, and under $14.50 no new building from the Build menu. That is what "run well" means in the long run. A person who buys everything at once will still see the margin fall.
+
+| Measured | Kept of every $100 |
+|---|---|
+| A new game, as it opens | $16.60 (was $12.00) |
+| The casual test player, years 3 to 8, two seeds | $13.30 to $13.90 |
+| The once-a-day test player, years 3 to 8, two seeds | $12.70 to $13.70 |
+| The player who works every cause, years 3 to 8, two seeds | $11.70 to $13.80 |
+| All three by week 44 | $23.00 to $24.80 |
+| Left alone for five years | Nets $80M in its leanest year, cash grows by $384M, no grant |
+
+The rise after month five is the endowment. A test player pays its spare cash in, and by week 44 it holds $6.0 to $6.5 billion, which earns more than a tenth of the campus's income. See "rough" below.
+
+**The pace, measured.** The real week each goal is reached, over 44 weeks, on two seeds. A game year is a real week.
+
+| Goal | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| 50,000 students | 2 | 2 | 2 |
+| 55,000 students | 3 | 3 | 3 |
+| 60,000 students | 4 | 4 | 3 to 4 |
+| 66,000 students | 5 | 5 | 4 to 5 |
+| 73,000 students | 7 to 8 | 8 | 7 to 8 |
+| 81,000 students | 14 to 15 | 14 to 16 | 10 to 11 |
+| 90,000 students | 27 to 28 | 29 to 31 | 26 to 29 |
+| 100,000 students | Not reached | Not reached | 31 to 33 |
+| Top 175 | 1 | 1 | 1 |
+| Top 150 | 2 | 2 | 2 |
+| Top 125 | 5 | 5 | 5 |
+| Top 100 | 8 to 10 | 10 to 12 | 10 to 12 |
+| Top 75 | 18 to 21 | 19 to 20 | 21 |
+| Top 50 | 44, or not reached | 42, or not reached | Not reached |
+| Top 25 and Top 10 | Not reached | Not reached | Not reached |
+
+Against the targets: the once-a-day player has five size goals by week 9 and reaches 81,000 in week 14 to 16. Every regular player has four in the first two months. The top goal is reached, by the player who works every cause, in the eighth month and never before the fifth. The Top 100 comes in about month two and a half. The Top 10 is not reached inside ten months by a player who admits everyone: it needs a campus that turns applicants away, which costs size, the choice 15.1 is built on.
+
+The player who works every cause is a new test player, `striver`: once a day, marketing at its top step, every stadium the team earns, green beside its least pleasant halls, and seats to spare so classes are not crowded. On a model campus a test player whose street plan is used up now builds on any open ground beside a walk, and lays a walk into open ground when there is none.
+
+**Tests and long runs.** 27 new tests in `tests/goals.test.ts`: 569 in all. Six new long-run checks on the model campus, and the old margin check there re-set to his target: 46 in all.
+
+**Decisions made for the owner.**
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The mark of a game begun on the model campus | Its goals being there in the save | A campus scale above 1, which the test campuses at scale 1 would fail |
+| How the causes add up to the student | Each applied in turn and rounded, and the intake uses that total | Multiply and round once, and show rounded lines that do not add up |
+| How the first rank lands near 150th | An opening standing, and a published rating that follows the year's measure a part of the way | Clamp the first rank only, which jumps eighty places the year after |
+| The rank's lift on applicants | 55 in a hundred at 1st | 25, with the top goal out of reach, or a larger reach, with the middle goals too soon |
+| How to reach $12 to $17 | Tuition for a school already standing, marketing priced by reach, and test players who hold a margin | A new line of income, or cuts to per-student costs, which would move the small campus too |
+| Where a new game opens | $16.60 kept, near the top of his range, so there is room to spend before it reaches the bottom | Open at $12 and fall under it with the first purchases |
+| Which players the money target is checked on | The casual and the once-a-day, as he asked. The third is reported | All three |
+| The main street in old saves | Renamed in every save that has one | Only where it still had the old default, which the code would have to spell out |
+| The paper's first issue | Names the first goal as its first line | Leave the goal for the player to find on the panel |
+| A reward for a goal | A counter in the save and nothing else, until he has seen the sheet | A stand-in building |
+
+**Rough.**
+
+| Rough | Why |
+|---|---|
+| After month five a test player keeps $23 to $25 of every $100, above his range | Its endowment has grown to about $6 billion. Nothing in the game takes that money yet. The reward buildings, and eras that unlock something to buy, are where it should go |
+| The player who works every cause dips to $11.70 kept in one year | It pays for marketing at its top step while it builds for a class. The two regular players stay above $12.70 |
+| The top goal leans on the rank | With looks capped near 63 of 100, the rank is most of the last 15,000 students. When more can lift how a campus looks, the rank's 55 should come back toward 25 |
+| Nobody reaches the Top 25 or the Top 10 in ten months | A test player that turns applicants away to be selective does not exist. The estimate is that the Top 10 costs about a quarter of a campus's size |
+| An era is still only a name | 37.5 and the owner's note in 15.2 |
+| The headline and the first line of the paper repeat a goal | The goal is both the plain fact under the headline and the line beneath it |
+| The published rating and the year's measure are two numbers | The Rankings page says both in one line. It may read as one too many |
+
+---
+
+## 38. Capacity and faculty: scaling with enrollment (proposed)
+
+Asked for by the owner on 2026-11-12, typed to the build session while the size goals were being built: "Make scaling with enrollment a core, visible mechanic. Much of it exists; unify it and fill the gaps." **This section is a proposal. Nothing in it is built. It waits for his go.**
+
+### 38.1 What he asked for
+
+1. **A Capacity panel**, one screen opened from the student count, listing every per-student need as supply against what enrollment requires, with a status (OK, tight, short) and its consequence: beds with locals housed in town, classroom seats, the student-to-faculty ratio, dining capacity, recreation capacity, safety and health coverage, parking for drivers, maintenance workers for the litter load, and staff per student. Each row taps through to its fix. It shows next fall's forecast.
+2. **Faculty to manage.** A target ratio from the Instruction slider (for example 1 to 15 well funded, 1 to 25 underfunded). New faculty arrive at the start of each semester, so when enrollment outruns hiring the ratio stretches for a semester, and class size, GPA, Stress and the academic rating suffer, each with a named cause. The ratio shows on the panel, the Provost's line and the Scorecard, and on student and professor cards.
+3. **Scaling down.** Empty beds and seats still cost upkeep. Faculty and staff shrink by attrition about a semester behind, so a sudden drop costs payroll for a while. No layoffs. Dining, recreation and services keep their costs.
+4. **Rules.** Every capacity scales from the same enrollment number and updates at each intake and graduation. A shortfall never blocks the game: it lowers the right number with a named cause. Only beds and seats cap enrollment. Deterministic and cheap in catch-up. Two long-run checks: a campus growing fast without building ahead ends up short and unhappy but never spirals, and a campus that shrinks recovers its finances within two years.
+5. "Tell me which play stop this belongs in, what it changes in existing saves, and anything already built that it replaces."
+
+### 38.2 The answer to his fifth point
+
+**Which stop.** Its own stop, right after the size goals, and not folded into them. Faculty is the largest cost there is, about 29 cents of every dollar that comes in. A hiring lag and an attrition lag move the money again, and the size goals were tuned to his target of $12 to $17 kept (37.11). Built together, nobody could say which change moved what. One thing in his reason needs a correction: the size goals make enrollment steadier and not swingier, since a campus now settles where its applicants hold it. The lag matters all the same, every year, because a quarter of the students leave at commencement and the fall class arrives a day later.
+
+**What exists today, and what is missing.**
+
+| Need | Today | Missing |
+|---|---|---|
+| Beds, with locals in town | Built: the Housing bar, the plan it taps through to, and it caps enrollment | Its row |
+| Classroom seats | Built, the same way | Its row |
+| Student-to-faculty ratio | Faculty are a line of payroll: one for every so many students, changed the instant enrollment changes | A stored head count, the lag, and the Instruction slider itself, which does not exist |
+| Dining capacity | Reach and kinds of food count toward Happiness. A building's room is a number in the config | Nothing is lowered when a dining hall is over its room |
+| Recreation capacity | Built: capacity, queues and waits | Its row |
+| Safety and health coverage | Built: reach, staff, incidents handled or missed | Its row, as a share of students covered |
+| Parking for drivers | Built: spaces, and the Parking overlay | Its row |
+| Maintenance workers | Built: yards, and workers needed against hired | Its row |
+| Staff per student | A line of payroll, changed in an instant | A stored head count, the lag, and something a shortfall lowers |
+
+Two things his brief leans on are not built: **decay** of empty buildings, and the **Scorecard**. Empty beds and seats do cost upkeep today. Recommended: leave decay out of this stop, and put the ratio on the Scorecard when the Scorecard is built.
+
+**What it replaces.**
+
+| Built today | Becomes |
+|---|---|
+| The Size panel, opened from the student count (37.7) | One screen with two pages: Goals, which is the Size panel as it is, and Capacity. Nothing is thrown away |
+| The faculty and staff lines of payroll, worked out from enrollment each time they are read | Head counts kept in the save, which arrive and leave a semester behind |
+| "Crowded classes", which is students against seats | Kept, with the ratio beside it as a second named cause for class size, GPA, Stress and the academic rating |
+| The Housing and Academics bars on the top bar | Kept as they are. They are the two needs that cap enrollment |
+
+**What it changes in existing saves.** One new save version. A save gains a faculty count, a staff count and the Instruction slider. Every save loads with faculty and staff exactly at the numbers it pays for today and the slider in the middle, so nothing moves on the day it loads. The lag first shows at its next intake or commencement. Nothing on the map changes.
+
+### 38.3 Points for the owner
+
+| Point | Recommended | The alternative |
+|---|---|---|
+| Which stop | Its own, right after the size goals | Folded into the size goals, with the money tuned twice at once |
+| The Instruction slider | Brought in alone, since the ratio needs it | All five budget sliders of section 9 together, which is a larger stop |
+| Decay of empty buildings | Left for its own stop | Built here, with the rules of section 6 |
+| The money target | Measured again at the end of the stop against $12 to $17, with what moved | Left as tuned for the size goals |
+| What a faculty shortfall lowers | Class size first, and through it GPA, Stress and the rating, each naming the ratio | Its own new penalty on each |

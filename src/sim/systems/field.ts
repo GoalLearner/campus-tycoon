@@ -19,7 +19,9 @@ import {
 import { RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
 import { nextFloat, nextInt } from '../rng';
 import type { Field, GameState, LogEntry, RngState, School } from '../types';
-import { acceptanceRate, startedHere } from './admissions';
+import { OPENING_RANK, RANK_PULL } from '../config/goals';
+import { acceptanceRate, begunHere } from './admissions';
+import { landRankGoals } from './goals';
 import { crowding } from './season';
 
 /**
@@ -183,7 +185,11 @@ export function academicInputs(state: GameState): AcademicInput[] {
   let entered = 0;
   let finished = 0;
   for (const record of state.classes) {
-    if (!startedHere(record) || record.entryYear > state.clock.week.year - 4) continue;
+    if (!begunHere(state, record)) continue;
+    // A class counts once it has had its four years. On a model campus that is from its commencement, so the
+    // classes it opened with give a rate from the first spring (DESIGN.md 37.4).
+    const done = record.entryYear <= state.clock.week.year - 4 || (state.goals !== null && record.finishedOnTime + record.finishedLate > 0);
+    if (!done) continue;
     entered += record.entered;
     finished += record.finishedOnTime + record.finishedLate;
   }
@@ -251,7 +257,10 @@ const REPUTATION_PULL = 0.3;
 export function rankingsDay(state: GameState, log: LogEntry[]): void {
   if (state.admissions.lastIntake === null) return;
   const field = state.field;
-  const rating = academicRating(state);
+  const measured = academicRating(state);
+  // On a game with goals the published rating follows this year's measure a part of the way, from the standing the
+  // campus opened with (DESIGN.md 37.4). The rank moves a little each year, and never a hundred places in a day.
+  const rating = state.goals ? round1(field.academic + RANK_PULL * (measured - field.academic)) : measured;
   const rank = rankAmong(field, 'ar', rating);
   const first = field.rankYear === 0;
   const was = field.rank;
@@ -275,7 +284,7 @@ export function rankingsDay(state: GameState, log: LogEntry[]): void {
     if (up && down) text += ` Around the country, ${up.name} climbed ${field.moved.upBy} places and ${down.name} fell ${field.moved.downBy}.`;
   }
   if (weakest) text += ` The weakest part of the rating is ${weakest.name.toLowerCase()}: ${weakest.detail.charAt(0).toLowerCase()}${weakest.detail.slice(1)}.`;
-  log.push({ tick: state.clock.tick, kind: 'rankings', text, data: { keep: 1, rank, rating } });
+  log.push({ tick: state.clock.tick, kind: 'rankings', text, data: { keep: 1, rank, rating, measured } });
 
   // Reputation follows the rating slowly, from the level the rating itself had this year.
   const level = ((rating - RATING_MIN) / (RATING_MAX - RATING_MIN)) * 100;
@@ -283,4 +292,16 @@ export function rankingsDay(state: GameState, log: LogEntry[]): void {
   field.academic = rating;
   field.rank = rank;
   field.rankYear = state.clock.week.year;
+  // A rank goal lands here, on rankings day, and nowhere else (DESIGN.md 37.4).
+  landRankGoals(state, log);
+}
+
+/**
+ * The standing a model campus opens with: the rating of the school that
+ * stands at the opening rank in its own field, so its first rank lands near
+ * there whatever the seed (DESIGN.md 37.4).
+ */
+export function openingStanding(field: Field): number {
+  const ratings = field.schools.map((school) => school.ar).sort((a, b) => b - a);
+  return ratings[Math.min(ratings.length, OPENING_RANK) - 1] ?? FIELD_MEAN;
 }

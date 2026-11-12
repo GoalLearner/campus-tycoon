@@ -57,6 +57,7 @@ export const CLOSING_SOON_TICKS = 12 * TICKS_PER_HOUR;
  */
 export const TOP_WEIGHTS = {
   decisions: 100,
+  goal: 98,
   paused: 96,
   annualDefault: 90,
   bigGame: 84,

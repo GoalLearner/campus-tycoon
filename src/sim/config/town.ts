@@ -19,7 +19,7 @@ export const LAND_FOR_SALE = [
 
 /** The town's main street runs down this column, just beyond the campus edge. Everything east of it is town. */
 export const TOWN_X = 32;
-export const MAIN_STREET = 'College Avenue';
+export const MAIN_STREET = 'Lantern Avenue';
 
 /** Each neighbourhood is a side street running east from the main street on one of these rows, with houses on both sides. */
 export const SIDE_STREET_ROWS: readonly number[] = [2, 7, 12, 17, 22, 27, 35, 42];

@@ -1,3 +1,6 @@
+import { MAIN_STREET } from './config/town';
+import { openingStanding } from './systems/field';
+import { newGoals } from './systems/goals';
 import { newInbox } from './systems/inbox';
 import { STARTER } from './config/map';
 import { plainWeek } from './calendar';
@@ -8,7 +11,7 @@ import { GROUNDS_QUIET_TICKS } from './config/grounds';
 import { LOCAL_SHARE, WORLD } from './config/town';
 import { recomputeDesirability } from './systems/desirability';
 import { buildTown, startingParcels } from './systems/town';
-import type { GameState, MapState } from './types';
+import type { Field, GameState, MapState } from './types';
 
 /**
  * Versioned saves. A save file is { v, savedAt, state }. On load it is parsed,
@@ -16,7 +19,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 
 export interface SaveFile {
   v: number;
@@ -209,6 +212,22 @@ export const MIGRATIONS: Record<number, Migration> = {
   // next day of the game week begins, and nothing on it does anything until the player or its default chooses.
   13: (state) => {
     if (typeof state.inbox !== 'object' || state.inbox === null) state.inbox = newInbox(Number(state.seed ?? 0));
+    return state;
+  },
+  // Version 15: the main street is Lantern Avenue, and goals (DESIGN.md section 37).
+  // No player could ever rename the main street, so every save that has one takes the name. Nothing else about the
+  // town changes. A game begun on the model campus is known by its campus scale, which only that campus has above
+  // 1: it gets its goals, none reached yet, and if it has never been ranked, the standing a model campus opens with.
+  // A game begun on the small campus has no goals, and nothing else about it changes.
+  14: (state) => {
+    const map = state.map as { scale?: unknown; town?: { street?: unknown } };
+    if (map.town && typeof map.town.street === 'string' && map.town.street !== '') map.town.street = MAIN_STREET;
+    if (state.goals === undefined) {
+      const model = typeof map.scale === 'number' && map.scale > 1;
+      state.goals = model ? newGoals() : null;
+      const field = state.field as Field | undefined;
+      if (model && field && field.rankYear === 0 && field.schools.length > 0) field.academic = openingStanding(field);
+    }
     return state;
   },
 };
