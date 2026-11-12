@@ -6,12 +6,13 @@ import { store, wakeHourOf } from './store';
 /**
  * Notifications on the iPhone (DESIGN.md 2.3 and 36.6).
  *
- * WRITTEN AND NOT RUN. Nothing here has been on a phone. It talks to
- * Capacitor's local-notifications plugin by name, through `registerPlugin`,
- * so this file needs no package the project does not already have. Until
- * `@capacitor/local-notifications` is installed and synced into the iOS
- * project (a step for the owner, DESIGN.md 36.8), every call below fails
- * quietly and the Menu says this build cannot send them.
+ * WRITTEN AND NOT RUN ON A PHONE. It talks to Capacitor's
+ * local-notifications plugin by name, through `registerPlugin`. The plugin
+ * (`@capacitor/local-notifications`) is in the project and synced into the
+ * iOS app since 2026-11-12, and the next TestFlight build is the first time
+ * any of this runs (DESIGN.md 36.6 and 36.8). In a build without the plugin
+ * every call below fails quietly and the Menu says this build cannot send
+ * them.
  *
  * What it does, once the plugin is there:
  * - Nothing at launch. Permission is asked the first time the player turns

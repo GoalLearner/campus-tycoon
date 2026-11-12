@@ -3945,7 +3945,7 @@ Nothing here has been on a phone.
 | When | Planned as the app goes to the background, for the next three days, and withdrawn when the app comes back |
 | How | `planNotices` plays the next three days forward on a copy of the save and returns the moments. It is a pure function, tested like the rest of the sim. `src/app/notices.ts` hands them to Capacitor's local-notifications plugin, which it reaches by name through `registerPlugin` |
 
-**What changed in the project for this.** Nothing in `ios/`, `package.json` or `package-lock.json`. The plugin is not installed: installing it is a download, which needs the owner's own yes. Until it is installed and synced, turning notifications on in the app says "This build cannot send notifications yet." The steps are in 36.8.
+**What changed in the project for this.** As first built, nothing in `ios/`, `package.json` or `package-lock.json`: the plugin was reached by name and not installed. **Installed on 2026-11-12 by the main session, on the owner's standing rule that free things need no asking:** `@capacitor/local-notifications` 8.3.1, the free official plugin, added to `package.json` and `package-lock.json`, and synced into the iOS project (`ios/App/CapApp-SPM/Package.swift`). Nothing else in `ios/` changed. It has still never run on a phone: the next TestFlight build is the first time. If a build has no plugin, turning notifications on says "This build cannot send notifications yet."
 
 ### 36.7 Tests and long runs
 
@@ -3969,7 +3969,7 @@ Save version 14. A save from before gets four named advisors and an empty inbox,
 
 ### 36.8 For the owner to do by hand
 
-1. Say yes to installing the notifications plugin, then on the Mac, in the project folder, run `npm install @capacitor/local-notifications` and `npx cap sync ios`. It is the free official plugin. It adds one line to `package.json`, updates `package-lock.json`, and the sync adds the plugin to the iOS project.
+1. Nothing to install: the plugin is in the project since 2026-11-12. Build to the iPhone as usual. If the build fails at the Swift packages step, the plugin is the first thing to suspect, since it has never been built.
 2. Build to the iPhone and go through the manual list on the hand-off page: turn notifications on, see the phone ask once, put the app away with a decision open, and see one notice arrive twelve hours before it closes.
 3. If the phone never asks, check that the app's notification entitlement was added by the sync.
 
@@ -3991,7 +3991,7 @@ Save version 14. A save from before gets four named advisors and an empty inbox,
 | Notifications before they are asked for | Off. Two a day once turned on | On by default, which would mean asking at launch |
 | The player's night | Nothing is sent outside fifteen hours from their day's start | Send at the moment, whatever the hour |
 | How far ahead notices are planned | Three days. A player away longer hears no more | A week, which nags someone who has stopped playing |
-| The plugin | Reached by name, not installed | Install it now, which is a download and needs his own yes |
+| The plugin | First reached by name and not installed. Installed on 2026-11-12 by the main session: it is free and official | Leave the install for the owner to do on the Mac |
 | Log lines | Head counts in the away list are now written with commas, and "0 got in and" is dropped from the waitlist line | Leave them, and print 11500 in the paper |
 | Test players | Every one that looks in takes the advisor's pick on the desk. One extra run leaves the desk alone, for the comparison | Leave the desk alone in every run |
 
