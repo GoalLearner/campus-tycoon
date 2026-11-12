@@ -187,8 +187,10 @@ function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | nul
   const uncovered = state.map.placed.filter((p): p is Placed => !!p && isMessSpot(p) && (state.map.care.yard[p.id] ?? -1) < 0);
   const gap = (px: number, py: number, p: Placed): number =>
     Math.max(Math.max(p.x - (px + spec.w - 1), px - (p.x + p.w - 1), 0), Math.max(p.y - (py + spec.h - 1), py - (p.y + p.h - 1), 0));
+  const yards = state.map.placed.filter((p): p is Placed => !!p && p.type === 'yard');
   let best: Point | null = null;
   let bestCount = 0;
+  let bestApart = -1;
   let bestFar = Infinity;
   for (let py = spot.y - spec.radius; py <= spot.y + spot.h - 1 + spec.radius; py++) {
     for (let px = spot.x - spec.radius - spec.w + 1; px <= spot.x + spot.w - 1 + spec.radius; px++) {
@@ -196,9 +198,12 @@ function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | nul
       if (far < 1 || far > spec.radius) continue;
       if (onStreetPlan(px, py) || onStreetPlan(px + 1, py) || previewPlace(state, 'yard', px, py).problem !== null) continue;
       const count = uncovered.filter((p) => gap(px, py, p) <= spec.radius).length;
-      if (count > bestCount || (count === bestCount && far < bestFar)) {
+      // Among spots that cover as many, the one furthest from the yards already built: circles that overlap are wasted.
+      const apart = Math.min(2 * spec.radius, ...yards.map((y) => gap(px, py, y)));
+      if (count > bestCount || (count === bestCount && (apart > bestApart || (apart === bestApart && far < bestFar)))) {
         best = [px, py];
         bestCount = count;
+        bestApart = apart;
         bestFar = far;
       }
     }

@@ -600,8 +600,8 @@ Campus Safety handles mischief, not crime (section 16).
 | Desirability | A zone picker, the score, the top pluses and minuses, walk minutes on housing |
 | Coverage | A service picker, each circle, and a ghost outline of its full size |
 | Money | Each lot's net income per real hour |
-| Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). The next overlay to be built |
-| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and College Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet: it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
+| Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). Built on 2026-11-11 with play stop 4a. It opens from "Show cleanliness" on the Happiness panel and stays until Done |
+| Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and College Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
 
 ---
 
@@ -1425,7 +1425,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -2144,6 +2144,12 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Recreation field, `build.field` | The soccer stadium with its stand, booth and banner cut away | Penzilla commission, 2 x 2, or keep if it passes a second look |
 | Lake, `pond.large` | Laid from nine shore tiles. Two are mirrored and the middle is two half tiles joined. The sliver of earth at its two side corners was a fault in the drawing order, not in the art, and was fixed on 2026-11-11 | Penzilla commission of the two missing shore pieces and a plain water tile |
 | First-aid icon, `icon.injury` | The pharmacy sign, cropped, with its cross recoloured green | Penzilla commission: one icon |
+| Bin, filling up, `grounds.bin.full` | The pack's wire basket heaped with rubbish, a different bin from the lidded can that shows it empty | Penzilla commission: one bin in three states |
+| Bin, full, `grounds.bin.over` | That wire basket with one of the pack's rubbish bags beside it, put together here | The same commission |
+| Anything broken, `grounds.cone` | The thing as it is, with the pack's traffic cone beside it. A broken lamp is the unlit lamp with the cone | Penzilla commission: a broken version of each |
+| Picnic table, `grounds.table` | The pack's table with four chairs | Penzilla commission: a picnic table |
+| Grounds worker, `grounds.broom` and `grounds.cart` | The pack's construction worker, with its broom or cart drawn beside him. No figure holds anything | Penzilla commission: a worker holding a broom |
+| Students at a bench or table | A standing student beside it. Every figure only stands and walks | Penzilla commission: seated figures |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
 
@@ -2153,12 +2159,6 @@ Edits that are kept and need no fix: the red cross on the Medical Center recolou
 
 | Thing | The stand-in | Planned fix |
 |---|---|---|
-| Bin, full | The pack's wire basket, a different bin from the lidded can that shows it empty | Penzilla commission: one bin in three states |
-| Bin, overflowing | The full bin with one of the pack's rubbish bags beside it | The same commission |
-| Bin, bench and picnic table, broken | The thing with the pack's traffic cone beside it | Penzilla commission: a broken version of each |
-| Picnic table | The pack's table with four chairs | Penzilla commission: a picnic table |
-| Worker with a broom or a cart | The pack's worker with its broom or cart drawn beside him. No figure holds anything | Penzilla commission: a worker holding a broom |
-| Students sitting, eating, studying | A standing student at the bench or table. Every figure only stands and walks | Penzilla commission: seated figures |
 | Food truck | The pack's box truck with an apple on its side. It has no serving hatch | Penzilla commission: a truck with a hatch and an awning |
 | Smoothie and juice bar | The ice-cream stand as it is | A juice sign, as a small commission |
 | Computer lab | The electrician's workshop as it is. Its sign is a plug, not a screen | A screen sign, or keep if it reads well in play |
@@ -2304,7 +2304,7 @@ Lit windows, umbrellas, coats and snow wait, because their art has to be made. W
 
 ## 29. Grounds: litter, bins, seating and maintenance workers
 
-Asked for by the owner on 2026-11-11, adapted from RollerCoaster Tycoon's handymen and Two Point Campus's janitors for an idle game. **Accepted by the owner the same day, with every proposal of 29.13. Not built.** It is play stop 4 of the feedback pass (29.12), and it does not start until he has played stop 3 and given the go-ahead.
+Asked for by the owner on 2026-11-11, adapted from RollerCoaster Tycoon's handymen and Two Point Campus's janitors for an idle game. **Accepted by the owner the same day, with every proposal of 29.13. Built on 2026-11-11 as play stop 4a: 29.14 says what was built and what is rough.** It is play stop 4 of the feedback pass (29.12), and it does not start until he has played stop 3 and given the go-ahead.
 
 ### 29.1 The loop
 
@@ -2472,6 +2472,43 @@ The owner accepted every proposal in this table on 2026-11-11, and asked for eac
 | A new campus | Two bins by the dining hall and no yard, so the first full bin teaches the system |
 | Old saves | No litter for the first 36 hours, and one line in the away list |
 | No picture of a broken thing, a picnic table, a seated student or a worker holding a broom | Stand-ins from real pictures now (29.8), and four small commissions for the Penzilla request |
+
+### 29.14 As built
+
+Play stop 4a, 2026-11-11. Everything in 29.2 to 29.7 is built except what is listed as rough below. `src/sim/config/grounds.ts` holds the numbers and `src/sim/systems/grounds.ts` the rules. Save version 7.
+
+| Piece | Built |
+|---|---|
+| Mess spots | The dining hall, the coffee stand, the campus store and every recreation building. Strengths 1, 1, 0.6 and 0.35 |
+| How busy a spot is | The students who use it are its share of the campus's lots: lots within its reach over all lots, times enrollment. It is as busy as it gets at 250 students [T] |
+| Litter | A busy food place drops 4 at each 20-minute check, up to a ceiling of 100, where the spot is 30% clean. A spot at its ceiling draws half again as much |
+| Bins | Catch 85% within three cells and hold 40. A full bin catches nothing. Shown as the can, then heaped, then with a bag beside it |
+| Paths | Lots outside a staffed yard's circle are never above 85% clean. Inside one the paths are swept |
+| The yard | 2 by 1, $60,000, a circle of eight cells, one worker to start and four at most, $6,000 a year each. Its card has a minus and a plus |
+| A worker | Clears 2.2 at each check: bins more than half full first, fullest first, then the dirtiest spot, then what is broken, then the other bins. That is about two busy places with bins, or half of one without |
+| What a yard says | "Keeping up", or "Understaffed: hire 2 more", from the work its places ask for against what its workers can do. The work counts the litter already lying there and anything broken: a yard is keeping up only if its circle would be clean within about a day |
+| Seating | Benches and picnic tables within three cells, and quad cells. A broken one seats nobody. A table near a dining building or an Academic lot adds two spots to social life |
+| Grounds | The cause that was Green space. Green space counts half, cleanliness three tenths and seating two tenths. The part with the most to gain is the one the panel names |
+| Breakage | Above seven tenths of the ceiling, about one chance in 25 at each check for a campus of middling happiness, a quarter of that inside a Campus Safety circle, and at most one thing a day at a spot. A bin, bench, table or street lamp within four cells |
+| Repairs | A worker in range fixes it in about half an hour of work, with no tap. Out of range it stays broken and its panel says "Outside worker coverage" |
+| Placing | Trash bin, Bench and Picnic table are cards on a Grounds shelf that hand over to a drag tool, with a bar and a Done button. The yard is placed like any building |
+| Feedback | A place's panel gives its cleanliness and its one fix. Tapping litter opens the place it came from. The Cleanliness overlay opens from the Happiness panel. Four new student thoughts each way. One line in the away list, first only when cleanliness is the biggest gap |
+| Old saves | Nothing added, nothing charged, no litter for 36 hours, and one line in the away list |
+| A new campus | Two bins beside the dining hall and no yard |
+| On screen | Litter pieces on the paths around a place, more as it rises, and the odd piece on unswept paths. Up to two workers walk out from each staffed yard to what most needs them, with a broom or a cart beside them. A cone stands by anything broken. Students stop at benches and tables, and the card says what they are doing there by time of day |
+
+**Rough, or not as designed.**
+
+- The tilt from student types, and the Resident Advisor who empties a full bin in passing, are not built. The mix of types does not yet differ from one campus to another, so there is nothing for them to read.
+- "More likely where the students nearby are unhappy" reads the whole campus's Happiness at the last semester's end, not the students near the spot. It is one number already stored, so catch-up stays cheap.
+- A broken street lamp shows dark with a cone. Tapping it says nothing, because lamps have no panel.
+- Workers walk in straight lines, as the responders of stop 2 do.
+- Students stand at a bench or table. Nobody in the pack can sit.
+- The picnic table's effect on Stress and litter from game days wait for layer 1. Wages on a budget screen and the Facilities slider wait for layer 2.
+
+**Simulate checks added:** an untended campus gets messy, loses a few points, and is the same at year five as at year twenty; a well-staffed campus stays above 90% clean with nothing left broken after a day; a place with a bin and a yard that is keeping up stays above 90% clean, with nothing near it left broken after a day; the casual player's grounds stay a small job (bins no more than one and a half for each place, wages under 5% of income).
+
+**One target is missed.** 29.10 hoped for one yard for every six to eight places. The casual test player needed one for about every two and a half, because places are spread across the campus and a circle of eight cells reaches only so far. Put to the owner on 2026-11-11: widen the circle, or drop the target.
 
 ---
 

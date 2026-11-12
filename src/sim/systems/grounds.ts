@@ -439,6 +439,9 @@ export function socialTables(state: GameState): number {
 
 // ------------------------------------------------------------- what to say --
 
+/** A yard is keeping up when the mess already in its circle would be gone in this many checks: about a day. */
+const CLEAR_WITHIN_CHECKS = (24 * 60) / GROUNDS_EVAL_TICKS;
+
 export type GroundsFix = 'noBin' | 'binFull' | 'noYard' | 'noWorkers' | 'understaffed' | 'quiet' | null;
 
 export interface YardStatus {
@@ -461,9 +464,16 @@ function upkeepOf(state: GameState, spot: Placed): number {
 
 export function yardStatus(state: GameState, yard: Placed): YardStatus {
   const workers = workersAt(state, yard.id);
+  // What its places ask for at each check, as they are now: a dirty place draws more litter, and what is
+  // already lying there, or broken, has to be cleared within about a day for the yard to count as keeping up.
   let need = 0;
   for (const placed of state.map.placed) {
-    if (placed && isMessSpot(placed) && state.map.care.yard[placed.id] === yard.id) need += upkeepOf(state, placed);
+    if (!placed || state.map.care.yard[placed.id] !== yard.id) continue;
+    if (isMessSpot(placed)) {
+      const lying = state.grounds.litter[placed.id] ?? 0;
+      need += upkeepOf(state, placed) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING) + lying / CLEAR_WITHIN_CHECKS;
+    }
+    need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
   }
   const supply = workers * WORK_PER_WORKER;
   const hire = need > supply + 1e-9 ? Math.ceil((need - supply) / WORK_PER_WORKER - 1e-9) : 0;

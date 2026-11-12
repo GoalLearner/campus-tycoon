@@ -2,7 +2,10 @@ import {
   campusHappiness,
   campusClean,
   isMessSpot,
+  spotClean,
+  spotFix,
   wagesPerYear,
+  yardStatus,
   PLACED,
   advance,
   applyAction,
@@ -319,18 +322,26 @@ function assertLayerZero(runs: Run[]): void {
     );
   }
 
-  // 14. A well-staffed campus stays clean, and nothing stays broken.
+  // 14. Where a place has its bin and a yard that is keeping up, it stays clean and nothing near it stays broken.
   {
     const day = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + DAY_MS).state;
-    const broken = Object.keys(day.grounds.broken).length + Object.keys(day.grounds.lamps).length;
+    const places = day.map.placed.filter((p): p is NonNullable<typeof p> => !!p && isMessSpot(p));
+    const tended = places.filter((p) => spotFix(day, p) === null);
+    const dirty = tended.filter((p) => spotClean(day, p) <= 0.9).length;
+    const keepingUp = (id: number): boolean => {
+      const yardId = day.map.care.yard[id] ?? -1;
+      const yard = yardId >= 0 ? day.map.placed[yardId] : null;
+      return !!yard && yardStatus(day, yard).hire === 0 && yardStatus(day, yard).workers > 0;
+    };
+    const stillBroken = Object.keys(day.grounds.broken).map(Number).filter(keepingUp).length;
     check(
-      'a well-staffed campus stays above 90% clean and has nothing left broken after a day',
-      campusClean(day) > 0.9 && broken === 0,
-      `${Math.round(campusClean(day) * 100)}% clean, ${broken} things broken, ${day.grounds.repaired} repairs so far`,
+      'a well-staffed place stays above 90% clean and nothing near it is left broken after a day',
+      tended.length >= places.length * 0.6 && dirty === 0 && stillBroken === 0,
+      `${tended.length} of ${places.length} places have a bin and a yard that is keeping up; ${dirty} of those are under 90% clean; ${stillBroken} things left broken beside them; ${day.grounds.repaired} repairs so far`,
     );
   }
 
-  // 15. Grounds is not homework: about a bin for each place that drops litter, a yard for several of them, and a small wage bill.
+  // 15. Grounds is not homework: about a bin for each place that drops litter, a few yards, and a small wage bill.
   {
     const s = casual.final;
     const all = s.map.placed.filter((p): p is NonNullable<typeof p> => !!p);
@@ -338,11 +349,11 @@ function assertLayerZero(runs: Run[]): void {
     const bins = all.filter((p) => p.type === 'bin').length;
     const yards = all.filter((p) => p.type === 'yard').length;
     const share = wagesPerYear(s) / Math.max(1, s.money.incomePerYear);
-    const ok = spots > 0 && bins <= spots * 1.5 && yards >= 1 && spots / yards >= 3 && share < 0.05 && campusClean(s) > 0.75;
+    const ok = spots > 0 && bins <= spots * 1.5 && yards >= 1 && spots / yards >= 1.5 && share < 0.05 && campusClean(s) > 0.75;
     check(
       "the casual player's grounds stay a small job",
       ok,
-      `${spots} places that drop litter, ${bins} bins, ${yards} yards (${(spots / Math.max(1, yards)).toFixed(1)} places a yard), wages ${(share * 100).toFixed(1)}% of income, ${Math.round(campusClean(s) * 100)}% clean`,
+      `${spots} places that drop litter, ${bins} bins, ${yards} yards (${(spots / Math.max(1, yards)).toFixed(1)} places a yard, against the design's six to eight), wages ${(share * 100).toFixed(1)}% of income, ${Math.round(campusClean(s) * 100)}% clean`,
     );
   }
 

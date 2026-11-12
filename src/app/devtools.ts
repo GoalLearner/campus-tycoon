@@ -181,6 +181,10 @@ function groundsCampus(): GameState {
       if (hired?.ok) state = hired.state;
     }
   }
+  // A bin across the quad from the yard, nearly full, so a worker is seen walking out to it with a cart.
+  const courts = first('courts');
+  if (courts) lay('bin', beside(courts));
+  const farBin = state.map.placed.filter((placed) => placed?.type === 'bin').pop() ?? null;
   if (shop) {
     lay('bin', beside(shop));
     lay('bench', beside(shop, 2));
@@ -194,9 +198,10 @@ function groundsCampus(): GameState {
   for (const placed of state.map.placed) {
     if (!placed) continue;
     const tended = state.map.care.yard[placed.id] !== undefined && state.map.care.yard[placed.id]! >= 0;
-    if (placed.type === 'bin') state.grounds.bins[placed.id] = tended ? 6 : 40;
+    if (placed.type === 'bin') state.grounds.bins[placed.id] = tended ? 16 : 40;
     else if (['dining', 'store', 'recreation'].includes(PLACED[placed.type].family)) state.grounds.litter[placed.id] = tended ? 4 : 88;
   }
+  if (farBin && (state.map.care.yard[farBin.id] ?? -1) >= 0) state.grounds.bins[farBin.id] = 31;
   const benches = state.map.placed.filter((placed) => placed?.type === 'bench' && (state.map.care.yard[placed.id] ?? -1) < 0);
   if (benches[0]) state.grounds.broken[benches[0].id] = 3.3;
   return state;
@@ -315,6 +320,16 @@ function applyViewParams(params: URLSearchParams): void {
         const [type, x, y] = placing.split(',');
         session.startPlacing(type as Parameters<typeof session.startPlacing>[0]);
         session.setGhost(Number(x), Number(y));
+      }
+      // &crewinfo prints where the grounds workers are, for checking them in a screenshot.
+      if (params.has('crewinfo')) {
+        setTimeout(() => {
+          const crew = (scene as unknown as { crew: { trips: Array<{ toX: number; toY: number; cart: boolean; body: { visible: boolean; x: number; y: number; frame: { name: string } } }> } }).crew;
+          const note = document.createElement('div');
+          note.style.cssText = 'position:fixed;left:8px;top:190px;z-index:99;background:#000c;color:#fff;font:11px monospace;padding:6px;max-width:340px;white-space:pre-wrap';
+          note.textContent = JSON.stringify(crew.trips.map((t) => ({ to: [t.toX, t.toY], cart: t.cart, vis: t.body.visible, at: [Math.round(t.body.x), Math.round(t.body.y)], frame: t.body.frame.name })), null, 0);
+          document.body.append(note);
+        }, 3000);
       }
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       // &panel=plan opens the room plan as a tap on the Housing bar would.
