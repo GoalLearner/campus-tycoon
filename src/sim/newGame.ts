@@ -1,7 +1,7 @@
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
-import { START_CASH } from './config/money';
+import { START_CASH, PHASE_STEPS } from './config/money';
 import { TICK_MS } from './config/time';
 import { hashInts, seedStreams } from './rng';
 import { SAVE_VERSION } from './save';
@@ -108,17 +108,21 @@ export function newGame(opts: NewGameOptions): GameState {
       yearEarned: 0,
       yearSpent: 0,
       grants: 0,
+      endowment: 0,
+      marketing: 0,
+      phase: PHASE_STEPS,
     },
     map,
     cohorts: [0, 0, 0, 0],
     offCampus: [0, 0, 0, 0],
     classes: [],
+    fourYears: true,
     admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null },
     timers: [],
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
-    grounds: { litter: {}, bins: {}, broken: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
+    grounds: { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
   };
   recomputeRates(state);
   return state;

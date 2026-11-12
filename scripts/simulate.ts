@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
+  BENEFITS_SHARE,
+  budget,
+  parseSave,
   campusHappiness,
   campusClean,
   isMessSpot,
@@ -69,6 +74,11 @@ interface YearRow {
   desirability: number;
   turnedAway: number;
   grants: number;
+  income: number;
+  spending: number;
+  /** Of every $100 that comes in, how much is kept. */
+  kept: number;
+  endowment: number;
 }
 
 interface Run {
@@ -94,6 +104,10 @@ function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
     desirability: averageDesirability(state),
     turnedAway,
     grants: state.money.grants,
+    income: state.money.incomePerYear,
+    spending: state.money.spendingPerYear,
+    kept: state.money.incomePerYear > 0 ? (100 * (state.money.incomePerYear - state.money.spendingPerYear)) / state.money.incomePerYear : 0,
+    endowment: state.money.endowment,
   };
 }
 
@@ -150,7 +164,7 @@ function lostToWaitlist(log: LogEntry[]): number {
 
 function printRun(run: Run): void {
   console.log(`\n${run.style.toUpperCase()}  (seed ${run.seed})`);
-  console.log('year  students      cash    net/yr  buildings  avg stage  desirability  lost to waitlist    grants');
+  console.log('year  students      cash    net/yr  kept  endowment  buildings  avg stage  desirability  lost to waitlist    grants');
   for (const r of run.rows) {
     console.log(
       [
@@ -158,6 +172,8 @@ function printRun(run: Run): void {
         String(r.students).padStart(9),
         dollarsShort(r.cash).padStart(9),
         dollarsShort(r.netPerYear).padStart(9),
+        `${r.kept.toFixed(0)}%`.padStart(5),
+        dollarsShort(r.endowment).padStart(10),
         String(r.lots).padStart(10),
         r.avgStage.toFixed(2).padStart(10),
         r.desirability.toFixed(1).padStart(13),
@@ -231,7 +247,11 @@ function assertLayerZero(runs: Run[]): void {
   {
     const y5 = absent.rows[4];
     const ok = !!y5 && y5.students > 0 && y5.netPerYear > 0 && validate(absent.final) === null;
-    check('an untouched campus still works after five years', ok, y5 ? `${y5.students} students, net ${dollarsShort(y5.netPerYear)} a year` : 'ran fewer than five years');
+    check(
+      'an untouched campus still works, and still nets a surplus, after five years',
+      ok,
+      y5 ? `${y5.students} students, net ${dollarsShort(y5.netPerYear)} a year, ${y5.kept.toFixed(0)} of every $100 kept` : 'ran fewer than five years',
+    );
   }
 
   // 5. A tended campus grows over its first years.
@@ -260,7 +280,9 @@ function assertLayerZero(runs: Run[]): void {
   // 8. A campus with no coverage is less happy, and stays so: it never spirals.
   {
     const bare = campusHappiness(absent.final);
-    const tended = campusHappiness(optimizer.final);
+    // The casual player's campus is the covered one. The optimizer spends every dollar on lots the moment it
+    // has one, and since staff are paid it ends up with half its dorms outside any Campus Safety circle.
+    const tended = campusHappiness(casual.final);
     const safe = (mood: typeof bare): number => mood.causes.find((c) => c.id === 'safety')?.level ?? 0;
     const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && bare.retention >= 0.95;
     check('an uncovered campus loses happiness but never spirals', ok, `happiness ${bare.score.toFixed(0)} uncovered against ${tended.score.toFixed(0)} covered, after five years and twenty`);
@@ -268,12 +290,12 @@ function assertLayerZero(runs: Run[]): void {
 
   // 9. A covered campus handles nearly every incident.
   {
-    const before = optimizer.final.incidents;
-    const later = advance(optimizer.final, optimizer.final.clock.lastSimulatedAt, optimizer.final.clock.lastSimulatedAt + 3 * DAY_MS).state.incidents;
+    const before = casual.final.incidents;
+    const later = advance(casual.final, casual.final.clock.lastSimulatedAt, casual.final.clock.lastSimulatedAt + 3 * DAY_MS).state.incidents;
     const handled = later.handled - before.handled;
     const missed = later.missed - before.missed;
     const ok = handled + missed > 10 && handled / (handled + missed) >= 0.9;
-    check('a covered campus handles nearly every incident', ok, `${handled} handled and ${missed} missed over three days`);
+    check('a covered campus handles nearly every incident', ok, `the casual player's campus: ${handled} handled and ${missed} missed over three days`);
   }
 
   // 10. Once a day is enough. Eras and the bailout are not built yet, so this reads the sizes a
@@ -353,12 +375,12 @@ function assertLayerZero(runs: Run[]): void {
     const spots = all.filter((p) => isMessSpot(p)).length;
     const bins = all.filter((p) => p.type === 'bin').length;
     const yards = all.filter((p) => p.type === 'yard').length;
-    const share = wagesPerYear(s) / Math.max(1, s.money.incomePerYear);
-    const ok = spots > 0 && bins <= spots * 1.5 && yards >= 1 && spots / yards >= 3 && share < 0.05 && campusClean(s) > 0.75;
+    const share = (wagesPerYear(s) * (1 + BENEFITS_SHARE)) / Math.max(1, s.money.incomePerYear);
+    const ok = spots > 0 && bins <= spots * 1.5 && yards >= 1 && spots / yards >= 5 && share < 0.05 && campusClean(s) > 0.75;
     check(
       "the casual player's grounds stay a small job",
       ok,
-      `${spots} places that drop litter, ${bins} bins, ${yards} yards (${(spots / Math.max(1, yards)).toFixed(1)} places a yard, against the design's six to eight), wages ${(share * 100).toFixed(1)}% of income, ${Math.round(campusClean(s) * 100)}% clean`,
+      `${spots} places that drop litter, ${bins} bins, ${yards} yards (${(spots / Math.max(1, yards)).toFixed(1)} places a yard, against the design's six to eight), wages with benefits ${(share * 100).toFixed(1)}% of income, ${Math.round(campusClean(s) * 100)}% clean`,
     );
   }
 
@@ -391,6 +413,95 @@ function assertLayerZero(runs: Run[]): void {
       filthy < 0.5 && brokenBins > 0 && campusClean(s) > 0.9 && stuck === 0,
       `${Math.round(filthy * 100)}% clean with ${brokenBins} bins broken after six days with no workers; ${Math.round(campusClean(s) * 100)}% clean five days after hiring again; ${stuck} yards beyond a full crew`,
     );
+  }
+
+  // ---- Money (DESIGN.md 31.6)
+  const daily = runs.find((r) => r.style === 'daily')!;
+
+  // 17. Payroll, with benefits, is at least half of what a mature campus spends.
+  {
+    const shares = [casual, daily, optimizer].map((run) => {
+      const b = budget(run.final);
+      return { style: run.style, share: (b.groups.find((g) => g.id === 'payroll')?.amount ?? 0) / Math.max(1, b.fullSpending) };
+    });
+    check(
+      'payroll is at least half of spending on a mature campus',
+      shares.every((entry) => entry.share >= 0.5),
+      shares.map((entry) => `${entry.style} ${Math.round(entry.share * 100)}%`).join(', '),
+    );
+  }
+
+  // 18. Mid-game, between 10 and 20 of every $100 is kept. Years 3 to 8: past the opening, before the land runs out.
+  {
+    const mid = [casual, daily].flatMap((run) => run.rows.filter((row) => row.year >= 3 && row.year <= 8).map((row) => ({ style: run.style, ...row })));
+    const low = Math.min(...mid.map((row) => row.kept));
+    const high = Math.max(...mid.map((row) => row.kept));
+    check(
+      'the mid-game margin sits between 10 and 20%',
+      mid.length >= 10 && low >= 10 && high <= 20,
+      `casual and once-a-day players, years 3 to 8: ${low.toFixed(1)}% at the least and ${high.toFixed(1)}% at the most; payroll ${Math.round((100 * (budget(casual.final).groups.find((g) => g.id === 'payroll')?.amount ?? 0)) / Math.max(1, casual.final.money.incomePerYear))}% of the casual player's income at the end`,
+    );
+  }
+
+  // 19. Real costs, and seniors who graduate from the first spring, must not slow a campus by more than a year.
+  // The pace is what both players managed before play stop 5: the year each size was first read.
+  {
+    const PACE_BEFORE: Record<number, number> = { 500: 2, 1000: 3, 2000: 4, 4000: 6, 8000: 11 };
+    const yearReached = (run: Run, students: number): number => run.rows.find((row) => row.students >= students)?.year ?? Infinity;
+    const late: string[] = [];
+    const told: string[] = [];
+    for (const run of [casual, daily]) {
+      for (const [size, was] of Object.entries(PACE_BEFORE)) {
+        const now = yearReached(run, Number(size));
+        if (now > was + 1) late.push(`${run.style} ${size}`);
+        if (run === casual) told.push(`${size}: year ${now} (was ${was})`);
+      }
+    }
+    check(
+      'the casual and once-a-day players still reach each campus size within a year of the pace before real costs',
+      late.length === 0,
+      `casual ${told.join(', ')}; once a day ${Object.keys(PACE_BEFORE).map((size) => `${size}: year ${yearReached(daily, Number(size))}`).join(', ')}`,
+    );
+  }
+
+  // 20. Cash has somewhere to go. Nobody sits on more than a year of their own spending.
+  {
+    const worst = runs
+      .filter((run) => run.style !== 'absent')
+      .map((run) => ({ style: run.style, most: Math.max(...run.rows.map((row) => row.cash / Math.max(1, row.spending))), endowment: run.final.money.endowment }));
+    check(
+      'no test player holds more cash than a year of its own spending at any reading',
+      worst.every((entry) => entry.most <= 1),
+      worst.map((entry) => `${entry.style}: ${entry.most.toFixed(2)} of a year at most, ${dollarsShort(entry.endowment)} in the endowment by the end`).join('; '),
+    );
+  }
+
+  // 21. A mature save from before these costs climbs to them in seven days and never needs the state.
+  {
+    // Read from the repository root, where `npm run simulate` runs.
+    const text = readFileSync(resolve('tests/fixtures/save-v8-mature.json'), 'utf8');
+    const loaded = parseSave(text);
+    if (!loaded.ok) {
+      check('a mature save from before real costs needs no rescue while they phase in', false, loaded.reason);
+    } else {
+      let s = loaded.state;
+      const before = { spending: s.money.spendingPerYear, income: s.money.incomePerYear, students: enrollment(s) };
+      let least = s.money.cash;
+      let steps = 0;
+      // Nine days, visited twice a day, as its player would.
+      for (let visit = 0; visit < 18; visit++) {
+        const result = advance(s, s.clock.lastSimulatedAt, s.clock.lastSimulatedAt + DAY_MS / 2);
+        steps += result.log.filter((entry) => entry.kind === 'costs').length;
+        s = takeTurn(result.state, 'casual').state;
+        least = Math.min(least, s.money.cash);
+      }
+      const b = budget(s);
+      check(
+        'a mature save from before real costs needs no rescue while they phase in',
+        s.money.grants === 0 && least > 0 && steps === 7 && b.phase === null && b.kept > 10,
+        `${before.students} students; spending ${dollarsShort(before.spending)} a year before and ${dollarsShort(b.spending)} after ${steps} daily steps; ${b.kept.toFixed(0)} of every $100 kept at the end; cash never under ${dollarsShort(least)}; grants ${dollarsShort(s.money.grants)}`,
+      );
+    }
   }
 
   // 12. A car park with no road lets nobody in. With a road to the street it does.

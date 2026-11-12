@@ -7,8 +7,15 @@
 /** Students expected in the very first class. */
 export const FOUNDING_CLASS = 400;
 
+/**
+ * A campus opens with all four class years, not only freshmen (the owner,
+ * 2026-11-11). The founding class is split in these shares: freshmen,
+ * sophomores, juniors, seniors. Slightly fewer seniors.
+ */
+export const FOUNDING_SHARES: readonly [number, number, number, number] = [0.27, 0.26, 0.25, 0.22];
+
 /** Fall applicants who would enrol, per student already on campus. */
-export const WORD_OF_MOUTH = 0.9;
+export const WORD_OF_MOUTH = 1.0;
 
 /** The spring class as a share of a fall class. */
 export const SPRING_SHARE = 0.2;

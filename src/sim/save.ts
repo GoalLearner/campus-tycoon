@@ -12,7 +12,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface SaveFile {
   v: number;
@@ -148,7 +148,7 @@ export const MIGRATIONS: Record<number, Migration> = {
   6: (state) => {
     const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
     if (typeof state.grounds !== 'object' || state.grounds === null) {
-      state.grounds = { litter: {}, bins: {}, broken: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: tick + GROUNDS_QUIET_TICKS, overflowed: 0, repaired: 0 };
+      state.grounds = { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: tick + GROUNDS_QUIET_TICKS, overflowed: 0, repaired: 0 };
     }
     const map = state.map as unknown as MapState;
     map.care = { users: {}, bins: {}, yard: {}, lots: 0 };
@@ -161,6 +161,23 @@ export const MIGRATIONS: Record<number, Migration> = {
     const grounds = state.grounds as Record<string, unknown>;
     if (typeof grounds.lampFrom !== 'object' || grounds.lampFrom === null) grounds.lampFrom = {};
     recomputeDesirability(state.map as unknown as MapState);
+    return state;
+  },
+  // Version 9 is play stop 5. A Facilities Yard reaches 16 cells, and what broke each bin, bench and table is kept.
+  8: (state) => {
+    const grounds = state.grounds as Record<string, unknown>;
+    if (typeof grounds.brokenFrom !== 'object' || grounds.brokenFrom === null) grounds.brokenFrom = {};
+    recomputeDesirability(state.map as unknown as MapState);
+    // A campus now opens with all four class years. One whose founders have not moved in yet gets them
+    // that way. Any other is spread at its next fall intake (spreadClassYears).
+    const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
+    if (typeof state.fourYears !== 'boolean') state.fourYears = tick < FIRST_INTAKE_TICK;
+    // Money by what it buys (DESIGN.md 31). Costs start where they stood and climb in seven daily steps.
+    const money = state.money as Record<string, unknown>;
+    if (typeof money.endowment !== 'number') money.endowment = 0;
+    if (typeof money.marketing !== 'number') money.marketing = 0;
+    if (typeof money.phase !== 'number') money.phase = 0;
+    money.ratesDirty = true;
     return state;
   },
 };
@@ -218,6 +235,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(map.town) || !Array.isArray(map.town.neighbourhoods) || !isObject(map.town.access)) return 'The map has no town.';
   if ((state.offCampus as unknown[]).length !== 4) return 'The save has the wrong number of class years living off campus.';
   if (!Array.isArray(state.classes)) return 'The save has no class records.';
+  if (typeof state.fourYears !== 'boolean') return 'The save does not say whether it has all four class years.';
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';
   if ((state.cohorts as unknown[]).length !== 4) return 'The save has the wrong number of class years.';

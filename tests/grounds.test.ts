@@ -5,10 +5,12 @@ import {
   advance,
   applyAction,
   approvalAt,
+  BENEFITS_SHARE,
   BIN_CAPACITY,
   binState,
   BREAK_LINES,
   BREAK_RATE,
+  BROKE_BY,
   BREAK_SAFETY_SHARE,
   breakChance,
   campusClean,
@@ -16,6 +18,7 @@ import {
   cleanAt,
   COST,
   DIRT_AT_CEILING,
+  DIRT_INVITES,
   enrollment,
   FIX_WORK,
   fixText,
@@ -39,6 +42,7 @@ import {
   spotClean,
   spotFix,
   thingFix,
+  thingReport,
   validate,
   WAGE_PER_YEAR,
   wagesPerYear,
@@ -163,8 +167,10 @@ describe('workers', () => {
     };
     const one = checksToClear(1);
     const two = checksToClear(2);
-    expect(one).toBe(Math.ceil(LITTER_CEILING / WORK_PER_WORKER));
-    expect(two).toBe(Math.ceil(LITTER_CEILING / (2 * WORK_PER_WORKER)));
+    // Deep litter goes faster than the plain sum of a worker's 2.2 a check: half again as fast at the ceiling.
+    expect(one).toBeLessThan(Math.ceil(LITTER_CEILING / WORK_PER_WORKER));
+    expect(one).toBeGreaterThan(Math.ceil(LITTER_CEILING / (WORK_PER_WORKER * (1 + DIRT_INVITES))));
+    expect(Math.abs(two - one / 2)).toBeLessThanOrEqual(1);
     expect(staff(mess, 0).grounds.workers[yard(mess).id]).toBe(0);
   });
 
@@ -176,7 +182,7 @@ describe('workers', () => {
     expect(spotFix(state, dining(state))).toBe('noBin');
     const short = run(state, 2 * 24 * 60).state;
     // It sits at its ceiling, less the little one worker sweeps at each check.
-    expect(litter(short)).toBeGreaterThanOrEqual(LITTER_CEILING - WORK_PER_WORKER - 1e-9);
+    expect(litter(short)).toBeGreaterThanOrEqual(LITTER_CEILING - WORK_PER_WORKER * (1 + DIRT_INVITES) - 1e-9);
 
     // With its bins back one worker is enough, and the yard says so.
     state = act(state, { type: 'paint', tool: 'bin', cells: [[9, 12], [12, 12]] });
@@ -198,12 +204,13 @@ describe('workers', () => {
     const full = { ...now, workers: YARD_MAX_WORKERS, supply: YARD_MAX_WORKERS * WORK_PER_WORKER, need: 10, hire: 1 };
     expect(yardLine({ ...full, beyond: false })).toBe('Full crew, catching up.');
     expect(yardLine({ ...full, beyond: true })).toBe('Understaffed, and full. Build another yard near the busiest places.');
-    const room = { ...now, workers: 3, supply: 3 * WORK_PER_WORKER, need: 12, hire: 3 };
+    const some = YARD_MAX_WORKERS - 1;
+    const room = { ...now, workers: some, supply: some * WORK_PER_WORKER, need: 100, hire: 3 };
     expect(yardLine({ ...room, beyond: false })).toBe('Understaffed: hire 1 more.');
     expect(yardLine({ ...room, beyond: true })).toBe('Understaffed: hire 1 more, and build another yard.');
   });
 
-  it('are paid a wage, and a yard holds no more than four', () => {
+  it('are paid a wage with benefits on top, and a yard holds no more than six', () => {
     let state = withYard(busy());
     expect(state.grounds.workers[yard(state).id]).toBe(1);
     expect(wagesPerYear(state)).toBe(WAGE_PER_YEAR);
@@ -211,7 +218,8 @@ describe('workers', () => {
     const before = state.money.spendingPerYear;
     state = staff(state, 3);
     recomputeRates(state);
-    expect(state.money.spendingPerYear - before).toBe(2 * WAGE_PER_YEAR);
+    expect(state.money.spendingPerYear - before).toBeCloseTo(2 * WAGE_PER_YEAR * (1 + BENEFITS_SHARE), 6);
+    expect(YARD_MAX_WORKERS).toBe(6);
     expect(applyAction(state, { type: 'staff', yard: yard(state).id, workers: YARD_MAX_WORKERS + 1 }).ok).toBe(false);
     expect(applyAction(state, { type: 'staff', yard: dining(state).id, workers: 1 }).ok).toBe(false);
     // Bins, benches and tables cost nothing to keep.
@@ -469,6 +477,61 @@ describe('breakage', () => {
       expect(report.yard).toBeNull();
     });
 
+    it('has the same to say for a broken bin, bench or picnic table', () => {
+      let state = withYard(busy(0));
+      state = act(state, { type: 'paint', tool: 'bench', cells: [[8, 11]] });
+      state = act(state, { type: 'paint', tool: 'table', cells: [[28, 28]] });
+      const bench = ofType(state, 'bench')[0]!;
+      const table = ofType(state, 'table')[0]!;
+      const bin = ofType(state, 'bin')[0]!;
+      expect(thingReport(state, bench)).toBeNull();
+      state.grounds.broken[bench.id] = FIX_WORK;
+      state.grounds.brokenFrom[bench.id] = { spot: dining(state).id, line: 1 };
+      state.grounds.broken[table.id] = FIX_WORK;
+      state.grounds.broken[bin.id] = FIX_WORK;
+      state.grounds.brokenFrom[bin.id] = { spot: dining(state).id, line: 0 };
+
+      // The bench by the yard: its cause, its yard, and a time that is the time it takes.
+      const near = thingReport(state, bench)!;
+      expect(near).toMatchObject({ kind: 'bench', line: 1, workers: 1 });
+      expect(near.spot?.id).toBe(dining(state).id);
+      expect(near.yard?.id).toBe(yard(state).id);
+      const minutes = near.minutes!;
+      expect(minutes).toBeGreaterThan(0);
+      expect(isBrokenThing(run(state, minutes - 20).state, bench.id)).toBe(true);
+      const fixed = run(state, minutes).state;
+      expect(isBrokenThing(fixed, bench.id)).toBe(false);
+      expect(fixed.grounds.brokenFrom[bench.id]).toBeUndefined();
+      // The bin is mended first, so it is done sooner than the bench.
+      expect(thingReport(state, bin)!.minutes!).toBeLessThan(minutes);
+      expect(thingReport(state, bin)!.kind).toBe('bin');
+
+      // The table across the campus: no cause was kept, nothing drops litter near it, and no yard reaches it.
+      const far = thingReport(state, table)!;
+      expect(far).toMatchObject({ kind: 'table', line: null, spot: null, yard: null, workers: 0, minutes: null });
+      // With nobody on the books the near one is not coming either.
+      expect(thingReport(staff(state, 0), bench)).toMatchObject({ workers: 0, minutes: null });
+      // Cleared, it is forgotten.
+      const cleared = run(act(state, { type: 'paint', tool: 'clear', cells: [[28, 28]] }), 20).state;
+      expect(cleared.grounds.broken[table.id]).toBeUndefined();
+      expect(cleared.grounds.brokenFrom[table.id]).toBeUndefined();
+    });
+
+    it('keeps the cause when breakage breaks a bin, bench or table', () => {
+      let state = act(busy(), { type: 'paint', tool: 'bench', cells: rowBetween([6, 11], [13, 11]) });
+      state.grounds.litter[dining(state).id] = LITTER_CEILING;
+      const result = run(state, 6 * 24 * 60);
+      const ids = Object.keys(result.state.grounds.broken).map(Number);
+      expect(ids.length).toBeGreaterThan(0);
+      for (const id of ids) {
+        const from = result.state.grounds.brokenFrom[id]!;
+        expect(from.spot).toBe(dining(state).id);
+        const kind = result.state.map.placed[id]!.type as 'bin' | 'bench' | 'table';
+        expect(from.line).toBeLessThan(BROKE_BY[kind].length);
+        expect(thingReport(result.state, result.state.map.placed[id]!)!.spot?.id).toBe(dining(state).id);
+      }
+    });
+
     it('is forgotten when its path is cleared', () => {
       let state = breakLamp(busy(0));
       state = act(state, { type: 'paint', tool: 'clear', cells: [LAMP] });
@@ -483,9 +546,12 @@ describe('breakage', () => {
   it('keeps every line inside the tone guide', () => {
     const banned = /\b(beer|wine|drunk|alcohol|pub|vodka|smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|rat|rats|roach\w*)\b/i;
     for (const lines of Object.values(BREAK_LINES)) for (const line of lines) expect(line).not.toMatch(banned);
-    for (const line of LAMP_BROKE_BY) expect(line).not.toMatch(banned);
-    // A lamp's panel tells the same two stories as the news of it breaking.
-    expect(LAMP_BROKE_BY.length).toBe(BREAK_LINES.lamp.length);
+    // A broken thing's panel tells the same stories as the news of it breaking.
+    for (const kind of ['bin', 'bench', 'table', 'lamp'] as const) {
+      for (const line of BROKE_BY[kind]) expect(line).not.toMatch(banned);
+      expect(BROKE_BY[kind].length).toBe(BREAK_LINES[kind].length);
+    }
+    expect(LAMP_BROKE_BY).toBe(BROKE_BY.lamp);
   });
 });
 
@@ -609,8 +675,47 @@ describe('upgrading a version 7 save, from when a yard reached eight cells', () 
     const report = lampReport(state, cells[0]! % width, Math.floor(cells[0]! / width))!;
     expect(report.line).toBeNull();
     expect(report.spot?.type).toBe('store');
-    // It stands thirteen cells from the yard: still out of reach, and its report says so.
-    expect(report.yard).toBeNull();
-    expect(report.minutes).toBeNull();
+    // It stands thirteen cells from the yard: out of reach at twelve cells, inside the circle at sixteen.
+    expect(report.yard?.id).toBe(yard(state).id);
+    expect(report.minutes).not.toBeNull();
+  });
+});
+
+describe('upgrading a version 8 save, from when a yard reached twelve cells', () => {
+  const text = readFileSync(join(__dirname, 'fixtures', 'save-v8.json'), 'utf8');
+  const old = (JSON.parse(text) as { state: GameState }).state;
+  const load = (): GameState => {
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(loaded.migratedFrom).toBe(8);
+    return loaded.state;
+  };
+
+  it('keeps the map and the grounds as they were', () => {
+    const state = load();
+    expect(state.version).toBe(SAVE_VERSION);
+    expect(state.map.placed).toEqual(old.map.placed);
+    expect(state.map.cells).toEqual(old.map.cells);
+    expect(state.grounds.litter).toEqual(old.grounds.litter);
+    expect(state.grounds.broken).toEqual(old.grounds.broken);
+    expect(state.grounds.workers).toEqual(old.grounds.workers);
+    expect(state.grounds.brokenFrom).toEqual({});
+    expect(validate(state)).toBeNull();
+    expect(load()).toEqual(load());
+  });
+
+  it('lets the yard reach the store fourteen cells away, and explains the bench broken before causes were kept', () => {
+    const state = load();
+    const store = ofType(state, 'store')[0]!;
+    const bench = ofType(state, 'bench')[0]!;
+    expect(old.map.care.yard[store.id]).toBe(-1);
+    expect(state.map.care.yard[store.id]).toBe(yard(state).id);
+    const report = thingReport(state, bench)!;
+    expect(report).toMatchObject({ kind: 'bench', line: null });
+    expect(report.spot?.type).toBe('store');
+    expect(report.yard?.id).toBe(yard(state).id);
+    const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * DAY).state;
+    expect(spotClean(later, store)).toBeGreaterThan(0.9);
+    expect(isBrokenThing(later, bench.id)).toBe(false);
   });
 });

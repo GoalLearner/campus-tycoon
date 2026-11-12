@@ -14,6 +14,7 @@ import {
   dateAt,
   formatDate,
   capacityWanted,
+  BENEFITS_SHARE,
   WAGE_PER_YEAR,
   workersAt,
   YARD_MAX_WORKERS,
@@ -54,7 +55,7 @@ import {
   summarizeAway,
   type Zone,
 } from '../sim';
-import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
+import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { face, mountStudentCard } from './studentCard';
@@ -237,7 +238,10 @@ export function mountUi(root: HTMLElement): void {
   // ------------------------------------------------------------------ HUD --
   const hud = el('div', 'hud');
   const top = el('div', 'hud-top');
-  const money = el('div', 'money');
+  // Cash, and what is earned an hour. Tapping it opens the Money panel.
+  const money = el('button', 'money');
+  money.type = 'button';
+  money.addEventListener('click', () => openMoney());
   const cash = el('span', 'cash');
   const rate = el('span', 'rate');
   money.append(cash, rate);
@@ -877,11 +881,11 @@ export function mountUi(root: HTMLElement): void {
     if (placedHere) {
       setText(inspectorTitle, PLACED[placedHere.type].name);
       setText(inspectorState, placedSummary(state, placedHere));
-      setText(inspectorFacts, placedFacts(placedHere));
+      setText(inspectorFacts, placedFacts(state, placedHere));
       if (placedHere.type === 'yard') {
         staffYard = placedHere.id;
         const workers = workersAt(state, placedHere.id);
-        setText(staffCount, `${workers} ${workers === 1 ? 'worker' : 'workers'} · ${dollars(WAGE_PER_YEAR)} a year each`);
+        setText(staffCount, `${workers} ${workers === 1 ? 'worker' : 'workers'} · ${dollars(WAGE_PER_YEAR * (1 + BENEFITS_SHARE))} a year each`);
         fewer.disabled = workers <= 0;
         more.disabled = workers >= YARD_MAX_WORKERS;
         inspectorStaff.classList.add('show');
@@ -1009,6 +1013,77 @@ export function mountUi(root: HTMLElement): void {
     setText(placerState, text);
     placer.classList.toggle('bad', !!preview?.problem);
     placeButton.disabled = !preview || preview.problem !== null;
+  }
+
+  /** Money: what comes in, what goes out and what it buys, marketing, and the endowment. */
+  function openMoney(): void {
+    /** The groups the player has opened, kept while the panel is redrawn after a tap. */
+    const open = new Set<string>();
+    openModal((close, card) => {
+      const row = (item: { name: string; detail: string; amount: string }, className: string): HTMLElement => {
+        const line = el('div', className);
+        const text = el('div', 'money-text');
+        text.append(el('span', 'money-name', item.name), el('span', 'money-detail', item.detail));
+        line.append(text, el('span', 'money-amount', item.amount));
+        return line;
+      };
+      const draw = (): void => {
+        const view = moneyView(store.state);
+        card.textContent = '';
+        card.append(el('h1', '', 'Money'), el('p', 'money-lead', view.lead));
+        if (view.phase) card.append(el('p', 'fine', view.phase));
+
+        card.append(el('div', 'money-head', `Coming in · ${view.incomeTotal} a year`));
+        for (const item of view.income) card.append(row(item, 'money-row'));
+
+        card.append(el('div', 'money-head', `Going out · ${view.spendingTotal} a year`));
+        for (const group of view.groups) {
+          const head = el('button', open.has(group.id) ? 'money-group open' : 'money-group');
+          head.type = 'button';
+          head.append(el('span', 'money-name', group.name), el('span', 'money-share', group.share), el('span', 'money-amount', group.amount));
+          head.addEventListener('click', () => {
+            if (open.has(group.id)) open.delete(group.id);
+            else open.add(group.id);
+            draw();
+          });
+          card.append(head);
+          if (open.has(group.id)) for (const item of group.lines) card.append(row(item, 'money-row inner'));
+        }
+
+        // Recruiting and marketing: the one cost here the player sets.
+        card.append(el('div', 'money-head', 'Recruiting and marketing'));
+        const steps = el('div', 'money-steps');
+        const set = (step: number): void => {
+          const result = store.dispatch({ type: 'marketing', step });
+          if (!result.ok) session.notify(result.error, 'error');
+          draw();
+        };
+        const down = button('−', 'staff-button', () => set(view.marketing.step - 1));
+        const up = button('+', 'staff-button', () => set(view.marketing.step + 1));
+        down.disabled = view.marketing.step <= 0;
+        up.disabled = view.marketing.step >= view.marketing.max;
+        steps.append(down, el('span', 'staff-count', view.marketing.line), up);
+        card.append(steps);
+
+        // The endowment: cash paid in for good.
+        card.append(el('div', 'money-head', 'Endowment'), el('p', '', view.endowment.line));
+        if (view.endowment.payIn.length > 0) {
+          const pay = el('div', 'money-pay');
+          for (const amount of view.endowment.payIn) {
+            pay.append(
+              button(`Pay in ${dollarsShort(amount)}`, '', () => {
+                const result = store.dispatch({ type: 'endow', amount });
+                if (!result.ok) session.notify(result.error, 'error');
+                draw();
+              }),
+            );
+          }
+          card.append(pay, el('p', 'fine', 'It never comes back out.'));
+        }
+        card.append(button('Close', 'wide', close));
+      };
+      draw();
+    });
   }
 
   function openHappiness(): void {

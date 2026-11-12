@@ -10,17 +10,27 @@ import {
   fallClassDraw,
   FIRST_INTAKE_TICK,
   FOUNDING_CLASS,
+  FOUNDING_SHARES,
   MIN_WINDOW_TICKS,
   openCapacity,
   roomForNewStudents,
   rowBetween,
+  sampleStudents,
+  spreadClassYears,
   SPRING_SHARE,
+  startedHere,
+  studentCard,
+  summarizeAway,
   TICKS_PER_DAY,
+  TICKS_PER_YEAR,
   WAITLIST_TICKS,
   type GameState,
+  type LogEntry,
   type Point,
   type Tool,
 } from '../src/sim';
+import { promote } from '../src/sim/systems/admissions';
+import { recomputeRates } from '../src/sim/systems/money';
 import { badNumbers, DAY, freshGame, MIN, T0 } from './helpers';
 
 function paint(state: GameState, tool: Tool, cells: Point[]): GameState {
@@ -178,23 +188,38 @@ describe('the academic year', () => {
     const start = wellZoned();
     const yearOne = advance(start, T0, T0 + 6.5 * DAY).state;
     expect(yearOne.cohorts[0]).toBeGreaterThan(0);
-    expect(yearOne.cohorts[1]).toBe(0);
+    expect(yearOne.cohorts[1]).toBeGreaterThan(0);
+    // The seniors have just graduated.
+    expect(yearOne.cohorts[3]).toBe(0);
 
     const yearTwo = advance(start, T0, T0 + 7.5 * DAY).state;
     expect(yearTwo.cohorts[1]).toBe(yearOne.cohorts[0]);
+    expect(yearTwo.cohorts[2]).toBe(yearOne.cohorts[1]);
+    expect(yearTwo.cohorts[3]).toBe(yearOne.cohorts[2]);
     expect(yearTwo.cohorts[0]).toBeGreaterThan(0);
   });
 
-  it('graduates the founding class in its fourth year', () => {
+  it('graduates a class every spring, from the first commencement on', () => {
     const start = wellZoned();
-    const beforeGrad = advance(start, T0, T0 + 26 * DAY).state;
+    const beforeGrad = advance(start, T0, T0 + 4.5 * DAY).state;
     expect(beforeGrad.stats.graduates).toBe(0);
     expect(beforeGrad.cohorts[3]).toBeGreaterThan(0);
 
-    const afterGrad = advance(start, T0, T0 + 27 * DAY);
-    expect(afterGrad.state.stats.graduates).toBeGreaterThan(0);
-    expect(afterGrad.state.cohorts[3]).toBe(0);
-    expect(afterGrad.log.some((e) => e.kind === 'graduation')).toBe(true);
+    // Year one: the founding seniors, who began somewhere else two years before the campus opened.
+    const first = advance(start, T0, T0 + 6.5 * DAY);
+    // All of them but the few who did not come back at the end of the semester.
+    expect(first.state.stats.graduates).toBeGreaterThan(beforeGrad.cohorts[3] * 0.9);
+    expect(first.state.stats.graduates).toBeLessThanOrEqual(beforeGrad.cohorts[3]);
+    expect(first.state.cohorts[3]).toBe(0);
+    expect(first.log.some((e) => e.kind === 'graduation')).toBe(true);
+    expect(first.state.classes.find((r) => r.entryYear === -2)?.finishedOnTime).toBe(first.state.stats.graduates);
+
+    // Year four: the first class to have spent all four years here.
+    const beforeFourth = advance(start, T0, T0 + 26 * DAY).state;
+    const fourth = advance(start, T0, T0 + 27 * DAY).state;
+    expect(fourth.stats.graduates).toBeGreaterThan(beforeFourth.stats.graduates);
+    expect(fourth.classes.find((r) => r.entryYear === 1)?.finishedOnTime).toBeGreaterThan(0);
+    expect(fourth.cohorts[3]).toBe(0);
   });
 
   it('grows a tended campus year over year', () => {
@@ -232,5 +257,179 @@ describe('neglect', () => {
     const atYear10 = run(70);
     expect(atYear10).toBeGreaterThan(atYear5 * 0.7);
     expect(atYear10).toBeLessThan(atYear5 * 1.3);
+  });
+});
+
+describe('all four class years from the first day', () => {
+  const sum = (list: readonly number[]): number => list.reduce((total, n) => total + n, 0);
+
+  it('splits the founding class 27, 26, 25 and 22 in a hundred, and changes nothing else on day one', () => {
+    const state = advance(wellZoned(), T0, at(FIRST_INTAKE_TICK)).state;
+    expect(enrollment(state)).toBe(FOUNDING_CLASS);
+    expect(state.cohorts).toEqual(FOUNDING_SHARES.map((share) => Math.round(FOUNDING_CLASS * share)));
+    expect(state.cohorts[3]).toBeLessThan(state.cohorts[0]);
+    // Those who live in town are split the same way.
+    const off = sum(state.offCampus);
+    expect(off).toBeGreaterThan(0);
+    for (let classYear = 0; classYear < 4; classYear++) {
+      expect(Math.abs(state.offCampus[classYear]! - off * FOUNDING_SHARES[classYear]!)).toBeLessThanOrEqual(1);
+    }
+    // The money is what it would be with 400 freshmen: tuition and room fees do not ask what year anyone is in.
+    const freshmen = structuredClone(state);
+    freshmen.cohorts = [FOUNDING_CLASS, 0, 0, 0];
+    freshmen.offCampus = [off, 0, 0, 0];
+    recomputeRates(state);
+    recomputeRates(freshmen);
+    expect(state.money.incomePerYear).toBe(freshmen.money.incomePerYear);
+    expect(state.money.spendingPerYear).toBe(freshmen.money.spendingPerYear);
+    expect(state.money.cash).toBe(freshmen.money.cash);
+  });
+
+  it('keeps the mix however the founders trickle in, and records each class under the year it began', () => {
+    // The starter campus has room for 60. The other 340 wait, and come in as lots open.
+    const first = advance(freshGame(), T0, at(FIRST_INTAKE_TICK)).state;
+    expect(enrollment(first)).toBe(60);
+    for (let classYear = 0; classYear < 4; classYear++) {
+      expect(Math.abs(first.cohorts[classYear]! - 60 * FOUNDING_SHARES[classYear]!)).toBeLessThan(1);
+    }
+    let state = structuredClone(first);
+    state.money.cash = 5_000_000;
+    state = paint(state, 'housing', rowBetween([0, 18], [18, 18]));
+    state = paint(state, 'academic', rowBetween([0, 13], [9, 13]));
+    const later = advance(state, state.clock.lastSimulatedAt, T0 + 1.2 * DAY).state;
+    expect(enrollment(later)).toBeGreaterThan(100);
+    expect(later.admissions.waitlistAdmitted).toBe(enrollment(later) - 60);
+    for (let classYear = 0; classYear < 4; classYear++) {
+      expect(Math.abs(later.cohorts[classYear]! - enrollment(later) * FOUNDING_SHARES[classYear]!)).toBeLessThan(1);
+      // Sophomores began in year 0, juniors in year -1, seniors in year -2.
+      expect(later.classes.find((r) => r.entryYear === 1 - classYear)?.entered).toBe(later.cohorts[classYear]);
+    }
+    expect(later.classes.filter(startedHere).map((r) => r.entryYear)).toEqual([1]);
+  });
+
+  it('brings every later class in as freshmen', () => {
+    const start = wellZoned();
+    const beforeSpring = advance(start, T0, T0 + 2.9 * DAY).state;
+    const afterSpring = advance(start, T0, T0 + 3.2 * DAY).state;
+    expect(afterSpring.admissions.lastIntake?.season).toBe('spring');
+    expect(afterSpring.admissions.lastIntake!.admitted).toBeGreaterThan(0);
+    // The upper classes only shrink, by the few who did not come back.
+    for (const classYear of [1, 2, 3]) expect(afterSpring.cohorts[classYear]).toBeLessThanOrEqual(beforeSpring.cohorts[classYear]!);
+    expect(afterSpring.cohorts[0]).toBeGreaterThan(beforeSpring.cohorts[0]! - 10);
+  });
+
+  it('shows each founder the year they are in, with a first-year phase only for freshmen and a last-year one only for seniors', () => {
+    const state = advance(wellZoned(), T0, T0 + 20 * MIN).state;
+    const names = ['Freshman', 'Sophomore', 'Junior', 'Senior'];
+    for (let classYear = 0; classYear < 4; classYear++) {
+      // A founding sophomore's class entered in year 0, a senior's in year -2.
+      const card = studentCard(state, { entryYear: 1 - classYear, index: 0 })!;
+      expect(card.classYear).toBe(classYear);
+      expect(card.classYearName).toBe(names[classYear]);
+      expect(studentCard(state, { entryYear: 1 - classYear, index: state.cohorts[classYear]! })).toBeNull();
+    }
+    const cards = sampleStudents(state).map((ref) => studentCard(state, ref)!);
+    expect(cards.length).toBe(FOUNDING_CLASS);
+    for (const card of cards) {
+      if (card.archetype === 'lost' || card.archetype === 'homesick') expect(card.classYear).toBe(0);
+      if (card.archetype === 'superSenior') expect(card.classYear).toBe(3);
+    }
+    expect(cards.some((card) => card.archetype === 'lost')).toBe(true);
+    expect(cards.some((card) => card.archetype === 'superSenior')).toBe(true);
+  });
+});
+
+describe('a save from before campuses opened with four class years', () => {
+  const sum = (list: readonly number[]): number => list.reduce((total, n) => total + n, 0);
+  /** The campus as an older version left it: everyone a freshman, in the fall of year one. */
+  function oldSave(): GameState {
+    const state = structuredClone(advance(wellZoned(), T0, T0 + 2 * DAY).state);
+    const off = sum(state.offCampus);
+    state.cohorts = [enrollment(state), 0, 0, 0];
+    state.offCampus = [off, 0, 0, 0];
+    state.classes = [{ entryYear: 1, entered: FOUNDING_CLASS, finishedOnTime: 0, finishedLate: 0, left: FOUNDING_CLASS - state.cohorts[0] }];
+    state.fourYears = false;
+    return state;
+  }
+
+  it('graduates nobody in its first spring, then fills the upper classes at the next fall intake', () => {
+    const start = oldSave();
+    const summer = advance(start, start.clock.lastSimulatedAt, T0 + 6.9 * DAY);
+    expect(summer.state.stats.graduates).toBe(0);
+    expect(summer.state.fourYears).toBe(false);
+    expect(summer.log.some((e) => e.kind === 'classes')).toBe(false);
+
+    const fall = advance(summer.state, summer.state.clock.lastSimulatedAt, T0 + 7.1 * DAY);
+    expect(fall.state.fourYears).toBe(true);
+    for (const classYear of [0, 1, 2, 3]) expect(fall.state.cohorts[classYear]).toBeGreaterThan(0);
+    // Said once, and it reaches the away list.
+    const notes = fall.log.filter((e) => e.kind === 'classes');
+    expect(notes.length).toBe(1);
+    expect(notes[0]!.text).toMatch(/all four class years/);
+    const away = summarizeAway(fall.log, { minutes: 300, cashBefore: 0, cashAfter: 0, studentsBefore: 0, studentsAfter: 0 });
+    expect(away.lines.filter((line) => /all four class years/.test(line)).length).toBe(1);
+    // And never again.
+    const next = advance(fall.state, fall.state.clock.lastSimulatedAt, T0 + 14.5 * DAY);
+    expect(next.log.some((e) => e.kind === 'classes')).toBe(false);
+    // Its seniors graduate that spring.
+    expect(next.state.stats.graduates).toBeGreaterThan(0);
+  });
+
+  it('moves nobody out and changes no income: the same students, in other years', () => {
+    const start = oldSave();
+    const summer = structuredClone(advance(start, start.clock.lastSimulatedAt, T0 + 6.9 * DAY).state);
+    summer.clock.tick += 1;
+    promote(summer);
+    recomputeRates(summer);
+    const before = structuredClone(summer);
+    const log: LogEntry[] = [];
+    spreadClassYears(summer, log);
+    recomputeRates(summer);
+    expect(enrollment(summer)).toBe(enrollment(before));
+    expect(sum(summer.offCampus)).toBe(sum(before.offCampus));
+    expect(summer.money.incomePerYear).toBe(before.money.incomePerYear);
+    expect(summer.money.spendingPerYear).toBe(before.money.spendingPerYear);
+    expect(sum(summer.classes.map((r) => r.entered))).toBe(sum(before.classes.map((r) => r.entered)));
+    // About 26, 25 and 22 parts of the 73 that are not freshmen.
+    const continuing = enrollment(before);
+    expect(summer.cohorts[0]).toBe(0);
+    expect(Math.abs(summer.cohorts[3] - (continuing * 22) / 73)).toBeLessThanOrEqual(1);
+    expect(Math.abs(summer.cohorts[2] - (continuing * 25) / 73)).toBeLessThanOrEqual(1);
+    for (let classYear = 1; classYear < 4; classYear++) expect(summer.offCampus[classYear]).toBeLessThanOrEqual(summer.cohorts[classYear]!);
+    expect(log.length).toBe(1);
+    // A second call does nothing.
+    const again = structuredClone(summer);
+    spreadClassYears(again, log);
+    expect(again).toEqual(summer);
+    expect(log.length).toBe(1);
+  });
+
+  it('moves nobody down a year, and leaves a campus with every class alone', () => {
+    // A save upgraded in its second year: last year's freshmen and the founding class, no seniors.
+    const two = oldSave();
+    two.clock.tick = 2 * TICKS_PER_YEAR + FIRST_INTAKE_TICK;
+    two.cohorts = [0, 100, 380, 0];
+    two.offCampus = [0, 10, 40, 0];
+    two.classes = [
+      { entryYear: 1, entered: 400, finishedOnTime: 0, finishedLate: 0, left: 20 },
+      { entryYear: 2, entered: 110, finishedOnTime: 0, finishedLate: 0, left: 10 },
+    ];
+    spreadClassYears(two, []);
+    expect(two.cohorts[1]).toBe(100);
+    expect(two.cohorts[3]).toBe(Math.round((480 * 22) / 73));
+    expect(two.cohorts[2]).toBe(380 - two.cohorts[3]);
+    expect(sum(two.offCampus)).toBe(50);
+
+    // A mature campus already has every class.
+    const mature = oldSave();
+    mature.clock.tick = 5 * TICKS_PER_YEAR + FIRST_INTAKE_TICK;
+    mature.cohorts = [0, 300, 280, 260];
+    const before = structuredClone(mature);
+    const log: LogEntry[] = [];
+    spreadClassYears(mature, log);
+    expect(mature.cohorts).toEqual(before.cohorts);
+    expect(mature.classes).toEqual(before.classes);
+    expect(mature.fourYears).toBe(true);
+    expect(log.length).toBe(0);
   });
 });

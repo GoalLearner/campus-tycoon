@@ -202,6 +202,16 @@ export interface Money {
   yearSpent: number;
   /** Total of state grants received when cash would have gone below zero. */
   grants: number;
+  /** Cash paid in for good. It earns a small income every year and is the campus's legacy number. */
+  endowment: number;
+  /** The recruiting and marketing step: 0 is off, 4 the most. */
+  marketing: number;
+  /**
+   * How far the costs of play stop 5 have been phased in, out of PHASE_STEPS.
+   * A new campus pays them in full. A save from before starts at 0 and takes
+   * one step each day.
+   */
+  phase: number;
 }
 
 export type TimerKind = 'buildDone';
@@ -275,8 +285,19 @@ export interface GameState {
    * needs a bed.
    */
   offCampus: [number, number, number, number];
-  /** One record per entering class, oldest first. */
+  /**
+   * One record per entering class, oldest first. A campus opens with all four
+   * class years, so its founding sophomores, juniors and seniors have entry
+   * years 0, -1 and -2: they began somewhere else. Graduation rates leave
+   * those records out (see `startedHere`).
+   */
   classes: ClassRecord[];
+  /**
+   * True once the student body has all four class years. A new campus has it
+   * from the first day. A save from before that rule gets it at its next fall
+   * intake, when its students are spread across the years.
+   */
+  fourYears: boolean;
   admissions: Admissions;
   timers: Timer[];
   timerSeq: number;
@@ -293,6 +314,8 @@ export interface Grounds {
   bins: Record<number, number>;
   /** Broken bins, benches and tables: the work left to fix each. */
   broken: Record<number, number>;
+  /** What broke each of those: the place whose litter led to it, and which of its stories it was. */
+  brokenFrom: Record<number, { spot: number; line: number }>;
   /** Broken street lamps, by cell index: the work left to fix each. */
   lamps: Record<number, number>;
   /**
@@ -345,10 +368,12 @@ export type LogKind =
   | 'waitlist'
   | 'waitlistClosed'
   | 'graduation'
+  | 'classes'
   | 'semester'
   | 'incident'
   | 'grounds'
   | 'yearEnd'
+  | 'costs'
   | 'grant'
   | 'paused';
 

@@ -87,7 +87,7 @@ describe('the student card', () => {
       const card = studentCard(state, ref)!;
       expect(card).not.toBeNull();
       expect(card.name).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
-      expect(card.classYearName).toBe('Freshman');
+      expect(['Freshman', 'Sophomore', 'Junior', 'Senior']).toContain(card.classYearName);
       expect(card.major.length).toBeGreaterThan(0);
       expect(QUIRKS).toContain(card.quirk);
       expect(card.gpa).toBeGreaterThanOrEqual(GPA_MIN);

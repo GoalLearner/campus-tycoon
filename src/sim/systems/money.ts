@@ -1,37 +1,26 @@
-import {
-  OPERATING_COST_PER_STUDENT_PER_YEAR,
-  ROOM_FEE_PER_BED_PER_YEAR,
-  TUITION_PER_STUDENT_PER_YEAR,
-} from '../config/money';
+import { PHASE_STEPS } from '../config/money';
 import { TICKS_PER_YEAR } from '../config/time';
 import { dollars } from '../format';
-import { enrollment, openCapacity, upkeepPerYear } from '../selectors';
 import type { GameState, LogEntry } from '../types';
-import { placedIncomePerYear } from './placed';
-import { offCampusNow } from './town';
-import { wagesPerYear } from './grounds';
+import { budget } from './budget';
+
+export { occupiedBeds } from './budget';
 
 /**
- * First playable money: tuition from every student and a room fee from every
- * occupied bed in, upkeep and a flat running cost out. Rates are yearly and
- * accrue every tick. See DESIGN.md sections 9 and 25.1.
+ * Money. Tuition from every student and a room fee from every occupied bed
+ * come in. What goes out is worked out line by line in `budget`. Rates are
+ * yearly and accrue every tick. See DESIGN.md sections 9, 25.1 and 31.
  */
 
-/** Beds with a student in them: the students who do not live in town, as far as there are beds. */
-export function occupiedBeds(state: GameState): number {
-  return Math.max(0, Math.min(enrollment(state) - offCampusNow(state), openCapacity(state, 'housing')));
-}
-
-/** Call after anything that changes enrollment or the buildings that stand. */
+/** Call after anything that changes enrollment, the buildings that stand, or what the player has chosen to spend. */
 export function markRatesDirty(state: GameState): void {
   state.money.ratesDirty = true;
 }
 
 export function recomputeRates(state: GameState): void {
-  const students = enrollment(state);
-  state.money.incomePerYear = students * TUITION_PER_STUDENT_PER_YEAR + occupiedBeds(state) * ROOM_FEE_PER_BED_PER_YEAR + placedIncomePerYear(state);
-  state.money.spendingPerYear =
-    upkeepPerYear(state) + wagesPerYear(state) + students * OPERATING_COST_PER_STUDENT_PER_YEAR;
+  const b = budget(state);
+  state.money.incomePerYear = b.incomeTotal;
+  state.money.spendingPerYear = b.spending;
   state.money.ratesDirty = false;
 }
 
@@ -55,12 +44,47 @@ export function spend(state: GameState, amount: number): boolean {
 }
 
 /**
- * Daily check. The first playable has no bailout penalties yet: when cash would
- * sit below zero the state tops it up to zero and the grant is recorded.
- * The real bailout arrives in layer 2.
+ * A save from before play stop 5 takes one more step toward full costs each
+ * day, seven in all, and says so each time. A new campus is already there.
+ */
+export function stepPhase(state: GameState, log: LogEntry[]): void {
+  const m = state.money;
+  if (m.phase >= PHASE_STEPS) return;
+  m.phase += 1;
+  recomputeRates(state);
+  const full = budget(state).fullSpending;
+  log.push({
+    tick: state.clock.tick,
+    kind: 'costs',
+    text:
+      m.phase >= PHASE_STEPS
+        ? `Running costs have reached their full level: ${dollars(m.spendingPerYear)} a year. The cash figure opens the Money panel, which shows where it goes.`
+        : `Running costs rose a step, ${m.phase} of ${PHASE_STEPS}: ${dollars(m.spendingPerYear)} a year now, and about ${dollars(full)} once all ${PHASE_STEPS} are in.`,
+    data: { step: m.phase, spending: Math.round(m.spendingPerYear), full: Math.round(full) },
+  });
+}
+
+/**
+ * Daily check. When cash would sit below zero the endowment covers the
+ * shortfall first, so nobody can put cash away and be bailed out. If that is
+ * not enough the state tops cash up to zero and the grant is recorded. The
+ * real bailout, with its penalties, arrives in layer 2.
  */
 export function dailyCashCheck(state: GameState, log: LogEntry[]): void {
   const m = state.money;
+  if (m.cash >= 0) return;
+  const fromEndowment = Math.min(-m.cash, m.endowment);
+  if (fromEndowment > 0) {
+    m.endowment -= fromEndowment;
+    m.cash += fromEndowment;
+    markRatesDirty(state);
+    log.push({
+      tick: state.clock.tick,
+      kind: 'grant',
+      text: `The endowment covered a shortfall of ${dollars(fromEndowment)}.`,
+      data: { endowment: Math.round(fromEndowment) },
+    });
+  }
   if (m.cash >= 0) return;
   const shortfall = -m.cash;
   m.cash = 0;

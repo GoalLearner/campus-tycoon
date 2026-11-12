@@ -11,6 +11,7 @@ import { FIRST_INTAKE_TICK } from '../config/time';
 import { LOCAL_SHARE } from '../config/town';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
 import type { GameState, Season, Zone } from '../types';
+import { marketingLift } from './budget';
 import { freeTownPlaces, offCampusNow, townPlaces } from './town';
 
 /**
@@ -47,7 +48,8 @@ export function nextIntakeSeason(state: GameState): Season {
 export function fallClassDraw(state: GameState): number {
   const students = enrollment(state);
   const draw = DESIRABILITY_DRAW_FLOOR + DESIRABILITY_DRAW_SPAN * (averageDesirability(state) / 100);
-  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw;
+  // Recruiting and marketing lifts applications. The ceiling is the wall it pushes against.
+  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state));
   return Math.min(POOL_CEILING, Math.round(pool));
 }
 

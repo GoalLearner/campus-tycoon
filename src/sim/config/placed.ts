@@ -1,4 +1,5 @@
 import type { PlacedType } from '../types';
+import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
 
 /**
  * Hand-placed buildings: what the Build menu offers. Each belongs to one
@@ -33,6 +34,8 @@ export interface PlacedSpec {
   buildable: boolean;
   /** Car parks only: the cars it holds once a road links it to a town street. */
   cars?: number;
+  /** Its utilities for a game year, where the rule by size does not fit. The pool uses far more than its size. */
+  utilitiesPerYear?: number;
 }
 
 export const PLACED: Record<PlacedType, PlacedSpec> = {
@@ -62,7 +65,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   pool: {
     name: 'Aquatics pool', category: 'Recreation', family: 'recreation', w: 2, h: 1, cost: 40_000, upkeepPerYear: 4_000,
-    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.pool', flat: true, buildable: true,
+    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.pool', flat: true, buildable: true, utilitiesPerYear: 9_000,
   },
   courts: {
     name: 'Outdoor courts', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 18_000, upkeepPerYear: 1_000,
@@ -114,7 +117,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   yard: {
     name: 'Facilities Yard', category: 'Grounds', family: 'yard', w: 2, h: 1, cost: 60_000, upkeepPerYear: 0,
-    radius: 12, strength: 0, effect: 'Its workers empty bins, sweep and fix within 12 cells', sprite: 'build.yard', flat: false, buildable: true,
+    radius: 16, strength: 0, effect: 'Its workers empty bins, sweep and fix within 16 cells', sprite: 'build.yard', flat: false, buildable: true,
   },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
@@ -140,3 +143,15 @@ export const STORE_INCOME_PER_PASSER = 45;
 
 /** Places to meet: one recreation building is worth this many quad cells of social life. */
 export const SOCIAL_SPOTS_PER_RECREATION = 4;
+
+/**
+ * Utilities for a hand-placed building, for a game year: by the cells it
+ * stands on. Something that lies open on the ground, a court or a field,
+ * has lights and little else. Water, bins and seats use nothing.
+ */
+export function utilitiesOf(type: PlacedType): number {
+  const spec = PLACED[type];
+  if (spec.utilitiesPerYear !== undefined) return spec.utilitiesPerYear;
+  if (spec.family === 'water' || spec.family === 'bin' || spec.family === 'seat' || spec.family === 'landmark') return 0;
+  return spec.w * spec.h * (spec.flat ? UTILITIES_PER_OPEN_CELL : UTILITIES_PER_CELL);
+}

@@ -2,6 +2,9 @@ import {
   applyAction,
   approvalAt,
   campusHappiness,
+  fallClassDraw,
+  FIRST_INTAKE_TICK,
+  POOL_CEILING,
   COST,
   coverFor,
   fedAt,
@@ -172,6 +175,40 @@ function nextParking(state: GameState): { type: PlacedType; x: number; y: number
 function nextLand(state: GameState): number | null {
   const forSale = state.map.parcels.filter((parcel) => !parcel.owned).sort((a, b) => a.price - b.price);
   return forSale[0]?.id ?? null;
+}
+
+// ------------------------------------------------------------------ money --
+
+/**
+ * Recruiting and marketing, as a player who has read the Money panel would
+ * set it: on while a bigger class would have somewhere to go, and off when
+ * students from the last class gave up waiting for room or the pool is at
+ * its ceiling, because then it buys nothing.
+ */
+function setMarketing(state: GameState, style: Style): GameState {
+  const a = state.admissions;
+  // Wait until the last waitlist has closed: only then is it known whether anyone was turned away for good.
+  if (!a.lastIntake || a.waitlistUntilTick !== 0) return state;
+  const lost = a.lastIntake.turnedAway - a.waitlistAdmitted > 0;
+  const atCeiling = fallClassDraw(state) >= POOL_CEILING;
+  const step = lost || atCeiling ? 0 : style === 'optimizer' ? 4 : 2;
+  if (step === state.money.marketing) return state;
+  const result = applyAction(state, { type: 'marketing', step });
+  return result.ok ? result.state : state;
+}
+
+/**
+ * Cash with nothing to buy goes into the endowment. Only on a visit when
+ * nothing was bought and nothing was out of reach, and only what is left
+ * above half a year of spending and a million dollars: a young campus needs
+ * its cash for the next class.
+ */
+function payIntoEndowment(state: GameState, style: Style): GameState {
+  const keep = Math.max(1_000_000, state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5));
+  const spare = Math.floor(state.money.cash - keep);
+  if (spare < 100_000) return state;
+  const result = applyAction(state, { type: 'endow', amount: spare });
+  return result.ok ? result.state : state;
 }
 
 // ---------------------------------------------------------------- grounds --
@@ -349,10 +386,15 @@ function wantsFromMenu(state: GameState): Array<{ type: PlacedType; x: number; y
   for (const b of state.map.buildings) {
     if (hungry >= 3) break;
     if (b && b.zone === 'housing' && b.stage === 1 && !fedAt(state.map, b.x, b.y)) {
-      wants.push({ type: state.money.cash > 150_000 ? 'dining' : 'coffee', x: b.x, y: b.y });
+      // A dining hall feeds four times the ground a coffee stand does and takes two cells. A campus that
+      // only ever buys the stand ends up with dozens of them where its Medical Centers should have gone.
+      wants.push({ type: state.money.cash >= PLACED.dining.cost + 20_000 ? 'dining' : 'coffee', x: b.x, y: b.y });
       hungry += 1;
     }
   }
+  // Beds and seats come first while students are waiting for them, and before anyone has moved in. The top
+  // bar says so in as many words, and a gym or a Campus Safety office has staff to pay from the day it opens.
+  if (state.admissions.waitlist > 0 || state.clock.tick < FIRST_INTAKE_TICK) return wants;
   // The panel names a cause and its weakest part. The part is what gets built.
   const worst = campusHappiness(state).worstPart;
   if (worst === 'dining' || worst === 'recreation' || worst === 'safety') {
@@ -428,6 +470,21 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   let purchases = 0;
   let blockedByCash = false;
 
+  // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a
+  // Medical Center, and by the time it stopped growing the ground for one would be gone. It buys what the
+  // Happiness panel asks for first, and if it cannot afford the next of those it holds that price back from
+  // this visit's zoning: saving up. The other players are held back by how much they do in a visit, not by
+  // cash, so they shop for these after zoning, as before.
+  let lotReserve = reserve;
+  if (style === 'optimizer') {
+    const first = buildFromMenu(current, reserve, 4);
+    current = first.state;
+    purchases += first.built;
+    const waiting = wantsFromMenu(current).filter((want) => menuSpot(current, want.type, want.x, want.y) !== null);
+    // Hold back the dearest of them, so a Campus Safety office is not for ever outbid by a coffee stand.
+    if (waiting.length > 0) lotReserve += Math.max(...waiting.map((want) => (want.type === 'coffee' ? PLACED.dining.cost : PLACED[want.type].cost)));
+  }
+
   while (purchases < maxPurchases) {
     const zone = neediestZone(current);
     if (!zone) break;
@@ -436,17 +493,17 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     let next: GameState | null;
     if (spots.length === 0) {
       const stretch = nextPathStretch(current);
-      if (stretch) next = tryPaint(current, 'path', stretch, reserve);
+      if (stretch) next = tryPaint(current, 'path', stretch, lotReserve);
       else {
         // Out of room on the land the campus has: buy the next field.
         const land = nextLand(current);
         if (land === null) break;
-        const bought = current.money.cash - current.map.parcels[land]!.price >= reserve ? applyAction(current, { type: 'buyLand', parcel: land }) : null;
+        const bought = current.money.cash - current.map.parcels[land]!.price >= lotReserve ? applyAction(current, { type: 'buyLand', parcel: land }) : null;
         next = bought?.ok ? bought.state : null;
       }
     } else {
       const spot = spots[0]!;
-      next = tryPaint(current, isQuadSpot(spot) ? 'quad' : zone, [spot], reserve);
+      next = tryPaint(current, isQuadSpot(spot) ? 'quad' : zone, [spot], lotReserve);
     }
     if (!next) {
       blockedByCash = true;
@@ -487,5 +544,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     current = after.state;
     purchases += after.built;
   }
+  current = setMarketing(current, style);
+  if (!blockedByCash) current = payIntoEndowment(current, style);
   return { state: current, purchases, blockedByCash };
 }

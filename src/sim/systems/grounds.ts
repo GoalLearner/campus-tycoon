@@ -197,15 +197,18 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
   // 1. Litter falls. Bins beside the spot catch most of it until they are full.
   for (const spot of spots) {
     const lying = g.litter[spot.id] ?? 0;
-    const drop = dropOf(state, spot) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
+    const drop = dropOf(state, spot);
     if (drop <= 0) continue;
+    // Dirt invites dirt: at a filthy place half again as much is dropped on the ground. What goes in the
+    // bins is the same as ever, so a dirty place asks no more of its bins than a clean one.
+    const invited = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
     const beside = map.care.bins[spot.id];
     let open = 0;
     if (beside) for (const id of beside) if (!((g.broken[id] ?? 0) > 0) && (g.bins[id] ?? 0) < BIN_CAPACITY) open += 1;
-    let ground = drop;
+    let ground = drop * invited;
     if (open > 0) {
       const each = (drop * BIN_CATCH) / open;
-      ground = drop * (1 - BIN_CATCH);
+      ground = drop * (1 - BIN_CATCH) * invited;
       for (const id of beside!) {
         if ((g.broken[id] ?? 0) > 0 || (g.bins[id] ?? 0) >= BIN_CAPACITY) continue;
         const before = g.bins[id] ?? 0;
@@ -246,6 +249,7 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     const id = Number(key);
     if (!map.placed[id]) {
       delete g.broken[id];
+      delete g.brokenFrom[id];
       continue;
     }
     const yardId = map.care.yard[id] ?? -1;
@@ -276,6 +280,7 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
       const left = g.broken[id]! - used;
       if (left <= 1e-9) {
         delete g.broken[id];
+        delete g.brokenFrom[id];
         g.repaired += 1;
         log.push({ tick, kind: 'grounds', text: `A worker fixed a ${nameOf(map.placed[id]!).toLowerCase()}.`, data: { event: 'fixed', thing: map.placed[id]!.type } });
       } else g.broken[id] = left;
@@ -303,9 +308,13 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
       mySpots.sort((x, y) => g.litter[y.id]! - g.litter[x.id]! || x.id - y.id);
       for (const spot of mySpots) {
         if (work <= 0) break;
-        const swept = Math.min(work, g.litter[spot.id]!);
-        g.litter[spot.id] = g.litter[spot.id]! - swept;
-        work -= swept;
+        // Deep litter is quicker to clear, piece for piece: by as much as a filthy place draws more of it.
+        // So a crew that can keep its places clean can also win them back, however bad they got.
+        const lying = g.litter[spot.id]!;
+        const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
+        const swept = Math.min(work * pace, lying);
+        g.litter[spot.id] = lying - swept;
+        work -= swept / pace;
       }
     }
     // The other broken things in the circle, and broken lamps under it.
@@ -388,7 +397,10 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     if ('lamp' in thing) {
       g.lamps[thing.lamp] = FIX_WORK;
       g.lampFrom[thing.lamp] = { spot: spot.id, line };
-    } else g.broken[thing.placed.id] = FIX_WORK;
+    } else {
+      g.broken[thing.placed.id] = FIX_WORK;
+      g.brokenFrom[thing.placed.id] = { spot: spot.id, line };
+    }
     log.push({ tick, kind: 'grounds', text: lines[line]!, data: { event: 'broken', thing: kind, spot: spot.id } });
   }
 }
@@ -561,10 +573,13 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   for (const placed of state.map.placed) {
     if (!placed || state.map.care.yard[placed.id] !== yard.id) continue;
     if (isMessSpot(placed)) {
+      // A filthy place draws more litter, and a worker clears deep litter faster by the same measure, so
+      // the two cancel: what a place asks of its yard is what it asks when clean, plus the backlog.
       const lying = state.grounds.litter[placed.id] ?? 0;
-      const drawn = upkeepOf(state, placed) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
+      const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
+      const drawn = upkeepOf(state, placed);
       falling += drawn;
-      need += drawn + lying / CLEAR_WITHIN_CHECKS;
+      need += drawn + lying / pace / CLEAR_WITHIN_CHECKS;
     }
     need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
   }
@@ -627,66 +642,84 @@ export function thingFix(state: GameState, placed: Placed): GroundsFix {
   return placed.type === 'bin' && !isBroken(state, placed.id) ? 'binFull' : null;
 }
 
-/** What a broken street lamp's panel has to say. */
-export interface LampReport {
-  /** Which of LAMP_BROKE_BY it was. null for a lamp broken before that was kept. */
+/** What the panel of something broken has to say: a street lamp, a bin, a bench or a picnic table. */
+export interface BreakReport {
+  kind: 'bin' | 'bench' | 'table' | 'lamp';
+  /** Which of BROKE_BY's stories it was. null for a thing broken before that was kept. */
   line: number | null;
   /** The place whose litter led to it. null when it is not known, or the place has gone. */
   spot: Placed | null;
-  /** The yard whose circle covers the lamp, and how many work there. null when none does. */
+  /** The yard whose circle covers it, and how many work there. null when none does. */
   yard: Placed | null;
   workers: number;
   /** Minutes until a worker has fixed it, as things stand. null when none will within three days. */
   minutes: number | null;
 }
+export type LampReport = BreakReport;
 
 /** True where a street lamp stands broken. */
 export function isBrokenLamp(state: GameState, x: number, y: number): boolean {
   return (state.grounds.lamps[y * state.map.width + x] ?? 0) > 0 && lampAt(state.map, x, y);
 }
 
+/** The nearest place that drops litter within breaking reach of a cell: the likely cause when none was kept. */
+function likelySpot(map: MapState, x: number, y: number): Placed | null {
+  let spot: Placed | null = null;
+  let near = Infinity;
+  for (const placed of map.placed) {
+    if (!placed || !isMessSpot(placed)) continue;
+    const gap = gapTo(placed, x, y);
+    if (gap <= BREAK_REACH && gap < near) {
+      near = gap;
+      spot = placed;
+    }
+  }
+  return spot;
+}
+
 /**
- * Why a street lamp is broken, who will fix it, and when. The "when" is found
- * by running the grounds forward on a copy, check by check, until the lamp is
- * fixed: the same rules that will fix it, so the answer is the game's own.
- * It assumes nothing else changes meanwhile. null where no lamp is broken.
+ * When a worker will have fixed something, in minutes from now. The grounds
+ * are run forward on a copy, check by check, until `fixed` says it is done:
+ * the same rules that will fix it, so the answer is the game's own. It assumes
+ * nothing else changes meanwhile. null when it is not fixed within three days.
  */
-export function lampReport(state: GameState, x: number, y: number): LampReport | null {
+function minutesUntilFixed(state: GameState, fixed: (grounds: GameState['grounds']) => boolean): number | null {
+  // Only the grounds, the dice and the clock change in a check, so only those are copied.
+  const ahead: GameState = { ...state, clock: { ...state.clock }, grounds: structuredClone(state.grounds), rng: structuredClone(state.rng) };
+  const start = state.clock.tick;
+  let tick = start - (start % GROUNDS_EVAL_TICKS) + GROUNDS_EVAL_TICKS;
+  for (let n = 0; n < FIX_LOOKAHEAD_CHECKS; n++, tick += GROUNDS_EVAL_TICKS) {
+    ahead.clock.tick = tick;
+    stepGrounds(ahead, []);
+    if (fixed(ahead.grounds)) return tick - start;
+  }
+  return null;
+}
+
+/** Why a street lamp is broken, who will fix it, and when. null where no lamp is broken. */
+export function lampReport(state: GameState, x: number, y: number): BreakReport | null {
   if (!isBrokenLamp(state, x, y)) return null;
   const map = state.map;
   const cell = y * map.width + x;
   const from = state.grounds.lampFrom[cell];
-  let spot = from ? (map.placed[from.spot] ?? null) : null;
-  if (!from) {
-    // Not kept for this lamp: the nearest place that drops litter within breaking reach is the likely one.
-    let near = Infinity;
-    for (const placed of map.placed) {
-      if (!placed || !isMessSpot(placed)) continue;
-      const gap = gapTo(placed, x, y);
-      if (gap <= BREAK_REACH && gap < near) {
-        near = gap;
-        spot = placed;
-      }
-    }
-  }
+  const spot = from ? (map.placed[from.spot] ?? null) : likelySpot(map, x, y);
   const yard = yardOver(map, x, y);
   const workers = yard ? workersAt(state, yard.id) : 0;
-  let minutes: number | null = null;
-  if (yard && workers > 0) {
-    // Only the grounds, the dice and the clock change in a check, so only those are copied.
-    const ahead: GameState = { ...state, clock: { ...state.clock }, grounds: structuredClone(state.grounds), rng: structuredClone(state.rng) };
-    const start = state.clock.tick;
-    let tick = start - (start % GROUNDS_EVAL_TICKS) + GROUNDS_EVAL_TICKS;
-    for (let n = 0; n < FIX_LOOKAHEAD_CHECKS; n++, tick += GROUNDS_EVAL_TICKS) {
-      ahead.clock.tick = tick;
-      stepGrounds(ahead, []);
-      if (ahead.grounds.lamps[cell] === undefined) {
-        minutes = tick - start;
-        break;
-      }
-    }
-  }
-  return { line: from ? from.line : null, spot, yard, workers, minutes };
+  const minutes = yard && workers > 0 ? minutesUntilFixed(state, (grounds) => grounds.lamps[cell] === undefined) : null;
+  return { kind: 'lamp', line: from ? from.line : null, spot, yard, workers, minutes };
+}
+
+/** The same for a broken bin, bench or picnic table. null when it is not broken. */
+export function thingReport(state: GameState, placed: Placed): BreakReport | null {
+  if (!isBroken(state, placed.id) || (placed.type !== 'bin' && placed.type !== 'bench' && placed.type !== 'table')) return null;
+  const map = state.map;
+  const from = state.grounds.brokenFrom[placed.id];
+  const spot = from ? (map.placed[from.spot] ?? null) : likelySpot(map, placed.x, placed.y);
+  const yardId = map.care.yard[placed.id] ?? -1;
+  const yard = yardId >= 0 ? (map.placed[yardId] ?? null) : null;
+  const workers = yard ? workersAt(state, yard.id) : 0;
+  const minutes = yard && workers > 0 ? minutesUntilFixed(state, (grounds) => grounds.broken[placed.id] === undefined) : null;
+  return { kind: placed.type, line: from ? from.line : null, spot, yard, workers, minutes };
 }
 
 /** How a bin stands: empty, part full, full, or broken. For the picture and the panel. */

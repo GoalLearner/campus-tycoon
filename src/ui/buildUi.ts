@@ -5,8 +5,23 @@ import {
   fixText,
   isBrokenThing,
   isMessSpot,
-  LAMP_BROKE_BY,
+  BENEFITS_SHARE,
+  BROKE_BY,
+  budget,
+  utilitiesOf,
+  WAGE_PER_YEAR,
+  careStaffAt,
+  CARE_STAFF_PAY,
+  ENDOWMENT_YIELD,
+  enrollment,
+  hasCareStaff,
+  MARKETING_COST_PER_STUDENT,
+  MARKETING_LIFT,
   lampReport,
+  thingReport,
+  type BreakReport,
+  type BudgetGroupId,
+  type BudgetLine,
   spotClean,
   spotFix,
   thingFix,
@@ -59,7 +74,7 @@ export function buildEntries(): BuildEntry[] {
       category: spec.category,
       cost: dollarsShort(spec.cost),
       footprint: footprint(spec.w, spec.h),
-      upkeep: spec.upkeepPerYear > 0 ? `Upkeep ${dollarsShort(spec.upkeepPerYear)} a year` : 'No upkeep',
+      upkeep: runningLine(type),
       effect: spec.effect,
     };
   });
@@ -92,7 +107,7 @@ export function buildEntries(): BuildEntry[] {
     category: 'Grounds',
     cost: `${dollarsShort(PLACED[type].cost)} each`,
     footprint: 'tap or drag a row',
-    upkeep: 'No upkeep',
+    upkeep: 'Costs nothing to run',
     effect: PLACED[type].effect,
   }));
   const firstGrounds = entries.findIndex((entry) => entry.category === 'Grounds');
@@ -160,21 +175,21 @@ function baseSummary(state: GameState, placed: Placed): string {
       return `Holds ${cars} cars, and ${used} are parked here now. Each space lets one local drive in from a street too far to walk.`;
     }
     case 'bin': {
+      const broke = thingReport(state, placed);
+      if (broke) return `Broken, so it catches nothing. ${breakWords(state, broke)}`;
       const fix = fixText(state, placed, thingFix(state, placed));
       const how = { empty: 'Catching litter.', filling: 'Filling up.', full: 'Full. It catches nothing until it is emptied.', broken: 'Broken. It catches nothing until it is fixed.' }[binState(state, placed.id)];
       return fix ? `${how} ${fix}` : how;
     }
     case 'seat': {
-      if (isBrokenThing(state, placed.id)) {
-        const fix = fixText(state, placed, thingFix(state, placed));
-        return `Broken. Nobody can sit here until it is fixed.${fix ? ` ${fix}` : ' A worker is on the way.'}`;
-      }
+      const broke = thingReport(state, placed);
+      if (broke) return `Broken, so nobody can sit here. ${breakWords(state, broke)}`;
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       return `Somewhere to sit for ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.`;
     }
     case 'yard': {
       const status = yardStatus(state, placed);
-      return `${status.workers} of ${status.max} workers. ${yardLine(status)} Wages ${dollars(status.wagesPerYear)} a year.`;
+      return `${status.workers} of ${status.max} workers. ${yardLine(status)} Wages and benefits ${dollars(withBenefits(status.wagesPerYear))} a year.`;
     }
     case 'landmark':
       return `${spec.effect}.`;
@@ -197,13 +212,21 @@ function about(minutes: number): string {
  */
 export function lampSummary(state: GameState, x: number, y: number): string | null {
   const report = lampReport(state, x, y);
-  if (!report) return null;
-  const story = report.line === null ? undefined : LAMP_BROKE_BY[report.line];
+  return report ? `Broken. ${breakWords(state, report)}` : null;
+}
+
+/**
+ * The rest of a broken thing's panel, the same for a lamp, a bin, a bench and
+ * a table: what broke it, whether a yard covers it, and when it will be fixed.
+ */
+function breakWords(state: GameState, report: BreakReport): string {
+  const story = report.line === null ? undefined : BROKE_BY[report.kind][report.line];
   const where = report.spot ? `after litter piled up around the ${PLACED[report.spot.type].name}` : 'where litter had piled up';
   const cause = story ? `${story}, ${where}.` : `It happened ${where}.`;
+  const stays = report.kind === 'lamp' ? 'dark' : 'broken';
   let fix: string;
-  if (!report.yard) fix = `No Facilities Yard reaches it, so it stays dark. Build one within ${PLACED.yard.radius} cells.`;
-  else if (report.workers === 0) fix = 'The Facilities Yard over it has no workers, so it stays dark. Hire one.';
+  if (!report.yard) fix = `No Facilities Yard reaches it, so it stays ${stays}. Build one within ${PLACED.yard.radius} cells.`;
+  else if (report.workers === 0) fix = `The Facilities Yard over it has no workers, so it stays ${stays}. Hire one.`;
   else if (report.minutes !== null) fix = `A Facilities Yard covers it, and a worker should have it fixed in about ${about(report.minutes)}.`;
   else {
     // Covered, but the crew has too much else to do. The yard's own line says what would help.
@@ -211,13 +234,39 @@ export function lampSummary(state: GameState, x: number, y: number): string | nu
     const help = line.startsWith('Understaffed') ? ` Its yard is ${line.replace(/^U/, 'u')}` : '';
     fix = `A Facilities Yard covers it, but its workers will not get to it for days.${help}`;
   }
-  return `Broken. ${cause} ${fix}`;
+  return `${cause} ${fix}`;
 }
 
-export function placedFacts(placed: Placed): string {
+/** What one member of staff or one worker costs for a year, with benefits on top. */
+const withBenefits = (pay: number): number => pay * (1 + BENEFITS_SHARE);
+
+/** Upkeep and utilities of a hand-placed building for a year. */
+function buildingCost(type: PlacedType): number {
+  return PLACED[type].upkeepPerYear + utilitiesOf(type);
+}
+
+/** A Build menu card's line on what a building costs to run, before it is built. */
+function runningLine(type: PlacedType): string {
+  const spec = PLACED[type];
+  const cost = buildingCost(type);
+  const base = cost > 0 ? `Runs at ${dollarsShort(cost)} a year` : 'Costs nothing to run';
+  if (spec.family === 'medical' || spec.family === 'safety') return `${base}, plus staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))}`;
+  if (spec.family === 'yard') return `${base}, plus ${dollarsShort(withBenefits(WAGE_PER_YEAR))} a worker`;
+  return base;
+}
+
+/** The small print on a building's card: what it costs to run, and its staff where it has any. */
+export function placedFacts(state: GameState, placed: Placed): string {
   const spec = PLACED[placed.type];
-  const upkeep = spec.upkeepPerYear > 0 ? `Upkeep ${dollars(spec.upkeepPerYear)} a year` : 'No upkeep';
-  return spec.buildable ? `${upkeep} · The Clear tool removes it` : upkeep;
+  const cost = buildingCost(placed.type);
+  const parts: string[] = [];
+  if (hasCareStaff(placed)) {
+    const staff = careStaffAt(state, placed);
+    parts.push(`Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits`);
+  }
+  parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
+  if (spec.buildable) parts.push('The Clear tool removes it');
+  return parts.join(' · ');
 }
 
 /** The line shown while a building is being placed. */
@@ -331,4 +380,84 @@ export function housingFixLines(fixes: HousingFixes): { lots: string; path: stri
     ? `Build ${plural(fixes.parking.spaces, 'parking space', 'parking spaces')} with a road to a street: ${plural(fixes.parking.lots, 'Parking lot', 'Parking lots')}, ${dollarsShort(fixes.parking.cost)}. ${plural(fixes.parking.brings, 'local could', 'locals could')} drive in, so ${beds(fixes.parking.brings)}.`
     : '';
   return { lots, path, parking };
+}
+
+// ------------------------------------------------------------- the Money panel --
+
+export interface MoneyRow {
+  name: string;
+  /** The count behind it: "42 members at $58,000". */
+  detail: string;
+  amount: string;
+}
+
+export interface MoneyView {
+  /** How much of every $100 is kept: the one number that says whether the campus is healthy. */
+  lead: string;
+  /** Set while a save from before these costs is climbing to them. */
+  phase: string | null;
+  incomeTotal: string;
+  income: MoneyRow[];
+  spendingTotal: string;
+  /** Largest first. Each opens to its lines. */
+  groups: Array<{ id: BudgetGroupId; name: string; amount: string; share: string; lines: MoneyRow[] }>;
+  marketing: { step: number; max: number; line: string };
+  endowment: { line: string; payIn: number[] };
+}
+
+/** A round sum to offer: two figures, rounded down. */
+function roundSum(amount: number): number {
+  if (amount < 10_000) return 0;
+  const unit = 10 ** (Math.floor(Math.log10(amount)) - 1);
+  return Math.floor(amount / unit) * unit;
+}
+
+/** Everything the Money panel shows, in words. The panel only lays it out. */
+export function moneyView(state: GameState): MoneyView {
+  const b = budget(state);
+  const m = state.money;
+  const kept = Math.round(b.kept);
+  let lead: string;
+  if (b.incomeTotal <= 0) lead = 'No money comes in until the first class arrives.';
+  else if (b.kept >= 1) lead = `You keep $${kept} of every $100 that comes in.`;
+  else if (b.kept >= 0) lead = 'You keep less than $1 of every $100 that comes in.';
+  else lead = `You spend $${Math.max(1, Math.round(-b.kept))} more than every $100 that comes in.`;
+
+  const phase = b.phase
+    ? `New running costs are coming in over ${b.phase.of} days. This is step ${b.phase.step} of ${b.phase.of}: you pay ${dollarsShort(b.spending)} this year, and about ${dollarsShort(b.fullSpending)} once they are all in.`
+    : null;
+
+  const row = (line: BudgetLine): MoneyRow => ({ name: line.name, detail: line.detail, amount: dollarsShort(line.amount) });
+  const step = m.marketing;
+  const max = MARKETING_LIFT.length - 1;
+  const lifts = MARKETING_LIFT.slice(1).map((lift) => Math.round(lift * 100));
+  const marketingLine =
+    step === 0
+      ? `Off. Each step brings more applications: ${lifts.slice(0, -1).join(', ')}, then ${lifts[lifts.length - 1]}%.`
+      : `Step ${step} of ${max} · ${Math.round(MARKETING_LIFT[step]! * 100)}% more applications · ${dollarsShort(enrollment(state) * MARKETING_COST_PER_STUDENT[step]!)} a year`;
+
+  const pays = Math.round(ENDOWMENT_YIELD * 100);
+  const endowmentLine =
+    m.endowment > 0
+      ? `${dollarsShort(m.endowment)} · earns ${dollarsShort(m.endowment * ENDOWMENT_YIELD)} a year`
+      : `Nothing yet. Cash paid in earns ${pays}% a year for good.`;
+  // A tenth or a quarter of the cash in hand: enough to matter, never so much that one tap empties the campus.
+  const payIn = [...new Set([roundSum(m.cash * 0.1), roundSum(m.cash * 0.25)])].filter((amount) => amount >= 10_000);
+
+  return {
+    lead,
+    phase,
+    incomeTotal: dollarsShort(b.incomeTotal),
+    income: b.income.map(row),
+    spendingTotal: dollarsShort(b.spending),
+    groups: b.groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      amount: dollarsShort(group.amount),
+      share: `${Math.round((100 * group.amount) / Math.max(1, b.fullSpending))}%`,
+      lines: group.lines.map(row),
+    })),
+    marketing: { step, max, line: marketingLine },
+    endowment: { line: endowmentLine, payIn },
+  };
 }
