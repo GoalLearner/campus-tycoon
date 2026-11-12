@@ -18,6 +18,7 @@ How to read this document:
 - Section 28 is time of day and weather, also for layer 1.
 - Section 29 is Grounds: litter, bins, seating and maintenance workers. Accepted by the owner on 2026-11-11 as play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
+- Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 
 ---
 
@@ -690,6 +691,30 @@ Design targets for a mid-game campus on each ladder. They are tuning goals, not 
 | Scholarships | 4% | 12% |
 | Events and one-offs | 2% | 2% |
 | Left for projects | 15% | 10% |
+
+**Proposed on 2026-11-11 with section 31, and waiting for the owner's go-ahead: the same spending, shown by what it buys.** The slider totals above move by a point or two. Facilities gives up two points to make room for insurance and marketing, which had no line. Payroll with benefits comes to 59% of spending on the size ladder and 58% on the prestige ladder.
+
+| Spending, as a share of income | Funded by | Size ladder | Prestige ladder |
+|---|---|---|---|
+| **Payroll** | | **50%** | **52%** |
+| Faculty pay | Instruction | 22% | 27% |
+| Staff pay | Student Services | 8% | 7.5% |
+| Safety and medical staff | Student Services | 1.5% | 1.5% |
+| Maintenance workers | Their count on each yard | 2% | 2% |
+| Coaches and athletics staff | Athletics | 5% | 2% |
+| Benefits, 30% on top of all pay | None | 11.5% | 12% |
+| **Buildings and utilities** | | **14.5%** | **13.5%** |
+| Utilities | None. Bills are paid in full | 6% | 5.5% |
+| Upkeep and repairs | Facilities | 8.5% | 8% |
+| **Scholarships** | The scholarship lever | **4%** | **12%** |
+| **Other** | | **16.5%** | **12.5%** |
+| Teaching supplies and the library | Instruction | 4% | 5% |
+| Student programs and events | Student Life | 3% | 3% |
+| Athletics operations | Athletics | 6.5% | 2.5% |
+| Recruiting and marketing | Its own five steps | 1.5% | 1% |
+| Insurance and legal | None | 1.5% | 1% |
+| **Left for projects** | | **15%** | **10%** |
+
 
 ### 9.5 Deficits and the endowment
 
@@ -1399,7 +1424,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -2555,3 +2580,145 @@ The owner accepted every proposal in this table on 2026-11-11, with one choice o
 | The science lab | Wait for layer 2 |
 | The Student Life zone | Loses its food to the Build menu |
 | The size of stop 4 | One stop, or two halves with a play between them |
+
+---
+
+## 31. Money: payroll and visible costs
+
+Asked for by the owner on 2026-11-11: "make costs visible and realistic. Discuss first, then propose where it lands." **Discussed and proposed here. Not built. It waits for the owner's go-ahead.**
+
+### 31.1 Where money stands today
+
+| | |
+|---|---|
+| Built | Tuition of $8,200 a student and $3,000 an occupied bed come in. Each building's upkeep goes out, with one flat running cost of $6,500 a student that stands in for everything else |
+| Designed for layer 2 | Five funding sliders, three price levers, scholarships, the bailout, the endowment and the budget screen (section 9) |
+| The gap | The game has costs, and the player cannot see what any of them is for |
+
+### 31.2 What duplicates what
+
+Most of the request is already in the design under another name. Nothing below is built twice.
+
+| Asked for | Already designed | What is new |
+|---|---|---|
+| Faculty pay, from enrollment and a class-size target, with the Instruction slider setting pay | The Instruction slider. Its face is already the student-to-faculty ratio (24.3), and "faculty are folded into the Instruction slider" (9.1) | A headcount and a pay figure the player can read. The rule is the same |
+| Staff, tied to the Student Services slider | The Student Services slider | A headcount |
+| Maintenance workers | Grounds (29.4) | Nothing. They get their line |
+| Campus Safety and Medical Center staff, shown on the buildings | Each building's upkeep | Upkeep there is split into staff pay and utilities |
+| Coaches and athletics staff | The Athletics slider, which "includes the coach" | A line, in layer 1 |
+| Benefits | Nothing | A new line with no lever |
+| Utilities | Building upkeep, under Facilities | Split from repairs. Bills cannot be underfunded |
+| Insurance and legal | Nothing | A new small line with no lever |
+| Recruiting and marketing | Nothing. Applications already has four causes (24.1) | A new lever. See 31.3 |
+| Scholarships | The scholarship lever, layer 2 | Nothing |
+| Debt payments | Bonds are on the later roadmap | No line until bonds exist |
+| A simple Money panel | "Tapping it opens the budget screen" (9.1), layer 2 | Its first version, mostly read-only |
+| No taxes | None were designed | Nothing |
+
+### 31.3 Discussion
+
+**1. Seeing costs and raising costs are two jobs.** Naming the lines changes nothing in the balance and is cheap: today's flat $6,500 is simply shown as the things it pays for. Raising costs is a rebalance of the whole game. The first can be done exactly. The second has to be done against the test players.
+
+**2. Costs cannot cure "cash piles up with nothing to buy". Only something to buy can.** A campus that grows must run a surplus, and once the map is full a surplus piles up however high costs go. Late in a long run the surplus is about 24% of income today, against a design target of 15% (9.4). Realistic costs bring it to the target. The pile-up itself ends only with a purchase that never runs out, and the design already has one: the endowment (9.5). The proposal is to bring forward its plain form: pay cash in from the Money panel, never out, for a small permanent income [T], shown as the legacy number.
+
+**3. Recruiting and marketing would be a fifth cause of Applications.** Section 24.1 lists four and section 24.2 allows four. The proposal: it takes the place of "the tier's ceiling" in that list, because a ceiling is the wall the other causes push against and not something the player does. It is five steps, like a price lever, with each step adding less than the one before.
+
+**4. Realistic pay breaks the scale of small buildings.** If a professor is paid like a professor, a Medical Center cannot run on $9,000 a year. The proposal: Safety and Medical staff pay follows the students in each building's circle, and the flat cost per student shrinks by the same amount. The total is re-based, not stacked.
+
+**5. Lines with no lever are honest and they are noise.** Benefits, utilities and insurance cannot be changed by the player. On a phone they belong inside their group, seen on a tap, never on the first screen.
+
+### 31.4 The lines
+
+| Line | How it is worked out | Its lever, and when |
+|---|---|---|
+| **Payroll** | | |
+| Faculty | Students divided by the class-size target of 20 [T], times pay | Layer 2: the Instruction slider sets pay. Paid less, faculty drift away over the year, classes swell and the academic score falls. Until then pay is full and class size sits on its target |
+| Staff: admissions, advisors, administration, IT, dining | One for every 40 students [T], times pay | Layer 2: the Student Services slider |
+| Safety and medical staff | By the students in each building's circle. Shown on the building's card | The same slider |
+| Maintenance workers | Workers hired, times the wage (29.4) | The plus and minus on each yard |
+| Coaches and athletics staff | Layer 1 | The Athletics slider. The head coach is hired by name |
+| Benefits | 30% on top of all pay [T] | None |
+| **Buildings and utilities** | | |
+| Utilities | A cost for each building by its size. Labs, the pool and the stadium use more | None. Bills are paid in full, whatever the Facilities slider says |
+| Upkeep and repairs | Today's upkeep number for each building, and each cell of road | Layer 2: the Facilities slider. Underfunded, buildings turn Rundown |
+| **Scholarships** | Layer 2 | The scholarship lever |
+| **Other** | | |
+| Teaching supplies and the library | By student | The Instruction slider |
+| Student programs and events | By student | The Student Life slider |
+| Recruiting and marketing | Five steps. A step costs more on a bigger campus and lifts applications by 5, 9, 12 and 14% [T] | Its own, from play stop 5 |
+| Insurance and legal | By student, small | None |
+| Debt payments | None until bonds exist | |
+
+Nobody is hired one by one except the head coach, and the count of maintenance workers on each yard. Every other headcount follows from the size of the campus and is there to be read.
+
+### 31.5 The Money panel
+
+| Decision | Why |
+|---|---|
+| It opens from the cash figure on the top bar. The top bar keeps showing net income an hour | The owner's instruction, and where section 9.1 already put the budget screen |
+| Two lists for the game year: income and spending. Spending is grouped as Payroll, Buildings and utilities, Scholarships, and Other, largest first, each with its total and its share | The owner's layout |
+| Tapping a group opens its lines, each with the count behind it: "42 faculty at $50,000" | A cost the player can check against the campus |
+| One sentence leads the panel: how much of every $100 is kept | The one number that says whether the campus is healthy |
+| It is read-only, apart from the marketing steps and paying into the endowment | Sliders and price levers join the same screen in layer 2 |
+| While new costs are phasing in, it says which day of seven this is and where the total will settle | No surprise |
+
+### 31.6 Balance
+
+| Decision | Why |
+|---|---|
+| The targets of section 9.4 are restated by what the money buys. Payroll with benefits is 59% of spending on the size ladder and 58% on the prestige ladder | "Roughly half or more, as at real universities." The old shares already implied it; now it is visible |
+| Until football, tiers and scholarships exist their lines are empty, so the lines that do exist carry the 85% between them: about 55 points of payroll, 17 of buildings and utilities and 13 of other [T] | Otherwise the surplus would grow, not shrink |
+| About 15 of every 100 dollars is left for projects in mid-game | The existing target. It is what "a well-run campus must still grow" means in numbers |
+| Every cost follows the size of the campus. There is no fixed overhead | A small or untended campus is never crushed |
+| **Old saves: new costs phase in over one game year.** Each raised or new cost starts where it stood on the day of the upgrade and climbs in seven daily steps. The away summary says so on each of them | The owner's rule. A game year is a real week, so a daily player sees every step |
+| New campuses pay full costs from the first day, with the opening cash and first weeks re-tuned against the test players | Nothing to phase |
+| The endowment, in its plain form, gives late cash somewhere to go | 31.3, point 2 |
+
+Simulate checks to add:
+
+- Payroll is at least half of spending on a mature campus.
+- The mid-game margin sits between 10 and 20%.
+- The casual and once-a-day players still reach each campus size within a year of today's pace.
+- No test player holds more cash than a year of its own spending at any year's reading, with the players paying into the endowment once nothing else is worth buying.
+- A mature save from before the upgrade needs no rescue at any point in its seven days of phase-in.
+- An untouched campus still nets a surplus after five years.
+
+### 31.7 Where it lands
+
+**Play stop 5, Money: after both halves of stop 4 and before the football layer.** Grounds brings wages and food brings income, so the rebalance is done once, after them. Football then adds its lines to a panel that already exists. It is the spending half of layer 2 brought forward at full funding. Layer 2 adds the controls to the same screen.
+
+| When | What |
+|---|---|
+| Play stop 5 | The Money panel. Faculty, staff, safety and medical staff, workers, benefits, utilities, upkeep, supplies, programs, insurance. The marketing steps. The plain endowment. The phase-in. The rebalance and its checks |
+| Layer 1 | Coaches and athletics staff, athletics operations, ticket and TV income |
+| Layer 2 | The five sliders, which set pay and funding. Price levers, tiers, state funding, scholarships, the bailout with its 36 hours of warning |
+| Later | Debt payments, with bonds |
+
+One piece could come sooner if wanted: the read-only panel alone, in the first half of stop 4, so that maintenance wages have a line from the day they exist.
+
+### 31.8 Design tests
+
+| Test | Verdict |
+|---|---|
+| 4. Legible feedback | Stronger. Every dollar spent has a name and a count behind it |
+| Simple screens | Holds, if groups come first and lines only on a tap |
+| Four causes (24.2) | Holds, if marketing takes the place of the tier's ceiling among the causes of Applications |
+| Once a day (2.3) | Holds. Nothing here has a window. The phase-in takes seven days and is announced on each |
+| Neglect-safe | Holds. Costs follow size, so an untended campus keeps a surplus. The simulate script checks it |
+| Cheap catch-up | Holds. Yearly rates are worked out only when something changes, as now |
+| Nothing to farm | Holds. Marketing gives less with each step, and the endowment's income is small and cannot be withdrawn |
+| Toy first (8) | At risk if costs are tuned to realism before fun. The margin target, not a real university's books, decides the numbers |
+
+### 31.9 Points raised with the owner
+
+| Point | What is proposed |
+|---|---|
+| Costs alone will not stop cash piling up | Bring the plain endowment forward as the purchase that never runs out |
+| Marketing is a fifth cause of Applications | It replaces "the tier's ceiling" in that list |
+| Realistic pay against small buildings | Safety and Medical pay follows the students in the circle, and the flat cost per student shrinks to match |
+| Lines with no lever | Inside their group, on a tap |
+| Dining staff under Student Services | As asked. Student Life's slider keeps programs and events |
+| Benefits | 30% of all pay, one line |
+| Class-size target | 20 students to one member of faculty |
+| The phase-in | Seven daily steps over one game year, each in the away summary |
+| When | Play stop 5, after stop 4. Or the read-only panel alone in the first half of stop 4 |
