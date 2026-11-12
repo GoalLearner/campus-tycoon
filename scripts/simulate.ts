@@ -29,6 +29,14 @@ import {
   TICKS_PER_DAY,
   TICKS_PER_YEAR,
   validate,
+  BREAK_LIFT,
+  fieldAverage,
+  FIELD_MEAN,
+  kickoff,
+  ME,
+  STRESS_HAPPINESS,
+  teamRating,
+  TICKS_PER_HOUR,
   type GameState,
   type LogEntry,
 } from '../src/sim';
@@ -89,6 +97,61 @@ interface Run {
   checkIns: number;
   checkInsWithPurchase: number;
   checkInsBlocked: number;
+  /** The football and calendar layer: what was seen along the way. */
+  seen: Seen;
+}
+
+interface Seen {
+  /** The tick of every visit. */
+  visits: number[];
+  /** Every annual decision that opened: when it opened and when it closed. */
+  decisions: Array<{ opens: number; closes: number; kind: string }>;
+  /** Exam reports, by which exams they were for. */
+  exams: Record<string, number>;
+  /** Stress at its highest, at its highest outside an exam week, and at its highest during a break. */
+  stressMax: number;
+  stressOutsideExams: number;
+  stressOnBreak: number;
+  /** The least and the most the calendar and the sky ever moved Happiness. */
+  deltaMin: number;
+  deltaMax: number;
+  /** Football seasons finished, and how many of them had ten games for every team and a table that added up. */
+  seasons: number;
+  seasonsSound: number;
+}
+
+const newSeen = (): Seen => ({ visits: [], decisions: [], exams: {}, stressMax: 0, stressOutsideExams: 0, stressOnBreak: 0, deltaMin: 0, deltaMax: 0, seasons: 0, seasonsSound: 0 });
+
+/** Read what a stretch of time left in the log, and how the campus stands at the end of it. */
+function look(seen: Seen, state: GameState, log: LogEntry[]): void {
+  for (const entry of log) {
+    if (entry.kind === 'decision' && entry.data?.closes !== undefined) seen.decisions.push({ opens: entry.tick, closes: Number(entry.data.closes), kind: String(entry.data.kind) });
+    if (entry.kind === 'exam') seen.exams[String(entry.data?.id)] = (seen.exams[String(entry.data?.id)] ?? 0) + 1;
+  }
+  const season = campusHappiness(state).season;
+  seen.stressMax = Math.max(seen.stressMax, season.stress.score);
+  if (season.day.kind !== 'finals' && season.day.kind !== 'midterms') seen.stressOutsideExams = Math.max(seen.stressOutsideExams, season.stress.score);
+  if (season.day.kind === 'break' || season.day.kind === 'summer') seen.stressOnBreak = Math.max(seen.stressOnBreak, season.stress.score);
+  seen.deltaMin = Math.min(seen.deltaMin, season.delta);
+  seen.deltaMax = Math.max(seen.deltaMax, season.delta);
+}
+
+/** True when a finished season gave every conference team ten games and its table adds up. */
+function seasonSound(state: GameState): boolean {
+  const season = state.football.season;
+  if (!season || !season.closed) return false;
+  const teams = Object.keys(season.table);
+  if (teams.length !== 12) return false;
+  let wins = 0;
+  let losses = 0;
+  for (const team of teams) {
+    const record = season.table[team]!;
+    const extra = team === String(ME) ? season.games.filter((game) => game.slot >= 10 && game.done).length : 0;
+    if (record.w + record.l !== 10 + extra || record.cw + record.cl !== 9 || record.dw + record.dl !== 5) return false;
+    wins += record.cw;
+    losses += record.cl;
+  }
+  return wins === losses && wins === 54;
 }
 
 function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
@@ -120,6 +183,8 @@ function play(style: Style, seed: number, years: number): Run {
   let checkInsWithPurchase = 0;
   let checkInsBlocked = 0;
   let lostThisYear = 0;
+  const seen = newSeen();
+  let seasonCounted = 0;
 
   // The player acts once before move-in, as a person would in their first session.
   const first = takeTurn(state, style);
@@ -134,6 +199,7 @@ function play(style: Style, seed: number, years: number): Run {
       const r = advance(state, state.clock.lastSimulatedAt, nextRowAt);
       state = r.state;
       lostThisYear += lostToWaitlist(r.log);
+      look(seen, state, r.log);
       if (rows.length < years) rows.push(yearRow(state, rows.length + 1, lostThisYear));
       lostThisYear = 0;
       nextRowAt += YEAR_MS;
@@ -141,17 +207,32 @@ function play(style: Style, seed: number, years: number): Run {
     const result = advance(state, state.clock.lastSimulatedAt, now);
     state = result.state;
     lostThisYear += lostToWaitlist(result.log);
+    look(seen, state, result.log);
+    // A football season that has just finished is checked once, while its table is still there.
+    const season = state.football.season;
+    if (season && season.closed && season.year > seasonCounted) {
+      seasonCounted = season.year;
+      seen.seasons += 1;
+      if (seasonSound(state)) seen.seasonsSound += 1;
+    }
 
     if (style !== 'absent') {
+      seen.visits.push(state.clock.tick);
       const turn = takeTurn(state, style);
       state = turn.state;
       checkIns += 1;
       if (turn.purchases > 0) checkInsWithPurchase += 1;
       if (turn.blockedByCash && turn.purchases === 0) checkInsBlocked += 1;
+      // Every player who looks in takes the advisor's pick on whatever is open. The absent one never does.
+      for (const decision of state.decisions.open) {
+        if (decision.chosen !== null) continue;
+        const picked = applyAction(state, { type: 'decide', id: decision.id, option: decision.advised });
+        if (picked.ok) state = picked.state;
+      }
     }
     if (now >= end) break;
   }
-  return { style, seed, rows, final: state, checkIns, checkInsWithPurchase, checkInsBlocked };
+  return { style, seed, rows, final: state, checkIns, checkInsWithPurchase, checkInsBlocked, seen };
 }
 
 function lostToWaitlist(log: LogEntry[]): number {
@@ -536,6 +617,80 @@ function assertLayerZero(runs: Run[]): void {
   }
 }
 
+/** The football and calendar layer (DESIGN.md section 18, layer 1, and 27.3). */
+function assertLayerOne(runs: Run[]): void {
+  console.log('\nLAYER 1 ASSERTIONS: FOOTBALL AND THE CALENDAR');
+  const daily = runs.find((r) => r.style === 'daily')!;
+  const tended = runs.filter((r) => r.style !== 'absent');
+
+  // A clear favourite: ten points better, on a neutral field, wins about three games in four.
+  {
+    const state = structuredClone(daily.final);
+    const mine = teamRating(state).total;
+    const opp = state.football.divisions[1][0]!;
+    state.field.schools[opp]!.fr = mine - 10;
+    let won = 0;
+    const games = 4000;
+    for (let n = 0; n < games; n++) {
+      const game = { slot: 10, label: '', opp, home: false, kick: state.clock.tick, us: [] as number[], them: [] as number[], crowd: 0, seats: 0, rating: 0, oppRating: 0, gap: '', done: false };
+      state.football.season = { year: state.clock.week.year, games: [game], table: {}, pending: [], played: 10, champion: null, bowl: '', closed: false, streak: 0 };
+      state.timers = [];
+      kickoff(state, 10);
+      if (game.us.reduce((a, b) => a + b, 0) > game.them.reduce((a, b) => a + b, 0)) won += 1;
+    }
+    const share = won / games;
+    check('a clear favourite wins about three games in four', share > 0.71 && share < 0.79, `${(share * 100).toFixed(1)}% of ${games} games with a ten-point edge`);
+  }
+
+  // Ten games for every team, every season, and a table that adds up.
+  {
+    const seasons = runs.reduce((sum, run) => sum + run.seen.seasons, 0);
+    const sound = runs.reduce((sum, run) => sum + run.seen.seasonsSound, 0);
+    check('every team plays ten games every season and the standings add up', seasons > 0 && sound === seasons, `${sound} of ${seasons} finished seasons across ${runs.length} players`);
+  }
+
+  // No annual decision is open for less than 48 hours.
+  {
+    const all = runs.flatMap((run) => run.seen.decisions);
+    const shortest = all.reduce((least, item) => Math.min(least, item.closes - item.opens), Infinity);
+    const kinds = [...new Set(all.map((item) => item.kind))].sort();
+    check('no annual decision is open for less than 48 hours', all.length > 0 && shortest >= 48 * TICKS_PER_HOUR, `${all.length} decisions (${kinds.join(', ')}), the shortest open ${(shortest / TICKS_PER_HOUR).toFixed(0)} hours`);
+  }
+
+  // The once-a-day player sees every decision while it is open.
+  {
+    const missed = daily.seen.decisions.filter((item) => !daily.seen.visits.some((visit) => visit >= item.opens && visit < item.closes));
+    check('the once-a-day player misses no decision', daily.seen.decisions.length > 0 && missed.length === 0, `${daily.seen.decisions.length} decisions, ${missed.length} that opened and closed between two visits`);
+  }
+
+  // The field never rises: its average stays where it began.
+  {
+    const worst = runs.reduce((most, run) => Math.max(most, Math.abs(fieldAverage(run.final.field, 'ar') - FIELD_MEAN), Math.abs(fieldAverage(run.final.field, 'fr') - FIELD_MEAN)), 0);
+    check("the field's average does not drift", worst < 0.6, `at most ${worst.toFixed(2)} points from ${FIELD_MEAN} after ${YEARS} years, academics and football, on every player's field`);
+  }
+
+  // Stress never spirals: it is low on every break, never at its peak outside exams, and its cost to Happiness is capped.
+  {
+    const breaks = tended.map((run) => run.seen.stressOnBreak);
+    const outside = tended.map((run) => run.seen.stressOutsideExams);
+    const top = runs.reduce((most, run) => Math.max(most, run.seen.stressMax), 0);
+    const low = runs.reduce((least, run) => Math.min(least, run.seen.deltaMin), 0);
+    const high = runs.reduce((most, run) => Math.max(most, run.seen.deltaMax), 0);
+    const ok = Math.max(...breaks) <= 15 && Math.max(...outside) <= 62 && top <= 100 && low >= -(STRESS_HAPPINESS + 4) && high <= BREAK_LIFT + 1.5;
+    check(
+      'Stress and weather never spiral and stay inside their caps',
+      ok,
+      `Stress at most ${Math.max(...breaks)} on a break and ${Math.max(...outside)} outside exam weeks at any visit, ${top} at its highest; the season's line on Happiness between ${low.toFixed(1)} and +${high.toFixed(1)} points`,
+    );
+  }
+
+  // The once-a-day player's away list carries an exam report for every exam period, seen or not.
+  {
+    const counts = ['fallMidterms', 'fallFinals', 'springMidterms', 'springFinals'].map((id) => daily.seen.exams[id] ?? 0);
+    check('the once-a-day player gets an exam report for every exam period', counts.every((count) => count === YEARS), `${counts.join(', ')} reports for the four exam periods over ${YEARS} years`);
+  }
+}
+
 // ------------------------------------------------------------------- main --
 
 const started = performance.now();
@@ -546,5 +701,6 @@ for (const seed of SEEDS) {
   allRuns.push(...runs);
 }
 assertLayerZero(allRuns.filter((r) => r.seed === SEEDS[0]));
+assertLayerOne(allRuns.filter((r) => r.seed === SEEDS[0]));
 console.log(`\n${failures.length === 0 ? 'All assertions passed' : `${failures.length} assertion(s) failed`} in ${((performance.now() - started) / 1000).toFixed(1)} s.`);
 process.exit(failures.length === 0 ? 0 : 1);

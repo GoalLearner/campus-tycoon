@@ -67,7 +67,7 @@ import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSu
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
-import { effectsSetting, musicVolume, setEffectsSetting, setMusicVolume, setSoundVolume, soundVolume } from '../app/life';
+import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
 import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
@@ -705,7 +705,21 @@ export function mountUi(root: HTMLElement): void {
         row.append(el('span', 'volume-name', label), slider, shown);
         return row;
       };
-      card.append(volume('Sound', soundVolume(), setSoundVolume), volume('Music', musicVolume(), setMusicVolume));
+      // Mute: one tap silences sound and music together. The two volumes stay as they were set.
+      const sliders = [volume('Sound', soundVolume(), setSoundVolume), volume('Music', musicVolume(), setMusicVolume)];
+      const mute = button('', 'wide', () => {
+        setMuted(!muted());
+        sound.applyVolumes();
+        showMute();
+        if (!muted()) sound.ui('tap');
+      });
+      const showMute = (): void => {
+        setText(mute, muted() ? 'Muted. Tap to turn the sound back on' : 'Mute');
+        mute.classList.toggle('muted', muted());
+        for (const row of sliders) row.classList.toggle('dimmed', muted());
+      };
+      showMute();
+      card.append(mute, ...sliders);
 
       // When the player's day starts: every day of the campus week begins two hours later. It can be moved every four weeks.
       const wake = hourSelect(wakeHourOf(store.state.clock.anchor));

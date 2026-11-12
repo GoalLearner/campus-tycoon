@@ -160,6 +160,8 @@ export function newGame(opts: NewGameOptions): GameState {
     decisions: { open: [], nextId: 1, past: [] },
   };
   startFootball(state, 1);
+  // A new campus has its stadium plot from the first day.
+  state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
   scheduleScrimmage(state);
   recomputeRates(state);
   return state;

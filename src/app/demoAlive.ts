@@ -187,7 +187,8 @@ export function footballCampus(at = 'live', students = 2400, tier = 2): GameStat
   state = paint(state, 'bin', [[19, 15], [23, 18]]);
   state = place(state, 'pondMedium', 10, 15);
   state = place(state, 'library', 15, 19);
-  // The stadium plot north of the east walk, with a walk up to its gate and a car park beside it for the tailgates.
+  // The stadium plot is moved beside the east walk, with a walk up to its gate and a car park beside it for the tailgates.
+  state = paint(state, 'clear', [[27, 9]]);
   state = place(state, 'stadium', 25, 12);
   state = paint(state, 'path', [...rowBetween([24, 14], [28, 14]), ...rowBetween([24, 15], [24, 16])]);
   state = place(state, 'parking', 28, 15);

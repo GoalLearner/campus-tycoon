@@ -1,5 +1,5 @@
 import { currentDaylight } from './daylight';
-import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, type SoundMix } from './life';
+import { bellDue, heardMusic, heardSound, SILENT, soundMix, type SoundFacts, type SoundMix } from './life';
 
 /**
  * Sound (DESIGN.md section 33.6 and 33.9). An ambient soundscape that follows
@@ -162,12 +162,12 @@ class SoundEngine {
     return gain;
   }
 
-  /** The player moved a volume. Zero on both stops everything. */
+  /** The player moved a volume, or muted or unmuted. Zero on both, or muted, stops everything. */
   applyVolumes(): void {
     if (!this.ctx || !this.soundBus || !this.musicBus) return;
     const now = this.ctx.currentTime;
-    this.soundBus.gain.setTargetAtTime(soundVolume(), now, 0.05);
-    this.musicBus.gain.setTargetAtTime(musicVolume() * 0.5, now, 0.05);
+    this.soundBus.gain.setTargetAtTime(heardSound(), now, 0.05);
+    this.musicBus.gain.setTargetAtTime(heardMusic() * 0.5, now, 0.05);
     this.wake();
   }
 
@@ -181,7 +181,7 @@ class SoundEngine {
   private wake(): void {
     const ctx = this.ctx;
     if (!ctx) return;
-    const silent = this.hidden || (soundVolume() <= 0 && musicVolume() <= 0);
+    const silent = this.hidden || (heardSound() <= 0 && heardMusic() <= 0);
     if (silent) {
       if (this.timer !== null) clearInterval(this.timer);
       this.timer = null;
@@ -258,7 +258,7 @@ class SoundEngine {
       this.busk(now, mix.busker);
       this.next.busk = now + [0.28, 0.28, 0.56, 0.84][Math.floor(Math.random() * 4)]!;
     }
-    if (musicVolume() > 0 && now >= this.next.beat) {
+    if (heardMusic() > 0 && now >= this.next.beat) {
       this.music(now);
       this.next.beat = now + BEAT_S;
     }

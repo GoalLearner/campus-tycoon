@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => {
     test: {
       include: ['tests/**/*.test.ts'],
       environment: 'node',
+      // Some tests run a whole game year or more, and the files run side by side.
+      testTimeout: 20_000,
     },
   };
 });

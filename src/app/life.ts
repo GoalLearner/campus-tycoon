@@ -329,3 +329,43 @@ export function setSoundVolume(value: number): void {
 export function setMusicVolume(value: number): void {
   volumes.music = keepVolume(MUSIC_KEY, value);
 }
+
+// ------------------------------------------------------------------ mute --
+
+const MUTE_KEY = 'campus-tycoon.muted';
+let mutedNow: boolean | null = null;
+
+/** True while the player has muted the game. Remembered between visits, apart from the saved game. */
+export function muted(): boolean {
+  if (mutedNow === null) {
+    mutedNow = false;
+    try {
+      mutedNow = localStorage.getItem(MUTE_KEY) === 'yes';
+    } catch {
+      // Storage is blocked: not muted, until the page closes.
+    }
+  }
+  return mutedNow;
+}
+
+/**
+ * Mute or unmute. Muting silences sound and music together and leaves the
+ * two volumes exactly as the player set them, so unmuting brings both back.
+ */
+export function setMuted(value: boolean): void {
+  mutedNow = value;
+  try {
+    localStorage.setItem(MUTE_KEY, value ? 'yes' : 'no');
+  } catch {
+    // Private browsing: the choice lasts until the page closes.
+  }
+}
+
+/** How loud sound and music actually play: the player's volumes, or nothing while muted. */
+export function heardSound(): number {
+  return muted() ? 0 : soundVolume();
+}
+
+export function heardMusic(): number {
+  return muted() ? 0 : musicVolume();
+}

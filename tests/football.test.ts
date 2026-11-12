@@ -405,13 +405,11 @@ describe('the team', () => {
 });
 
 describe('the annual decisions', () => {
-  /** Six years on a campus big enough to fill a rented field, with a stadium plot placed. */
+  /** Six years on a campus big enough to fill a rented field. A new campus has its stadium plot from the first day. */
   const years = (() => {
     let state = campus(3000);
     state.football.standing = 60;
-    const placed = applyAction(state, { type: 'place', building: 'stadium', x: 3, y: 3 });
-    if (!placed.ok) throw new Error(placed.error);
-    state = placed.state;
+    if (state.football.stadium.plot === null) throw new Error('A new campus should have its stadium plot.');
     const opened: Decision[] = [];
     const log: LogEntry[] = [];
     const seen = new Set<number>();
@@ -465,7 +463,9 @@ describe('the annual decisions', () => {
     const ask = state.decisions.open.find((item) => item.kind === 'stadium')!;
     expect(ask).toBeDefined();
     expect(ask.options[0]!.cost).toBe(TIER_COST[1]);
-    // No plot yet: it cannot be built, and says why.
+    // With the plot cleared away it cannot be built, and says why.
+    state = applyAction(state, { type: 'paint', tool: 'clear', cells: [[27, 9]] }).state;
+    expect(state.football.stadium.plot).toBeNull();
     const early = applyAction(state, { type: 'decide', id: ask.id, option: 'build' });
     expect(early.ok).toBe(false);
     if (!early.ok) expect(early.error).toContain('stadium plot');
@@ -500,11 +500,12 @@ describe('the annual decisions', () => {
   });
 
   it('a bare plot can be moved, and clearing it forgets it', () => {
-    let state = campus(500);
-    state = applyAction(state, { type: 'place', building: 'stadium', x: 3, y: 3 }).state;
+    const state = campus(500);
     const plot = state.football.stadium.plot;
     expect(plot).not.toBeNull();
-    const cleared = applyAction(state, { type: 'paint', tool: 'clear', cells: [[4, 5]] });
+    expect(state.map.placed[plot!]).toMatchObject({ type: 'stadium', x: 27, y: 9, w: 2, h: 3 });
+    // Any cell of it clears the whole plot.
+    const cleared = applyAction(state, { type: 'paint', tool: 'clear', cells: [[28, 11]] });
     expect(cleared.ok).toBe(true);
     expect(cleared.state.football.stadium.plot).toBeNull();
     expect(applyAction(cleared.state, { type: 'place', building: 'stadium', x: 8, y: 3 }).ok).toBe(true);
@@ -585,7 +586,14 @@ describe("football's money", () => {
 describe('stadium noise', () => {
   it('is part of Grounds for the dorms inside its reach, and for nobody else', () => {
     let state = campus(600);
-    // A plot two cells west of the first starter dorm, which stands at (10, 13).
+    // Where a new campus has it, the plot is out of earshot of every dorm, at any tier.
+    for (const tier of [1, 3, 5]) {
+      const far = structuredClone(state);
+      far.football.stadium.tier = tier;
+      for (const building of far.map.buildings) if (building && building.zone === 'housing') expect(noiseAt(far, building.x, building.y)).toBe(0);
+    }
+    // Moved to two cells west of the first starter dorm, which stands at (10, 13), it is not.
+    state = applyAction(state, { type: 'paint', tool: 'clear', cells: [[27, 9]] }).state;
     state = applyAction(state, { type: 'place', building: 'stadium', x: 7, y: 10 }).state;
     const dorm = 13 * state.map.width + 10;
     const hall = 18 * state.map.width + 19;

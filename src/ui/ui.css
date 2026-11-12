@@ -1599,3 +1599,14 @@ button.money {
 .decision-tag.yours {
   color: var(--accent);
 }
+
+/* The Mute button, on: it says so in the accent colour, and the two sliders under it are dimmed. */
+.wide.muted {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.volume.dimmed {
+  opacity: 0.4;
+}
