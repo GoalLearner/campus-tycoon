@@ -20,7 +20,7 @@ How to read this document:
 - Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 - Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
-- Section 33 is life and sound: bigger crowds and traffic now, and a proposed Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11.
+- Section 33 is life and sound: bigger crowds and traffic now, and a Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11 and accepted the next day as the last stop before football. Not started.
 
 ---
 
@@ -2970,7 +2970,7 @@ The People stop changes no rule and no number. It needs no rebalance, which is w
 
 ## 33. Life and sound
 
-Asked for by the owner on 2026-11-11: "give the campus more life and soul. All visual and audio only, never touching the numbers, deterministic where it matters, and cheap on a phone." He split it himself: three items go with the fixes being built now, and three need a place. **This section records the split and proposes the place. The Life and sound stop is not started and waits for his word.**
+Asked for by the owner on 2026-11-11: "give the campus more life and soul. All visual and audio only, never touching the numbers, deterministic where it matters, and cheap on a phone." He split it himself: three items go with the fixes being built now, and three need a place. **He accepted the proposal below on 2026-11-12: Life and sound is its own stop, the last before football, and it starts with free sound only. It is not started, and like every stop it waits for his go-ahead after he has played the one before.**
 
 ### 33.1 The split
 
@@ -2985,7 +2985,7 @@ Asked for by the owner on 2026-11-11: "give the campus more life and soul. All v
 
 ### 33.2 Where the Life and sound stop fits
 
-**Proposed: its own stop, the last one before football.** The order would be: the fixes now, the People stop, the second half of stop 4 (food and Academics), Life and sound, then layer 1.
+**Accepted: its own stop, the last one before football.** The order would be: the fixes now, the People stop, the second half of stop 4 (food and Academics), Life and sound, then layer 1.
 
 | Reason | |
 |---|---|
@@ -3064,7 +3064,7 @@ The scenes with no art are left out until it exists. They are not faked.
 | Cozy Adventure Lo Fi pack | About $2 | Five loops. Cheap enough to try |
 | An ambience pack, such as the Environment Sounds Pack | Not seen | Rain, birds, crickets, city and crowd in one licence, if picking single free recordings proves slow |
 
-The recommendation is to start with free sound only, and buy at most one music pack if the free music does not fit.
+The owner accepted this on 2026-11-12: start with free sound only. A music pack is bought only if the free music does not fit, and only on his word.
 
 ### 33.7 Design tests
 
