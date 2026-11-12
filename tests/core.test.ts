@@ -13,7 +13,7 @@ import {
   MAP_SIZE,
   netPerRealHour,
   nextMilestone,
-  OPERATING_COST_PER_STUDENT_PER_YEAR,
+  budget,
   ROOM_FEE_PER_BED_PER_YEAR,
   START_CASH,
   TICKS_PER_DAY,
@@ -184,10 +184,13 @@ describe('money', () => {
     const end = advance(state, T0, T0 + (FIRST_INTAKE_TICK - 1) * 60_000).state;
     const ticks = end.clock.tick;
     expect(ticks).toBe(FIRST_INTAKE_TICK - 1);
-    const perTick =
-      // Every student pays tuition. The 36 beds of the starter dorms are all full, and each pays a room fee.
-      (400 * (TUITION_PER_STUDENT_PER_YEAR - OPERATING_COST_PER_STUDENT_PER_YEAR) + 36 * ROOM_FEE_PER_BED_PER_YEAR - upkeepPerYear(state)) /
-      TICKS_PER_YEAR;
+    // Every student pays tuition. The 36 beds of the starter dorms are all full, and each pays a room fee.
+    // What goes out is the budget, line by line (tests/money.test.ts).
+    const spent = budget(state);
+    expect(spent.incomeTotal).toBe(400 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR);
+    expect(spent.spending).toBe(spent.fullSpending);
+    expect(spent.spending).toBeGreaterThan(upkeepPerYear(state));
+    const perTick = (spent.incomeTotal - spent.spending) / TICKS_PER_YEAR;
     expect(end.money.cash).toBeCloseTo(START_CASH + perTick * ticks, 6);
     expect(end.money.yearEarned - end.money.yearSpent).toBeCloseTo(perTick * ticks, 6);
     expect(netPerRealHour(end)).toBeCloseTo(perTick * 60, 6);

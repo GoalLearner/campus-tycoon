@@ -2,6 +2,9 @@ import {
   applyAction,
   approvalAt,
   campusHappiness,
+  fallClassDraw,
+  FIRST_INTAKE_TICK,
+  POOL_CEILING,
   COST,
   coverFor,
   fedAt,
@@ -172,6 +175,40 @@ function nextParking(state: GameState): { type: PlacedType; x: number; y: number
 function nextLand(state: GameState): number | null {
   const forSale = state.map.parcels.filter((parcel) => !parcel.owned).sort((a, b) => a.price - b.price);
   return forSale[0]?.id ?? null;
+}
+
+// ------------------------------------------------------------------ money --
+
+/**
+ * Recruiting and marketing, as a player who has read the Money panel would
+ * set it: on while a bigger class would have somewhere to go, and off when
+ * students from the last class gave up waiting for room or the pool is at
+ * its ceiling, because then it buys nothing.
+ */
+function setMarketing(state: GameState, style: Style): GameState {
+  const a = state.admissions;
+  // Wait until the last waitlist has closed: only then is it known whether anyone was turned away for good.
+  if (!a.lastIntake || a.waitlistUntilTick !== 0) return state;
+  const lost = a.lastIntake.turnedAway - a.waitlistAdmitted > 0;
+  const atCeiling = fallClassDraw(state) >= POOL_CEILING;
+  const step = lost || atCeiling ? 0 : style === 'optimizer' ? 4 : 2;
+  if (step === state.money.marketing) return state;
+  const result = applyAction(state, { type: 'marketing', step });
+  return result.ok ? result.state : state;
+}
+
+/**
+ * Cash with nothing to buy goes into the endowment. Only on a visit when
+ * nothing was bought and nothing was out of reach, and only what is left
+ * above half a year of spending and a million dollars: a young campus needs
+ * its cash for the next class.
+ */
+function payIntoEndowment(state: GameState, style: Style): GameState {
+  const keep = Math.max(1_000_000, state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5));
+  const spare = Math.floor(state.money.cash - keep);
+  if (spare < 100_000) return state;
+  const result = applyAction(state, { type: 'endow', amount: spare });
+  return result.ok ? result.state : state;
 }
 
 // ---------------------------------------------------------------- grounds --
@@ -353,6 +390,9 @@ function wantsFromMenu(state: GameState): Array<{ type: PlacedType; x: number; y
       hungry += 1;
     }
   }
+  // Beds and seats come first while students are waiting for them, and before anyone has moved in. The top
+  // bar says so in as many words, and a gym or a Campus Safety office has staff to pay from the day it opens.
+  if (state.admissions.waitlist > 0 || state.clock.tick < FIRST_INTAKE_TICK) return wants;
   // The panel names a cause and its weakest part. The part is what gets built.
   const worst = campusHappiness(state).worstPart;
   if (worst === 'dining' || worst === 'recreation' || worst === 'safety') {
@@ -487,5 +527,7 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     current = after.state;
     purchases += after.built;
   }
+  current = setMarketing(current, style);
+  if (!blockedByCash) current = payIntoEndowment(current, style);
   return { state: current, purchases, blockedByCash };
 }

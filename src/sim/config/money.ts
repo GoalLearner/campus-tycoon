@@ -12,8 +12,53 @@ export const START_CASH = 400_000;
 export const TUITION_PER_STUDENT_PER_YEAR = 8_200;
 export const ROOM_FEE_PER_BED_PER_YEAR = 3_000;
 
-/** Stand-in for the five funding sliders, which arrive in layer 2. */
-export const OPERATING_COST_PER_STUDENT_PER_YEAR = 6_500;
+/**
+ * What the money buys (DESIGN.md section 31). Every line is at full funding:
+ * the five sliders that will set pay and funding arrive in layer 2. The
+ * numbers are tuned to a margin, not to a real university's books: about 15
+ * of every 100 dollars is left for projects in mid-game, and payroll is more
+ * than half of what is spent.
+ */
+
+/** Faculty: one for every this many students, the class-size target. */
+export const CLASS_SIZE = 20;
+export const FACULTY_PAY = 58_000;
+/** Staff: admissions, advisors, administration, IT and dining. */
+export const STUDENTS_PER_STAFF = 40;
+export const STAFF_PAY = 42_000;
+/** Medical Center and Campus Safety staff: one for every this many students in the building's circle. */
+export const STUDENTS_PER_CARE_STAFF = 800;
+export const CARE_STAFF_PAY = 42_000;
+/** Paid on top of all pay: faculty, staff, safety and medical staff, and maintenance workers. */
+export const BENEFITS_SHARE = 0.3;
+
+/** Utilities for a hand-placed building, by the cells it stands on. Courts and fields have lights and little else. */
+export const UTILITIES_PER_CELL = 1_500;
+export const UTILITIES_PER_OPEN_CELL = 400;
+
+export const SUPPLIES_PER_STUDENT = 650;
+export const PROGRAMS_PER_STUDENT = 500;
+export const INSURANCE_PER_STUDENT = 220;
+
+/**
+ * Recruiting and marketing: five steps, from off. A step costs more on a
+ * bigger campus, because it is paid by the student, and each lifts
+ * applications by less than the one before.
+ */
+export const MARKETING_LIFT: readonly number[] = [0, 0.05, 0.09, 0.12, 0.14];
+export const MARKETING_COST_PER_STUDENT: readonly number[] = [0, 60, 120, 180, 240];
+
+/** Cash paid into the endowment never comes back out. It earns this share of itself every game year, for good. */
+export const ENDOWMENT_YIELD = 0.02;
+
+/**
+ * The single flat cost the game ran on until play stop 5, and the wage of the
+ * time. A save from before then starts from these and climbs to the lines
+ * above in this many daily steps: one game year.
+ */
+export const LEGACY_COST_PER_STUDENT_PER_YEAR = 6_500;
+export const LEGACY_WAGE_PER_YEAR = 6_000;
+export const PHASE_STEPS = 7;
 
 /** One-off costs the player pays for permission and conditions. */
 export const COST = {

@@ -29,6 +29,21 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
+export {
+  budget,
+  careStaffAt,
+  careStaffCount,
+  facultyCount,
+  hasCareStaff,
+  marketingLift,
+  staffCount,
+  studentsInCircle,
+  workerCount,
+  type Budget,
+  type BudgetGroup,
+  type BudgetGroupId,
+  type BudgetLine,
+} from './systems/budget';
 export { housingFixes, roomPlan, waitlistOpen, type HousingFixes, type RoomPlan, type ZonePlan } from './systems/plan';
 export { approvalAt, campusHappiness, partLevel, retentionRate, type Approval, type CampusHappiness, type Cause, type CausePart } from './systems/happiness';
 export {

@@ -5,6 +5,7 @@ import {
   advance,
   applyAction,
   approvalAt,
+  BENEFITS_SHARE,
   BIN_CAPACITY,
   binState,
   BREAK_LINES,
@@ -206,7 +207,7 @@ describe('workers', () => {
     expect(yardLine({ ...room, beyond: true })).toBe('Understaffed: hire 1 more, and build another yard.');
   });
 
-  it('are paid a wage, and a yard holds no more than four', () => {
+  it('are paid a wage with benefits on top, and a yard holds no more than six', () => {
     let state = withYard(busy());
     expect(state.grounds.workers[yard(state).id]).toBe(1);
     expect(wagesPerYear(state)).toBe(WAGE_PER_YEAR);
@@ -214,7 +215,8 @@ describe('workers', () => {
     const before = state.money.spendingPerYear;
     state = staff(state, 3);
     recomputeRates(state);
-    expect(state.money.spendingPerYear - before).toBe(2 * WAGE_PER_YEAR);
+    expect(state.money.spendingPerYear - before).toBeCloseTo(2 * WAGE_PER_YEAR * (1 + BENEFITS_SHARE), 6);
+    expect(YARD_MAX_WORKERS).toBe(6);
     expect(applyAction(state, { type: 'staff', yard: yard(state).id, workers: YARD_MAX_WORKERS + 1 }).ok).toBe(false);
     expect(applyAction(state, { type: 'staff', yard: dining(state).id, workers: 1 }).ok).toBe(false);
     // Bins, benches and tables cost nothing to keep.

@@ -13,7 +13,7 @@ import {
 } from './systems/admissions';
 import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
-import { accrue, dailyCashCheck } from './systems/money';
+import { accrue, dailyCashCheck, stepPhase } from './systems/money';
 import { yearEnd } from './systems/year';
 import { popDue } from './timers';
 import type { AdvanceResult, GameState, LogEntry, Timer } from './types';
@@ -116,6 +116,7 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
   switch (event) {
     case 'dayStart':
       dailyCashCheck(state, log);
+      stepPhase(state, log);
       break;
     case 'fallIntake':
       if (calendarAt(state.clock.tick).year > 1) {

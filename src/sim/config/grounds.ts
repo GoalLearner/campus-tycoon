@@ -43,7 +43,7 @@ export const FIX_WORK = 3.3;
 export const YARD_START_WORKERS = 1;
 export const YARD_MAX_WORKERS = 6;
 /** A worker's wage for a game year: about $36 a real hour. */
-export const WAGE_PER_YEAR = 6_000;
+export const WAGE_PER_YEAR = 48_000;
 
 /** Above this much litter, something near the spot may get broken. */
 export const BREAK_AT = 0.7 * LITTER_CEILING;

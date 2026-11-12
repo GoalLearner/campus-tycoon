@@ -202,6 +202,16 @@ export interface Money {
   yearSpent: number;
   /** Total of state grants received when cash would have gone below zero. */
   grants: number;
+  /** Cash paid in for good. It earns a small income every year and is the campus's legacy number. */
+  endowment: number;
+  /** The recruiting and marketing step: 0 is off, 4 the most. */
+  marketing: number;
+  /**
+   * How far the costs of play stop 5 have been phased in, out of PHASE_STEPS.
+   * A new campus pays them in full. A save from before starts at 0 and takes
+   * one step each day.
+   */
+  phase: number;
 }
 
 export type TimerKind = 'buildDone';
@@ -363,6 +373,7 @@ export type LogKind =
   | 'incident'
   | 'grounds'
   | 'yearEnd'
+  | 'costs'
   | 'grant'
   | 'paused';
 

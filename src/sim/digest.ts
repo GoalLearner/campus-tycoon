@@ -42,6 +42,8 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
 
   // A change of rule that happened while away is said once, near the top.
   for (const entry of log) if (entry.kind === 'classes') lines.push(entry.text);
+  // Costs phasing in: where they stand now. One line, however many steps were taken while away.
+  lines.push(...latestText(log, 'costs'));
 
   if (facts.studentsAfter !== facts.studentsBefore) {
     lines.push(`Enrollment went from ${facts.studentsBefore} to ${facts.studentsAfter}.`);
@@ -92,9 +94,13 @@ export function summarizeAway(log: LogEntry[], facts: AwayFacts): AwaySummary {
   lines.push(...latestText(log, 'yearEnd'));
 
   let grants = 0;
+  let drawn = 0;
   for (const entry of log) {
-    if (entry.kind === 'grant') grants += Number(entry.data?.amount ?? 0);
+    if (entry.kind !== 'grant') continue;
+    grants += Number(entry.data?.amount ?? 0);
+    drawn += Number(entry.data?.endowment ?? 0);
   }
+  if (drawn > 0) lines.push(`The endowment covered ${dollars(drawn)} in shortfalls.`);
   if (grants > 0) lines.push(`The state covered ${dollars(grants)} in shortfalls.`);
 
   if (lines.length === 0) lines.push('A quiet stretch. Nothing changed on campus.');

@@ -172,6 +172,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     // that way. Any other is spread at its next fall intake (spreadClassYears).
     const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
     if (typeof state.fourYears !== 'boolean') state.fourYears = tick < FIRST_INTAKE_TICK;
+    // Money by what it buys (DESIGN.md 31). Costs start where they stood and climb in seven daily steps.
+    const money = state.money as Record<string, unknown>;
+    if (typeof money.endowment !== 'number') money.endowment = 0;
+    if (typeof money.marketing !== 'number') money.marketing = 0;
+    if (typeof money.phase !== 'number') money.phase = 0;
+    money.ratesDirty = true;
     return state;
   },
 };

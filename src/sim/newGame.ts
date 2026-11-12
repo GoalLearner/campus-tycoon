@@ -1,7 +1,7 @@
 import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
-import { START_CASH } from './config/money';
+import { START_CASH, PHASE_STEPS } from './config/money';
 import { TICK_MS } from './config/time';
 import { hashInts, seedStreams } from './rng';
 import { SAVE_VERSION } from './save';
@@ -108,6 +108,9 @@ export function newGame(opts: NewGameOptions): GameState {
       yearEarned: 0,
       yearSpent: 0,
       grants: 0,
+      endowment: 0,
+      marketing: 0,
+      phase: PHASE_STEPS,
     },
     map,
     cohorts: [0, 0, 0, 0],

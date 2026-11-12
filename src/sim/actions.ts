@@ -1,5 +1,5 @@
 import { PLACED } from './config/placed';
-import { REFUND_SHARE, UNDO_TICKS } from './config/money';
+import { REFUND_SHARE, UNDO_TICKS, MARKETING_LIFT } from './config/money';
 import { addPlaced, previewPlace, removePlaced } from './systems/placed';
 import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
@@ -31,7 +31,11 @@ export type Action =
   | { type: 'paint'; tool: Tool; cells: readonly Point[]; variant?: number }
   | { type: 'place'; building: PlacedType; x: number; y: number }
   | { type: 'buyLand'; parcel: number }
-  | { type: 'staff'; yard: number; workers: number };
+  | { type: 'staff'; yard: number; workers: number }
+  /** Set the recruiting and marketing step: 0 is off, 4 the most. */
+  | { type: 'marketing'; step: number }
+  /** Pay cash into the endowment. It never comes back out. */
+  | { type: 'endow'; amount: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -269,6 +273,29 @@ function staff(state: GameState, yardId: number, workers: number): ActionResult 
   return { ok: true, state: next, cost: 0, changed: 1 };
 }
 
+/** Turn recruiting and marketing up or down. It is paid by the student from then on, and lifts the next class. */
+function setMarketing(state: GameState, step: number): ActionResult {
+  if (!Number.isInteger(step) || step < 0 || step >= MARKETING_LIFT.length) {
+    return { ok: false, state, error: `Marketing has steps 0 to ${MARKETING_LIFT.length - 1}.` };
+  }
+  if (step === state.money.marketing) return { ok: true, state, cost: 0, changed: 0 };
+  const next = structuredClone(state);
+  next.money.marketing = step;
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
+/** Pay cash into the endowment. It cannot be taken out again, and earns a small income for good. */
+function endow(state: GameState, amount: number): ActionResult {
+  if (!Number.isFinite(amount) || amount < 1) return { ok: false, state, error: 'Choose an amount to pay in.' };
+  if (amount > state.money.cash) return { ok: false, state, error: `You have ${dollars(state.money.cash)}.` };
+  const next = structuredClone(state);
+  next.money.cash -= amount;
+  next.money.endowment += amount;
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: amount, changed: 1 };
+}
+
 export function applyAction(state: GameState, action: Action): ActionResult {
   switch (action.type) {
     case 'paint':
@@ -279,6 +306,10 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return buyLand(state, action.parcel);
     case 'staff':
       return staff(state, action.yard, action.workers);
+    case 'marketing':
+      return setMarketing(state, action.step);
+    case 'endow':
+      return endow(state, action.amount);
   }
 }
 
