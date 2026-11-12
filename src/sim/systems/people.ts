@@ -20,7 +20,7 @@ import { hashInts } from '../rng';
 import { enrollment } from '../selectors';
 import type { GameState, Placed } from '../types';
 import { acceptanceRate } from './admissions';
-import { facultyCount, staffCount } from './budget';
+import { classSizeNow, facultyCount, facultyNeed, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
 import { expectedClass, shortage } from './demand';
 import { foodTrade } from './food';
 import { isBrokenThing, workersAt, yardLine, yardStatus } from './grounds';
@@ -144,14 +144,17 @@ export function personCard(state: GameState, ref: PersonRef): PersonCard | null 
       const hasLibrary = state.map.placed.some((placed) => placed?.type === 'library');
       let doing: string = pickFrom(PROFESSOR_DOING, roll(seed, ref, SALT.doing, moment));
       if (!hasLibrary && doing.includes('library')) doing = PROFESSOR_DOING_NO_LIBRARY;
-      const size = Math.round(students / faculty);
+      // The ratio as classes are taught now. Short of the faculty the campus funds, they say so.
+      const size = Math.round(classSizeNow(state));
+      const short = facultyNeed(state) - facultyWorking(state);
+      const funded = short > 0 && size > ratioTarget(state) ? ` We are ${count(short)} short of the one to every ${ratioTarget(state)} the campus funds.` : '';
       return {
         ref,
         name,
         title: `Professor of ${pickFrom(MAJORS, roll(seed, ref, SALT.subject)).name}`,
         doing: doing.replace('{hall}', where),
         // In exam season the faculty are stretched too, more so with crowded classes (DESIGN.md 27.1).
-        line: say('professor', state, ref, { n: count(size) }) + (facultyStress(state) >= 60 ? ` It is exam season, and faculty Stress is at ${facultyStress(state)}.` : ''),
+        line: say('professor', state, ref, { n: count(size) }) + funded + (facultyStress(state) >= 60 ? ` It is exam season, and faculty Stress is at ${facultyStress(state)}.` : ''),
         quotes: { what: 'classSize', value: size },
         cell: hall,
       };
@@ -159,7 +162,7 @@ export function personCard(state: GameState, ref: PersonRef): PersonCard | null 
     case 'advisor': {
       const staff = staffCount(state);
       if (ref.n < 0 || ref.n >= staff) return null;
-      const each = Math.round(students / staff);
+      const each = Math.round(students / Math.max(1, staffWorking(state)));
       return {
         ref,
         name,

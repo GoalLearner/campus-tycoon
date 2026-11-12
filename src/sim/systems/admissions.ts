@@ -5,7 +5,8 @@ import { headCount } from '../format';
 import { enrollment, openCapacity } from '../selectors';
 import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
 import { classSize, dormStudents, localsAmong } from './demand';
-import { landSizeGoals } from './goals';
+import { enrollmentCap, landSizeGoals, roomUnderCap } from './goals';
+import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
@@ -34,7 +35,8 @@ export interface Admit {
  * How many of a group can be let in now. Everyone needs a seat. `locals` of
  * the `count` live in town if a place there is free, and everyone else needs
  * a bed. The group is let in at its own mix of locals, so an intake short of
- * seats does not fill up with locals alone.
+ * seats does not fill up with locals alone. On a game with a cap nobody is
+ * let in past it, whatever room there is.
  */
 export function admitPlan(state: GameState, count: number, locals: number): Admit {
   const seats = Math.max(0, openCapacity(state, 'academic') - enrollment(state));
@@ -45,7 +47,7 @@ export function admitPlan(state: GameState, count: number, locals: number): Admi
 
   // Beds needed never fall as more are let in, so the most that fit can be found by halving.
   let low = 0;
-  let high = Math.max(0, Math.min(count, seats));
+  let high = Math.max(0, Math.min(count, seats, roomUnderCap(state)));
   while (low < high) {
     const mid = (low + high + 1) >> 1;
     if (bedsFor(mid) <= beds) low = mid;
@@ -192,18 +194,30 @@ export function spreadClassYears(state: GameState, log: LogEntry[]): void {
   }
 }
 
-/** A class arrives. Whoever does not fit goes on the waitlist. */
+/**
+ * A class arrives. On a game with a cap, applicants past the room the cap
+ * leaves are turned away for good (DESIGN.md 38.4). Of the rest, whoever does
+ * not fit goes on the waitlist for a bed or a seat.
+ */
 export function runIntake(state: GameState, season: Season, log: LogEntry[]): void {
   const tick = state.clock.tick;
   const expected = classSize(state, season, tick === FIRST_INTAKE_TICK);
-  const locals = localsAmong(expected);
-  const plan = admitPlan(state, expected, locals);
+  const cap = enrollmentCap(state);
+  // Everyone who applied, and how many of them the cap leaves a place for.
+  const places = Math.min(expected, roomUnderCap(state));
+  const capped = expected - places;
+  const locals = localsAmong(places);
+  const plan = admitPlan(state, places, locals);
   const admitted = plan.admitted;
-  const turnedAway = expected - admitted;
+  const turnedAway = places - admitted;
   const bottleneck = turnedAway > 0 ? plan.tightest : null;
 
   enrol(state, admitted, plan.off, tick === FIRST_INTAKE_TICK);
-  state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck };
+  state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck, ...(cap === null ? {} : { capped }) };
+  // The year's applicants and places, for selectivity: both classes of a year count, from the fall on.
+  if (season === 'fall') state.admissions.year = { applied: 0, admitted: 0 };
+  state.admissions.year.applied += expected;
+  state.admissions.year.admitted += admitted;
   // The first class arriving puts safety and medical staff on the payroll, whoever was admitted.
   markRatesDirty(state);
   state.admissions.waitlist = turnedAway;
@@ -213,15 +227,18 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 
   const { year } = calendarAt(state.clock);
   const label = season === 'fall' ? `The fall class of year ${year}` : `The spring class of year ${year}`;
+  const full = capped > 0 && cap !== null ? ` The campus is full at ${headCount(cap)}: ${headCount(capped)} more who applied were turned away.` : '';
   log.push({
     tick,
     kind: 'intake',
     text:
-      bottleneck === null
-        ? `${label} moved in: ${headCount(admitted)} students, and everyone found a place.`
-        : `${label} moved in: ${headCount(admitted)} students. ${headCount(turnedAway)} more are on the waitlist for want of ${ZONE_UNIT[bottleneck]}.`,
-    data: { season, year, expected, admitted, turnedAway, bottleneck: bottleneck ?? '' },
+      (bottleneck === null
+        ? `${label} moved in: ${headCount(admitted)} students${capped > 0 ? '.' : ', and everyone found a place.'}`
+        : `${label} moved in: ${headCount(admitted)} students. ${headCount(turnedAway)} more are on the waitlist for want of ${ZONE_UNIT[bottleneck]}.`) + full,
+    data: { season, year, expected, admitted, turnedAway, bottleneck: bottleneck ?? '', capped },
   });
+  // A semester begins: faculty and staff hired a semester ago arrive, and those no longer needed have left.
+  staffSemester(state, season, log);
   // A size goal lands here, at an intake, and nowhere else (DESIGN.md 37.2).
   landSizeGoals(state, log);
 }
@@ -235,6 +252,9 @@ export function openWithStudents(state: GameState, count: number): number {
   const plan = admitPlan(state, count, localsAmong(count));
   enrol(state, plan.admitted, plan.off, true);
   state.admissions.lastIntake = { tick: state.clock.tick, season: 'fall', expected: plan.admitted, admitted: plan.admitted, turnedAway: 0, bottleneck: null };
+  state.admissions.year = { applied: plan.admitted, admitted: plan.admitted };
+  // It opens with the faculty and staff its students need: they were hired for the opening.
+  staffSemester(state, 'fall');
   markRatesDirty(state);
   return plan.admitted;
 }
@@ -250,6 +270,9 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   a.waitlist -= count;
   a.waitlistLocals = Math.max(0, Math.min(a.waitlist, a.waitlistLocals - plan.locals));
   a.waitlistAdmitted += count;
+  a.year.admitted += count;
+  // Where faculty follow the students at once, they do so now. Elsewhere this changes nothing until the list closes.
+  if (!hiresBehindNow(state)) planStaff(state);
   log.push({
     tick: state.clock.tick,
     kind: 'waitlist',
@@ -268,6 +291,8 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
   a.waitlist = 0;
   a.waitlistLocals = 0;
   a.waitlistUntilTick = 0;
+  // The search for next semester's faculty follows the students who actually came.
+  if (admitted > 0) planStaff(state);
   if (lost > 0 || admitted > 0) {
     log.push({
       tick: state.clock.tick,
@@ -316,6 +341,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const stayed = enrollment(state);
   const left = before - stayed;
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
+  if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
   if (log && before > 0) {
     log.push({
@@ -338,6 +364,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   state.offCampus[3] = 0;
   if (seniors > 0) classRecord(state, calendarAt(state.clock).year - 3).finishedOnTime += seniors;
   state.stats.graduates += seniors;
+  if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
   if (seniors > 0) {
     log.push({
@@ -355,6 +382,17 @@ export function promote(state: GameState): void {
   state.cohorts = [0, c[0], c[1], c[2] + c[3]];
   const o = state.offCampus;
   state.offCampus = [0, o[0], o[1], o[2] + o[3]];
+}
+
+/**
+ * The share of this year's applicants who got a place, the fall class and
+ * the spring class together, counting those who came off a waitlist. The
+ * academic rating reads selectivity from it. null before the first class.
+ */
+export function yearAcceptance(state: GameState): number | null {
+  const year = state.admissions.year;
+  if (!state.admissions.lastIntake || year.applied <= 0) return null;
+  return Math.min(1, year.admitted / year.applied);
 }
 
 /**

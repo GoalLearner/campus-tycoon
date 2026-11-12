@@ -10,11 +10,13 @@ import {
   WORD_OF_MOUTH,
 } from '../config/demand';
 import { GOAL_SCALE, RANK_LIFT, REACH } from '../config/goals';
+import { CROWDING_FROM } from '../config/season';
 import { FIRST_INTAKE_TICK } from '../config/time';
 import { LOCAL_SHARE } from '../config/town';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
 import type { GameState, Season, Zone } from '../types';
 import { marketingLift } from './budget';
+import { roomUnderCap } from './goals';
 import { athleticLift } from './football';
 import { freeTownPlaces, offCampusNow, townPlaces } from './town';
 
@@ -141,10 +143,19 @@ export function classSize(state: GameState, season: Season, founding: boolean): 
   return season === 'fall' ? fall : Math.round(fall * SPRING_SHARE);
 }
 
-/** Students expected to enrol at the next intake if there is room for all of them. */
-export function expectedClass(state: GameState): number {
+/** Everyone who will apply at the next intake: a fall's applicants, or a spring's. */
+export function nextApplicants(state: GameState): number {
   const founding = state.clock.tick < FIRST_INTAKE_TICK;
   return classSize(state, nextIntakeSeason(state), founding);
+}
+
+/**
+ * Students expected to enrol at the next intake if there is a bed and a seat
+ * for all of them: its applicants, as far as the cap leaves room for them
+ * (DESIGN.md 38.4). A game with no cap expects every applicant.
+ */
+export function expectedClass(state: GameState): number {
+  return Math.min(nextApplicants(state), roomUnderCap(state, continuingStudents(state) + state.admissions.waitlist));
 }
 
 /** Of a group of newcomers, how many are locals who would live in town if they had a way to class. */
@@ -207,6 +218,30 @@ export function capacityWanted(state: GameState, zone: Zone): number {
 /** Beds or seats still to find, counting what is already under construction. */
 export function shortage(state: GameState, zone: Zone): number {
   return capacityWanted(state, zone) - openCapacity(state, zone) - pendingCapacity(state, zone);
+}
+
+/**
+ * Seats still to find before classes stop being crowded: enough that the
+ * students wanted fill no more than seven seats in ten, counting what is
+ * already under construction. 0 on a game with no cap.
+ *
+ * A campus at its cap needs no more seats to take its students, so without
+ * this an Academic lot zoned to ease crowded classes would never be built on
+ * (DESIGN.md 38.5).
+ */
+export function seatsForRoom(state: GameState): number {
+  if (!state.goals) return 0;
+  return Math.ceil(studentsWanted(state) / CROWDING_FROM) - openCapacity(state, 'academic') - pendingCapacity(state, 'academic');
+}
+
+/**
+ * What a zone's lots grow to meet. Beds are built for the students wanted.
+ * So are seats, and on a game with a cap also until classes are no longer
+ * crowded: the player zones the lots, and the campus builds on them.
+ */
+export function growthShortage(state: GameState, zone: Zone): number {
+  const short = shortage(state, zone);
+  return zone === 'academic' ? Math.max(short, seatsForRoom(state)) : short;
 }
 
 /**

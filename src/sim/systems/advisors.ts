@@ -8,6 +8,8 @@ import { budget, occupiedBeds } from './budget';
 import { hasSeason, ratingOf, teamRating } from './football';
 import { campusHappiness } from './happiness';
 import { crowding } from './season';
+import { classSizeNow, facultyNeed, facultyWorking, nextSemesterStaff, ratioTarget } from './staffing';
+import { nextIntakeSeason } from './demand';
 
 /**
  * The four advisors (DESIGN.md 12.2). Each has one line: the thing in their
@@ -36,22 +38,39 @@ const GAP: Record<DriverId, string> = {
   safety: 'safety and health. A Medical Center and Campus Safety in reach close it',
 };
 
+/** The ratio in a few words, for the end of the Provost's line: "Faculty: 1 to 20." '' with nobody enrolled. */
+export function ratioWords(state: GameState): string {
+  const size = Math.round(classSizeNow(state));
+  return size > 0 ? `Faculty: 1 to ${size}.` : '';
+}
+
 function provost(state: GameState): string {
+  const ratio = ratioWords(state);
+  const said = (line: string): string => (ratio ? `${line} ${ratio}` : line);
   const a = state.admissions;
   const last = a.lastIntake;
-  if (a.waitlist > 0 && last?.bottleneck === 'academic') return `Academic seats are the bottleneck: ${a.waitlist.toLocaleString('en-US')} are waiting for one.`;
+  if (a.waitlist > 0 && last?.bottleneck === 'academic') return said(`Academic seats are the bottleneck: ${a.waitlist.toLocaleString('en-US')} are waiting for one.`);
+  // Faculty a tenth or more short of what the campus funds: classes are larger until those hired arrive.
+  const need = facultyNeed(state);
+  const short = need - facultyWorking(state);
+  if (need > 0 && short >= need * 0.1) {
+    const coming = nextSemesterStaff(state).faculty - facultyWorking(state);
+    const when = nextIntakeSeason(state);
+    const arrive = coming > 0 ? ` ${coming.toLocaleString('en-US')} more arrive in the ${when}.` : '';
+    return `Faculty are stretched: one to every ${Math.round(classSizeNow(state))} students, where ${ratioTarget(state)} is funded.${arrive}`;
+  }
   const crowd = crowding(state);
   if (crowd >= 0.4) {
     const seats = openCapacity(state, 'academic');
     const full = seats > 0 ? Math.round((100 * enrollment(state)) / seats) : 100;
-    return `Classes are ${Math.min(100, full)}% full, and that is most of what makes exams hard here.`;
+    return said(`Classes are ${Math.min(100, full)}% full, and that is most of what makes exams hard here.`);
   }
-  if (last && last.turnedAway > 0 && last.bottleneck === 'academic') return `Academic seats capped the last class: ${last.turnedAway.toLocaleString('en-US')} were turned away.`;
+  if (last && last.turnedAway > 0 && last.bottleneck === 'academic') return said(`Academic seats capped the last class: ${last.turnedAway.toLocaleString('en-US')} were turned away.`);
   const rank = state.field.rank;
-  if (rank > 0) return `Ranked No. ${rank} of 200 for academics. Graduation and class size count most.`;
+  if (rank > 0) return said(`Ranked No. ${rank} of 200 for academics. Graduation and class size count most.`);
   const seats = openCapacity(state, 'academic');
   const free = Math.max(0, seats - enrollment(state));
-  return free > 0 ? `Classes have room: ${free.toLocaleString('en-US')} seats are empty.` : 'The first rankings come out in the spring.';
+  return said(free > 0 ? `Classes have room: ${free.toLocaleString('en-US')} seats are empty.` : 'The first rankings come out in the spring.');
 }
 
 function cfo(state: GameState): string {

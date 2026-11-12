@@ -6,7 +6,7 @@ import { cellAt, isPathKind } from '../selectors';
 import { ZONES, type Building, type GameState, type MapState, type Zone } from '../types';
 import { cancelTimers } from '../timers';
 import { startBuild } from './construction';
-import { shortage } from './demand';
+import { growthShortage } from './demand';
 import { scoreParts } from './desirability';
 import { fedAt } from './placed';
 
@@ -66,7 +66,7 @@ export function lotStatus(state: GameState, x: number, y: number): LotStatus | n
   const needed = stageSpec(zone, nextStage, scaleOf(map)).desirabilityNeeded;
   const causes: StallCause[] = [];
   if (!touchesPath(map, x, y)) causes.push('noPath');
-  if (shortage(state, zone) <= 0) causes.push('noDemand');
+  if (growthShortage(state, zone) <= 0) causes.push('noDemand');
   if (needsDining(map, x, y, zone, nextStage)) causes.push('noDining');
   if (map.score[y * map.width + x]! < needed) causes.push('lowDesirability');
 
@@ -171,7 +171,7 @@ function ensureBuilding(state: GameState, x: number, y: number, zone: Zone): Bui
 export function evaluateGrowth(state: GameState, only?: Zone): void {
   for (const zone of ZONES) {
     if (only && zone !== only) continue;
-    let short = shortage(state, zone);
+    let short = growthShortage(state, zone);
     if (short <= 0) continue;
     // Nothing could grow last time, and nothing has been built or changed since.
     const care = state.map.care;

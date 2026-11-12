@@ -64,6 +64,7 @@ import { STRESS_GPA, STRESS_HAPPINESS, STRESS_TILT } from '../config/season';
 import { townLiving } from './town';
 import { socialTables } from './grounds';
 import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
+import { classSizeNow, teaching } from './staffing';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -221,7 +222,7 @@ function minutes(walk: number): string {
 
 // --------------------------------------------------------------- grades --
 
-/** How good the teaching side of campus is right now, 0 to 1: how pleasant the Academic lots are, and how much room classes have. */
+/** How good the teaching side of campus is right now, 0 to 1: how pleasant the Academic lots are, and how small classes are. */
 export function teachingQuality(state: GameState): number {
   const { cells, score, buildings } = state.map;
   let sum = 0;
@@ -235,7 +236,10 @@ export function teachingQuality(state: GameState): number {
   const lots = Math.max(0, Math.min(1, (sum / count - BASE_SCORE) / GREEN_CAP.academic));
   const seats = openCapacity(state, 'academic');
   const taken = seats > 0 ? enrollment(state) / seats : 1;
-  const room = 1 - Math.max(0, Math.min(1, (taken - SEATS_COMFORTABLE) / (1 - SEATS_COMFORTABLE)));
+  // How small classes are, from two things in equal parts: how full the seats are, and how many students there
+  // are to a member of faculty (DESIGN.md 38.5).
+  const seated = 1 - Math.max(0, Math.min(1, (taken - SEATS_COMFORTABLE) / (1 - SEATS_COMFORTABLE)));
+  const room = (seated + 1 - teaching(state)) / 2;
   return TEACHING_WEIGHTS.lots * lots + TEACHING_WEIGHTS.room * room;
 }
 
@@ -336,6 +340,8 @@ export interface StudentCard {
   gpa: number;
   /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
   tutored: boolean;
+  /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
+  classSize: number;
   /** null for a student in no club. */
   club: string | null;
   /** The sixth line. Shown on the card only. */
@@ -580,6 +586,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     street: resident ? null : streetOf(state, ref),
     gpa,
     tutored: tutoring > 0,
+    classSize: Math.round(classSizeNow(state)),
     club: clubOf(seed, ref, nature, major.group, quirk),
     relationship,
     happiness,

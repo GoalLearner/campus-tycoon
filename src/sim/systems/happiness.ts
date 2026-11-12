@@ -5,7 +5,7 @@ import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } fr
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
-import { foodKindsAt } from './food';
+import { diningAt, foodKindsAt } from './food';
 import { noiseAt } from './football';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
@@ -121,7 +121,8 @@ export function approvalAt(state: GameState, cell: number): Approval {
   }
   // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
   const kinds = foodKindsAt(map, x, y);
-  felt.push({ id: 'dining', level: kinds > 0 ? 1 : 0 });
+  // A place to eat with a long line is worth a little less (DESIGN.md 38.5).
+  felt.push({ id: 'dining', level: kinds > 0 ? diningAt(state, x, y) : 0 });
   felt.push({ id: 'recreation', level: recreationAt(state, x, y) });
   // Medical Center and Campus Safety coverage are read together, as one level.
   felt.push({ id: 'safety', level: safetyAt(state, x, y) });

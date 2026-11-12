@@ -19,10 +19,11 @@ import {
 import { RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
 import { nextFloat, nextInt } from '../rng';
 import type { Field, GameState, LogEntry, RngState, School } from '../types';
-import { OPENING_RANK, RANK_PULL } from '../config/goals';
-import { acceptanceRate, begunHere } from './admissions';
+import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
+import { begunHere, yearAcceptance } from './admissions';
 import { landRankGoals } from './goals';
-import { crowding } from './season';
+import { classPressure, crowding } from './season';
+import { classSizeNow, facultyStretched, ratioTarget } from './staffing';
 
 /**
  * The national field (DESIGN.md section 11): the 199 other schools the
@@ -194,14 +195,22 @@ export function academicInputs(state: GameState): AcademicInput[] {
     finished += record.finishedOnTime + record.finishedLate;
   }
   const graduation = entered > 0 ? finished / entered : null;
-  const accept = acceptanceRate(state);
-  const room = 1 - crowding(state);
+  // Selectivity is the year's: its fall class and its spring class together.
+  const accept = yearAcceptance(state);
+  // Class size has two named causes, in equal parts: how full the seats are, and how many students there are
+  // to a member of faculty (DESIGN.md 38.5). The one that weighs more is named first.
+  const crowd = crowding(state);
+  const room = 1 - classPressure(state);
+  const taught = `one member of faculty to every ${Math.round(classSizeNow(state))} students`;
+  const seats = crowd <= 0 ? 'classes have room' : `classes are ${Math.round(crowd * 100)}% of the way to full`;
+  const first = facultyStretched(state) && classPressure(state) - crowd / 2 > crowd / 2 ? `there is ${taught}, where ${ratioTarget(state)} is funded, and ${seats}` : `${seats}, with ${taught}`;
+  const classes = first.charAt(0).toUpperCase() + first.slice(1);
   // Retention as the four causes of Happiness give it, between its floor and its ceiling.
   const last = state.admissions.lastSemester;
   const retention = last ? Math.max(0, Math.min(1, last.happiness / 100)) : null;
   return [
     { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes` },
-    { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: room >= 1 ? 'Classes have room' : `Classes are ${Math.round((1 - room) * 100)}% of the way to full` },
+    { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : 100 * retention, detail: retention === null ? 'No semester has ended yet' : `${(100 * (RETENTION_FLOOR + RETENTION_SPAN * retention)).toFixed(1)}% return each semester` },
     { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
@@ -260,7 +269,9 @@ export function rankingsDay(state: GameState, log: LogEntry[]): void {
   const measured = academicRating(state);
   // On a game with goals the published rating follows this year's measure a part of the way, from the standing the
   // campus opened with (DESIGN.md 37.4). The rank moves a little each year, and never a hundred places in a day.
-  const rating = state.goals ? round1(field.academic + RANK_PULL * (measured - field.academic)) : measured;
+  // Nor more than a set step in a year, up or down: with every full campus turning applicants away, that is
+  // what makes the last rank goals take months for the best run campus (38.4).
+  const rating = state.goals ? round1(field.academic + Math.max(-RANK_STEP, Math.min(RANK_STEP, RANK_PULL * (measured - field.academic)))) : measured;
   const rank = rankAmong(field, 'ar', rating);
   const first = field.rankYear === 0;
   const was = field.rank;

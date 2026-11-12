@@ -41,6 +41,7 @@ import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { Clock, GameState, LogEntry } from '../types';
 import { markRatesDirty } from './money';
+import { staffSupport, teaching } from './staffing';
 
 /**
  * The pulse of the academic year (DESIGN.md sections 4.8, 27 and 28): who is
@@ -195,11 +196,15 @@ export interface StressRead {
   score: number;
   /** The calendar's part, 0.1 to 1. */
   season: number;
-  /** How hard the campus makes the season land: 0 to 1. Crowded classes, and teaching once it exists. */
+  /** How hard the campus makes the season land: 0 to 1. Crowded classes, and how stretched the faculty are. */
   pressure: number;
   /** How much the campus eases it: 0 to 1. Places to unwind, and support. */
   relief: number;
   crowding: number;
+  /** How stretched teaching is: 0 at the best ratio, 1 at the worst, and a half at full funding. */
+  teaching: number;
+  /** How large classes are, from both causes: what the faculty's own Stress follows. 0 to 1. */
+  strain: number;
   unwind: number;
   support: number;
   /** The thing whose fix would lower Stress most. 'season' when the campus is doing all it can. */
@@ -215,18 +220,34 @@ export function crowding(state: GameState): number {
   return clamp01((enrollment(state) / seats - CROWDING_FROM) / (1 - CROWDING_FROM));
 }
 
+/**
+ * How large classes are, 0 to 1, from its two named causes in equal parts:
+ * how full the seats are, and how many students there are to a member of
+ * faculty. It is one number, read by Stress, by the faculty's own Stress, by
+ * class size in the academic rating and by a student's grades (DESIGN.md
+ * 38.5). Roomy seats alone take it to a quarter, and so does a well-funded
+ * faculty alone. It takes both to bring it to nothing.
+ */
+export function classPressure(state: GameState): number {
+  return (crowding(state) + teaching(state)) / 2;
+}
+
 /** Stress now, with what is behind it. Worked out, never stored. */
 export function stressRead(state: GameState, levels: CampusLevels, season = seasonCurve(state.clock)): StressRead {
   const crowded = crowding(state);
+  const taught = teaching(state);
   const unwind = (levels.recreation + levels.green) / 2;
-  const support = (libraryShare(state) + levels.safety) / 2;
-  // Teaching joins crowding when Instruction funding exists. Until then it is neutral.
-  const pressure = (crowded + TEACHING_NEUTRAL) / 2;
+  // Advisors are staff: a campus short of them supports its students a little less (DESIGN.md 38.5).
+  const support = ((libraryShare(state) + levels.safety) / 2) * staffSupport(state);
+  // Crowded seats and stretched faculty: the two things that make a class large (`classPressure`).
+  const pressure = (crowded + taught) / 2;
   const relief = (unwind + support) / 2;
   const factor = (STRESS_BASE + STRESS_PRESSURE * pressure) * (1 - STRESS_RELIEF * relief);
   // What each fix would take off, at this season.
   const gains: Array<[StressCause, number]> = [
     ['crowding', STRESS_PRESSURE * (crowded / 2) * (1 - STRESS_RELIEF * relief)],
+    // What full funding would take off. A campus at full funding or better is never told its faculty are too few.
+    ['teaching', STRESS_PRESSURE * (Math.max(0, taught - TEACHING_NEUTRAL) / 2) * (1 - STRESS_RELIEF * relief)],
     ['unwind', (STRESS_BASE + STRESS_PRESSURE * pressure) * STRESS_RELIEF * ((1 - unwind) / 2)],
     ['support', (STRESS_BASE + STRESS_PRESSURE * pressure) * STRESS_RELIEF * ((1 - support) / 2)],
   ];
@@ -241,12 +262,12 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
   // Help from the desk, such as late library hours, comes straight off the top. It is the same help at any season.
   const help = stressOff(state);
   const raw = Math.round(100 * season * factor);
-  return { score: Math.max(0, raw - help.points), season, pressure, relief, crowding: crowded, unwind, support, cause, factor, eased: Math.min(raw, help.points), easedBy: help.label };
+  return { score: Math.max(0, raw - help.points), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, help.points), easedBy: help.label };
 }
 
-/** Faculty Stress, 0 to 100: their own calendar, and how crowded classes are. */
+/** Faculty Stress, 0 to 100: their own calendar, and how large classes are. */
 export function facultyStress(state: GameState): number {
-  return Math.round(100 * facultyCurve(state.clock) * (0.6 + 0.4 * crowding(state)));
+  return Math.round(100 * facultyCurve(state.clock) * (0.6 + 0.4 * classPressure(state)));
 }
 
 // --------------------------------------------------------------- weather --
@@ -397,7 +418,7 @@ function onMark(state: GameState, mark: CalendarMark, log: LogEntry[], levels: (
   // The campus's part is read afresh as exams begin and as they end, and the peak is the higher of the two.
   const read = stressRead(state, levels(), begins ? undefined : entry.kind === 'finals' ? SEASON_CURVE.finals : SEASON_CURVE.midterms);
   term.factor = read.factor;
-  const faculty = Math.round(100 * (entry.kind === 'finals' ? SEASON_CURVE.finals : SEASON_CURVE.midterms) * (0.6 + 0.4 * read.crowding));
+  const faculty = Math.round(100 * (entry.kind === 'finals' ? SEASON_CURVE.finals : SEASON_CURVE.midterms) * (0.6 + 0.4 * read.strain));
   if (begins) {
     term.examPeak = read.score;
     term.examCause = read.cause;

@@ -8,8 +8,8 @@ import {
   budget,
   edition,
   enrollment,
+  ENROLLMENT_CAP,
   ERA_AT_RANK,
-  ERA_AT_SIZE,
   eraOf,
   ERAS,
   fallApplicants,
@@ -32,6 +32,7 @@ import {
   scaleOf,
   serialize,
   SIZE_GOALS,
+  SIZE_GOALS_ONCE,
   sizeGoal,
   tuitionRate,
   validate,
@@ -64,13 +65,16 @@ function years(start: GameState, count: number): { state: GameState; log: LogEnt
 }
 
 describe('the goals a game has', () => {
-  it('are eight sizes from 50,000 to 100,000 and eight ranks from the Top 175 to the Top 10', () => {
-    expect(SIZE_GOALS).toEqual([50_000, 55_000, 60_000, 66_000, 73_000, 81_000, 90_000, 100_000]);
+  it('are one size, a full campus of 50,000, and eight ranks from the Top 175 to the Top 10', () => {
+    // The owner capped enrollment at 50,000 (DESIGN.md 38.4): the seven size goals above it are gone.
+    expect(ENROLLMENT_CAP).toBe(50_000);
+    expect(SIZE_GOALS).toEqual([50_000]);
     expect(RANK_GOALS).toEqual([175, 150, 125, 100, 75, 50, 25, 10]);
     expect(ERAS).toEqual(['Arrival', 'Growth', 'Flagship', 'Legacy']);
-    // The eras open at 55,000, 66,000 and 81,000 students, or at the Top 125, the Top 75 and the Top 25.
-    expect(ERA_AT_SIZE.map((count) => SIZE_GOALS[count - 1])).toEqual([55_000, 66_000, 81_000]);
+    // The rank alone opens an era: the Top 125, the Top 75 and the Top 25.
     expect(ERA_AT_RANK.map((count) => RANK_GOALS[count - 1])).toEqual([125, 75, 25]);
+    // What the goals above 50,000 were called, for a save that reached one before the cap.
+    expect(SIZE_GOALS_ONCE).toEqual([50_000, 55_000, 60_000, 66_000, 73_000, 81_000, 90_000, 100_000]);
     // They are written for the model campus's own scale.
     expect(scaleOf(model())).toBe(GOAL_SCALE);
     expect(sizeGoal(model(), 0)).toBe(50_000);
@@ -85,26 +89,30 @@ describe('the goals a game has', () => {
     expect(small.log.some((entry) => entry.kind === 'goal')).toBe(false);
   });
 
-  it('open an era from either ladder, in order, and never go back', () => {
+  it('open an era by the rank alone, in order, and never close one a save has already opened', () => {
     const goals = { size: 0, rank: 0, reached: [], rewards: 0 };
     expect(eraOf(goals)).toBe(0);
-    expect(eraOf({ ...goals, size: 2 })).toBe(1);
+    // A full campus opens no era. The rank does.
+    expect(eraOf({ ...goals, size: 1 })).toBe(0);
+    expect(eraOf({ ...goals, rank: 2 })).toBe(0);
     expect(eraOf({ ...goals, rank: 3 })).toBe(1);
-    expect(eraOf({ ...goals, size: 4 })).toBe(2);
     expect(eraOf({ ...goals, size: 1, rank: 5 })).toBe(2);
-    expect(eraOf({ ...goals, size: 6 })).toBe(3);
     expect(eraOf({ ...goals, rank: 7 })).toBe(3);
     expect(eraOf(null)).toBe(0);
+    // A save from before the cap that reached 66,000 students opened Flagship by its size. It stays open.
+    const before = { size: 4, rank: 1, rewards: 0, reached: [{ ladder: 'size' as const, n: 3, year: 5 }, { ladder: 'era' as const, n: 1, year: 3 }, { ladder: 'era' as const, n: 2, year: 5 }] };
+    expect(eraOf(before)).toBe(2);
+    expect(eraOf({ ...before, rank: 7 })).toBe(3);
   });
 });
 
 describe('size goals', () => {
   it('land at an intake and nowhere else', () => {
-    // Enough students for a goal, in the middle of a term: nothing lands while no class moves in.
+    // Enough students for the goal, in the middle of a term: nothing lands while no class moves in.
     const state = structuredClone(model());
-    state.cohorts = [14_000, 13_000, 13_000, 12_000];
+    state.cohorts = [14_000, 13_000, 12_000, 11_000];
     const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + DAY);
-    expect(enrollment(later.state)).toBeGreaterThan(50_000);
+    expect(enrollment(later.state)).toBe(50_000);
     expect(later.state.goals!.size).toBe(0);
     expect(later.log.some((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size')).toBe(false);
 
@@ -114,7 +122,7 @@ describe('size goals', () => {
     const reached = run.log.filter((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size');
     expect(reached.length).toBe(1);
     for (const goal of reached) expect(intakes.has(goal.tick)).toBe(true);
-    expect(reached[0]!.text).toMatch(/^Test University has [\d,]+ students\. The goal of 50,000 students is reached\. It is kept for good\.$/);
+    expect(reached[0]!.text).toBe('Test University has 50,000 students: the campus is full. The goal of 50,000 students is reached. It is kept for good.');
   });
 
   it('are kept for good, whatever the campus does afterwards', () => {
@@ -132,19 +140,25 @@ describe('size goals', () => {
     expect(validate(later)).toBeNull();
   });
 
-  it('can land several at once, and say when an era begins', () => {
+  it('are one goal and no more: a campus above the cap from before it reaches nothing new by its size', () => {
     const state = structuredClone(model());
     state.cohorts = [15_000, 14_500, 14_500, 14_000];
     const log: LogEntry[] = [];
     landSizeGoals(state, log);
-    expect(state.goals!.size).toBe(2);
+    expect(state.goals!.size).toBe(1);
     expect(log.length).toBe(1);
-    expect(log[0]!.text).toBe('Test University has 58,000 students. The goals of 50,000 and 55,000 students are reached. They are kept for good. The Growth era begins.');
-    expect(log[0]!.data).toMatchObject({ ladder: 'size', count: 2, from: 0, era: 1 });
-    expect(state.goals!.reached.map((entry) => entry.ladder)).toEqual(['size', 'size', 'era']);
+    expect(log[0]!.data).toMatchObject({ ladder: 'size', count: 1, from: 0, era: -1 });
+    expect(state.goals!.reached.map((entry) => entry.ladder)).toEqual(['size']);
     // Asked again with nothing new, it says nothing.
     landSizeGoals(state, log);
     expect(log.length).toBe(1);
+    // A save that reached three of the eight before the cap keeps all three, by their own names.
+    const kept = structuredClone(model());
+    kept.goals = { size: 3, rank: 0, rewards: 0, reached: [0, 1, 2].map((n) => ({ ladder: 'size' as const, n, year: 2 + n })) };
+    landSizeGoals(kept, log);
+    expect(kept.goals.size).toBe(3);
+    expect(nextSizeGoal(kept)).toBeNull();
+    expect(goalsReached(kept)).toEqual(['Year 4 · 60,000 students', 'Year 3 · 55,000 students', 'Year 2 · 50,000 students']);
   });
 });
 
@@ -254,8 +268,11 @@ describe('applicants on a game with goals', () => {
     expect(rankLift(ranked)).toBe(0);
     ranked.field.rank = 1;
     expect(rankLift(ranked)).toBeCloseTo(RANK_LIFT, 9);
+    // A quarter more at 1st, the figure the owner approved (37.9), and half of that at the middle of the field.
+    expect(RANK_LIFT).toBe(0.25);
     ranked.field.rank = 100;
-    expect(rankLift(ranked)).toBeGreaterThan(0.24);
+    expect(rankLift(ranked)).toBeGreaterThan(0.12);
+    expect(rankLift(ranked)).toBeLessThan(0.13);
     expect(part(ranked, 'rank')).toBeCloseTo(1 + rankLift(ranked), 9);
   });
 
@@ -263,7 +280,7 @@ describe('applicants on a game with goals', () => {
     const big = fallApplicants(model()).total;
     const one = fallApplicants(model(1)).total;
     expect(Math.abs(big / (one * GOAL_SCALE) - 1)).toBeLessThan(0.01);
-    expect(sizeGoal(model(1), 7)).toBe(Math.round(100_000 / GOAL_SCALE));
+    expect(sizeGoal(model(1), 0)).toBe(Math.round(50_000 / GOAL_SCALE));
     // The same campus reaches its first goal in the same year at either scale.
     const reached = (start: GameState): number => years(start, 3).state.goals!.reached.find((entry) => entry.ladder === 'size')?.year ?? 0;
     expect(reached(model())).toBe(reached(model(1)));
@@ -286,10 +303,10 @@ describe('a game begun on the small campus', () => {
     expect(marketingCost(state, 2)).toBe(students * 120);
   });
 
-  it('shows what is true there on the Size panel, and no goals', () => {
+  it('shows what is true there on the Goals page, with no cap and no goals', () => {
     const view = sizeView(years(freshGame(), 2).state);
-    expect(view.next).toBeNull();
-    expect(view.done).toBe('');
+    expect(view.cap).toBeNull();
+    expect(view.places).toBeNull();
     expect(view.era).toBe('');
     expect(view.rankNext).toBe('');
     expect(view.reached).toEqual([]);
@@ -298,13 +315,15 @@ describe('a game begun on the small campus', () => {
   });
 });
 
-describe('the Size panel on a game with goals', () => {
+describe('the Goals page on a game with goals', () => {
   const number = (text: string): number => Number(text.replace(/[^\d−+-]/g, '').replace('−', '-'));
 
-  it('shows the students, the next goal, and applicants that add up to the student', () => {
+  it('shows the students against the cap, applicants that add up to the student, and who gets a place', () => {
     const view = sizeView(model());
     expect(view.title).toBe('46,000 students');
-    expect(view.next).toEqual({ line: 'Next goal: 50,000 students', toGo: '4,000 to go. Counted when a class moves in.', percent: 0 });
+    expect(view.cap).toEqual({ line: '4,000 places open of 50,000', note: 'A full campus is the first goal. It is counted when a class moves in.', percent: 92 });
+    // Next fall the seniors have gone, so there is room for every applicant.
+    expect(view.places).toEqual({ admitted: view.applicants.total, turnedAway: '0' });
     expect(view.applicants.head).toBe("This fall's applicants");
     expect(view.applicants.rows.map((row) => row.name)).toEqual(['Reach', 'How the campus looks', 'Marketing', 'Football', 'Academic rank']);
     expect(view.applicants.rows[0]!.value).toBe('11,000');
@@ -318,7 +337,9 @@ describe('the Size panel on a game with goals', () => {
   it('lists what is reached, newest first, and the era', () => {
     const state = years(model(), 2).state;
     const view = sizeView(state);
-    expect(view.next!.line).toBe('Next goal: 55,000 students');
+    expect(view.cap!.line).toMatch(/^(Full at 50,000|[\d,]+ places open of 50,000)$/);
+    expect(view.cap!.note).toBe('A full campus turns the rest of its applicants away, and is ranked the higher for it.');
+    expect(number(view.places!.admitted) + number(view.places!.turnedAway)).toBe(number(view.applicants.total));
     expect(view.reached.length).toBeGreaterThanOrEqual(2);
     expect(view.reached.every((line) => /^Year \d+ · /.test(line))).toBe(true);
     expect(view.rank).toMatch(/^No\. \d+ of 200 for academics$/);
@@ -328,12 +349,13 @@ describe('the Size panel on a game with goals', () => {
 
 describe('a goal in the paper', () => {
   it('is the headline of its day, said once, when it was reached while away', () => {
-    const before = advance(model(), T0, T0 + 6 * DAY).state;
-    const away = advance(before, before.clock.lastSimulatedAt, T0 + 8 * DAY);
+    // The campus fills with the spring class of its second year.
+    const before = advance(model(), T0, T0 + 9 * DAY).state;
+    const away = advance(before, before.clock.lastSimulatedAt, T0 + 11 * DAY);
     const goal = away.log.find((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size')!;
     expect(goal).toBeDefined();
     const paper = edition(away.state, away.log, { minutes: 2 * 1440, cashBefore: before.money.cash, cashAfter: away.state.money.cash, studentsBefore: enrollment(before), studentsAfter: enrollment(away.state) });
-    expect(paper.headline).toMatch(/^Test Passes 50,000 Students; /);
+    expect(paper.headline).toMatch(/^Test Is Full at 50,000 Students; /);
     // Said once on the front: in the line under the headline, and not again among the lines beneath.
     expect(paper.deck).toBe(goal.text);
     expect(paper.top.some((item) => item.text === goal.text)).toBe(false);
@@ -347,10 +369,10 @@ describe('a goal in the paper', () => {
 
   it('gives an era its own headline', () => {
     const state = structuredClone(model());
-    state.cohorts = [15_000, 14_500, 14_500, 14_000];
+    state.field.rank = 120;
     const log: LogEntry[] = [];
-    landSizeGoals(state, log);
-    const paper = edition(state, log, { minutes: 1440, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 58_000 });
+    landRankGoals(state, log);
+    const paper = edition(state, log, { minutes: 1440, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 46_000 });
     expect(paper.headline).toMatch(/^The Growth Era Begins at Test; /);
   });
 });
@@ -394,11 +416,15 @@ describe('the main street', () => {
     expect(loaded.migratedFrom).toBe(14);
     expect(loaded.state.map.town.street).toBe('Lantern Avenue');
     expect(loaded.state.goals).toBeNull();
-    // Nothing else moved: the save as it was, with those two things and its version changed.
+    // Nothing else moved: the save as it was, with those two things and its version changed, and what
+    // version 16 keeps beside them (tests/capacity.test.ts has those).
     const expected = structuredClone(file.state) as GameState;
     expected.version = SAVE_VERSION;
     expected.map.town.street = 'Lantern Avenue';
     expected.goals = null;
+    expected.staffing = loaded.state.staffing;
+    expected.admissions.year = loaded.state.admissions.year;
+    expected.map.care.meals = loaded.state.map.care.meals!;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

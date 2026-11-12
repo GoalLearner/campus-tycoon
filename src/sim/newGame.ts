@@ -19,6 +19,7 @@ import { recomputeRates } from './systems/money';
 import { buildTown, startingParcels } from './systems/town';
 import { makeField, openingStanding } from './systems/field';
 import { newGoals } from './systems/goals';
+import { newStaffing } from './systems/staffing';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
@@ -182,7 +183,7 @@ export function newGame(opts: NewGameOptions): GameState {
     offCampus: [0, 0, 0, 0],
     classes: [],
     fourYears: true,
-    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null },
+    admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null, year: { applied: 0, admitted: 0 } },
     timers: [],
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
@@ -196,6 +197,8 @@ export function newGame(opts: NewGameOptions): GameState {
     inbox: newInbox(opts.seed),
     // Goals belong to a game begun on the model campus (DESIGN.md 37.2). This is the mark of one.
     goals: model ? newGoals() : null,
+    // Nobody is on the payroll until the first class arrives (DESIGN.md 38).
+    staffing: newStaffing(),
   };
   startFootball(state, 1);
   // A model campus is a school already standing: it opens with a standing, near the foot of the ladder (DESIGN.md 37.4).

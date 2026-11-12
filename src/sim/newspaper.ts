@@ -147,6 +147,7 @@ export function admissionsStory(state: GameState, log: readonly LogEntry[]): str
   const admitted = Number(intake.data?.admitted ?? 0);
   const expected = Number(intake.data?.expected ?? admitted);
   const turnedAway = Number(intake.data?.turnedAway ?? 0);
+  const capped = Number(intake.data?.capped ?? 0);
   const look = (DESIRABILITY_DRAW_SPAN * averageDesirability(state)) / 100 / DESIRABILITY_DRAW_FLOOR;
   const drivers: Array<[string, number]> = [
     [`how the campus looks, at ${Math.round(averageDesirability(state))} of 100 for desirability`, look],
@@ -158,7 +159,9 @@ export function admissionsStory(state: GameState, log: readonly LogEntry[]): str
   const top = drivers[0]![1] > 0 ? drivers[0]![0] : 'word of mouth, and nothing else yet';
   const came = `${expected.toLocaleString('en-US')} wanted a place and ${admitted.toLocaleString('en-US')} got one.`;
   const drew = `What drew them most: ${top}.`;
-  const lost = turnedAway > 0 ? ` What turned ${turnedAway.toLocaleString('en-US')} away: ${UNIT[String(intake.data?.bottleneck)] ?? 'room'}.` : ' Nobody was turned away.';
+  let lost = turnedAway > 0 ? ` What turned ${turnedAway.toLocaleString('en-US')} away: ${UNIT[String(intake.data?.bottleneck)] ?? 'room'}.` : ' Nobody was turned away.';
+  // A campus at its cap turns the rest away, and is the more selective for it (DESIGN.md 38.4).
+  if (capped > 0) lost = `${turnedAway > 0 ? lost : ''} The campus is full: ${capped.toLocaleString('en-US')} were turned away, and it is the more selective for it.`;
   return `${came} ${drew}${lost}`;
 }
 
@@ -200,12 +203,12 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'intake': {
         const admitted = Number(entry.data?.admitted ?? 0);
         const turnedAway = Number(entry.data?.turnedAway ?? 0);
+        const capped = Number(entry.data?.capped ?? 0);
         const unit = UNIT[String(entry.data?.bottleneck)] ?? 'room';
-        out.push({
-          weight: 85,
-          headline: turnedAway > 0 ? `${admitted.toLocaleString('en-US')} Move In; ${turnedAway.toLocaleString('en-US')} More Wait for ${unit === 'beds' ? 'Beds' : 'Classroom Seats'}` : `${admitted.toLocaleString('en-US')} Move In; Housing Office Surprised to Find Room for All`,
-          deck: entry.text,
-        });
+        let headline = `${admitted.toLocaleString('en-US')} Move In; Housing Office Surprised to Find Room for All`;
+        if (turnedAway > 0) headline = `${admitted.toLocaleString('en-US')} Move In; ${turnedAway.toLocaleString('en-US')} More Wait for ${unit === 'beds' ? 'Beds' : 'Classroom Seats'}`;
+        else if (capped > 0) headline = `${admitted.toLocaleString('en-US')} Move In; ${capped.toLocaleString('en-US')} More Told the Campus Is Full`;
+        out.push({ weight: 85, headline, deck: entry.text });
         break;
       }
       case 'goal': {
@@ -213,7 +216,7 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         const era = Number(entry.data?.era ?? -1);
         const size = entry.data?.ladder === 'size';
         const n = Number(entry.data?.count ?? 1) - 1;
-        const what = era > 0 ? `The ${ERAS[era]} Era Begins at ${school}` : size ? `${school} Passes ${headCount(sizeGoal(state, n))} Students` : `${school} Enters the Top ${RANK_GOALS[n]}`;
+        const what = era > 0 ? `The ${ERAS[era]} Era Begins at ${school}` : size ? `${school} Is Full at ${headCount(sizeGoal(state, n))} Students` : `${school} Enters the Top ${RANK_GOALS[n]}`;
         out.push({ weight: era > 0 ? 106 : size ? 104 : 103, headline: `${what}; ${pickLine(state, entry.tick, size ? GREW : CLIMBED)}`, deck: entry.text });
         break;
       }
@@ -378,7 +381,7 @@ export function welcomeEdition(state: GameState): Edition {
 
   // The first goal, on a game that has goals.
   const goal = nextSizeGoal(state);
-  if (goal) top.push({ kind: 'news', text: `${state.school.name} has ${headCount(students)} students. The first goal is ${headCount(goal.goal)}.` });
+  if (goal) top.push({ kind: 'news', text: `${state.school.name} has ${headCount(students)} students. The first goal is ${headCount(goal.goal)}: a full campus.` });
 
   // The next class, and what the campus is short of to fit it.
   const next = roomPlan(state).students;

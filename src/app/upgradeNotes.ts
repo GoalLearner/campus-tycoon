@@ -48,5 +48,11 @@ export function upgradeNotes(fromVersion: number): string[] {
       "New: tap the student count to see this fall's applicants and what makes them. A game begun on the model campus has size goals and rank goals there, kept for good once reached. The main street is Lantern Avenue.",
     );
   }
+  if (fromVersion < 16) {
+    notes.push(
+      'New: tap the student count for the Capacity page. It lists every need of a student, from beds to faculty, as what you have against what your students ask. Faculty and staff now arrive a semester after they are hired, and the Instruction slider there sets how many students each member of faculty has.',
+    );
+    notes.push('New: a campus that opened whole is full at 50,000 students. Applicants past that are turned away, which makes it more selective, and the rank goals are the long climb. No student is asked to leave.');
+  }
   return notes;
 }

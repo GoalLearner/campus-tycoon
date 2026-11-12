@@ -1,7 +1,16 @@
 import {
   averageDesirability,
+  BENEFITS_SHARE,
   budget,
+  calendarAt,
   crowding,
+  FACULTY_PAY,
+  facultyNeed,
+  INSTRUCTION_FULL,
+  INSTRUCTION_RATIOS,
+  instructionStep,
+  nextSemesterStaff,
+  enrollment,
   applyAction,
   approvalAt,
   campusHappiness,
@@ -63,8 +72,30 @@ export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver';
  * A test player there watches the Money panel: under the first of these it takes on no new yearly cost, and it
  * starts again once it keeps the second.
  */
-const KEEPS_ENOUGH = 13;
-const KEEPS_PLENTY = 14.5;
+const KEEPS_ENOUGH = 13.5;
+const KEEPS_PLENTY = 15.2;
+/**
+ * The Instruction slider, as a player who reads the Money panel would use it once enrollment is capped and
+ * income no longer grows (DESIGN.md 38.5): a step more faculty when the campus would still keep this much after
+ * paying for them, and a step fewer when it keeps less than KEEPS_LEAST. The player who works every cause
+ * funds teaching sooner than the others.
+ */
+const KEEPS_AFTER_FACULTY: Record<string, number> = { casual: 14.5, daily: 14.5, striver: 14 };
+const KEEPS_LEAST = 13;
+
+/** Whether the test players touch the Instruction slider. Turned off for one comparison run. */
+export const botOptions = { slider: true };
+
+/**
+ * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
+ * shows today's margin, and a player who has just funded more faculty knows it is about to fall.
+ */
+function keeps(state: GameState): number {
+  const books = budget(state);
+  if (books.incomeTotal <= 0) return books.kept;
+  const coming = Math.max(0, nextSemesterStaff(state).faculty - state.staffing.faculty);
+  return books.kept - (100 * coming * FACULTY_PAY * (1 + BENEFITS_SHARE)) / books.incomeTotal;
+}
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
@@ -252,15 +283,45 @@ function setMarketing(state: GameState, style: Style): GameState {
   if (!a.lastIntake || a.waitlistUntilTick !== 0) return state;
   const lost = a.lastIntake.turnedAway - a.waitlistAdmitted > 0;
   const atCeiling = !state.goals && fallClassDraw(state) >= POOL_CEILING * scaleOf(state);
-  let step = lost || atCeiling ? 0 : style === 'optimizer' || style === 'striver' ? 4 : 2;
+  // A campus at its cap has nowhere to put a bigger class. More applicants then only make it more selective,
+  // which is worth paying for to the player who is chasing the rank and to nobody else (DESIGN.md 38.4).
+  const full = (a.lastIntake.capped ?? 0) > 0 && style !== 'striver';
+  let step = lost || atCeiling || full ? 0 : style === 'optimizer' || style === 'striver' ? 4 : 2;
   // On a game with goals the player keeps an eye on the margin: marketing stops while the campus keeps too little.
   if (state.goals && step > 0) {
-    const kept = budget(state).kept;
+    const kept = keeps(state);
     if (kept < KEEPS_ENOUGH) step = 0;
     else if (kept < KEEPS_PLENTY) step = Math.min(step, state.money.marketing);
   }
   if (step === state.money.marketing) return state;
   const result = applyAction(state, { type: 'marketing', step });
+  return result.ok ? result.state : state;
+}
+
+/**
+ * The Instruction slider on a game with goals. Faculty arrive and leave a semester after the slider moves, so it
+ * is only touched in term, and only once the last move has taken effect.
+ */
+function setInstruction(state: GameState, style: Style): GameState {
+  const after = KEEPS_AFTER_FACULTY[style];
+  if (!state.goals || after === undefined || !botOptions.slider) return state;
+  const phase = calendarAt(state.clock).phase;
+  if (phase !== 'fall' && phase !== 'spring') return state;
+  const books = budget(state);
+  if (books.incomeTotal <= 0) return state;
+  const kept = keeps(state);
+  const step = instructionStep(state);
+  const students = enrollment(state);
+  /** What moving to another step would add to the payroll, as dollars of every $100 that comes in. */
+  const costOf = (to: number): number => {
+    const want = students > 0 ? Math.max(1, Math.round(students / INSTRUCTION_RATIOS[to]!)) : 0;
+    return (100 * (want - facultyNeed(state)) * FACULTY_PAY * (1 + BENEFITS_SHARE)) / books.incomeTotal;
+  };
+  let next = step;
+  if (kept < KEEPS_LEAST && step > INSTRUCTION_FULL) next = step - 1;
+  else if (step < INSTRUCTION_RATIOS.length - 1 && kept - costOf(step + 1) >= after) next = step + 1;
+  if (next === step) return state;
+  const result = applyAction(state, { type: 'instruction', step: next });
   return result.ok ? result.state : state;
 }
 
@@ -598,7 +659,7 @@ export function takeTurn(state: GameState, as: Style): TurnResult {
   const striver = as === 'striver';
   const style: Style = striver ? 'daily' : as;
   // On a game with goals: no new yearly cost while the campus keeps too little (the owner's target, 37.10).
-  const margin = state.goals ? budget(state).kept : 100;
+  const margin = state.goals ? keeps(state) : 100;
   const thrifty = margin < KEEPS_PLENTY;
   // The once-a-day player has a day's income to spend, so buys twice as much in a visit as the twice-a-day one.
   const maxPurchases = style === 'casual' ? 5 : style === 'daily' ? 10 : 60;
@@ -706,6 +767,7 @@ export function takeTurn(state: GameState, as: Style): TurnResult {
     purchases += after.built;
   }
   current = setMarketing(current, as);
+  current = setInstruction(current, as);
   if (!blockedByCash) current = payIntoEndowment(current, style);
   return { state: current, purchases, blockedByCash };
 }

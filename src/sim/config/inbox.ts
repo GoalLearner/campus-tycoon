@@ -71,6 +71,7 @@ export const TOP_WEIGHTS = {
   graduation: 56,
   missed: 55,
   rules: 52,
+  staff: 51,
   exams: 50,
   money: 45,
   enrollment: 44,

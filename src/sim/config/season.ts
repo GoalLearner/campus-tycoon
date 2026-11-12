@@ -38,7 +38,11 @@ export const EXAM_RAMP_TICKS = Math.round(6.5 * TICKS_PER_HOUR);
 export const STRESS_BASE = 0.55;
 export const STRESS_PRESSURE = 0.45;
 export const STRESS_RELIEF = 0.5;
-/** Until Instruction funding exists (layer 2), teaching reads as neither good nor bad. */
+/**
+ * Teaching at full funding reads as neither good nor bad: one member of
+ * faculty to twenty students. The ratio moves it from 0 at its best to 1 at
+ * its most stretched (config/staffing.ts).
+ */
 export const TEACHING_NEUTRAL = 0.5;
 /** Classes feel crowded from this share of seats taken, and as crowded as they get when every seat is. */
 export const CROWDING_FROM = 0.7;
@@ -112,8 +116,9 @@ export const SUMMER_START_LINE = 'The summer term begins. About {share}% of stud
 /** What each cause of Stress is called, and what would ease it. */
 export const STRESS_CAUSES = {
   crowding: { name: 'crowded classes', fix: 'More Academic seats would have eased it.' },
+  teaching: { name: 'too few faculty', fix: 'More faculty would have eased it. They arrive a semester after they are hired.' },
   unwind: { name: 'too few places to unwind', fix: 'Recreation, a quad or a pond in reach of the dorms would have eased it.' },
-  support: { name: 'too little support', fix: 'A library and a Medical Center in reach would have eased it.' },
+  support: { name: 'too little support', fix: 'A library and a Medical Center in reach, and staff at full strength, would have eased it.' },
   season: { name: 'the exams themselves', fix: 'The campus did all it could.' },
 } as const;
 export type StressCause = keyof typeof STRESS_CAUSES;

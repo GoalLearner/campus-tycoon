@@ -131,6 +131,10 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   // Costs phasing in: where they stand now. One line, however many steps were taken while away.
   lines.push(...latestText(log, 'costs'));
 
+  // Faculty a semester behind the students, or still on the payroll after them: the latest word on it.
+  as(TOP_WEIGHTS.staff, 'problem');
+  lines.push(...latestText(log, 'staff'));
+
   as(TOP_WEIGHTS.enrollment, 'news');
   if (facts.studentsAfter !== facts.studentsBefore) {
     lines.push(`Enrollment went from ${headCount(facts.studentsBefore)} to ${headCount(facts.studentsAfter)}.`);

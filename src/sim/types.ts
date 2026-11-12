@@ -180,6 +180,13 @@ export interface Care {
    * it. Missing on a save from before food earned anything.
    */
   food?: Record<number, number>;
+  /**
+   * For each place to eat, how many lots' worth of students eat there once
+   * every lot has shared its meals among the places that reach it, in
+   * proportion to how many each can feed. Missing on a save from before a
+   * place to eat could fill up.
+   */
+  meals?: Record<number, number>;
 }
 
 export interface MapState {
@@ -287,8 +294,13 @@ export interface IntakeResult {
   expected: number;
   admitted: number;
   turnedAway: number;
-  /** The zone that capped the class, or null when everyone got in. */
+  /** The zone that capped the class, or null when everyone the campus had room for under its cap got in. */
   bottleneck: Zone | null;
+  /**
+   * Applicants turned away because the campus was full at its cap (DESIGN.md 38.4). They are not in `turnedAway`,
+   * which counts those who wait for a bed or a seat. Left out on a game with no cap, and on an older save.
+   */
+  capped?: number;
 }
 
 export interface Admissions {
@@ -303,6 +315,31 @@ export interface Admissions {
   lastIntake: IntakeResult | null;
   /** How the last semester ended: who stayed, who left, and how happy the campus was. */
   lastSemester: { tick: number; stayed: number; left: number; happiness: number } | null;
+  /**
+   * This year's applicants and how many of them got a place, the fall class and the spring class together. It
+   * starts again at each fall intake. Selectivity is read from it, so one small spring class cannot speak for a
+   * year.
+   */
+  year: { applied: number; admitted: number };
+}
+
+/**
+ * The people a campus employs for its students (DESIGN.md section 38). They
+ * are head counts kept in the save: hired at the start of a semester and
+ * leaving at the start of one, a semester behind the students.
+ */
+export interface Staffing {
+  /** Faculty and staff on the payroll now. */
+  faculty: number;
+  staff: number;
+  /**
+   * What each was last measured to need: at the start of the semester, when its waitlist closed, and when the
+   * Instruction slider was moved. The next semester's hiring and leaving go this far and no further.
+   */
+  facultyPlan: number;
+  staffPlan: number;
+  /** The Instruction slider, 0 to 4: how many students one member of faculty is hired for. 2 is full funding. */
+  instruction: number;
 }
 
 /**
@@ -328,13 +365,16 @@ export interface Stats {
  * on the model campus has them.
  */
 export interface Goals {
-  /** How many of the eight size goals are reached. Kept for good. */
+  /**
+   * How many size goals are reached. Kept for good. There is one now, a full campus (DESIGN.md 38.4). A save
+   * from when there were eight may hold more, and keeps every one.
+   */
   size: number;
   /** How many of the eight rank goals are reached. Kept for good. */
   rank: number;
   /** Each goal and era as it was reached, oldest first. `n` counts from 0 on a ladder, and is the era's number for an era. */
   reached: Array<{ ladder: 'size' | 'rank' | 'era'; n: number; year: number }>;
-  /** Free buildings taken for size goals so far. Nothing gives one yet (37.7). */
+  /** Free buildings taken for rank goals so far. Nothing gives one yet (37.7 and 38.4). */
   rewards: number;
 }
 
@@ -380,6 +420,7 @@ export interface GameState {
   inbox: Inbox;
   /** The goals of a game begun on the model campus. null on a game begun on the small campus, which has none. */
   goals: Goals | null;
+  staffing: Staffing;
 }
 
 // ------------------------------------------------------------- football --
@@ -735,6 +776,7 @@ export type LogKind =
   | 'grounds'
   | 'yearEnd'
   | 'costs'
+  | 'staff'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

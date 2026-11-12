@@ -6,7 +6,6 @@ import { WAGE_PER_YEAR } from '../config/grounds';
 import {
   BENEFITS_SHARE,
   CARE_STAFF_PAY,
-  CLASS_SIZE,
   ENDOWMENT_YIELD,
   FACULTY_PAY,
   INSURANCE_PER_STUDENT,
@@ -21,7 +20,6 @@ import {
   ROOM_FEE_PER_BED_PER_YEAR,
   STAFF_PAY,
   STUDENTS_PER_CARE_STAFF,
-  STUDENTS_PER_STAFF,
   SUPPLIES_PER_STUDENT,
   TUITION_PER_STUDENT_PER_YEAR,
 } from '../config/money';
@@ -35,7 +33,10 @@ import { placedIncomePerYear } from './placed';
 import { dayRead } from './season';
 import { footballBooks, homeGameNow } from './football';
 import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
+import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
 import { offCampusNow } from './town';
+
+export { facultyCount, staffCount } from './staffing';
 
 /**
  * Where the money goes, by what it buys. Every cost follows the size of the
@@ -46,18 +47,6 @@ import { offCampusNow } from './town';
  * All of it is worked out from the state when asked, and only when something
  * changed (`money.ratesDirty`), so catch-up costs nothing extra.
  */
-
-/** Faculty: one for every 20 students, to the nearest whole person, and at least one once anyone is enrolled. */
-export function facultyCount(state: GameState): number {
-  const students = enrollment(state);
-  return students > 0 ? Math.max(1, Math.round(students / CLASS_SIZE)) : 0;
-}
-
-/** Staff: admissions, advisors, administration, IT and dining. One for every 40 students. */
-export function staffCount(state: GameState): number {
-  const students = enrollment(state);
-  return students > 0 ? Math.max(1, Math.round(students / STUDENTS_PER_STAFF)) : 0;
-}
 
 /** True for a Medical Center or a Campus Safety building: the two whose staff are counted by the students around them. */
 export function hasCareStaff(placed: Placed): boolean {
@@ -198,14 +187,17 @@ export function budget(state: GameState): Budget {
   const incomeTotal = income.reduce((sum, line) => sum + line.amount, 0);
 
   // ---- payroll
-  const faculty = facultyCount(state);
-  const staff = staffCount(state);
+  // Faculty and staff are head counts the campus keeps (DESIGN.md 38). Over the summer only those the summer's
+  // students need are on the payroll.
+  const faculty = facultyWorking(state);
+  const staff = staffWorking(state);
+  const off = { faculty: facultyCount(state) - faculty, staff: staffCount(state) - staff };
   const care = careStaffCount(state);
   const workers = workerCount(state);
   const pay = faculty * FACULTY_PAY + staff * STAFF_PAY + care * CARE_STAFF_PAY + workers * WAGE_PER_YEAR + ball.pay;
   const payroll: BudgetLine[] = [
-    { id: 'faculty', name: 'Faculty', amount: faculty * FACULTY_PAY, detail: `${people(faculty, 'member', 'members')} at ${dollars(FACULTY_PAY)}, one for every ${CLASS_SIZE} students` },
-    { id: 'staff', name: 'Staff', amount: staff * STAFF_PAY, detail: `${people(staff, 'member', 'members')} at ${dollars(STAFF_PAY)}: admissions, advisors, administration, IT and dining` },
+    { id: 'faculty', name: 'Faculty', amount: faculty * FACULTY_PAY, detail: `${people(faculty, 'member', 'members')} at ${dollars(FACULTY_PAY)}, funded at one for every ${ratioTarget(state)} students${off.faculty > 0 ? `. ${people(off.faculty, 'more is', 'more are')} away for the summer` : ''}` },
+    { id: 'staff', name: 'Staff', amount: staff * STAFF_PAY, detail: `${people(staff, 'member', 'members')} at ${dollars(STAFF_PAY)}: admissions, advisors, administration, IT and dining${off.staff > 0 ? `. ${people(off.staff, 'more is', 'more are')} away for the summer` : ''}` },
     { id: 'care', name: 'Safety and medical staff', amount: care * CARE_STAFF_PAY, detail: `${people(care, 'member', 'members')} at ${dollars(CARE_STAFF_PAY)}, by the students in each building's circle` },
     { id: 'workers', name: 'Maintenance workers', amount: workers * WAGE_PER_YEAR, detail: `${people(workers, 'worker', 'workers')} at ${dollars(WAGE_PER_YEAR)}, hired at each Facilities Yard` },
     { id: 'coaches', name: 'Coaches and athletics staff', amount: ball.pay, detail: ball.pay > 0 ? `${state.football.coach.name} at ${dollars(ball.coach)}${ball.coach < state.football.coach.pay ? ', a share of the going rate at a school this size' : ''}, and ${people(ball.staff, 'member', 'members')} of staff at ${dollars(ATHLETICS_STAFF_PAY)}` : '' },

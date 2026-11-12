@@ -429,7 +429,7 @@ describe('the Money panel, in words', () => {
     }
     const payroll = view.groups[0]!.lines.map((row) => row.name);
     expect(payroll).toEqual(expect.arrayContaining(['Faculty', 'Staff', 'Safety and medical staff', 'Benefits']));
-    expect(view.groups[0]!.lines.find((row) => row.name === 'Faculty')!.detail).toBe('50 members at $58,000, one for every 20 students');
+    expect(view.groups[0]!.lines.find((row) => row.name === 'Faculty')!.detail).toBe('50 members at $58,000, funded at one for every 20 students');
     expect(view.phase).toBeNull();
   });
 

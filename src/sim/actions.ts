@@ -18,6 +18,8 @@ import { ownedAt } from './systems/town';
 import { recomputeDesirability } from './systems/desirability';
 import { evaluateGrowth, cancelStrandedBuilds } from './systems/growth';
 import { markRatesDirty } from './systems/money';
+import { INSTRUCTION_RATIOS } from './config/staffing';
+import { instructionStep, planStaff } from './systems/staffing';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
 
@@ -41,6 +43,8 @@ export type Action =
   | { type: 'staff'; yard: number; workers: number }
   /** Set the recruiting and marketing step: 0 is off, 4 the most. */
   | { type: 'marketing'; step: number }
+  /** Set the Instruction slider: 0 to 4. It sets how many students one member of faculty is hired for. */
+  | { type: 'instruction'; step: number }
   /** Pay cash into the endowment. It never comes back out. */
   | { type: 'endow'; amount: number }
   /** Choose or move the anchor: the minute of the UTC day at which each day of the campus week begins. */
@@ -330,6 +334,23 @@ function setMarketing(state: GameState, step: number): ActionResult {
   return { ok: true, state: next, cost: 0, changed: 1 };
 }
 
+/**
+ * Move the Instruction slider. It sets the ratio the campus hires faculty
+ * for. Nobody is hired or let go on the spot: the faculty for the new ratio
+ * arrive, or leave, when the next semester begins (DESIGN.md 38).
+ */
+function setInstruction(state: GameState, step: number): ActionResult {
+  if (!Number.isInteger(step) || step < 0 || step >= INSTRUCTION_RATIOS.length) {
+    return { ok: false, state, error: `Instruction has steps 0 to ${INSTRUCTION_RATIOS.length - 1}.` };
+  }
+  if (step === instructionStep(state)) return { ok: true, state, cost: 0, changed: 0 };
+  const next = structuredClone(state);
+  next.staffing.instruction = step;
+  planStaff(next);
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 /** Pay cash into the endowment. It cannot be taken out again, and earns a small income for good. */
 function endow(state: GameState, amount: number): ActionResult {
   if (!Number.isFinite(amount) || amount < 1) return { ok: false, state, error: 'Choose an amount to pay in.' };
@@ -423,6 +444,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return staff(state, action.yard, action.workers);
     case 'marketing':
       return setMarketing(state, action.step);
+    case 'instruction':
+      return setInstruction(state, action.step);
     case 'endow':
       return endow(state, action.amount);
     case 'anchor':

@@ -1859,3 +1859,70 @@ button.students {
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
+
+/* ------------------------------------------------------------- Capacity */
+
+.size-row.places {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.need {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.need-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.need-name {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.need-line {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.need-status {
+  flex: 0 0 auto;
+  min-width: 46px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #10160f;
+  background: var(--good);
+}
+
+.need-status.tight {
+  background: var(--accent);
+}
+
+.need-status.short {
+  background: var(--bad);
+}
+
+.need-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 12px 8px;
+  font-size: 13.5px;
+}
+
+.need-detail p {
+  margin: 0;
+}

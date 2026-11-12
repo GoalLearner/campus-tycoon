@@ -483,8 +483,14 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           }, 1900);
         }
       }
-      // &panel=size opens the Size panel as a tap on the student count would.
-      if (panel === 'size') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
+      // &panel=size opens the Goals and Capacity screen as a tap on the student count would. &panel=capacity turns to
+      // its Capacity page, and &row=Faculty opens one of that page's rows.
+      if (panel === 'size' || panel === 'capacity') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
+        if (panel === 'capacity') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.fb-tab')].find((b) => b.textContent?.startsWith('Capacity'))?.click(), 1900);
+        const row = params.get('row');
+        if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
+      }
       // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
       if (panel === 'inbox') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('.hud-chips .hud-chip:last-child')?.click(), 1400);
