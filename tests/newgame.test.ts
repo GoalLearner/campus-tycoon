@@ -32,10 +32,12 @@ import {
   applyAction,
   budget,
   buildings,
+  DEFAULT_SCHOOL_NAME,
   enrollment,
   footballBooks,
   MODEL_STUDENTS,
   newGame,
+  paperName,
   PLACED,
   previewPaint,
   scaleOf,
@@ -88,6 +90,20 @@ describe('a game started from the app', () => {
     expect(enrollment(again.state)).toBe(MODEL_STUDENTS);
     expect(again.offersVisit).toBe(false);
     expect(again.welcome).toBe(false);
+  });
+});
+
+describe('the name a new university is offered', () => {
+  it('is Larp University, which a player can change, and no other school in the field shares it', () => {
+    expect(DEFAULT_SCHOOL_NAME).toBe('Larp University');
+    const app = new Store();
+    app.foundUniversity(DEFAULT_SCHOOL_NAME, 7);
+    expect(app.state.school.name).toBe('Larp University');
+    expect(validate(app.state)).toBeNull();
+    const others = app.state.field.schools.map((school) => school.name.toLowerCase());
+    expect(others.some((name) => name.includes('larp'))).toBe(false);
+    expect(paperName(app.state)).toMatch(/^The Larp \w+$/);
+    expect(toneProblem(DEFAULT_SCHOOL_NAME)).toBeNull();
   });
 });
 

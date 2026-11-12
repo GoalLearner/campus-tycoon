@@ -1,4 +1,4 @@
-import { advance, applyAction, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -558,7 +558,7 @@ export function installDevTools(): void {
     store.adopt(lifeCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
   } else if (params.get('demo') === 'model') {
     // The model campus of DESIGN.md section 35, unsaved. The same thing the Menu's visit opens.
-    store.adopt(newGame({ seed: Number(params.get('seed') ?? 20261112), name: 'Larkspur University', now: clock.now(), campus: 'model' }), { ephemeral: true });
+    store.adopt(newGame({ seed: Number(params.get('seed') ?? 20261112), name: DEFAULT_SCHOOL_NAME, now: clock.now(), campus: 'model' }), { ephemeral: true });
     // &days=9 lets that many days pass with nobody looking in, and puts the away list aside. &answer takes the
     // advisor's pick on the desk each of those days, as a player would. &away=24 then lets that many hours pass
     // at once, so the newspaper opens as it would after a day away.

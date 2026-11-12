@@ -3693,6 +3693,7 @@ Left out, because the game has nothing for them yet: the theatres and the music 
 | "Visit the model campus" | Gone from a game that began on the model campus | Keep it in every Menu |
 | A first lesson | None added. The top bar already names the first jobs: beds and seats for the next class, then the stadium | A tutorial for a campus this size |
 | What the player may change | Everything, with the game's ordinary tools. Nothing on the model campus is locked | Lock the layout |
+| The name a new university is offered | Larp University, chosen by the owner on 2026-11-12. The founding screen fills it in and the player can type another (`DEFAULT_SCHOOL_NAME`) | Larkspur University, which the screen offered before |
 
 What this changes elsewhere, to settle when each is built:
 

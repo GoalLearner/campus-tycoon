@@ -63,6 +63,7 @@ import {
   anchorFreeAt,
   dayRead,
   DEFAULT_COLOUR,
+  DEFAULT_SCHOOL_NAME,
   DEFAULT_WAKE_HOUR,
   SCHOOL_COLOURS,
   weatherAt,
@@ -579,12 +580,12 @@ export function mountUi(root: HTMLElement): void {
       input.type = 'text';
       input.maxLength = 40;
       input.placeholder = 'University name';
-      input.value = 'Larkspur University';
+      input.value = DEFAULT_SCHOOL_NAME;
       input.autocomplete = 'off';
       const wake = hourSelect(DEFAULT_WAKE_HOUR);
       const colour = colourSelect(DEFAULT_COLOUR);
       const start = (): void => {
-        const name = input.value.trim() || 'Larkspur University';
+        const name = input.value.trim() || DEFAULT_SCHOOL_NAME;
         store.foundUniversity(name, Number(wake.value), colour.value);
         close();
       };

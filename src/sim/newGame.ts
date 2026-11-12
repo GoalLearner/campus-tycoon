@@ -22,6 +22,9 @@ import { newGoals } from './systems/goals';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
+/** The name the founding screen offers a new university. The player can change it there (DESIGN.md 35.6). */
+export const DEFAULT_SCHOOL_NAME = 'Larp University';
+
 export interface NewGameOptions {
   seed: number;
   name: string;
