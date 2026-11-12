@@ -231,7 +231,8 @@ export class Walkers {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
-      if (spec.family === 'water' || spec.family === 'landmark') continue;
+      // Places to go: not ponds, landmarks, car parks, bins or the yard.
+      if (['water', 'landmark', 'parking', 'bin', 'yard'].includes(spec.family)) continue;
       let found = false;
       for (let cy = placed.y; cy < placed.y + placed.h && !found; cy++) {
         for (let cx = placed.x; cx < placed.x + placed.w && !found; cx++) {
@@ -387,7 +388,8 @@ export class Walkers {
     } else {
       homes = others.filter((stop) => stop.zone === 'housing');
     }
-    const places = others.filter((stop) => stop.kind === 'place');
+    // Seats are empty at night.
+    const places = others.filter((stop) => stop.kind === 'place' && !(this.period === 'night' && (stop.name === 'Bench' || stop.name === 'Picnic table')));
     const out = places.length > 0 ? places : quads;
     const roll = Math.random();
     let choice: readonly Stop[];

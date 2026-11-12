@@ -633,6 +633,190 @@
     }
    ]
   },
+  "grounds.bin": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TrashCan.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.35
+    }
+   ]
+  },
+  "grounds.bin.full": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TrashCanLarge.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.35
+    }
+   ]
+  },
+  "grounds.bin.over": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TrashCanLarge.png",
+     "stand": [
+      0.4,
+      0.42
+     ],
+     "scale": 1.35
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TrashBag1.png",
+     "stand": [
+      0.72,
+      0.7
+     ],
+     "scale": 1.2
+    }
+   ]
+  },
+  "grounds.bench": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Bench.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "grounds.table": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TableSet1.png",
+     "stand": [
+      0.5,
+      0.56
+     ]
+    }
+   ]
+  },
+  "grounds.cone": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/EmergencyCone.png",
+     "stand": [
+      0.8,
+      0.74
+     ],
+     "scale": 0.8
+    }
+   ]
+  },
+  "litter.0": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Garbage1.png",
+     "stand": [
+      0.3,
+      0.3
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "litter.1": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Garbage2.png",
+     "stand": [
+      0.68,
+      0.36
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "litter.2": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Garbage3.png",
+     "stand": [
+      0.42,
+      0.66
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "litter.3": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Garbage4.png",
+     "stand": [
+      0.7,
+      0.7
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "litter.4": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Garbage5.png",
+     "stand": [
+      0.26,
+      0.58
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "litter.5": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Cup.png",
+     "stand": [
+      0.56,
+      0.5
+     ],
+     "scale": 1.5
+    }
+   ]
+  },
+  "build.yard": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Workplace_Handyman_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "grounds.broom": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Broom.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    }
+   ]
+  },
+  "grounds.cart": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Cart.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.7
+    }
+   ]
+  },
   "lamp.off": {
    "layers": [
     {
@@ -2908,7 +3092,7 @@
   "Elm"
  ],
  "people": {
-  "comment": "Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last two looks are the responders, not part of the crowd.",
+  "comment": "Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The last three looks are the responders and the grounds worker, not part of the crowd.",
   "frames": 8,
   "frameMs": 84,
   "height": 36,
@@ -2928,6 +3112,7 @@
   "roles": {
    "medic": 21,
    "officer": 22,
+   "worker": 23,
    "athlete": 16
   },
   "looks": [
@@ -2953,7 +3138,8 @@
    "penzilla/NPC/NpcReadymade_SportsPlayer4.png",
    "penzilla/NPC/NpcReadymade_Teacher.png",
    "penzilla/NPC/NpcReadymade_Doctor.png",
-   "penzilla/NPC/NpcReadymade_Police.png"
+   "penzilla/NPC/NpcReadymade_Police.png",
+   "penzilla/NPC/NpcReadymade_ConstructionWorker.png"
   ]
  },
  "footprints": {
@@ -2970,6 +3156,10 @@
    1
   ],
   "build.store": [
+   2,
+   1
+  ],
+  "build.yard": [
    2,
    1
   ],

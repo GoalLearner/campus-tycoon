@@ -1,4 +1,4 @@
-import { advance, applyAction, incidentText, nearestSpot, newGame, PLACED, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, incidentText, nearestSpot, newGame, PLACED, previewPaint, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -138,6 +138,75 @@ function stop3Campus(): GameState {
   return advance(state, started, now).state;
 }
 
+/**
+ * Grounds on one screen, for the fourth play stop. The dining hall's corner is
+ * tended: bins, benches, a picnic table, and a Facilities Yard with two
+ * workers. The recreation field's corner is not: no yard reaches it, its bin
+ * is full, litter is deep and a bench is broken. `?demo=grounds`.
+ */
+function groundsCampus(): GameState {
+  let state = builtCampus();
+  state.money.cash = 5_000_000;
+  const first = (type: string) => state.map.placed.find((placed) => placed?.type === type) ?? null;
+  const free = (x: number, y: number): boolean => previewPaint(state, 'bin', [[x, y]]).cells.length === 1;
+  /** The nearest free cell to a building, a ring at a time. */
+  const beside = (of: { x: number; y: number; w: number; h: number }, skip = 0): Point | null => {
+    let left = skip;
+    for (let ring = 1; ring <= 3; ring++) {
+      for (let y = of.y - ring; y <= of.y + of.h - 1 + ring; y++) {
+        for (let x = of.x - ring; x <= of.x + of.w - 1 + ring; x++) {
+          if (!free(x, y)) continue;
+          if (left === 0) return [x, y];
+          left -= 1;
+        }
+      }
+    }
+    return null;
+  };
+  const lay = (tool: 'bin' | 'bench' | 'table', cell: Point | null): void => {
+    if (cell) state = paint(state, tool, [cell]);
+  };
+  const hall = first('dining');
+  // The recreation field is out of the yard's reach, so it is the corner nobody tends.
+  const shop = first('field');
+  if (hall) {
+    lay('bench', beside(hall, 2));
+    lay('table', beside(hall, 4));
+    const spot = nearestSpot(state, 'yard', hall.x, hall.y);
+    const built = spot ? applyAction(state, { type: 'place', building: 'yard', x: spot.x, y: spot.y }) : null;
+    if (built?.ok) {
+      state = built.state;
+      const yard = first('yard');
+      const hired = yard ? applyAction(state, { type: 'staff', yard: yard.id, workers: 2 }) : null;
+      if (hired?.ok) state = hired.state;
+    }
+  }
+  // A bin across the quad from the yard, nearly full, so a worker is seen walking out to it with a cart.
+  const courts = first('courts');
+  if (courts) lay('bin', beside(courts));
+  const farBin = state.map.placed.filter((placed) => placed?.type === 'bin').pop() ?? null;
+  if (shop) {
+    lay('bin', beside(shop));
+    lay('bench', beside(shop, 2));
+    lay('bench', beside(shop, 3));
+  }
+  state = structuredClone(state);
+  state.cohorts = [1400, 0, 0, 0];
+  // Let a day of litter fall, then leave the store's corner as a neglected one looks.
+  state = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 60_000).state;
+  state = structuredClone(state);
+  for (const placed of state.map.placed) {
+    if (!placed) continue;
+    const tended = state.map.care.yard[placed.id] !== undefined && state.map.care.yard[placed.id]! >= 0;
+    if (placed.type === 'bin') state.grounds.bins[placed.id] = tended ? 16 : 40;
+    else if (['dining', 'store', 'recreation'].includes(PLACED[placed.type].family)) state.grounds.litter[placed.id] = tended ? 4 : 88;
+  }
+  if (farBin && (state.map.care.yard[farBin.id] ?? -1) >= 0) state.grounds.bins[farBin.id] = 31;
+  const benches = state.map.placed.filter((placed) => placed?.type === 'bench' && (state.map.care.yard[placed.id] ?? -1) < 0);
+  if (benches[0]) state.grounds.broken[benches[0].id] = 3.3;
+  return state;
+}
+
 interface DevScene {
   cameras: { main: { zoom: number; width: number; height: number; scrollX: number; scrollY: number; setZoom(zoom: number): void; setScroll(x: number, y: number): void } };
   iso: { toWorld(x: number, y: number): { x: number; y: number } };
@@ -252,12 +321,25 @@ function applyViewParams(params: URLSearchParams): void {
         session.startPlacing(type as Parameters<typeof session.startPlacing>[0]);
         session.setGhost(Number(x), Number(y));
       }
+      // &crewinfo prints where the grounds workers are, for checking them in a screenshot.
+      if (params.has('crewinfo')) {
+        setTimeout(() => {
+          const crew = (scene as unknown as { crew: { trips: Array<{ toX: number; toY: number; cart: boolean; body: { visible: boolean; x: number; y: number; frame: { name: string } } }> } }).crew;
+          const note = document.createElement('div');
+          note.style.cssText = 'position:fixed;left:8px;top:190px;z-index:99;background:#000c;color:#fff;font:11px monospace;padding:6px;max-width:340px;white-space:pre-wrap';
+          note.textContent = JSON.stringify(crew.trips.map((t) => ({ to: [t.toX, t.toY], cart: t.cart, vis: t.body.visible, at: [Math.round(t.body.x), Math.round(t.body.y)], frame: t.body.frame.name })), null, 0);
+          document.body.append(note);
+        }, 3000);
+      }
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       // &panel=plan opens the room plan as a tap on the Housing bar would.
       if (panel === 'plan') setTimeout(() => document.querySelector<HTMLElement>('.bars .bar')?.click(), 1400);
       // &tool=road puts the road tool in hand, and &overlay=parking shows the Parking overlay.
       if (params.get('tool') === 'road') setTimeout(() => session.setTool('road'), 1400);
-      if (params.get('overlay') === 'parking') setTimeout(() => session.setOverlay('parking'), 1400);
+      const overlay = params.get('overlay');
+      if (overlay === 'parking' || overlay === 'clean') setTimeout(() => session.setOverlay(overlay), 1400);
+      const hand = params.get('tool');
+      if (hand === 'bin' || hand === 'bench' || hand === 'table') setTimeout(() => session.setTool(hand), 1400);
       if (card !== null) {
         // After the view has been aimed for the last time.
         setTimeout(() => {
@@ -296,6 +378,8 @@ export function installDevTools(): void {
     store.adopt(townCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stop3') {
     store.adopt(stop3Campus(), { ephemeral: true });
+  } else if (params.get('demo') === 'grounds') {
+    store.adopt(groundsCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'founding') {
     // A brand-new campus a minute after its first class moved in: beds short, a waitlist open, locals with no way in.
     const started = clock.now() - 16 * 60_000;
@@ -314,6 +398,14 @@ export function installDevTools(): void {
       // The look preview shows its example cards. Anywhere else, the real menu.
       if (params.get('demo') === 'look') openBuildMenu(root, LOOK_MENU, () => undefined);
       else document.querySelector<HTMLButtonElement>('.build-fab')?.click();
+      // &shelf=Grounds scrolls the menu to that shelf.
+      const shelf = params.get('shelf');
+      if (shelf) {
+        setTimeout(() => {
+          const heads = [...document.querySelectorAll<HTMLElement>('.build-category')];
+          heads.find((head) => head.textContent === shelf)?.scrollIntoView();
+        }, 900);
+      }
     }, 150);
   }
 }

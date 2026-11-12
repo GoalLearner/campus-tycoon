@@ -3,6 +3,7 @@ import {
   advance,
   applyAction,
   approvalAt,
+  partLevel,
   BED_NEED,
   classYearOf,
   enrollment,
@@ -170,7 +171,7 @@ describe('the student card', () => {
     const state = withStudents();
     const resident = sampleStudents(state).find((ref) => {
       const home = studentHome(state, ref);
-      return home !== null && approvalAt(state, home).causes.some((c) => c.id === 'green' && c.level < 0.6) && emptyNear(state, home).length >= 3;
+      return home !== null && (partLevel(approvalAt(state, home).causes, 'green') ?? 1) < 0.6 && emptyNear(state, home).length >= 3;
     });
     expect(resident).toBeDefined();
     const before = studentCard(state, resident!)!;
@@ -276,8 +277,8 @@ describe('the student card', () => {
     const state = withStudents();
     for (const ref of sampleStudents(state)) {
       const card = studentCard(state, ref)!;
-      expect(['walk', 'green', 'life', 'safety']).toContain(card.reason!.cause);
-      expect(['walk', 'green', 'dining', 'recreation', 'safety']).toContain(card.reason!.part);
+      expect(['walk', 'grounds', 'life', 'safety']).toContain(card.reason!.cause);
+      expect(['walk', 'green', 'clean', 'seating', 'dining', 'recreation', 'safety']).toContain(card.reason!.part);
       expect(Math.abs(card.relationship.points)).toBe(RELATIONSHIP_POINTS);
     }
     const thin = relationshipOf(1, { entryYear: 1, index: 0 }, 0, 'scholar', 0);

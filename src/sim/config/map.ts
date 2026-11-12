@@ -37,5 +37,8 @@ export const STARTER = {
   placed: [
     { type: 'dining', x: 10, y: 12 },
     { type: 'admin', x: 20, y: 15 },
+    // Two bins beside the dining hall, and no yard: the first full bin is the lesson.
+    { type: 'bin', x: 9, y: 12 },
+    { type: 'bin', x: 12, y: 12 },
   ] as ReadonlyArray<{ type: PlacedType; x: number; y: number }>,
 } as const;

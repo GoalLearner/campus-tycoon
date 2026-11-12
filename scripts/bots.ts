@@ -5,7 +5,14 @@ import {
   COST,
   coverFor,
   fedAt,
+  isMessSpot,
   isPathKind,
+  previewPaint,
+  spotFix,
+  workersAt,
+  WORK_PER_WORKER,
+  yardStatus,
+  YARD_MAX_WORKERS,
   localsNeedingBeds,
   ownedAt,
   PLACED,
@@ -17,6 +24,7 @@ import {
   type CellKind,
   type DriverId,
   partLevel,
+  type Placed,
   type PlacedType,
   ZONES,
   type GameState,
@@ -164,6 +172,103 @@ function nextParking(state: GameState): { type: PlacedType; x: number; y: number
 function nextLand(state: GameState): number | null {
   const forSale = state.map.parcels.filter((parcel) => !parcel.owned).sort((a, b) => a.price - b.price);
   return forSale[0]?.id ?? null;
+}
+
+// ---------------------------------------------------------------- grounds --
+
+/**
+ * Where to put a Facilities Yard for a place: on free ground within its reach,
+ * where it covers the most places no yard covers yet. A second yard for a
+ * place whose first is full goes as near to it as it can, so it takes over.
+ */
+function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | null {
+  if (nearest) return menuSpot(state, 'yard', spot.x, spot.y);
+  const spec = PLACED.yard;
+  const uncovered = state.map.placed.filter((p): p is Placed => !!p && isMessSpot(p) && (state.map.care.yard[p.id] ?? -1) < 0);
+  const gap = (px: number, py: number, p: Placed): number =>
+    Math.max(Math.max(p.x - (px + spec.w - 1), px - (p.x + p.w - 1), 0), Math.max(p.y - (py + spec.h - 1), py - (p.y + p.h - 1), 0));
+  const yards = state.map.placed.filter((p): p is Placed => !!p && p.type === 'yard');
+  let best: Point | null = null;
+  let bestCount = 0;
+  let bestApart = -1;
+  let bestFar = Infinity;
+  for (let py = spot.y - spec.radius; py <= spot.y + spot.h - 1 + spec.radius; py++) {
+    for (let px = spot.x - spec.radius - spec.w + 1; px <= spot.x + spot.w - 1 + spec.radius; px++) {
+      const far = gap(px, py, spot);
+      if (far < 1 || far > spec.radius) continue;
+      if (onStreetPlan(px, py) || onStreetPlan(px + 1, py) || previewPlace(state, 'yard', px, py).problem !== null) continue;
+      const count = uncovered.filter((p) => gap(px, py, p) <= spec.radius).length;
+      // Among spots that cover as many, the one furthest from the yards already built: circles that overlap are wasted.
+      const apart = Math.min(2 * spec.radius, ...yards.map((y) => gap(px, py, y)));
+      if (count > bestCount || (count === bestCount && (apart > bestApart || (apart === bestApart && far < bestFar)))) {
+        best = [px, py];
+        bestCount = count;
+        bestApart = apart;
+        bestFar = far;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Keep the campus clean, as a player who taps a messy spot and reads its one
+ * fix would: a bin beside each place that drops litter, a Facilities Yard in
+ * reach of it, and as many workers as the yard says it needs. Hiring is free,
+ * so it never counts as a purchase.
+ */
+function tendGrounds(state: GameState, reserve: number, most: number): { state: GameState; built: number } {
+  let current = state;
+  let built = 0;
+  for (let guard = 0; guard < 40 && built < most; guard++) {
+    let acted = false;
+    for (const spot of current.map.placed) {
+      if (!spot || !isMessSpot(spot)) continue;
+      const fix = spotFix(current, spot);
+      if (fix === 'noBin') {
+        if (current.money.cash - PLACED.bin.cost < reserve) continue;
+        let cell: Point | null = null;
+        for (let ring = 1; ring <= 3 && !cell; ring++) {
+          for (let y = spot.y - ring; y <= spot.y + spot.h - 1 + ring && !cell; y++) {
+            for (let x = spot.x - ring; x <= spot.x + spot.w - 1 + ring && !cell; x++) {
+              if (!onStreetPlan(x, y) && previewPaint(current, 'bin', [[x, y]]).cells.length === 1) cell = [x, y];
+            }
+          }
+        }
+        const placed = cell ? applyAction(current, { type: 'paint', tool: 'bin', cells: [cell] }) : null;
+        if (!placed?.ok) continue;
+        current = placed.state;
+        built += 1;
+        acted = true;
+        break;
+      }
+      // No yard in reach, or the one in reach is full and still short of hands: build one where it covers the most.
+      const yardId = current.map.care.yard[spot.id] ?? -1;
+      const over = yardId >= 0 ? current.map.placed[yardId] : null;
+      const full = fix === 'understaffed' && !!over && workersAt(current, yardId) >= YARD_MAX_WORKERS && yardStatus(current, over).beyond;
+      if (fix === 'noYard' || full) {
+        if (current.money.cash - PLACED.yard.cost < reserve) continue;
+        const at = yardSpot(current, spot, full);
+        const placed = at ? applyAction(current, { type: 'place', building: 'yard', x: at[0], y: at[1] }) : null;
+        if (!placed?.ok) continue;
+        current = placed.state;
+        built += 1;
+        acted = true;
+        break;
+      }
+    }
+    if (!acted) break;
+  }
+  // Hire up to what each yard says it needs, and let go of those with nothing to do.
+  for (const yard of current.map.placed) {
+    if (!yard || yard.type !== 'yard') continue;
+    const status = yardStatus(current, yard);
+    const wanted = Math.max(1, Math.min(YARD_MAX_WORKERS, Math.ceil(status.need / WORK_PER_WORKER - 1e-9)));
+    if (wanted === workersAt(current, yard.id)) continue;
+    const staffed = applyAction(current, { type: 'staff', yard: yard.id, workers: wanted });
+    if (staffed.ok) current = staffed.state;
+  }
+  return { state: current, built };
 }
 
 function neediestZone(state: GameState): Zone | null {
@@ -345,6 +450,11 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
     current = placed.state;
     purchases += 1;
   }
+
+  // Grounds: bins, a yard, and the workers the yard asks for.
+  const grounds = tendGrounds(current, reserve, style === 'casual' ? 2 : style === 'daily' ? 4 : 8);
+  current = grounds.state;
+  purchases += grounds.built;
 
   // Then the Build menu, as a player who has read the Happiness panel would use it.
   // A bigger campus needs more of everything, so a visit covers more than it did before there was land to buy.

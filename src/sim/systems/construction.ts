@@ -28,6 +28,8 @@ export function finishBuild(state: GameState, buildingId: number, log: LogEntry[
   b.stage = b.rebuild.toStage;
   b.variant = b.rebuild.variant;
   b.rebuild = null;
+  // A lot that has just opened a stage may be ready for the next, so growth looks again.
+  if (state.map.care?.idle) state.map.care.idle[b.zone] = false;
   markRatesDirty(state);
   const spec = stageSpec(b.zone, b.stage);
   const unit = b.zone === 'housing' ? 'beds' : 'seats';

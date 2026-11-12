@@ -8,12 +8,12 @@ import type { PlacedType } from '../types';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'parking' | 'landmark';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Landmarks';
+  category: 'Academics' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -100,6 +100,22 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Parking structure', category: 'Roads and parking', family: 'parking', w: 2, h: 2, cost: 160_000, upkeepPerYear: 6_000,
     radius: 0, strength: 0, effect: 'Lets 100 locals drive in. Needs a road to a town street', sprite: 'build.garage', flat: false, buildable: true, cars: 100,
   },
+  bin: {
+    name: 'Trash bin', category: 'Grounds', family: 'bin', w: 1, h: 1, cost: 1_500, upkeepPerYear: 0,
+    radius: 3, strength: 0, effect: 'Catches litter within 3 cells. Workers empty it', sprite: 'grounds.bin', flat: false, buildable: true,
+  },
+  bench: {
+    name: 'Bench', category: 'Grounds', family: 'seat', w: 1, h: 1, cost: 2_500, upkeepPerYear: 0,
+    radius: 3, strength: 0, effect: 'Somewhere to sit for the lots within 3 cells', sprite: 'grounds.bench', flat: false, buildable: true,
+  },
+  table: {
+    name: 'Picnic table', category: 'Grounds', family: 'seat', w: 1, h: 1, cost: 4_000, upkeepPerYear: 0,
+    radius: 3, strength: 0, effect: 'Seating, and more social life near dining or Academic lots', sprite: 'grounds.table', flat: false, buildable: true,
+  },
+  yard: {
+    name: 'Facilities Yard', category: 'Grounds', family: 'yard', w: 2, h: 1, cost: 60_000, upkeepPerYear: 0,
+    radius: 8, strength: 0, effect: 'Its workers empty bins, sweep and fix within 8 cells', sprite: 'build.yard', flat: false, buildable: true,
+  },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Where the university began', sprite: 'build.admin', flat: false, buildable: false,
@@ -108,7 +124,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
 
 /** The order of the Build menu. */
 export const BUILD_ORDER: readonly PlacedType[] = [
-  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage',
+  'library', 'dining', 'coffee', 'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard',
 ];
 
 /** A pond cell counts as this share of a quad cell in the one green-space input, which is capped. */

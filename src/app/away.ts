@@ -14,6 +14,10 @@ export interface AwayReport {
   cashAfter: number;
   studentsBefore: number;
   studentsAfter: number;
+  /** Grounds in one line: the messiest spot and its fix, bins filled, repairs made. '' when there is nothing to say. */
+  grounds?: string;
+  /** True when cleanliness is what is holding Happiness back, so the line leads the list. */
+  groundsFirst?: boolean;
 }
 
 export interface SavedApp {
@@ -61,6 +65,8 @@ function readAway(raw: unknown): AwayReport | null {
     cashAfter: r.cashAfter as number,
     studentsBefore: r.studentsBefore as number,
     studentsAfter: r.studentsAfter as number,
+    grounds: typeof r.grounds === 'string' ? r.grounds : '',
+    groundsFirst: r.groundsFirst === true,
   };
 }
 

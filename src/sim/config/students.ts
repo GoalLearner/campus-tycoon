@@ -202,12 +202,18 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
  * 2026-11-11). A cause is the average of its drivers. A new driver, such as
  * noise, joins by being given a cause here; nothing else has to change.
  */
-export type DriverId = 'walk' | 'green' | 'dining' | 'recreation' | 'safety';
-export type CauseId = 'walk' | 'green' | 'life' | 'safety';
+export type DriverId = 'walk' | 'green' | 'clean' | 'seating' | 'dining' | 'recreation' | 'safety';
+export type CauseId = 'walk' | 'grounds' | 'life' | 'safety';
 /** Which cause each driver counts toward. Dining and things to do share one: "Food & fun". */
-export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'green', dining: 'life', recreation: 'life', safety: 'safety' };
+export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'grounds', clean: 'grounds', seating: 'grounds', dining: 'life', recreation: 'life', safety: 'safety' };
+/**
+ * How much each driver counts inside its cause. Grounds is green space, how
+ * clean it is and somewhere to sit, and they do not count the same: a bench
+ * must not weigh as much as a quad.
+ */
+export const PART_WEIGHTS: Record<DriverId, number> = { walk: 1, green: 0.5, clean: 0.3, seating: 0.2, dining: 1, recreation: 1, safety: 1 };
 /** The causes in the order they are listed. Every one counts the same. */
-export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, green: 1, life: 1, safety: 1 };
+export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, grounds: 1, life: 1, safety: 1 };
 /** [T] How far one student's mood can sit from their spot's score. */
 export const TEMPERAMENT_SPREAD = 6;
 /** [T] The lowest score for each face, from delighted down. Below the last is the saddest. */
@@ -349,4 +355,12 @@ export const THOUGHTS = {
   ],
   commuterSafetyGood: ['Somebody always turns up when things go sideways near my lecture hall.'],
   commuterSafetyLow: ['Nobody would come if something went wrong by my lecture hall. It needs a Medical Center or Campus Safety in reach.'],
+  cleanGood: ['The paths by my dorm are spotless. Somebody clearly cares.', 'Not a wrapper in sight. I like that about this place.'],
+  cleanLow: ['So much trash by where we eat. A bin and somebody to empty it would fix it.', 'The bins near my dorm are overflowing again. It needs workers nearby.'],
+  commuterCleanGood: ['The walk to my lecture hall is always clean.'],
+  commuterCleanLow: ['So much trash on the way to class. It needs bins, and workers to empty them.'],
+  seatingGood: ['Love eating lunch out here. There is always somewhere to sit.', 'A bench in the sun between classes. Perfect.'],
+  seatingLow: ['Nowhere to sit outside near my dorm. A few benches would do it.', 'I ate lunch standing up again. A picnic table nearby would help.'],
+  commuterSeatingGood: ['There is always a bench free by my lecture hall.'],
+  commuterSeatingLow: ['Nowhere to sit between classes. A bench or a picnic table by the lecture halls would help.'],
 } as const;

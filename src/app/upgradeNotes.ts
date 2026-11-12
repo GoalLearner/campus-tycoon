@@ -16,5 +16,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: a town now stands along the east edge of campus. Locals in new classes live there and need a way in: a path to College Avenue to walk, or parking with a road to drive. Without one they need a bed. Students already enrolled are not affected.',
     );
   }
+  if (fromVersion < 7) {
+    notes.push(
+      'New: students now drop litter where they eat and play. A Trash bin beside each such place catches most of it, and workers from a Facilities Yard empty the bins and sweep. Nothing falls for the first day and a half.',
+    );
+  }
   return notes;
 }

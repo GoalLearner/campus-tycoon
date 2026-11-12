@@ -50,6 +50,10 @@ export type PlacedType =
   | 'safety'
   | 'parking'
   | 'garage'
+  | 'bin'
+  | 'bench'
+  | 'table'
+  | 'yard'
   | 'admin';
 
 /** A hand-placed building. It is whole from the moment it is placed. */
@@ -128,6 +132,30 @@ export interface Town {
   };
 }
 
+/** For grounds: the lots that use each mess spot, the bins beside it, and the yard that looks after each thing. */
+export interface Care {
+  /** Lots within reach of each mess spot, by its id. */
+  users: Record<number, number>;
+  /** Ids of the bins beside each mess spot. */
+  bins: Record<number, number[]>;
+  /** The yard that looks after each placed thing, by its id. -1 when no circle covers it. */
+  yard: Record<number, number>;
+  /** Every zoned lot on the map. */
+  lots: number;
+  /**
+   * Ids of the placed things of each family, so a search for "dining in reach" does not walk every bin and bench.
+   * Missing on a save written before it existed, until the next action rebuilds it.
+   */
+  byFamily?: Record<string, number[]>;
+  /**
+   * Set for a zone when no lot of it could start growing. Until a build
+   * finishes or the player changes the map, none can, so growth need not look
+   * again. Without this a campus of stalled lots is searched on every beat of
+   * catch-up for nothing.
+   */
+  idle?: Partial<Record<Zone, boolean>>;
+}
+
 export interface MapState {
   width: number;
   height: number;
@@ -140,6 +168,8 @@ export interface MapState {
   /** The land: what the campus owns and what is for sale. */
   parcels: Parcel[];
   town: Town;
+  /** Who serves what on the grounds. Worked out after every action, like desirability. */
+  care: Care;
   /** Desirability of each cell, read as its own zone. 0 where there is no lot. */
   score: number[];
   /** Walk to the nearest Academic lot along paths, in minutes. -1 when unreachable or unused. */
@@ -252,6 +282,28 @@ export interface GameState {
   timerSeq: number;
   stats: Stats;
   incidents: Incidents;
+  grounds: Grounds;
+}
+
+/** Litter, bins, workers and broken things. Keys are ids of placed things unless said otherwise. See DESIGN.md section 29. */
+export interface Grounds {
+  /** Litter lying around each mess spot, from nothing up to its ceiling. */
+  litter: Record<number, number>;
+  /** How full each bin is. */
+  bins: Record<number, number>;
+  /** Broken bins, benches and tables: the work left to fix each. */
+  broken: Record<number, number>;
+  /** Broken street lamps, by cell index: the work left to fix each. */
+  lamps: Record<number, number>;
+  /** Workers hired at each Facilities Yard. */
+  workers: Record<number, number>;
+  /** The tick something last broke at each mess spot. */
+  lastBreak: Record<number, number>;
+  /** No litter falls before this tick. Set on an upgraded save, so the player reads about litter first. */
+  quietUntilTick: number;
+  /** Totals over the life of the save. */
+  overflowed: number;
+  repaired: number;
 }
 
 export type IncidentKind = 'injury' | 'mischief';
@@ -290,6 +342,7 @@ export type LogKind =
   | 'graduation'
   | 'semester'
   | 'incident'
+  | 'grounds'
   | 'yearEnd'
   | 'grant'
   | 'paused';

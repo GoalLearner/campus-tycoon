@@ -14,6 +14,10 @@ import {
   dateAt,
   formatDate,
   capacityWanted,
+  WAGE_PER_YEAR,
+  workersAt,
+  YARD_MAX_WORKERS,
+  type Tool,
   hasRoadAccess,
   housingFixes,
   hoodAt,
@@ -52,7 +56,7 @@ import {
 } from '../sim';
 import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
-import { hoodSummary, housingFixLines, parcelSummary, ROAD_ENTRY } from './buildUi';
+import { hoodSummary, housingFixLines, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -96,11 +100,22 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: string }> = [
 ];
 
 
+/** Tools picked from the Build menu and kept in hand until Done: they have no button in the bar. */
+const DRAG_FROM_MENU: readonly ToolChoice[] = ['road', 'bin', 'bench', 'table'];
+const ROW_HINT: Record<'bin' | 'bench' | 'table', string> = {
+  bin: 'Tap or drag to place. One within three cells of each place students eat, shop or play is enough.',
+  bench: 'Tap or drag to place. It seats the lots within three cells.',
+  table: 'Tap or drag to place. It seats the lots within three cells, and adds to social life near dining or lecture halls.',
+};
+
 const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]> = {
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
   road: ['road cell', 'road cells'],
+  bin: ['trash bin', 'trash bins'],
+  bench: ['bench', 'benches'],
+  table: ['picnic table', 'picnic tables'],
   quad: ['quad cell', 'quad cells'],
   tree: ['tree', 'trees'],
   clear: ['cell', 'cells'],
@@ -340,7 +355,19 @@ export function mountUi(root: HTMLElement): void {
     session.setGhost(spot.x, spot.y);
     session.lookAt(spot.x, spot.y);
   });
-  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorAction);
+  // A Facilities Yard: a minus and a plus for its workers.
+  let staffYard: number | null = null;
+  const changeStaff = (by: number): void => {
+    if (staffYard === null) return;
+    const result = store.dispatch({ type: 'staff', yard: staffYard, workers: workersAt(store.state, staffYard) + by });
+    if (!result.ok) session.notify(result.error, 'error');
+  };
+  const inspectorStaff = el('div', 'inspector-staff');
+  const fewer = button('\u2212', 'staff-button', () => changeStaff(-1));
+  const more = button('+', 'staff-button', () => changeStaff(1));
+  const staffCount = el('span', 'staff-count');
+  inspectorStaff.append(fewer, staffCount, more);
+  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorStaff, inspectorAction);
 
   const studentPanel = mountStudentCard();
 
@@ -377,7 +404,7 @@ export function mountUi(root: HTMLElement): void {
   const modeButtons = el('div', 'placer-buttons');
   modeButtons.append(
     button('Done', 'primary mode-done', () => {
-      if (session.tool === 'road') session.setTool('look');
+      if (DRAG_FROM_MENU.includes(session.tool)) session.setTool('look');
       else session.setOverlay(null);
     }),
   );
@@ -402,7 +429,8 @@ export function mountUi(root: HTMLElement): void {
 
   function openBuild(): void {
     openBuildMenu(root, buildEntries(), (entry) => {
-      if (entry.id === ROAD_ENTRY) session.setTool('road');
+      // Roads, bins, benches and tables are laid by dragging. Everything else is placed one at a time.
+      if (entry.id?.startsWith(TOOL_ENTRY)) session.setTool(entry.id.slice(TOOL_ENTRY.length) as Tool);
       else if (entry.id) session.startPlacing(entry.id as PlacedType);
     });
   }
@@ -500,7 +528,13 @@ export function mountUi(root: HTMLElement): void {
     openModal((close, card) => {
       card.append(el('h1', '', summary ? summary.headline : 'New since your last visit'));
       const list = el('ul', 'away-list');
-      for (const line of summary?.lines ?? []) list.append(el('li', '', line));
+      const lines = [...(summary?.lines ?? [])];
+      // Grounds has one line. It leads only when cleanliness is what is holding Happiness back.
+      if (report?.grounds) {
+        if (report.groundsFirst) lines.unshift(report.grounds);
+        else lines.push(report.grounds);
+      }
+      for (const line of lines) list.append(el('li', '', line));
       // Rules that are new to an older save, told once.
       for (const note of notes) list.append(el('li', 'away-note', note));
       card.append(
@@ -785,6 +819,8 @@ export function mountUi(root: HTMLElement): void {
     const cell = selected ? cellAt(state.map, selected.x, selected.y) : null;
     const placedHere = selected ? placedAt(state.map, selected.x, selected.y) : null;
     actionLand = null;
+    staffYard = null;
+    inspectorStaff.classList.remove('show');
     setText(inspectorAction, 'Build a dining hall here');
     // A field for sale: its price, and a button to buy it.
     const parcel = selected ? parcelAt(state.map, selected.x, selected.y) : null;
@@ -815,6 +851,14 @@ export function mountUi(root: HTMLElement): void {
       setText(inspectorTitle, PLACED[placedHere.type].name);
       setText(inspectorState, placedSummary(state, placedHere));
       setText(inspectorFacts, placedFacts(placedHere));
+      if (placedHere.type === 'yard') {
+        staffYard = placedHere.id;
+        const workers = workersAt(state, placedHere.id);
+        setText(staffCount, `${workers} ${workers === 1 ? 'worker' : 'workers'} · ${dollars(WAGE_PER_YEAR)} a year each`);
+        fewer.disabled = workers <= 0;
+        more.disabled = workers >= YARD_MAX_WORKERS;
+        inspectorStaff.classList.add('show');
+      }
       inspectorAction.classList.remove('show');
       inspector.classList.add('show');
       return;
@@ -896,14 +940,25 @@ export function mountUi(root: HTMLElement): void {
 
   /** The bar for a mode that lasts until Done: laying road, or looking at the Parking overlay. */
   function renderModeBar(): boolean {
-    const road = session.tool === 'road';
-    const parking = !road && session.overlay === 'parking' && session.tool === 'look';
-    const show = (road || parking) && session.clearing === null;
+    const tool = session.tool;
+    const road = tool === 'road';
+    const row = tool === 'bin' || tool === 'bench' || tool === 'table';
+    const overlay = !road && !row && tool === 'look' ? session.overlay : null;
+    const parking = overlay === 'parking';
+    const show = (road || row || overlay !== null) && session.clearing === null;
     modeBar.classList.toggle('show', show);
     if (!show) return false;
     if (road) {
       setText(modeTitle, `Road · ${dollars(COST.road)} a cell`);
       setText(modeState, 'Drag to lay road. Green road reaches a street. Red does not yet. The street to reach is blue.');
+    } else if (row) {
+      setText(modeTitle, `${PLACED[tool].name} · ${dollars(PLACED[tool].cost)} each`);
+      setText(modeState, ROW_HINT[tool]);
+    } else if (overlay === 'clean') {
+      setText(modeTitle, 'Cleanliness');
+      setText(modeState, "Green is clean, yellow is getting messy, red is dirty or needs a worker. Blue is where a yard's workers reach.");
+    } else if (!parking) {
+      return false;
     } else {
       setText(modeTitle, 'Parking');
       setText(modeState, 'Green car parks have a road to a street. Red ones hold no cars until a road joins them to the blue street.');
@@ -914,7 +969,7 @@ export function mountUi(root: HTMLElement): void {
   function renderPlacer(state: GameState): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
-    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || session.tool === 'road' || session.overlay !== null);
+    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     if (!type) return;
     setText(placerTitle, placingLine(type));
     const ghost = session.ghost;
@@ -947,6 +1002,16 @@ export function mountUi(root: HTMLElement): void {
       if (view.advice) card.append(el('p', '', view.advice));
       card.append(el('p', 'fine', view.staying));
       if (view.lastSemester) card.append(el('p', 'fine', view.lastSemester));
+      // Grounds is partly how clean the campus is. The overlay shows where the mess is and who can reach it.
+      if (view.rows.some((row) => row.id === 'grounds')) {
+        card.append(
+          button('Show cleanliness', 'wide', () => {
+            session.setTool('look');
+            session.setOverlay('clean');
+            close();
+          }),
+        );
+      }
       if (view.build) {
         card.append(
           button('Open the Build menu', 'primary wide', () => {
@@ -967,7 +1032,7 @@ export function mountUi(root: HTMLElement): void {
     const picking = tool === 'tree' && treeButtons.length > 0;
     treePicker.classList.toggle('show', picking);
     // The tree picker and the road bar both sit where the chip would be, so it moves up.
-    chip.classList.toggle('raised', picking || tool === 'road');
+    chip.classList.toggle('raised', picking || DRAG_FROM_MENU.includes(tool));
     treeButtons.forEach((b, kind) => b.classList.toggle('active', kind === session.treeKind));
     if (tool === 'look' || tool === 'place') {
       chip.classList.remove('show', 'bad');

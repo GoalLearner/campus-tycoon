@@ -58,7 +58,8 @@ describe('placing buildings', () => {
   it('starts a campus with a dining hall and the Administration building', () => {
     const state = freshGame();
     const types = state.map.placed.map((p) => p?.type);
-    expect(types).toEqual(['dining', 'admin']);
+    // And two trash bins beside the dining hall.
+    expect(types).toEqual(['dining', 'admin', 'bin', 'bin']);
     // The first dorms are fed, so they can grow past their first stage.
     expect(fedAt(state.map, 10, 13)).toBe(true);
   });
@@ -224,7 +225,8 @@ describe('happiness', () => {
     const home = studentHome(state, resident)!;
     const before = approvalAt(state, home);
     // Four causes, never more, and every one counts the same.
-    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'green', 'life', 'safety']);
+    expect(before.causes.map((c) => c.id)).toEqual(['walk', 'grounds', 'life', 'safety']);
+    expect(before.causes.find((c) => c.id === 'grounds')!.parts.map((part) => part.id)).toEqual(['green', 'clean', 'seating']);
     expect(before.causes.every((c) => c.weight === 1)).toBe(true);
     expect(before.causes.find((c) => c.id === 'life')!.parts.map((part) => part.id)).toEqual(['dining', 'recreation']);
     expect(before.score).toBeCloseTo(25 * before.causes.reduce((sum, c) => sum + c.level, 0));

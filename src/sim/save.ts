@@ -1,5 +1,6 @@
 import { STARTER } from './config/map';
 import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
+import { GROUNDS_QUIET_TICKS } from './config/grounds';
 import { LOCAL_SHARE, WORLD } from './config/town';
 import { recomputeDesirability } from './systems/desirability';
 import { buildTown, startingParcels } from './systems/town';
@@ -11,7 +12,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface SaveFile {
   v: number;
@@ -142,6 +143,18 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (money) money.ratesDirty = true;
     return state;
   },
+  // Version 7 added grounds: litter, bins, seating and Facilities Yards (DESIGN.md 29.7).
+  // Nothing is added to the map and nothing is charged. No litter falls for the first 36 hours.
+  6: (state) => {
+    const tick = Number((state.clock as { tick?: number } | undefined)?.tick ?? 0);
+    if (typeof state.grounds !== 'object' || state.grounds === null) {
+      state.grounds = { litter: {}, bins: {}, broken: {}, lamps: {}, workers: {}, lastBreak: {}, quietUntilTick: tick + GROUNDS_QUIET_TICKS, overflowed: 0, repaired: 0 };
+    }
+    const map = state.map as unknown as MapState;
+    map.care = { users: {}, bins: {}, yard: {}, lots: 0 };
+    recomputeDesirability(map);
+    return state;
+  },
 };
 
 export type LoadResult =
@@ -179,7 +192,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {
@@ -193,6 +206,7 @@ export function validate(state: unknown): string | null {
   if (!Array.isArray(buildings)) return 'The map has no building list.';
   if (!Array.isArray(map.placed)) return 'The map has no list of placed buildings.';
   if (!Array.isArray(map.parcels)) return 'The map has no land records.';
+  if (!isObject(map.care)) return 'The map has no grounds records.';
   if (!isObject(map.town) || !Array.isArray(map.town.neighbourhoods) || !isObject(map.town.access)) return 'The map has no town.';
   if ((state.offCampus as unknown[]).length !== 4) return 'The save has the wrong number of class years living off campus.';
   if (!Array.isArray(state.classes)) return 'The save has no class records.';
