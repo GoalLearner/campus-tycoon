@@ -107,7 +107,7 @@ export function buildEntries(): BuildEntry[] {
     category: 'Grounds',
     cost: `${dollarsShort(PLACED[type].cost)} each`,
     footprint: 'tap or drag a row',
-    upkeep: 'No upkeep',
+    upkeep: 'Costs nothing to run',
     effect: PLACED[type].effect,
   }));
   const firstGrounds = entries.findIndex((entry) => entry.category === 'Grounds');

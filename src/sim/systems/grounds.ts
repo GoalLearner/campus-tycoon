@@ -197,15 +197,18 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
   // 1. Litter falls. Bins beside the spot catch most of it until they are full.
   for (const spot of spots) {
     const lying = g.litter[spot.id] ?? 0;
-    const drop = dropOf(state, spot) * (1 + (DIRT_INVITES * lying) / LITTER_CEILING);
+    const drop = dropOf(state, spot);
     if (drop <= 0) continue;
+    // Dirt invites dirt: at a filthy place half again as much is dropped on the ground. What goes in the
+    // bins is the same as ever, so a dirty place asks no more of its bins than a clean one.
+    const invited = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
     const beside = map.care.bins[spot.id];
     let open = 0;
     if (beside) for (const id of beside) if (!((g.broken[id] ?? 0) > 0) && (g.bins[id] ?? 0) < BIN_CAPACITY) open += 1;
-    let ground = drop;
+    let ground = drop * invited;
     if (open > 0) {
       const each = (drop * BIN_CATCH) / open;
-      ground = drop * (1 - BIN_CATCH);
+      ground = drop * (1 - BIN_CATCH) * invited;
       for (const id of beside!) {
         if ((g.broken[id] ?? 0) > 0 || (g.bins[id] ?? 0) >= BIN_CAPACITY) continue;
         const before = g.bins[id] ?? 0;

@@ -694,7 +694,7 @@ Design targets for a mid-game campus on each ladder. They are tuning goals, not 
 | Events and one-offs | 2% | 2% |
 | Left for projects | 15% | 10% |
 
-**Proposed on 2026-11-11 with section 31, and waiting for the owner's go-ahead: the same spending, shown by what it buys.** The slider totals above move by a point or two. Facilities gives up two points to make room for insurance and marketing, which had no line. Payroll with benefits comes to 59% of spending on the size ladder and 58% on the prestige ladder.
+**Proposed on 2026-11-11 with section 31, accepted by the owner the same day, and built as play stop 5: the same spending, shown by what it buys.** Football, tiers and scholarships are not built, so the lines that are carry the spending between them: 31.10 gives the shares measured. The slider totals above move by a point or two. Facilities gives up two points to make room for insurance and marketing, which had no line. Payroll with benefits comes to 59% of spending on the size ladder and 58% on the prestige ladder.
 
 | Spending, as a share of income | Funded by | Size ladder | Prestige ladder |
 |---|---|---|---|
@@ -729,7 +729,7 @@ When cash would go below zero at the daily check:
 3. The game never ends.
 ```
 
-Cash paid into the endowment cannot be withdrawn. It earns a small permanent income [T]. Because a deficit draws on it before the state steps in, nobody can hoard and take a bailout.
+Cash paid into the endowment cannot be withdrawn. It earns a small permanent income [T]. Because a deficit draws on it before the state steps in, nobody can hoard and take a bailout. **Built in its plain form with play stop 5 (31.10):** paid in from the Money panel, 2% a game year [T], and a shortfall draws on it before the state does. The bailout itself, with its penalties, is still layer 2.
 
 ### 9.6 Clearing and refunds
 
@@ -1428,7 +1428,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 5, Money, built (31.10, 29.16, 32.1):** payroll and every other cost as its own line, the Money panel, recruiting and marketing, the plain endowment, a seven-day phase-in for older saves, a yard that reaches sixteen cells with six workers, a card for anything broken, and a campus that opens with all four class years. Save version 9. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1902,7 +1902,7 @@ applications -> acceptance rate -> yield -> retention -> graduation rate -> alum
 
 | Stage | Rule | Its causes | Before this section |
 |---|---|---|---|
-| Applications | The pool per tier, section 7.3 | Academic standing, athletic standing, price, the tier's ceiling | Existed |
+| Applications | The pool per tier, section 7.3 | Academic standing, athletic standing, price, recruiting and marketing. Marketing took the place of the tier's ceiling on 2026-11-11 (31.3): a ceiling is the wall the others push against, not something the player does. Built with play stop 5 | Existed |
 | Acceptance rate | Offers divided by applications. Offers are admitted students divided by yield | Room on campus, the size of the pool, yield | Existed upside down as applicants per seat |
 | Yield | The share of offers that enrol, per tier, worked out at each intake | How the campus looks (average Housing desirability), cost after aid, facilities condition | A fixed number per tier |
 | Retention | The share of each class that returns, applied each semester | Happiness, safety and health coverage, policies, living on campus | Existed, flat in the first playable |
@@ -2351,9 +2351,9 @@ A new shelf in the Build menu. Each thing is one cell and cheap, and dragging la
 
 | Decision | Why |
 |---|---|
-| The Facilities Yard becomes a real building: 2 by 1, about $60,000, covering a circle of twelve cells [T]. It was eight, like the Medical Center, until the owner widened it on 2026-11-11 (29.15) | The owner's instruction |
-| The yard's card has a plus and a minus. It holds up to four workers [T] and opens with one | "A simple + / - count up to a cap per yard" |
-| Each worker costs a wage of about $36 a real hour, which is $6,000 a game year [T]. Hiring and letting go are instant and free | Set once and left alone. It suits one visit a day |
+| The Facilities Yard becomes a real building: 2 by 1, about $60,000, covering a circle of sixteen cells [T]. It was eight, like the Medical Center, then twelve (29.15), and sixteen since play stop 5 (29.16) | The owner's instruction |
+| The yard's card has a plus and a minus. It holds up to six workers [T], four until play stop 5 (29.16), and opens with one | "A simple + / - count up to a cap per yard" |
+| Each worker costs a wage of $48,000 a game year [T], with benefits on top like all pay. It was $6,000 until play stop 5 (29.16). Hiring and letting go are instant and free | Set once and left alone. It suits one visit a day |
 | Workers do everything inside the circle by themselves, in this order: mend a broken bin (added in 29.15), empty the fullest bins, sweep the dirtiest spot, fix whatever else is broken | Prevention first. No patrol areas, no job lists and no mowing, which were RollerCoaster Tycoon's most hated chores |
 | One worker keeps about two busy spots clean [T]. More workers clear faster. Too few and litter builds to its ceiling | The owner's rule |
 | The card says "Keeping up" or "Understaffed: hire 2 more", from the same sums | One line that names the fix |
@@ -2487,7 +2487,7 @@ Play stop 4a, 2026-11-11. Everything in 29.2 to 29.7 is built except what is lis
 | Litter | A busy food place drops 4 at each 20-minute check, up to a ceiling of 100, where the spot is 30% clean. A spot at its ceiling draws half again as much |
 | Bins | Catch 85% within three cells and hold 40. A full bin catches nothing. Shown as the can, then heaped, then with a bag beside it |
 | Paths | Lots outside a staffed yard's circle are never above 85% clean. Inside one the paths are swept |
-| The yard | 2 by 1, $60,000, a circle of twelve cells (eight until 29.15), one worker to start and four at most, $6,000 a year each. Its card has a minus and a plus |
+| The yard | 2 by 1, $60,000, a circle of sixteen cells (eight at first, twelve in 29.15, sixteen in 29.16), one worker to start and six at most, $48,000 a year each with benefits on top. Its card has a minus and a plus |
 | A worker | Clears 2.2 at each check: a broken bin first (29.15), then bins more than half full, fullest first, then the dirtiest spot, then what is broken, then the other bins. That is about two busy places with bins, or half of one without |
 | What a yard says | "Keeping up", or "Understaffed: hire 2 more", from the work its places ask for against what its workers can do. The work counts the litter already lying there and anything broken: a yard is keeping up only if its circle would be clean within about a day. A yard with all four workers and a backlog says "Full crew, catching up". It asks for another yard only when more falls at each check than four workers clear, which no amount of waiting fixes |
 | Seating | Benches and picnic tables within three cells, and quad cells. A broken one seats nobody. A table near a dining building or an Academic lot adds two spots to social life |
@@ -2550,6 +2550,22 @@ The panel closes with "A worker fixed the street lamp" when that happens while i
 **Simulate check added:** a campus whose workers were all let go gets filthy and has bins broken, and comes back above 90% clean within five days of hiring what each yard asks for, with nothing new built. It takes that long because a filthy place draws half again as much litter, and a yard holds four workers. The check on a well-staffed place now lets the player look in once after the fall class arrives, because a yard staffed for summer is short of hands that evening. The check on the casual player's grounds now asks for at least three places to a yard.
 
 **For the money work (the owner, 2026-11-11).** Workers' wages are about 0.2% of the casual player's income, too little to notice. When payroll gets its own lines (section 31), the wage is set again so that workers are a real cost and still an affordable one, in line with the other staff. Noted in 31.6.
+
+### 29.16 With the money stop
+
+Play stop 5, 2026-11-11. The owner accepted the proposal of 29.15 and asked for one more panel. Save version 9.
+
+| Change | What was built |
+|---|---|
+| Reach and crew | A yard reaches sixteen cells and holds six workers. An older save works out again which yard looks after what |
+| Places to a yard | The casual test player, twenty years, three campuses: 5.8, 6.5 and 6.5 places to a yard. The target of six to eight is met. The simulate check asks for at least five |
+| A broken bin, bench or table | Its card says what a broken street lamp's does (29.15): what broke it, whether a yard covers it, and when it will be fixed. What broke it is kept with the thing from now on. One broken before that names the nearest place that drops litter |
+| The wage | $48,000 a game year, up from $6,000, with benefits of 30% on top: $62,400 a worker. The yard's card and its Build menu card say so. In line with staff at $42,000 and faculty at $58,000 |
+| Deep litter clears faster | A worker clears half again as much at a place at its ceiling, the same measure by which that place draws more. And what a filthy place draws more of lands on the ground, not in its bins. So a crew that can keep its places clean can always win them back |
+
+**Why deep litter clears faster.** With six workers and a wider circle a yard looks after eight places or more. Left to rot, they asked for more than a full crew could ever clear, though the same crew could keep them clean: the game said "build another yard" for a campus that needed only time. The rule of 29.2, that dirt invites dirt, stays. It no longer makes a trap. A campus with no workers for six days is back above 90% clean within five days of hiring again, with nothing new built, and the simulate script holds it to that.
+
+**The wage against the target.** The table under 9.4 gives maintenance workers 2% of income. At a wage in line with other staff they come to about 1.2 to 1.9% with benefits in mid-game and about 1% on a mature campus, because the count of places that drop litter grows more slowly than enrollment. Reaching 2% on a mature campus would take a wage of about $100,000, more than a member of faculty. The owner's words were "a real but affordable cost, in line with the other staff", so the wage follows the staff and the share is reported as it falls.
 
 ---
 
@@ -2674,7 +2690,7 @@ The owner accepted every proposal in this table on 2026-11-11, with one choice o
 
 ## 31. Money: payroll and visible costs
 
-Asked for by the owner on 2026-11-11: "make costs visible and realistic. Discuss first, then propose where it lands." **Discussed and proposed here. Not built. It waits for the owner's go-ahead.**
+Asked for by the owner on 2026-11-11: "make costs visible and realistic. Discuss first, then propose where it lands." **Discussed and proposed here. Accepted by the owner on 2026-11-11, with every proposal of 31.9, and built the same day as play stop 5: 31.10 says what was built, what the rebalance moved and what is rough.**
 
 ### 31.1 Where money stands today
 
@@ -2812,6 +2828,56 @@ One piece could come sooner if wanted: the read-only panel alone, in the first h
 | Class-size target | 20 students to one member of faculty |
 | The phase-in | Seven daily steps over one game year, each in the away summary |
 | When | Play stop 5, after stop 4. Or the read-only panel alone in the first half of stop 4 |
+
+### 31.10 As built
+
+Play stop 5, 2026-11-11. `src/sim/systems/budget.ts` works out every line, `src/sim/config/money.ts` holds the numbers, and `moneyView` in `src/ui/buildUi.ts` turns them into the panel's words. Save version 9.
+
+| Line | Built [T] |
+|---|---|
+| Faculty | One for every 20 students, to the nearest whole person, at $58,000 |
+| Staff | One for every 40 students, at $42,000 |
+| Safety and medical staff | One for every 800 students in the building's circle, never fewer than one, at $42,000. A student is in a circle by the lots in it, as a litter place counts its users (29.14). The building's card shows "Staff of 3: $163,800 a year with benefits" |
+| Maintenance workers | The count on each yard, at $48,000 (29.16) |
+| Benefits | 30% on top of all four |
+| Utilities | A dorm $5,500 or $13,000 by stage, a lecture hall $7,500 or $17,000. A hand-placed building $1,500 a cell, an open court or field $400 a cell, the pool $9,000. Ponds, bins and seats nothing |
+| Upkeep and repairs | The numbers of before, for each building and each cell of road |
+| Supplies, programs, insurance | $650, $500 and $220 a student |
+| Recruiting and marketing | Off, then four steps at $60, $120, $180 and $240 a student, lifting applications by 5, 9, 12 and 14% |
+| The flat $6,500 a student | Gone. The lines above replace it |
+| The endowment | Paid in from the Money panel in sums of a tenth or a quarter of the cash in hand. 2% a game year. Never paid out, except that a shortfall draws on it before the state does (9.5) |
+
+**The panel.** The cash figure on the top bar opens it. One sentence leads: "You keep $15 of every $100 that comes in." Then income, then spending as Payroll, Buildings and utilities, and Other, largest first, each with its share. A tap opens a group to its lines, each with the count behind it. Scholarships has no group until it has a line. Marketing has a minus and a plus. The endowment has its two sums and "It never comes back out." A building's Build menu card says what it will cost to run before it is bought: "Runs at $15K a year, plus staff from $55K".
+
+**Older saves.** Costs start at exactly what the save paid the day before and climb to the lines above in seven steps, one at each day's start. Each step puts one line in the away list: "Running costs rose a step, 3 of 7: $61M a year now, and about $72M once all 7 are in." The panel says the same while it lasts. Marketing is the player's own choice and is paid in full from the day it is turned on. A campus made new pays the lines in full from its first day.
+
+**The rebalance, against the test players.** Twenty game years each.
+
+| Measure | Before | After |
+|---|---|---|
+| Kept of every $100, years 3 to 8 | About 28 | 14 to 19 |
+| Payroll with benefits, of all spending | Not shown | 55 to 58% |
+| Sizes reached, casual and once-a-day players | 500 in year 2, 1,000 in year 3, 2,000 in year 4, 4,000 in year 6, 8,000 in year 11 | The same years. Enrollment at each year's reading is within 6% for the casual player and within 16% for the once-a-day one |
+| Cash in hand at the end | $350M and rising | Under half a year of spending, with about $200M in the endowment |
+| An untouched campus | Nets $211K a year | Nets $110K a year: 12 of every $100 |
+| A mature save from before, seven days of phase-in | | Spending goes from $55M to $72M a year. No rescue, and cash never under $26M |
+
+**What had to move.**
+
+- **Word of mouth, from 0.9 to 1.0** fall applicants for each student on campus. A campus now opens with all four class years (32.1), so about a quarter of the founders graduate each spring from the first year on. With nothing else changed the third year's class was a fifth smaller. This puts the first three years back to within a few points of where they were.
+- **Opening cash did not move.** It is still $400,000. What had to change was the order the test players buy in. With staff to pay from the day a building opens, a player who puts up a Medical Center and a Campus Safety office before anyone has moved in runs the first days at break-even, and half the founding class gives up waiting. The test players now house a class that is waiting before they buy services, as the top bar tells a person to. **This is the one early trap the new costs make,** and the Build menu card now carries the running cost so a person can see it coming.
+- **The fastest test player,** which spends every dollar on lots the moment it has one, ends up with half its dorms outside any Campus Safety circle. The casual and once-a-day players cover every dorm. The two coverage checks now read the casual player's campus.
+
+**Simulate checks added,** all six of 31.6: payroll is at least half of spending on a mature campus; the mid-game margin sits between 10 and 20%; both players reach each size within a year of the pace before; nobody holds more cash than a year of spending at any reading; a mature save from before needs no rescue while costs phase in; an untouched campus still nets a surplus after five years.
+
+**Rough, or not as designed.**
+
+- **Maintenance workers come to less than the 2% in the table of 9.4.** 29.16 says why. The wage was set by "in line with the other staff".
+- **The margin drifts above 20 late.** A mature campus keeps 19 to 22 of every $100 once its endowment is large, because the endowment's income counts. Mid-game is on target.
+- **Safety and medical staff come to about 2% of income** against 1.5% in the table, because the test players overlap their circles.
+- Scholarships, coaches, athletics and debt have no lines yet. The five sliders and the bailout are still layer 2.
+- A count is the nearest whole person, so the pay of a tiny campus is lumpy: one more student can add a member of faculty.
+- Paying into the endowment is one tap and cannot be undone. The sums offered are never more than a quarter of the cash in hand.
 
 ---
 
