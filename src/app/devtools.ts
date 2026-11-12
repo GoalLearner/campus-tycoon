@@ -548,6 +548,9 @@ export function installDevTools(): void {
     }
   } else if (params.get('demo') === 'life') {
     store.adopt(lifeCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
+  } else if (params.get('demo') === 'model') {
+    // The model campus of DESIGN.md section 35, unsaved. The same thing the Menu's visit opens.
+    store.adopt(newGame({ seed: Number(params.get('seed') ?? 20261112), name: 'Larkspur University', now: clock.now(), campus: 'model' }), { ephemeral: true });
   } else if (params.get('demo') === 'unjoined') {
     store.adopt(unjoinedCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'mature') {

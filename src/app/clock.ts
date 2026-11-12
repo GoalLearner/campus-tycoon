@@ -61,6 +61,13 @@ export const clock = {
     writeOffset(offsetMs);
   },
 
+  /** Time-skip builds only: put the clock back where it stood, undoing any skip made since. Used on the way back from a visit. */
+  restore(offset: number): void {
+    if (!hasTimeSkip || offset === offsetMs) return;
+    offsetMs = offset;
+    writeOffset(offsetMs);
+  },
+
   /** Forget every skip. Used when starting a new game. */
   reset(): void {
     offsetMs = 0;

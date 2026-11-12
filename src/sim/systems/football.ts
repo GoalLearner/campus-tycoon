@@ -1,4 +1,5 @@
 import { fansLift } from './boosts';
+import { scaleOf } from '../scale';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -64,6 +65,7 @@ import {
   SUPERFAN_ATTENDANCE,
   SUPERFAN_SHARE,
   TICKET_PRICE,
+  TIER_COST,
   TIER_SCORE,
   TITLE_DATE,
   TOP_BOWL_DATE,
@@ -97,17 +99,17 @@ const round1 = (value: number): number => Math.round(value * 10) / 10 + 0;
 
 // ---------------------------------------------------------------- set-up --
 
-/** What a coach of a given rating is paid a year. */
-export function coachPay(rating: number): number {
-  return Math.max(COACH_PAY_FLOOR, Math.round(((rating - 20) * COACH_PAY_PER_POINT) / 1000) * 1000);
+/** What a coach of a given rating is paid a year, on a campus of a given scale: a bigger programme pays in proportion. */
+export function coachPay(rating: number, scale = 1): number {
+  return Math.max(COACH_PAY_FLOOR, Math.round(((rating - 20) * COACH_PAY_PER_POINT) / 1000) * 1000) * scale;
 }
 
 const TRAIT_IDS: readonly CoachTrait[] = ['recruiter', 'tactician', 'developer', 'showman'];
 
-function makeCoach(rng: RngState, rating: number, until: number): Coach {
+function makeCoach(rng: RngState, rating: number, until: number, scale: number): Coach {
   const name = `${COACH_FIRST[nextInt(rng, 'football', COACH_FIRST.length)]} ${COACH_STARTS[nextInt(rng, 'football', COACH_STARTS.length)]}${COACH_ENDS[nextInt(rng, 'football', COACH_ENDS.length)]}`;
   const rated = Math.round(clamp(rating, 20, 95));
-  return { name, rating: rated, trait: TRAIT_IDS[nextInt(rng, 'football', TRAIT_IDS.length)]!, pay: coachPay(rated), until };
+  return { name, rating: rated, trait: TRAIT_IDS[nextInt(rng, 'football', TRAIT_IDS.length)]!, pay: coachPay(rated, scale), until };
 }
 
 /**
@@ -115,7 +117,7 @@ function makeCoach(rng: RngState, rating: number, until: number): Coach {
  * of the field, a founding coach on a three-year contract, and a roster of
  * four modest classes. `firstYear` is the first game year it plays a season.
  */
-export function newFootball(rng: RngState, field: Field, firstYear: number): Football {
+export function newFootball(rng: RngState, field: Field, firstYear: number, scale = 1): Football {
   const byPedigree = field.schools.map((school, id) => ({ id, fp: school.fp })).sort((a, b) => b.fp - a.fp || a.id - b.id);
   const from = Math.floor(byPedigree.length * CONFERENCE_BAND[0]);
   const to = Math.floor(byPedigree.length * CONFERENCE_BAND[1]);
@@ -132,7 +134,7 @@ export function newFootball(rng: RngState, field: Field, firstYear: number): Foo
     conference: `${CONFERENCE_NAMES[nextInt(rng, 'football', CONFERENCE_NAMES.length)]} Conference`,
     divisions: [[ME, ...rivals.slice(0, DIVISION_SIZE - 1)], rivals.slice(DIVISION_SIZE - 1)],
     rival: rivals[0]!,
-    coach: makeCoach(rng, FOUNDING_COACH_RATING, firstYear + CONTRACT_YEARS - 1),
+    coach: makeCoach(rng, FOUNDING_COACH_RATING, firstYear + CONTRACT_YEARS - 1, scale),
     candidates: [],
     classes: [...FOUNDING_CLASSES],
     pitch: 'safe',
@@ -154,10 +156,10 @@ export function makeCandidates(state: GameState): Coach[] {
   const found: Coach[] = [];
   for (let n = 0; n < COACH_CANDIDATES; n++) {
     const rating = level + (n - 1) * (CANDIDATE_SPREAD / 2) + (nextFloat(state.rng, 'football') * 2 - 1) * (CANDIDATE_SPREAD / 2);
-    let coach = makeCoach(state.rng, rating, until);
+    let coach = makeCoach(state.rng, rating, until, scaleOf(state));
     // No two on the list share a first name, with each other or with the coach they would replace.
     const first = (name: string): string => name.split(' ')[0]!;
-    for (let tries = 0; tries < 6 && [state.football.coach, ...found].some((other) => first(other.name) === first(coach.name)); tries++) coach = makeCoach(state.rng, rating, until);
+    for (let tries = 0; tries < 6 && [state.football.coach, ...found].some((other) => first(other.name) === first(coach.name)); tries++) coach = makeCoach(state.rng, rating, until, scaleOf(state));
     found.push(coach);
   }
   return found;
@@ -387,7 +389,17 @@ export function fanDemand(state: GameState, big = false): number {
 
 /** The seats the team plays in front of today. */
 export function seatsNow(state: GameState): number {
-  return SEATS[state.football.stadium.tier] ?? SEATS[0]!;
+  return seatsAt(state, state.football.stadium.tier);
+}
+
+/** The seats of a stadium tier on this campus. Seats are heads, so they follow the campus scale (DESIGN.md 35.7). */
+export function seatsAt(state: GameState, tier: number): number {
+  return (SEATS[tier] ?? SEATS[0]!) * scaleOf(state);
+}
+
+/** What a stadium tier costs to build on this campus. */
+export function tierCost(state: GameState, tier: number): number {
+  return (TIER_COST[tier] ?? 0) * scaleOf(state);
 }
 
 /** The crowd an ordinary home game would draw today: the fans who want to come, as far as there are seats. */
@@ -833,7 +845,7 @@ export function stadiumDone(state: GameState, log: LogEntry[]): void {
   stadium.tier = stadium.work.tier;
   stadium.work = null;
   markRatesDirty(state);
-  log.push({ tick: state.clock.tick, kind: 'football', text: `The new stadium is open: ${people(SEATS[stadium.tier] ?? 0)} seats.`, data: { keep: 1, tier: stadium.tier } });
+  log.push({ tick: state.clock.tick, kind: 'football', text: `The new stadium is open: ${people(seatsAt(state, stadium.tier))} seats.`, data: { keep: 1, tier: stadium.tier } });
 }
 
 /** How loud the stadium is at a cell on a home crowd's scale: 1 at its wall, fading to 0 at the edge of its reach. */
@@ -885,18 +897,20 @@ export function footballBooks(state: GameState): FootballBooks {
   const crowd = f.stadium.average > 0 ? Math.min(f.stadium.average, seatsNow(state)) : expectedCrowd(state);
   const students = enrollment(state);
   // Every cost follows the size of the school, and a stadium sets a floor under each.
-  const staff = Math.max(ATHLETICS_STAFF[tier] ?? 0, Math.round(students / STUDENTS_PER_ATHLETICS_STAFF));
-  const coach = Math.round(f.coach.pay * Math.min(1, students / COACH_FULL_PAY_STUDENTS));
-  const rent = tier === 0 ? Math.min(FIELD_RENT, students * FIELD_RENT_PER_STUDENT) : 0;
+  // The floors a stadium sets, and the size at which a coach is paid in full, are for the small game: each follows the scale.
+  const scale = scaleOf(state);
+  const staff = Math.max((ATHLETICS_STAFF[tier] ?? 0) * scale, Math.round(students / STUDENTS_PER_ATHLETICS_STAFF));
+  const coach = Math.round(f.coach.pay * Math.min(1, students / (COACH_FULL_PAY_STUDENTS * scale)));
+  const rent = tier === 0 ? Math.min(FIELD_RENT * scale, students * FIELD_RENT_PER_STUDENT) : 0;
   return {
     tickets: HOME_GAMES_PER_YEAR * crowd * ((TICKET_PRICE[f.stadium.price] ?? 0) + CONCESSIONS_PER_FAN),
     tv: f.tv.until >= state.clock.week.year ? f.tv.perYear : 0,
     pay: coach + staff * ATHLETICS_STAFF_PAY,
     coach,
     staff,
-    operations: Math.max(ATHLETICS_OPERATIONS[tier] ?? 0, students * OPERATIONS_PER_STUDENT) + rent,
-    upkeep: STADIUM_UPKEEP[tier] ?? 0,
-    utilities: STADIUM_UTILITIES[tier] ?? 0,
+    operations: Math.max((ATHLETICS_OPERATIONS[tier] ?? 0) * scale, students * OPERATIONS_PER_STUDENT) + rent,
+    upkeep: (STADIUM_UPKEEP[tier] ?? 0) * scale,
+    utilities: (STADIUM_UTILITIES[tier] ?? 0) * scale,
     crowd,
   };
 }

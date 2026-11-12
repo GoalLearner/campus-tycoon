@@ -183,6 +183,11 @@ export interface Care {
 }
 
 export interface MapState {
+  /**
+   * The campus scale (DESIGN.md 35.7): how many of the small game's students each bed, seat, parking space and
+   * town house stands for. 1 for every campus but the model campus. Read it through `scaleOf`.
+   */
+  scale: number;
   width: number;
   height: number;
   /** Row-major: index = y * width + x. */

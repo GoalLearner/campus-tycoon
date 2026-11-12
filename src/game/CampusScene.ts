@@ -6,54 +6,7 @@ import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import {
-  previewPaint,
-  rowBetween,
-  stageSpec,
-  TICK_MS,
-  type Building,
-  type GameState,
-  type Point,
-  type Zone,
-  personKey,
-  studentKey,
-  type PersonRef,
-  PLACED,
-  previewPlace,
-  reachCells,
-  incidentText,
-  hoodAt,
-  parcelAt,
-  driversNow,
-  hasRoadAccess,
-  isPathKind,
-  isRoadKind,
-  roadsByAccess,
-  binState,
-  enrollment,
-  isBrokenThing,
-  isMessSpot,
-  isPathKind as isWalk,
-  isBrokenLamp,
-  lampAt,
-  LITTER_CEILING,
-  spotClean,
-  workersAt,
-  yardOver,
-  START_LAND,
-  TOWN_X,
-  calendarAt,
-  dateAt,
-  dayRead,
-  homeGameNow,
-  SCHOOL_COLOURS,
-  weatherAt,
-  townHints,
-  townLiving,
-  townPlaces,
-  type Incident,
-  type Placed,
-} from '../sim';
+import { previewPaint, rowBetween, smallCount, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -268,10 +221,11 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeLive = store.onLive((entries) => {
       let movedIn = 0;
       for (const entry of entries) {
-        if (entry.kind === 'waitlist') movedIn += Number(entry.data?.count ?? 0);
-        else if (entry.kind === 'intake') movedIn += Number(entry.data?.admitted ?? 0);
+        // Newcomers drawn are a sample of those who arrived, as the small game would count them.
+        if (entry.kind === 'waitlist') movedIn += smallCount(store.state, Number(entry.data?.count ?? 0));
+        else if (entry.kind === 'intake') movedIn += smallCount(store.state, Number(entry.data?.admitted ?? 0));
       }
-      if (movedIn > 0) this.pendingArrivals += movedIn;
+      if (movedIn > 0) this.pendingArrivals += Math.ceil(movedIn);
     });
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -460,7 +414,7 @@ export class CampusScene extends Phaser.Scene {
       day: date.day,
       term,
       weather: this.weather,
-      students: enrollment(state),
+      students: smallCount(state, enrollment(state)),
       reduced,
       presence: day.walkers,
       exams: day.kind === 'midterms' || day.kind === 'finals',
@@ -1024,7 +978,7 @@ export class CampusScene extends Phaser.Scene {
   private unlinkedCarParks(state: GameState): Array<NonNullable<GameState['map']['placed'][number]>> {
     const out: Array<NonNullable<GameState['map']['placed'][number]>> = [];
     for (const placed of state.map.placed) {
-      if (placed && PLACED[placed.type].cars && !hasRoadAccess(state.map, placed)) out.push(placed);
+      if (placed && placedCars(placed.type, 1) > 0 && !hasRoadAccess(state.map, placed)) out.push(placed);
     }
     return out;
   }
@@ -1036,11 +990,11 @@ export class CampusScene extends Phaser.Scene {
    */
   private parkingOverlayOn(state: GameState): boolean {
     if (session.overlay === 'parking' || session.tool === 'road') return true;
-    if (session.placing && PLACED[session.placing].cars) return true;
+    if (session.placing && placedCars(session.placing, 1) > 0) return true;
     const selected = session.selected;
     const id = selected ? (state.map.cells[selected.y * state.map.width + selected.x]?.placedId ?? null) : null;
     const placed = id === null ? null : state.map.placed[id];
-    return !!placed && !!PLACED[placed.type].cars;
+    return !!placed && placedCars(placed.type, 1) > 0;
   }
 
   /** Green where cars can get to, red where they cannot, and the avenue every road has to reach in blue. */
@@ -1050,7 +1004,7 @@ export class CampusScene extends Phaser.Scene {
     for (const [x, y] of roads.linked) this.fillCell(x, y, PARKING_OK, 0.38);
     for (const [x, y] of roads.cut) this.fillCell(x, y, PARKING_CUT, 0.5);
     for (const placed of state.map.placed) {
-      if (!placed || !PLACED[placed.type].cars) continue;
+      if (!placed || placedCars(placed.type, 1) <= 0) continue;
       const linked = hasRoadAccess(state.map, placed);
       for (let cy = placed.y; cy < placed.y + placed.h; cy++) {
         for (let cx = placed.x; cx < placed.x + placed.w; cx++) this.fillCell(cx, cy, linked ? PARKING_OK : PARKING_CUT, linked ? 0.5 : 0.62);
@@ -1097,7 +1051,7 @@ export class CampusScene extends Phaser.Scene {
     const now = clock.now();
     for (const building of state.map.buildings) {
       if (!building?.rebuild) continue;
-      const total = stageSpec(building.zone, building.rebuild.toStage).buildTicks * TICK_MS;
+      const total = stageSpec(building.zone, building.rebuild.toStage, 1).buildTicks * TICK_MS;
       const remaining = this.realTimeOfTick(state, building.rebuild.doneTick) - now;
       const done = Phaser.Math.Clamp(1 - remaining / total, 0, 1);
       const pos = this.iso.toWorld(building.x, building.y);

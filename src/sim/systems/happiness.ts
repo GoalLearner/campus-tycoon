@@ -164,7 +164,8 @@ function zoneAverage(state: GameState, zone: Zone): { people: number; score: num
   let score = 0;
   for (const building of state.map.buildings) {
     if (!building || building.zone !== zone || building.stage < 1) continue;
-    const size = stageSpec(zone, building.stage).capacity;
+    // Used as a weight, so the campus scale cancels.
+    const size = stageSpec(zone, building.stage, 1).capacity;
     const here = approvalAt(state, building.y * state.map.width + building.x);
     for (const cause of here.causes) {
       for (const part of cause.parts) levels.set(part.id, (levels.get(part.id) ?? 0) + part.level * size);
@@ -276,7 +277,8 @@ export function campusLevels(state: GameState): CampusLevels {
     for (let i = 0; i < built.length; i += stride) {
       const building = built[i]!;
       const { x, y } = building;
-      const size = stageSpec(zone, building.stage).capacity;
+      // Used as a weight, so the campus scale cancels.
+    const size = stageSpec(zone, building.stage, 1).capacity;
       const walk = zone === 'housing' ? (map.walkMinutes[y * map.width + x] ?? -1) : -1;
       sum.people += size;
       sum.green += size * Math.min(1, scoreParts(map, x, y, zone, walk).green / GREEN_CAP[zone]);

@@ -169,7 +169,8 @@ export function libraryShare(state: GameState): number {
   let served = 0;
   for (const building of map.buildings) {
     if (!building || building.stage < 1) continue;
-    const size = stageSpec(building.zone, building.stage).capacity;
+    // Used as a weight, so the campus scale cancels.
+    const size = stageSpec(building.zone, building.stage, 1).capacity;
     people += size;
     for (const id of ids) {
       const placed = map.placed[id];

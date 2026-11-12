@@ -1,3 +1,5 @@
+import { scaleOf } from '../scale';
+import { placedCars } from '../config/placed';
 import { PLACED } from '../config/placed';
 import { WALK_MINUTES_PER_CELL } from '../config/desirability';
 import {
@@ -183,7 +185,7 @@ export function refreshTownAccess(map: MapState, steps: Int32Array): void {
   const linked: number[] = [];
   for (const placed of map.placed) {
     if (!placed) continue;
-    const cars = PLACED[placed.type].cars ?? 0;
+    const cars = placedCars(placed.type, scaleOf(map));
     if (cars === 0) continue;
     let touches = false;
     for (let y = placed.y - 1; y <= placed.y + placed.h && !touches; y++) {
@@ -207,8 +209,8 @@ export function hasRoadAccess(map: MapState, placed: Placed): boolean {
   return map.town.access.linked.includes(placed.id);
 }
 
-export function hoodCapacity(hood: Neighbourhood): number {
-  return hood.plots.length * STUDENTS_PER_HOUSE;
+export function hoodCapacity(hood: Neighbourhood, scale = 1): number {
+  return hood.plots.length * STUDENTS_PER_HOUSE * scale;
 }
 
 /** True when this neighbourhood's students can walk to class. */
@@ -234,8 +236,8 @@ export function townPlaces(map: MapState): TownPlaces {
   let walk = 0;
   let driveWanted = 0;
   for (const hood of map.town.neighbourhoods) {
-    if (hoodWalks(map, hood)) walk += hoodCapacity(hood);
-    else driveWanted += hoodCapacity(hood);
+    if (hoodWalks(map, hood)) walk += hoodCapacity(hood, scaleOf(map));
+    else driveWanted += hoodCapacity(hood, scaleOf(map));
   }
   const spaces = map.town.access.spaces;
   const drive = Math.min(driveWanted, spaces);
@@ -278,11 +280,12 @@ export function townLiving(state: GameState): HoodLiving[] {
   const map = state.map;
   const hoods = map.town.neighbourhoods;
   const living = hoods.map(() => 0);
+  const scale = scaleOf(map);
   let left = offCampusNow(state);
 
   const walking = hoods.filter((hood) => hoodWalks(map, hood)).sort((a, b) => map.town.access.walk[a.id]! - map.town.access.walk[b.id]! || a.id - b.id);
   for (const hood of walking) {
-    const take = Math.min(left, hoodCapacity(hood));
+    const take = Math.min(left, hoodCapacity(hood, scale));
     living[hood.id] = take;
     left -= take;
   }
@@ -292,13 +295,13 @@ export function townLiving(state: GameState): HoodLiving[] {
   const farFromParking = (hood: Neighbourhood): number => (parks.length === 0 ? 0 : Math.min(...parks.map((placed) => Math.abs(hood.row - placed.y))));
   const driving = hoods.filter((hood) => !hoodWalks(map, hood)).sort((a, b) => farFromParking(a) - farFromParking(b) || a.id - b.id);
   for (const hood of driving) {
-    const take = Math.min(left, hoodCapacity(hood), spaces);
+    const take = Math.min(left, hoodCapacity(hood, scale), spaces);
     living[hood.id] = take;
     left -= take;
     spaces -= take;
   }
   for (const hood of hoods) {
-    const take = Math.min(left, hoodCapacity(hood) - living[hood.id]!);
+    const take = Math.min(left, hoodCapacity(hood, scale) - living[hood.id]!);
     living[hood.id]! += take;
     left -= take;
   }
@@ -309,11 +312,11 @@ export function townLiving(state: GameState): HoodLiving[] {
     return {
       id: hood.id,
       name: hood.name,
-      capacity: hoodCapacity(hood),
+      capacity: hoodCapacity(hood, scale),
       living: here,
       mode: walks ? 'walk' : map.town.access.spaces > 0 ? 'drive' : 'none',
       walkMinutes: map.town.access.walk[hood.id] ?? -1,
-      houses: Math.min(hood.plots.length, Math.ceil(here / STUDENTS_PER_HOUSE)),
+      houses: Math.min(hood.plots.length, Math.ceil(here / (STUDENTS_PER_HOUSE * scale))),
     };
   });
 }

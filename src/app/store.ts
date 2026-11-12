@@ -64,6 +64,13 @@ export class Store {
   upgradeNotes: string[] = [];
   /** True when a save was found but could not be read, and the backup was used or nothing was. */
   loadProblem: string | null = null;
+  /**
+   * Set while the model campus is being visited: the name of the player's own
+   * university, which waits untouched in its save. Nothing is saved during a
+   * visit. null at any other time.
+   */
+  visiting: string | null = null;
+  private visitClock = 0;
 
   get state(): GameState {
     if (!this.current) throw new Error('No game is loaded.');
@@ -149,12 +156,49 @@ export class Store {
     this.emit();
   }
 
-  /** `wakeHour` is the hour of the player's own clock their day usually starts. `colour` is the school's. */
-  startNewGame(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string): void {
+  /**
+   * Look at the model campus without touching the player's own game. Their
+   * game is saved first and then left alone: the visit is never written
+   * anywhere, and `leaveVisit` reads their own campus back from its save.
+   */
+  async visitModel(): Promise<void> {
+    const own = this.current;
+    if (!own || this.visiting !== null) return;
+    await this.flush();
+    this.visitClock = clock.offset();
+    this.visiting = own.school.name;
+    this.ephemeral = true;
+    let state = newGame({ seed: own.seed, name: own.school.name, now: clock.now(), anchor: own.clock.anchor ?? anchorFor(DEFAULT_WAKE_HOUR), campus: 'model' });
+    const coloured = applyAction(state, { type: 'colour', colour: own.football.colour });
+    if (coloured.ok) state = coloured.state;
+    this.current = state;
+    this.away = null;
+    this.recent = [];
+    this.upgradeNotes = [];
+    this.emit();
+  }
+
+  /** Back from the model campus to the player's own, read from its save and caught up to now. */
+  async leaveVisit(): Promise<void> {
+    if (this.visiting === null) return;
+    this.visiting = null;
+    this.ephemeral = false;
+    this.current = null;
+    this.away = null;
+    this.recent = [];
+    // A skip of the clock made while visiting belongs to the visit, not to the player's own campus.
+    clock.restore(this.visitClock);
+    await this.load();
+    this.emit();
+  }
+
+  /** `wakeHour` is the hour of the player's own clock their day usually starts. `colour` is the school's. `campus` is which to begin with. */
+  startNewGame(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string, campus: 'small' | 'model' = 'small'): void {
     clock.reset();
     this.ephemeral = false;
+    this.visiting = null;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
-    this.current = newGame({ seed, name, now: clock.now(), anchor: anchorFor(wakeHour) });
+    this.current = newGame({ seed, name, now: clock.now(), anchor: anchorFor(wakeHour), campus });
     if (colour) {
       const picked = applyAction(this.current, { type: 'colour', colour });
       if (picked.ok) this.current = picked.state;

@@ -29,11 +29,11 @@ type Loop = keyof SoundMix;
 /** How loud each steady layer is at its fullest, before the player's volume. All of it sits well under the music and the taps. */
 const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0, stadium: 0.2 };
 /**
- * The layers made from noise are off: a crowd's murmur, footsteps and traffic,
- * and the stadium's crowd and its roar with them. Under the music they sounded
- * like static (the owner, 2026-11-12, the first time anyone heard them). They
- * come back when recorded sound replaces them. Rain is not one of them: rain
- * is noise, and it waits for the weather.
+ * The layers made from noise are off: a crowd's murmur, footsteps, traffic,
+ * the stadium and the rain. Under the music the first three sounded like
+ * static, and the owner did not like the rain either (2026-11-12, the first
+ * times anyone heard them). They come back when recorded sound replaces them.
+ * Rain is still seen on the map.
  */
 const NOISE_AMBIENCE = false;
 /** The scheduler looks this far ahead, this often. */
@@ -236,7 +236,7 @@ class SoundEngine {
     for (const name of ['crowd', 'traffic', 'rain', 'stadium'] as const) {
       // A crowd's murmur rises and falls a little by itself, and a stadium's swells.
       const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : name === 'stadium' ? 0.6 + Math.random() * 0.8 : 1;
-      const level = name === 'rain' || NOISE_AMBIENCE ? LOOP_LEVEL[name] : 0;
+      const level = NOISE_AMBIENCE ? LOOP_LEVEL[name] : 0;
       this.loops[name]?.gain.setTargetAtTime(mix[name] * level * waver, now, 0.5);
     }
     // Scattered sounds: each is due at a time that the mix brings nearer or pushes away.

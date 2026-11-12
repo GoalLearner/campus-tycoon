@@ -1,3 +1,4 @@
+import { smallCount } from '../scale';
 import { offCampusNow } from './town';
 import {
   INCIDENT_EVAL_TICKS,
@@ -111,7 +112,8 @@ export function spawnIncidents(state: GameState): void {
   const injuryPick = nextFloat(state.rng, 'events');
   const mischiefRoll = nextFloat(state.rng, 'events');
   const mischiefPick = nextFloat(state.rng, 'events');
-  const scale = students / 1000;
+  // How often something happens follows how busy the campus is, as the small game counts it (DESIGN.md 35.7).
+  const scale = smallCount(state, students) / 1000;
 
   const play = state.map.placed.filter((p): p is Placed => !!p && PLACED[p.type].family === 'recreation');
   if (play.length > 0 && state.incidents.active.length < MAX_ACTIVE_INCIDENTS && injuryRoll < Math.min(0.9, scale * INJURY_RATE)) {

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState } from '../sim';
+import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars, smallCount } from '../sim';
 import type { Art } from './art';
 import type { Iso } from './iso';
 import { driveways } from './townLook';
@@ -182,7 +182,8 @@ export class Cars {
     this.height = height;
     this.drivable = cells.map((cell) => isRoadKind(cell.kind));
     this.crossing = cells.map((cell) => cell.kind === 'crossing');
-    this.drivers = driversNow(state);
+    // The cars drawn are a sample of those who drive in, as the small game would count them.
+    this.drivers = smallCount(state, driversNow(state));
 
     const roadBeside = (x0: number, y0: number, w: number, h: number): number => {
       for (let y = y0 - 1; y <= y0 + h; y++) {
@@ -201,7 +202,7 @@ export class Cars {
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
-      if (spec.cars && hasRoadAccess(state.map, placed)) {
+      if (placedCars(placed.type, 1) > 0 && hasRoadAccess(state.map, placed)) {
         const door = roadBeside(placed.x, placed.y, placed.w, placed.h);
         if (door >= 0) this.parks.push({ door, x: placed.x, y: placed.y });
       }

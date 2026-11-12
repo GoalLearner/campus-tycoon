@@ -16,7 +16,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 13;
+export const SAVE_VERSION = 14;
 
 export interface SaveFile {
   v: number;
@@ -198,9 +198,16 @@ export const MIGRATIONS: Record<number, Migration> = {
   },
   // Version 12 is the football and calendar layer.
   11: (state) => upgradeToLayerOne(state),
-  // Version 13: the desk. Four advisors, named once from the seed, and an empty inbox. Nothing arrives before the
-  // next day of the game week begins, and nothing on it does anything until the player or its default chooses.
+  // Version 13: the campus scale (DESIGN.md 35.7). Every campus that exists is the small game's own size, so its
+  // scale is 1 and nothing else about it changes.
   12: (state) => {
+    const map = state.map as Record<string, unknown>;
+    if (typeof map.scale !== 'number') map.scale = 1;
+    return state;
+  },
+  // Version 14: the desk. Four advisors, named once from the seed, and an empty inbox. Nothing arrives before the
+  // next day of the game week begins, and nothing on it does anything until the player or its default chooses.
+  13: (state) => {
     if (typeof state.inbox !== 'object' || state.inbox === null) state.inbox = newInbox(Number(state.seed ?? 0));
     return state;
   },
@@ -279,6 +286,7 @@ export function validate(state: unknown): string | null {
   const map = state.map as Record<string, unknown>;
   const { width, height, cells, buildings, score, walkMinutes } = map;
   if (typeof width !== 'number' || typeof height !== 'number') return 'The map has no size.';
+  if (typeof map.scale !== 'number' || !Number.isInteger(map.scale) || map.scale < 1) return 'The campus has no scale.';
   if (!Array.isArray(cells) || cells.length !== width * height) return 'The map is the wrong size.';
   if (!Array.isArray(buildings)) return 'The map has no building list.';
   if (!Array.isArray(map.placed)) return 'The map has no list of placed buildings.';
