@@ -144,7 +144,7 @@ function lotsInReach(state: GameState, placed: Placed, zone: 'housing' | 'academ
   return count;
 }
 
-const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string): string => `${headCount(n)} ${n === 1 ? one : many}`;
 
 /** What a placed building is doing right now, in one line. */
 export function placedSummary(state: GameState, placed: Placed): string {
@@ -382,7 +382,7 @@ export function happinessView(state: GameState): HappinessView {
     advice: mood.worst && mood.worstPart ? `Biggest gap: ${CAUSE_NAME[mood.worst].toLowerCase()}. ${PART_FIX[mood.worstPart]}` : '',
     build: mood.worst === 'life' || mood.worst === 'safety' || mood.worstPart === 'clean' || mood.worstPart === 'seating',
     staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.`,
-    lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${last.stayed} stayed. Happiness was ${last.happiness}.` : '',
+    lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${headCount(last.stayed)} stayed. Happiness was ${last.happiness}.` : '',
   };
 }
 
@@ -428,7 +428,7 @@ export function parcelSummary(state: GameState, parcel: Parcel): { state: string
  * simulation. An entry is left out when it would bring nobody in.
  */
 export function housingFixLines(fixes: HousingFixes): { lots: string; path: string; parking: string } {
-  const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+  const plural = (n: number, one: string, many: string): string => `${headCount(n)} ${n === 1 ? one : many}`;
   const beds = (n: number): string => `${plural(n, 'fewer bed is', 'fewer beds are')} needed`;
   const lots = fixes.lots
     ? `Zone ${plural(fixes.lots.count, 'more Housing lot', 'more Housing lots')}: ${fixes.lots.perLot} beds each, ${dollarsShort(fixes.lots.cost)} in all. That covers all ${fixes.bedsShort}.`
