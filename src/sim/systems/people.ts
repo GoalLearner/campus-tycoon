@@ -1,3 +1,4 @@
+import { facultyStress } from './season';
 import {
   ADVISOR_DOING,
   CHEF_DOING,
@@ -149,7 +150,8 @@ export function personCard(state: GameState, ref: PersonRef): PersonCard | null 
         name,
         title: `Professor of ${pickFrom(MAJORS, roll(seed, ref, SALT.subject)).name}`,
         doing: doing.replace('{hall}', where),
-        line: say('professor', state, ref, { n: count(size) }),
+        // In exam season the faculty are stretched too, more so with crowded classes (DESIGN.md 27.1).
+        line: say('professor', state, ref, { n: count(size) }) + (facultyStress(state) >= 60 ? ` It is exam season, and faculty Stress is at ${facultyStress(state)}.` : ''),
         quotes: { what: 'classSize', value: size },
         cell: hall,
       };
