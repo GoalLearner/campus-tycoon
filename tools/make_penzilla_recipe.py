@@ -267,10 +267,8 @@ for key, name in (('shuttle', 'Bus_Orange'), ('truck.0', 'Truck_Groceries'), ('t
         if mirrored:
             layer['flip'] = True
         sprites[f'{key}.{way}'] = {'layers': [layer]}
-# A football for the recreation field, and the pack's two pool toys.
+# A football for the recreation field. The pool's own picture already has its toys.
 sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0.5, scale=0.045)]}
-sprites['pool.float'] = {'layers': [standing(DECOR + 'PoolFloatie.png', 0.5, 0.5)]}
-sprites['pool.ball'] = {'layers': [standing(DECOR + 'PoolBall.png', 0.5, 0.5)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
 sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]}

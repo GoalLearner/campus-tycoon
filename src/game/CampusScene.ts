@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { clock } from '../app/clock';
+import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
@@ -37,15 +38,19 @@ import {
   yardOver,
   START_LAND,
   TOWN_X,
+  dateAt,
+  townHints,
   townLiving,
   townPlaces,
   type Incident,
 } from '../sim';
+import { Activity } from './Activity';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
 import { GroundsWorkers } from './GroundsWorkers';
 import { Iso } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
+import { townLook } from './townLook';
 import { Walkers } from './Walkers';
 
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
@@ -70,6 +75,12 @@ const PARKING_CUT = 0xff5a4d;
 const PARKING_AVENUE = 0x7ab8ff;
 /** How high the "no road access" badge floats over a surface lot and over a parking structure. */
 const BADGE_LIFT = { low: 74, tall: 168 } as const;
+/**
+ * What the map says at the edge of a campus the town cannot get into. The
+ * owner's words, 2026-11-11. Each stands with a sign from the art pack.
+ */
+const HINT_TEXT = { walk: 'Connect a path here\nso locals can walk in', drive: 'Build parking with a road\nhere so locals can drive in' } as const;
+const HINT_LIFT = 26;
 /** Where cars park on a surface lot, as steps along it from its top corner. */
 const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
@@ -108,6 +119,24 @@ export class CampusScene extends Phaser.Scene {
   private walkers!: Walkers;
   private cars!: Cars;
   private crew!: GroundsWorkers;
+  private activity!: Activity;
+  /** The sentence that stands with each edge marker, by which marker it is. */
+  private hintTexts = new Map<'walk' | 'drive', Phaser.GameObjects.Text>();
+  /** Where each edge marker stands, for taps. */
+  private hintSpots = new Map<'walk' | 'drive', { x: number; y: number }>();
+  /** Holds the frame rate: steps the crowd down when frames are short, and back up when they recover. */
+  private budget = new FrameBudget(stepOf(crowdSetting()));
+  private crowdCeiling = stepOf(crowdSetting());
+  private frames = 0;
+  private framesSince = 0;
+  private fps = 60;
+  /** Dev only: the milliseconds of work one frame takes, from the start of the step to the end of the draw. */
+  private frameMs = 0;
+  private workSum = 0;
+  private workFrames = 0;
+  private workFrom = 0;
+  /** Dev screenshots: keep the crowd at the setting whatever the frame rate. A screenshot machine draws slowly. */
+  private crowdHeld = false;
   /** Cells with litter drawn on them, and the place it came from. A tap there opens that place. */
   private litterCells = new Map<number, number>();
   private placed!: PlacedSprites;
@@ -150,6 +179,18 @@ export class CampusScene extends Phaser.Scene {
     this.walkers = new Walkers(this, this.art, this.iso);
     this.cars = new Cars(this, this.art, this.iso);
     this.crew = new GroundsWorkers(this, this.art, this.iso);
+    this.activity = new Activity(this, this.art, this.iso);
+    // A car waits at a crossing while somebody is walking over it.
+    this.cars.watchCrossings((cell) => this.walkers.onCrossing(cell));
+    this.applyStep(this.budget.step);
+    if (import.meta.env.DEV) {
+      // How long a frame's work takes, for the report: a frame rate says nothing once the screen caps it.
+      this.game.events.on(Phaser.Core.Events.PRE_STEP, () => (this.workFrom = performance.now()));
+      this.game.events.on(Phaser.Core.Events.POST_RENDER, () => {
+        this.workSum += performance.now() - this.workFrom;
+        this.workFrames += 1;
+      });
+    }
     this.placed = new PlacedSprites(this, this.art, this.iso);
     this.lightLayer = this.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.MULTIPLY);
     // Dev builds: reach the scene from the console, for screenshots and checks.
@@ -208,11 +249,16 @@ export class CampusScene extends Phaser.Scene {
       this.nextLightAt = time + 1000;
       this.showLight();
     }
+    this.watchFrames(time);
     if (this.dirty) {
       this.syncMap(state);
       this.walkers.setMap(state);
+      // A Saturday or Sunday in the game's own calendar is quieter on the paths.
+      const weekday = dateAt(state.clock.tick).weekday;
+      this.walkers.setWeekend(weekday === 0 || weekday === 6);
       this.cars.setMap(state);
       this.crew.setMap(state);
+      this.activity.setMap(state);
       this.placedDirty = true;
       this.dirty = false;
       this.overlayDirty = true;
@@ -229,6 +275,8 @@ export class CampusScene extends Phaser.Scene {
     this.walkers.update(delta);
     this.cars.update(delta, this.light.period);
     this.crew.update(time);
+    this.activity.update(time, delta);
+    this.showHintTexts();
     this.moveResponders(state, time);
     this.watchStudent(delta);
     this.placed.update(time);
@@ -255,6 +303,10 @@ export class CampusScene extends Phaser.Scene {
     this.walkers.clear();
     this.cars.clear();
     this.crew.clear();
+    this.activity.clear();
+    for (const text of this.hintTexts.values()) text.destroy();
+    this.hintTexts.clear();
+    this.hintSpots.clear();
     this.litterCells.clear();
     this.placed.clear();
     for (const glow of this.glows.values()) glow.destroy();
@@ -316,6 +368,56 @@ export class CampusScene extends Phaser.Scene {
     }
     for (const glow of this.glows.values()) glow.setAlpha(light.lamps).setVisible(lit);
     this.walkers.setPeriod(light.period);
+    this.activity.setPeriod(light.period);
+  }
+
+  /** Show the crowd step in force on everything that draws people or cars. */
+  private applyStep(step: number): void {
+    this.walkers.setStep(step);
+    this.cars.setStep(step);
+    this.activity.setStep(step);
+  }
+
+  /**
+   * The frame budget. Once a second: count the frames drawn, and let the
+   * budget step the crowd down a level if they were short, or back up toward
+   * the player's setting if they have been good for a while.
+   */
+  private watchFrames(time: number): void {
+    this.frames += 1;
+    if (this.framesSince === 0) this.framesSince = time;
+    const span = time - this.framesSince;
+    if (span < 1000) return;
+    this.fps = (this.frames * 1000) / span;
+    if (this.workFrames > 0) this.frameMs = this.workSum / this.workFrames;
+    this.workSum = 0;
+    this.workFrames = 0;
+    this.frames = 0;
+    this.framesSince = time;
+    const ceiling = stepOf(crowdSetting());
+    if (ceiling !== this.crowdCeiling) {
+      this.crowdCeiling = ceiling;
+      this.budget.setCeiling(ceiling);
+      this.applyStep(this.budget.step);
+      return;
+    }
+    const before = this.budget.step;
+    // A tab in the background draws no frames at all. That is not a slow phone.
+    // Nor is one that draws a frame or two a second: that is a tab the browser has put to sleep.
+    if (!this.crowdHeld && span < 2500 && this.fps >= 5 && this.budget.second(this.fps) !== before) this.applyStep(this.budget.step);
+  }
+
+  /** Dev screenshots: show the crowd the setting asks for, and stop stepping it down when frames are short. */
+  holdCrowd(): void {
+    this.crowdHeld = true;
+    this.crowdCeiling = stepOf(crowdSetting());
+    this.budget.setCeiling(this.crowdCeiling);
+    this.applyStep(this.budget.step);
+  }
+
+  /** Frames a second, the crowd step in force, and who is on screen. For the dev readout and the report. */
+  stats(): { fps: number; frameMs: number; step: number; ceiling: number; walkers: Walkers['counts']; vehicles: Cars['counts']; extras: number; caps: (typeof CROWD_STEPS)[number] } {
+    return { fps: Math.round(this.fps * 10) / 10, frameMs: Math.round(this.frameMs * 100) / 100, step: this.budget.step, ceiling: this.crowdCeiling, walkers: this.walkers.counts, vehicles: this.cars.counts, extras: this.activity.count, caps: CROWD_STEPS[this.budget.step]! };
   }
 
   /** Keep one glow for each street lamp, and drop those whose lamp has gone. */
@@ -379,12 +481,7 @@ export class CampusScene extends Phaser.Scene {
   /** Bring every sprite in line with the state. Only cells whose look changed are touched. */
   private syncMap(state: GameState): void {
     const { width, height, cells, buildings } = state.map;
-    // Houses stand on as many plots as there are locals to live in them.
-    const standing = new Set<number>();
-    const living = townLiving(state);
-    for (const hood of state.map.town.neighbourhoods) {
-      for (const plot of hood.plots.slice(0, living[hood.id]?.houses ?? 0)) standing.add(plot.y * width + plot.x);
-    }
+    // The town is always fully built: every plot has its house, whoever is enrolled from it.
     const forSale = state.map.parcels.filter((parcel) => !parcel.owned);
     const hasLamps = this.art.has('lamp.off') && this.art.has('lamp.on');
     const lamp = this.lampsLit ? 'lamp.on' : 'lamp.off';
@@ -417,11 +514,12 @@ export class CampusScene extends Phaser.Scene {
           // The bars lie across the road, whichever way it runs.
           groundKey = this.roadMask(state, x, y) & 5 ? 'road.cross.5' : 'road.cross.10';
         } else if (cell.kind === 'house') {
-          if (standing.has(i)) objectKey = `town.house.${cell.variant}`;
+          objectKey = `town.house.${cell.variant}`;
         } else if (cell.kind === 'town') {
-          // Gardens: mostly lawn, a tree here and there, the odd flower bed.
-          if (cell.variant < 2) objectKey = this.variantKey('tree', cellHash(x, y));
-          else if (cell.variant === 2 && this.art.has('town.garden')) groundKey = 'town.garden';
+          // Between and behind the houses: driveways, gardens, the odd pool, lawn and trees.
+          const look = townLook(state.map, x, y);
+          if (look === 'tree') objectKey = this.variantKey('tree', cellHash(x, y));
+          else if (look !== 'lawn' && this.art.has(`town.${look}`)) groundKey = `town.${look}`;
         } else if (cell.kind === 'empty' && forSale.some((p) => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h)) {
           // A field the campus has not bought: dimmer, and still wild.
           tint = FOR_SALE_TINT;
@@ -547,6 +645,17 @@ export class CampusScene extends Phaser.Scene {
     // A car park no road reaches holds no cars. A lowered barrier floats over it until one does.
     for (const placed of this.unlinkedCarParks(state)) {
       items.push({ key: 'icon.noroad', x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: 'float', lift: placed.type === 'garage' ? BADGE_LIFT.tall : BADGE_LIFT.low });
+    }
+    // A campus the town cannot get into says so at its edge: a sign beside College Avenue where a path,
+    // or a road to parking, would let locals in. Worked out from the same access data the rules use.
+    const hints = townHints(state);
+    this.hintSpots.clear();
+    for (const which of ['walk', 'drive'] as const) {
+      const hint = hints[which];
+      const key = which === 'walk' ? 'icon.walkin' : 'icon.drivein';
+      if (!hint || !this.art.has(key)) continue;
+      this.hintSpots.set(which, { x: hint.x, y: hint.y });
+      items.push({ key, x: hint.x, y: hint.y, layer: 'float', lift: HINT_LIFT });
     }
     // An icon floats over every open incident.
     for (const incident of state.incidents.active) {
@@ -1053,6 +1162,38 @@ export class CampusScene extends Phaser.Scene {
     return null;
   }
 
+  /** Keep each edge marker's sentence beside its sign, the same size on screen at any zoom. */
+  private showHintTexts(): void {
+    const camera = this.cameras.main;
+    for (const which of ['walk', 'drive'] as const) {
+      const spot = this.hintSpots.get(which);
+      let text = this.hintTexts.get(which);
+      if (!spot) {
+        text?.setVisible(false);
+        continue;
+      }
+      if (!text) {
+        text = this.add
+          .text(0, 0, HINT_TEXT[which], {
+            fontFamily: '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            fontSize: '26px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#16201b',
+            strokeThickness: 7,
+            align: 'center',
+          })
+          .setOrigin(0.5, 1)
+          .setDepth(1_000_002);
+        this.hintTexts.set(which, text);
+      }
+      const at = this.iso.toWorld(spot.x + 0.5, spot.y + 0.5);
+      // About 13 px tall on screen at any zoom, above the sign.
+      text.setScale(0.5 / this.scale.zoom / camera.zoom);
+      text.setPosition(at.x, at.y - (HINT_LIFT + 96)).setVisible(true);
+    }
+  }
+
   /** A broken street lamp under the finger: on its post, or on the cell it stands on. */
   private brokenLampAt(worldX: number, worldY: number, screenX: number, screenY: number): [number, number] | null {
     const state = store.state;
@@ -1098,10 +1239,21 @@ export class CampusScene extends Phaser.Scene {
       session.select(placed.x, placed.y);
       return;
     }
+    // An edge marker: tapping it puts the right tool in hand, where it is needed.
+    for (const [which, spot] of this.hintSpots) {
+      const at = this.iso.toWorld(spot.x + 0.5, spot.y + 0.5);
+      if (Math.abs(world.x - at.x) > reach * 2.2 || world.y > at.y + reach * 0.6 || world.y < at.y - (HINT_LIFT + 150)) continue;
+      session.closeStudent();
+      if (which === 'walk') session.setTool('path');
+      else session.startPlacing('parking');
+      session.lookAt(spot.x, spot.y);
+      return;
+    }
     // A walker is in front of whatever they are walking past.
     const walker = this.walkers.walkerAt(world.x, world.y, (14 * this.dpr) / this.cameras.main.zoom);
     if (walker) {
       if (walker.student) session.openStudent(walker.student);
+      else if (walker.neighbour) session.notify('A neighbour from the town. Townspeople are not students.');
       else session.notify('Staff. Students arrive with the first class.');
       return;
     }

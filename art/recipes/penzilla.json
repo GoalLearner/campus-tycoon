@@ -3223,28 +3223,6 @@
     }
    ]
   },
-  "pool.float": {
-   "layers": [
-    {
-     "file": "penzilla/GiantCityBuilder/DecorItems/PoolFloatie.png",
-     "stand": [
-      0.5,
-      0.5
-     ]
-    }
-   ]
-  },
-  "pool.ball": {
-   "layers": [
-    {
-     "file": "penzilla/GiantCityBuilder/DecorItems/PoolBall.png",
-     "stand": [
-      0.5,
-      0.5
-     ]
-    }
-   ]
-  },
   "decor.car": {
    "layers": [
     {

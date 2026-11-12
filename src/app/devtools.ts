@@ -1,8 +1,10 @@
-import { advance, applyAction, incidentText, lampAt, nearestSpot, newGame, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
+import { setCrowdSetting } from './crowd';
+import { playCampus, unjoinedCampus } from './demoAlive';
 import { session } from './session';
 import { store } from './store';
 
@@ -333,6 +335,8 @@ function applyViewParams(params: URLSearchParams): void {
           camera.setScroll(at.x - camera.width / 2, at.y - camera.height / 2);
         };
         aim();
+        // The camera works out what it can see when it next draws. Do it now, so the crowd settles into this view.
+        (camera as unknown as { preRender?: () => void }).preRender?.();
         // The canvas can still change size just after load, which moves the middle. Aim again.
         setTimeout(aim, 1200);
       }
@@ -393,6 +397,25 @@ function applyViewParams(params: URLSearchParams): void {
       if (panel === 'happiness') setTimeout(() => document.querySelector<HTMLButtonElement>('.happy')?.click(), 1400);
       // &panel=plan opens the room plan as a tap on the Housing bar would.
       if (panel === 'plan') setTimeout(() => document.querySelector<HTMLElement>('.bars .bar')?.click(), 1400);
+      // &crowd=low|normal|high sets the crowd density for this visit, and &stats shows frames a second and
+      // who is on screen in the corner, read once a second.
+      const crowd = params.get('crowd');
+      if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
+      // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
+      if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
+      if (params.has('stats')) {
+        const box = document.createElement('div');
+        Object.assign(box.style, { position: 'fixed', left: '8px', bottom: '70px', zIndex: '99', padding: '4px 8px', font: '12px monospace', color: '#fff', background: 'rgba(0,0,0,0.7)', borderRadius: '6px', pointerEvents: 'none', whiteSpace: 'pre' });
+        document.body.append(box);
+        setInterval(() => {
+          const live = (window as unknown as { __scene?: { stats?: () => { fps: number; step: number; walkers: Record<string, number>; vehicles: Record<string, number>; extras: number } } }).__scene?.stats?.();
+          if (!live) return;
+          const sum = (o: Record<string, number>): number => Object.values(o).reduce((a, b) => a + b, 0);
+          box.textContent = `${live.fps.toFixed(0)} fps · step ${live.step}
+${sum(live.walkers)} walking (${live.walkers.commuters} in from town, ${live.walkers.neighbours} neighbours)
+${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.parked ?? 0} parked · ${live.extras} playing or seated`;
+        }, 1000);
+      }
       // &phone=375x667 lays the interface out in a box of that size at the top left, for a screenshot of a
       // panel on a phone narrower than a desktop browser window can be made.
       const phone = params.get('phone')?.split('x').map(Number);
@@ -464,6 +487,19 @@ export function installDevTools(): void {
     const started = clock.now() - 16 * 60_000;
     const fresh = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
     store.adopt(advance(fresh, started, clock.now()).state, { ephemeral: true });
+  } else if (params.get('demo') === 'play') {
+    // &students=800 sets how many are enrolled, to show a quieter campus or a more crowded one.
+    store.adopt(playCampus(Number(params.get('students') ?? 1500)), { ephemeral: true });
+  } else if (params.get('demo') === 'unjoined') {
+    store.adopt(unjoinedCampus(), { ephemeral: true });
+  } else if (params.get('demo') === 'mature') {
+    // A large campus: the save the tests keep of a campus eight years old, read from the dev server.
+    void fetch('/tests/fixtures/save-v8-mature.json')
+      .then((response) => response.text())
+      .then((text) => {
+        const loaded = parseSave(text);
+        if (loaded.ok) store.adopt(loaded.state, { ephemeral: true });
+      });
   } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });
   }

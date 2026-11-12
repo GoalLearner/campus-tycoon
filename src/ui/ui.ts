@@ -58,6 +58,7 @@ import {
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
+import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -601,6 +602,14 @@ export function mountUi(root: HTMLElement): void {
       });
       setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
       card.append(daylight);
+
+      // How many people the map shows. The setting is a ceiling: the map shows fewer by itself if frames run short.
+      const crowd = button('', 'wide', () => {
+        setCrowdSetting(CROWDS[(CROWDS.indexOf(crowdSetting()) + 1) % CROWDS.length]!);
+        setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
+      });
+      setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
+      card.append(crowd);
 
       const startOver = button('Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {

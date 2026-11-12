@@ -102,9 +102,16 @@ export function playingNow(demandAtPeak: number, capacity: number, period: DayPe
   return { playing: Math.min(capacity, here), waiting: Math.max(0, here - capacity) };
 }
 
-/** How far the frame rate may fall before the crowd steps down, and how good it must be to step back up. */
-export const FPS_LOW = 48;
-export const FPS_GOOD = 57;
+/**
+ * How far the frame rate may fall before the crowd steps down, and how good it
+ * must be to step back up, as shares of the best rate this screen has shown.
+ * A phone in Low Power Mode draws 30 frames a second however little there is
+ * to draw: that is its full rate, not a slow phone.
+ */
+export const FPS_LOW_SHARE = 0.8;
+export const FPS_GOOD_SHARE = 0.93;
+/** No screen is taken to refresh slower than this, so a phone that never gets above 20 is still called slow. */
+export const FPS_FLOOR = 30;
 /** Seconds below the low mark before stepping down, and above the good mark before stepping up. */
 export const FPS_DOWN_AFTER = 3;
 export const FPS_UP_AFTER = 8;
@@ -117,6 +124,8 @@ export const FPS_UP_AFTER = 8;
 export class FrameBudget {
   private low = 0;
   private good = 0;
+  /** The best rate seen: what this screen can do. */
+  private best = FPS_FLOOR;
   step: number;
 
   constructor(private ceiling: number) {
@@ -133,14 +142,15 @@ export class FrameBudget {
 
   /** One second has passed at this frame rate. Returns the step to show. */
   second(fps: number): number {
-    if (fps < FPS_LOW) {
+    this.best = Math.max(this.best, Math.min(fps, 240));
+    if (fps < this.best * FPS_LOW_SHARE) {
       this.low += 1;
       this.good = 0;
       if (this.low >= FPS_DOWN_AFTER && this.step > 0) {
         this.step -= 1;
         this.low = 0;
       }
-    } else if (fps >= FPS_GOOD) {
+    } else if (fps >= this.best * FPS_GOOD_SHARE) {
       this.good += 1;
       this.low = 0;
       if (this.good >= FPS_UP_AFTER && this.step < this.ceiling) {
