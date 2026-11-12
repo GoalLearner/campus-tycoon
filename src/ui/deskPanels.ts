@@ -2,7 +2,7 @@ import type { AwayReport } from '../app/away';
 import { session } from '../app/session';
 import { sound } from '../app/sound';
 import { store } from '../app/store';
-import { awayView, inboxView, type PaperView } from './deskUi';
+import { awayView, inboxView, welcomeView, type PaperView } from './deskUi';
 
 /**
  * The Inbox and the away screen (DESIGN.md section 36). The Inbox has three
@@ -125,6 +125,16 @@ export function openInbox(openModal: OpenModal, start: InboxTab = 'To decide'): 
 
 // ------------------------------------------------------------ the paper --
 
+function pollRow(line: PaperView['poll'][number]): HTMLElement {
+  const row = el('div', 'paper-poll');
+  const bar = el('div', 'paper-bar');
+  const fill = el('div', 'paper-fill');
+  fill.style.width = `${Math.max(2, line.share)}%`;
+  bar.append(fill);
+  row.append(el('span', 'paper-poll-name', line.label), bar, el('span', 'paper-poll-share', line.words));
+  return row;
+}
+
 function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football') => void): void {
   const page = el('div', 'paper');
   const edition = paper.edition;
@@ -138,6 +148,13 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
     top.append(row);
   }
   page.append(top);
+
+  // The first issue has the poll on its front: nothing has happened yet to fold away.
+  if (paper.front && paper.poll.length > 0) {
+    page.append(el('div', 'paper-section', 'Student poll: what is wrong here'));
+    for (const line of paper.poll) page.append(pollRow(line));
+    page.append(el('p', 'paper-small', paper.pollNote));
+  }
 
   if (paper.restLabel) {
     const rest = el('div', 'paper-rest');
@@ -158,15 +175,7 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
     }
     if (paper.poll.length > 0) {
       section('Student poll: what is wrong here');
-      for (const line of paper.poll) {
-        const row = el('div', 'paper-poll');
-        const bar = el('div', 'paper-bar');
-        const fill = el('div', 'paper-fill');
-        fill.style.width = `${Math.max(2, line.share)}%`;
-        bar.append(fill);
-        row.append(el('span', 'paper-poll-name', line.label), bar, el('span', 'paper-poll-share', line.words));
-        rest.append(row);
-      }
+      for (const line of paper.poll) rest.append(pollRow(line));
       rest.append(el('p', 'paper-small', paper.pollNote));
     }
     if (edition.movers) {
@@ -196,15 +205,23 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
  * once. `go` opens the Inbox or the Football page from a line that leads there.
  */
 export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, notes: string[], go: (where: 'inbox' | 'football') => void): void {
-  const view = report ? awayView(store.state, report) : null;
+  // A game's first screen is the paper's first issue. An away list, if there is one too, waits for the next look.
+  const welcome = store.welcome ? welcomeView(store.state) : null;
+  const view = !welcome && report ? awayView(store.state, report) : null;
   openModal((close, card) => {
     card.classList.add('card-fixed');
     const body = el('div', 'card-scroll');
     const leave = (): void => {
-      if (report) store.awaySeen(report);
+      if (welcome) store.welcomeSeen();
+      else if (report) store.awaySeen(report);
       close();
     };
-    if (view?.kind === 'paper') {
+    if (welcome) {
+      drawPaper(body, welcome, (where) => {
+        leave();
+        go(where);
+      });
+    } else if (view?.kind === 'paper') {
       drawPaper(body, view.paper, (where) => {
         leave();
         go(where);
@@ -237,6 +254,6 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
       for (const note of notes) list.append(el('li', 'away-note', note));
       body.append(list);
     }
-    card.append(body, button('Back to campus', 'primary', leave));
+    card.append(body, button(welcome ? welcome.leave : 'Back to campus', 'primary', leave));
   }, false);
 }

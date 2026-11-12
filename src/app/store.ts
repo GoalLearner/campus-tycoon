@@ -11,6 +11,7 @@ import {
   groundsLine,
   newGame,
   parseSave,
+  scaleOf,
   serialize,
   type Action,
   type ActionResult,
@@ -62,6 +63,8 @@ export class Store {
   recent: LogEntry[] = [];
   /** Rules that are new to a save made by an older version. The UI shows them once and clears them. */
   upgradeNotes: string[] = [];
+  /** True from the moment a game is founded until its first issue of the paper has been read. Not saved: it is a greeting. */
+  welcome = false;
   /** True when a save was found but could not be read, and the backup was used or nothing was. */
   loadProblem: string | null = null;
   /**
@@ -151,6 +154,7 @@ export class Store {
   adopt(state: GameState, options: { ephemeral: boolean }): void {
     this.current = state;
     this.ephemeral = options.ephemeral;
+    this.welcome = false;
     this.away = null;
     this.recent = [];
     this.emit();
@@ -173,6 +177,7 @@ export class Store {
     if (coloured.ok) state = coloured.state;
     this.current = state;
     this.away = null;
+    this.welcome = false;
     this.recent = [];
     this.upgradeNotes = [];
     this.emit();
@@ -185,6 +190,7 @@ export class Store {
     this.ephemeral = false;
     this.current = null;
     this.away = null;
+    this.welcome = false;
     this.recent = [];
     // A skip of the clock made while visiting belongs to the visit, not to the player's own campus.
     clock.restore(this.visitClock);
@@ -208,12 +214,30 @@ export class Store {
       if (picked.ok) this.current = picked.state;
     }
     this.away = null;
+    // A campus that opens with students on it greets its president with the paper's first issue.
+    this.welcome = enrollment(this.current) > 0;
     this.lastExportAt = null;
     this.recent = [];
     this.loadProblem = null;
     void requestPersistentStorage();
     this.saveNow();
     this.emit();
+  }
+
+  /**
+   * What the founding screen does (DESIGN.md 35.6): every game a player starts begins on the model campus. It is
+   * the only way the app founds a game. The small campus is reached by the tests and the long runs alone.
+   */
+  foundUniversity(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string): void {
+    this.startNewGame(name, wakeHour, colour, 'model');
+  }
+
+  /**
+   * True when the Menu offers "Visit the model campus": a game that began on the small campus, and is not on a
+   * visit already. A game that began on the model campus is there.
+   */
+  get offersVisit(): boolean {
+    return this.current !== null && this.visiting === null && scaleOf(this.current) === 1;
   }
 
   /** Replace the game with one read from a save file. Returns an error message, or null on success. */
@@ -225,6 +249,7 @@ export class Store {
     clock.follow(result.state.clock.lastSimulatedAt);
     this.chooseAnchor();
     this.away = null;
+    this.welcome = false;
     // The file that was just loaded is itself a backup, as old as the day it was made.
     this.lastExportAt = result.savedAt > 0 ? result.savedAt : null;
     this.recent = [];
@@ -237,6 +262,7 @@ export class Store {
   async deleteGame(): Promise<void> {
     this.current = null;
     this.away = null;
+    this.welcome = false;
     this.lastExportAt = null;
     this.recent = [];
     await clearSaves();
@@ -259,6 +285,11 @@ export class Store {
    * The player has read an away list. Only the list they were shown is
    * dropped: if more was added to it while it was on screen, that stays.
    */
+  welcomeSeen(): void {
+    this.welcome = false;
+    this.emit();
+  }
+
   awaySeen(shown: AwayReport): void {
     if (this.away !== shown) return;
     this.away = null;

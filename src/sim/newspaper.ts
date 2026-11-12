@@ -3,13 +3,15 @@ import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand
 import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
-import { dollars, duration } from './format';
+import { dollars, duration, headCount } from './format';
 import { hashInts } from './rng';
-import { enrollment } from './selectors';
+import { buildings, enrollment, openCapacity } from './selectors';
 import { applicantsLift } from './systems/boosts';
-import { marketingLift } from './systems/budget';
-import { averageDesirability } from './systems/demand';
-import { athleticLift } from './systems/football';
+import { budget, marketingLift } from './systems/budget';
+import { averageDesirability, capacityWanted } from './systems/demand';
+import { athleticLift, seatsNow } from './systems/football';
+import { inReach } from './systems/placed';
+import { roomPlan } from './systems/plan';
 import { sampleStudents, studentCard } from './systems/students';
 import type { GameState, LogEntry } from './types';
 
@@ -339,9 +341,74 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
   };
 }
 
+// -------------------------------------------------------------- welcome --
+
+const WELCOME: ReadonlyArray<(school: string) => string> = [
+  (school) => `${school} Names a New President; Trustees Call the Search "Thorough"`,
+  (school) => `New President Arrives at ${school}; Is Shown the Good Chair`,
+  (school) => `${school} Has a New President; Committee Forms to Welcome the Committee`,
+];
+
+/**
+ * The first issue, for a president on their first day (DESIGN.md 36.10). It
+ * is the paper's welcome: a headline, and what the campus they have been
+ * handed is short of, read from the campus as it stands. It says what is so
+ * and leaves what to do about it to the reader. The student poll is on the
+ * front, since nothing has happened yet to fold away.
+ */
+export function welcomeEdition(state: GameState): Edition {
+  const school = shortName(state.school.name);
+  const students = enrollment(state);
+  const top: TopItem[] = [];
+
+  // The next class, and what the campus is short of to fit it.
+  const next = roomPlan(state).students;
+  if (next > 0) {
+    const beds = Math.max(0, capacityWanted(state, 'housing') - openCapacity(state, 'housing'));
+    const seats = Math.max(0, capacityWanted(state, 'academic') - openCapacity(state, 'academic'));
+    const short = [beds > 0 ? `${headCount(beds)} beds` : '', seats > 0 ? `${headCount(seats)} classroom seats` : ''].filter((part) => part !== '');
+    top.push({ kind: 'intake', text: `The next class is ${headCount(next)} strong. ${short.length > 0 ? `The campus is ${short.join(' and ')} short of fitting them.` : 'There is room for all of them.'}` });
+  }
+
+  // Residence halls with no Medical Center or no Campus Safety in reach.
+  const halls = buildings(state.map).filter((hall) => hall.zone === 'housing' && hall.stage > 0);
+  const reached = halls.filter((hall) => inReach(state.map, 'medical', hall.x, hall.y).length > 0 && inReach(state.map, 'safety', hall.x, hall.y).length > 0).length;
+  if (halls.length > 0 && reached < halls.length) {
+    const rest = halls.length - reached;
+    top.push({ kind: 'problem', text: `A Medical Center and Campus Safety both reach ${reached} of the ${halls.length} residence halls. The other ${rest} ${rest === 1 ? 'is' : 'are'} on ${rest === 1 ? 'its' : 'their'} own.` });
+  }
+
+  // The team, while it has no stadium of its own.
+  if (state.football.stadium.tier === 0) {
+    const where = state.football.stadium.plot === null ? 'There is no plot for a stadium yet.' : 'The stadium plot stands bare.';
+    top.push({ kind: 'game', text: `The team plays on a rented field of ${headCount(seatsNow(state))} seats. ${where}`, go: 'football' });
+  }
+
+  const books = budget(state);
+  if (books.incomeTotal > 0) top.push({ kind: 'money', text: `The campus keeps $${Math.round(books.kept)} of every $100 that comes in.` });
+
+  const poll = studentPoll(state);
+  return {
+    paper: paperName(state),
+    dateline: `${formatDate(dateAt(state.clock))} · Year ${Math.max(1, state.clock.week.year)}`,
+    headline: WELCOME[hashInts(state.seed, 5151) % WELCOME.length]!(school),
+    deck: `The campus is yours from today: ${headCount(students)} students, and ${dollars(state.money.cash)} in the bank.`,
+    top: top.slice(0, TOP_ITEMS),
+    scores: [],
+    admissions: null,
+    poll: poll.lines,
+    content: poll.content,
+    movers: null,
+    more: [],
+    days: [],
+    earlier: 0,
+    folded: 0,
+  };
+}
+
 /** Every line an edition could print that is written here, for the tone check. */
 export function newspaperLines(): string[] {
-  return [...WON, ...LOST, ...Object.values(COMPLAINT)];
+  return [...WON, ...LOST, ...Object.values(COMPLAINT), ...WELCOME.map((line) => line('Larkspur'))];
 }
 
 /** Used by the tests: the number of students on campus the poll could ask. */

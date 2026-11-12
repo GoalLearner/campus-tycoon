@@ -3730,8 +3730,8 @@ Built on 2026-11-12, ahead of Stop C at the owner's word, on the branch `play-st
 | Locals living in town | 18,400. Streets on both sides of the walk to the avenue walk in (10,640 places). The rest drive: 7,760 cars for 13,440 spaces |
 | Staff | 2,300 faculty, 1,150 staff, 112 safety and medical staff, 196 maintenance workers |
 | A year's income | $462.5M |
-| A year's spending | $417.0M, so $9.80 of every $100 is kept |
-| Opening cash | $41.7M, a tenth of a year's spending. Nothing in the endowment |
+| A year's spending | $406.9M, so $12.00 of every $100 is kept. It was $417.0M and $9.80 until football's own costs became real size (35.9) |
+| Opening cash | $40.7M, a tenth of a year's spending. Nothing in the endowment |
 | Happiness | 78: walk to class 92, grounds 88, food and fun 69, safety and health 71 |
 | Football | A rented field of 3,000 seats, which sells out: about 100,000 want a ticket. The first season is that fall. The stadium plot is bare |
 
@@ -3754,6 +3754,7 @@ The multiplication is in one place for each kind of thing, where its number is r
 | The head coach's pay, and a TV deal | Left alone. One programme of real size | `coachPay`, `tvOffers` |
 | The floors a stadium tier sets under athletics staff and operations, the cap on the field's rent, and the size at which a coach is paid in full | Left alone, with the stadium | `footballBooks` |
 | How many want a ticket | Follows the real enrollment and alumni, as it always did. It is the one part of football that grows with the campus | `fanDemand` |
+| Athletics staff, travel and game days | Sized for the school as the small game counts it, since 2026-11-12 (the third change below). At the same tier they cost what they do on a small campus | `footballBooks`, `smallCount` |
 | The applicant pool: its floor (the founding class) and its ceiling | Scaled | `fallClassDraw` |
 | The founding class of a new campus | Scaled | `classSize`. It is 400 at scale 1, and the model campus has none |
 | The least staff a Medical Center or Campus Safety building has | Scaled | One at scale 1 |
@@ -3772,6 +3773,8 @@ The multiplication is in one place for each kind of thing, where its number is r
 **Changed on 2026-11-12, after the owner saw it: the stadium is one stadium of real size.** As first built, seats, tier costs, the coach's pay and the TV deal followed the scale, so the model campus's rented field held 84,000 and its top tier would have held almost two million. Now none of football's own numbers is multiplied. How many want a ticket still follows enrollment and alumni, so the model campus fills the small tiers and earns the larger ones season by season, and its first goal is still the stadium. Football's money becomes a small line on a campus of this size, and a cost: the staff and the travel follow the 46,000 students, and a field of 3,000 seats cannot pay for them. That took the opening margin from $10.40 kept of every $100 to $9.80. Chosen: a stadium of real size. The alternative: seats that follow the scale, which is what was built first.
 
 **Changed the same day: the crowd.** As first built every drawn count was divided by the scale, so the model campus drew what a campus of 1,643 would. Now walkers, commuters walking in, cars, queues, players, the scenes and the move-in crowd follow the real enrollment, each up to the limit it already had: the Crowd density setting, the caps of each step in `CROWD_STEPS`, the frame budget, and the caps on commuters, student cars, queues, scenes and arrivals. No cap moved. In practice the numbers on screen did not change: at Normal the model campus already filled its limits (about 130 people in a close view and 170 in a wide one, with 26 commuters and 19 cars). Work in a frame on this PC at Normal, over three runs of two views: 3.5 to 5.6 ms before and 3.7 to 5.6 ms after. The spread between runs is larger than any difference between before and after. To see more people the owner can set Crowd density to High. Chosen: follow the real enrollment up to the existing limits. The alternative: divide by the scale, which was built first.
+
+**Changed the same day, when the model campus became the start for every new game: football's own costs are real size too.** With the stadium at real size, the athletics staff and the travel still followed the 46,000 students: 115 staff and $1.8M of operations against a rented field of 3,000 seats. Football lost about $10M a year, and the campus opened keeping $9.80 of every $100, just under the range the game is tuned for. The owner asked for it to be fixed at its cause. One programme of real size has staff, travel and game days of real size, so `footballBooks` now sizes them for the school as the small game counts it (`smallCount`). On the model campus that is a staff of 4 and $85,700 of operations with the rent, exactly what a small campus of 1,643 pays at the same tier. Football there now costs $236,000 a year more than it earns, the same as on that small campus, and a full house at each tier it builds pays for more. **The opening numbers:** $462.5M comes in and $406.9M goes out, so $12.00 of every $100 is kept, and cash is $40.7M. Nothing about tuition, any per-student rate, or any other cost moved. At scale 1 nothing changed at all, and every earlier test passes. Left alone for five years the model campus nets $55M in its leanest year and its cash grows by $269.6M. With the casual test player it keeps 12.1% to 16.8% in years 3 to 8 and reaches 156,352 students by year eight. Chosen: size football's costs with the programme. The alternatives: leave football a $10M cost and open under the range, or raise income some other way, which the owner ruled out.
 
 **On screen.** Head counts are written with separators. Cash on the top bar is written short from $100M. The Money panel writes one decimal from $100M. The top bar, the Money panel, the building panels, the away list, the Football page and the list of what to build were looked at on a phone-sized screen at 46,000 students, and nothing runs past its place.
 
@@ -3796,16 +3799,19 @@ The multiplication is in one place for each kind of thing, where its number is r
 | The stadium, since 2026-11-12 | One stadium of real size at any scale: seats, tier costs, bills, the coach and the TV deal are not multiplied (35.9) | Seats that follow the scale, which was built first |
 | The crowd, since 2026-11-12 | Follows the real enrollment up to the limits that already exist (35.9) | Divided by the scale, which was built first |
 | What the scale test compares, since 2026-11-12 | The whole campus with football held off, and with football on the campus apart from football's own lines | Drop the comparison of money, and compare enrollment only |
+| Football's own costs, since 2026-11-12 | Staff, travel and game days are sized for the school as the small game counts it, so the campus opens keeping $12.00 of every $100 (35.9) | Leave them following 46,000 students, and open at $9.80 |
+| How the app founds a game, since 2026-11-12 | One call, `store.foundUniversity`, which always gives the model campus. The sim's own default stays the small campus, so every earlier test is unchanged | Make the model campus the sim's default and rewrite the earlier tests |
+| Whether anything is locked | Nothing. Every hall, path and placed building can be cleared with the ordinary tools, tested for all 72 lots and every placed thing. The Administration building stays, as on any campus | Lock the layout |
 
 | Rough | Why |
 |---|---|
 | The halls are drawn at the low tier's size | Each stands for a far larger building. On the art-to-fix list (section 26) |
 | The crowd is a sample | At Normal about 130 people are on a close view. That is the limit of the setting, not of the campus, and it reads a little thin against "46,000" on the top bar. High shows more |
 | The two sets of courts by the pool have nobody in reach, and the pool has few | They are the reference's athletics quarter. The gym, the fields and the courts by the halls have players |
-| Money opens at $9.80 kept of every $100 | Just under the 10 to 20 the game is tuned for, since football became a cost here. Two days into the first fall it reads 10, the casual test player's years 3 to 8 run from 10.1 to 14.8, and the untended campus nets $44M in its leanest year. A campus this well served has more to keep up than a player's own |
-| Football loses money on a campus this size | About $10M a year at the rented field: 115 staff and the travel against 3,000 seats. Each tier it earns and builds narrows that |
-| The test player who spends every dollar took one state grant in its second summer | $1.5M, once, on a budget of several hundred million. The same thing happens on a small campus (34.5). A player who keeps anything in hand does not see it |
-| A 46,000-student campus can grow | With the casual test player it reached 147,000 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
+| Money opens at $12.00 kept of every $100 | Inside the 10 to 20 the game is tuned for, two points clear of its edge. Two days into the first fall it reads 11.80. It was $9.80 until football's own costs became real size (35.9) |
+| Football is a small loss at the rented field | About $236,000 a year, the same as on a small campus at that tier. It was about $10M until its costs became real size (35.9) |
+| The test player who spends every dollar took one state grant in its second summer | $163K, once, on a budget of several hundred million. The same thing happens on a small campus (34.5). A player who keeps anything in hand does not see it |
+| A 46,000-student campus can grow | With the casual test player it reached 156,352 students in eight years. Nothing stops it but the land and the applicant pool, as on any campus |
 | The legal check | Where real buildings stand is a fact, but the owner's earlier rule was the cautious line. A lawyer should say so before the game is sold (35.1) |
 
 ---
@@ -3890,7 +3896,7 @@ Every item is written from something true of the campus at the moment it opens, 
 
 **Sums follow the campus.** A price or a fee is so much for each student, to the nearest $500, with a floor that follows the campus scale (35.7). Late hours cost $2,000 on a campus of 290 and $184,000 on one of 46,000. Rules about how big a campus must be read it as the small game would count it. Every number is written with its commas.
 
-**The advisor's pick follows the money.** An advisor picks a paid choice only when the campus has twenty times its price in the bank and keeps at least $10 of every $100 (`ADVISOR_SPENDS_FROM`). An advisor takes a deal when under $8 of every $100 is kept. Otherwise they pick the choice that costs nothing. The second half of the first rule came from the long run: on the model campus, which opens just under $10 kept, picks that spent money in the first two years took a tenth of a point off the leanest year's margin.
+**The advisor's pick follows the money.** An advisor picks a paid choice only when the campus has twenty times its price in the bank and keeps at least $10 of every $100 (`ADVISOR_SPENDS_FROM`). An advisor takes a deal when under $8 of every $100 is kept. Otherwise they pick the choice that costs nothing. The second half of the first rule came from the long run: on the model campus, which at the time opened just under $10 kept (35.9), picks that spent money in the first two years took a tenth of a point off the leanest year's margin.
 
 **The 22 items.** Each row is what must be true for it to arrive.
 
@@ -3943,7 +3949,7 @@ Nothing here has been on a phone.
 
 ### 36.7 Tests and long runs
 
-52 new tests (`tests/inbox.test.ts`, `tests/newspaper.test.ts`, `tests/notify.test.ts`): 529 in all. Seven new long-run checks, under "LAYER 4": 40 in all.
+52 new tests (`tests/inbox.test.ts`, `tests/newspaper.test.ts`, `tests/notify.test.ts`), and 13 more with the first issue and the new start (`tests/newgame.test.ts`, 36.10): 542 in all. Seven new long-run checks, under "LAYER 4": 40 in all.
 
 | Check | Result |
 |---|---|
@@ -3955,7 +3961,7 @@ Nothing here has been on a phone.
 | The once-a-day player misses no routine item | 141 items, 0 that opened and closed between two visits; 141 answered and 0 left to their default |
 | The desk gates nothing | 6782 students with every pick taken and 6871 with the desk left alone; cash $35M and $35M; the leanest year from year 3 keeps 12.9% and 13.6%; 143 answers took $2.3M out of the bank in 20 years, which is 0.17% of 20 years of spending at today's rate, and put $35M into the endowment |
 
-**How the balance moved.** Little. The casual test player was run twice for 20 game years, once taking every advisor's pick and once leaving the desk alone. It ended with 6,782 students against 6,871, and $35M in the bank both times. Its leanest year from year 3 kept $12.90 of every $100 against $13.60. The 143 answers took $2.3M out of the bank in all, which is 0.17% of what the campus spent, and put $35M into the endowment on the CFO's advice. Every size was reached in the same year as before: 500 students in year 2, 1,000 in year 3, 2,000 in year 4, 4,000 in year 6 and 8,000 in year 11. The mid-game margin of the casual and once-a-day players runs from 12.9% to 17.3%, inside the 10 to 20 the game is tuned for. The season's line on Happiness, which now carries the desk's lines, stayed between 7.1 points down and 8.5 up. On the model campus the casual test player keeps 10.0% to 14.8% in years 3 to 8, where it kept 10.1% to 14.8% before this stop, and reaches 153,664 students by year eight, where it reached 147,280.
+**How the balance moved.** Little. The casual test player was run twice for 20 game years, once taking every advisor's pick and once leaving the desk alone. It ended with 6,782 students against 6,871, and $35M in the bank both times. Its leanest year from year 3 kept $12.90 of every $100 against $13.60. The 143 answers took $2.3M out of the bank in all, which is 0.17% of what the campus spent, and put $35M into the endowment on the CFO's advice. Every size was reached in the same year as before: 500 students in year 2, 1,000 in year 3, 2,000 in year 4, 4,000 in year 6 and 8,000 in year 11. The mid-game margin of the casual and once-a-day players runs from 12.9% to 17.3%, inside the 10 to 20 the game is tuned for. The season's line on Happiness, which now carries the desk's lines, stayed between 7.1 points down and 8.5 up. On the model campus the casual test player keeps 12.1% to 16.8% in years 3 to 8 and reaches 156,352 students by year eight. Before this stop it kept 10.1% to 14.8% and reached 147,280. Most of that rise is football's costs becoming real size (35.9), which came with the same merge, and not the desk.
 
 A player who looks in every 24 hours never loses a decision without having seen it open: tested for 28 days on the test campus and for 20 game years in the long run, for routine items and the year's decisions alike.
 
@@ -4009,4 +4015,30 @@ Save version 14. A save from before gets four named advisors and an empty inbox,
 | The paper has no pictures | Words only |
 | On the model campus every fall's paper says tens of thousands went elsewhere | The campus opens full, so the waitlist line is true every fall until more is built. It may read as alarm |
 | The dated list repeats the scores | A game is under Scores and again under its date |
-| The model campus's leanest year | With the casual test player its leanest year keeps 10.0%, the very bottom of the tuned range. It was 10.1% before this stop. When advisors picked paid extras whatever the margin, it fell just under 10% and the long-run check failed, which is why they now hold back on a campus that keeps under $10 of every $100. There is no room to spare there |
+| The advisors' rule about a thin campus | It was added when the model campus opened at $9.80 kept and paid picks pushed its leanest year just under 10%. Since football's costs became real size the model campus keeps 12.1% in its leanest year with the casual test player, so the rule is no longer what holds the check. It stays, because it is good advice |
+
+### 36.10 The first issue
+
+Asked for by the owner through the main session on 2026-11-12, once the model campus became the start for every new game: "On a new game the paper's first issue is the welcome: a headline for the new president, and the student poll of top complaints, which are the first jobs. Light, in the paper's own voice, and no instructions."
+
+A game's first screen, after "Open the gates", is the paper's first issue. It is shown once and is not saved: it is a greeting.
+
+| Part | Rule |
+|---|---|
+| The headline | One of three, picked from the seed, each about the new president and each aimed at an office: the trustees, a committee, the good chair |
+| Under it | "The campus is yours from today", with the students and the cash |
+| The lines | What the campus is short of, read from the campus as it stands and said as news. The next class and how many beds and classroom seats short the campus is of fitting it. How many residence halls a Medical Center and Campus Safety both reach, and how many are on their own. The rented field and the bare stadium plot. What the campus keeps of every $100. A line that is not true of the campus is not printed |
+| The poll | On the front, since nothing has happened yet to fold away |
+| The button | "See your campus" |
+| Where | `welcomeEdition` in `src/sim/newspaper.ts`, `welcomeView`, and `store.welcome` |
+
+On the model campus it reads: the next class is 9,942 strong and the campus is 3,325 beds and 5,542 classroom seats short of fitting them. A Medical Center and Campus Safety both reach 24 of the 36 residence halls. The team plays on a rented field of 3,000 seats and the stadium plot stands bare. The campus keeps $12 of every $100.
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| A welcome | The paper's first issue, as the first screen of a new game | No welcome: straight to the map, with the top bar alone naming the first jobs |
+| What it says | What is so, and nothing about what to do. A test fails if a line tells the reader to build, add, place or tap | A list of first steps, which would be the tutorial the owner did not ask for |
+| The first jobs | Read from the campus, so they are true of any campus a game could open on | Written for the model campus by hand |
+| Whether it is saved | Not saved. Closing the app before the button is tapped loses it | Keep it until read, like an away list |
+
+**The walk through a brand-new game, as a new player.** The founding screen asks for a name, when the day starts and a colour, and says the campus opens whole. The first screen is the first issue. Behind it the top bar reads "Move-in week", "Next class is 9,942: add Housing beds and Academic seats to fit them all" and when the spring class arrives. There is no founding-day wait, since the clock opens at the tick a first class would have moved in. Nothing speaks of a first class arriving in fifteen minutes, and no tip points at a starter quad. The lines that say "until the first class arrives" are only shown on a campus with nobody on it, which no player now meets. The Menu of a new game has no "Visit the model campus". The Menu of a game begun on the small campus keeps it.
