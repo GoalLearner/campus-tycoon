@@ -212,6 +212,25 @@ function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | nul
 }
 
 /**
+ * Where a second yard goes when one has more places than a full crew can hold:
+ * beside the place furthest from the first, so the far half of its circle
+ * changes hands. The nearer yard always looks after a place.
+ */
+function splitSpot(state: GameState, yard: Placed): Point | null {
+  let far: Placed | null = null;
+  let most = -1;
+  for (const p of state.map.placed) {
+    if (!p || !isMessSpot(p) || state.map.care.yard[p.id] !== yard.id) continue;
+    const gap = Math.max(Math.max(p.x - (yard.x + yard.w - 1), yard.x - (p.x + p.w - 1), 0), Math.max(p.y - (yard.y + yard.h - 1), yard.y - (p.y + p.h - 1), 0));
+    if (gap > most) {
+      most = gap;
+      far = p;
+    }
+  }
+  return far ? menuSpot(state, 'yard', far.x, far.y) : null;
+}
+
+/**
  * Keep the campus clean, as a player who taps a messy spot and reads its one
  * fix would: a bin beside each place that drops litter, a Facilities Yard in
  * reach of it, and as many workers as the yard says it needs. Hiring is free,
@@ -248,7 +267,7 @@ function tendGrounds(state: GameState, reserve: number, most: number): { state: 
       const full = fix === 'understaffed' && !!over && workersAt(current, yardId) >= YARD_MAX_WORKERS && yardStatus(current, over).beyond;
       if (fix === 'noYard' || full) {
         if (current.money.cash - PLACED.yard.cost < reserve) continue;
-        const at = yardSpot(current, spot, full);
+        const at = full ? splitSpot(current, over!) : yardSpot(current, spot, false);
         const placed = at ? applyAction(current, { type: 'place', building: 'yard', x: at[0], y: at[1] }) : null;
         if (!placed?.ok) continue;
         current = placed.state;
@@ -462,5 +481,11 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   current = menu.state;
   purchases += menu.built;
   if (menu.blocked) blockedByCash = true;
+  // A place built on this visit gets its bin, and its yard the hands for it, before the player leaves.
+  if (menu.built > 0) {
+    const after = tendGrounds(current, reserve, menu.built);
+    current = after.state;
+    purchases += after.built;
+  }
   return { state: current, purchases, blockedByCash };
 }

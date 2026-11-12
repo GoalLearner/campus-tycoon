@@ -5,6 +5,8 @@ import {
   fixText,
   isBrokenThing,
   isMessSpot,
+  LAMP_BROKE_BY,
+  lampReport,
   spotClean,
   spotFix,
   thingFix,
@@ -177,6 +179,39 @@ function baseSummary(state: GameState, placed: Placed): string {
     case 'landmark':
       return `${spec.effect}.`;
   }
+}
+
+/** About how long, in words. The grounds are looked at every twenty minutes, so nothing is finer than that. */
+function about(minutes: number): string {
+  if (minutes < 50) return `${Math.max(20, Math.round(minutes / 20) * 20)} minutes`;
+  const hours = Math.round(minutes / 60);
+  if (hours <= 1) return 'an hour';
+  if (hours < 24) return `${hours} hours`;
+  const days = Math.round(hours / 24);
+  return days <= 1 ? 'a day' : `${days} days`;
+}
+
+/**
+ * A broken street lamp's panel: what broke it, whether a yard covers it, and
+ * when it will be fixed. null where no lamp is broken.
+ */
+export function lampSummary(state: GameState, x: number, y: number): string | null {
+  const report = lampReport(state, x, y);
+  if (!report) return null;
+  const story = report.line === null ? undefined : LAMP_BROKE_BY[report.line];
+  const where = report.spot ? `after litter piled up around the ${PLACED[report.spot.type].name}` : 'where litter had piled up';
+  const cause = story ? `${story}, ${where}.` : `It happened ${where}.`;
+  let fix: string;
+  if (!report.yard) fix = `No Facilities Yard reaches it, so it stays dark. Build one within ${PLACED.yard.radius} cells.`;
+  else if (report.workers === 0) fix = 'The Facilities Yard over it has no workers, so it stays dark. Hire one.';
+  else if (report.minutes !== null) fix = `A Facilities Yard covers it, and a worker should have it fixed in about ${about(report.minutes)}.`;
+  else {
+    // Covered, but the crew has too much else to do. The yard's own line says what would help.
+    const line = yardLine(yardStatus(state, report.yard));
+    const help = line.startsWith('Understaffed') ? ` Its yard is ${line.replace(/^U/, 'u')}` : '';
+    fix = `A Facilities Yard covers it, but its workers will not get to it for days.${help}`;
+  }
+  return `Broken. ${cause} ${fix}`;
 }
 
 export function placedFacts(placed: Placed): string {

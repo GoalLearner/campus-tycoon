@@ -12,6 +12,7 @@ import {
   DIRT_AT_CEILING,
   DIRT_INVITES,
   DROP_BUSY,
+  FIX_LOOKAHEAD_CHECKS,
   FIX_WORK,
   GROUNDS_EVAL_TICKS,
   LITTER_CEILING,
@@ -26,10 +27,12 @@ import {
   WORK_PER_WORKER,
   YARD_MAX_WORKERS,
 } from '../config/grounds';
+import { stageSpec } from '../config/buildings';
 import { PLACED } from '../config/placed';
 import { nextFloat } from '../rng';
 import { enrollment } from '../selectors';
 import type { GameState, LogEntry, MapState, Placed } from '../types';
+import { approvalAt } from './happiness';
 
 /**
  * Grounds. Students drop litter where they eat and play. Bins catch most of
@@ -217,7 +220,7 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     g.litter[spot.id] = Math.min(LITTER_CEILING, lying + ground);
   }
 
-  // 2. Workers: the fullest bins first, then the dirtiest spot, then what is broken.
+  // 2. Workers: broken bins first, then the fullest bins, then the dirtiest spot, then whatever else is broken.
   // What each yard has to do is sorted out once, with plain loops: this runs on every beat of catch-up.
   const binsOf = new Map<number, number[]>();
   for (const key in g.bins) {
@@ -251,12 +254,40 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     if (list) list.push(id);
     else brokenOf.set(yardId, [id]);
   }
+  // A broken lamp whose path or road has since been cleared is gone with it.
+  for (const key in g.lamps) {
+    const cell = Number(key);
+    const x = cell % map.width;
+    if (lampAt(map, x, (cell - x) / map.width)) continue;
+    delete g.lamps[cell];
+    delete g.lampFrom[cell];
+  }
   /** Broken lamps under each yard, worked out the first time a yard has hands free for them. */
   let lampsOf: Map<number, number[]> | null = null;
 
   for (const yard of yards) {
     let work = workersAt(state, yard.id) * WORK_PER_WORKER;
     if (work <= 0) continue;
+    const myBroken = brokenOf.get(yard.id);
+    /** Put work into one broken thing. It is mended when none is left to do. */
+    const mend = (id: number): void => {
+      const used = Math.min(work, g.broken[id]!);
+      work -= used;
+      const left = g.broken[id]! - used;
+      if (left <= 1e-9) {
+        delete g.broken[id];
+        g.repaired += 1;
+        log.push({ tick, kind: 'grounds', text: `A worker fixed a ${nameOf(map.placed[id]!).toLowerCase()}.`, data: { event: 'fixed', thing: map.placed[id]!.type } });
+      } else g.broken[id] = left;
+    };
+    // A broken bin comes before everything: while it is broken all the litter beside it lands on the
+    // ground, faster than a crew can sweep, so sweeping first would never end.
+    if (myBroken) {
+      for (const id of myBroken) {
+        if (work <= 0) break;
+        if (map.placed[id]!.type === 'bin') mend(id);
+      }
+    }
     const myBins = binsOf.get(yard.id);
     if (myBins) {
       myBins.sort((x, y) => g.bins[y]! - g.bins[x]! || x - y);
@@ -277,19 +308,11 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
         work -= swept;
       }
     }
-    // Broken things in the circle, and broken lamps under it.
-    const myBroken = brokenOf.get(yard.id);
+    // The other broken things in the circle, and broken lamps under it.
     if (myBroken) {
       for (const id of myBroken) {
         if (work <= 0) break;
-        const used = Math.min(work, g.broken[id]!);
-        work -= used;
-        const left = g.broken[id]! - used;
-        if (left <= 1e-9) {
-          delete g.broken[id];
-          g.repaired += 1;
-          log.push({ tick, kind: 'grounds', text: `A worker fixed a ${nameOf(map.placed[id]!).toLowerCase()}.`, data: { event: 'fixed', thing: map.placed[id]!.type } });
-        } else g.broken[id] = left;
+        if (g.broken[id] !== undefined) mend(id);
       }
     }
     if (work > 0 && lampsOf === null) {
@@ -313,6 +336,7 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
         const left = g.lamps[cell]! - used;
         if (left <= 1e-9) {
           delete g.lamps[cell];
+          delete g.lampFrom[cell];
           g.repaired += 1;
           log.push({ tick, kind: 'grounds', text: 'A worker fixed a street lamp.', data: { event: 'fixed', thing: 'lamp' } });
         } else g.lamps[cell] = left;
@@ -337,8 +361,11 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
     // Two draws at every check for every spot this dirty, whatever comes of them, so the stream never depends on the outcome.
     const roll = nextFloat(state.rng, 'events');
     const pick = nextFloat(state.rng, 'events');
-    // The most the chance can ever be is checked first, so the search for a Campus Safety circle is rarely made.
-    if (roll >= BREAK_RATE * 1.5 || roll >= breakChance(state, spot)) continue;
+    // The most the chance can ever be is checked first, then Campus Safety, then whether anything is there
+    // to break. How the students nearby feel is the dear part, so it is read last and only when it decides.
+    if (roll >= BREAK_RATE * MOOD_MOST) continue;
+    const share = safetyShare(state, spot);
+    if (roll >= BREAK_RATE * MOOD_MOST * share) continue;
     const things: Array<{ placed: Placed } | { lamp: number }> = [];
     for (const placed of map.placed) {
       if (!placed || isBroken(state, placed.id)) continue;
@@ -351,25 +378,75 @@ export function stepGrounds(state: GameState, log: LogEntry[]): void {
       }
     }
     if (things.length === 0) continue;
+    // A roll under the least the chance can be breaks something whatever the mood.
+    if (roll >= BREAK_RATE * MOOD_LEAST * share && roll >= breakChance(state, spot)) continue;
     const thing = things[Math.min(things.length - 1, Math.floor(pick * things.length))]!;
     g.lastBreak[spot.id] = tick;
     const kind = 'lamp' in thing ? 'lamp' : (thing.placed.type as 'bin' | 'bench' | 'table');
-    if ('lamp' in thing) g.lamps[thing.lamp] = FIX_WORK;
-    else g.broken[thing.placed.id] = FIX_WORK;
     const lines = BREAK_LINES[kind];
-    log.push({ tick, kind: 'grounds', text: lines[Math.floor(pick * 97) % lines.length]!, data: { event: 'broken', thing: kind, spot: spot.id } });
+    const line = Math.floor(pick * 97) % lines.length;
+    if ('lamp' in thing) {
+      g.lamps[thing.lamp] = FIX_WORK;
+      g.lampFrom[thing.lamp] = { spot: spot.id, line };
+    } else g.broken[thing.placed.id] = FIX_WORK;
+    log.push({ tick, kind: 'grounds', text: lines[line]!, data: { event: 'broken', thing: kind, spot: spot.id } });
   }
 }
 
 /**
+ * How the students who use a place feel, from 0 to 100: the Happiness of the
+ * open dorms and lecture halls within its reach, each counted by how many it
+ * holds. It is today's Happiness, the number a student card there would show.
+ * null where no dorm or lecture hall in reach has opened yet.
+ */
+export function moodNear(state: GameState, spot: Placed): number | null {
+  const map = state.map;
+  const reach = messReach(spot);
+  let people = 0;
+  let sum = 0;
+  for (let y = Math.max(0, spot.y - reach); y <= Math.min(map.height - 1, spot.y + spot.h - 1 + reach); y++) {
+    for (let x = Math.max(0, spot.x - reach); x <= Math.min(map.width - 1, spot.x + spot.w - 1 + reach); x++) {
+      const index = y * map.width + x;
+      const cell = map.cells[index]!;
+      if (cell.kind !== 'lot' || cell.buildingId === null) continue;
+      const building = map.buildings[cell.buildingId];
+      if (!building || building.stage < 1) continue;
+      const size = stageSpec(building.zone, building.stage).capacity;
+      sum += approvalAt(state, index).score * size;
+      people += size;
+    }
+  }
+  return people > 0 ? sum / people : null;
+}
+
+/**
  * The chance, at one check, that something near a filthy spot gets broken:
- * higher where students were unhappy last semester, and a quarter as high
- * inside a Campus Safety circle.
+ * higher where the students who use the spot are unhappy, and a quarter as
+ * high inside a Campus Safety circle. Where nobody lives or studies in reach
+ * yet, the whole campus's Happiness at the last semester's end stands in.
  */
 export function breakChance(state: GameState, spot: Placed): number {
-  const mood = state.admissions.lastSemester?.happiness ?? 60;
-  const safe = state.map.placed.some((placed) => placed && PLACED[placed.type].family === 'safety' && gapBetween(placed, spot) <= PLACED[placed.type].radius);
-  return BREAK_RATE * (0.5 + (100 - mood) / 100) * (safe ? BREAK_SAFETY_SHARE : 1);
+  const mood = moodNear(state, spot) ?? state.admissions.lastSemester?.happiness ?? 60;
+  return BREAK_RATE * (MOOD_LEAST + (100 - mood) / 100) * safetyShare(state, spot);
+}
+
+/** The chance is half the usual where students could not be happier, and half again as much where they could not be less so. */
+const MOOD_LEAST = 0.5;
+const MOOD_MOST = 1.5;
+
+/** What Campus Safety leaves of the chance: a quarter inside one of its circles, all of it outside. */
+function safetyShare(state: GameState, spot: Placed): number {
+  const map = state.map;
+  const ids = map.care.byFamily?.safety;
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (placed && gapBetween(placed, spot) <= PLACED[placed.type].radius) return BREAK_SAFETY_SHARE;
+    }
+    return 1;
+  }
+  const safe = map.placed.some((placed) => placed && PLACED[placed.type].family === 'safety' && gapBetween(placed, spot) <= PLACED[placed.type].radius);
+  return safe ? BREAK_SAFETY_SHARE : 1;
 }
 
 // ------------------------------------------------------------ what it costs --
@@ -462,10 +539,15 @@ export interface YardStatus {
   wagesPerYear: number;
 }
 
-/** Work a spot asks of its yard at each check, when it is kept clean: what misses the bins, and emptying them. */
+/**
+ * Work a spot asks of its yard at each check, when it is kept clean: what
+ * misses the bins, and emptying them. A broken bin still counts where a
+ * staffed yard reaches it, because mending it is the first thing a crew does.
+ */
 function upkeepOf(state: GameState, spot: Placed): number {
   const drop = dropOf(state, spot);
-  const bins = (state.map.care.bins[spot.id] ?? []).filter((id) => !isBroken(state, id));
+  const care = state.map.care;
+  const bins = (care.bins[spot.id] ?? []).filter((id) => !isBroken(state, id) || workersAt(state, care.yard[id] ?? -1) > 0);
   return bins.length > 0 ? drop * (1 - BIN_CATCH) + (drop * BIN_CATCH) / BIN_PER_WORK : drop;
 }
 
@@ -518,7 +600,7 @@ export function spotFix(state: GameState, spot: Placed): GroundsFix {
 const FIX_TEXT: Record<Exclude<GroundsFix, null | 'understaffed' | 'quiet'>, string> = {
   noBin: 'No bin within reach. Put a Trash bin beside it.',
   binFull: 'Its bin is full. A worker has to empty it.',
-  noYard: 'Outside worker coverage. Build a Facilities Yard within eight cells.',
+  noYard: `Outside worker coverage. Build a Facilities Yard within ${PLACED.yard.radius} cells.`,
   noWorkers: 'Its Facilities Yard has no workers. Hire one.',
 };
 
@@ -543,6 +625,68 @@ export function thingFix(state: GameState, placed: Placed): GroundsFix {
   if (workersAt(state, yard.id) === 0) return 'noWorkers';
   if (yardStatus(state, yard).hire > 0) return 'understaffed';
   return placed.type === 'bin' && !isBroken(state, placed.id) ? 'binFull' : null;
+}
+
+/** What a broken street lamp's panel has to say. */
+export interface LampReport {
+  /** Which of LAMP_BROKE_BY it was. null for a lamp broken before that was kept. */
+  line: number | null;
+  /** The place whose litter led to it. null when it is not known, or the place has gone. */
+  spot: Placed | null;
+  /** The yard whose circle covers the lamp, and how many work there. null when none does. */
+  yard: Placed | null;
+  workers: number;
+  /** Minutes until a worker has fixed it, as things stand. null when none will within three days. */
+  minutes: number | null;
+}
+
+/** True where a street lamp stands broken. */
+export function isBrokenLamp(state: GameState, x: number, y: number): boolean {
+  return (state.grounds.lamps[y * state.map.width + x] ?? 0) > 0 && lampAt(state.map, x, y);
+}
+
+/**
+ * Why a street lamp is broken, who will fix it, and when. The "when" is found
+ * by running the grounds forward on a copy, check by check, until the lamp is
+ * fixed: the same rules that will fix it, so the answer is the game's own.
+ * It assumes nothing else changes meanwhile. null where no lamp is broken.
+ */
+export function lampReport(state: GameState, x: number, y: number): LampReport | null {
+  if (!isBrokenLamp(state, x, y)) return null;
+  const map = state.map;
+  const cell = y * map.width + x;
+  const from = state.grounds.lampFrom[cell];
+  let spot = from ? (map.placed[from.spot] ?? null) : null;
+  if (!from) {
+    // Not kept for this lamp: the nearest place that drops litter within breaking reach is the likely one.
+    let near = Infinity;
+    for (const placed of map.placed) {
+      if (!placed || !isMessSpot(placed)) continue;
+      const gap = gapTo(placed, x, y);
+      if (gap <= BREAK_REACH && gap < near) {
+        near = gap;
+        spot = placed;
+      }
+    }
+  }
+  const yard = yardOver(map, x, y);
+  const workers = yard ? workersAt(state, yard.id) : 0;
+  let minutes: number | null = null;
+  if (yard && workers > 0) {
+    // Only the grounds, the dice and the clock change in a check, so only those are copied.
+    const ahead: GameState = { ...state, clock: { ...state.clock }, grounds: structuredClone(state.grounds), rng: structuredClone(state.rng) };
+    const start = state.clock.tick;
+    let tick = start - (start % GROUNDS_EVAL_TICKS) + GROUNDS_EVAL_TICKS;
+    for (let n = 0; n < FIX_LOOKAHEAD_CHECKS; n++, tick += GROUNDS_EVAL_TICKS) {
+      ahead.clock.tick = tick;
+      stepGrounds(ahead, []);
+      if (ahead.grounds.lamps[cell] === undefined) {
+        minutes = tick - start;
+        break;
+      }
+    }
+  }
+  return { line: from ? from.line : null, spot, yard, workers, minutes };
 }
 
 /** How a bin stands: empty, part full, full, or broken. For the picture and the panel. */

@@ -56,7 +56,7 @@ import {
 } from '../sim';
 import { buildEntries, happinessView, lotFacts, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
-import { hoodSummary, housingFixLines, parcelSummary, TOOL_ENTRY } from './buildUi';
+import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -814,6 +814,9 @@ export function mountUi(root: HTMLElement): void {
     lowDesirability: 'low desirability',
   };
 
+  /** The broken street lamp whose panel is open, so the panel can say when it has been fixed. */
+  let lampOpen: { x: number; y: number } | null = null;
+
   function renderInspector(state: GameState): void {
     const selected = session.selected;
     const cell = selected ? cellAt(state.map, selected.x, selected.y) : null;
@@ -822,6 +825,30 @@ export function mountUi(root: HTMLElement): void {
     staffYard = null;
     inspectorStaff.classList.remove('show');
     setText(inspectorAction, 'Build a dining hall here');
+    // A broken street lamp: what broke it, whether a yard covers it, and when it will be fixed.
+    const lamp = selected ? lampSummary(state, selected.x, selected.y) : null;
+    if (selected && lamp) {
+      lampOpen = { x: selected.x, y: selected.y };
+      setText(inspectorTitle, 'Street lamp');
+      setText(inspectorState, lamp);
+      setText(inspectorFacts, '');
+      inspectorAction.classList.remove('show');
+      inspector.classList.add('show');
+      return;
+    }
+    if (lampOpen) {
+      // Its panel was open and a worker has just fixed it: say so, and close the panel.
+      const was = lampOpen;
+      lampOpen = null;
+      if (selected && selected.x === was.x && selected.y === was.y) {
+        inspector.classList.remove('show');
+        queueMicrotask(() => {
+          session.clearSelection();
+          session.notify('A worker fixed the street lamp.');
+        });
+        return;
+      }
+    }
     // A field for sale: its price, and a button to buy it.
     const parcel = selected ? parcelAt(state.map, selected.x, selected.y) : null;
     if (selected && parcel && !parcel.owned) {

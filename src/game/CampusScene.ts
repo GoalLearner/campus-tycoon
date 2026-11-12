@@ -29,6 +29,7 @@ import {
   isBrokenThing,
   isMessSpot,
   isPathKind as isWalk,
+  isBrokenLamp,
   lampAt,
   LITTER_CEILING,
   spotClean,
@@ -1052,6 +1053,25 @@ export class CampusScene extends Phaser.Scene {
     return null;
   }
 
+  /** A broken street lamp under the finger: on its post, or on the cell it stands on. */
+  private brokenLampAt(worldX: number, worldY: number, screenX: number, screenY: number): [number, number] | null {
+    const state = store.state;
+    const [gx, gy] = this.cellAt(screenX, screenY);
+    const pad = (8 * this.dpr) / this.cameras.main.zoom;
+    for (const key of Object.keys(state.grounds.lamps)) {
+      const cell = Number(key);
+      const x = cell % this.mapWidth;
+      const y = (cell - x) / this.mapWidth;
+      if (!isBrokenLamp(state, x, y)) continue;
+      if (x === gx && y === gy) return [x, y];
+      const post = this.visuals[cell]?.object;
+      if (!post?.visible) continue;
+      const box = post.getBounds();
+      if (worldX >= box.x - pad && worldX <= box.right + pad && worldY >= box.y - pad && worldY <= box.bottom + pad) return [x, y];
+    }
+    return null;
+  }
+
   private tap(screenX: number, screenY: number): void {
     const world = this.toWorld(screenX, screenY);
     if (session.tool === 'place' && session.placing) {
@@ -1086,6 +1106,12 @@ export class CampusScene extends Phaser.Scene {
       return;
     }
     session.closeStudent();
+    // A broken street lamp says what broke it and when it will be fixed.
+    const lamp = this.brokenLampAt(world.x, world.y, screenX, screenY);
+    if (lamp) {
+      session.select(lamp[0], lamp[1]);
+      return;
+    }
     const building = this.placed.hit(world.x, world.y);
     if (building) {
       session.select(building.x, building.y);

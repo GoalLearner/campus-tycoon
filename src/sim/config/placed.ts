@@ -114,7 +114,7 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   yard: {
     name: 'Facilities Yard', category: 'Grounds', family: 'yard', w: 2, h: 1, cost: 60_000, upkeepPerYear: 0,
-    radius: 8, strength: 0, effect: 'Its workers empty bins, sweep and fix within 8 cells', sprite: 'build.yard', flat: false, buildable: true,
+    radius: 12, strength: 0, effect: 'Its workers empty bins, sweep and fix within 12 cells', sprite: 'build.yard', flat: false, buildable: true,
   },
   admin: {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,

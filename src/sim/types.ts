@@ -295,6 +295,11 @@ export interface Grounds {
   broken: Record<number, number>;
   /** Broken street lamps, by cell index: the work left to fix each. */
   lamps: Record<number, number>;
+  /**
+   * What broke each of those lamps: the place whose litter led to it, and which
+   * of the lamp's stories it was. Missing for a lamp broken before this was kept.
+   */
+  lampFrom: Record<number, { spot: number; line: number }>;
   /** Workers hired at each Facilities Yard. */
   workers: Record<number, number>;
   /** The tick something last broke at each mess spot. */

@@ -56,6 +56,9 @@ export const BREAK_EVERY_TICKS = 24 * 60;
 /** Things this near a dirty spot can be the one that breaks. */
 export const BREAK_REACH = 4;
 
+/** A lamp's panel says when a worker will have fixed it, looking this many checks ahead: three days. */
+export const FIX_LOOKAHEAD_CHECKS = (3 * 24 * 60) / GROUNDS_EVAL_TICKS;
+
 /** Seating: what each thing is worth to the lots within SEAT_REACH cells, and how much is plenty. */
 export const SEAT_REACH = 3;
 export const SEAT_UNITS = { quad: 0.5, bench: 1, table: 1.5 } as const;
@@ -73,3 +76,6 @@ export const BREAK_LINES: Record<'bin' | 'bench' | 'table' | 'lamp', readonly st
   table: ['A picnic table hosted one tug-of-war too many.', 'A picnic table has been stacked on by too many people at once.'],
   lamp: ['A street lamp met a stray frisbee and went dark.', 'A street lamp has stopped working after a very ambitious kick.'],
 };
+
+/** The same two stories about a street lamp, as its own panel tells them. In the order of BREAK_LINES.lamp. */
+export const LAMP_BROKE_BY: readonly string[] = ['A stray frisbee hit it', 'Somebody tried a very ambitious kick'];

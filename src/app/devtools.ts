@@ -1,4 +1,4 @@
-import { advance, applyAction, incidentText, nearestSpot, newGame, PLACED, previewPaint, previewPlace, rowBetween, studentCard, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, incidentText, lampAt, nearestSpot, newGame, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -167,8 +167,12 @@ function groundsCampus(): GameState {
     if (cell) state = paint(state, tool, [cell]);
   };
   const hall = first('dining');
-  // The recreation field is out of the yard's reach, so it is the corner nobody tends.
-  const shop = first('field');
+  // A court at the south end of the land, out of the yard's reach: the corner nobody tends.
+  state = paint(state, 'path', rowBetween([4, 29], [11, 29]));
+  const cornerAt = [5, 6, 7, 8, 4, 9].map((x): Point => [x, 30]).find(([x, y]) => previewPlace(state, 'courts', x, y).problem === null);
+  const corner = cornerAt ? applyAction(state, { type: 'place', building: 'courts', x: cornerAt[0], y: cornerAt[1] }) : null;
+  if (corner?.ok) state = corner.state;
+  const shop = corner?.ok ? (state.map.placed[state.map.placed.length - 1] ?? null) : null;
   if (hall) {
     lay('bench', beside(hall, 2));
     lay('table', beside(hall, 4));
@@ -204,6 +208,34 @@ function groundsCampus(): GameState {
   if (farBin && (state.map.care.yard[farBin.id] ?? -1) >= 0) state.grounds.bins[farBin.id] = 31;
   const benches = state.map.placed.filter((placed) => placed?.type === 'bench' && (state.map.care.yard[placed.id] ?? -1) < 0);
   if (benches[0]) state.grounds.broken[benches[0].id] = 3.3;
+  // Two broken street lamps: one a worker will reach, and one no yard covers. &select=lamp and &select=lamp2 open them.
+  const breakLampBy = (spot: { id: number; x: number; y: number } | null, line: number): void => {
+    if (!spot) return;
+    for (let ring = 1; ring <= 4; ring++) {
+      for (let y = spot.y - ring; y <= spot.y + ring; y++) {
+        for (let x = spot.x - ring; x <= spot.x + ring; x++) {
+          const cell = y * state.map.width + x;
+          if (x < 0 || y < 0 || x >= state.map.width || y >= state.map.height || !lampAt(state.map, x, y) || state.grounds.lamps[cell]) continue;
+          state.grounds.lamps[cell] = 3.3;
+          state.grounds.lampFrom[cell] = { spot: spot.id, line };
+          return;
+        }
+      }
+    }
+  };
+  breakLampBy(hall, 0);
+  breakLampBy(shop, 1);
+  // The yard has the hands its circle asks for, so its corner reads as a tended one does.
+  const yard = first('yard');
+  if (yard) {
+    for (let n = 0; n < 4; n++) {
+      const status = yardStatus(state, yard);
+      if (status.hire === 0 || status.workers >= status.max) break;
+      const hired = applyAction(state, { type: 'staff', yard: yard.id, workers: Math.min(status.max, status.workers + status.hire) });
+      if (!hired.ok) break;
+      state = hired.state;
+    }
+  }
   return state;
 }
 
@@ -252,6 +284,21 @@ function applyViewParams(params: URLSearchParams): void {
   const incident = params.get('incident');
   const select = params.get('select')?.split(',').map(Number);
   if (select && select.length === 2 && select.every(Number.isFinite)) setTimeout(() => session.select(select[0]!, select[1]!), 2600);
+  // &select=lamp opens a broken street lamp a yard covers, and &select=lamp2 one that none does.
+  const lampPick = params.get('select');
+  if (lampPick === 'lamp' || lampPick === 'lamp2') {
+    setTimeout(() => {
+      const map = store.state.map;
+      for (const key of Object.keys(store.state.grounds.lamps)) {
+        const cell = Number(key);
+        const x = cell % map.width;
+        const y = Math.floor(cell / map.width);
+        if ((yardOver(map, x, y) !== null) !== (lampPick === 'lamp')) continue;
+        session.focusOn(x, y);
+        return;
+      }
+    }, 2600);
+  }
   if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;

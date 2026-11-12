@@ -8,6 +8,7 @@ import {
   BIN_CAPACITY,
   binState,
   BREAK_LINES,
+  BREAK_RATE,
   BREAK_SAFETY_SHARE,
   breakChance,
   campusClean,
@@ -20,8 +21,12 @@ import {
   fixText,
   GROUNDS_QUIET_TICKS,
   groundsLine,
+  isBrokenLamp,
   isBrokenThing,
+  LAMP_BROKE_BY,
+  lampReport,
   LITTER_CEILING,
+  moodNear,
   parseSave,
   PART_WEIGHTS,
   partLevel,
@@ -296,17 +301,72 @@ describe('breakage', () => {
     expect(broken(clean)).toBe(0);
   });
 
-  it('is rarer inside a Campus Safety circle, and where students are happy', () => {
-    const chance = (mood: number, safe: boolean): number => {
-      const state = filthy(mood, safe);
-      return breakChance(state, dining(state));
+  it('is rarer inside a Campus Safety circle', () => {
+    const unsafe = filthy(40, false);
+    const safe = filthy(40, true);
+    // Campus Safety also makes the students nearby a little happier, so the chance is read from the rule itself.
+    const rule = (state: GameState, share: number): number => BREAK_RATE * (0.5 + (100 - moodNear(state, dining(state))!) / 100) * share;
+    expect(breakChance(unsafe, dining(unsafe))).toBeCloseTo(rule(unsafe, 1), 9);
+    expect(breakChance(safe, dining(safe))).toBeCloseTo(rule(safe, BREAK_SAFETY_SHARE), 9);
+    expect(breakChance(safe, dining(safe))).toBeLessThan(breakChance(unsafe, dining(unsafe)) * 0.3);
+    // And it shows: far fewer things are broken where Campus Safety is near.
+    expect(broken(safe)).toBeLessThanOrEqual(broken(unsafe));
+  });
+
+  it('reads the Happiness of the students near the spot, not of the whole campus', () => {
+    const state = filthy(40, false);
+    const hall = dining(state);
+    const width = state.map.width;
+    // The three dorms beside the hall are its students. The lecture halls across the campus are not.
+    const dorms = state.map.buildings.filter((b) => b && b.zone === 'housing' && b.stage >= 1).map((b) => approvalAt(state, b!.y * width + b!.x).score);
+    expect(dorms.length).toBe(3);
+    const near = moodNear(state, hall)!;
+    expect(near).toBeCloseTo(dorms.reduce((sum, score) => sum + score, 0) / dorms.length, 9);
+    expect(Math.abs(near - campusHappiness(state).score)).toBeGreaterThan(3);
+    // Last semester's campus number no longer moves it.
+    const other = filthy(95, false);
+    expect(breakChance(other, dining(other))).toBe(breakChance(state, hall));
+    // What the students beside it feel does. With the litter gone they are happier, and less gets broken.
+    const tidy = structuredClone(state);
+    tidy.grounds.litter = {};
+    expect(moodNear(tidy, dining(tidy))!).toBeGreaterThan(near + 1);
+    expect(breakChance(tidy, dining(tidy))).toBeLessThan(breakChance(state, hall));
+    // A mess at the far end of the campus changes the campus's Happiness and leaves this spot's alone.
+    let far = act(state, { type: 'paint', tool: 'path', cells: rowBetween([19, 19], [21, 19]) });
+    far = act(far, { type: 'place', building: 'courts', x: 19, y: 20 });
+    far.grounds.litter[ofType(far, 'courts')[0]!.id] = LITTER_CEILING;
+    expect(campusHappiness(far).score).not.toBeCloseTo(campusHappiness(state).score, 6);
+    expect(moodNear(far, dining(far))!).toBeCloseTo(near, 9);
+  });
+
+  it('falls back on the campus where nobody lives or studies in reach yet', () => {
+    const chance = (mood: number): number => {
+      const state = act(filthy(mood, false), { type: 'place', building: 'courts', x: 3, y: 26 });
+      const lonely = ofType(state, 'courts')[0]!;
+      expect(moodNear(state, lonely)).toBeNull();
+      return breakChance(state, lonely);
     };
-    expect(chance(40, true)).toBeCloseTo(chance(40, false) * BREAK_SAFETY_SHARE, 9);
-    expect(chance(98, false)).toBeLessThan(chance(40, false));
-    expect(chance(40, false)).toBeLessThan(chance(5, false));
-    // And it shows over a week: far fewer things are broken where Campus Safety is near.
-    const week = (state: GameState): number => run(state, 2.5 * 24 * 60).log.filter((entry) => entry.data?.event === 'broken').length;
-    expect(week(filthy(40, true))).toBeLessThanOrEqual(week(filthy(40, false)));
+    expect(chance(98)).toBeLessThan(chance(40));
+    expect(chance(40)).toBeLessThan(chance(5));
+  });
+
+  it('mends a broken bin before anything else, so one crew can win back a filthy place', () => {
+    let state = withYard(busy());
+    const bins = ofType(state, 'bin');
+    expect(bins.length).toBe(2);
+    for (const bin of bins) state.grounds.broken[bin.id] = FIX_WORK;
+    state.grounds.litter[dining(state).id] = LITTER_CEILING;
+    // With both bins broken the hall drops more than one worker sweeps, so sweeping first would never end.
+    expect(yardStatus(state, yard(state)).beyond).toBe(false);
+    const first = run(state, 80);
+    const hour = first.state;
+    // Both are mended within three checks, while the litter still lies deep. (One may be broken again later.)
+    expect(first.log.filter((entry) => entry.data?.event === 'fixed' && entry.data?.thing === 'bin').length).toBe(2);
+    expect(litter(hour)).toBeGreaterThan(0.9 * LITTER_CEILING);
+    // And with the bins back, the yard's own advice gets the place clean again.
+    const status = yardStatus(hour, yard(hour));
+    const staffed = staff(hour, Math.min(YARD_MAX_WORKERS, status.workers + status.hire));
+    expect(spotClean(run(staffed, 2 * 24 * 60).state, dining(staffed))).toBeGreaterThan(0.9);
   });
 
   it('is fixed inside a yard\'s circle with no tap, and stays broken outside one', () => {
@@ -328,9 +388,104 @@ describe('breakage', () => {
     expect(isBrokenThing(run(later.state, 3 * 24 * 60).state, far.id)).toBe(true);
   });
 
+  describe('a broken street lamp', () => {
+    const LAMP: [number, number] = [10, 14];
+    const cellOf = (state: GameState): number => LAMP[1] * state.map.width + LAMP[0];
+    const breakLamp = (state: GameState): GameState => {
+      const next = structuredClone(state);
+      next.grounds.lamps[cellOf(next)] = FIX_WORK;
+      next.grounds.lampFrom[cellOf(next)] = { spot: dining(next).id, line: 1 };
+      return next;
+    };
+
+    it('says what broke it, which yard covers it, and when it will be fixed', () => {
+      expect(lampReport(withYard(busy(0)), ...LAMP)).toBeNull();
+      const state = breakLamp(withYard(busy(0)));
+      expect(isBrokenLamp(state, ...LAMP)).toBe(true);
+      const report = lampReport(state, ...LAMP)!;
+      expect(report.spot?.id).toBe(dining(state).id);
+      expect(report.line).toBe(1);
+      expect(report.yard?.id).toBe(yard(state).id);
+      expect(report.workers).toBe(1);
+      // The time it gives is the time it takes: still broken one check sooner, fixed on the minute.
+      expect(report.minutes).not.toBeNull();
+      const minutes = report.minutes!;
+      expect(minutes).toBeGreaterThan(20);
+      expect(minutes).toBeLessThanOrEqual(60);
+      expect(isBrokenLamp(run(state, minutes - 20).state, ...LAMP)).toBe(true);
+      const fixed = run(state, minutes).state;
+      expect(isBrokenLamp(fixed, ...LAMP)).toBe(false);
+      expect(fixed.grounds.lampFrom).toEqual({});
+      // Asking changes nothing.
+      const before = JSON.stringify(state);
+      lampReport(state, ...LAMP);
+      expect(JSON.stringify(state)).toBe(before);
+    });
+
+    it('takes longer behind a crew with more to do, and says when nobody will come', () => {
+      // A second worker gets there sooner.
+      const one = breakLamp(withYard(busy(0)));
+      const two = staff(one, 2);
+      expect(lampReport(two, ...LAMP)!.minutes!).toBeLessThan(lampReport(one, ...LAMP)!.minutes!);
+      // A filthy hall with no bins keeps one worker sweeping for good: the lamp is not reached.
+      let swamped = act(withYard(busy()), { type: 'paint', tool: 'clear', cells: [[9, 12], [12, 12]] });
+      swamped.grounds.litter[dining(swamped).id] = LITTER_CEILING;
+      swamped = breakLamp(swamped);
+      const stuck = lampReport(swamped, ...LAMP)!;
+      expect(stuck.yard).not.toBeNull();
+      expect(stuck.minutes).toBeNull();
+      expect(isBrokenLamp(run(swamped, 3 * 24 * 60).state, ...LAMP)).toBe(true);
+      // Nobody on the books, or no yard at all.
+      const idle = lampReport(staff(one, 0), ...LAMP)!;
+      expect(idle.yard).not.toBeNull();
+      expect(idle.workers).toBe(0);
+      expect(idle.minutes).toBeNull();
+      const alone = lampReport(breakLamp(busy(0)), ...LAMP)!;
+      expect(alone.yard).toBeNull();
+      expect(alone.minutes).toBeNull();
+    });
+
+    it('remembers which place\'s litter led to it, and which story it was', () => {
+      // No bins and no benches by the hall: the lamps on its path are all there is to break.
+      let state = act(busy(), { type: 'paint', tool: 'clear', cells: [[9, 12], [12, 12]] });
+      state.grounds.litter[dining(state).id] = LITTER_CEILING;
+      let entry: LogEntry | undefined;
+      for (let day = 0; day < 12 && !entry; day++) {
+        const result = run(state, 24 * 60);
+        state = result.state;
+        entry = result.log.find((line) => line.data?.event === 'broken');
+      }
+      expect(entry?.data?.thing).toBe('lamp');
+      const cells = Object.keys(state.grounds.lamps).map(Number);
+      expect(cells.length).toBeGreaterThan(0);
+      const from = state.grounds.lampFrom[cells[0]!]!;
+      expect(from.spot).toBe(dining(state).id);
+      const width = state.map.width;
+      const report = lampReport(state, cells[0]! % width, Math.floor(cells[0]! / width))!;
+      expect(report.spot?.id).toBe(dining(state).id);
+      expect(BREAK_LINES.lamp).toContain(entry!.text);
+      expect(report.line).toBeGreaterThanOrEqual(0);
+      expect(report.line).toBeLessThan(LAMP_BROKE_BY.length);
+      expect(report.yard).toBeNull();
+    });
+
+    it('is forgotten when its path is cleared', () => {
+      let state = breakLamp(busy(0));
+      state = act(state, { type: 'paint', tool: 'clear', cells: [LAMP] });
+      expect(isBrokenLamp(state, ...LAMP)).toBe(false);
+      expect(lampReport(state, ...LAMP)).toBeNull();
+      const later = run(state, 20).state;
+      expect(later.grounds.lamps).toEqual({});
+      expect(later.grounds.lampFrom).toEqual({});
+    });
+  });
+
   it('keeps every line inside the tone guide', () => {
     const banned = /\b(beer|wine|drunk|alcohol|pub|vodka|smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|rat|rats|roach\w*)\b/i;
     for (const lines of Object.values(BREAK_LINES)) for (const line of lines) expect(line).not.toMatch(banned);
+    for (const line of LAMP_BROKE_BY) expect(line).not.toMatch(banned);
+    // A lamp's panel tells the same two stories as the news of it breaking.
+    expect(LAMP_BROKE_BY.length).toBe(BREAK_LINES.lamp.length);
   });
 });
 
@@ -403,5 +558,59 @@ describe('upgrading a version 6 save, from before grounds', () => {
     expect(later.grounds.bins).toEqual({});
     // A bin's worth of capacity is what a full one holds.
     expect(BIN_CAPACITY).toBeGreaterThan(0);
+  });
+});
+
+describe('upgrading a version 7 save, from when a yard reached eight cells', () => {
+  const text = readFileSync(join(__dirname, 'fixtures', 'save-v7.json'), 'utf8');
+  const old = (JSON.parse(text) as { state: GameState }).state;
+  const load = (): GameState => {
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(loaded.migratedFrom).toBe(7);
+    return loaded.state;
+  };
+
+  it('changes nothing the player built or owns', () => {
+    const state = load();
+    expect(state.version).toBe(SAVE_VERSION);
+    expect(state.money.cash).toBe(old.money.cash);
+    expect(state.cohorts).toEqual(old.cohorts);
+    expect(state.map.placed).toEqual(old.map.placed);
+    expect(state.map.cells).toEqual(old.map.cells);
+    expect(state.grounds.litter).toEqual(old.grounds.litter);
+    expect(state.grounds.lamps).toEqual(old.grounds.lamps);
+    expect(state.grounds.workers).toEqual(old.grounds.workers);
+    expect(state.grounds.lampFrom).toEqual({});
+    expect(validate(state)).toBeNull();
+    expect(load()).toEqual(load());
+  });
+
+  it('lets the yard reach the store ten cells away, which it could not before', () => {
+    const state = load();
+    const store = ofType(state, 'store')[0]!;
+    const bench = ofType(state, 'bench')[0]!;
+    expect(old.map.care.yard[store.id]).toBe(-1);
+    expect(old.grounds.litter[store.id]).toBe(LITTER_CEILING);
+    expect(isBrokenThing(state, bench.id)).toBe(true);
+    expect(state.map.care.yard[store.id]).toBe(yard(state).id);
+    expect(state.map.care.yard[bench.id]).toBe(yard(state).id);
+    // Its worker sweeps the store and mends the bench without being asked.
+    const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * DAY).state;
+    expect(spotClean(later, store)).toBeGreaterThan(0.9);
+    expect(isBrokenThing(later, bench.id)).toBe(false);
+  });
+
+  it('explains a lamp broken before the cause was kept, by the nearest place that drops litter', () => {
+    const state = load();
+    const cells = Object.keys(state.grounds.lamps).map(Number);
+    expect(cells.length).toBe(1);
+    const width = state.map.width;
+    const report = lampReport(state, cells[0]! % width, Math.floor(cells[0]! / width))!;
+    expect(report.line).toBeNull();
+    expect(report.spot?.type).toBe('store');
+    // It stands thirteen cells from the yard: still out of reach, and its report says so.
+    expect(report.yard).toBeNull();
+    expect(report.minutes).toBeNull();
   });
 });
