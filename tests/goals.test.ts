@@ -327,15 +327,20 @@ describe('the Size panel on a game with goals', () => {
 });
 
 describe('a goal in the paper', () => {
-  it('is the headline of its day, and at the top, when it was reached while away', () => {
+  it('is the headline of its day, said once, when it was reached while away', () => {
     const before = advance(model(), T0, T0 + 6 * DAY).state;
     const away = advance(before, before.clock.lastSimulatedAt, T0 + 8 * DAY);
     const goal = away.log.find((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size')!;
     expect(goal).toBeDefined();
     const paper = edition(away.state, away.log, { minutes: 2 * 1440, cashBefore: before.money.cash, cashAfter: away.state.money.cash, studentsBefore: enrollment(before), studentsAfter: enrollment(away.state) });
     expect(paper.headline).toMatch(/^Test Passes 50,000 Students; /);
+    // Said once on the front: in the line under the headline, and not again among the lines beneath.
     expect(paper.deck).toBe(goal.text);
-    expect(paper.top.some((item) => item.text === goal.text)).toBe(true);
+    expect(paper.top.some((item) => item.text === goal.text)).toBe(false);
+    expect(paper.more).not.toContain(goal.text);
+    // A second goal on the same day, which is not the headline, is one of the lines at the top.
+    const second = away.log.find((entry) => entry.kind === 'goal' && entry.text !== paper.deck);
+    if (second) expect(paper.top.some((item) => item.text === second.text)).toBe(true);
     // It is in the dated list as well, on the day the class moved in.
     expect(paper.days.some((day) => day.lines.includes(goal.text))).toBe(true);
   });

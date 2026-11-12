@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { planTraffic } from '../app/traffic';
 import { clock } from '../app/clock';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
@@ -649,6 +650,8 @@ export class CampusScene extends Phaser.Scene {
     // The town is always fully built: every plot has its house, whoever is enrolled from it.
     const forSale = state.map.parcels.filter((parcel) => !parcel.owned);
     const hasLamps = this.art.has('lamp.off') && this.art.has('lamp.on');
+    // Where the marked crossings are: the same reading of the roads the cars and the people use.
+    const crossings = planTraffic(state.map.width, state.map.height, state.map.cells.map((one) => one.kind), TOWN_X);
     const lamp = this.lampsLit ? 'lamp.on' : 'lamp.off';
     const lampCells: number[] = [];
     for (let y = 0; y < height; y++) {
@@ -669,7 +672,8 @@ export class CampusScene extends Phaser.Scene {
             if (!out) lampCells.push(i);
           }
         } else if (cell.kind === 'road' || cell.kind === 'street') {
-          groundKey = `road.${this.roadMask(state, x, y)}`;
+          // Beside a junction on the avenue the road is a marked crossing: where people from the town walk over.
+          groundKey = crossings.zebra[i] ? (this.roadMask(state, x, y) & 5 ? 'road.cross.5' : 'road.cross.10') : `road.${this.roadMask(state, x, y)}`;
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
             objectKey = out ? 'lamp.off' : lamp;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
+import { newCar, placeCar, planTraffic, Traffic, type RouteNode, type TrafficCar } from '../app/traffic';
 import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars } from '../sim';
 import type { Art } from './art';
 import type { Iso } from './iso';
@@ -19,14 +20,14 @@ import { driveways } from './townLook';
  * - Delivery trucks call at dining halls and stores that have a road beside
  *   them.
  *
- * A car waits at a crossing while somebody is walking over it. That is the
- * whole of the traffic rules: there is no congestion, none of this is
- * simulation, none of it is saved, and nothing here runs while the game is
- * closed.
+ * The rules of the road are in `src/app/traffic.ts`, where they are tested
+ * without the game engine: a gap behind the car in front, a stop sign at
+ * every junction with one car through at a time, and a crossing that belongs
+ * to whoever is on it. This file draws what those rules decide. None of it
+ * is simulation, none of it is saved, and nothing here runs while the game
+ * is closed.
  */
 
-/** Cells a second. */
-const SPEED = 2.3;
 const FADE_MS = 280;
 const SPAWN_EVERY_MS = 650;
 const MAX_STUDENT_CARS = 9;
@@ -39,12 +40,14 @@ const SMALL_CARS = 6;
 /** How busy the roads are in each part of the day, and the share of student cars heading to campus. */
 const TRAFFIC: Record<DayPeriod, { busy: number; inbound: number }> = {
   morning: { busy: 1.4, inbound: 0.85 },
-  afternoon: { busy: 0.8, inbound: 0.5 },
+  afternoon: { busy: 0.6, inbound: 0.5 },
   evening: { busy: 1.2, inbound: 0.2 },
   night: { busy: 0.25, inbound: 0.3 },
 };
+/** How busy the busiest part of the day is: the rush the caps are sized for. */
+const RUSH_BUSY = 1.4;
 /** The town's own cars on its streets in each part of the day. */
-const TOWN_CARS: Record<DayPeriod, number> = { morning: 4, afternoon: 3, evening: 4, night: 1 };
+const TOWN_CARS: Record<DayPeriod, number> = { morning: 4, afternoon: 2, evening: 4, night: 1 };
 /** The share of driveways with a car standing in them. People are home at night and out by day. */
 const HOME: Record<DayPeriod, number> = { morning: 0.55, afternoon: 0.35, evening: 0.7, night: 0.95 };
 const SHUTTLE_PAUSE_MS = 2600;
@@ -54,59 +57,16 @@ const TRUCK_EVERY_MS = 16_000;
 /** Shuttle stops nearer than this to one already chosen are left out. */
 const STOP_SPACING = 4;
 
-type Heading = 'px' | 'nx' | 'py' | 'ny';
+type Node = RouteNode;
 
-/** Cars keep to one side of the road, as the look review placed them. */
-const LANE: Record<Heading, { x: number; y: number }> = {
-  px: { x: 0, y: 0.16 },
-  nx: { x: 0, y: -0.16 },
-  py: { x: -0.14, y: 0 },
-  ny: { x: 0.14, y: 0 },
-};
-
-/** Which way each heading points, in cells. */
-const AHEAD: Record<Heading, { x: number; y: number }> = {
-  px: { x: 1, y: 0 },
-  nx: { x: -1, y: 0 },
-  py: { x: 0, y: 1 },
-  ny: { x: 0, y: -1 },
-};
-/** The room a car keeps behind the one in front, in cells, and how much more a bus or a truck takes up. */
-const GAP = 0.85;
-const LONG_GAP = 0.3;
-
-const NO_LANE = { x: 0, y: 0 };
-
-/** One step of a route: a cell, and whether it is road. Driveways and car parks are not. */
-interface Node {
-  x: number;
-  y: number;
-  road: boolean;
-}
-
-interface Vehicle {
+/** A car as the rules of the road keep it, with what is needed to draw it. */
+interface Vehicle extends TrafficCar {
   sprite: Phaser.GameObjects.Image;
   kind: 'student' | 'town' | 'shuttle' | 'truck';
   /** The sprite name before the heading: car.3, shuttle, truck.0. */
   look: string;
-  route: Node[];
-  /** The leg being driven: from route[leg] to route[leg + 1]. */
-  leg: number;
-  /** How far along that leg, from 0 to 1. */
-  along: number;
   alpha: number;
   fading: 'in' | 'out' | null;
-  /** Standing still for this long yet: at a stop, or making a delivery. */
-  pauseMs: number;
-  /** Legs at whose end it pauses, and for how long. */
-  pauseAt: Map<number, number>;
-  /** The shuttle never leaves: at the end of its route it starts the next. */
-  loop: number;
-  heading: Heading;
-  /** Where it was last drawn, in cells, and whether that was on the road. */
-  x: number;
-  y: number;
-  onRoad: boolean;
   /** A delivery truck: its driver, who steps out with boxes while it stands at the kitchen or the store. */
   driver: { n: number; x: number; y: number; front: number; body: Phaser.GameObjects.Image; boxes: Phaser.GameObjects.Image } | null;
 }
@@ -134,7 +94,9 @@ export class Cars {
   private width = 0;
   private height = 0;
   private drivable: boolean[] = [];
-  private crossing: boolean[] = [];
+  /** The rules of the road, and the signs that stand at its junctions and crossings. */
+  private traffic = new Traffic(planTraffic(0, 0, [], TOWN_X));
+  private signs: Phaser.GameObjects.Image[] = [];
   /** Car parks a road reaches: the road cell beside each, and the car park's own cell. */
   private parks: Array<{ door: number; x: number; y: number }> = [];
   /** Driveways of the streets students drive from. */
@@ -152,8 +114,6 @@ export class Cars {
   private spawnClock = 0;
   private truckClock = TRUCK_EVERY_MS * 0.5;
   private step = 2;
-  /** Crossings a vehicle is on or is driving onto. Walkers wait for them. */
-  private taken = new Set<number>();
   /** Vehicles on screen at the last frame, for the sound of traffic. */
   private seen = 0;
   /** Asked each frame: is somebody walking over this crossing? */
@@ -181,7 +141,24 @@ export class Cars {
     this.width = width;
     this.height = height;
     this.drivable = cells.map((cell) => isRoadKind(cell.kind));
-    this.crossing = cells.map((cell) => cell.kind === 'crossing');
+    const plan = planTraffic(width, height, cells.map((cell) => cell.kind), TOWN_X);
+    this.traffic.setPlan(plan);
+    for (const vehicle of this.vehicles) {
+      vehicle.zone = -1;
+      vehicle.waitingAt = -1;
+    }
+    // A stop sign at every way into a junction, and a crossing sign at a crossing that stands by itself.
+    for (const sprite of this.signs) sprite.destroy();
+    this.signs = [];
+    for (const sign of plan.signs) {
+      const key = sign.kind === 'stop' ? 'sign.stop' : 'sign.crossing';
+      if (!this.art.has(key)) continue;
+      const sprite = this.scene.add.image(0, 0, '__DEFAULT');
+      this.art.apply(sprite, key);
+      const at = this.iso.toWorld(sign.x, sign.y);
+      sprite.setPosition(at.x, at.y).setDepth((sign.x + sign.y) * 4 + 2.45);
+      this.signs.push(sprite);
+    }
     // Student cars have a cap of their own, so they follow the real number who drive in.
     this.drivers = driversNow(state);
 
@@ -332,14 +309,31 @@ export class Cars {
     if (route.length < 2) return null;
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
     sprite.setVisible(true);
-    const vehicle: Vehicle = { sprite, kind, look, route, leg: 0, along: 0, alpha: 0, fading: 'in', pauseMs: 0, pauseAt, loop: 0, heading: 'px', x: 0, y: 0, onRoad: false, driver: null };
+    const vehicle: Vehicle = { ...newCar(route, kind === 'shuttle' || kind === 'truck', pauseAt), sprite, kind, look, alpha: 0, fading: 'in', driver: null };
     if (partWay) {
-      // The first cars are already on their way, so the roads are not empty when the map opens.
-      vehicle.leg = Math.floor(Math.random() * (route.length - 1));
+      // The first cars are already on their way, so the roads are not empty when the map opens. None is set
+      // down inside a junction or on a crossing, or within a car's length of another.
+      const clear = (leg: number): boolean => {
+        const zone = (node: Node | undefined): number => (node && node.road ? this.traffic.zoneOfCell(node.y * this.width + node.x) : -1);
+        if (zone(route[leg]) >= 0 || zone(route[leg + 1]) >= 0) return false;
+        const here = route[leg]!;
+        return !this.vehicles.some((other) => Math.abs(other.x - here.x) < 1.6 && Math.abs(other.y - here.y) < 1.6);
+      };
+      let leg = -1;
+      for (let tries = 0; tries < 8 && leg < 0; tries++) {
+        const pick = Math.floor(Math.random() * (route.length - 1));
+        if (clear(pick)) leg = pick;
+      }
+      if (leg < 0) {
+        this.pool.push(sprite.setVisible(false));
+        return null;
+      }
+      vehicle.leg = leg;
       vehicle.alpha = 1;
       vehicle.fading = null;
     }
     this.vehicles.push(vehicle);
+    placeCar(vehicle);
     this.draw(vehicle);
     return vehicle;
   }
@@ -423,68 +417,15 @@ export class Cars {
     }
   }
 
-  /**
-   * Where in the road a vehicle is as it passes one step of its route: in the
-   * lane of the way it came, the lane of the way it leaves, or, at a corner,
-   * half way between the two. Off the road there is no lane.
-   */
-  private laneAt(vehicle: Vehicle, index: number): { x: number; y: number } {
-    const route = vehicle.route;
-    const here = route[index]!;
-    if (!here.road) return NO_LANE;
-    const way = (p: Node, q: Node): Heading | null => (q.x > p.x ? 'px' : q.x < p.x ? 'nx' : q.y > p.y ? 'py' : q.y < p.y ? 'ny' : null);
-    const before = index > 0 ? way(route[index - 1]!, here) : null;
-    const after = index < route.length - 1 ? way(here, route[index + 1]!) : null;
-    const first = LANE[before ?? after ?? vehicle.heading];
-    const second = LANE[after ?? before ?? vehicle.heading];
-    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
-  }
-
   private draw(vehicle: Vehicle): void {
-    const from = vehicle.route[vehicle.leg]!;
-    const to = vehicle.route[Math.min(vehicle.leg + 1, vehicle.route.length - 1)]!;
-    if (to.x !== from.x || to.y !== from.y) vehicle.heading = to.x > from.x ? 'px' : to.x < from.x ? 'nx' : to.y > from.y ? 'py' : 'ny';
-    // On the road it keeps to its lane. At a corner it cuts across from the lane it was in to the lane it is
-    // turning into, so it turns through the corner and does not jump sideways on the spot. Turning into a
-    // driveway or a car park it leaves the lane behind.
-    const a = this.laneAt(vehicle, vehicle.leg);
-    const b = this.laneAt(vehicle, Math.min(vehicle.leg + 1, vehicle.route.length - 1));
-    const x = from.x + a.x + (to.x + b.x - from.x - a.x) * vehicle.along;
-    const y = from.y + a.y + (to.y + b.y - from.y - a.y) * vehicle.along;
-    vehicle.x = x;
-    vehicle.y = y;
-    vehicle.onRoad = from.road && to.road;
     this.art.apply(vehicle.sprite, `${vehicle.look}.${vehicle.heading}`);
-    const at = this.iso.toWorld(x, y);
-    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth((x + y) * 4 + 2.4);
-  }
-
-  /**
-   * Is another vehicle close ahead in the same lane? Cars keep a gap, so they
-   * queue behind a bus at its stop or a car waiting at a crossing, and never
-   * drive through each other. Only the one behind ever waits, so nobody locks.
-   */
-  private blocked(vehicle: Vehicle, index: number): boolean {
-    if (!vehicle.onRoad) return false;
-    const way = AHEAD[vehicle.heading];
-    const long = vehicle.kind === 'shuttle' || vehicle.kind === 'truck';
-    for (let j = 0; j < this.vehicles.length; j++) {
-      if (j === index) continue;
-      const other = this.vehicles[j]!;
-      if (!other.onRoad || other.heading !== vehicle.heading || other.fading === 'out') continue;
-      const dx = other.x - vehicle.x;
-      const dy = other.y - vehicle.y;
-      if (Math.abs(dx * way.y - dy * way.x) > 0.3) continue;
-      const ahead = dx * way.x + dy * way.y;
-      const gap = GAP + (long ? LONG_GAP : 0) + (other.kind === 'shuttle' || other.kind === 'truck' ? LONG_GAP : 0);
-      // Two on the same spot: the later one lets the earlier one go.
-      if (ahead > 1e-6 ? ahead < gap : ahead > -1e-6 && j < index) return true;
-    }
-    return false;
+    const at = this.iso.toWorld(vehicle.x, vehicle.y);
+    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth((vehicle.x + vehicle.y) * 4 + 2.4);
   }
 
   private retire(index: number): void {
     const vehicle = this.vehicles[index]!;
+    this.traffic.forget(vehicle);
     vehicle.driver?.body.destroy();
     vehicle.driver?.boxes.destroy();
     vehicle.sprite.setVisible(false);
@@ -504,7 +445,7 @@ export class Cars {
       if (mix(cell, 7) >= HOME[period]) continue;
       const look = Math.floor(mix(cell, 3) * SMALL_CARS);
       // Nose to the street.
-      const heading: Heading = drive.y < drive.row ? 'py' : 'ny';
+      const heading = drive.y < drive.row ? 'py' : 'ny';
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, `car.${look}.${heading}`);
       const at = this.iso.toWorld(drive.x, drive.y);
@@ -517,19 +458,15 @@ export class Cars {
     const dt = Math.min(deltaMs, 100);
     this.showParked(period);
     const count = { student: 0, town: 0, shuttle: 0, truck: 0 };
-    this.taken.clear();
     this.seen = 0;
     const view = this.scene.cameras.main.worldView;
+    // The rules of the road move every car: gaps, stop signs, and crossings with people on them.
+    for (const vehicle of this.vehicles) vehicle.leaving = vehicle.leaving || vehicle.fading === 'out';
+    this.traffic.step(this.vehicles, dt, this.busyCrossing);
     for (let i = this.vehicles.length - 1; i >= 0; i--) {
       const vehicle = this.vehicles[i]!;
-      // On a crossing, or past the point where it could still stop short of the next one.
-      if (vehicle.onRoad && vehicle.fading !== 'out') {
-        const cell = Math.floor(vehicle.y + 0.5) * this.width + Math.floor(vehicle.x + 0.5);
-        if (this.crossing[cell]) this.taken.add(cell);
-        const ahead = vehicle.route[Math.min(vehicle.leg + 1, vehicle.route.length - 1)]!;
-        const next = ahead.y * this.width + ahead.x;
-        if (vehicle.along >= 0.6 && this.crossing[next]) this.taken.add(next);
-      }
+      // At the end of its road, or given up: it fades away.
+      if ((vehicle.done || vehicle.leaving) && vehicle.fading !== 'out') vehicle.fading = 'out';
       if (vehicle.sprite.x >= view.x && vehicle.sprite.x <= view.right && vehicle.sprite.y >= view.y && vehicle.sprite.y <= view.bottom) this.seen += 1;
       if (vehicle.fading === 'in') {
         vehicle.alpha = Math.min(1, vehicle.alpha + dt / FADE_MS);
@@ -557,47 +494,15 @@ export class Cars {
           who.boxes.setPosition(beside.x, beside.y).setDepth(depth + 0.05);
         }
       }
-      if (vehicle.fading !== 'out') {
-        if (vehicle.pauseMs > 0) vehicle.pauseMs -= dt;
-        else {
-          // Somebody on the crossing ahead: wait at its edge.
-          const next = vehicle.route[Math.min(vehicle.leg + 1, vehicle.route.length - 1)]!;
-          const ahead = next.y * this.width + next.x;
-          const held = next.road && this.crossing[ahead] && vehicle.along >= 0.35 && vehicle.along < 0.6 && this.busyCrossing(ahead);
-          if (!held && !this.blocked(vehicle, i)) vehicle.along += ((vehicle.kind === 'shuttle' || vehicle.kind === 'truck' ? SPEED * 0.8 : SPEED) * dt) / 1000;
-          while (vehicle.along >= 1 && vehicle.leg < vehicle.route.length - 2) {
-            const pause = vehicle.pauseAt.get(vehicle.leg);
-            vehicle.along -= 1;
-            vehicle.leg += 1;
-            if (pause) {
-              // Pulled up at a stop: stand at the start of the next leg until the pause is over.
-              vehicle.along = 0;
-              vehicle.pauseMs = pause;
-              break;
-            }
-          }
-          if (vehicle.along >= 1) {
-            if (vehicle.loop > 0) {
-              // The shuttle's round ends where it began.
-              const pause = vehicle.pauseAt.get(vehicle.leg) ?? 0;
-              vehicle.leg = 0;
-              vehicle.along = 0;
-              vehicle.pauseMs = pause;
-            } else {
-              // The end of the road: into the car park, onto a driveway, or off the edge of the map.
-              vehicle.along = 1;
-              vehicle.fading = 'out';
-            }
-          }
-        }
-      }
       this.draw(vehicle);
     }
 
     const scale = CROWD_STEPS[this.step]!.traffic;
     const students =
       this.drivers > 0 && this.parks.length > 0 && this.studentHomes.length > 0
-        ? Phaser.Math.Clamp(Math.round((this.drivers / DRIVERS_PER_CAR) * TRAFFIC[period].busy * scale), 1, Math.round(MAX_STUDENT_CARS * scale))
+        ? // The most on the road follows the time of day too: the full number at the morning rush, and fewer outside it,
+          // so a large campus is not at its rush all day.
+          Phaser.Math.Clamp(Math.round((this.drivers / DRIVERS_PER_CAR) * TRAFFIC[period].busy * scale), 1, Math.max(1, Math.round((MAX_STUDENT_CARS * scale * TRAFFIC[period].busy) / RUSH_BUSY)))
         : 0;
     const town = this.drives.length + this.ends.length >= 2 ? Math.max(1, Math.round(TOWN_CARS[period] * scale)) : 0;
 
@@ -620,9 +525,14 @@ export class Cars {
     }
   }
 
-  /** True while a vehicle is on that crossing or driving onto it. */
+  /** True while a car has that crossing, or one is due it. People wait at the kerb. */
   onCrossing(cell: number): boolean {
-    return this.taken.has(cell);
+    return this.traffic.claims(cell);
+  }
+
+  /** How many cars have given up because they could not move. For the dev readout: it should stay at nothing. */
+  get gaveUp(): number {
+    return this.traffic.gaveUp;
   }
 
   /** Vehicles on screen now. */
@@ -683,6 +593,8 @@ export class Cars {
     for (const vehicle of this.vehicles) vehicle.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
     for (const sprite of this.parked) sprite.destroy();
+    for (const sprite of this.signs) sprite.destroy();
+    this.signs = [];
     this.vehicles = [];
     this.pool = [];
     this.parked = [];
