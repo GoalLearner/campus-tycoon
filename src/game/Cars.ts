@@ -106,7 +106,7 @@ interface Vehicle {
   y: number;
   onRoad: boolean;
   /** A delivery truck: its driver, who steps out with boxes while it stands at the kitchen or the store. */
-  driver: { n: number; x: number; y: number; body: Phaser.GameObjects.Image; boxes: Phaser.GameObjects.Image } | null;
+  driver: { n: number; x: number; y: number; front: number; body: Phaser.GameObjects.Image; boxes: Phaser.GameObjects.Image } | null;
 }
 
 const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
@@ -145,7 +145,7 @@ export class Cars {
   /** Road cells beside a dining hall or a store. */
   private deliveries: number[] = [];
   /** For each of those, the middle of the building's nearest cell: where the driver carries the boxes. */
-  private dropAt = new Map<number, { x: number; y: number }>();
+  private dropAt = new Map<number, { x: number; y: number; front: number }>();
   private drivers = 0;
   private spawnClock = 0;
   private truckClock = TRUCK_EVERY_MS * 0.5;
@@ -209,7 +209,11 @@ export class Cars {
           const ry = Math.floor(door / width);
           const bx = Math.max(placed.x, Math.min(placed.x + placed.w - 1, rx));
           const by = Math.max(placed.y, Math.min(placed.y + placed.h - 1, ry));
-          this.dropAt.set(door, { x: rx + 0.5 + (bx - rx) * 0.55, y: ry + 0.5 + (by - ry) * 0.55 });
+          // On the road's kerb, outside the building's own ground. South or east of a building is in front
+          // of it, however wide it is, so there the driver is drawn over it.
+          const inFront = ry >= placed.y + placed.h || rx >= placed.x + placed.w;
+          const front = inFront ? (placed.x + placed.w - 1 + placed.y + placed.h - 1) * 4 + 3.1 : 0;
+          this.dropAt.set(door, { x: rx + 0.5 + (bx - rx) * 0.36, y: ry + 0.5 + (by - ry) * 0.36, front });
         }
       }
     }
@@ -405,7 +409,7 @@ export class Cars {
       this.art.apply(body, `person.${look}.${facing}.0`);
       body.setFlipX(this.art.people?.flip?.sw !== undefined);
       if (this.art.has('people.boxes')) this.art.apply(boxes, 'people.boxes');
-      truck.driver = { n: Math.floor(Math.random() * 40), x: drop.x, y: drop.y, body, boxes };
+      truck.driver = { n: Math.floor(Math.random() * 40), x: drop.x, y: drop.y, front: drop.front, body, boxes };
     }
   }
 
@@ -507,9 +511,10 @@ export class Cars {
         who.boxes.setVisible(out && this.art.has('people.boxes'));
         if (out) {
           const at = this.iso.toWorld(who.x, who.y);
-          const depth = (who.x + who.y - 1) * 4 + 2.6;
+          const depth = Math.max((who.x + who.y - 1) * 4 + 2.6, who.front);
           who.body.setPosition(at.x, at.y).setDepth(depth);
-          const beside = this.iso.toWorld(who.x + 0.3, who.y + 0.12);
+          // The boxes go down on the kerb beside them.
+          const beside = this.iso.toWorld(who.x + 0.34, who.y + 0.08);
           who.boxes.setPosition(beside.x, beside.y).setDepth(depth + 0.05);
         }
       }
@@ -574,6 +579,21 @@ export class Cars {
       this.truckClock = 0;
       if (count.truck < (this.step >= 3 ? 2 : 1) && period !== 'night') this.startTruck();
     }
+  }
+
+  /** Dev screenshots: a delivery truck that is nearly at its door, so its driver is seen without a wait. */
+  truckNow(): void {
+    const before = this.vehicles.length;
+    this.startTruck();
+    const truck = this.vehicles[before];
+    const stop = truck ? [...truck.pauseAt.keys()][0] : undefined;
+    if (!truck || truck.kind !== 'truck' || stop === undefined) return;
+    // It stands a full minute, so a screenshot taken on a slow machine still finds it there.
+    truck.pauseAt.set(stop, 60_000);
+    truck.leg = stop;
+    truck.along = 0.8;
+    truck.alpha = 1;
+    truck.fading = null;
   }
 
   /** The delivery driver under a point of the world, by their number, or null. `reach` widens the figure for a thumb. */

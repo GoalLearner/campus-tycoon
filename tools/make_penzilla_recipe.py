@@ -292,7 +292,7 @@ sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0
 # What goes beside two of the people on campus, because no figure can hold anything: the red pennant an
 # admissions guide leads a tour with, and the boxes a delivery driver unloads.
 sprites['people.pennant'] = {'layers': [standing(OLD + 'Decor/Banner.png', 0.5, 0.5, scale=0.75)]}
-sprites['people.boxes'] = {'layers': [standing(DECOR + 'Boxes1.png', 0.5, 0.5, scale=0.5)]}
+sprites['people.boxes'] = {'layers': [standing(DECOR + 'Boxes1.png', 0.5, 0.5, scale=0.85)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
 sprites['decor.hedge'] = {'layers': [standing(PLANTS + 'Bushes1.png', 0.5, 0.6)]}

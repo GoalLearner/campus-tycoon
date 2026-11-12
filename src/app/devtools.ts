@@ -403,6 +403,8 @@ function applyViewParams(params: URLSearchParams): void {
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
+      // &truck brings a delivery truck to its door at once, for a screenshot of its driver.
+      if (params.has('truck')) (scene as unknown as { cars?: { truckNow?: () => void } }).cars?.truckNow?.();
       // &weekend shows a weekend's visitors, tour groups and boosters, on any day of the game's week.
       if (params.has('weekend')) (scene as unknown as { holdWeekend?: () => void }).holdWeekend?.();
       // &person=professor opens the card of the nearest person of that role to the middle of the view:
@@ -417,7 +419,8 @@ function applyViewParams(params: URLSearchParams): void {
             if (params.has('centre')) (scene as unknown as { lookAtPerson?: (ref: typeof found) => void }).lookAtPerson?.(found);
           } else if (tries > 0) setTimeout(() => look(tries - 1), 700);
         };
-        setTimeout(() => look(14), 1600);
+        // &wait=60 keeps looking for that many seconds: a delivery driver is only out while a truck stands at a door.
+        setTimeout(() => look(Math.round(Number(params.get('wait') ?? 10) / 0.7)), 1600);
       }
       if (params.has('stats')) {
         const box = document.createElement('div');
@@ -429,6 +432,7 @@ function applyViewParams(params: URLSearchParams): void {
           const sum = (o: Record<string, number>): number => Object.values(o).reduce((a, b) => a + b, 0);
           box.textContent = `${live.fps.toFixed(0)} fps · step ${live.step}
 ${sum(live.walkers)} walking (${live.walkers.commuters} in from town, ${live.walkers.neighbours} neighbours)
+${live.walkers.professors ?? 0} professors, ${live.walkers.staff ?? 0} staff, ${live.walkers.visitors ?? 0} visitors
 ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.parked ?? 0} parked · ${live.extras} playing or seated`;
         }, 1000);
       }
