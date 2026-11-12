@@ -21,5 +21,8 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: students now drop litter where they eat and play. A Trash bin beside each such place catches most of it, and workers from a Facilities Yard empty the bins and sweep. Nothing falls for the first day and a half.',
     );
   }
+  if (fromVersion === 7) {
+    notes.push('Changed: a Facilities Yard now reaches 12 cells instead of 8, and its workers mend a broken bin before they sweep. Tap a broken street lamp to see what broke it and when it will be fixed.');
+  }
   return notes;
 }

@@ -57,7 +57,10 @@ export {
   groundsLine,
   isBrokenThing,
   isMessSpot,
+  isBrokenLamp,
   lampAt,
+  lampReport,
+  moodNear,
   messiestSpot,
   seatingAt,
   spotClean,
@@ -69,6 +72,7 @@ export {
   yardOver,
   yardStatus,
   type GroundsFix,
+  type LampReport,
   type YardStatus,
 } from './systems/grounds';
 export {
