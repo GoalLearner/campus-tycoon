@@ -16,7 +16,8 @@ How to read this document:
 - Section 26 is the art to fix before release.
 - Section 27 is Stress, which ships with the calendar in layer 1.
 - Section 28 is time of day and weather, also for layer 1.
-- Section 29 is Grounds: litter, bins, seating and maintenance workers. Designed on 2026-11-11 and waiting for the owner's go-ahead.
+- Section 29 is Grounds: litter, bins, seating and maintenance workers. Accepted by the owner on 2026-11-11 as play stop 4. Not built: it waits until he has played stop 3 and said go.
+- Section 30 is more food places and more Academics buildings. Designed on 2026-11-11 for play stop 4 and waiting for the owner's go-ahead.
 
 ---
 
@@ -1398,7 +1399,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1641,10 +1642,10 @@ The map shows 54 kinds of facility. Fifty-odd rules would fail design tests 4 an
 |---|---|
 | Seats | Academic halls. A department is a look, not a rule |
 | Beds | Residence halls, apartments, towers, housing over shops, and Greek Row as the variant already designed |
-| Places | Student Life lots: shops, food and venues |
-| Dining | Dining commons and coffee stands feed the Housing around them |
+| Places | Student Life lots: shops and venues. Their food moved to the Build menu on 2026-11-11 (section 30) |
+| Dining | Every food place feeds the lots around it: the dining commons, the coffee stand, and the eight food places of section 30. They differ in size, cost and reach, never in rule |
 | Happiness | Gym, pool, courts, fields, track, theatre and amphitheatre raise happiness near them |
-| Academic lift | The library, and later the Grand Library |
+| Academic lift | The library, the computer lab and the science lab (section 30), and later the Grand Library |
 | Coverage | Medical Center, Campus Safety, Facilities yard and Shuttle each cover a circle |
 | Access | Parking and the transit station decide how many students can commute |
 | Landmarks | Reward, ceiling and prestige landmarks. Each emits desirability or lifts one ceiling |
@@ -1661,6 +1662,10 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Academic hall | Zone lot | Seats | 1 x 1, merging to 2 x 2 | 0. Merging is on the later roadmap | Plain blocks at one cell. School, College and University at four cells | Drawn |
 | Department identity: Engineering, Sciences, Arts and Letters, Business, Education, Music, Fine Arts, Health Sciences | Skin on an Academic hall | None of its own. The skin follows the mix of student majors and feeds student cards and newspaper stories | Same lot | 4 | An emblem on the hall from pack props: anvil, bottle, book, coins, scroll, lute, statue, herbs | From parts |
 | Library | Hand-placed | Lifts nearby Academic lots and draws scholars | 2 x 2 | This pass, full version in 3 | Public_Library | Drawn |
+| Computer lab | Hand-placed | Lifts Academic lots within four cells: the library's rule at a smaller size. From layer 1 it counts as study space against exam Stress (section 30.3) | 2 x 1 | Play stop 4 | Workplace_Electrician_OneFloor | Drawn |
+| Study center | Hand-placed | Tutoring. A better GPA on the cards of students in reach, as a stand-in. From layer 2 it is a cause of the graduation rate | 2 x 1 | Play stop 4, full version in 2 | A plain hall with the pack's book as its sign | From parts |
+| Makerspace | Hand-placed | Things to do and social life within five cells: the recreation rule | 2 x 1 | Play stop 4 | Shop_Tools_OneFloor | Drawn |
+| Science lab | Hand-placed | Lifts Academic lots like the library and draws scholars. It waits for tiers, because before them it is only a second library | 2 x 2 | 2 | A plain two-floor building with the pack's bottle as its sign | From parts |
 | Research lab | Zone lot of the later Research zone | Research income and prestige | 2 x 2 | Later | Industrial and Workplace buildings | Drawn |
 | Observatory | Reward landmark | Emits desirability | 1 x 1 | 5 | None | No sprite |
 | Continuing education centre | Flavour | None. It belongs with transfer and graduate students on the later roadmap | None | Later | Hotel_OneFloor | Drawn |
@@ -1679,10 +1684,18 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 
 | Type | Kind | One main effect | Footprint | Layer | Sprite | Art |
 |---|---|---|---|---|---|---|
-| Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs one | 2 x 1 | This pass | Fifteen restaurants. The bar is not used | Drawn |
+| Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs a food place in reach | 2 x 1 | This pass | Restaurant_Sandwich. Ten more restaurants are spare. The bar is not used | Drawn |
 | Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass | StreetStand_Coffee | Drawn |
+| Food truck | Hand-placed, small | Feeds a small radius. Clearing it always returns its whole price, so moving it is free | 1 x 1 | Play stop 4 | Truck_Groceries. It is a box truck with no serving hatch | Drawn |
+| Taco stand | Hand-placed, small | Feeds a small radius | 1 x 1 | Play stop 4 | Restaurant_Mexican with its patio cut away | From parts |
+| Pizza place | Hand-placed, small | Feeds a small radius | 1 x 1 | Play stop 4 | Restaurant_Pizza with its patio cut away | From parts |
+| Smoothie and juice bar | Hand-placed, small | Feeds a small radius. Earns double beside recreation | 1 x 1 | Play stop 4 | StreetStand_Icecream | Drawn |
+| Convenience store | Hand-placed, small | Feeds a very small radius | 1 x 1 | Play stop 4 | StreetStand_NewsPaper | Drawn |
+| Burger grill | Hand-placed | Feeds a medium radius | 2 x 1 | Play stop 4 | Restaurant_Burger | Drawn |
+| Late-night diner | Hand-placed | Feeds a medium radius | 2 x 1 | Play stop 4 | Restaurant_Breakfast | Drawn |
+| Food court | Hand-placed | Feeds a wide radius and counts as three kinds of food | 2 x 2 | Play stop 4 | Groceries_Market, the open-air market | Drawn |
 | Campus store or bookstore | Hand-placed | Earns from foot traffic | 2 x 1 | This pass | Shop_Kiosk. A book prop makes it a bookstore | Drawn |
-| Retail plaza | Zone lot of Student Life | Places, and foot-traffic income | 1 x 1 and 2 x 1 | 2 | Eleven shop kinds, a market and street stands | Drawn |
+| Retail plaza | Zone lot of Student Life | Places, and foot-traffic income | 1 x 1 and 2 x 1 | 2 | Eleven shop kinds and the flower stand. The market, the ice-cream stand and the newspaper stand went to the food places above | Drawn |
 | Faculty club | Reward landmark | Emits desirability | 2 x 1 | 5 | Cafe | Drawn |
 
 **Student life and culture**
@@ -1761,6 +1774,10 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 |---|---|---|---|---|---|---|
 | Quad, trees, ponds and the lake | Hand-placed | They share one green-space input and its cap | Any | This pass | Done | Drawn |
 | Central walk | A strip of quad along the main path | Green space | Any | This pass | Lawn, trees and benches | Drawn |
+| Trash bin | Hand-placed, one cell | Catches litter within three cells (section 29) | 1 x 1 | Play stop 4 | TrashCan, with TrashCanLarge for full and a TrashBag beside it for overflowing | Drawn |
+| Bench | Hand-placed, one cell | Seating within three cells | 1 x 1 | Play stop 4 | Bench, from the older pack, as the quads use | Drawn |
+| Picnic table | Hand-placed, one cell | Seating, and social life beside dining or Academic lots | 1 x 1 | Play stop 4 | TableSet in four colours. It is a table and chairs, not a picnic table | Drawn |
+| Lamp post | Not placed. Play stop 3 sets them along paths and roads | None. It can be broken and fixed | None | Play stop 3 | StreetLampOn, StreetLampOff and StreetLampGlow | Drawn |
 
 ### 23.3 Where the expected mapping was changed
 
@@ -1772,6 +1789,8 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Athletics venues | The arena, baseball stadium, softball field and tennis centre wait for their sport, by the same rule the owner set for the stadium: no venue that does nothing. The pool, courts, fields and track work now as recreation. Practice fields and the athletics headquarters are scenery attached to football, because the team rating already has four visible inputs and a fifth would blur every loss recap. |
 | Back of house | The Facilities yard gets the one mechanic: buildings near it run down more slowly, which ties to the Facilities slider. The central plant and the campus station are reward landmarks. Central receiving is scenery. None of them gates density: Campus Safety and the Medical Center already hold the two gates. |
 | Transport | The transit station is the Commuter Hub ceiling landmark that section 15.3 already has. Shuttle stops stay as designed. Bike lanes should be cut: they would be a second tool for the one walk-time number. |
+| Each new Academics building with two effects and a favourite major (the owner's list of 2026-11-11) | One effect each, taken from a rule that exists or is already designed. The second effect arrives with its own system, and a major stays a look until departments are real in layer 4 (section 30.3) |
+| Food that grows by itself in the Student Life zone | Food is hand-placed from play stop 4, ten kinds of it. The Student Life zone of layer 2 keeps shops and venues |
 
 ### 23.4 Layout: the model campus
 
@@ -2066,6 +2085,23 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 
 Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way. The face on the student card is drawn in code, and the owner approved it.
 
+**Planned for play stop 4.** None of these exists yet. The owner accepted the Grounds stand-ins on 2026-11-11; the food and Academics ones wait on his word (section 30). Each moves into the table above in the piece of work that builds it.
+
+| Thing | The stand-in | Planned fix |
+|---|---|---|
+| Bin, full | The pack's wire basket, a different bin from the lidded can that shows it empty | Penzilla commission: one bin in three states |
+| Bin, overflowing | The full bin with one of the pack's rubbish bags beside it | The same commission |
+| Bin, bench and picnic table, broken | The thing with the pack's traffic cone beside it | Penzilla commission: a broken version of each |
+| Picnic table | The pack's table with four chairs | Penzilla commission: a picnic table |
+| Worker with a broom or a cart | The pack's worker with its broom or cart drawn beside him. No figure holds anything | Penzilla commission: a worker holding a broom |
+| Students sitting, eating, studying | A standing student at the bench or table. Every figure only stands and walks | Penzilla commission: seated figures |
+| Taco stand and pizza place | The Mexican and pizza restaurants with their patios cut away to fit one cell | Penzilla commission: two stalls in the style of the coffee stand |
+| Food truck | The pack's box truck with an apple on its side. It has no serving hatch | Penzilla commission: a truck with a hatch and an awning |
+| Smoothie and juice bar | The ice-cream stand as it is | A juice sign, with the stalls above |
+| Computer lab | The electrician's workshop as it is. Its sign is a plug, not a screen | A screen sign, or keep if it reads well in play |
+| Study center | A plain hall with the pack's book as its sign | Penzilla commission, 2 x 1 |
+| Science lab, when layer 2 builds it | A plain two-floor building with the pack's bottle as its sign | Penzilla commission, 2 x 2 |
+
 Any sprite assembled or rendered from now on is added to this table in the same piece of work.
 
 ---
@@ -2192,7 +2228,7 @@ Lit windows, umbrellas, coats and snow wait, because their art has to be made. W
 
 ## 29. Grounds: litter, bins, seating and maintenance workers
 
-Asked for by the owner on 2026-11-11, adapted from RollerCoaster Tycoon's handymen and Two Point Campus's janitors for an idle game. **Designed, not built. It waits for the owner's go-ahead.** It is play stop 4 of the feedback pass (29.12).
+Asked for by the owner on 2026-11-11, adapted from RollerCoaster Tycoon's handymen and Two Point Campus's janitors for an idle game. **Accepted by the owner the same day, with every proposal of 29.13. Not built.** It is play stop 4 of the feedback pass (29.12), and it does not start until he has played stop 3 and given the go-ahead.
 
 ### 29.1 The loop
 
@@ -2202,7 +2238,7 @@ Students drop litter where they eat and play. Bins catch most of it. Workers fro
 
 | Decision | Why |
 |---|---|
-| Litter comes from **mess spots**: the dining hall, the coffee stand, the campus store and every recreation building. Later the stadium and its tailgates on a home game day (layer 1), and Student Life lots (layer 2) | The owner's list. A short list of places is something the player can answer. Litter everywhere would be a chore |
+| Litter comes from **mess spots**: every food place (the dining hall, the coffee stand and the eight of section 30), the campus store and every recreation building. Later the stadium and its tailgates on a home game day (layer 1), and Student Life lots (layer 2) | The owner's list. A short list of places is something the player can answer. Litter everywhere would be a chore |
 | A spot's litter follows the students in its reach, times a strength for its kind: coffee stand and dining hall high, store medium, recreation low [T] | It is worked out from the simulation's own count of who uses each building, never from the walkers on screen |
 | A thin, even amount also falls along every busy path. Alone it never takes a spot below about 85% clean [T] | Paths look lived in. Bins are never needed everywhere |
 | Each spot keeps one number: the litter lying around it, from nothing up to a ceiling | The ceiling is what stops a spiral |
@@ -2346,6 +2382,8 @@ What it leaves switched off until its layer arrives:
 
 ### 29.13 Points raised with the owner
 
+The owner accepted every proposal in this table on 2026-11-11, and asked for each stand-in to be put on the list in section 26.
+
 | Point | What is proposed |
 |---|---|
 | This reopens a cut. Garbage was cut from SimCity's list | Bring it back on the two conditions of 29.10 |
@@ -2356,3 +2394,120 @@ What it leaves switched off until its layer arrives:
 | A new campus | Two bins by the dining hall and no yard, so the first full bin teaches the system |
 | Old saves | No litter for the first 36 hours, and one line in the away list |
 | No picture of a broken thing, a picnic table, a seated student or a worker holding a broom | Stand-ins from real pictures now (29.8), and four small commissions for the Penzilla request |
+
+---
+
+## 30. More food places and more Academics buildings
+
+Asked for by the owner on 2026-11-11, to be built with Grounds in play stop 4. **Designed, not built. It waits for the owner's go-ahead for stop 4.**
+
+### 30.1 The rule they keep
+
+The catalog has one rule above all: a building type is a look and a size inside a family, never a rule of its own (23.1). The owner asked for the same thing here: one clear effect per building. So every food place is the dining rule, and every Academics building takes a rule that exists or is already designed. Food gains two small rules, variety and income, and both have a ceiling.
+
+### 30.2 Food
+
+Every food place does the one thing the dining hall does: it feeds the lots in its reach. That is the food half of Food & fun, and it lets Housing grow past its first stage.
+
+| Place | Size | Cost [T] | Reach [T] | What sets it apart |
+|---|---|---|---|---|
+| Food truck | 1 x 1 | $8,000 | 2 cells | Clearing it always gives the whole price back, so moving it is free |
+| Convenience store | 1 x 1 | $9,000 | 2 cells | The cheapest fixed food. Snacks, open late |
+| Taco stand | 1 x 1 | $10,000 | 3 cells | The cheap lunch spot |
+| Smoothie and juice bar | 1 x 1 | $10,000 | 3 cells | Earns double with a recreation building within two cells |
+| Coffee stand, built | 1 x 1 | $12,000 | 3 cells | |
+| Pizza place | 1 x 1 | $14,000 | 3 cells | Busiest in the evening and at night |
+| Burger grill | 2 x 1 | $30,000 | 5 cells | Busy at lunch |
+| Late-night diner | 2 x 1 | $36,000 | 5 cells | Busiest at night, and in finals week from layer 1 |
+| Dining hall, built | 2 x 1 | $45,000 | 6 cells | |
+| Food court | 2 x 2 | $140,000 | 7 cells | Counts as three kinds of food |
+
+| Decision | Why |
+|---|---|
+| "When it is busy" is seen, not counted. The hour of the day changes where walkers queue and eat. It never changes what a place feeds or earns | The simulation never reads the time of day (28.1). If it did, the same campus would score differently for a morning player and a night player, and catch-up would stop being exact. Finals week is a date in the game, so the diner's finals crowd can follow it, still for show |
+| **Variety.** A lot with three or more different kinds of food in reach gets one tenth added to its Food & fun, never past full [T]. The food court counts as three kinds | The owner's bonus. It cannot outweigh another cause: it lives inside one cause, which is a quarter of Happiness, so it is worth at most two and a half points, and a fourth kind adds nothing |
+| **Income.** Each student in reach of food is worth about $30 a year [T], shared equally among the food places that reach them | "A little income from foot traffic, like the campus store." Sharing is the ceiling: a second stall beside the first halves what each earns, so stalls cannot be stacked for money |
+| Every food place has upkeep, about a twelfth of its price a year [T] | Overbuilding costs something |
+| Any food place in reach lets Housing grow past its first stage | One rule for all ten. A cheap stall reaches very few lots, which is its price |
+| Every food place is a mess spot (29.2). Stalls beside each other share the bins within three cells | More food means more litter. The guard against bin chores still holds, because a cluster shares its bins |
+| Walkers queue at food places, and eat at the picnic tables near them | For show. It uses stop 3's walker schedule and the Grounds seats |
+| Student thoughts name a favourite, from the kinds in reach: "Taco Tuesday is the only reason I go to class." | The owner's example |
+
+### 30.3 Academics
+
+| Building | Size, cost [T] | Its one effect in play stop 4 | What it gains when its system arrives |
+|---|---|---|---|
+| Computer lab | 2 x 1, $30,000 | Lifts Academic lots within four cells. The library's rule at a smaller size | Layer 1: it counts as study space, which eases exam Stress. Layer 4: Engineering and Computer Science students name it |
+| Makerspace | 2 x 1, $28,000 | Things to do and social life within five cells. The recreation rule | Layer 4: a lift for Engineering and the Arts |
+| Study center | 2 x 1, $35,000 | Tutoring: a better GPA on the cards of students within six cells. A stand-in | Layer 2: tutoring in reach becomes a cause of the graduation rate, and GPA follows the academic score |
+| Science lab | 2 x 2, about $80,000 | **Not in stop 4** | Layer 2: lifts Academic lots like the library and draws scholars. Layer 4: the science departments |
+
+| Decision | Why |
+|---|---|
+| Each building has one effect. The owner's list gave most of them two, and a favourite major | His own rule, and the catalog's. The second effect is not lost: it arrives with its system |
+| The computer lab's Stress relief is not a second rule. The library family already counts as study space in the Stress design (27.1), and the computer lab is a member of that family | One family, one behaviour |
+| Majors stay a look. "Engineering students benefit most" shows on cards, in thoughts and in the newspaper, and changes no number until departments are real in layer 4 | A major has never had a number of its own (23.1, 23.3). Giving it one here would make eight kinds of student to build for |
+| Lifts from the library family do not add up. The best one in reach counts | As built. A computer lab is for the lecture halls the library does not reach |
+| The study center changes only student cards until layer 2 | GPA is a stand-in today and nothing reads it. The owner offered this stand-in himself. Its menu card says so |
+| The science lab waits for layer 2 | Its point is drawing scholars, who arrive with tiers. Before that it would be a second library with nothing to set it apart, and its sign has to be made from parts |
+
+### 30.4 Art
+
+Checked in the owner's packs on 2026-11-11. Every restaurant in the pack carries a large sign on its roof, which is what makes it read at phone zoom.
+
+| Wanted | In the packs | Gap, and the stand-in |
+|---|---|---|
+| Burger grill | Yes: a burger restaurant, two cells wide, a burger on its roof | |
+| Late-night diner | Yes: a breakfast restaurant with bacon and an egg on its roof | |
+| Food court | Yes: an open-air market of stalls and umbrellas, two cells by two | |
+| Pizza place | A pizza restaurant with a slice on its roof, but drawn two cells wide with a patio | Its patio cut away to fit one cell |
+| Taco stand | A Mexican restaurant with nachos on its roof, also two cells wide. No stall | The same cut |
+| Smoothie and juice bar | An ice-cream stand, one cell, with a cone for its sign | The ice-cream stand as it is |
+| Convenience store | A newspaper kiosk, one cell | The kiosk as it is |
+| Food truck | Box trucks only. One has an apple on its side. None has a serving hatch | The apple truck as it is |
+| Computer lab | An electrician's workshop with a plug on its sign | As it is. It reads as power more than computers |
+| Makerspace | Yes: a tool shop with a wrench on its sign | |
+| Study center | None | A plain hall with the pack's book as its sign |
+| Science lab | None. The museum is already the art gallery | A plain two-floor building with the pack's bottle as its sign, when layer 2 builds it |
+
+Ten more restaurants are spare for later: ramen, chicken, sushi, cake, grill, salad, and four more. The bar stays unused. The market, the ice-cream stand and the newspaper stand had been set aside for the Student Life zone, which keeps its eleven shops.
+
+The stand-ins are on the list in section 26, with the fix for each.
+
+### 30.5 What goes where
+
+| When | What |
+|---|---|
+| Play stop 4, with Grounds | All eight food places, variety, shared income, the free move for the truck, favourite-food thoughts, queues. The computer lab, the makerspace, and the study center with its stand-in |
+| Layer 1, football and calendar | The computer lab eases exam Stress. The diner's finals crowd |
+| Layer 2, tiers and money | The science lab. The study center's effect on graduation. Scholars drawn by the lab family |
+| Layer 4 | Everything that depends on majors |
+
+Every piece placed in stop 4 is a look of a rule that exists, so the rules are cheap. The cost is art, tuning and tests: eleven sprites to prepare, two of them cut. With this, stop 4 becomes the largest stop. It can be played in two halves if a shorter wait is wanted: Grounds first, then food and Academics.
+
+### 30.6 Design tests
+
+| Test | Verdict |
+|---|---|
+| One rule per family (23.1) | Holds. Eight looks of the dining rule, two of the library rule and one of the recreation rule. One new effect in all: tutoring |
+| Nothing to farm | Holds. Food income is shared among the places that reach a student, variety stops at three kinds, and every place has upkeep |
+| Four causes (24.2) | Holds. Variety lives inside Food & fun |
+| Exact catch-up | Holds, because the time of day is seen and never counted |
+| The chore risk of litter (29.10) | Watched. Ten kinds of food mean more mess spots. A cluster of stalls shares its bins, and the simulate count of bins and yards applies to a campus with food variety |
+| The Student Life zone of layer 2 | Changed. Its food moves to the Build menu, and the zone keeps shops and venues. It should be looked at again when layer 2 is planned |
+| Tone | Holds. No bar. The diner serves coffee and breakfast at all hours |
+
+### 30.7 Points raised with the owner
+
+| Point | What is proposed |
+|---|---|
+| The pizza place and the taco stand were asked for at one cell. The pack draws both two cells wide | Cut the patio away as a stand-in, on the art list. Or make them 2 x 1 and use the art as drawn |
+| "When they're busy" | Seen on the map, never counted in the numbers |
+| The variety bonus | One tenth of Food & fun at three kinds, never past full |
+| Food income | About $30 a student a year, shared among the places in reach |
+| Two effects on most Academics buildings | One each now. The second arrives with its system |
+| "Engineering students benefit most" | Flavour until departments are real in layer 4 |
+| The study center | Built with its GPA stand-in, which changes cards only, and its menu card says so |
+| The science lab | Wait for layer 2 |
+| The Student Life zone | Loses its food to the Build menu |
+| The size of stop 4 | One stop, or two halves with a play between them |
