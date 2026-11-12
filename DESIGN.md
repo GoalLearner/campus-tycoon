@@ -17,7 +17,7 @@ How to read this document:
 - Section 27 is Stress, which ships with the calendar in layer 1.
 - Section 28 is time of day and weather, also for layer 1.
 - Section 29 is Grounds: litter, bins, seating and maintenance workers. Accepted by the owner on 2026-11-11 as play stop 4. Not built: it waits until he has played stop 3 and said go.
-- Section 30 is more food places and more Academics buildings. Designed on 2026-11-11 for play stop 4 and waiting for the owner's go-ahead.
+- Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
 
 ---
 
@@ -1399,7 +1399,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, waiting for the owner's word:** neighbourhoods, roads, cars, parking lots and the parking structure, room fees, and land purchase, which the owner brought forward from layer 2 on 2026-11-11 (section 25). Also in stop 3, moved there by the owner on 2026-11-11: the cheap parts of time of day (28.4). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1687,8 +1687,8 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Dining commons | Hand-placed | Feeds Housing in its radius. Stage 2 Housing needs a food place in reach | 2 x 1 | This pass | Restaurant_Sandwich. Nine more restaurants are spare. The bar is not used | Drawn |
 | Coffee stand or market | Hand-placed, small | Feeds Housing in a small radius | 1 x 1 | This pass | StreetStand_Coffee | Drawn |
 | Food truck | Hand-placed, small | Feeds a small radius. Clearing it always returns its whole price, so moving it is free | 1 x 1 | Play stop 4 | Truck_Groceries. It is a box truck with no serving hatch | Drawn |
-| Taco stand | Hand-placed, small | Feeds a small radius | 1 x 1 | Play stop 4 | Restaurant_Mexican with its patio cut away | From parts |
-| Pizza place | Hand-placed, small | Feeds a small radius | 1 x 1 | Play stop 4 | Restaurant_Pizza with its patio cut away | From parts |
+| Taco stand | Hand-placed | Feeds a small radius | 2 x 1 | Play stop 4 | Restaurant_Mexican as drawn, with its patio | Drawn |
+| Pizza place | Hand-placed | Feeds a small radius | 2 x 1 | Play stop 4 | Restaurant_Pizza as drawn, with its patio | Drawn |
 | Smoothie and juice bar | Hand-placed, small | Feeds a small radius. Earns double beside recreation | 1 x 1 | Play stop 4 | StreetStand_Icecream | Drawn |
 | Convenience store | Hand-placed, small | Feeds a very small radius | 1 x 1 | Play stop 4 | StreetStand_NewsPaper | Drawn |
 | Burger grill | Hand-placed | Feeds a medium radius | 2 x 1 | Play stop 4 | Restaurant_Burger | Drawn |
@@ -2085,7 +2085,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 
 Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way. The face on the student card is drawn in code, and the owner approved it.
 
-**Planned for play stop 4.** None of these exists yet. The owner accepted the Grounds stand-ins on 2026-11-11; the food and Academics ones wait on his word (section 30). Each moves into the table above in the piece of work that builds it.
+**Planned for play stop 4.** None of these exists yet. The owner accepted all of them on 2026-11-11 and turned one down: the pizza place and the taco stand are not cut down to one cell. They stay two cells wide with their patios, as drawn. Each moves into the table above in the piece of work that builds it.
 
 | Thing | The stand-in | Planned fix |
 |---|---|---|
@@ -2095,9 +2095,8 @@ Edits that are kept and need no fix: the red cross on the Medical Center recolou
 | Picnic table | The pack's table with four chairs | Penzilla commission: a picnic table |
 | Worker with a broom or a cart | The pack's worker with its broom or cart drawn beside him. No figure holds anything | Penzilla commission: a worker holding a broom |
 | Students sitting, eating, studying | A standing student at the bench or table. Every figure only stands and walks | Penzilla commission: seated figures |
-| Taco stand and pizza place | The Mexican and pizza restaurants with their patios cut away to fit one cell | Penzilla commission: two stalls in the style of the coffee stand |
 | Food truck | The pack's box truck with an apple on its side. It has no serving hatch | Penzilla commission: a truck with a hatch and an awning |
-| Smoothie and juice bar | The ice-cream stand as it is | A juice sign, with the stalls above |
+| Smoothie and juice bar | The ice-cream stand as it is | A juice sign, as a small commission |
 | Computer lab | The electrician's workshop as it is. Its sign is a plug, not a screen | A screen sign, or keep if it reads well in play |
 | Study center | A plain hall with the pack's book as its sign | Penzilla commission, 2 x 1 |
 | Science lab, when layer 2 builds it | A plain two-floor building with the pack's bottle as its sign | Penzilla commission, 2 x 2 |
@@ -2370,6 +2369,8 @@ Litter is paper cups, wrappers and apple cores. There is no vomit, nothing gross
 
 ### 29.12 Where it lands
 
+**Two halves (the owner's decision, 2026-11-11).** Stop 4 plays as Grounds first, then the food and Academics of section 30, with a stop for him to play between. Neither half starts until he has played stop 3 and given the go-ahead.
+
 **Play stop 4 of the feedback pass: after stop 3, before the football and calendar layer.** The owner expected this, and it is right for three reasons. It uses stop 3's lamps and walker schedule. It must exist before game days, so that layer 1 only has to add the stadium and tailgates as mess spots. And it needs nothing from later layers to be worth playing.
 
 What it leaves switched off until its layer arrives:
@@ -2399,7 +2400,7 @@ The owner accepted every proposal in this table on 2026-11-11, and asked for eac
 
 ## 30. More food places and more Academics buildings
 
-Asked for by the owner on 2026-11-11, to be built with Grounds in play stop 4. **Designed, not built. It waits for the owner's go-ahead for stop 4.**
+Asked for by the owner on 2026-11-11, to be built with Grounds in play stop 4. **Accepted by him the same day, with every proposal of 30.7 but one: the pizza place and the taco stand stay two cells wide with their patios and are not cut down. Not built.** It is the second half of stop 4, after Grounds, and neither half starts until he has played stop 3 and said go.
 
 ### 30.1 The rule they keep
 
@@ -2413,10 +2414,10 @@ Every food place does the one thing the dining hall does: it feeds the lots in i
 |---|---|---|---|---|
 | Food truck | 1 x 1 | $8,000 | 2 cells | Clearing it always gives the whole price back, so moving it is free |
 | Convenience store | 1 x 1 | $9,000 | 2 cells | The cheapest fixed food. Snacks, open late |
-| Taco stand | 1 x 1 | $10,000 | 3 cells | The cheap lunch spot |
+| Taco stand | 2 x 1 | $10,000 | 3 cells | The cheap lunch spot. Two cells for the price of a stall |
 | Smoothie and juice bar | 1 x 1 | $10,000 | 3 cells | Earns double with a recreation building within two cells |
 | Coffee stand, built | 1 x 1 | $12,000 | 3 cells | |
-| Pizza place | 1 x 1 | $14,000 | 3 cells | Busiest in the evening and at night |
+| Pizza place | 2 x 1 | $14,000 | 3 cells | Busiest in the evening and at night |
 | Burger grill | 2 x 1 | $30,000 | 5 cells | Busy at lunch |
 | Late-night diner | 2 x 1 | $36,000 | 5 cells | Busiest at night, and in finals week from layer 1 |
 | Dining hall, built | 2 x 1 | $45,000 | 6 cells | |
@@ -2460,8 +2461,8 @@ Checked in the owner's packs on 2026-11-11. Every restaurant in the pack carries
 | Burger grill | Yes: a burger restaurant, two cells wide, a burger on its roof | |
 | Late-night diner | Yes: a breakfast restaurant with bacon and an egg on its roof | |
 | Food court | Yes: an open-air market of stalls and umbrellas, two cells by two | |
-| Pizza place | A pizza restaurant with a slice on its roof, but drawn two cells wide with a patio | Its patio cut away to fit one cell |
-| Taco stand | A Mexican restaurant with nachos on its roof, also two cells wide. No stall | The same cut |
+| Pizza place | Yes: a pizza restaurant with a slice on its roof, two cells wide with a patio | Used as drawn. The owner chose this on 2026-11-11: the patio reads as outdoor seating and nothing is cropped |
+| Taco stand | Yes: a Mexican restaurant with nachos on its roof, two cells wide with a patio. No stall | Used as drawn, for the same reason |
 | Smoothie and juice bar | An ice-cream stand, one cell, with a cone for its sign | The ice-cream stand as it is |
 | Convenience store | A newspaper kiosk, one cell | The kiosk as it is |
 | Food truck | Box trucks only. One has an apple on its side. None has a serving hatch | The apple truck as it is |
@@ -2483,7 +2484,7 @@ The stand-ins are on the list in section 26, with the fix for each.
 | Layer 2, tiers and money | The science lab. The study center's effect on graduation. Scholars drawn by the lab family |
 | Layer 4 | Everything that depends on majors |
 
-Every piece placed in stop 4 is a look of a rule that exists, so the rules are cheap. The cost is art, tuning and tests: eleven sprites to prepare, two of them cut. With this, stop 4 becomes the largest stop. It can be played in two halves if a shorter wait is wanted: Grounds first, then food and Academics.
+Every piece placed in stop 4 is a look of a rule that exists, so the rules are cheap. The cost is art, tuning and tests: eleven sprites to prepare, none of them cut. **Stop 4 plays in two halves (the owner's decision, 2026-11-11): Grounds first, then food and Academics, with a stop for him to play between them.**
 
 ### 30.6 Design tests
 
@@ -2498,6 +2499,8 @@ Every piece placed in stop 4 is a look of a rule that exists, so the rules are c
 | Tone | Holds. No bar. The diner serves coffee and breakfast at all hours |
 
 ### 30.7 Points raised with the owner
+
+The owner accepted every proposal in this table on 2026-11-11, with one choice of his own: the pizza place and the taco stand are 2 x 1 with their patios, not cut down. That leaves the food truck, the convenience store, the smoothie bar and the coffee stand as the one-cell food.
 
 | Point | What is proposed |
 |---|---|
