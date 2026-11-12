@@ -3271,6 +3271,8 @@ The scenes with no art are left out until it exists. They are not faked.
 | Short loops, compressed, a few megabytes in all, and never more than a handful playing at once | Cheap on a phone, and a small download |
 | Only licensed or public-domain sound, every one listed in CREDITS.md | His rule |
 
+**Changed on 2026-11-12, when the owner first heard it.** The crowd's murmur, footsteps and traffic had been made in code from filtered noise, and under the music they sounded like static. They are switched off (`NOISE_AMBIENCE` in `src/app/sound.ts`). Birds, crickets, the bell, the busker, taps and the music are tones, and stay. Chosen: silence those three until recorded sound replaces them. The alternative: keep them, much quieter.
+
 **What is free, from a first look on 2026-11-11.** The choosing is done when the stop is built, and every licence is read on its own page then.
 
 | Need | Free | Notes |
