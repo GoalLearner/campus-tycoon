@@ -29,11 +29,13 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
+export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
 export {
   budget,
   careStaffAt,
   careStaffCount,
   facultyCount,
+  firstClassArrived,
   hasCareStaff,
   marketingLift,
   staffCount,
@@ -54,7 +56,6 @@ export {
   placedAt,
   previewPlace,
   reachCells,
-  recreationAt,
   storeIncomePerYear,
   storePassers,
   type PlacePreview,
@@ -107,9 +108,12 @@ export {
   roadReach,
   roadsByAccess,
   startingParcels,
+  townHints,
   townLiving,
   townPlaces,
   type HoodLiving,
+  type TownHint,
+  type TownHints,
   type TownPlaces,
 } from './systems/town';
 export { acceptanceRate, classRecord, spreadClassYears, startedHere } from './systems/admissions';

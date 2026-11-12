@@ -21,6 +21,8 @@ const DOING: Record<string, string> = {
   toQuad: 'Heading to the quad',
   onQuad: 'Sitting on the quad',
   movingIn: 'Moving in',
+  walkingIn: 'Walking in from home',
+  walkingHome: 'Walking home',
 };
 /** Where they went when they stepped out of sight, from what they were last doing. */
 const INDOORS: Record<string, string> = {
@@ -28,6 +30,8 @@ const INDOORS: Record<string, string> = {
   nextClass: 'In class',
   toDorm: 'In the dorm',
   movingIn: 'Unpacking in the dorm',
+  walkingIn: 'In class',
+  walkingHome: 'At home in town',
 };
 
 /** The same, by the part of the player's day where it reads differently. */
@@ -64,7 +68,18 @@ function doingText(doing: string): string {
   return DOING_BY_PERIOD[currentDaylight().period]?.[doing] ?? DOING[doing] ?? 'Out on campus';
 }
 
+/** What a student is doing once they have stepped onto a court or through the gym's door, by the building's name. */
+const PLAYING: Record<string, string> = {
+  'Outdoor courts': 'Playing on the courts',
+  'Recreation field': 'In a game on the field',
+  'Aquatics pool': 'Swimming at the pool',
+  'Track and field': 'Running on the track',
+  Gym: 'Working out at the gym',
+};
+
 function indoorsText(doing: string): string {
+  const playing = doing.startsWith('toPlace:') ? PLAYING[doing.slice(8)] : undefined;
+  if (playing) return playing;
   return INDOORS_BY_PERIOD[currentDaylight().period]?.[doing] ?? INDOORS[doing] ?? 'Out of sight';
 }
 

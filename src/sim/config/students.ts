@@ -343,6 +343,12 @@ export const THOUGHTS = {
     'Nothing to do near my dorm but homework. A court or a field would help.',
     'I would join a game if there were anywhere near my dorm to play one.',
   ],
+  /** A recreation building in reach is over what it holds. {w} is the wait and {place} the building. */
+  recreationCrowded: [
+    'Waited {w} for {place}. Another one nearby would clear the line.',
+    'The line at {place} was {w} long today. It needs a second one nearby.',
+  ],
+  commuterRecreationCrowded: ['Waited {w} for {place} between classes. Another one by the lecture halls would clear the line.'],
   commuterRecreationGood: ['Between classes there is always a game on by the lecture hall.'],
   commuterRecreationLow: ['Nothing to do between classes. A field by the lecture halls would help.'],
   safetyGood: [

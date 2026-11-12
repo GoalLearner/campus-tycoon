@@ -345,3 +345,49 @@ export function hoodAdvice(state: GameState, hood: HoodLiving): string {
   const far = `The walk to class is ${Math.round(hood.walkMinutes)} minutes, and ${TOWN_WALK_MAX_MINUTES} is as far as anyone walks.`;
   return hood.mode === 'drive' ? `${far} Its students drive. Academic lots nearer the street would let them walk.` : `${far} Zone Academic lots nearer the street, or build parking with a road.`;
 }
+
+/** A spot on the campus's edge beside the main street, and the side street across from it. */
+export interface TownHint {
+  x: number;
+  y: number;
+  street: string;
+}
+
+export interface TownHints {
+  /** Where a path would let locals walk in. null once any neighbourhood can. */
+  walk: TownHint | null;
+  /** Where parking with a road would let locals drive in. null once a road reaches a car park. */
+  drive: TownHint | null;
+}
+
+/**
+ * What the map should point at while the town cannot get in, worked out from
+ * the same access data the rules use. The spots are on the campus's own land,
+ * in the column beside the main street, across from the side streets nearest
+ * the lecture halls: where a path or a road would be shortest.
+ */
+export function townHints(state: GameState): TownHints {
+  const map = state.map;
+  const gateX = TOWN_X - 1;
+  // The lecture halls are what a path has to reach. With none yet, the middle of the starting land.
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < map.cells.length; i++) {
+    const cell = map.cells[i]!;
+    if (cell.kind !== 'lot' || cell.zone !== 'academic') continue;
+    sum += Math.floor(i / map.width);
+    count += 1;
+  }
+  const middle = count > 0 ? sum / count : START_LAND.y + START_LAND.h / 2;
+  const near = map.town.neighbourhoods
+    .filter((hood) => ownedAt(map, gateX, hood.row))
+    .sort((a, b) => Math.abs(a.row - middle) - Math.abs(b.row - middle) || a.id - b.id);
+  const spot = (n: number): TownHint | null => {
+    const hood = near[Math.min(n, near.length - 1)];
+    return hood ? { x: gateX, y: hood.row, street: hood.name } : null;
+  };
+  const walk = townPlaces(map).walk === 0 ? spot(0) : null;
+  // The two never stand on the same cell.
+  const drive = map.town.access.spaces === 0 ? spot(walk ? 1 : 0) : null;
+  return { walk, drive };
+}

@@ -33,6 +33,7 @@ import { nextFloat } from '../rng';
 import { enrollment } from '../selectors';
 import type { GameState, LogEntry, MapState, Placed } from '../types';
 import { approvalAt } from './happiness';
+import { playLoads } from './play';
 
 /**
  * Grounds. Students drop litter where they eat and play. Bins catch most of
@@ -126,7 +127,8 @@ export function refreshCare(map: MapState): void {
   }
   const byFamily: Record<string, number[]> = {};
   for (const placed of all) (byFamily[PLACED[placed.type].family] ??= []).push(placed.id);
-  map.care = { users, bins, yard, lots, byFamily };
+  const play = playLoads(map, all.filter((placed) => PLACED[placed.type].family === 'recreation'));
+  map.care = { users, bins, yard, lots, byFamily, play };
 }
 
 /** The yard whose circle covers a cell, nearest first. null when none does. */

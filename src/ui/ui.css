@@ -103,7 +103,9 @@ button:active {
   flex: 1;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  /* On a narrow phone with millions in hand, the hourly figure drops under the cash instead of running into the student count. */
+  flex-wrap: wrap;
+  gap: 0 8px;
   min-width: 0;
 }
 
@@ -852,15 +854,19 @@ button.student-reason {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  /* Clear of the notch and the home bar, so a tall card never sits under either. */
+  padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 16px);
   background: rgba(8, 12, 10, 0.62);
 }
 
 .card {
   width: 100%;
   max-width: 400px;
-  max-height: calc(100% - 32px);
+  max-height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 20px 18px 16px;
   background: var(--panel-solid);
   border: 1px solid var(--line);
@@ -1239,4 +1245,41 @@ button.money {
 
 .money-pay button {
   flex: 1;
+}
+
+/* A card whose title and Close button stay put while the middle scrolls. */
+.card.card-fixed {
+  overflow: hidden;
+}
+
+.card-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Room for the scroll bar, and a hint that there is more below. */
+  margin: 0 -6px;
+  padding: 0 6px 6px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.card-scroll > * {
+  flex: 0 0 auto;
+}
+
+.card.card-fixed > button.wide {
+  flex: 0 0 auto;
+}
+
+.money-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
 }

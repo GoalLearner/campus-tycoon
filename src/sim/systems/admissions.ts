@@ -192,6 +192,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 
   enrol(state, admitted, plan.off, tick === FIRST_INTAKE_TICK);
   state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck };
+  // The first class arriving puts safety and medical staff on the payroll, whoever was admitted.
+  markRatesDirty(state);
   state.admissions.waitlist = turnedAway;
   state.admissions.waitlistLocals = locals - plan.locals;
   state.admissions.waitlistUntilTick = turnedAway > 0 ? tick + WAITLIST_TICKS : 0;

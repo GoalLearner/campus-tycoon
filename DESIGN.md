@@ -20,6 +20,7 @@ How to read this document:
 - Section 30 is more food places and more Academics buildings. Accepted by the owner on 2026-11-11 as the second half of play stop 4. Not built: it waits until he has played stop 3 and said go.
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 - Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
+- Section 33 is life and sound: bigger crowds and traffic now, and a Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11 and accepted the next day as the last stop before football. Not started.
 
 ---
 
@@ -593,6 +594,8 @@ effectiveRadius = baseRadius * fundingFactor(Student Services slider) * min(1, c
 
 Campus Safety handles mischief, not crime (section 16).
 
+**The shuttle bus on the map is scenery (2026-11-11).** A shuttle already loops the campus roads, pausing at car parks, at crossings and where a road runs beside a path (25.7). It is for show, like the cars. It cuts no walk time, there is no stop to place, and it is not a service. The Shuttle stop in the table above is still the design. When that is built, the bus on screen calls at the player's stops.
+
 ### 8.4 Overlays
 
 | Overlay | Shows |
@@ -603,6 +606,29 @@ Campus Safety handles mischief, not crime (section 16).
 | Money | Each lot's net income per real hour |
 | Cleanliness | Dirty spots, full bins, broken things and worker coverage (section 29.6). Built on 2026-11-11 with play stop 4a. It opens from "Show cleanliness" on the Happiness panel and stays until Done |
 | Parking | Car parks and roads a car from the town can reach in green, those it cannot in red, and College Avenue, which every road has to reach, in blue. Built on 2026-11-11 with the stop 3 fixes. It has no button of its own yet. **When the overlays button is built it gets its own entry there, alongside Growth, Desirability, Coverage and Money (the owner, 2026-11-11).** Until then it shows while a road is being laid, while a car park is being placed or is selected, and from "Show car parks" in the room plan, where it stays until Done |
+
+### 8.5 Recreation holds so many at once
+
+A rule, asked for by the owner on 2026-11-11: "each recreation building holds a set number", the rest wait, a long wait takes a little off its lift, and a second one nearby shares the crowd. Built the same day with the fixes after the money stop. `src/sim/systems/play.ts` holds it. Save version 10.
+
+| Piece | Built [T] |
+|---|---|
+| What each holds at once | Outdoor courts 8, recreation field 22, aquatics pool 30, track and field 30, gym 40 |
+| Demand | At the busiest hour 5 in every 100 students want to play. They are spread over the lots. A lot's students split their play among every recreation building that reaches it, in proportion to what each holds. A lot nothing reaches sends nobody |
+| Over capacity | The rest wait and rotate in. Waiting never blocks anything |
+| The lift to Happiness | All of it up to full. Past full it falls in a straight line, to seven tenths at twice what the building holds, and no further |
+| The busiest hour, not this hour | The numbers are for the peak. The simulation never reads the clock (28.1), so a player at night and a player in the afternoon have the same campus. The map shows who is there now from the same numbers: all of the peak in the afternoon, nine tenths in the evening, about a third in the morning, almost nobody at night |
+| Thoughts | About one student in three near a crowded building has the wait on their mind: "Waited 20 minutes for a court. Another one nearby would clear the line." The minutes run from 5 to 20, to the nearest five |
+| The card | "Room to spare: 3 of 8 playing at peak." "Busy: 6 of 8 playing at peak." "Full at peak, and nobody waiting." "Full, 5 waiting at peak. Build another nearby to share the crowd." The advice appears from a quarter over |
+| A second building nearby | Shares the demand of every lot both reach, so the line clears and the lift returns |
+| Older saves | Told once in the away list. Nothing else changes in a save |
+| Stored | Only how many lots each building has to itself (`map.care.play`), worked out again after every action |
+
+**What it did to Happiness.** The casual test player, three seeds, twelve game years, against the same player on the rules of the day before: its average Happiness over years 3 to 12 fell by 0.3 to 0.5 of a point (78.1 to 77.7, 81.1 to 80.6, 79.5 to 79.2). That player builds two recreation buildings for a campus of 7,500, and by year 5 both are over what they hold, at up to 1.75 times. Recreation is a small part of its Happiness, so the cost of the crowding is small. A player who builds a second court where the card asks gets it back.
+
+**On the map.** Players on the courts either side of the net, a game on the field with its ball, runners circling the track, swimmers in the pool, and people at benches and picnic tables. A crowded court or field has its line standing on its own lawn beside the game. All of it is for show (28.5): how many are drawn follows the numbers above and the part of the day, and nothing is saved.
+
+**Tests.** `tests/play.test.ts`: demand follows the lots in reach, a second court halves it, the lift falls to seven tenths and no further, the card and the thought say what the numbers say, and catch-up is exact.
 
 ---
 
@@ -1428,7 +1454,7 @@ A "stand-in" is a temporary simplification that a later layer replaces.
 Defined precisely in section 19.
 
 - **Built 2026-11-11.** 86 tests pass, the simulate script passes its six assertions, and the checks below were run in the browser at phone size, apart from the home-screen install, which waits on the owner's choice of host.
-- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 5, Money, built (31.10, 29.16, 32.1):** payroll and every other cost as its own line, the Money panel, recruiting and marketing, the plain endowment, a seven-day phase-in for older saves, a yard that reaches sixteen cells with six workers, a card for anything broken, and a campus that opens with all four class years. Save version 9. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it.
+- **Feedback pass, 2026-11-11.** The owner approved the look, so the pass is being built in three play stops, with a stop for him to play after each. **Stop 1, built:** the Build button and menu; twelve hand-placed buildings (library, dining hall, coffee stand, campus store, gym, track, pool, courts, recreation field, and ponds in three sizes); a starter dining hall and the Administration building on new campuses; Happiness with its causes on the HUD; retention that follows it; the record of every entering class; the acceptance rate on the room plan. Save version 3. Also built earlier in the pass: walking students, trees, laid-out quads and the student card (13.8). **Stop 2, built:** Medical Center and Campus Safety with fixed circles; incidents (comic injuries where students play, mischief where dorms are full) with an icon, a line, and a responder who walks from the nearest covering building; uncovered ones linger, cost a little safety and pass; Safety as a cause of Happiness; students with no bed leave at the end of the semester; test players who use the Build menu, with three new simulate checks. Save version 5. **Stop 2 fixes, built at the owner's request:** calendar dates run evenly again, with football fitted to them (4.8); Happiness regrouped into four causes at full weight (24.2); the waitlist window lengthened from nine hours to 36, with the audit of every timer against one visit a day (4.9); a once-a-day test player. **Stop 3, built:** the town and its neighbourhoods, locals who walk or drive, roads and crossings, the parking lot and parking structure, room fees, two fields of land for sale, cars, and the save upgrade (25.6); the day and night light, street lamps, the walker schedule and the night guard (28.4); a one-time Home Screen tip on iPhone and iPad browsers (17.5). Save version 6. **Stop 3 fixes, built after the owner played it:** a barrier badge over a car park with no road and the Parking overlay (8.4); the three fixes for a bed shortage with their numbers (25.2); a Done button for the road tool; the town confirmed east of campus. **Stop 4a, built:** Grounds (29.14): litter, bins, benches, picnic tables, the Facilities Yard and its workers, breakage and repairs, Grounds as a cause of Happiness, and the Cleanliness overlay. Save version 7. **Stop 4a fixes, built (29.15):** a yard reaches twelve cells, workers mend a broken bin first, breakage reads the students near the spot, and a broken street lamp explains itself on a tap. Save version 8. **Stop 5, Money, built (31.10, 29.16, 32.1):** payroll and every other cost as its own line, the Money panel, recruiting and marketing, the plain endowment, a seven-day phase-in for older saves, a yard that reaches sixteen cells with six workers, a card for anything broken, and a campus that opens with all four class years. Save version 9. **Stop 4b, waiting for the owner's word:** more food places and Academics buildings (section 30). **After stop 1, built at the owner's request:** refunds on clearing with a prompt (9.6), a "Build a dining hall here" shortcut on a dorm held back for want of dining, a one-time note of new rules on older saves, and the date on the HUD. Save version 4. From here each play stop is built on its own branch and merged only when it is finished and its tests pass. **Stop 4, designed and waiting for the owner's go-ahead:** Grounds, which is litter, bins, seating and maintenance workers (section 29). It lands after stop 3 and before layer 1. Stop 4 was accepted on 2026-11-11 and does not start until the owner has played stop 3. Section 30 proposes adding ten kinds of food and three Academics buildings to it. Section 30 was accepted the same day: stop 4 plays in two halves, Grounds first and then food and Academics. Section 31 proposes a play stop 5, Money, after both halves of stop 4 and before layer 1. It waits for the owner's go-ahead. The owner gave the go-ahead for the money stop the same day, to be built before the second half of stop 4, with the yard changes of 29.15 and the four class years of section 32. A small People stop (section 32) follows it. **Fixes after the money stop, built 2026-11-11 before the owner played it:** recreation buildings are seen in use and hold so many at once (8.5); the town is always built and lived in, with commuters on foot, cars that park and queue, a shuttle and delivery trucks, and markers at the edge of a campus the town cannot get into (25.7); a Crowd density setting with a frame budget (28.5); the Money panel scrolls on the shortest phone; and a Medical Center or Campus Safety office has no staff to pay before the first class (31.10). Save version 10.
 - **Acceptance checks:** installs to the home screen. Zoned lots rise within minutes. The first class arrives within fifteen minutes. The Bottleneck tag names the scarce zone, and fixing it during the waitlist admits more students. After a night away, the away list shows what grew and what was earned. A lot stalled for low desirability grows after a quad is placed. Setting the phone clock backward does nothing harmful.
 - **Simulate must assert:** determinism; the catch-up time target; the clock guard; the absent profile still functions after five years; the casual profile's enrollment grows over its first years.
 
@@ -1821,6 +1847,7 @@ Layers are the build layers in section 18. "This pass" is the feedback pass on L
 | Back of house | The Facilities yard gets the one mechanic: buildings near it run down more slowly, which ties to the Facilities slider. The central plant and the campus station are reward landmarks. Central receiving is scenery. None of them gates density: Campus Safety and the Medical Center already hold the two gates. |
 | Transport | The transit station is the Commuter Hub ceiling landmark that section 15.3 already has. Shuttle stops stay as designed. Bike lanes should be cut: they would be a second tool for the one walk-time number. |
 | Each new Academics building with two effects and a favourite major (the owner's list of 2026-11-11) | One effect each, taken from a rule that exists or is already designed. The second effect arrives with its own system, and a major stays a look until departments are real in layer 4 (section 30.3) |
+| A recreation building lifts Happiness the same however many students use it | Each holds so many at once, from 2026-11-11 (8.5). The courts hold 8, the field 22, the pool and the track 30 and the gym 40. Over that, students wait and the lift falls by up to three tenths. It makes a second court a real choice, and it is the first thing on the map that shows a building is too small for its crowd |
 | Food that grows by itself in the Student Life zone | Food is hand-placed from play stop 4, ten kinds of it. The Student Life zone of layer 2 keeps shops and venues |
 
 ### 23.4 Layout: the model campus
@@ -2026,7 +2053,8 @@ Asked for by the owner on 2026-11-11 as item 8 of the feedback pass, and settled
 |---|---|
 | Not every student lives in a dorm. Locals live in houses in the town, outside the campus land | It replaces the flat share of students who needed no bed, which was free and had no cause |
 | Only locals live in town: about four in ten of each class [T]. From layer 2 they are the in-state commuters of section 7.2. Out-of-state students and scholars always need a bed | Without this the town is an endless free dorm. The most that can skip a bed is the local share |
-| Each neighbourhood has a fixed number of house plots. Houses fill in over real hours as locals enrol, and stop when the plots are full | Growth the player can see and cannot farm. The town is capped, so Housing matters more as the school grows |
+| Each neighbourhood has a fixed number of house plots, and that number is the most locals it can send. **The town is always fully built (the owner, 2026-11-11): every plot has its house from the first day, whoever is enrolled.** Who is enrolled from a street shows on its card, and in who walks and drives in from it. Until that day houses appeared as locals enrolled | "The town looks dead." A town that filled in house by house was an empty field beside a new campus. The cap is unchanged, so Housing still matters more as the school grows |
+| Townspeople and their cars are on the town's streets and sidewalks whether or not the campus connects. They are flavour and never count as students (25.7) | The owner, 2026-11-11 |
 | A local comes if they can reach campus. From a neighbourhood joined by a path and within walking range of an Academic lot, they walk and need no bed and no parking. Otherwise they drive and need a parking space with road access | One rule for how they arrive |
 | A local with no way in needs a bed instead | Every student needs somewhere to live |
 | Off-campus students pay tuition and no room fees. Dorm students pay both. Room fees arrive with neighbourhoods | In the first playable's numbers a commuter netted more than a dorm student, because of bed upkeep. Starting numbers [T]: tuition $8,200 a student and $3,000 an occupied bed, which leaves income unchanged at the start |
@@ -2072,6 +2100,8 @@ The owner overrode the proposal of no road tool. Traffic simulation stays cut.
 | Town streets belong to the town and appear with the neighbourhoods. The player's roads join them, or the highway, at the edge of the land | The town is not the player's to edit |
 | **One rule only: a parking lot or structure holds cars when a road links it to a town street or the highway. Without that it holds none and shows the stall cause "no road access"** | Roads never become a need of every building. That was the chore SimCity made of them |
 | Cars are for show, like walkers. Their number follows how many locals drive and the time of day. They leave driveways, follow streets and roads to a parking space, and leave later. Parked cars fill a lot in proportion to its use. No congestion, and nothing in catch-up | The traffic cut stands |
+| A car waits at a crossing while somebody is walking over it, and keeps a gap behind the car in front, so cars queue. This is for show too: nothing is counted and there is still no congestion (2026-11-11) | The owner: "Cars stop at crosswalks when walkers cross" |
+| A campus shuttle loops the player's roads, and delivery trucks call at a dining hall or the campus store where a road runs beside it. Scenery (8.3, 25.7) | Life on the roads |
 | Housing and Academic lots mildly dislike a road beside them, as part of the noise input | A walkable core with roads at the edges becomes the natural layout, which is the model campus of 23.4 |
 | A road costs money a cell and a little upkeep [T] | A choice, not free |
 | The parking structure holds several times a surface lot on a similar footprint, costs much more, and has a smaller desirability penalty | Land is the scarce thing late on |
@@ -2116,7 +2146,7 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 | Noise | A lot loses 3 points of desirability for a road or street beside it, 6 for a parking lot within a cell and 3 for a structure |
 | Money | Tuition $8,200 a student and a room fee of $3,000 for each occupied bed |
 | Land | Tap a field to see its price and buy it: $250K and $400K. Nothing can be built on a field before it is bought, and the town can never be changed |
-| On screen | Houses stand on as many plots as there are locals living there. Cars drive between those houses and the car parks a road reaches, more in the morning and evening. Tapping a house or side street shows who lives there, whether they walk or drive, and what would let more come |
+| On screen | Every plot has its house (25.7). Until 2026-11-11 houses stood only on as many plots as there were locals living there. Cars drive between those houses and the car parks a road reaches, more in the morning and evening. Tapping a house or side street shows who lives there, whether they walk or drive, and what would let more come |
 | Old saves | Upgraded as 25.4 says, with one line in the away list |
 | A car park with no road | The pack's lowered barrier floats over it, big enough to read at normal zoom, until a road reaches it. Tapping the barrier opens its panel. The Parking overlay (8.4) shows it in red |
 | The road tool | Picked from the Build menu. It stays in hand until Done is tapped, on a bar that says what the colours mean |
@@ -2124,10 +2154,39 @@ The highway does not exist on the map until layer 3. Until then a road counts wh
 **Where it differs from the decisions above, and what is rough.**
 
 - The town is east of the campus. The first sketch put it below. The owner played it on the east and confirmed that on 2026-11-11, so east is the design.
-- Houses appear when a class arrives, not over real hours.
+- Houses appeared when a class arrived, not over real hours, until 2026-11-11. The town is now always fully built (25.7).
 - Land purchase is two fields. The full map of 25 parcels (5.2) waits, because growing the map again means another upgrade step.
-- Cars pass through one another and turn on the spot. There is no highway.
+- Cars turn on the spot. There is no highway. Since 2026-11-11 they keep a gap behind the car in front and wait at crossings (25.7).
 - Town relations, landlords and the freshman live-on policy are not built.
+
+### 25.7 The town lived in
+
+Asked for by the owner on 2026-11-11, after the money stop: "No one walks or drives in from the town", and "The town looks dead." Built the same day. All of it is for show: nothing here is saved, no number changes, and nothing runs while the game is closed.
+
+**Was it a bug?** Yes, in what was shown, not in the numbers. The locals were enrolled and counted correctly all along. On the map, nobody ever came out of a house: a commuter appeared already on campus, a car appeared only when students drove, which needs a car park a road reaches, and a house stood only where locals were enrolled. A campus from an older save also has no walk to College Avenue, because that walk is laid for new campuses only (25.4), and the only place that said so was a panel. Both halves are fixed: the map says at its edge when the town cannot get in, and when it can, people and cars are seen coming and going.
+
+| Piece | Built [T] |
+|---|---|
+| The town | Every plot has its house. The few spots along a street with no house are a driveway with a car, a garden, a pool or trees, and the ground behind the houses is lawn and trees. It is read from numbers the save already holds, so a town always looks the same |
+| Townspeople | Neighbours walk the sidewalks of College Avenue and the side streets, about seven at a time by day and one at night. A tap says "A neighbour from the town. Townspeople are not students." |
+| Town cars | Between driveways and the ends of the streets: four in the morning and evening, three in the afternoon, one at night. Cars stand in driveways: nearly all at night, about a third in the afternoon |
+| Walking in | From each street that walks: out of a house, along its sidewalk, over College Avenue and up the path to class. Nearly all inbound in the morning, home again in the evening. About one walker for every 14 locals who walk, never more than 26 at once, and fewer on a weekend. Their card says "Walking in from home" and "Walking home" |
+| Driving in | A car leaves a driveway, drives its street, College Avenue and the player's road, and pulls into a car park a road reaches. Later it drives home. One car for about ten students who drive, never more than nine at once at Normal |
+| Crossings and gaps | A car stops short of a crossing while a walker is on it. A car keeps a gap behind the one in front, so they queue behind a bus at its stop |
+| The shuttle | The pack's orange bus loops the campus roads, pausing at each car park's door, each crossing and where a road runs beside a path. Scenery until the shuttle service is built (8.3). It needs at least two such places |
+| Delivery trucks | A grocery truck or a mail truck drives in from the edge of the map, stands seven seconds beside a dining hall or the campus store, and leaves. Only where a road is beside one of them, and never at night |
+| Edge markers | When no street can walk in, the pack's arrow sign stands at the campus edge beside College Avenue, on the row of the side street nearest the lecture halls, with "Connect a path here so locals can walk in". When no car park has a road, the pack's blue road sign stands on another row with "Build parking with a road here so locals can drive in". Each reads at normal phone zoom with no panel open and goes when the campus is joined. A tap puts the path tool in hand, or begins placing a parking lot. Both are worked out by `townHints` from the access data the rules use |
+| Bikes and skateboards | Left out. No figure in the packs rides anything. Listed in section 26 |
+
+`?demo=unjoined` shows the markers, `?demo=stop3&hour=8` the morning rush, and `?demo=play` recreation in use.
+
+**Rough.**
+
+- Cars still turn on the spot, and a car pulling into a car park fades at its door: no parking space is drawn filling up beyond what 25.6 already shows.
+- A car waits only for a walker on the crossing ahead. Walkers do not wait for cars.
+- The shuttle carries nobody and nobody waits for it.
+- Townspeople walk between houses and the ends of the streets. They do not go into anything.
+- The sentence beside each edge marker is written by the game beside the sign, at the owner's request. It is the one piece of text that floats on the map.
 
 ---
 
@@ -2153,10 +2212,14 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Picnic table, `grounds.table` | The pack's table with four chairs | Penzilla commission: a picnic table |
 | Grounds worker, `grounds.broom` and `grounds.cart` | The pack's construction worker, with its broom or cart drawn beside him. No figure holds anything | Penzilla commission: a worker holding a broom |
 | Students at a bench or table | A standing student beside it. Every figure only stands and walks | Penzilla commission: seated figures |
+| Swimmers in the pool | A walking figure with everything below the chest cut away, so it reads as a head and shoulders in the water. Cut in code, 2026-11-11 | Penzilla commission: a swimmer |
+| Players on a court, the field and the track | The pack's four athletes, walking and running. Nobody holds a racket or kicks | Penzilla commission: figures at play |
+| Edge markers, `icon.walkin` and `icon.drivein` | The pack's arrow sign and its blue road sign, enlarged. The sentence beside each is written by the game | Keep, or one commissioned signpost |
+| Someone on a bike, a skateboard or a scooter | Nothing. No figure in the packs rides anything, so none is shown | Penzilla commission, if wanted |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
 
-Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way. The face on the student card is drawn in code, and the owner approved it.
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The face on the student card is drawn in code, and the owner approved it.
 
 **Planned for play stop 4.** None of these exists yet. The owner accepted all of them on 2026-11-11 and turned one down: the pizza place and the taco stand are not cut down to one cell. They stay two cells wide with their patios, as drawn. Each moves into the table above in the piece of work that builds it.
 
@@ -2302,6 +2365,36 @@ Lit windows, umbrellas, coats and snow wait, because their art has to be made. W
 | The student card | "Doing now" reads by period: hurrying to class in the morning, an evening or night class later, asleep in the dorm at night |
 
 `&hour=22` on a dev page shows any hour. Nothing here is simulation, and nothing is saved but the switch.
+
+### 28.5 Crowd density and the frame budget
+
+Asked for by the owner on 2026-11-11: more people on the map, scaled by enrollment, zoom and time of day, a Crowd density setting, and a frame budget that drops the crowd by itself when frames fall. Built the same day. The rules are plain sums in `src/app/crowd.ts`, tested in `tests/crowd.test.ts`. All of it is for show: none of these counts is saved, none is read by the simulation, and nothing here runs while the game is closed.
+
+**The caps.** Before this the map wanted at most 64 walkers in view and kept at most 90 alive. That is now Low.
+
+| Level | Walkers wanted in view | Walkers kept alive | How full the paths get | Players, runners, swimmers and people at seats | Cars, against Low |
+|---|---|---|---|---|---|
+| Sparse, which only the frame budget chooses | 32 | 48 | 0.6 | 16 | 0.5 |
+| Low, the crowd of before | 64 | 90 | 1 | 36 | 1 |
+| Normal, the setting a new player has | 120 | 170 | 1.9 | 70 | 1.4 |
+| High | 190 | 260 | 3 | 110 | 1.8 |
+
+| Piece | Built [T] |
+|---|---|
+| The setting | "Crowd density: Normal" in the Menu, which a tap turns to High, Low and back. Kept on the device, not in the saved game. It is the most the map will show, not a promise |
+| Walkers wanted on screen | The path cells in view, times how many students there are for each cell of path, times the level's fullness, times the part of the day. So more with more students, more with more of the campus in view, and never more than the level's cap |
+| The part of the day | Against a steady afternoon: a third more in the morning, a fifth fewer in the evening, three tenths at night. Never fewer than four in view |
+| The weekday | Saturday and Sunday of the game's own calendar are about a third quieter on the paths, and few walk in from town. The day comes from the date in the game, never from the device |
+| Where they go | Morning: nearly everyone to class. Afternoon: class still, and a quarter to the courts, fields, pool and gym. Evening: recreation and food first, then home. Night: home, a late bite, a night class |
+| Using the campus | A walker who reaches a court, a field or the pool steps onto it and joins the game. Who is playing there is counted from the building's own numbers (8.5) |
+| The frame budget | Read once a second. Frames are short when the rate is under eight tenths of the best this screen has shown. Three short seconds step the crowd down a level, as far as Sparse. Eight good seconds step it back up, never above the setting. A phone in Low Power Mode, which draws 30 frames a second however little there is to draw, is not taken for a slow phone. A tab in the background is not counted |
+| Pooled sprites | Walkers, cars and the figures on the courts each reuse their sprites. Nothing is made and thrown away as people come and go |
+
+**How it was measured, and what that is worth.** On the development PC, a desktop with a GeForce RTX 2060 Super, in a phone-sized window of 390 by 844 at three times density, on the test players' large campus of 7,100 students, in the morning rush and zoomed out. The work of one frame, from the start of the step to the end of the draw, took 3.4 ms at Low with about 90 walkers and 14 vehicles, 3.6 ms at Normal with about 165 and 19, and 3.9 ms at High with about 240 and 23. Sixty frames a second allows 16.7 ms. In a visible browser window at Normal the game held 60 frames a second. The crowd is a small part of the frame: Low to High adds about half a millisecond.
+
+**This is a PC, not an iPhone.** A mid-range iPhone runs this code several times slower, and what the measurement leaves out, the drawing itself on the phone's graphics chip at three times density, is the part most likely to matter. The numbers say the caps are likely to hold on a phone. They do not show it. A frame-rate check on a real mid-range iPhone, at each level, on a large campus, is on the manual list of the stop's hand-off page, and High stays a proposal until it has been done. The frame budget is the guard in the meantime: a phone that cannot hold a level drops to the one below by itself.
+
+`&crowd=low`, `normal` or `high` on a dev page sets the level, `&stats` shows frames a second and who is on screen, and `&pin` holds the level whatever the frame rate, for screenshots.
 
 ---
 
@@ -2837,7 +2930,7 @@ Play stop 5, 2026-11-11. `src/sim/systems/budget.ts` works out every line, `src/
 |---|---|
 | Faculty | One for every 20 students, to the nearest whole person, at $58,000 |
 | Staff | One for every 40 students, at $42,000 |
-| Safety and medical staff | One for every 800 students in the building's circle, never fewer than one, at $42,000. A student is in a circle by the lots in it, as a litter place counts its users (29.14). The building's card shows "Staff of 3: $163,800 a year with benefits" |
+| Safety and medical staff | **Nothing until the first class arrives (the owner, 2026-11-11).** A Medical Center or a Campus Safety office built before move-in has no staff to pay. From the day the first class is admitted: one for every 800 students in the building's circle, never fewer than one, at $42,000. The Build menu says "Runs at $15K a year. Staff from $55K once students arrive", and the card says "No staff to pay until the first class arrives". A student is in a circle by the lots in it, as a litter place counts its users (29.14). The building's card shows "Staff of 3: $163,800 a year with benefits" |
 | Maintenance workers | The count on each yard, at $48,000 (29.16) |
 | Benefits | 30% on top of all four |
 | Utilities | A dorm $5,500 or $13,000 by stage, a lecture hall $7,500 or $17,000. A hand-placed building $1,500 a cell, an open court or field $400 a cell, the pool $9,000. Ponds, bins and seats nothing |
@@ -2964,3 +3057,117 @@ The People stop changes no rule and no number. It needs no rebalance, which is w
 - No card line breaks the tone guide's word list.
 - Opening cards, and the people on screen, change nothing in the saved game.
 - Non-students stay under their share of the crowd at every time of day.
+
+---
+
+## 33. Life and sound
+
+Asked for by the owner on 2026-11-11: "give the campus more life and soul. All visual and audio only, never touching the numbers, deterministic where it matters, and cheap on a phone." He split it himself: three items go with the fixes being built now, and three need a place. **He accepted the proposal below on 2026-11-12: Life and sound is its own stop, the last before football, and it starts with free sound only. It is not started, and like every stop it waits for his go-ahead after he has played the one before.**
+
+### 33.1 The split
+
+| Item | What | When |
+|---|---|---|
+| 1 | More people: walker counts raised and scaled by enrollment, zoom and time of day, with a Crowd density setting of Low, Normal and High | Now, with the fixes after the money stop |
+| 2 | Commuters walking in from town and home again, cars from driveways to parking spaces and back, cars waiting at crossings, a shuttle bus, delivery trucks | Now |
+| 6 | A frame budget, pooled sprites, and crowd density that drops by itself when frames fall | Now |
+| 3 | Small scenes that come and go | The Life and sound stop |
+| 4 | Ambient motion | The Life and sound stop |
+| 5 | Sound | The Life and sound stop |
+
+### 33.2 Where the Life and sound stop fits
+
+**Accepted: its own stop, the last one before football.** The order would be: the fixes now, the People stop, the second half of stop 4 (food and Academics), Life and sound, then layer 1.
+
+| Reason | |
+|---|---|
+| It leans on what comes before it | The tour group and its pennant come with the People stop. The busker stands by a food place and queues form at them, which is stop 4b. Study groups sit at Grounds's picnic tables |
+| Football needs it | Game days are the loudest and busiest thing in the game. If scenes, crowds and sound exist first, layer 1 only has to add tailgates and the stadium crowd |
+| It changes no rule and no number | It needs no rebalance and can be played for feel alone |
+
+What it leaves for layer 1: tailgates, the stadium crowd, rain and its sound, and scenes that follow the season.
+
+### 33.3 Rules for all of it
+
+| Rule | Why |
+|---|---|
+| For show only. Nothing here is saved, nothing changes a number, and nothing runs in catch-up | The owner's rule |
+| The hour comes from the player's clock and the weekday and season from the date in the game. Neither is ever counted (28.1) | The same rule as day and night |
+| Every visible thing is a real sprite. Motion may be made in code on a real sprite, and spray, ripples and rain may be light particles, as weather's already are (28.3). Nothing is drawn to stand in for a missing figure | The art rule |
+| One setting reduces effects, one sets crowd density, and two set volume | Old phones, and players who want quiet |
+
+### 33.4 Small scenes
+
+Checked in the owner's packs on 2026-11-11. The figures only stand and walk, and hold nothing, which decides most of this table.
+
+| Scene | With the art there is | Gap |
+|---|---|---|
+| Study groups at picnic tables | Yes: figures standing at the Grounds tables | Seated figures |
+| Club tables with signs | Yes: the pack's tables, its sandwich-board sign and a tent, set out together | |
+| A tour group behind a guide with a flag | Yes, from the People stop: the pennant is drawn beside the guide | A guide holding it |
+| Move-in day, families with boxes | Yes: stacks of boxes, cars and trucks by the dorms | |
+| Pickup games on a quad | Partly: figures can run about | A ball and a frisbee |
+| People lying on the grass | No | A lying figure |
+| Someone walking a dog | No | A dog |
+| A busker by the coffee stand | No | A figure with an instrument |
+| Tailgates on game day | Yes: tents and tables. Layer 1 | A grill |
+
+The scenes with no art are left out until it exists. They are not faked.
+
+### 33.5 Ambient motion
+
+| Wanted | In the packs | How |
+|---|---|---|
+| Wheels turning and headlights | Yes: animation sheets for cars, the bus and trucks | The pack's own frames |
+| A fan and a windmill | Yes: animation sheets | The pack's own frames, where such a building stands |
+| Trees swaying, a pennant moving | No animation | A gentle sway made in code on the real sprite |
+| Pond and fountain ripples, sprinklers on lawns in the morning | No animation. A fountain exists as a still picture, and no sprinkler head | Light particles, as rain will be. The sprinkler has spray and no head until one is drawn |
+| Birds and the campus squirrel | None | Left out until drawn |
+| Lights coming on in windows at dusk | None, as found in 28.3 | Left out until window art is made. Street lamps already light |
+
+### 33.6 Sound
+
+| Decision | Why |
+|---|---|
+| Sound follows what is on screen and how far the view is zoomed: footsteps and chatter grow with the walkers in view, traffic is heard near roads, birds by day and crickets at night | The owner's design. It is worked out from what is drawn, so it costs almost nothing |
+| A bell chimes on the hour of the player's own clock. Soft sounds for taps. Light music under it all | His list |
+| Rain, the stadium crowd and anything tied to weather or game days arrive with layer 1 | Their systems are not built |
+| Two volumes in Settings, music and sound. Both start low | His instruction |
+| Silent means silent | His instruction. In the iPhone app the sound is set to follow the ring switch. In a browser tab the phone decides, and it is not the same on every phone, so this is on the list to try on a real iPhone |
+| No sound plays until the first tap | Browsers do not allow it |
+| Short loops, compressed, a few megabytes in all, and never more than a handful playing at once | Cheap on a phone, and a small download |
+| Only licensed or public-domain sound, every one listed in CREDITS.md | His rule |
+
+**What is free, from a first look on 2026-11-11.** The choosing is done when the stop is built, and every licence is read on its own page then.
+
+| Need | Free | Notes |
+|---|---|---|
+| Taps and menus | Kenney's Interface Sounds (100 files) and UI Audio (50), public domain | No credit required. Credited anyway |
+| Short tunes for a result or a reward | Kenney's Music Jingles (85), public domain | |
+| Background music | Blippy Bits, public domain, pay what you want. Gentle Exploration, free with credit | Free music is the weakest part. It may not suit the game |
+| Birds, crickets, chatter, footsteps, traffic, a bell | Nothing found as one free public-domain pack. Kenney has no ambience | Single public-domain recordings exist on Freesound and OpenGameArt and are picked one by one |
+
+**What might be worth buying.** Prices as listed on 2026-11-11, to be confirmed before any purchase. Nothing is bought without the owner's word.
+
+| Thing | Price seen | Why |
+|---|---|---|
+| One cosy music pack: the Cozy Casual series, or the Cozy Gaming Music Asset Pack | About $12 to $16 a pack | Loopable, licensed for commercial games. The single purchase most likely to be worth it |
+| Plucky Plucks music pack | About $30 | The same, dearer |
+| Cozy Adventure Lo Fi pack | About $2 | Five loops. Cheap enough to try |
+| An ambience pack, such as the Environment Sounds Pack | Not seen | Rain, birds, crickets, city and crowd in one licence, if picking single free recordings proves slow |
+
+The owner accepted this on 2026-11-12: start with free sound only. A music pack is bought only if the free music does not fit, and only on his word.
+
+### 33.7 Design tests
+
+| Test | Verdict |
+|---|---|
+| Exact catch-up | Holds. Nothing here is counted or saved |
+| Cheap on a phone | The risk. Crowds, cars, particles and sound all cost frames. The frame budget and the automatic drop in density built with the fixes are the guard, and each later piece is measured against them |
+| The art rule | Holds, because scenes with no art are left out, not faked |
+| Simple screens | Three settings are added: crowd density, music volume and sound volume. Reduce effects already exists in the design (28.3) |
+| Tone | Holds. Music without words, a bell, birds. Nothing loud by default |
+
+### 33.8 Art to ask for
+
+For the Penzilla request, in the order they would add most: seated and lying figures, a ball and a frisbee, a dog, birds and a squirrel, a figure with an instrument, a guide holding a flag, a sprinkler head, a grill, and lit windows.

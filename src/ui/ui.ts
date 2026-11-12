@@ -58,6 +58,7 @@ import {
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
+import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
 import { face, mountStudentCard } from './studentCard';
 
 /**
@@ -602,6 +603,14 @@ export function mountUi(root: HTMLElement): void {
       setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
       card.append(daylight);
 
+      // How many people the map shows. The setting is a ceiling: the map shows fewer by itself if frames run short.
+      const crowd = button('', 'wide', () => {
+        setCrowdSetting(CROWDS[(CROWDS.indexOf(crowdSetting()) + 1) % CROWDS.length]!);
+        setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
+      });
+      setText(crowd, `Crowd density: ${CROWD_NAMES[crowdSetting()]}`);
+      card.append(crowd);
+
       const startOver = button('Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {
           startOver.dataset.armed = 'yes';
@@ -1020,6 +1029,12 @@ export function mountUi(root: HTMLElement): void {
     /** The groups the player has opened, kept while the panel is redrawn after a tap. */
     const open = new Set<string>();
     openModal((close, card) => {
+      // The title and the Close button stay put. Everything between them scrolls, on the shortest phone too.
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      const foot = button('Close', 'wide', close);
+      card.append(head, body, foot);
       const row = (item: { name: string; detail: string; amount: string }, className: string): HTMLElement => {
         const line = el('div', className);
         const text = el('div', 'money-text');
@@ -1027,31 +1042,43 @@ export function mountUi(root: HTMLElement): void {
         line.append(text, el('span', 'money-amount', item.amount));
         return line;
       };
-      const draw = (): void => {
+      /** Redraw after a tap, keeping the list where the player had scrolled it. `show` is a group to bring into view. */
+      const draw = (show?: string): void => {
         const view = moneyView(store.state);
-        card.textContent = '';
-        card.append(el('h1', '', 'Money'), el('p', 'money-lead', view.lead));
-        if (view.phase) card.append(el('p', 'fine', view.phase));
+        const scrolled = body.scrollTop;
+        head.textContent = '';
+        head.append(el('h1', '', 'Money'), el('p', 'money-lead', view.lead));
+        if (view.phase) head.append(el('p', 'fine', view.phase));
 
-        card.append(el('div', 'money-head', `Coming in · ${view.incomeTotal} a year`));
-        for (const item of view.income) card.append(row(item, 'money-row'));
+        body.textContent = '';
+        body.append(el('div', 'money-head', `Coming in · ${view.incomeTotal} a year`));
+        for (const item of view.income) body.append(row(item, 'money-row'));
 
-        card.append(el('div', 'money-head', `Going out · ${view.spendingTotal} a year`));
+        body.append(el('div', 'money-head', `Going out · ${view.spendingTotal} a year`));
+        let shown: HTMLElement | null = null;
         for (const group of view.groups) {
-          const head = el('button', open.has(group.id) ? 'money-group open' : 'money-group');
-          head.type = 'button';
-          head.append(el('span', 'money-name', group.name), el('span', 'money-share', group.share), el('span', 'money-amount', group.amount));
-          head.addEventListener('click', () => {
-            if (open.has(group.id)) open.delete(group.id);
-            else open.add(group.id);
-            draw();
+          const top = el('button', open.has(group.id) ? 'money-group open' : 'money-group');
+          top.type = 'button';
+          top.append(el('span', 'money-name', group.name), el('span', 'money-share', group.share), el('span', 'money-amount', group.amount));
+          top.addEventListener('click', () => {
+            const opening = !open.has(group.id);
+            if (opening) open.add(group.id);
+            else open.delete(group.id);
+            draw(opening ? group.id : undefined);
           });
-          card.append(head);
-          if (open.has(group.id)) for (const item of group.lines) card.append(row(item, 'money-row inner'));
+          body.append(top);
+          if (open.has(group.id)) {
+            let last: HTMLElement = top;
+            for (const item of group.lines) {
+              last = row(item, 'money-row inner');
+              body.append(last);
+            }
+            if (show === group.id) shown = last;
+          }
         }
 
         // Recruiting and marketing: the one cost here the player sets.
-        card.append(el('div', 'money-head', 'Recruiting and marketing'));
+        body.append(el('div', 'money-head', 'Recruiting and marketing'));
         const steps = el('div', 'money-steps');
         const set = (step: number): void => {
           const result = store.dispatch({ type: 'marketing', step });
@@ -1063,10 +1090,10 @@ export function mountUi(root: HTMLElement): void {
         down.disabled = view.marketing.step <= 0;
         up.disabled = view.marketing.step >= view.marketing.max;
         steps.append(down, el('span', 'staff-count', view.marketing.line), up);
-        card.append(steps);
+        body.append(steps);
 
         // The endowment: cash paid in for good.
-        card.append(el('div', 'money-head', 'Endowment'), el('p', '', view.endowment.line));
+        body.append(el('div', 'money-head', 'Endowment'), el('p', '', view.endowment.line));
         if (view.endowment.payIn.length > 0) {
           const pay = el('div', 'money-pay');
           for (const amount of view.endowment.payIn) {
@@ -1078,9 +1105,11 @@ export function mountUi(root: HTMLElement): void {
               }),
             );
           }
-          card.append(pay, el('p', 'fine', 'It never comes back out.'));
+          body.append(pay, el('p', 'fine', 'It never comes back out.'));
         }
-        card.append(button('Close', 'wide', close));
+        body.scrollTop = scrolled;
+        // A group that has just been opened is brought into view, lines and all, without jumping the list.
+        if (shown && typeof shown.scrollIntoView === 'function') shown.scrollIntoView({ block: 'nearest' });
       };
       draw();
     });

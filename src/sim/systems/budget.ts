@@ -71,9 +71,22 @@ export function studentsInCircle(state: GameState, placed: Placed): number {
   return Math.round((enrollment(state) * inside) / lots);
 }
 
-/** Staff at one Medical Center or Campus Safety building: one for every 800 students in its circle, and never fewer than one. */
+/**
+ * True once the first class has arrived. Until then a Medical Center or a
+ * Campus Safety office has nobody to look after and nobody on its payroll
+ * (the owner, 2026-11-11): building one early is not a trap.
+ */
+export function firstClassArrived(state: GameState): boolean {
+  return state.admissions.lastIntake !== null;
+}
+
+/**
+ * Staff at one Medical Center or Campus Safety building: one for every 800
+ * students in its circle, and never fewer than one. None at all before the
+ * first class has arrived.
+ */
 export function careStaffAt(state: GameState, placed: Placed): number {
-  if (!hasCareStaff(placed)) return 0;
+  if (!hasCareStaff(placed) || !firstClassArrived(state)) return 0;
   return Math.max(1, Math.ceil(studentsInCircle(state, placed) / STUDENTS_PER_CARE_STAFF));
 }
 

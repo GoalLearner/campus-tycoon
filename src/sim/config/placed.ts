@@ -36,6 +36,8 @@ export interface PlacedSpec {
   cars?: number;
   /** Its utilities for a game year, where the rule by size does not fit. The pool uses far more than its size. */
   utilitiesPerYear?: number;
+  /** Recreation only: how many students it holds at once. A court fits a game or two, the gym most. */
+  capacity?: number;
 }
 
 export const PLACED: Record<PlacedType, PlacedSpec> = {
@@ -57,23 +59,23 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   },
   gym: {
     name: 'Gym', category: 'Recreation', family: 'recreation', w: 2, h: 1, cost: 55_000, upkeepPerYear: 5_000,
-    radius: 8, strength: 0.6, effect: 'Raises happiness within 8 cells', sprite: 'build.gym', flat: false, buildable: true,
+    radius: 8, strength: 0.6, effect: 'Raises happiness within 8 cells', sprite: 'build.gym', flat: false, buildable: true, capacity: 40,
   },
   track: {
     name: 'Track and field', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 120_000, upkeepPerYear: 8_000,
-    radius: 6, strength: 0.7, effect: 'Raises happiness within 6 cells', sprite: 'build.track', flat: false, buildable: true,
+    radius: 6, strength: 0.7, effect: 'Raises happiness within 6 cells', sprite: 'build.track', flat: false, buildable: true, capacity: 30,
   },
   pool: {
     name: 'Aquatics pool', category: 'Recreation', family: 'recreation', w: 2, h: 1, cost: 40_000, upkeepPerYear: 4_000,
-    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.pool', flat: true, buildable: true, utilitiesPerYear: 9_000,
+    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.pool', flat: true, buildable: true, utilitiesPerYear: 9_000, capacity: 30,
   },
   courts: {
     name: 'Outdoor courts', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 18_000, upkeepPerYear: 1_000,
-    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.courts', flat: true, buildable: true,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.courts', flat: true, buildable: true, capacity: 8,
   },
   field: {
     name: 'Recreation field', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 15_000, upkeepPerYear: 1_000,
-    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.field', flat: true, buildable: true,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.field', flat: true, buildable: true, capacity: 22,
   },
   pondSmall: {
     name: 'Small pond', category: 'Water', family: 'water', w: 1, h: 1, cost: 8_000, upkeepPerYear: 0,
@@ -140,6 +142,21 @@ export const STORE_REACH_CELLS = 10;
 /** Share of the beds and seats in reach that pass the door. */
 export const STORE_PASSING_SHARE = 0.5;
 export const STORE_INCOME_PER_PASSER = 45;
+
+/**
+ * Recreation fills up (the owner, 2026-11-11). Of the students a building
+ * reaches, this share want to play at the busiest hour of the day [T].
+ */
+export const PLAY_SHARE = 0.05;
+/**
+ * A long wait takes a little off what a building is worth to Happiness: none
+ * of it while there is room, falling to this share of its lift when demand
+ * is CROWD_WORST_AT times what it holds, and no further [T].
+ */
+export const CROWD_LIFT_FLOOR = 0.7;
+export const CROWD_WORST_AT = 2;
+/** The wait a student talks about at a building that crowded. */
+export const WAIT_MINUTES_AT_WORST = 20;
 
 /** Places to meet: one recreation building is worth this many quad cells of social life. */
 export const SOCIAL_SPOTS_PER_RECREATION = 4;

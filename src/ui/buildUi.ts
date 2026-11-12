@@ -7,6 +7,8 @@ import {
   isMessSpot,
   BENEFITS_SHARE,
   BROKE_BY,
+  playLine,
+  playUse,
   budget,
   utilitiesOf,
   WAGE_PER_YEAR,
@@ -157,7 +159,8 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'recreation': {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
-      return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.`;
+      const use = playUse(state, placed);
+      return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.${use ? ` ${playLine(use)}` : ''}`;
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
@@ -250,7 +253,7 @@ function runningLine(type: PlacedType): string {
   const spec = PLACED[type];
   const cost = buildingCost(type);
   const base = cost > 0 ? `Runs at ${dollarsShort(cost)} a year` : 'Costs nothing to run';
-  if (spec.family === 'medical' || spec.family === 'safety') return `${base}, plus staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))}`;
+  if (spec.family === 'medical' || spec.family === 'safety') return `${base}. Staff from ${dollarsShort(withBenefits(CARE_STAFF_PAY))} once students arrive`;
   if (spec.family === 'yard') return `${base}, plus ${dollarsShort(withBenefits(WAGE_PER_YEAR))} a worker`;
   return base;
 }
@@ -262,7 +265,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
   const parts: string[] = [];
   if (hasCareStaff(placed)) {
     const staff = careStaffAt(state, placed);
-    parts.push(`Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits`);
+    parts.push(staff > 0 ? `Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits` : 'No staff to pay until the first class arrives');
   }
   parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
   if (spec.buildable) parts.push('The Clear tool removes it');
@@ -335,7 +338,7 @@ export const CAUSE_FIXES = PART_FIX;
 export function lotFacts(state: GameState, x: number, y: number): string[] {
   const facts: string[] = [];
   facts.push(fedAt(state.map, x, y) ? 'Dining in reach' : 'No dining in reach');
-  const fun = recreationAt(state.map, x, y);
+  const fun = recreationAt(state, x, y);
   facts.push(fun > 0 ? `Things to do ${Math.round(fun * 100)}%` : 'Nothing to do nearby');
   return facts;
 }

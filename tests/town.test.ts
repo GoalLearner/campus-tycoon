@@ -47,6 +47,7 @@ import {
   STUDENTS_PER_HOUSE,
   TOWN_WALK_MAX_MINUTES,
   TOWN_X,
+  townHints,
   townLiving,
   townPlaces,
   TUITION_PER_STUDENT_PER_YEAR,
@@ -514,5 +515,52 @@ describe('the Parking overlay', () => {
     // A second road that goes nowhere is still shown as cut off.
     state = act(state, { type: 'paint', tool: 'road', cells: rowBetween([20, 24], [21, 24]) });
     expect(roadsByAccess(state.map).cut).toEqual([[20, 24], [21, 24]]);
+  });
+});
+
+describe('what the map points at while the town cannot get in', () => {
+  /** A campus from before the town was joined: the path to College Avenue is not there. */
+  const unjoined = (): GameState => act(rich(), { type: 'paint', tool: 'clear', cells: rowBetween([24, STARTER.townLink.y], [31, STARTER.townLink.y]) });
+
+  it('points at nothing to walk by on a new campus, whose path already meets the street', () => {
+    const state = rich();
+    expect(townPlaces(state.map).walk).toBeGreaterThan(0);
+    expect(townHints(state).walk).toBeNull();
+  });
+
+  it('points at the edge beside the street nearest the lecture halls when no path joins the town', () => {
+    const state = unjoined();
+    expect(townPlaces(state.map).walk).toBe(0);
+    const hint = townHints(state).walk!;
+    // The lecture halls stand on row 18. The side street across from row 17 is the nearest.
+    expect(hint).toEqual({ x: TOWN_X - 1, y: STARTER.townLink.y, street: hoodOnRow(state, STARTER.townLink.y).name });
+    // It goes away the moment a path does the job, wherever the player lays it.
+    const joined = act(state, { type: 'paint', tool: 'path', cells: rowBetween([24, 17], [31, 17]) });
+    expect(townHints(joined).walk).toBeNull();
+  });
+
+  it('points at a second spot for parking until a road reaches a car park, and never at the same cell', () => {
+    const state = unjoined();
+    const hints = townHints(state);
+    expect(hints.drive).not.toBeNull();
+    expect(hints.drive!.x).toBe(TOWN_X - 1);
+    expect(hints.drive!.y).not.toBe(hints.walk!.y);
+    // With the path there, parking takes the nearest spot.
+    expect(townHints(rich()).drive).toEqual({ x: TOWN_X - 1, y: STARTER.townLink.y, street: hoodOnRow(state, STARTER.townLink.y).name });
+    // A car park with no road changes nothing. One a road reaches clears it.
+    let built = act(rich(), { type: 'place', building: 'parking', x: 28, y: 20 });
+    expect(townHints(built).drive).not.toBeNull();
+    built = act(built, { type: 'paint', tool: 'road', cells: rowBetween([28, 21], [31, 21]) });
+    built = act(built, { type: 'paint', tool: 'road', cells: rowBetween([31, 21], [31, 22]) });
+    expect(built.map.town.access.spaces).toBeGreaterThan(0);
+    expect(townHints(built).drive).toBeNull();
+  });
+
+  it('stands on the campus\'s own land, and changes nothing in the game', () => {
+    const state = unjoined();
+    const before = JSON.stringify(state);
+    const hints = townHints(state);
+    expect(JSON.stringify(state)).toBe(before);
+    for (const hint of [hints.walk!, hints.drive!]) expect(ownedAt(state.map, hint.x, hint.y)).toBe(true);
   });
 });

@@ -144,12 +144,12 @@ describe('what the buildings do', () => {
 
   it('adds recreation up to one cap', () => {
     let state = rich(freshGame());
-    expect(recreationAt(state.map, 10, 13)).toBe(0);
+    expect(recreationAt(state, 10, 13)).toBe(0);
     state = place(state, 'courts', 8, 10);
-    expect(recreationAt(state.map, 10, 13)).toBeCloseTo(PLACED.courts.strength);
+    expect(recreationAt(state, 10, 13)).toBeCloseTo(PLACED.courts.strength);
     state = place(state, 'gym', 10, 11);
     state = place(state, 'track', 12, 10);
-    expect(recreationAt(state.map, 10, 13)).toBe(1);
+    expect(recreationAt(state, 10, 13)).toBe(1);
   });
 
   it('earns more at a store beside a busier path', () => {

@@ -3,6 +3,7 @@ import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
 import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
 import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
+import { crowdedNear, waitMinutes } from './play';
 import {
   ARCHETYPE_NAMES,
   CLASS_YEAR_NAMES,
@@ -83,7 +84,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -375,7 +376,27 @@ function approvalOver(state: GameState, spots: readonly number[]): Approval {
   return { score: each.reduce((sum, one) => sum + one.score, 0) / each.length, causes, walkMinutes: first.walkMinutes };
 }
 
+/** The share of students in a crowded building's reach who have the wait on their mind. */
+const WAIT_TALK_SHARE = 0.34;
+
+/** How a student names the recreation building they waited at. */
+const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym' };
+
 function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], resident: boolean, approval: Approval, content: boolean): StudentReason | null {
+  // A line at a court is something people talk about, pleased with the place or not: about one in three
+  // of the students a crowded building reaches has the wait on their mind.
+  if (roll(state.seed, ref, SALT.wait) < WAIT_TALK_SHARE) {
+    const width = state.map.width;
+    for (const candidate of spots) {
+      const crowded = crowdedNear(state, candidate % width, Math.floor(candidate / width));
+      if (!crowded) continue;
+      const pool = resident ? THOUGHTS.recreationCrowded : THOUGHTS.commuterRecreationCrowded;
+      const place = PLAY_NAMES[crowded.placed.type] ?? PLACED[crowded.placed.type].name.toLowerCase();
+      const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
+      const at = crowded.placed.y * width + crowded.placed.x;
+      return { cause: 'life', part: 'recreation', positive: false, thought: line.replace('{w}', `${waitMinutes(crowded.use)} minutes`).replace('{place}', place), cell: at };
+    }
+  }
   // A content student names the biggest plus. Anyone else names what would help most.
   const size = (cause: Cause): number => cause.weight * (content ? cause.level : 1 - cause.level);
   let best = -1;
@@ -406,8 +427,20 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   else if (part === 'clean') pool = resident ? (content ? THOUGHTS.cleanGood : THOUGHTS.cleanLow) : content ? THOUGHTS.commuterCleanGood : THOUGHTS.commuterCleanLow;
   else if (part === 'seating') pool = resident ? (content ? THOUGHTS.seatingGood : THOUGHTS.seatingLow) : content ? THOUGHTS.commuterSeatingGood : THOUGHTS.commuterSeatingLow;
   else pool = resident ? (content ? THOUGHTS.safetyGood : THOUGHTS.safetyLow) : content ? THOUGHTS.commuterSafetyGood : THOUGHTS.commuterSafetyLow;
+  // Something to do is in reach, and there is a line for it: the thought is the wait, not the lack.
+  let wait = '';
+  let place = '';
+  if (part === 'recreation' && !content) {
+    const width = state.map.width;
+    const crowded = crowdedNear(state, spot % width, Math.floor(spot / width));
+    if (crowded) {
+      pool = resident ? THOUGHTS.recreationCrowded : THOUGHTS.commuterRecreationCrowded;
+      wait = `${waitMinutes(crowded.use)} minutes`;
+      place = PLAY_NAMES[crowded.placed.type] ?? PLACED[crowded.placed.type].name.toLowerCase();
+    }
+  }
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
-  return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)), cell: spot };
+  return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)).replace('{w}', wait).replace('{place}', place), cell: spot };
 }
 
 /** The street a student living off campus lives on: one of the neighbourhoods with students in it, more often a fuller one. */

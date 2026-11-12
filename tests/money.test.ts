@@ -14,6 +14,7 @@ import {
   enrollment,
   FACULTY_PAY,
   facultyCount,
+  firstClassArrived,
   fallClassDraw,
   INSURANCE_PER_STUDENT,
   LEGACY_COST_PER_STUDENT_PER_YEAR,
@@ -54,11 +55,12 @@ function act(state: GameState, action: Action): GameState {
   return result.state;
 }
 
-/** The starter campus with a given number of students and money to build. */
+/** The starter campus with a given number of students and money to build. Its first class has arrived, unless it is empty. */
 function campus(students: number): GameState {
   const state = structuredClone(freshGame());
   state.money.cash = 10_000_000;
   state.cohorts = [students, 0, 0, 0];
+  if (students > 0) state.admissions.lastIntake = { tick: 15, season: 'fall', expected: students, admitted: students, turnedAway: 0, bottleneck: null };
   recomputeRates(state);
   return state;
 }
@@ -148,6 +150,34 @@ describe('what the money buys', () => {
     expect(studentsInCircle(state, far)).toBe(0);
     expect(careStaffAt(state, far)).toBe(1);
     expect(careStaffAt(state, state.map.placed.find((p) => p?.type === 'dining')!)).toBe(0);
+  });
+
+  it('pays no safety or medical staff until the first class has arrived', () => {
+    // Fifteen minutes before move-in: the buildings stand, and nobody is on their payroll.
+    let early = structuredClone(freshGame());
+    early.money.cash = 10_000_000;
+    early = act(early, { type: 'place', building: 'medical', x: 14, y: 10 });
+    early = act(early, { type: 'place', building: 'safety', x: 2, y: 28 });
+    const medical = early.map.placed.find((p) => p?.type === 'medical')!;
+    expect(firstClassArrived(early)).toBe(false);
+    expect(careStaffAt(early, medical)).toBe(0);
+    expect(careStaffCount(early)).toBe(0);
+    expect(line(budget(early), 'care')).toBe(0);
+    expect(placedFacts(early, medical)).toBe('No staff to pay until the first class arrives · Upkeep and utilities $15,000 a year · The Clear tool removes it');
+    // Their upkeep and utilities are paid from the day they are built, as any building's are.
+    expect(line(budget(early), 'upkeep')).toBeGreaterThan(line(budget(freshGame()), 'upkeep'));
+
+    // The class moves in, and each has its staff from that minute, whoever was let in.
+    const before = early.money.spendingPerYear;
+    const arrived = advance(early, T0, T0 + 16 * MIN).state;
+    expect(firstClassArrived(arrived)).toBe(true);
+    expect(careStaffCount(arrived)).toBe(2);
+    expect(line(budget(arrived), 'care')).toBe(2 * CARE_STAFF_PAY);
+    expect(arrived.money.spendingPerYear).toBeGreaterThan(before + 2 * CARE_STAFF_PAY);
+    // And they stay on it through every summer after: it is the first arrival that counts, not who is enrolled.
+    const empty = structuredClone(arrived);
+    empty.cohorts = [0, 0, 0, 0];
+    expect(careStaffCount(empty)).toBe(2);
   });
 
   it('charges utilities by size, more for a pool and nothing for a pond or a bench', () => {
@@ -440,7 +470,8 @@ describe('what a building costs to run, on its card', () => {
   it('says on the Build menu what a building will cost to run before it is bought', () => {
     const cards = buildEntries();
     const line = (name: string): string => cards.find((card) => card.name === name)!.upkeep;
-    expect(line('Medical Center')).toBe('Runs at $15K a year, plus staff from $55K');
+    expect(line('Medical Center')).toBe('Runs at $15K a year. Staff from $55K once students arrive');
+    expect(line('Campus Safety')).toBe('Runs at $14K a year. Staff from $55K once students arrive');
     expect(line('Facilities Yard')).toBe('Runs at $3.0K a year, plus $62K a worker');
     expect(line('Gym')).toBe('Runs at $8.0K a year');
     expect(line('Small pond')).toBe('Costs nothing to run');

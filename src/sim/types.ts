@@ -148,6 +148,12 @@ export interface Care {
    */
   byFamily?: Record<string, number[]>;
   /**
+   * For each recreation building, how many lots' worth of students it has to
+   * itself once every lot has shared its play among the buildings that reach
+   * it. Missing on a save from before recreation could fill up.
+   */
+  play?: Record<number, number>;
+  /**
    * Set for a zone when no lot of it could start growing. Until a build
    * finishes or the player changes the map, none can, so growth need not look
    * again. Without this a campus of stalled lots is searched on every beat of
