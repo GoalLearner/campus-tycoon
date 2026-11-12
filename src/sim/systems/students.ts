@@ -3,8 +3,10 @@ import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
 import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
 import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
+import { foodTypesAt, tutoringLift } from './food';
 import { crowdedNear, waitMinutes } from './play';
 import {
+  FAVOURITES,
   ARCHETYPE_NAMES,
   CLASS_YEAR_NAMES,
   CLUB_MATCH,
@@ -84,7 +86,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -306,6 +308,8 @@ export interface StudentCard {
   street: string | null;
   /** On a 4.0 scale, to one decimal. */
   gpa: number;
+  /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
+  tutored: boolean;
   /** null for a student in no club. */
   club: string | null;
   /** The sixth line. Shown on the card only. */
@@ -368,6 +372,7 @@ function approvalOver(state: GameState, spots: readonly number[]): Approval {
   const causes = first.causes.map((cause, i) => ({
     ...cause,
     level: each.reduce((sum, one) => sum + (one.causes[i]?.level ?? 0), 0) / each.length,
+    bonus: each.reduce((sum, one) => sum + (one.causes[i]?.bonus ?? 0), 0) / each.length,
     parts: cause.parts.map((part, j) => ({
       ...part,
       level: each.reduce((sum, one) => sum + (one.causes[i]?.parts[j]?.level ?? 0), 0) / each.length,
@@ -380,7 +385,7 @@ function approvalOver(state: GameState, spots: readonly number[]): Approval {
 const WAIT_TALK_SHARE = 0.34;
 
 /** How a student names the recreation building they waited at. */
-const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym' };
+const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym', makerspace: 'a bench at the makerspace' };
 
 function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], resident: boolean, approval: Approval, content: boolean): StudentReason | null {
   // A line at a court is something people talk about, pleased with the place or not: about one in three
@@ -437,6 +442,14 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
       pool = resident ? THOUGHTS.recreationCrowded : THOUGHTS.commuterRecreationCrowded;
       wait = `${waitMinutes(crowded.use)} minutes`;
       place = PLAY_NAMES[crowded.placed.type] ?? PLACED[crowded.placed.type].name.toLowerCase();
+    }
+  }
+  // Pleased with the food: they name a favourite, from the kinds of food in reach of that spot.
+  if (part === 'dining' && content) {
+    const kinds = foodTypesAt(state.map, spot % state.map.width, Math.floor(spot / state.map.width));
+    if (kinds.length > 0) {
+      const lines = FAVOURITES[pickFrom(kinds, roll(state.seed, ref, SALT.favourite))];
+      if (lines) pool = lines;
     }
   }
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
@@ -496,7 +509,11 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
+  // Tutoring: a study center in reach of where they spend their days. A stand-in until layer 2: only the card reads it.
+  let tutoring = 0;
+  for (const spot of spots) tutoring = Math.max(tutoring, tutoringLift(state.map, spot % state.map.width, Math.floor(spot / state.map.width)));
   const raw =
+    tutoring +
     GPA_FLOOR +
     GPA_SPAN * teachingQuality(state) +
     (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
@@ -517,6 +534,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     residence: resident ? 'dorm' : 'offCampus',
     street: resident ? null : streetOf(state, ref),
     gpa,
+    tutored: tutoring > 0,
     club: clubOf(seed, ref, nature, major.group, quirk),
     relationship,
     happiness,

@@ -32,6 +32,7 @@ import { PLACED } from '../config/placed';
 import { nextFloat } from '../rng';
 import { enrollment } from '../selectors';
 import type { GameState, LogEntry, MapState, Placed } from '../types';
+import { foodLoads } from './food';
 import { approvalAt } from './happiness';
 import { playLoads } from './play';
 
@@ -128,7 +129,8 @@ export function refreshCare(map: MapState): void {
   const byFamily: Record<string, number[]> = {};
   for (const placed of all) (byFamily[PLACED[placed.type].family] ??= []).push(placed.id);
   const play = playLoads(map, all.filter((placed) => PLACED[placed.type].family === 'recreation'));
-  map.care = { users, bins, yard, lots, byFamily, play };
+  const food = foodLoads(map, all.filter((placed) => PLACED[placed.type].family === 'dining'));
+  map.care = { users, bins, yard, lots, byFamily, play, food };
 }
 
 /** The yard whose circle covers a cell, nearest first. null when none does. */

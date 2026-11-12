@@ -221,7 +221,7 @@ describe('what the player is told', () => {
 
   it('tells a player with an older save, once', () => {
     expect(upgradeNotes(9).some((note) => /hold so many students at once/.test(note))).toBe(true);
-    expect(upgradeNotes(10)).toEqual([]);
+    expect(upgradeNotes(10).some((note) => /hold so many students at once/.test(note))).toBe(false);
   });
 });
 

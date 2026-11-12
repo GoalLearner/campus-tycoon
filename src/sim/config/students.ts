@@ -298,6 +298,23 @@ export const RELATIONSHIP_NOTES = {
  * Thoughts. `{m}` is the walk in minutes. Each names something the player can
  * change, and tapping it jumps to the building it is about.
  */
+/**
+ * A favourite place to eat, by its kind (DESIGN.md 30.2). A student who is
+ * pleased with the food near them names one of the kinds in reach.
+ * Tone: light. Nothing here but food.
+ */
+export const FAVOURITES: Partial<Record<string, readonly string[]>> = {
+  taco: ['Taco Tuesday is the only reason I go to class.', 'Two tacos between lectures and the afternoon is saved.'],
+  pizza: ['A slice from the pizza place at midnight is my whole study plan.', 'The pizza place knows my order. I am not sure how I feel about that.'],
+  burger: ['The burger grill at lunch is worth the line.', 'I timed it. Burger grill to my seat in class: four minutes.'],
+  diner: ['Pancakes at the diner at two in the morning fix most things.', 'The diner never closes. Neither, it turns out, do I.'],
+  foodcourt: ['I have eaten at every stall in the food court. I have a ranking.', 'The food court means nobody has to agree on lunch.'],
+  smoothie: ['A smoothie between classes. Today I am a healthy person.', 'The juice bar has a flavour of the week. I plan around it.'],
+  convenience: ['The convenience store has kept me going on snacks since move-in.', 'Instant noodles from the convenience store at midnight. A classic.'],
+  truck: ['I plan my day around where the food truck is parked.', 'Whatever the food truck is selling today, I am having it.'],
+  coffee: ['The coffee stand knows my name, my order and my timetable.', 'One coffee from the stand and I can face a nine o clock lecture.'],
+};
+
 export const THOUGHTS = {
   walkGood: [
     'Class is {m} from my bed. Best thing about this place.',

@@ -136,6 +136,8 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
         if (placed) {
           buildings.push(placed.type);
           back = refundFor(state, PLACED[placed.type].cost, placed.builtTick);
+          // The food truck drives off: its whole price comes back whenever it is cleared, so moving it is free.
+          if (PLACED[placed.type].fullRefund && placed.builtTick >= 0) back = { amount: PLACED[placed.type].cost, undo: back.undo };
         }
       } else {
         back = refundFor(state, PAINT_COST[cell.kind] ?? 0, cell.builtTick);

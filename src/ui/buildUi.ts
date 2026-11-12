@@ -41,6 +41,10 @@ import {
   townPlaces,
   dollarsShort,
   fedAt,
+  FOOD_INCOME_PER_STUDENT,
+  foodKindsAt,
+  foodTrade,
+  VARIETY_KINDS,
   inReach,
   PLACED,
   recreationAt,
@@ -149,8 +153,17 @@ function baseSummary(state: GameState, placed: Placed): string {
   switch (spec.family) {
     case 'library':
       return `Lifting ${plural(lotsInReach(state, placed, 'academic'), 'Academic lot', 'Academic lots')} within ${spec.radius} cells.`;
-    case 'dining':
-      return `Feeding ${plural(lotsInReach(state, placed, 'housing'), 'Housing lot', 'Housing lots')} within ${spec.radius} cells. Housing needs dining in reach to grow past its first stage.`;
+    case 'dining': {
+      const trade = foodTrade(state, placed);
+      const fed = `Feeding ${plural(lotsInReach(state, placed, 'housing'), 'Housing lot', 'Housing lots')} within ${spec.radius} cells.`;
+      // What it earns, and why a second stall beside it would not add to that.
+      const earns =
+        !trade || trade.income < 1
+          ? 'It earns nothing until students are in reach.'
+          : `It earns ${dollars(trade.income)} a year${trade.doubled ? ', double for the recreation beside it' : ''}: ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared with any other food that reaches them.`;
+      const moves = spec.fullRefund ? ' Clear it and the whole price comes back.' : '';
+      return `${fed} ${earns}${moves}`;
+    }
     case 'store': {
       const passers = storePassers(state, placed);
       return passers === 0
@@ -161,6 +174,10 @@ function baseSummary(state: GameState, placed: Placed): string {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       const use = playUse(state, placed);
       return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.${use ? ` ${playLine(use)}` : ''}`;
+    }
+    case 'tutoring': {
+      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      return `Tutoring for the students of ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells. Their cards show a better GPA. It changes nothing else yet.`;
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
@@ -292,7 +309,7 @@ const PART_FIX: Record<DriverId, string> = {
   green: 'Add quads, trees or a pond near dorms and lecture halls.',
   clean: 'Litter is building up. Put a Trash bin beside each place to eat or play, and a Facilities Yard with workers in reach.',
   seating: 'Students have nowhere to sit outside. Add benches or picnic tables near dorms and lecture halls.',
-  dining: 'Students have nowhere to eat nearby. Build a Dining hall or a Coffee stand near dorms and lecture halls.',
+  dining: 'Students have nowhere to eat nearby. Build a Dining hall, or anything else under Food, near dorms and lecture halls.',
   recreation: 'Students have nothing to do nearby. Build a gym, courts, a field, a pool or a track near dorms and lecture halls.',
   safety: 'Build a Medical Center and Campus Safety so their circles cover dorms and lecture halls.',
 };
@@ -337,7 +354,9 @@ export const CAUSE_FIXES = PART_FIX;
 /** True when dining reaches a lot. For the inspector's facts line. */
 export function lotFacts(state: GameState, x: number, y: number): string[] {
   const facts: string[] = [];
-  facts.push(fedAt(state.map, x, y) ? 'Dining in reach' : 'No dining in reach');
+  // Food, and how many kinds of it: three kinds or more is variety, which lifts Food & fun a little.
+  const kinds = foodKindsAt(state.map, x, y);
+  facts.push(!fedAt(state.map, x, y) ? 'No food in reach' : kinds >= VARIETY_KINDS ? `${kinds} kinds of food in reach: variety` : kinds === 1 ? '1 kind of food in reach' : `${kinds} kinds of food in reach`);
   const fun = recreationAt(state, x, y);
   facts.push(fun > 0 ? `Things to do ${Math.round(fun * 100)}%` : 'Nothing to do nearby');
   return facts;
