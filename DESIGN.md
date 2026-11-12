@@ -21,6 +21,7 @@ How to read this document:
 - Section 31 is money: payroll and visible costs. Discussed and proposed on 2026-11-11 as play stop 5. It waits for the owner's go-ahead.
 - Section 32 is the people on campus: four class years from the first day, and professors, staff and visitors who can be tapped. Asked for on 2026-11-11. The first half is built with the money stop. The second is the next small stop.
 - Section 33 is life and sound: bigger crowds and traffic now, and a Life and sound stop for small scenes, ambient motion and audio. Asked for on 2026-11-11 and accepted the next day as the last stop before football. Not started.
+- Section 35 is the model campus: a campus the player can start from, laid out district by district like the reference campus, under invented names. Chosen by the owner on 2026-11-12. Not built: it follows the long run.
 
 ---
 
@@ -1696,7 +1697,7 @@ Every number below is expected to change. All live in `src/sim/config`.
 
 ## 23. Master building catalog
 
-Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented.
+Written 2026-11-11. The owner supplied a printed map of a real Division I campus as a checklist of what a complete university contains. The map is copyrighted. It lives in `art/reference`, which is git-ignored, and it is never committed. It is used only as a list of building types and a guide to layout. No real name, logo, mascot or team from it appears anywhere in the game, and no layout is traced from it. Every name in the game is invented. **Changed by the owner on 2026-11-12:** he lifted the part about layout, for one thing only. A model campus may follow the reference campus district by district at the scale of the game (section 35). Everything else in this paragraph stands: no real name, logo, mascot, team, sponsor or building name, none of the map's own artwork, and the file is never committed.
 
 **Status: accepted by the owner on 2026-11-11**, with the mapping changes in 23.3, both layout fixes in 23.4 and the four additions in 23.5. Bike lanes are cut. The table is the plan for where each type lands. Nothing in it is built yet: the mechanics of this pass wait for the owner to approve the look.
 
@@ -3547,3 +3548,84 @@ One advance equals many still holds, with a football season inside the span.
 | After a daylight-saving change the day begins an hour off | The anchor is kept in UTC. The Menu moves it |
 | A decision's advisor is always the Athletic Director | The other advisors arrive with the inbox |
 | No Scorecard page, no grades on the Year-End line | The Rankings tab is the first version of both |
+
+---
+
+## 35. The model campus
+
+Asked for by the owner on 2026-11-12: "Analyze this map of this university and recreate it exactly for the game." The map is the reference of section 23. He was given three choices and took the first: **follow its layout on today's map, district by district, under invented names.** A building-for-building copy on a bigger map and "keep it as a guide only" were the other two. Not built. It is one stop, after the long run of 2026-11-12.
+
+### 35.1 What it is
+
+| Decision | Why |
+|---|---|
+| A second way to begin: "Start from the model campus", beside the empty campus of today | He asked to have the campus in the game. A new player still learns on the small one |
+| It is a whole campus from the first minute: every district in its place, enrollment to match what it holds, all four class years, and money that balances | A layout is only seen when it is built |
+| It is made by a script from the game's own buildings and rules, the same every time for the same seed | No hand-edited save to go stale. The simulate script can run it |
+| The player names the school. Every hall, street and team name comes from the game's own generators | The game's legal line: every school is fictional |
+| Nothing of the reference is copied but where things are: no name, logo, mascot, team, sponsor or building name, and none of the map's artwork. The file stays in `art/reference` and is never committed | The owner's standing rule, less the one part he lifted |
+| About one game building stands for every two or three on the reference | The reference names about 115 buildings. One cell each needs 60 cells by 40. The land is 32 by 48 with both fields |
+| An existing save is not changed | It is a way to begin, not an upgrade |
+
+One check is owed before release, by the owner and not by the game: where real buildings stand is a fact and not the map-maker's property, but his earlier rule was the cautious line, and a lawyer should say so for a game that is sold.
+
+### 35.2 The quarter turn
+
+The reference has its main street and neighbourhood on its south side. The game's town is on the east. So the layout is turned a quarter turn, with no mirroring: the reference's south becomes the game's east, its west becomes the game's south, its north the game's west, and its east the game's north. Chosen: turn the layout. The alternative: move the game's town to the south for this campus alone, which means a second town generator.
+
+The turn fits well. The reference is half again as wide as it is tall, and the game's land with both fields is 32 cells wide and 48 tall.
+
+### 35.3 The districts, in game cells
+
+x runs 0 to 31 from west to east and y runs 0 to 47 from north to south. College Avenue is the column just east of x 31. These are places to aim for. Footprints, reach and the rules decide the last cell.
+
+| District on the reference | Where it lands | Built from |
+|---|---|---|
+| The academic core on its long walk | x 4 to 21, y 8 to 25, with the walk running east to west along y 19 from x 9 to x 23 | Academic lots along a strip of path and quad. The library at about x 13, y 16. A computer lab, a study center and a makerspace among them |
+| The student union and its commons | About x 18, y 12 | A food court, the campus store, a coffee stand and a dining hall together, with picnic tables |
+| The second commons | West end of the walk | A dining hall and two food places |
+| The south-east residence halls | x 22 to 28, y 3 to 10 | Housing lots with their own dining, a quad and a bench or two |
+| The hilltop residences | x 1 to 10, y 33 to 40, in the south-west field | Housing lots round a small quad |
+| The chapter houses and apartments on the main street | x 22 to 29, y 26 to 31, along the east edge | Housing lots. Chapter houses wait for Greek Row |
+| The far apartment complex | The north-east corner | Housing lots |
+| The arena and the track on its deck | About x 19 to 26, y 27 to 36 | The stadium plot stands for both. A parking structure beside it |
+| The recreation centre | About x 15, y 31 | The gym |
+| The ballpark and the softball field | About x 16, y 38 | Two recreation fields |
+| The pool complex and the tennis centre | About x 17 to 19, y 43 to 46 | The pool and two sets of courts |
+| The big parking structures | The north edge, x 12 to 28, y 0 to 2 | Parking structures on a road |
+| The surface lots | The west edge, and one in each field | Parking lots on the loop road |
+| The loop road | Round the west and north edges, joined to College Avenue | Road, with crossings where the walks meet it |
+| The transit centre | Where the long walk meets College Avenue, about x 21 to 31, y 15 | A path to the avenue, so the nearest streets walk in |
+| Facilities, receiving, the plant | The north-west corner | Facilities Yards, enough to cover every place that drops litter |
+| The health centre and campus police | Near the union and near the stadium | A Medical Center and Campus Safety, placed to cover the dorms and the places to play |
+| The tower quad | The north end of the core | The Administration building on a quad |
+
+Left out, because the game has nothing for them yet: the theatres and the music hall, the alumni centre, the children's centre, the radio station, the light-rail station, and the shuttle. Their ground is left as lawn and trees.
+
+### 35.4 The numbers it opens with
+
+| Decision | Why |
+|---|---|
+| Lots stand at their second stage. Students fill about nine tenths of the seats and beds | A campus with room to breathe, and somewhere to go |
+| Locals walk in from the streets beside the transit path and drive to the structures | The town rule, used as intended |
+| Opening cash is about a tenth of a year's spending [T], with nothing in the endowment | Enough to act, not enough to coast |
+| It opens on the first day of a fall semester, with a team whose first season is that fall and a stadium plot with nothing on it yet | The first goal is the stadium |
+| Every place that drops litter has a bin in reach and a yard that covers it | It should open clean |
+
+### 35.5 Tests and checks
+
+- The script builds the same campus twice from the same seed, and the result passes the save's own validation.
+- Every district of 35.3 is present, and its centre lies within three cells of the place given.
+- Nothing is built on town land, and no real name appears: the word list of the reference's names is checked against every string the game can show.
+- Simulate: left alone for five years the model campus keeps a surplus, needs no rescue, and stays clean. With the casual player it stays inside the margin and payroll checks.
+- Thirty days of catch-up on it stays inside one second.
+
+### 35.6 Points for the owner
+
+| Point | Chosen | The alternative |
+|---|---|---|
+| How to reach it | A second choice when a game is founded | Replace the small starting campus for everyone |
+| The town's side | Turn the layout a quarter turn | Move the town to the south |
+| The arena, ballpark and tennis centre | The stadium plot, recreation fields and courts stand for them | Wait until those sports exist |
+| How full it opens | Nine tenths full, second-stage buildings | A half-built campus to finish |
+| The stadium | An empty plot, as the first goal | A first-tier stadium already standing |
