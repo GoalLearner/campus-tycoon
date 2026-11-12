@@ -1,4 +1,4 @@
-import { layModelCampus } from './modelCampus';
+import { layModelCampus, type ModelDistrict } from './modelCampus';
 import { openWithStudents } from './systems/admissions';
 import { yardStatus } from './systems/grounds';
 import { openCapacity } from './selectors';
@@ -204,6 +204,13 @@ function openModelCampus(state: GameState): void {
   state.money.ratesDirty = true;
   recomputeRates(state);
   state.money.cash = Math.round((state.money.spendingPerYear * MODEL_CASH_SHARE) / 1000) * 1000;
+}
+
+/** The districts of the model campus as the script lays them: where each was aimed, and where it landed. */
+export function modelDistricts(seed: number): ModelDistrict[] {
+  const map = emptyMap(WORLD.width, WORLD.height, seed >>> 0);
+  for (const parcel of map.parcels) parcel.owned = true;
+  return layModelCampus(map, seed >>> 0);
 }
 
 /** [T] How full the model campus opens, and its cash as a share of a year's spending. */

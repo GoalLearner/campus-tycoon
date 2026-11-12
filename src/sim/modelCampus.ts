@@ -156,9 +156,9 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     // North of the long walk.
     zone('academic', [[9, 18], [10, 18], [11, 18], [16, 18], [17, 18], [19, 18], [20, 18], [21, 18]]);
     // South of it.
-    zone('academic', [[9, 20], [10, 20], [12, 20], [13, 20], [16, 20], [17, 20], [18, 20], [20, 20], [21, 20], [22, 20]]);
+    zone('academic', [[9, 20], [10, 20], [12, 20], [13, 20], [14, 20], [16, 20], [17, 20], [18, 20], [20, 20], [21, 20], [22, 20]]);
     // Up the cross walk toward the union, and down it.
-    zone('academic', [[14, 11], [14, 12], [14, 13], [16, 16], [16, 17]]);
+    zone('academic', [[16, 10], [14, 11], [14, 12], [14, 13], [14, 14], [14, 15], [16, 16], [16, 17]]);
     zone('academic', [[14, 21], [14, 22], [14, 23], [16, 21], [16, 22]]);
     // The library on its forecourt, north of the walk.
     put('library', 13, 16);
@@ -204,14 +204,14 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   district('northEastHalls', 'The north-east residence halls', { x: 25, y: 6.5 }, () => {
     ground('path', row(6, 24, 29));
     ground('path', row(10, 24, 28));
-    zone('housing', [[24, 5], [25, 5], [26, 5], [27, 5], [28, 5]]);
+    zone('housing', [[24, 5], [25, 5], [26, 5], [27, 5], [28, 5], [29, 5]]);
     zone('housing', [[24, 7], [25, 7], [28, 7], [29, 7]]);
-    zone('housing', [[24, 9], [25, 9]]);
+    zone('housing', [[24, 9], [25, 9], [24, 11], [25, 11], [26, 11]]);
     put('dining', 26, 7);
     ground('quad', block(26, 8, 2, 2));
     small('bench', [[28, 9]]);
     small('bin', [[28, 8]]);
-    ground('tree', [[29, 5], [29, 9], [24, 4], [26, 4], [28, 4], [24, 11], [26, 11]]);
+    ground('tree', [[29, 9], [24, 4], [26, 4], [28, 4], [30, 6], [30, 8]]);
   });
 
   district('hill', 'The hill residences', { x: 5.5, y: 36.5 }, () => {
@@ -288,7 +288,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     ground('tree', [[17, 2], [22, 2], [27, 2], [12, 2]], false);
   });
 
-  district('lots', 'The surface lots', { x: 1.5, y: 20 }, () => {
+  district('lots', 'The surface lots', { x: 1.5, y: 27.5 }, () => {
     // Two on the west edge, on the loop road, and one in each field.
     put('parking', 1, 13);
     put('parking', 1, 26);
