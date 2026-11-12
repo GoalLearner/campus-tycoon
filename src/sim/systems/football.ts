@@ -75,6 +75,7 @@ import {
 } from '../config/football';
 import { FIRST_INTAKE_TICK, TICKS_PER_HOUR } from '../config/time';
 import { hashInts, nextFloat, nextInt } from '../rng';
+import { smallCount } from '../scale';
 import { enrollment } from '../selectors';
 import { addTimer } from '../timers';
 import type { Coach, Field, Football, Game, GameState, LogEntry, Poll, RngState, SeasonState, Standing } from '../types';
@@ -905,8 +906,11 @@ export function footballBooks(state: GameState): FootballBooks {
   const crowd = f.stadium.average > 0 ? Math.min(f.stadium.average, seatsNow(state)) : expectedCrowd(state);
   const students = enrollment(state);
   // Every cost follows the size of the school, and a stadium sets a floor under each.
-  // One programme of real size at any campus scale: its floors, its coach and its rent are not multiplied.
-  const staff = Math.max(ATHLETICS_STAFF[tier] ?? 0, Math.round(students / STUDENTS_PER_ATHLETICS_STAFF));
+  // One programme of real size at any campus scale (DESIGN.md 35.9): its floors, its coach and its rent are not
+  // multiplied, and its staff, its travel and its game days are sized for the school as the small game counts it.
+  // So football costs what it would on a small campus at the same tier, and a full house can pay for it.
+  const sized = smallCount(state, students);
+  const staff = Math.max(ATHLETICS_STAFF[tier] ?? 0, Math.round(sized / STUDENTS_PER_ATHLETICS_STAFF));
   const coach = Math.round(f.coach.pay * Math.min(1, students / COACH_FULL_PAY_STUDENTS));
   const rent = tier === 0 ? Math.min(FIELD_RENT, students * FIELD_RENT_PER_STUDENT) : 0;
   return {
@@ -915,7 +919,7 @@ export function footballBooks(state: GameState): FootballBooks {
     pay: coach + staff * ATHLETICS_STAFF_PAY,
     coach,
     staff,
-    operations: Math.max(ATHLETICS_OPERATIONS[tier] ?? 0, students * OPERATIONS_PER_STUDENT) + rent,
+    operations: Math.max(ATHLETICS_OPERATIONS[tier] ?? 0, sized * OPERATIONS_PER_STUDENT) + rent,
     upkeep: STADIUM_UPKEEP[tier] ?? 0,
     utilities: STADIUM_UTILITIES[tier] ?? 0,
     crowd,

@@ -8,6 +8,7 @@ import {
   inboxBlocked,
   ROUTINE_CAP,
   summarizeAway,
+  welcomeEdition,
   type AdvisorLine,
   type AwaySummary,
   type Edition,
@@ -111,6 +112,10 @@ export interface PaperView {
   /** The poll, as bars: a label, a share of 100 and the words beside it. */
   poll: Array<{ label: string; share: number; words: string }>;
   pollNote: string;
+  /** True for the first issue: the poll is on the front, and there is no rest. */
+  front: boolean;
+  /** The words on the button that puts the paper down. */
+  leave: string;
 }
 
 export type AwayView = { kind: 'paper'; paper: PaperView } | { kind: 'list'; summary: AwaySummary; grounds: string; groundsFirst: boolean };
@@ -133,6 +138,23 @@ export function awayView(state: GameState, report: AwayReport): AwayView {
       restLabel: paper.folded > 0 ? `The rest of the paper · ${paper.folded} ${paper.folded === 1 ? 'line' : 'lines'}` : '',
       poll: paper.poll.map((line) => ({ label: line.label, share: line.share, words: `${line.share} in 100` })),
       pollNote: paper.poll.length > 0 ? `${paper.content} in 100 named something they like instead.` : '',
+      front: false,
+      leave: 'Back to campus',
     },
+  };
+}
+
+/** The first issue, shown once when a game begins (DESIGN.md 36.10). */
+export function welcomeView(state: GameState): PaperView {
+  const paper = welcomeEdition(state);
+  return {
+    awayFor: 'First edition',
+    edition: paper,
+    top: paper.top.map((item) => (item.go ? { tag: TOP_TAG[item.kind], text: item.text, go: item.go } : { tag: TOP_TAG[item.kind], text: item.text })),
+    restLabel: '',
+    poll: paper.poll.map((line) => ({ label: line.label, share: line.share, words: `${line.share} in 100` })),
+    pollNote: paper.poll.length > 0 ? `${paper.content} in 100 named something they like instead.` : '',
+    front: true,
+    leave: 'See your campus',
   };
 }

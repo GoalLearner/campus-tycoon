@@ -581,7 +581,7 @@ export function mountUi(root: HTMLElement): void {
       const colour = colourSelect(DEFAULT_COLOUR);
       const start = (): void => {
         const name = input.value.trim() || 'Larkspur University';
-        store.startNewGame(name, Number(wake.value), colour.value, 'model');
+        store.foundUniversity(name, Number(wake.value), colour.value);
         close();
       };
       input.addEventListener('keydown', (e) => {
@@ -595,7 +595,7 @@ export function mountUi(root: HTMLElement): void {
   function openAway(): void {
     const report = store.away;
     const notes = store.upgradeNotes;
-    if (!report && notes.length === 0) return;
+    if (!report && notes.length === 0 && !store.welcome) return;
     // The away list stays saved until its button is tapped. Closing the app first loses nothing.
     store.upgradeNotes = [];
     openAwayScreen(openModal, report, notes, (where) => {
@@ -634,7 +634,7 @@ export function mountUi(root: HTMLElement): void {
           }),
           el('p', 'fine', 'This is the model campus. Nothing you do here is saved, and your own campus is untouched.'),
         );
-      } else if (scaleOf(store.state) === 1) {
+      } else if (store.offersVisit) {
         // A game that began on the small campus can look at the model campus. One that began on it is already there.
         card.append(
           button('Visit the model campus', 'wide', () => {
@@ -1429,7 +1429,7 @@ export function mountUi(root: HTMLElement): void {
     const hudBottom = `${Math.round(hud.getBoundingClientRect().bottom)}px`;
     if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);
 
-    if ((store.away || store.upgradeNotes.length > 0) && !modalOpen) openAway();
+    if ((store.away || store.upgradeNotes.length > 0 || store.welcome) && !modalOpen) openAway();
     // Once, on a return visit in an iPhone or iPad browser tab: the Home Screen keeps saves safe there.
     if (store.returning && !modalOpen && !tipChecked) {
       tipChecked = true;
