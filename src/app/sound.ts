@@ -24,7 +24,7 @@ import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, t
 type Loop = keyof SoundMix;
 
 /** How loud each steady layer is at its fullest, before the player's volume. All of it sits well under the music and the taps. */
-const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.3 };
+const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0 };
 /** The scheduler looks this far ahead, this often. */
 const TICK_MS = 200;
 /** A pentatonic scale from middle C, in hertz: no note in it clashes with another. */
@@ -40,6 +40,7 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private soundBus: GainNode | null = null;
   private musicBus: GainNode | null = null;
+  private meter: AnalyserNode | null = null;
   private loops: Partial<Record<Loop, GainNode>> = {};
   private noise: AudioBuffer | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -48,9 +49,10 @@ class SoundEngine {
   private lastHour: number | null = null;
   private hidden = false;
   /** When the next of each scattered sound is due, on the audio clock. */
-  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0 };
+  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0, busk: 0 };
   private beat = 0;
   private note = 2;
+  private buskNote = 4;
 
   /** True once the player has tapped and the audio has started. */
   get started(): boolean {
@@ -76,8 +78,19 @@ class SoundEngine {
     const ctx = this.ctx;
     this.soundBus = ctx.createGain();
     this.musicBus = ctx.createGain();
-    this.soundBus.connect(ctx.destination);
-    this.musicBus.connect(ctx.destination);
+    // Everything leaves through one limiter, so many sounds at once can never be harsh or clip.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -14;
+    limiter.knee.value = 10;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.004;
+    limiter.release.value = 0.2;
+    this.meter = ctx.createAnalyser();
+    this.meter.fftSize = 2048;
+    this.soundBus.connect(limiter);
+    this.musicBus.connect(limiter);
+    limiter.connect(this.meter);
+    this.meter.connect(ctx.destination);
     // Two seconds of noise, used by everything that hisses, rumbles or patters.
     this.noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = this.noise.getChannelData(0);
@@ -137,7 +150,7 @@ class SoundEngine {
     if (this.timer === null) {
       // Nothing that was due while it slept is played late.
       const now = ctx.currentTime;
-      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5 };
+      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5, busk: now + 0.5 };
       this.lastHour = clockHour();
       this.timer = setInterval(() => this.tick(), TICK_MS);
     }
@@ -146,6 +159,16 @@ class SoundEngine {
   /** What is on screen, from the map, a few times a second. */
   setFacts(facts: SoundFacts): void {
     this.facts = facts;
+  }
+
+  /** How loud the output is at this moment, from 0 to 1 where 1 would clip. For the dev readout and for checking levels. */
+  get peak(): number {
+    if (!this.meter) return 0;
+    const samples = new Float32Array(this.meter.fftSize);
+    this.meter.getFloatTimeDomainData(samples);
+    let peak = 0;
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+    return peak;
   }
 
   /** The mix now in force, for tests of the wiring and the dev readout. */
@@ -181,6 +204,10 @@ class SoundEngine {
     if (mix.traffic > 0.1 && now >= this.next.swoosh) {
       this.swoosh(now, mix.traffic);
       this.next.swoosh = now + (2.5 + Math.random() * 5) / mix.traffic;
+    }
+    if (mix.busker > 0.03 && now >= this.next.busk) {
+      this.busk(now, mix.busker);
+      this.next.busk = now + [0.28, 0.28, 0.56, 0.84][Math.floor(Math.random() * 4)]!;
     }
     if (musicVolume() > 0 && now >= this.next.beat) {
       this.music(now);
@@ -253,6 +280,14 @@ class SoundEngine {
   private swoosh(at: number, traffic: number): void {
     this.puff('bandpass', 260, 760, at, 0.9, 0.12 * traffic);
     this.puff('bandpass', 760, 240, at + 0.85, 1.1, 0.1 * traffic);
+  }
+
+  /** The busker's tune: a plucked string walking up and down the scale, an octave above the music. */
+  private busk(at: number, busker: number): void {
+    this.buskNote = Math.max(0, Math.min(SCALE.length - 1, this.buskNote + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)]!));
+    const pitch = SCALE[this.buskNote]! * 2;
+    this.tone(this.soundBus, 'triangle', pitch, pitch, at, 0.5, 0.07 * busker, 0.004);
+    this.tone(this.soundBus, 'sine', pitch * 2, pitch * 2, at, 0.22, 0.02 * busker, 0.003);
   }
 
   /** A soft bell: one note and the overtones that make it a bell, each fading at its own pace. */

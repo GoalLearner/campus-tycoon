@@ -36,6 +36,21 @@
    "minSaturation": 0.5
   }
  },
+ "glass": {
+  "window": {
+   "from": [
+    87,
+    191,
+    246
+   ],
+   "within": 14,
+   "to": [
+    255,
+    238,
+    156
+   ]
+  }
+ },
  "swaps": {
   "comment": "Colours taken from the pack: the rim drawn round the top of a grass tile, and the grass itself.",
   "rim": {
@@ -548,6 +563,342 @@
      ]
     }
    ]
+  },
+  "lit.housing.1.0.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.1.0.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.housing.2.0.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.2.0.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Red_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.housing.1.1.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.1.1.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.housing.2.1.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.2.1.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Yellow_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.housing.1.2.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.1.2.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.housing.2.2.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.housing.2.2.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Pink_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.1.0.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.1.0.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.2.0.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.2.0.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Blue_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.1.1.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.1.1.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.2.1.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.2.1.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Grey_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.1.2.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.1.2.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level1.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
+  },
+  "lit.academic.2.2.sw": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "sw",
+   "optional": true
+  },
+  "lit.academic.2.2.se": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Appartments/Appartment_Green_1x1_Level2.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "glass": "window"
+    }
+   ],
+   "side": "se",
+   "optional": true
   },
   "quad.lawn": {
    "layers": [
@@ -3465,15 +3816,15 @@
     }
    ]
   },
-  "scene.tent": {
+  "scene.parasol": {
    "layers": [
     {
-     "file": "penzilla/Medieval/Decor/Tent.png",
+     "file": "penzilla/GiantCityBuilder/DecorItems/Parasol.png",
      "stand": [
       0.5,
       0.5
      ],
-     "scale": 0.82
+     "scale": 1.5
     }
    ]
   },
@@ -3485,7 +3836,7 @@
       0.5,
       0.5
      ],
-     "scale": 0.62
+     "scale": 1.0
     }
    ]
   },
@@ -3497,7 +3848,19 @@
       0.5,
       0.5
      ],
-     "scale": 0.6
+     "scale": 0.82
+    }
+   ]
+  },
+  "scene.banner": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.1
     }
    ]
   },
@@ -3509,7 +3872,7 @@
       0.5,
       0.5
      ],
-     "scale": 0.55
+     "scale": 0.85
     }
    ]
   },
@@ -3521,7 +3884,55 @@
       0.5,
       0.5
      ],
-     "scale": 0.7
+     "scale": 0.9
+    }
+   ]
+  },
+  "scene.drum": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/MusicDrum.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.8
+    }
+   ]
+  },
+  "scene.rug": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Rug.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.5
+    }
+   ]
+  },
+  "scene.boxes": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Boxes3.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.8
+    }
+   ]
+  },
+  "scene.basket": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Basket.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.62
     }
    ]
   },

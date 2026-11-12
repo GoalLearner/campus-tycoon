@@ -74,6 +74,8 @@ export interface LifeFacts {
   /** The month and the day of the game's own date. */
   month: number;
   day: number;
+  /** True while a semester is in session, from the game's own calendar: false in the summer break. */
+  term: boolean;
   weather: Weather;
   students: number;
   /** True with Reduce effects on. */
@@ -85,8 +87,10 @@ export interface Scenes {
   studyGroups: number;
   /** Club tables set out on lawns: a tent, a table, a sign board and two people at each. */
   clubTables: number;
-  /** Pickup games on quads big enough for one, each a handful of people and a ball. */
+  /** Rings of friends on quads big enough for one, each a handful of people keeping a ball in the air. */
   pickupGames: number;
+  /** Picnic rugs on lawns beside a quad or a pond, each with a basket and two friends. */
+  picnics: number;
   /** Someone playing by the coffee stand. */
   busker: boolean;
   /** Sprinklers on the lawns. */
@@ -103,8 +107,11 @@ export interface Scenes {
 const STUDY: Record<DayPeriod, number> = { morning: 0.2, afternoon: 0.55, evening: 0.6, night: 0 };
 /** Wind by season: fall is breezy, summer is still. */
 const WIND: Record<Season, number> = { fall: 1, winter: 0.8, spring: 0.6, summer: 0.35 };
-/** Windows lit by the part of the day: the evening most, the small hours less. */
-const WINDOWS: Record<DayPeriod, number> = { morning: 0, afternoon: 0, evening: 0.7, night: 0.4 };
+/**
+ * Buildings with their windows lit, by the part of the day: the evening most, the small hours less, and
+ * the early risers before dawn. They only show while the street lamps are on, so by day this is not seen.
+ */
+const WINDOWS: Record<DayPeriod, number> = { morning: 0.3, afternoon: 0, evening: 0.75, night: 0.4 };
 /** A club table for this many students, and the most there are on an ordinary day and in a club fair. */
 const STUDENTS_PER_CLUB_TABLE = 600;
 const MAX_CLUB_TABLES = 2;
@@ -112,6 +119,9 @@ const MAX_FAIR_TABLES = 5;
 /** A pickup game for this many students, and the most at once. */
 const STUDENTS_PER_PICKUP = 500;
 const MAX_PICKUP = 3;
+/** A picnic rug for this many students, and the most at once. */
+const STUDENTS_PER_PICNIC = 400;
+const MAX_PICNICS = 4;
 
 /**
  * Which scenes are on, for a time of day, a date and a campus. The same facts
@@ -123,8 +133,8 @@ export function scenesFor(facts: LifeFacts): Scenes {
   const day = facts.period === 'morning' || facts.period === 'afternoon';
   const out = facts.period !== 'night';
   const anyone = facts.students > 0;
-  // Summer is between terms: few students are about, and no clubs meet.
-  const term = season !== 'summer';
+  // The summer break is between terms: few students are about, and no clubs meet.
+  const term = facts.term;
 
   // Study groups sit out in fine weather, less on a weekend and little in the cold.
   const study = !anyone || !fine ? 0 : STUDY[facts.period] * (facts.weekend ? 0.5 : 1) * (season === 'winter' ? 0.3 : 1) * (term ? 1 : 0.4);
@@ -147,6 +157,13 @@ export function scenesFor(facts: LifeFacts): Scenes {
     pickup = Math.min(MAX_PICKUP, Math.round(Math.max(facts.students >= 60 ? 1 : 0, facts.students / STUDENTS_PER_PICKUP) * keen));
   }
 
+  // Picnic rugs on a sunny lawn: the afternoon most, a few in the evening, more at a weekend, none in winter.
+  let picnics = 0;
+  if (anyone && fine && season !== 'winter' && (facts.period === 'afternoon' || facts.period === 'evening')) {
+    const keen = (facts.weekend ? 1.5 : 1) * (facts.period === 'evening' ? 0.5 : 1);
+    picnics = Math.min(MAX_PICNICS, Math.round(Math.max(facts.students >= 60 ? 1 : 0, facts.students / STUDENTS_PER_PICNIC) * keen));
+  }
+
   // A busker by the coffee stand in the afternoon and evening of two days in three, when it is fine and not winter.
   const busker = anyone && fine && season !== 'winter' && (facts.period === 'afternoon' || facts.period === 'evening') && facts.day % 3 !== 0;
 
@@ -154,6 +171,7 @@ export function scenesFor(facts: LifeFacts): Scenes {
     studyGroups: facts.reduced ? Math.min(study, 0.3) : study,
     clubTables: clubs,
     pickupGames: facts.reduced ? Math.min(1, pickup) : pickup,
+    picnics: facts.reduced ? Math.min(1, picnics) : picnics,
     busker,
     // Sprinklers run on fine mornings, outside winter. A still map has none.
     sprinklers: !facts.reduced && fine && facts.period === 'morning' && season !== 'winter',
@@ -170,6 +188,8 @@ export interface SoundFacts {
   walkersInView: number;
   /** Cars, buses and trucks on screen now. */
   vehiclesInView: number;
+  /** True while the busker by the coffee stand is on screen. */
+  buskerInView: boolean;
   /** How far in the map is zoomed: 1 is the size the game opens at. */
   zoom: number;
   period: DayPeriod;
@@ -188,9 +208,11 @@ export interface SoundMix {
   birds: number;
   crickets: number;
   rain: number;
+  /** The busker's tune, heard only while they are on screen. */
+  busker: number;
 }
 
-export const SILENT: SoundMix = { crowd: 0, traffic: 0, birds: 0, crickets: 0, rain: 0 };
+export const SILENT: SoundMix = { crowd: 0, traffic: 0, birds: 0, crickets: 0, rain: 0, busker: 0 };
 /** People on screen at which the crowd is as loud as it gets, and vehicles for traffic. */
 export const CROWD_FULL_AT = 70;
 export const TRAFFIC_FULL_AT = 10;
@@ -223,6 +245,7 @@ export function soundMix(facts: SoundFacts): SoundMix {
     birds: wet || snow ? 0 : BIRDS[facts.period] * BIRD_SEASON[season] * (0.6 + 0.4 * near),
     crickets: snow ? 0 : CRICKETS[facts.period] * CRICKET_SEASON[season] * (wet ? 0.3 : 1) * (0.6 + 0.4 * near),
     rain: wet ? 0.9 : 0,
+    busker: facts.buskerInView ? near : 0,
   };
 }
 

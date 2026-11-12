@@ -34,6 +34,9 @@ or an object with any of:
     "recolour": the name of a rule under "recolours"
     "swap":     the name of a rule under "swaps": one exact colour replaced by
                 another, used to hide a tile's drawn rim so tiles join cleanly
+    "glass":    the name of a rule under "glass": everything but the window
+                glass is cleared and the glass takes the rule's colour, for the
+                lit windows the game lays over a building at night
     "flip":     true to mirror it
     "at":       [dx, dy] top-left corner, as above
     "stand":    [x, y] in cells: the middle of the picture's bottom edge is put
@@ -124,6 +127,16 @@ def recoloured(im, rule):
     return Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGBA')
 
 
+def glass_only(im, rule):
+    """Keep only the pixels close to rule["from"], in the colour rule["to"]. Used on the file's own pixels, before shrinking."""
+    a = np.asarray(im.convert('RGBA')).astype(np.int16)
+    near = (np.abs(a[..., :3] - np.array(rule['from'], dtype=np.int16)).max(axis=-1) <= rule.get('within', 10)) & (a[..., 3] > 200)
+    out = np.zeros_like(a)
+    out[..., :3][near] = np.array(rule['to'], dtype=np.int16)
+    out[..., 3][near] = 255
+    return Image.fromarray(out.astype(np.uint8), 'RGBA')
+
+
 def swapped(im, rule):
     """Replace every pixel close to rule["from"] with rule["to"]. Used on the file's own pixels, before shrinking."""
     a = np.asarray(im.convert('RGBA')).astype(np.int16)
@@ -175,6 +188,8 @@ class Builder:
         im = self.numbered(*layer['tile']) if 'tile' in layer else self.open(layer['file'])
         if 'swap' in layer:
             im = swapped(im, self.recipe['swaps'][layer['swap']])
+        if 'glass' in layer:
+            im = glass_only(im, self.recipe['glass'][layer['glass']])
         if 'paste' in layer:
             im = im.copy()
             for extra in layer['paste']:
@@ -252,6 +267,11 @@ class Builder:
                 self.draw_layer(canvas, layer)
         else:
             self.stack(canvas, spec['stack'])
+        # One face of a building only: the wall left of its front corner, or the wall right of it.
+        if spec.get('side') == 'sw':
+            canvas.paste((0, 0, 0, 0), (ox, 0, CANVAS, CANVAS))
+        elif spec.get('side') == 'se':
+            canvas.paste((0, 0, 0, 0), (0, 0, ox, CANVAS))
         box = canvas.getbbox()
         if box is None:
             raise ValueError('empty sprite')
@@ -394,6 +414,9 @@ def main():
         try:
             sprites[key] = builder.compose(spec)
         except Exception as err:
+            # A wall with no windows has no lit windows: that sprite is simply not made.
+            if spec.get('optional') and str(err) == 'empty sprite':
+                continue
             raise SystemExit(f'Could not build sprite "{key}": {err}')
 
     people = recipe.get('people')

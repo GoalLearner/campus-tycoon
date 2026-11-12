@@ -457,8 +457,9 @@ export class Activity {
       for (const prop of site.props) {
         if (site.placed.type !== 'field') {
           // A study group's book lies open on the table.
-          const at = this.iso.toWorld(site.placed.x + 0.5, site.placed.y + 0.52);
-          prop.setPosition(at.x, at.y - 9).setDepth((site.placed.x + site.placed.y) * 4 + 3.6);
+          // The table's top is about 21 pixels of the map above where its picture stands.
+          const at = this.iso.toWorld(site.placed.x + 0.5, site.placed.y + 0.56);
+          prop.setPosition(at.x, at.y - 21).setDepth((site.placed.x + site.placed.y) * 4 + 2.7);
           continue;
         }
         const spot = this.ballAt(site, seconds);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { PLACED, type GameState } from '../sim';
+import { PLACED, type GameState, type PlacedType } from '../sim';
+import type { Art } from './art';
 import type { Iso } from './iso';
 
 /**
@@ -17,6 +18,8 @@ import type { Iso } from './iso';
 const MAX_RIPPLES = 10;
 const RIPPLE_EVERY_MS = 420;
 const RIPPLE_LIFE_MS = 1900;
+/** How many places on each kind of pond a ripple can begin, found once by looking at its picture. */
+const POND_SPOTS = 14;
 /** The most lawns with a sprinkler on at once, and the dots in each one's spray. */
 const MAX_SPRAYS = 8;
 const SPRAY_DOTS = 7;
@@ -27,6 +30,9 @@ interface Ripple {
   /** In cells. */
   x: number;
   y: number;
+  /** How far above the ground the water is, in pixels of the map, and how wide the ring grows: 1 for a pond. */
+  lift: number;
+  size: number;
 }
 
 interface Spray {
@@ -45,7 +51,9 @@ export class Ambient {
   private spare: Phaser.GameObjects.Ellipse[] = [];
   private sprays: Spray[] = [];
   /** Water a ripple can start on: each is a spot and how far from it, in cells. */
-  private water: Array<{ x: number; y: number; reachX: number; reachY: number }> = [];
+  private water: Array<{ x: number; y: number; lift: number; size: number }> = [];
+  /** For each kind of pond, the places on it that are open water, in cells from its north corner. */
+  private pondWater = new Map<PlacedType, Array<{ x: number; y: number }>>();
   /** Lawn cells, in the order sprinklers are given out. */
   private lawns: number[] = [];
   private width = 0;
@@ -55,8 +63,41 @@ export class Ambient {
 
   constructor(
     private scene: Phaser.Scene,
+    private art: Art,
     private iso: Iso,
   ) {}
+
+  /**
+   * Where the open water is on a kind of pond. A pond's picture has banks,
+   * reeds and sometimes a bridge, so a ripple may only begin where the picture
+   * itself is water for a little way to each side. Looked up once for each kind.
+   */
+  private waterOn(type: PlacedType): Array<{ x: number; y: number }> {
+    const known = this.pondWater.get(type);
+    if (known) return known;
+    const spots: Array<{ x: number; y: number }> = [];
+    const spec = PLACED[type];
+    const drawn = this.art.has(spec.sprite) ? this.art.resolve(spec.sprite) : null;
+    if (drawn && drawn.frame !== undefined) {
+      const frame = this.scene.textures.getFrame(drawn.texture, drawn.frame);
+      const corner = this.iso.toWorld(0, 0);
+      const wet = (px: number, py: number): boolean => {
+        const colour = this.scene.textures.getPixel(Math.round(px), Math.round(py), drawn.texture, drawn.frame);
+        return !!colour && colour.alpha > 200 && colour.blue > 150 && colour.blue > colour.red + 50;
+      };
+      for (let n = 0; n < 400 && spots.length < POND_SPOTS && frame; n++) {
+        // The same places every time, spread over the pond.
+        const x = mix(n, 5) * spec.w;
+        const y = mix(n, 9) * spec.h;
+        const at = this.iso.toWorld(x, y);
+        const px = at.x - corner.x + drawn.originX * frame.width;
+        const py = at.y - corner.y + drawn.originY * frame.height;
+        if (wet(px, py) && wet(px - 9, py) && wet(px + 9, py) && wet(px, py - 5) && wet(px, py + 5)) spots.push({ x, y });
+      }
+    }
+    this.pondWater.set(type, spots);
+    return spots;
+  }
 
   setLife(ripples: boolean, sprinklers: boolean): void {
     this.wantRipples = ripples;
@@ -70,7 +111,7 @@ export class Ambient {
     this.water = [];
     for (const placed of state.map.placed) {
       if (!placed || PLACED[placed.type].family !== 'water') continue;
-      this.water.push({ x: placed.x + placed.w / 2, y: placed.y + placed.h / 2, reachX: placed.w / 2 - 0.3, reachY: placed.h / 2 - 0.3 });
+      for (const spot of this.waterOn(placed.type)) this.water.push({ x: placed.x + spot.x, y: placed.y + spot.y, lift: 0, size: 1 });
     }
     const isQuad = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && cells[y * width + x]!.kind === 'quad';
     this.lawns = [];
@@ -78,8 +119,8 @@ export class Ambient {
       for (let x = 0; x < width; x++) {
         if (!isQuad(x, y)) continue;
         const links = Number(isQuad(x, y - 1)) + Number(isQuad(x + 1, y)) + Number(isQuad(x, y + 1)) + Number(isQuad(x - 1, y));
-        // A quad of one cell is the fountain. Its basin sits a little below the middle of the cell.
-        if (links === 0) this.water.push({ x: x + 0.5, y: y + 0.62, reachX: 0.05, reachY: 0.05 });
+        // A quad of one cell is the fountain. Its basin is a small bowl, raised above the lawn.
+        if (links === 0) this.water.push({ x: x + 0.5, y: y + 0.62, lift: 17, size: 0.5 });
         else this.lawns.push(y * width + x);
       }
     }
@@ -102,7 +143,7 @@ export class Ambient {
       if (spot) {
         const shape = this.spare.pop() ?? this.scene.add.ellipse(0, 0, this.iso.halfWidth * 0.5, this.iso.halfHeight * 0.5).setStrokeStyle(1.6, 0xffffff, 1).setFillStyle();
         shape.setVisible(true);
-        this.ripples.push({ shape, bornMs: timeMs, x: spot.x + (Math.random() * 2 - 1) * spot.reachX, y: spot.y + (Math.random() * 2 - 1) * spot.reachY });
+        this.ripples.push({ shape, bornMs: timeMs, x: spot.x, y: spot.y, lift: spot.lift, size: spot.size });
       }
     }
     for (let i = this.ripples.length - 1; i >= 0; i--) {
@@ -116,8 +157,8 @@ export class Ambient {
       }
       const at = this.iso.toWorld(ripple.x, ripple.y);
       ripple.shape
-        .setPosition(at.x, at.y)
-        .setScale(0.25 + age * 0.9)
+        .setPosition(at.x, at.y - ripple.lift)
+        .setScale((0.25 + age * 0.9) * ripple.size)
         .setAlpha(0.5 * (1 - age))
         .setDepth((ripple.x + ripple.y - 1) * 4 + 2.3);
     }

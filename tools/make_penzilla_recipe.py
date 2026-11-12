@@ -65,6 +65,15 @@ for variant, colour in enumerate(['Blue', 'Grey', 'Green']):
     for stage in (1, 2):
         sprites[f'academic.{stage}.{variant}'] = {'layers': [on_grid(f'{FLATS}Appartment_{colour}_1x1_Level{stage}.png')]}
 
+# Lit windows (DESIGN.md section 33.5): for each dorm and lecture hall, its own window glass in a warm colour and
+# nothing else, one picture for each of the two walls that show. The game lays them over the building at night.
+for zone in ('housing', 'academic'):
+    for variant in range(3):
+        for stage in (1, 2):
+            source = sprites[f'{zone}.{stage}.{variant}']['layers'][0]
+            for side in ('sw', 'se'):
+                sprites[f'lit.{zone}.{stage}.{variant}.{side}'] = {'layers': [{**source, 'glass': 'window'}], 'side': side, 'optional': True}
+
 # ------------------------------------------------------------------ quads --
 sprites['quad.lawn'] = {'layers': [on_grid(TILES + 'Grass.png', swap='rim', recolour='lawn')]}
 sprites['quad.tree'] = {'layers': [standing(PLANTS + 'Tree1.png', 0.5, 0.52)]}
@@ -293,14 +302,22 @@ sprites['play.ball'] = {'layers': [standing(ICONS + 'SockerFootBall.png', 0.5, 0
 # admissions guide leads a tour with, and the boxes a delivery driver unloads.
 sprites['people.pennant'] = {'layers': [standing(OLD + 'Decor/Banner.png', 0.5, 0.5, scale=0.75)]}
 sprites['people.boxes'] = {'layers': [standing(DECOR + 'Boxes1.png', 0.5, 0.5, scale=0.85)]}
-# Small scenes (DESIGN.md section 33): a club's table on a lawn is the Medieval pack's tent, the city pack's table
-# and its sandwich board, set out together on the cell. Each stays its own sprite, so the game stands them side by side.
-sprites['scene.tent'] = {'layers': [standing(OLD + 'Decor/Tent.png', 0.5, 0.5, scale=0.82)]}
-sprites['scene.table'] = {'layers': [standing(DECOR + 'Table.png', 0.5, 0.5, scale=0.62)]}
-sprites['scene.sign'] = {'layers': [standing(DECOR + 'Sign2.png', 0.5, 0.5, scale=0.6)]}
-# A study group's book on a picnic table, a busker's lute beside them, and a volleyball for a game on a quad.
-sprites['scene.book'] = {'layers': [standing(OLD + 'Decor/Book.png', 0.5, 0.5, scale=0.55)]}
-sprites['scene.lute'] = {'layers': [standing(OLD + 'Decor/MusicLute.png', 0.5, 0.5, scale=0.7)]}
+# Small scenes (DESIGN.md section 33): a club's table on a lawn is the city pack's table, parasol and sandwich
+# board with the Medieval pack's banner, set out together on the cell. Each stays its own sprite, so the game
+# stands them side by side and the banner can move in the wind.
+sprites['scene.parasol'] = {'layers': [standing(DECOR + 'Parasol.png', 0.5, 0.5, scale=1.5)]}
+sprites['scene.table'] = {'layers': [standing(DECOR + 'Table.png', 0.5, 0.5, scale=1.0)]}
+sprites['scene.sign'] = {'layers': [standing(DECOR + 'Sign2.png', 0.5, 0.5, scale=0.82)]}
+sprites['scene.banner'] = {'layers': [standing(OLD + 'Decor/Banner.png', 0.5, 0.5, scale=1.1)]}
+# A study group's book on a picnic table, a busker's drum and lute, a rug and a basket for a picnic, and a
+# volleyball for a ring of friends on a quad.
+sprites['scene.book'] = {'layers': [standing(OLD + 'Decor/Book.png', 0.5, 0.5, scale=0.85)]}
+sprites['scene.lute'] = {'layers': [standing(OLD + 'Decor/MusicLute.png', 0.5, 0.5, scale=0.9)]}
+sprites['scene.drum'] = {'layers': [standing(OLD + 'Decor/MusicDrum.png', 0.5, 0.5, scale=0.8)]}
+sprites['scene.rug'] = {'layers': [standing(OLD + 'Decor/Rug.png', 0.5, 0.5, scale=1.5)]}
+# Move-in day: a crate, a parcel and a small box stacked by a dorm's door.
+sprites['scene.boxes'] = {'layers': [standing(DECOR + 'Boxes3.png', 0.5, 0.5, scale=0.8)]}
+sprites['scene.basket'] = {'layers': [standing(OLD + 'Decor/Basket.png', 0.5, 0.5, scale=0.62)]}
 sprites['play.volleyball'] = {'layers': [standing(ICONS + 'VolleyBall.png', 0.5, 0.5, scale=0.05)]}
 sprites['decor.car'] = {'layers': [standing(CITY + 'Vehicles/CarType1_Blue_Front.png', 0.5, 0.5)]}
 sprites['decor.lamp'] = {'layers': [standing(DECOR + 'StreetLampOn.png', 0.5, 0.5)]}
@@ -364,6 +381,10 @@ recipe = {
         'comment': 'A mown lawn: the same grass, a little greener and brighter.',
         'lawn': {'from': [45, 95], 'to': 76, 'saturation': 1.0, 'value': 1.13},
         'cross': {'from': [0, 30], 'to': 135, 'saturation': 0.9, 'value': 0.82, 'minSaturation': 0.5},
+    },
+    'glass': {
+        # The pack's window glass is one flat blue. Lit, it is a pale warm yellow, which the game deepens with an orange glow.
+        'window': {'from': [87, 191, 246], 'within': 14, 'to': [255, 238, 156]},
     },
     'swaps': {
         'comment': 'Colours taken from the pack: the rim drawn round the top of a grass tile, and the grass itself.',

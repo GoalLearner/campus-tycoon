@@ -42,6 +42,7 @@ import {
   yardOver,
   START_LAND,
   TOWN_X,
+  calendarAt,
   dateAt,
   townHints,
   townLiving,
@@ -51,6 +52,7 @@ import {
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
+import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
 import { GroundsWorkers } from './GroundsWorkers';
@@ -130,6 +132,8 @@ export class CampusScene extends Phaser.Scene {
   private scenes!: Scenes;
   /** Ripples and sprinklers. */
   private ambient!: Ambient;
+  /** Lit windows on dorms and lecture halls after dark. */
+  private windows!: Windows;
   /** Trees that sway, by cell. */
   private swayers = new Map<number, Phaser.GameObjects.Image>();
   /** What the rule for small scenes asks for now, and when it is next read. */
@@ -203,7 +207,8 @@ export class CampusScene extends Phaser.Scene {
     this.crew = new GroundsWorkers(this, this.art, this.iso);
     this.activity = new Activity(this, this.art, this.iso);
     this.scenes = new Scenes(this, this.art, this.iso);
-    this.ambient = new Ambient(this, this.iso);
+    this.ambient = new Ambient(this, this.art, this.iso);
+    this.windows = new Windows(this, this.art, this.iso, LIGHT_DEPTH + 1);
     // A car waits at a crossing while somebody is walking over it, and a walker waits at the kerb for a car.
     this.cars.watchCrossings((cell) => this.walkers.onCrossing(cell));
     this.walkers.watchCars((cell) => this.cars.onCrossing(cell));
@@ -219,7 +224,10 @@ export class CampusScene extends Phaser.Scene {
     this.placed = new PlacedSprites(this, this.art, this.iso);
     this.lightLayer = this.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.MULTIPLY);
     // Dev builds: reach the scene from the console, for screenshots and checks.
-    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__scene = this;
+    if (import.meta.env.DEV) {
+      (window as unknown as Record<string, unknown>).__scene = this;
+      (window as unknown as Record<string, unknown>).__sound = sound;
+    }
 
     this.overlay = this.add.graphics().setDepth(1_000_000);
     this.bars = this.add.graphics().setDepth(1_000_001);
@@ -287,6 +295,7 @@ export class CampusScene extends Phaser.Scene {
       this.activity.setMap(state);
       this.scenes.setMap(state);
       this.ambient.setMap(state);
+      this.windows.setMap(state);
       this.nextLifeAt = 0;
       this.placedDirty = true;
       this.dirty = false;
@@ -343,6 +352,7 @@ export class CampusScene extends Phaser.Scene {
     this.activity.clear();
     this.scenes.clear();
     this.ambient.clear();
+    this.windows.clear();
     this.swayers.clear();
     for (const text of this.hintTexts.values()) text.destroy();
     this.hintTexts.clear();
@@ -420,15 +430,18 @@ export class CampusScene extends Phaser.Scene {
   private showLife(state: GameState): void {
     const date = dateAt(state.clock.tick);
     const weekend = this.weekendHeld || date.weekday === 0 || date.weekday === 6;
-    const life = scenesFor({ period: this.light.period, weekend, month: date.month, day: date.day, weather: this.weather, students: enrollment(state), reduced: effectsSetting() === 'reduced' });
+    const term = calendarAt(state.clock.tick).phase !== 'summer';
+    const life = scenesFor({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced: effectsSetting() === 'reduced' });
     this.life = life;
     this.scenes.setLife(life);
     this.ambient.setLife(life.ripples, life.sprinklers);
+    this.windows.show(life.windows, this.light.lamps);
     this.activity.setStudy(life.studyGroups);
     this.walkers.setWind(life.wind);
     sound.setFacts({
       walkersInView: this.walkers.onScreen,
       vehiclesInView: this.cars.inView,
+      buskerInView: this.scenes.buskerSeen,
       zoom: this.cameras.main.zoom / this.homeZoom,
       period: this.light.period,
       month: date.month,
@@ -531,8 +544,13 @@ export class CampusScene extends Phaser.Scene {
     return this.walkers.peopleNear(midX, midY).find((person) => person.role === role) ?? null;
   }
 
+  /** Dev screenshots: a class moves in now, with its parents and boxes. */
+  moveInNow(count: number): void {
+    this.pendingArrivals += count;
+  }
+
   /** Dev screenshots: the cell of the first small scene of a kind, or null when none is on. */
-  sceneSpot(kind: 'club' | 'pickup' | 'busker' | 'boxes'): { x: number; y: number } | null {
+  sceneSpot(kind: 'club' | 'pickup' | 'busker' | 'boxes' | 'picnic'): { x: number; y: number } | null {
     return this.scenes.where(kind);
   }
 
