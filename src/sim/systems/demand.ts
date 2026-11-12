@@ -12,6 +12,7 @@ import { LOCAL_SHARE } from '../config/town';
 import { enrollment, openCapacity, pendingCapacity } from '../selectors';
 import type { GameState, Season, Zone } from '../types';
 import { marketingLift } from './budget';
+import { athleticLift } from './football';
 import { freeTownPlaces, offCampusNow, townPlaces } from './town';
 
 /**
@@ -41,7 +42,7 @@ export function averageDesirability(state: GameState): number {
 export function nextIntakeSeason(state: GameState): Season {
   const tick = state.clock.tick;
   if (tick < FIRST_INTAKE_TICK) return 'fall';
-  return calendarAt(tick).tickInYear < SPRING_INTAKE_TICK_IN_YEAR ? 'spring' : 'fall';
+  return calendarAt(state.clock).tickInYear < SPRING_INTAKE_TICK_IN_YEAR ? 'spring' : 'fall';
 }
 
 /** A fall class as the campus would draw it today. */
@@ -49,7 +50,8 @@ export function fallClassDraw(state: GameState): number {
   const students = enrollment(state);
   const draw = DESIRABILITY_DRAW_FLOOR + DESIRABILITY_DRAW_SPAN * (averageDesirability(state) / 100);
   // Recruiting and marketing lifts applications. The ceiling is the wall it pushes against.
-  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state));
+  // Athletic standing lifts it too, and so does a TV deal: football's applicants (DESIGN.md 10.1).
+  const pool = Math.max(FOUNDING_CLASS, students * WORD_OF_MOUTH) * draw * (1 + marketingLift(state)) * (1 + athleticLift(state));
   return Math.min(POOL_CEILING, Math.round(pool));
 }
 
@@ -83,7 +85,7 @@ export function dormStudents(state: GameState): number {
 function seniorsLeaveFirst(state: GameState): boolean {
   const tick = state.clock.tick;
   if (tick < FIRST_INTAKE_TICK) return false;
-  const { tickInYear } = calendarAt(tick);
+  const { tickInYear } = calendarAt(state.clock);
   // Graduation falls between the spring intake and the next fall.
   return tickInYear >= SPRING_INTAKE_TICK_IN_YEAR && tickInYear < GRADUATION_TICK_IN_YEAR;
 }

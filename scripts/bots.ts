@@ -500,7 +500,9 @@ export function takeTurn(state: GameState, style: Style): TurnResult {
   if (style === 'absent') return { state, purchases: 0, blockedByCash: false };
   // The once-a-day player has a day's income to spend, so buys twice as much in a visit as the twice-a-day one.
   const maxPurchases = style === 'casual' ? 5 : style === 'daily' ? 10 : 60;
-  const reserve = style === 'optimizer' ? 0 : 20_000;
+  // A little is kept back: $20,000, or enough for the quiet day between graduation and the fall class, when a
+  // quarter of the students have left, the summer term earns little and the bills are what they were.
+  const reserve = style === 'optimizer' ? 0 : Math.max(20_000, Math.round(state.money.spendingPerYear * 0.006));
 
   let current = state;
   let purchases = 0;

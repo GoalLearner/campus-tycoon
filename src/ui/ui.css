@@ -1317,3 +1317,298 @@ button.money {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* ------------------------------------------- football and the calendar */
+
+.hud-chips {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.hud-chips.show {
+  display: flex;
+}
+
+.hud-chip {
+  display: none;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hud-chip.show {
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-chip.urgent {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.pick-name {
+  font-weight: 600;
+}
+
+.pick select {
+  min-height: 36px;
+  max-width: 55%;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+}
+
+.pick select option {
+  color: #111;
+}
+
+.away-days {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.away-date {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cause.week .week-label {
+  flex: 1;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.cause-fill.stress {
+  background: var(--short);
+}
+
+.fb-tabs {
+  display: flex;
+  /* A row that scrolls sideways may be squeezed to nothing by a long page under it. This one keeps its height. */
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 8px 0 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fb-tab {
+  flex: 1 1 auto;
+  min-height: 34px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fb-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1a12;
+}
+
+.fb-live {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+}
+
+.fb-live-when {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.fb-live-score {
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.fb-next {
+  margin: 4px 0 8px;
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.fb-games,
+.fb-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.fb-game {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.fb-game-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fb-game-name {
+  font-weight: 600;
+}
+
+.fb-game-detail {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.fb-game-result {
+  flex: none;
+  max-width: 46%;
+  text-align: right;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fb-game.won .fb-game-result {
+  color: var(--good);
+  font-weight: 700;
+}
+
+.fb-game.lost .fb-game-result {
+  color: var(--short);
+  font-weight: 700;
+}
+
+.fb-game.live .fb-game-result {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fb-row {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.fb-row.head {
+  border-top: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fb-row.mine {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fb-cell {
+  flex: none;
+  width: 44px;
+  text-align: right;
+}
+
+.fb-cell.wide {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  text-align: left;
+}
+
+.fb-note {
+  margin: -2px 0 4px !important;
+}
+
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--line);
+}
+
+.decision-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.decision-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  text-align: left;
+}
+
+.decision-option.chosen {
+  border-color: var(--accent);
+}
+
+.decision-label {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.decision-detail {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.decision-tag {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--good);
+}
+
+.decision-tag.yours {
+  color: var(--accent);
+}
+
+/* The Mute button, on: it says so in the accent colour, and the two sliders under it are dimmed. */
+.wide.muted {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.volume.dimmed {
+  opacity: 0.4;
+}

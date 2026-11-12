@@ -5,7 +5,7 @@ import { HOME_SCREEN_TIP, markHomeScreenTipShown, shouldShowHomeScreenTip } from
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
 import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
-import { store } from '../app/store';
+import { anchorFor, hourName, store, wakeHourOf } from '../app/store';
 import { updates } from '../app/updates';
 import {
   bottleneck,
@@ -54,12 +54,20 @@ import {
   type StallCause,
   summarizeAway,
   type Zone,
+  anchorFreeAt,
+  dayRead,
+  DEFAULT_COLOUR,
+  DEFAULT_WAKE_HOUR,
+  SCHOOL_COLOURS,
+  weatherAt,
 } from '../sim';
+import { decisionsChip, footballChip, footballMoney } from './footballUi';
+import { openDecisions, openFootball } from './footballPanels';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
-import { effectsSetting, musicVolume, setEffectsSetting, setMusicVolume, setSoundVolume, soundVolume } from '../app/life';
+import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
 import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
@@ -76,11 +84,14 @@ const ZONE_UNIT: Record<Zone, string> = { housing: 'beds', academic: 'seats' };
 /** What is happening right now, in words a first-time player reads at a glance. */
 const NOW_LABEL = {
   moveIn: 'Founding day',
+  founding: 'Founding day',
   fall: 'Fall semester in session',
   spring: 'Spring semester in session',
   graduation: 'Graduation day',
   summer: 'Summer break',
 };
+/** The weather in a word, beside the date. Nothing in fair weather. */
+const SKY_WORD: Record<string, string> = { fair: '', sunny: 'Sunny', rain: 'Rain', snow: 'Snow', heat: 'Heat wave' };
 /** What to add when a zone is short. */
 const ZONE_ASK: Record<Zone, string> = { housing: 'Housing beds', academic: 'Academic seats' };
 const ZONE_LOT: Record<Zone, [string, string]> = {
@@ -270,6 +281,12 @@ export function mountUi(root: HTMLElement): void {
   const next = el('span', 'next');
   calendar.append(when, next);
 
+  // Football and the year's decisions: one chip each, shown when there is something behind it.
+  const chips = el('div', 'hud-chips');
+  const footballButton = button('', 'hud-chip', () => openFootball(openModal));
+  const decisionsButton = button('', 'hud-chip urgent', () => openDecisions(openModal));
+  chips.append(footballButton, decisionsButton);
+
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
   for (const zone of ZONES) {
@@ -303,7 +320,7 @@ export function mountUi(root: HTMLElement): void {
     });
   });
   updateRow.append(el('span', '', 'A new version is ready.'), updateButton);
-  hud.append(top, calendar, bars, status, upcoming, updateRow);
+  hud.append(top, calendar, chips, bars, status, upcoming, updateRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -475,7 +492,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -504,6 +521,37 @@ export function mountUi(root: HTMLElement): void {
     modalOpen = true;
   }
 
+  /** A labelled choice from a short list, one row. */
+  function pick(label: string, select: HTMLSelectElement): HTMLElement {
+    const row = el('label', 'pick');
+    row.append(el('span', 'pick-name', label), select);
+    return row;
+  }
+
+  function hourSelect(hour: number): HTMLSelectElement {
+    const select = document.createElement('select');
+    for (let h = 0; h < 24; h++) {
+      const option = document.createElement('option');
+      option.value = String(h);
+      option.textContent = hourName(h);
+      select.append(option);
+    }
+    select.value = String(hour);
+    return select;
+  }
+
+  function colourSelect(colour: string): HTMLSelectElement {
+    const select = document.createElement('select');
+    for (const one of SCHOOL_COLOURS) {
+      const option = document.createElement('option');
+      option.value = one.id;
+      option.textContent = one.name;
+      select.append(option);
+    }
+    select.value = colour;
+    return select;
+  }
+
   function openSetup(): void {
     openModal((close, card) => {
       card.append(el('h1', '', 'Found your university'));
@@ -514,15 +562,17 @@ export function mountUi(root: HTMLElement): void {
       input.placeholder = 'University name';
       input.value = 'Larkspur University';
       input.autocomplete = 'off';
+      const wake = hourSelect(DEFAULT_WAKE_HOUR);
+      const colour = colourSelect(DEFAULT_COLOUR);
       const start = (): void => {
         const name = input.value.trim() || 'Larkspur University';
-        store.startNewGame(name);
+        store.startNewGame(name, Number(wake.value), colour.value);
         close();
       };
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') start();
       });
-      card.append(input, button('Open the gates', 'primary', start));
+      card.append(input, pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
       if (store.loadProblem) card.append(el('p', 'fine', store.loadProblem));
     }, false);
   }
@@ -546,8 +596,20 @@ export function mountUi(root: HTMLElement): void {
       for (const line of lines) list.append(el('li', '', line));
       // Rules that are new to an older save, told once.
       for (const note of notes) list.append(el('li', 'away-note', note));
+      // The calendar, football and decisions, by the date in the game.
+      const dated = el('div', 'away-days');
+      if (summary && summary.days.length > 0) {
+        if (summary.earlier > 0) dated.append(el('p', 'fine', `${summary.earlier} earlier ${summary.earlier === 1 ? 'line is' : 'lines are'} left out.`));
+        for (const day of summary.days) {
+          dated.append(el('div', 'away-date', day.date));
+          const lines = el('ul', 'away-list');
+          for (const line of day.lines) lines.append(el('li', '', line));
+          dated.append(lines);
+        }
+      }
       card.append(
         list,
+        dated,
         button('Back to campus', 'primary', () => {
           if (report) store.awaySeen(report);
           close();
@@ -643,7 +705,44 @@ export function mountUi(root: HTMLElement): void {
         row.append(el('span', 'volume-name', label), slider, shown);
         return row;
       };
-      card.append(volume('Sound', soundVolume(), setSoundVolume), volume('Music', musicVolume(), setMusicVolume));
+      // Mute: one tap silences sound and music together. The two volumes stay as they were set.
+      const sliders = [volume('Sound', soundVolume(), setSoundVolume), volume('Music', musicVolume(), setMusicVolume)];
+      const mute = button('', 'wide', () => {
+        setMuted(!muted());
+        sound.applyVolumes();
+        showMute();
+        if (!muted()) sound.ui('tap');
+      });
+      const showMute = (): void => {
+        setText(mute, muted() ? 'Muted. Tap to turn the sound back on' : 'Mute');
+        mute.classList.toggle('muted', muted());
+        for (const row of sliders) row.classList.toggle('dimmed', muted());
+      };
+      showMute();
+      card.append(mute, ...sliders);
+
+      // When the player's day starts: every day of the campus week begins two hours later. It can be moved every four weeks.
+      const wake = hourSelect(wakeHourOf(store.state.clock.anchor));
+      wake.addEventListener('change', () => {
+        const result = store.dispatch({ type: 'anchor', minute: anchorFor(Number(wake.value)) });
+        if (!result.ok) {
+          pushToast(result.error, 'error');
+          wake.value = String(wakeHourOf(store.state.clock.anchor));
+          return;
+        }
+        const extra = store.state.clock.week.extra;
+        pushToast(`From the next fall, each day of the campus week begins at ${hourName(Number(wake.value) + 2)}. This summer runs ${duration(extra)} longer to get there.`);
+      });
+      const free = anchorFreeAt(store.state);
+      wake.disabled = free > 0;
+      card.append(pick('Your day starts', wake));
+      if (free > 0) card.append(el('p', 'fine', `It can be changed again in ${duration(free - store.state.clock.tick)}.`));
+      const colour = colourSelect(store.state.football.colour);
+      colour.addEventListener('change', () => {
+        const result = store.dispatch({ type: 'colour', colour: colour.value });
+        if (!result.ok) pushToast(result.error, 'error');
+      });
+      card.append(pick('School colour', colour));
 
       const startOver = button('Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {
@@ -712,9 +811,19 @@ export function mountUi(root: HTMLElement): void {
 
     // Lead with what is happening now. The date is the small print.
     const tick = state.clock.tick;
-    const pos = calendarAt(tick);
-    setText(when, NOW_LABEL[pos.phase]);
-    setText(next, pos.year === 0 ? formatDate(dateAt(tick)) : `${formatDate(dateAt(tick))} · Year ${pos.year}`);
+    const pos = calendarAt(state.clock);
+    // A holiday, a break or an exam week is what is happening now. Otherwise the semester is.
+    const day = dayRead(state.clock);
+    setText(when, day.kind === 'term' || day.name === null ? NOW_LABEL[pos.phase] : day.name);
+    const sky = SKY_WORD[weatherAt(state.seed, state.clock)];
+    setText(next, pos.year === 0 ? formatDate(dateAt(state.clock)) : `${formatDate(dateAt(state.clock))} · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
+    const ball = footballChip(state);
+    setText(footballButton, ball ?? '');
+    footballButton.classList.toggle('show', ball !== null);
+    const waiting = decisionsChip(state);
+    setText(decisionsButton, waiting ?? '');
+    decisionsButton.classList.toggle('show', waiting !== null);
+    chips.classList.toggle('show', ball !== null || waiting !== null);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
@@ -734,7 +843,7 @@ export function mountUi(root: HTMLElement): void {
     const plan = roomPlan(state);
     const asks = ZONES.filter((zone) => plan.zones[zone].lots > 0).map((zone) => ZONE_ASK[zone]);
     const add = asks.join(' and ');
-    const milestone = nextMilestone(tick);
+    const milestone = nextMilestone(state.clock);
     const coming = `${MILESTONE_LABEL[milestone.event]} in ${duration(milestone.inTicks)}`;
 
     let action: string;
@@ -1111,6 +1220,14 @@ export function mountUi(root: HTMLElement): void {
           }
         }
 
+        // Football's own profit and loss, with the applicants it draws.
+        const ball = footballMoney(store.state);
+        if (ball) {
+          body.append(el('div', 'money-head', 'Football'));
+          for (const item of ball.rows) body.append(row({ name: item.name, detail: '', amount: item.amount }, 'money-row'));
+          body.append(el('p', '', ball.net), el('p', 'fine', ball.applicants));
+        }
+
         // Recruiting and marketing: the one cost here the player sets.
         body.append(el('div', 'money-head', 'Recruiting and marketing'));
         const steps = el('div', 'money-steps');
@@ -1164,6 +1281,19 @@ export function mountUi(root: HTMLElement): void {
         list.append(line);
       }
       card.append(list);
+      // The calendar's one line beside the four causes: exams, a break, the weather.
+      view.week.forEach((part, n) => {
+        const line = el('div', 'cause week');
+        line.append(el('span', 'cause-name', n === 0 ? 'This week' : ''), el('span', 'week-label', part.label), el('span', 'cause-value', part.points));
+        card.append(line);
+      });
+      const stress = el('div', 'cause');
+      const stressBar = el('div', 'cause-bar');
+      const stressFill = el('div', 'cause-fill stress');
+      stressFill.style.width = `${view.stress.score}%`;
+      stressBar.append(stressFill);
+      stress.append(el('span', 'cause-name', 'Stress'), stressBar, el('span', 'cause-value', String(view.stress.score)));
+      card.append(stress, el('p', 'fine', view.stress.note));
       if (view.advice) card.append(el('p', '', view.advice));
       card.append(el('p', 'fine', view.staying));
       if (view.lastSemester) card.append(el('p', 'fine', view.lastSemester));
@@ -1272,6 +1402,9 @@ export function mountUi(root: HTMLElement): void {
     if (store.recent.length > 0) {
       for (const entry of store.recent) {
         if (worthSaying(entry)) pushToast(entry.text);
+        // A result that comes in while the game is open has its short tune.
+        if (entry.kind === 'game') sound.jingle(entry.data?.won === 1 ? 'win' : 'loss');
+        else if (entry.kind === 'football' && (entry.data?.earned !== undefined || entry.data?.tier !== undefined)) sound.jingle('reward');
       }
       store.recent.length = 0;
     }

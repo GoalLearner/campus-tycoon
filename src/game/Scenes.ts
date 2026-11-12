@@ -32,7 +32,10 @@ const CLUB_SPACING = 3;
 const PICNIC_SPACING = 2;
 const OPEN_GROUND = ['empty', 'path', 'quad', 'crossing'];
 
-type Kind = 'club' | 'pickup' | 'busker' | 'boxes' | 'picnic';
+type Kind = 'club' | 'pickup' | 'busker' | 'boxes' | 'picnic' | 'tailgate' | 'band' | 'storm';
+/** People in the marching band, in two ranks, and fans on the field after a big win. */
+const BAND_SIZE = 8;
+const STORM_SIZE = 12;
 
 interface Actor {
   sprite: Phaser.GameObjects.Image;
@@ -42,6 +45,8 @@ interface Actor {
   direction: WalkDirection;
   /** A player in a ring steps on the spot while the ball is theirs. */
   plays: boolean;
+  /** Steps on the spot all the time: the band marking time, fans jumping on the field. */
+  marches: boolean;
   phase: number;
   shownKey: string;
 }
@@ -75,6 +80,13 @@ interface Scene {
   untilMs: number;
 }
 
+/**
+ * Where the pitch is in the stadium's picture, in cells from the plot's
+ * north corner, and how far above the ground it is drawn. Measured from the
+ * art, as the courts and the pool were.
+ */
+const STORM_FIELD = { x0: 1.15, x1: 1.95, y0: 0.75, y1: 1.85, lift: 4 };
+
 /** A steady number from two whole numbers, so a scene's place and people do not flicker. */
 function mix(a: number, b: number): number {
   let h = (a * 374761393 + b * 668265263) | 0;
@@ -105,6 +117,14 @@ export class Scenes {
   private buskerSpot: { x: number; y: number } | null = null;
   /** The day of the game's year: scenes move from day to day and stay put within one. */
   private day = 0;
+  /** Flat car parks, where a tailgate can be set up. */
+  private carParks: Array<{ x: number; y: number }> = [];
+  /** The stadium's plot and the tier that stands on it, or null with no plot. */
+  private stadium: { x: number; y: number; w: number; h: number; tier: number } | null = null;
+  /** The school's colour on a home game day, laid over fans and the band. null on any other day. */
+  private tint: number | null = null;
+  /** True for the few minutes fans are on the field after a big home win. */
+  private storming = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -119,6 +139,13 @@ export class Scenes {
     this.wanted = wanted;
   }
 
+  /** A home game day: the school's colour, and whether the field is being stormed. */
+  setGame(tint: number | null, storming: boolean): void {
+    if (tint !== this.tint || storming !== this.storming) this.recountAt = 0;
+    this.tint = tint;
+    this.storming = storming;
+  }
+
   /** The crowd step in force: on a slow device only one of each scene is shown. */
   setStep(step: number): void {
     this.step = step;
@@ -127,7 +154,7 @@ export class Scenes {
   /** Read the map again: where a club table, a ring, a rug and a busker could go today. */
   setMap(state: GameState): void {
     const { width, height, cells, buildings, placed } = state.map;
-    const date = dateAt(state.clock.tick);
+    const date = dateAt(state.clock);
     this.day = date.month * 32 + date.day;
     const kind = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
     const lots: Array<{ x: number; y: number }> = [];
@@ -186,6 +213,15 @@ export class Scenes {
     blocks.sort((a, b) => a.order - b.order);
     this.quadBlocks = blocks.slice(0, 6).map((block) => ({ x: block.x, y: block.y }));
 
+    // Tailgates set up on flat car parks. The band forms up on the stadium's plot.
+    this.carParks = [];
+    this.stadium = null;
+    for (const thing of placed) {
+      if (!thing) continue;
+      if (thing.type === 'parking') this.carParks.push({ x: thing.x, y: thing.y });
+      if (thing.type === 'stadium') this.stadium = { x: thing.x, y: thing.y, w: thing.w, h: thing.h, tier: state.football.stadium.tier };
+    }
+
     // A busker: at a front corner of the first coffee stand, out of the way of its line, on open ground with nothing on it.
     this.buskerSpot = null;
     const stand = placed.find((thing) => thing?.type === 'coffee');
@@ -231,9 +267,13 @@ export class Scenes {
     scene.props.push({ sprite, x, y, ball: how.ball ?? false, sways: how.sways ?? false, flat: how.flat ?? false });
   }
 
-  private actor(scene: Scene, look: number, x: number, y: number, direction: WalkDirection, plays = false): void {
+  private actor(scene: Scene, look: number, x: number, y: number, direction: WalkDirection, plays = false, marches = false): void {
     const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
-    scene.actors.push({ sprite, look, x, y, direction, plays, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '' });
+    // On a game day the fans and the band are in the school's colour: the figure itself is tinted.
+    if (marches || scene.kind === 'tailgate') {
+      if (this.tint !== null) sprite.setTint(this.tint);
+    }
+    scene.actors.push({ sprite, look, x, y, direction, plays, marches, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '' });
   }
 
   /** Bring the scenes on the map in line with what the rule asks for. */
@@ -291,6 +331,50 @@ export class Scenes {
         this.prop(scene, 'scene.basket', at.x + 0.4, at.y + 0.44);
         this.actor(scene, look(at.x * 71 + at.y, this.day + 5), at.x + 0.36, at.y + 0.76, 'se');
         this.actor(scene, look(at.x * 71 + at.y, this.day + 6), at.x + 0.8, at.y + 0.42, 'sw');
+      }
+
+      // A home game: tailgates in the car parks, each a parasol, a table and a few fans.
+      for (let n = 0; n < Math.min(this.carParks.length, wanted.tailgates); n++) {
+        const at = this.carParks[n]!;
+        const key = `tailgate:${at.x},${at.y}`;
+        keep.add(key);
+        if (this.scenes.has(key) || !this.art.has('scene.table')) continue;
+        const scene = this.begin(key, 'tailgate', at.x, at.y, 2, 2);
+        this.prop(scene, 'scene.parasol', at.x + 0.3, at.y + 1.5);
+        this.prop(scene, 'scene.table', at.x + 0.62, at.y + 1.82);
+        this.actor(scene, look(at.x * 61 + at.y, 1), at.x + 0.2, at.y + 1.9, 'se');
+        this.actor(scene, look(at.x * 61 + at.y, 2), at.x + 1.0, at.y + 1.55, 'sw');
+        this.actor(scene, look(at.x * 61 + at.y, 3), at.x + 1.05, at.y + 2.05, 'nw');
+      }
+
+      // The band, in two ranks on the practice lawn beside the stadium, marking time with a drum before each rank.
+      const ground = this.stadium;
+      if (wanted.band && ground && ground.tier >= 1 && ground.tier <= 3) {
+        const key = `band:${ground.x},${ground.y}`;
+        keep.add(key);
+        if (!this.scenes.has(key)) {
+          const scene = this.begin(key, 'band', ground.x, ground.y + 2, 2, 1);
+          for (let k = 0; k < BAND_SIZE; k++) {
+            const rank = Math.floor(k / (BAND_SIZE / 2));
+            this.actor(scene, look(ground.x * 43 + k, 9), ground.x + 0.28 + (k % (BAND_SIZE / 2)) * 0.48, ground.y + 2.3 + rank * 0.42, 'sw', false, true);
+          }
+          this.prop(scene, 'scene.drum', ground.x + 0.2, ground.y + 2.96);
+          this.prop(scene, 'scene.drum', ground.x + 1.2, ground.y + 2.96);
+        }
+      }
+
+      // A big home win: fans all over the field for a few minutes.
+      if (this.storming && ground && ground.tier >= 1) {
+        const key = `storm:${ground.x},${ground.y}`;
+        keep.add(key);
+        if (!this.scenes.has(key)) {
+          const scene = this.begin(key, 'storm', ground.x, ground.y, 2, 2);
+          for (let k = 0; k < STORM_SIZE; k++) {
+            const x = ground.x + STORM_FIELD.x0 + mix(k, 3) * (STORM_FIELD.x1 - STORM_FIELD.x0);
+            const y = ground.y + STORM_FIELD.y0 + mix(k, 5) * (STORM_FIELD.y1 - STORM_FIELD.y0);
+            this.actor(scene, look(k * 17 + ground.x, 13), x, y, (['se', 'sw', 'nw', 'ne'] as const)[k % 4]!, false, true);
+          }
+        }
       }
 
       if (wanted.busker && this.buskerSpot && this.art.has('scene.lute')) {
@@ -370,7 +454,7 @@ export class Scenes {
       for (let n = 0; n < scene.actors.length; n++) {
         const actor = scene.actors[n]!;
         // Whoever is sending or getting the ball steps on the spot. Everyone else stands.
-        const busy = actor.plays && (n === from || n === to);
+        const busy = actor.marches || (actor.plays && (n === from || n === to));
         const flipFrom = people.flip?.[actor.direction];
         const frame = busy ? Math.floor((timeMs + actor.phase * 300) / people.frameMs) % people.frames : 0;
         const key = `person.${actor.look}.${flipFrom ?? actor.direction}.${frame}`;
@@ -380,14 +464,16 @@ export class Scenes {
         }
         actor.sprite.setFlipX(flipFrom !== undefined);
         const at = this.iso.toWorld(actor.x, actor.y);
-        actor.sprite.setPosition(at.x, at.y).setDepth((actor.x + actor.y - 1) * 4 + 2.5).setAlpha(alpha);
+        // Fans on the field are drawn over the stadium they are standing in.
+        const depth = scene.kind === 'storm' ? (scene.x + scene.w + scene.y + scene.h - 2) * 4 + 1.2 + (actor.x + actor.y) * 0.01 : (actor.x + actor.y - 1) * 4 + 2.5;
+        actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? STORM_FIELD.lift : 0)).setDepth(depth).setAlpha(alpha);
       }
     }
   }
 
   /** How many scenes of each kind are on the map. For the dev readout and for screenshots. */
   get counts(): Record<Kind, number> {
-    const counts: Record<Kind, number> = { club: 0, pickup: 0, busker: 0, boxes: 0, picnic: 0 };
+    const counts: Record<Kind, number> = { club: 0, pickup: 0, busker: 0, boxes: 0, picnic: 0, tailgate: 0, band: 0, storm: 0 };
     for (const scene of this.scenes.values()) if (!scene.leaving) counts[scene.kind] += 1;
     return counts;
   }

@@ -40,5 +40,8 @@ export const STARTER = {
     // Two bins beside the dining hall, and no yard: the first full bin is the lesson.
     { type: 'bin', x: 9, y: 12 },
     { type: 'bin', x: 12, y: 12 },
+    // The stadium's plot, two cells by three, reserved from the start (DESIGN.md 10.2). It stands apart, north-east
+    // of the first buildings, where a home crowd's noise reaches no dorm, and can be moved while it is bare.
+    { type: 'stadium', x: 27, y: 9 },
   ] as ReadonlyArray<{ type: PlacedType; x: number; y: number }>,
 } as const;

@@ -44,10 +44,15 @@ import {
   TOWN_X,
   calendarAt,
   dateAt,
+  dayRead,
+  homeGameNow,
+  SCHOOL_COLOURS,
+  weatherAt,
   townHints,
   townLiving,
   townPlaces,
   type Incident,
+  type Placed,
 } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
@@ -69,6 +74,14 @@ const NO_TINT = 0xffffff;
 const FOR_SALE_TINT = 0x9cb39a;
 /** The light of the hour is laid over the map here: above everything on the ground, below the icons that float. */
 const LIGHT_DEPTH = 800_000;
+/** Fans stay on the field this many minutes after a big home win. */
+const STORM_TICKS = 5;
+
+/** A colour halfway to white, for tinting a figure without losing its face. */
+function softened(colour: number): number {
+  const mix = (shift: number): number => Math.round((((colour >> shift) & 0xff) + 255) / 2);
+  return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+}
 /** The Cleanliness overlay: clean, getting messy, dirty or in need of a worker, and where a yard's workers reach. */
 const CLEAN_OK = 0x6fe38c;
 const CLEAN_SOME = 0xffd24a;
@@ -139,8 +152,11 @@ export class CampusScene extends Phaser.Scene {
   /** What the rule for small scenes asks for now, and when it is next read. */
   private life: LifeScenes | null = null;
   private nextLifeAt = 0;
-  /** The sky. Clear until the calendar layer brings weather: everything here already answers to it. */
+  /** The sky, from the game's own weather. */
   private weather: Weather = 'clear';
+  /** Set by a dev page to show one kind of weather. */
+  private weatherHeld: Weather | null = null;
+  private stormHeld = false;
   /** The zoom the map opened at: sound is fullest there and closer, and quieter zoomed out. */
   private homeZoom = 1;
   /** The sentence that stands with each edge marker, by which marker it is. */
@@ -288,7 +304,7 @@ export class CampusScene extends Phaser.Scene {
       this.syncMap(state);
       this.walkers.setMap(state);
       // A Saturday or Sunday in the game's own calendar is quieter on the paths.
-      const weekday = dateAt(state.clock.tick).weekday;
+      const weekday = dateAt(state.clock).weekday;
       this.walkers.setWeekend(this.weekendHeld || weekday === 0 || weekday === 6);
       this.cars.setMap(state);
       this.crew.setMap(state);
@@ -428,10 +444,39 @@ export class CampusScene extends Phaser.Scene {
    * are the game's.
    */
   private showLife(state: GameState): void {
-    const date = dateAt(state.clock.tick);
+    const date = dateAt(state.clock);
     const weekend = this.weekendHeld || date.weekday === 0 || date.weekday === 6;
-    const term = calendarAt(state.clock.tick).phase !== 'summer';
-    const life = scenesFor({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced: effectsSetting() === 'reduced' });
+    const term = calendarAt(state.clock).phase !== 'summer';
+    // The calendar and the sky, from the game: who is on campus, exam weeks, a home game, and the weather.
+    const day = dayRead(state.clock);
+    const home = homeGameNow(state);
+    const sky = weatherAt(state.seed, state.clock);
+    this.weather = this.weatherHeld ?? (sky === 'rain' ? 'rain' : sky === 'snow' ? 'snow' : 'clear');
+    const reduced = effectsSetting() === 'reduced';
+    const life = scenesFor({
+      period: this.light.period,
+      weekend,
+      month: date.month,
+      day: date.day,
+      term,
+      weather: this.weather,
+      students: enrollment(state),
+      reduced,
+      presence: day.walkers,
+      exams: day.kind === 'midterms' || day.kind === 'finals',
+      gameDay: home !== null,
+    });
+    // Fans, the band and the tailgates wear the school's colour, softened so faces still read.
+    const colour = SCHOOL_COLOURS.find((one) => one.id === state.football.colour)?.hex ?? 0xffffff;
+    const tint = home ? softened(colour) : null;
+    const storming = this.stormHeld || (state.football.bigWin > 0 && state.clock.tick - state.football.bigWin < STORM_TICKS);
+    // Before the first stadium the team plays at a rented field in town (DESIGN.md 10.2): nobody walks to the bare
+    // plot, and no game is heard from it. The tailgates in the car parks are the day's only sign on the map.
+    const built = state.football.stadium.tier >= 1;
+    this.walkers.setGameDay(built ? tint : null);
+    this.walkers.setPresence(day.walkers);
+    this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
+    this.ambient.setWeather(this.weather, reduced);
     this.life = life;
     this.scenes.setLife(life);
     this.ambient.setLife(life.ripples, life.sprinklers);
@@ -442,6 +487,8 @@ export class CampusScene extends Phaser.Scene {
       walkersInView: this.walkers.onScreen,
       vehiclesInView: this.cars.inView,
       buskerInView: this.scenes.buskerSeen,
+      // The crowd is heard from kickoff to the final whistle: fully with the stadium on screen, faintly from across campus.
+      stadium: home && built && state.clock.tick >= home.kick ? (this.walkers.stadiumSeen ? 1 : 0.3) : 0,
       zoom: this.cameras.main.zoom / this.homeZoom,
       period: this.light.period,
       month: date.month,
@@ -450,9 +497,15 @@ export class CampusScene extends Phaser.Scene {
     });
   }
 
-  /** Dev pages and the calendar layer: set the sky. Rain empties the lawns and is heard. */
+  /** Dev pages: hold the sky at one kind of weather, whatever the game's own is. Rain empties the lawns and is heard. */
   setWeather(weather: Weather): void {
-    this.weather = weather;
+    this.weatherHeld = weather;
+    this.nextLifeAt = 0;
+  }
+
+  /** Dev screenshots: fans on the field, as after a big home win. */
+  holdStorm(): void {
+    this.stormHeld = true;
     this.nextLifeAt = 0;
   }
 
@@ -775,6 +828,34 @@ export class CampusScene extends Phaser.Scene {
     return { key: spec.flat ? 'quad.lawn' : this.variantKey('academic.2', 0), flat: false };
   }
 
+  /**
+   * The stadium plot, two cells by three. What stands on it follows the
+   * tier: mown lawn while it is bare, the stadium of tiers one to three on
+   * four of its cells with the practice lawn on the other two, and tiers four
+   * and five on all six. While a tier is going up, a building site stands
+   * where the new part will be.
+   */
+  private showStadium(state: GameState, placed: Placed, items: PlacedItem[]): void {
+    const stadium = state.football.stadium;
+    const tier = stadium.tier;
+    const lawn = this.art.has('quad.lawn') ? 'quad.lawn' : null;
+    const big = tier >= 4;
+    // The lawn under whatever part of the plot the stadium does not cover.
+    if (lawn && !big) {
+      for (let y = tier === 0 ? placed.y : placed.y + 2; y < placed.y + placed.h; y++) {
+        for (let x = placed.x; x < placed.x + placed.w; x++) items.push({ key: lawn, x, y, layer: 'ground', id: placed.id });
+      }
+    }
+    const key = `stadium.${tier}`;
+    if (tier >= 1 && this.art.has(key)) items.push({ key, x: placed.x, y: placed.y, w: 2, h: big ? 3 : 2, layer: 'object', id: placed.id });
+    else if (tier === 0 && !lawn) items.push({ key: this.spriteFor('stadium').key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: 'object', id: placed.id });
+    if (stadium.work && this.art.has('lot.site')) {
+      // Work on the first stadium is on the plot's four near cells. A bigger one is being built where the lawn is.
+      const row = tier === 0 ? placed.y : placed.y + 2;
+      for (let x = placed.x; x < placed.x + placed.w; x++) items.push({ key: 'lot.site', x, y: row, layer: 'ground', forward: 0 });
+    }
+  }
+
   /** Draw the hand-placed buildings in the game state, and the one being placed. */
   private showPlaced(state: GameState): void {
     const items: PlacedItem[] = [...this.devItems];
@@ -787,6 +868,10 @@ export class CampusScene extends Phaser.Scene {
         const how = binState(state, placed.id);
         const shown = how === 'full' ? 'grounds.bin.over' : how === 'filling' ? 'grounds.bin.full' : 'grounds.bin';
         if (this.art.has(shown)) key = shown;
+      }
+      if (placed.type === 'stadium') {
+        this.showStadium(state, placed, items);
+        continue;
       }
       items.push({ key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
       // A cone stands beside anything broken until a worker has fixed it.

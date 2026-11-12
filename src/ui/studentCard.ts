@@ -1,6 +1,6 @@
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { studentCard, studentKey, studentLook, type GameState } from '../sim';
+import { studentCard, studentFigure, studentKey, type GameState } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -170,7 +170,9 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     if (target) session.focusOn(target.x, target.y);
   });
 
-  node.append(head, doing.line, grades.line, club.line, relationship.line, reason);
+  // Stress, and what the calendar is doing to them this week. Low most of the year.
+  const stress = row('Stress');
+  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, reason);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -210,7 +212,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     const people = atlas?.people;
     if (atlas && people) {
       const looks = Math.min(people.looks, people.crowd ?? people.looks);
-      const sprite = `person.${studentLook(state, ref) % looks}.${people.flip?.sw ?? 'sw'}.0`;
+      const sprite = `person.${studentFigure(state, ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`;
       if (sprite !== shownLook) {
         shownLook = sprite;
         portrait.classList.toggle('missing', !drawSprite(portrait, atlas, sprite));
@@ -229,6 +231,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     setText(club.value, card.club ?? 'None');
     setText(relationship.value, card.relationship.name);
     setText(relationshipNote, card.relationship.note);
+    setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
 
     if (card.mood !== shownMood) {
       shownMood = card.mood;

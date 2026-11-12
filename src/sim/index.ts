@@ -133,6 +133,8 @@ export {
   studentHome,
   studentKey,
   studentLook,
+  studentFigure,
+  isVarsity,
   teachingQuality,
   type Relationship,
   type StudentCard,
@@ -142,9 +144,42 @@ export {
 export type { ArchetypeId, CauseId, DriverId, RelationshipId } from './config/students';
 export { PART_WEIGHTS } from './config/students';
 export { newGame, type NewGameOptions } from './newGame';
-export { calendarAt, dateAt, eventsAt, formatDate, nextMilestone, type CalendarEvent, type CalendarPos, type GameDate, type Phase } from './calendar';
+export {
+  activeEntries,
+  calendarAt,
+  dateAt,
+  entrySpan,
+  eventsAt,
+  formatDate,
+  marksAt,
+  minuteOfDay,
+  minutesToAnchor,
+  nextMilestone,
+  plainWeek,
+  rollWeek,
+  shortDate,
+  spanOf,
+  tickOfDate,
+  timeOfTick,
+  yearLength,
+  type CalendarEvent,
+  type CalendarMark,
+  type CalendarPos,
+  type GameDate,
+  type Phase,
+} from './calendar';
+export * from './config/season';
+export * from './config/football';
+export * from './systems/field';
+export * from './systems/football';
+export * from './systems/decisions';
+export { startFootball, newTerm } from './newGame';
+export * from './systems/season';
+export { campusLevels } from './systems/happiness';
+export { placedIncomePerYear } from './systems/placed';
+export { anchorFreeAt } from './actions';
 export * from './config/academicCalendar';
 export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult, type SaveFile } from './save';
 export * from './selectors';
 export * from './format';
-export { summarizeAway, type AwayFacts, type AwaySummary } from './digest';
+export { datedDays, summarizeAway, type AwayDay, type AwayFacts, type AwaySummary } from './digest';

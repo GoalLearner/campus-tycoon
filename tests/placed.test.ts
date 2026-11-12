@@ -59,7 +59,7 @@ describe('placing buildings', () => {
     const state = freshGame();
     const types = state.map.placed.map((p) => p?.type);
     // And two trash bins beside the dining hall.
-    expect(types).toEqual(['dining', 'admin', 'bin', 'bin']);
+    expect(types).toEqual(['dining', 'admin', 'bin', 'bin', 'stadium']);
     // The first dorms are fed, so they can grow past their first stage.
     expect(fedAt(state.map, 10, 13)).toBe(true);
   });

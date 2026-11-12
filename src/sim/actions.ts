@@ -5,7 +5,11 @@ import type { PlacedType } from './types';
 import { TREE_KINDS } from './config/desirability';
 import { COST } from './config/money';
 import { YARD_MAX_WORKERS, YARD_START_WORKERS } from './config/grounds';
-import { dollars } from './format';
+import { minutesToAnchor, timeOfTick, yearLength } from './calendar';
+import { SCHOOL_COLOURS, TICKET_PRICE } from './config/football';
+import { choose, stretchDecisions } from './systems/decisions';
+import { ANCHOR_RECHARGE_TICKS, TICKS_PER_DAY, TICKS_PER_YEAR } from './config/time';
+import { dollars, duration } from './format';
 import { inBounds } from './selectors';
 import { ownedAt } from './systems/town';
 import { recomputeDesirability } from './systems/desirability';
@@ -35,7 +39,15 @@ export type Action =
   /** Set the recruiting and marketing step: 0 is off, 4 the most. */
   | { type: 'marketing'; step: number }
   /** Pay cash into the endowment. It never comes back out. */
-  | { type: 'endow'; amount: number };
+  | { type: 'endow'; amount: number }
+  /** Choose or move the anchor: the minute of the UTC day at which each day of the campus week begins. */
+  | { type: 'anchor'; minute: number }
+  /** Answer one of the annual decisions. */
+  | { type: 'decide'; id: number; option: string }
+  /** Set the ticket price step, 0 to 4. */
+  | { type: 'ticketPrice'; step: number }
+  /** Choose the school's colour. */
+  | { type: 'colour'; colour: string };
 
 export interface PaintPreview {
   tool: Tool;
@@ -79,10 +91,14 @@ function canPaint(kind: CellKind, tool: Tool): boolean {
 }
 
 /** Buildings that came with the campus stay where they are. */
-function fixedInPlace(map: MapState, index: number): boolean {
+function fixedInPlace(state: GameState, index: number): boolean {
+  const map = state.map;
   const id = map.cells[index]!.placedId;
   const placed = id === null ? null : map.placed[id];
-  return placed ? !PLACED[placed.type].buildable : false;
+  if (!placed) return false;
+  // The stadium plot can be moved while it is bare. Once a stadium stands on it, or is being built, it stays.
+  if (placed.type === 'stadium') return state.football.stadium.tier > 0 || state.football.stadium.work !== null;
+  return !PLACED[placed.type].buildable;
 }
 
 /**
@@ -117,7 +133,7 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
     if (seen.has(i)) continue;
     seen.add(i);
     // Only the campus's own land can be changed. The town and the fields for sale are not the player's.
-    if (ownedAt(map, x, y) && canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(map, i))) valid.push([x, y]);
+    if (ownedAt(map, x, y) && canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(state, i))) valid.push([x, y]);
     else skipped += 1;
   }
   let refund = 0;
@@ -154,6 +170,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
   const cell = map.cells[y * map.width + x]!;
   if (cell.placedId !== null) {
     // Clearing any cell of a hand-placed building takes the whole building.
+    if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
     removePlaced(map, cell.placedId);
     return;
   }
@@ -230,6 +247,9 @@ const PLACE_ERROR = {
 function place(state: GameState, type: PlacedType, x: number, y: number): ActionResult {
   const spec = PLACED[type];
   if (!spec.buildable) return { ok: false, state, error: 'That cannot be built.' };
+  if (type === 'stadium' && state.football.stadium.plot !== null && state.map.placed[state.football.stadium.plot]) {
+    return { ok: false, state, error: 'The campus already has a stadium plot. Clear it first to move it.' };
+  }
   const preview = previewPlace(state, type, x, y);
   if (preview.problem === 'cash') {
     return { ok: false, state, error: `That costs ${dollars(spec.cost)}. You have ${dollars(state.money.cash)}.` };
@@ -240,6 +260,7 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   const built = addPlaced(next.map, type, x, y, next.clock.tick);
   // A yard opens with a worker on its books.
   if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
+  if (type === 'stadium') next.football.stadium.plot = built.id;
   next.money.cash -= spec.cost;
   next.money.yearSpent += spec.cost;
   recomputeDesirability(next.map);
@@ -298,6 +319,66 @@ function endow(state: GameState, amount: number): ActionResult {
   return { ok: true, state: next, cost: amount, changed: 1 };
 }
 
+/** When the anchor can next be moved, as a tick. 0 when it can be moved now. */
+export function anchorFreeAt(state: GameState): number {
+  const clock = state.clock;
+  if (clock.anchor === null || clock.anchorMovedTick < 0) return 0;
+  const free = clock.anchorMovedTick + ANCHOR_RECHARGE_TICKS;
+  return free > clock.tick ? free : 0;
+}
+
+/**
+ * Choose or move the anchor. The year in progress keeps every hour it had:
+ * its summer is stretched, by up to a day, so the next fall begins at the new
+ * anchor. Nothing is ever shortened, so no window closes early.
+ */
+function setAnchor(state: GameState, minute: number): ActionResult {
+  if (!Number.isInteger(minute) || minute < 0 || minute >= TICKS_PER_DAY) return { ok: false, state, error: 'Choose a time of day.' };
+  const clock = state.clock;
+  if (clock.anchor === minute) return { ok: true, state, cost: 0, changed: 0 };
+  const free = anchorFreeAt(state);
+  if (free > 0) return { ok: false, state, error: `You can change this again in ${duration(free - clock.tick)}.` };
+  const next = structuredClone(state);
+  const week = next.clock.week;
+  // The earliest the next fall could begin: when this year's seven days are up, or now if they already are.
+  const plain = week.start + TICKS_PER_YEAR;
+  const base = Math.max(plain, next.clock.tick + 1);
+  week.extra = base - plain + minutesToAnchor(timeOfTick(next.clock, base), minute);
+  // The first choice on a game that had none is free. After that, moving it starts the four-week wait.
+  if (next.clock.anchor !== null) next.clock.anchorMovedTick = next.clock.tick;
+  next.clock.anchor = minute;
+  // Decisions that close when the next fall begins stay open for the longer summer.
+  stretchDecisions(next, clock.week.start + yearLength(clock.week));
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
+/** Answer an annual decision. */
+function decide(state: GameState, id: number, option: string): ActionResult {
+  const next = structuredClone(state);
+  const before = next.money.cash;
+  const error = choose(next, id, option);
+  if (error) return { ok: false, state, error };
+  return { ok: true, state: next, cost: before - next.money.cash, changed: 1 };
+}
+
+/** Set the price of a ticket. Cheaper fills the seats, which is what earns the next stadium. Dearer earns more now. */
+function setTicketPrice(state: GameState, step: number): ActionResult {
+  if (!Number.isInteger(step) || step < 0 || step >= TICKET_PRICE.length) return { ok: false, state, error: `Tickets have ${TICKET_PRICE.length} prices.` };
+  if (step === state.football.stadium.price) return { ok: true, state, cost: 0, changed: 0 };
+  const next = structuredClone(state);
+  next.football.stadium.price = step;
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
+function setColour(state: GameState, colour: string): ActionResult {
+  if (!SCHOOL_COLOURS.some((one) => one.id === colour)) return { ok: false, state, error: 'That is not one of the colours.' };
+  if (colour === state.football.colour) return { ok: true, state, cost: 0, changed: 0 };
+  const next = structuredClone(state);
+  next.football.colour = colour;
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 export function applyAction(state: GameState, action: Action): ActionResult {
   switch (action.type) {
     case 'paint':
@@ -312,6 +393,14 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return setMarketing(state, action.step);
     case 'endow':
       return endow(state, action.amount);
+    case 'anchor':
+      return setAnchor(state, action.minute);
+    case 'decide':
+      return decide(state, action.id, action.option);
+    case 'ticketPrice':
+      return setTicketPrice(state, action.step);
+    case 'colour':
+      return setColour(state, action.colour);
   }
 }
 

@@ -60,10 +60,14 @@ export const MAJORS: ReadonlyArray<{ name: string; group: MajorGroup }> = [
 ];
 
 /**
- * The archetypes whose campus stat exists today. Superfan, Varsity Athlete,
- * Greek Loyalist and Pledge wait for football and Greek Row.
+ * The archetypes whose campus stat exists today. Superfan and Varsity Athlete
+ * came with football, and All-Nighter with finals week. Greek Loyalist and
+ * Pledge wait for Greek Row.
  */
 export type ArchetypeId =
+  | 'superfan'
+  | 'athlete'
+  | 'allNighter'
   | 'lost'
   | 'homesick'
   | 'commuter'
@@ -80,6 +84,9 @@ export type ArchetypeId =
   | 'attention';
 
 export const ARCHETYPE_NAMES: Record<ArchetypeId, string> = {
+  superfan: 'Superfan',
+  athlete: 'Varsity Athlete',
+  allNighter: 'All-Nighter',
   lost: 'Lost Freshman',
   homesick: 'Homesick',
   commuter: 'Commuter',
@@ -115,6 +122,8 @@ export const NATURE_WEIGHTS: ReadonlyArray<readonly [ArchetypeId, number]> = [
 /** [T] Students with no bed on campus are mostly this. */
 export const COMMUTER_WEIGHT = 40;
 
+/** [T] In finals week this share of students reads as All-Nighter, a passing phase like Lost Freshman. */
+export const ALL_NIGHTER_SHARE = 0.18;
 /** [T] Share of freshmen who read as Lost Freshman or Homesick: first in the fall, then for the rest of the year. */
 export const LOST_SHARE = { fall: 0.3, later: 0.12 };
 export const HOMESICK_SHARE = { fall: 0.12, later: 0.05 };
@@ -175,6 +184,7 @@ export const GPA_FLOOR = 2.3;
 export const GPA_SPAN = 1.1;
 export const GPA_SPREAD = 0.6;
 export const GPA_TILT: Partial<Record<ArchetypeId, number>> = {
+  superfan: -0.1,
   scholar: 0.5,
   stressed: 0.2,
   lost: -0.1,
@@ -202,16 +212,19 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
  * 2026-11-11). A cause is the average of its drivers. A new driver, such as
  * noise, joins by being given a cause here; nothing else has to change.
  */
-export type DriverId = 'walk' | 'green' | 'clean' | 'seating' | 'dining' | 'recreation' | 'safety';
+export type DriverId = 'walk' | 'green' | 'clean' | 'seating' | 'noise' | 'dining' | 'recreation' | 'safety';
 export type CauseId = 'walk' | 'grounds' | 'life' | 'safety';
 /** Which cause each driver counts toward. Dining and things to do share one: "Food & fun". */
-export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'grounds', clean: 'grounds', seating: 'grounds', dining: 'life', recreation: 'life', safety: 'safety' };
+export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'grounds', clean: 'grounds', seating: 'grounds', noise: 'grounds', dining: 'life', recreation: 'life', safety: 'safety' };
 /**
  * How much each driver counts inside its cause. Grounds is green space, how
  * clean it is and somewhere to sit, and they do not count the same: a bench
  * must not weigh as much as a quad.
+ *
+ * Noise joined Grounds with the stadium (DESIGN.md 29.5). Only a dorm inside
+ * a stadium's reach has it, so no other lot's Grounds changed.
  */
-export const PART_WEIGHTS: Record<DriverId, number> = { walk: 1, green: 0.5, clean: 0.3, seating: 0.2, dining: 1, recreation: 1, safety: 1 };
+export const PART_WEIGHTS: Record<DriverId, number> = { walk: 1, green: 0.5, clean: 0.3, seating: 0.2, noise: 0.5, dining: 1, recreation: 1, safety: 1 };
 /** The causes in the order they are listed. Every one counts the same. */
 export const CAUSE_WEIGHTS: Record<CauseId, number> = { walk: 1, grounds: 1, life: 1, safety: 1 };
 /** [T] How far one student's mood can sit from their spot's score. */
@@ -382,6 +395,8 @@ export const THOUGHTS = {
   cleanLow: ['So much trash by where we eat. A bin and somebody to empty it would fix it.', 'The bins near my dorm are overflowing again. It needs workers nearby.'],
   commuterCleanGood: ['The walk to my lecture hall is always clean.'],
   commuterCleanLow: ['So much trash on the way to class. It needs bins, and workers to empty them.'],
+  noiseGood: ['Game days are a distant hum from my dorm. Just right.'],
+  noiseLow: ['The stadium is so close my windows rattle on game days. Dorms further off would sleep better.', 'I live in the shadow of the stadium. Every home game is in my room with me.'],
   seatingGood: ['Love eating lunch out here. There is always somewhere to sit.', 'A bench in the sun between classes. Perfect.'],
   seatingLow: ['Nowhere to sit outside near my dorm. A few benches would do it.', 'I ate lunch standing up again. A picnic table nearby would help.'],
   commuterSeatingGood: ['There is always a bench free by my lecture hall.'],

@@ -1,4 +1,7 @@
 import { STARTER } from './config/map';
+import { plainWeek } from './calendar';
+import { newTerm, startFootball } from './newGame';
+import { seedStreams } from './rng';
 import { FIRST_INTAKE_TICK, TICKS_PER_YEAR } from './config/time';
 import { GROUNDS_QUIET_TICKS } from './config/grounds';
 import { LOCAL_SHARE, WORLD } from './config/town';
@@ -12,7 +15,7 @@ import type { GameState, MapState } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 export interface SaveFile {
   v: number;
@@ -192,7 +195,37 @@ export const MIGRATIONS: Record<number, Migration> = {
     (state.money as Record<string, unknown>).ratesDirty = true;
     return state;
   },
+  // Version 12 is the football and calendar layer.
+  11: (state) => upgradeToLayerOne(state),
 };
+
+/**
+ * Version 12. The clock keeps where the game year stands. A save from before
+ * has the plain week it always had: no founding day, no stretched summer and
+ * no anchor yet. The app chooses an anchor for it when it is next opened,
+ * which stretches its next summer and shortens nothing.
+ */
+function upgradeToLayerOne(state: Record<string, unknown>): Record<string, unknown> {
+  const clock = state.clock as Record<string, unknown>;
+  const tick = Number(clock.tick ?? 0);
+  if (typeof clock.week !== 'object' || clock.week === null) clock.week = plainWeek(tick);
+  if (clock.anchor === undefined) clock.anchor = null;
+  if (typeof clock.anchorMovedTick !== 'number') clock.anchorMovedTick = -1;
+  if (typeof state.term !== 'object' || state.term === null) state.term = newTerm(tick);
+  // Breaks and the summer now change what food and the stores earn.
+  (state.money as Record<string, unknown>).ratesDirty = true;
+  // Football and the national field. The football random stream starts where a new game's would, so the
+  // streams the save already has are untouched. Its first season is the next fall: nothing is played, paid
+  // or decided before then.
+  const rng = state.rng as Record<string, number>;
+  if (typeof rng.football !== 'number') rng.football = seedStreams(Number(state.seed ?? 0)).football;
+  if (typeof state.football !== 'object' || state.football === null) {
+    const year = tick < FIRST_INTAKE_TICK ? 0 : (clock.week as { year: number }).year;
+    startFootball(state as unknown as GameState, year + 1);
+  }
+  if (typeof state.decisions !== 'object' || state.decisions === null) state.decisions = { open: [], nextId: 1, past: [] };
+  return state;
+}
 
 export type LoadResult =
   | { ok: true; state: GameState; savedAt: number; migratedFrom: number | null; app: unknown }
@@ -229,7 +262,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

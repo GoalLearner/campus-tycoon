@@ -151,7 +151,9 @@ describe('advance: catch-up', () => {
 
   it('finishes every build that came due and keeps the timer list sorted', () => {
     const state = advance(busyGame(), T0, T0 + DAY).state;
-    expect(state.timers).toEqual([]);
+    // Nothing is left to build. The timers that remain are the season's kickoffs.
+    expect(state.timers.filter((timer) => timer.kind === 'buildDone')).toEqual([]);
+    for (let i = 1; i < state.timers.length; i++) expect(state.timers[i]!.due).toBeGreaterThanOrEqual(state.timers[i - 1]!.due);
     for (const b of buildings(state.map)) {
       expect(b.stage).toBe(2);
       expect(b.rebuild).toBeNull();

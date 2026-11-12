@@ -1,15 +1,18 @@
 import { currentDaylight } from './daylight';
-import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, type SoundMix } from './life';
+import { bellDue, heardMusic, heardSound, SILENT, soundMix, type SoundFacts, type SoundMix } from './life';
 
 /**
  * Sound (DESIGN.md section 33.6 and 33.9). An ambient soundscape that follows
  * what is on screen, soft sounds for taps, a bell on the hour of the player's
  * own clock, and light music.
  *
- * Every sound is made here, in code, from tones and filtered noise. The game
- * ships no recorded audio, so there is nothing to download, nothing to
- * license and nothing to credit. A recorded file can take the place of any
- * one of these later: each sound is one small function below.
+ * The soundscape, the bell, the busker and the music are made here, in code,
+ * from tones and filtered noise: there is no free ambience pack, and nobody
+ * can listen to choose recordings. The sounds for a tap, for something built
+ * and for something that could not be done, and three short tunes for a win,
+ * a loss and a reward, are Kenney's public-domain recordings (CREDITS.md).
+ * They are six small files in `public/assets/sound`. Until one has loaded, or
+ * if a phone cannot read it, the code-made sound it replaced plays instead.
  *
  * It is for show: nothing here is saved and nothing here changes a number.
  * How loud each part is comes from the plain rule `soundMix`. This file only
@@ -24,12 +27,13 @@ import { bellDue, musicVolume, SILENT, soundMix, soundVolume, type SoundFacts, t
 type Loop = keyof SoundMix;
 
 /** How loud each steady layer is at its fullest, before the player's volume. All of it sits well under the music and the taps. */
-const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0 };
+const LOOP_LEVEL: Record<Loop, number> = { crowd: 0.16, traffic: 0.22, birds: 0, crickets: 0, rain: 0.13, busker: 0, stadium: 0.2 };
 /**
- * The layers made from noise are off: a crowd's murmur, footsteps and traffic.
- * Under the music they sounded like static (the owner, 2026-11-12, the first
- * time anyone heard them). They come back when recorded sound replaces them.
- * Rain is not one of them: rain is noise, and it waits for the weather.
+ * The layers made from noise are off: a crowd's murmur, footsteps and traffic,
+ * and the stadium's crowd and its roar with them. Under the music they sounded
+ * like static (the owner, 2026-11-12, the first time anyone heard them). They
+ * come back when recorded sound replaces them. Rain is not one of them: rain
+ * is noise, and it waits for the weather.
  */
 const NOISE_AMBIENCE = false;
 /** The scheduler looks this far ahead, this often. */
@@ -40,6 +44,11 @@ const SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
 const ROOTS = [130.81, 110.0, 87.31, 98.0];
 const BEAT_S = 1.7;
 
+/** The recorded sounds, by what they are for, and how loud each plays before the player's volume. */
+const FILES = { tap: 0.16, built: 0.3, cannot: 0.3, win: 0.5, loss: 0.5, reward: 0.5 } as const;
+type FileName = keyof typeof FILES;
+export type Jingle = 'win' | 'loss' | 'reward';
+
 /** The hour on the player's own clock. The bell follows it whatever light the map is showing. */
 const clockHour = (): number => new Date().getHours();
 
@@ -48,6 +57,8 @@ class SoundEngine {
   private soundBus: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private meter: AnalyserNode | null = null;
+  /** The recorded sounds that have loaded. */
+  private files: Partial<Record<FileName, AudioBuffer>> = {};
   private loops: Partial<Record<Loop, GainNode>> = {};
   private noise: AudioBuffer | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -56,7 +67,7 @@ class SoundEngine {
   private lastHour: number | null = null;
   private hidden = false;
   /** When the next of each scattered sound is due, on the audio clock. */
-  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0, busk: 0 };
+  private next = { step: 0, bird: 0, cricket: 0, swoosh: 0, beat: 0, busk: 0, cheer: 0 };
   private beat = 0;
   private note = 2;
   private buskNote = 4;
@@ -105,9 +116,41 @@ class SoundEngine {
     this.loops.crowd = this.loop('bandpass', 650, 0.6);
     this.loops.traffic = this.loop('lowpass', 150, 0.4);
     this.loops.rain = this.loop('highpass', 1400, 0.3);
+    // A crowd a long way off: a broad murmur, lower than chatter close by.
+    this.loops.stadium = this.loop('bandpass', 420, 0.5);
     this.applyVolumes();
     this.lastHour = clockHour();
     this.wake();
+    this.loadFiles();
+  }
+
+  /** Fetch the six recorded sounds, once, after the first tap. A file that cannot be read is simply not used. */
+  private loadFiles(): void {
+    const ctx = this.ctx;
+    if (!ctx || typeof fetch !== 'function') return;
+    for (const name of Object.keys(FILES) as FileName[]) {
+      fetch(`./assets/sound/${name}.wav`)
+        .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error('missing'))))
+        .then((bytes) => ctx.decodeAudioData(bytes))
+        .then((buffer) => {
+          this.files[name] = buffer;
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  /** Play one recorded sound. False when it has not loaded, so the caller can play the code-made one. */
+  private playFile(name: FileName): boolean {
+    const ctx = this.ctx;
+    const buffer = this.files[name];
+    if (!ctx || !buffer || !this.soundBus) return false;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.value = FILES[name];
+    source.connect(gain).connect(this.soundBus);
+    source.start();
+    return true;
   }
 
   /** A steady layer: the noise through one filter, silent until the mix raises it. */
@@ -127,12 +170,12 @@ class SoundEngine {
     return gain;
   }
 
-  /** The player moved a volume. Zero on both stops everything. */
+  /** The player moved a volume, or muted or unmuted. Zero on both, or muted, stops everything. */
   applyVolumes(): void {
     if (!this.ctx || !this.soundBus || !this.musicBus) return;
     const now = this.ctx.currentTime;
-    this.soundBus.gain.setTargetAtTime(soundVolume(), now, 0.05);
-    this.musicBus.gain.setTargetAtTime(musicVolume() * 0.5, now, 0.05);
+    this.soundBus.gain.setTargetAtTime(heardSound(), now, 0.05);
+    this.musicBus.gain.setTargetAtTime(heardMusic() * 0.5, now, 0.05);
     this.wake();
   }
 
@@ -146,7 +189,7 @@ class SoundEngine {
   private wake(): void {
     const ctx = this.ctx;
     if (!ctx) return;
-    const silent = this.hidden || (soundVolume() <= 0 && musicVolume() <= 0);
+    const silent = this.hidden || (heardSound() <= 0 && heardMusic() <= 0);
     if (silent) {
       if (this.timer !== null) clearInterval(this.timer);
       this.timer = null;
@@ -157,7 +200,7 @@ class SoundEngine {
     if (this.timer === null) {
       // Nothing that was due while it slept is played late.
       const now = ctx.currentTime;
-      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5, busk: now + 0.5 };
+      this.next = { step: now + 0.3, bird: now + 1, cricket: now + 1, swoosh: now + 4, beat: now + 1.5, busk: now + 0.5, cheer: now + 2 };
       this.lastHour = clockHour();
       this.timer = setInterval(() => this.tick(), TICK_MS);
     }
@@ -190,9 +233,9 @@ class SoundEngine {
     const facts = this.facts;
     this.mix = facts ? soundMix({ ...facts, period: currentDaylight().period, hidden: this.hidden || facts.hidden }) : SILENT;
     const mix = this.mix;
-    for (const name of ['crowd', 'traffic', 'rain'] as const) {
-      // A crowd's murmur rises and falls a little by itself.
-      const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : 1;
+    for (const name of ['crowd', 'traffic', 'rain', 'stadium'] as const) {
+      // A crowd's murmur rises and falls a little by itself, and a stadium's swells.
+      const waver = name === 'crowd' ? 0.75 + Math.random() * 0.5 : name === 'stadium' ? 0.6 + Math.random() * 0.8 : 1;
       const level = name === 'rain' || NOISE_AMBIENCE ? LOOP_LEVEL[name] : 0;
       this.loops[name]?.gain.setTargetAtTime(mix[name] * level * waver, now, 0.5);
     }
@@ -213,11 +256,19 @@ class SoundEngine {
       this.swoosh(now, mix.traffic);
       this.next.swoosh = now + (2.5 + Math.random() * 5) / mix.traffic;
     }
+    // During a home game the band's drum is heard from the stadium: two low thumps, which are tones. The crowd's
+    // roar over it is noise, so it waits with the rest for a recording.
+    if (mix.stadium > 0.05 && now >= this.next.cheer) {
+      if (NOISE_AMBIENCE) this.puff('bandpass', 500, 1100, now, 1.6, 0.16 * mix.stadium);
+      this.tone(this.soundBus, 'sine', 110, 70, now + 0.1, 0.18, 0.1 * mix.stadium, 0.005);
+      this.tone(this.soundBus, 'sine', 110, 70, now + 0.5, 0.18, 0.1 * mix.stadium, 0.005);
+      this.next.cheer = now + 5 + Math.random() * 9;
+    }
     if (mix.busker > 0.03 && now >= this.next.busk) {
       this.busk(now, mix.busker);
       this.next.busk = now + [0.28, 0.28, 0.56, 0.84][Math.floor(Math.random() * 4)]!;
     }
-    if (musicVolume() > 0 && now >= this.next.beat) {
+    if (heardMusic() > 0 && now >= this.next.beat) {
       this.music(now);
       this.next.beat = now + BEAT_S;
     }
@@ -332,12 +383,24 @@ class SoundEngine {
   ui(kind: 'tap' | 'place' | 'error'): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running' || this.hidden) return;
+    if (this.playFile(kind === 'tap' ? 'tap' : kind === 'place' ? 'built' : 'cannot')) return;
     const at = ctx.currentTime + 0.005;
     if (kind === 'tap') this.tone(this.soundBus, 'sine', 720, 560, at, 0.07, 0.1, 0.004);
     else if (kind === 'place') {
       this.tone(this.soundBus, 'triangle', 392, 392, at, 0.16, 0.13, 0.006);
       this.tone(this.soundBus, 'triangle', 587.33, 587.33, at + 0.09, 0.22, 0.12, 0.006);
     } else this.tone(this.soundBus, 'triangle', 196, 164.81, at, 0.2, 0.12, 0.01);
+  }
+
+  /** A short tune for a result: a win, a loss, or something earned. */
+  jingle(kind: Jingle): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running' || this.hidden) return;
+    if (this.playFile(kind)) return;
+    // The code-made tune: three notes up for a win or a reward, three down for a loss.
+    const at = ctx.currentTime + 0.01;
+    const notes = kind === 'loss' ? [392, 329.63, 261.63] : kind === 'win' ? [261.63, 329.63, 392] : [329.63, 392, 523.25];
+    notes.forEach((pitch, n) => this.tone(this.soundBus, 'triangle', pitch, pitch, at + n * 0.14, 0.4, 0.12, 0.006));
   }
 }
 

@@ -7,6 +7,7 @@ import { foodTypesAt, tutoringLift } from './food';
 import { crowdedNear, waitMinutes } from './play';
 import {
   FAVOURITES,
+  ALL_NIGHTER_SHARE,
   ARCHETYPE_NAMES,
   CLASS_YEAR_NAMES,
   CLUB_MATCH,
@@ -55,7 +56,10 @@ import {
 import { hashInts } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
-import { approvalAt, partLevel, type Approval, type Cause } from './happiness';
+import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
+import { athleteShare, superfanShare } from './football';
+import { dayRead, seasonLine, type SeasonLine } from './season';
+import { STRESS_GPA, STRESS_HAPPINESS, STRESS_TILT } from '../config/season';
 import { townLiving } from './town';
 import { socialTables } from './grounds';
 import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
@@ -86,7 +90,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -111,14 +115,14 @@ function pickWeighted<T>(items: ReadonlyArray<readonly [T, number]>, at: number)
 
 /** 0 for a freshman to 3 for a senior, or null when no such student is enrolled now. */
 export function classYearOf(state: GameState, ref: StudentRef): number | null {
-  const classYear = calendarAt(state.clock.tick).year - ref.entryYear;
+  const classYear = calendarAt(state.clock).year - ref.entryYear;
   if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear > 3) return null;
   return ref.index < state.cohorts[classYear]! ? classYear : null;
 }
 
 /** Students to draw walkers from: up to `perClass` from each class year. */
 export function sampleStudents(state: GameState, perClass = 400): StudentRef[] {
-  const year = calendarAt(state.clock.tick).year;
+  const year = calendarAt(state.clock).year;
   const out: StudentRef[] = [];
   for (let classYear = 0; classYear < 4; classYear++) {
     const size = Math.min(perClass, state.cohorts[classYear]!);
@@ -181,6 +185,25 @@ export function studentLook(state: GameState, ref: StudentRef): number {
   return hashInts(state.seed, ref.entryYear, ref.index, SALT.look);
 }
 
+/**
+ * The figure a student is drawn as, among `crowd` looks. When the pack has
+ * athlete figures they are the looks from `athletes` up, and they are worn by
+ * the Varsity Athletes and by nobody else.
+ */
+export function studentFigure(state: GameState, ref: StudentRef, crowd: number, athletes: number | undefined): number {
+  const hash = studentLook(state, ref);
+  if (athletes === undefined || athletes <= 0 || athletes >= crowd) return hash % crowd;
+  return isVarsity(state, ref) ? athletes + (hash % (crowd - athletes)) : hash % athletes;
+}
+
+/**
+ * True for a Varsity Athlete: one of the roster. Always the same students,
+ * so the map can draw them in the pack's athlete figures and their cards agree.
+ */
+export function isVarsity(state: GameState, ref: StudentRef): boolean {
+  return roll(state.seed, ref, SALT.sport) < athleteShare(state);
+}
+
 // ------------------------------------------------------------ happiness --
 
 /** 4 is delighted, 0 is miserable. */
@@ -238,7 +261,7 @@ export function socialLife(state: GameState): number {
 
 /** Semesters since the game began: it steps at every fall and spring intake. */
 export function semesterOf(state: GameState): number {
-  const { year, tickInYear } = calendarAt(state.clock.tick);
+  const { year, tickInYear } = calendarAt(state.clock);
   return Math.max(0, (year - 1) * 2 + (tickInYear >= SPRING_INTAKE_TICK_IN_YEAR ? 1 : 0));
 }
 
@@ -318,6 +341,10 @@ export interface StudentCard {
   happiness: number;
   /** 4 is delighted, 0 is miserable. */
   mood: number;
+  /** Stress, 0 to 100: the campus's, as hard as this kind of student takes it. A small meter on the Happiness line. */
+  stress: number;
+  /** What the calendar or the sky is doing to their mood this week: "Finals week", "Thanksgiving break". null on an ordinary day. */
+  week: string | null;
   /** null only on a campus with no building for the student to be unhappy about. */
   reason: StudentReason | null;
 }
@@ -344,9 +371,16 @@ function clubOf(seed: number, ref: StudentRef, nature: ArchetypeId, group: strin
 
 /** The phase a student is in this year, laid over their lasting nature. */
 function archetypeNow(state: GameState, ref: StudentRef, classYear: number, nature: ArchetypeId, resident: boolean): ArchetypeId {
+  // Football's two: the roster, and the fans, who swell on a home game day and after a big win.
+  const sport = roll(state.seed, ref, SALT.sport);
+  const roster = athleteShare(state);
+  if (sport < roster) return 'athlete';
+  if (sport < roster + superfanShare(state)) return 'superfan';
+  // In finals week some of everyone is up all night. It passes with the exams.
+  if (dayRead(state.clock).kind === 'finals' && roll(state.seed, ref, SALT.finals) < ALL_NIGHTER_SHARE) return 'allNighter';
   const at = roll(state.seed, ref, SALT.phase);
   if (classYear === 0) {
-    const fall = calendarAt(state.clock.tick).phase === 'fall';
+    const fall = calendarAt(state.clock).phase === 'fall';
     const lost = fall ? LOST_SHARE.fall : LOST_SHARE.later;
     const homesick = resident ? (fall ? HOMESICK_SHARE.fall : HOMESICK_SHARE.later) : 0;
     if (at < lost) return 'lost';
@@ -501,11 +535,17 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   }
   let happiness = 50;
   let reason: StudentReason | null = null;
+  // What the calendar and the sky are doing to everyone this week. Some kinds of student take exams harder.
+  const week = seasonOnCards(state);
+  const tilt = STRESS_TILT[archetype] ?? 1;
+  const stress = Math.max(0, Math.min(100, Math.round(week.stress.score * tilt)));
+  let seasonal = 0;
+  for (const part of week.parts) seasonal += part.id === 'exams' ? Math.max(-STRESS_HAPPINESS, part.points * tilt) : part.points;
   if (spots.length > 0) {
     const approval = approvalOver(state, spots);
     const temperament = (roll(seed, ref, SALT.mood) * 2 - 1) * TEMPERAMENT_SPREAD;
     // The status nudges this one student. It is never offered as the reason: that stays something the player can change.
-    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + relationship.points)));
+    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + relationship.points + seasonal)));
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
@@ -518,7 +558,9 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     GPA_SPAN * teachingQuality(state) +
     (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
     (GPA_TILT[archetype] ?? 0) +
-    (GPA_BY_CLASS_YEAR[classYear] ?? 0);
+    (GPA_BY_CLASS_YEAR[classYear] ?? 0) -
+    // Exam Stress nudges grades down a little, and lifts when the exams end.
+    STRESS_GPA * (stress / 100);
   const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw)) * 10) / 10;
 
   return {
@@ -540,5 +582,14 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     happiness,
     mood: moodOf(happiness),
     reason,
+    stress,
+    week: week.parts.length > 0 ? week.parts.reduce((most, part) => (Math.abs(part.points) > Math.abs(most.points) ? part : most)).label : null,
   };
+}
+
+/** The campus's seasonal line, kept for the moment so a screen of cards does not work it out for each. */
+let cardWeek: { state: GameState; tick: number; line: SeasonLine } | null = null;
+function seasonOnCards(state: GameState): SeasonLine {
+  if (!cardWeek || cardWeek.state !== state || cardWeek.tick !== state.clock.tick) cardWeek = { state, tick: state.clock.tick, line: seasonLine(state, campusLevels(state)) };
+  return cardWeek.line;
 }

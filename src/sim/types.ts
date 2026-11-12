@@ -55,6 +55,8 @@ export type PlacedType =
   | 'table'
   | 'yard'
   | 'admin'
+  // The football layer: the plot of two cells by three that the stadium is built on.
+  | 'stadium'
   // Play stop 4b: eight more places to eat, and three Academics buildings.
   | 'truck'
   | 'convenience'
@@ -200,8 +202,19 @@ export interface MapState {
   walkMinutes: number[];
 }
 
-export type RngStream = 'growth' | 'intake' | 'names' | 'events';
+/** 'football' was added last, so the streams before it are what they always were. */
+export type RngStream = 'growth' | 'intake' | 'names' | 'events' | 'football';
 export type RngState = Record<RngStream, number>;
+
+/** Where the game year stands. See calendar.ts. */
+export interface Week {
+  /** The game year this is: 1 for the first. */
+  year: number;
+  /** The tick day 1 of this year begins: the fall anchor. In year 1 it is the first intake plus the founding day. */
+  start: number;
+  /** Ticks added to this year's summer by a shift of the anchor: 0 up to a day. */
+  extra: number;
+}
 
 export interface Clock {
   /** Whole ticks since the game was created. One tick is one real minute. */
@@ -213,6 +226,17 @@ export interface Clock {
   createdAt: number;
   /** Whole weeks dropped by the catch-up cap, over the life of the save. */
   weeksSkipped: number;
+  /** The game year in progress: which it is, when it began, and how far its summer is stretched. */
+  week: Week;
+  /**
+   * The anchor: the minute of the UTC day, 0 to 1439, at which each day of
+   * the week begins. It is two hours after the player's day usually starts.
+   * null when none has been chosen, on a game made without one: its week
+   * began fifteen minutes after it was made, at whatever hour that was.
+   */
+  anchor: number | null;
+  /** The tick the anchor was last moved, or -1 when it never has been. It can be moved again four weeks later. */
+  anchorMovedTick: number;
 }
 
 export interface Money {
@@ -238,7 +262,8 @@ export interface Money {
   phase: number;
 }
 
-export type TimerKind = 'buildDone';
+/** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage';
 
 export interface Timer {
   due: number;
@@ -328,6 +353,199 @@ export interface GameState {
   stats: Stats;
   incidents: Incidents;
   grounds: Grounds;
+  term: Term;
+  field: Field;
+  football: Football;
+  decisions: Decisions;
+}
+
+// ------------------------------------------------------------- football --
+
+/**
+ * One of the other 199 schools of the national field (DESIGN.md section 11).
+ * Made once from the seed, stored, and never made again. Short keys, because
+ * there are 199 of them in every save.
+ */
+export interface School {
+  name: string;
+  /** The team's nickname: "Herons". */
+  nick: string;
+  /** Academics: long-run pedigree and current rating, 0 to 100. */
+  ap: number;
+  ar: number;
+  /** Football: the same. */
+  fp: number;
+  fr: number;
+  /** A steady rise or fall under way, for academics and for football: the yearly step, and the years left. */
+  aa: number;
+  an: number;
+  fa: number;
+  fn: number;
+  /** This season's record: every game for a conference rival, one sampled record for the rest. */
+  w: number;
+  l: number;
+  /** One fixed offset for each stage of the student pipeline, made once, for grading the player against the field. */
+  off: number[];
+}
+
+export interface Field {
+  schools: School[];
+  /** The player's own academic standing: a slow reputation, and the rating and rank last published. */
+  reputation: number;
+  academic: number;
+  /** 1 is the best of the 200. 0 before the first rankings day. */
+  rank: number;
+  rankYear: number;
+  /** The school that climbed most in the last year's drift and the one that fell most, with how many places each moved. null before the first. */
+  moved: { up: number; upBy: number; down: number; downBy: number } | null;
+}
+
+export interface Coach {
+  name: string;
+  /** 0 to 100, on the field's scale. */
+  rating: number;
+  trait: 'recruiter' | 'tactician' | 'developer' | 'showman';
+  /** Pay for a year. */
+  pay: number;
+  /** The last game year the contract covers. */
+  until: number;
+}
+
+/** One game of the player's team. Rolled whole at kickoff and shown a quarter at a time. */
+export interface Game {
+  /** 0 to 9 in the regular season, 10 for the conference title game, 11 for a bowl, -1 for the scrimmage. */
+  slot: number;
+  /** "Homecoming", "Conference title game", a bowl's name, or ''. */
+  label: string;
+  /** The opponent: an index into the field's schools. -1 for the scrimmage. */
+  opp: number;
+  home: boolean;
+  kick: number;
+  /** Points by quarter, ours and theirs. Empty until kickoff. */
+  us: number[];
+  them: number[];
+  /** Through the gate, and the seats there were. 0 away from home. */
+  crowd: number;
+  seats: number;
+  /** The two ratings at kickoff, and the part of ours furthest behind theirs, for the recap. */
+  rating: number;
+  oppRating: number;
+  gap: string;
+  done: boolean;
+}
+
+/** A team's record in a season: all games, conference games, and games in its own division. */
+export interface Standing {
+  w: number;
+  l: number;
+  cw: number;
+  cl: number;
+  dw: number;
+  dl: number;
+}
+
+export interface SeasonState {
+  year: number;
+  games: Game[];
+  /** Records of the twelve conference teams, by team: the key is the school's index, and -1 is the player. */
+  table: Record<string, Standing>;
+  /** Results of the other games of a slot, rolled at kickoff and added to the table at the final whistle: winner, loser, 1 for a conference game, 1 for a division game. */
+  pending: Array<[number, number, number, number]>;
+  /** Slots finished, 0 to 10. */
+  played: number;
+  /** Who won the conference: a school's index, -1 for the player, null until it is decided. */
+  champion: number | null;
+  /** The bowl the player's team reached, or ''. */
+  bowl: string;
+  /** True once the season's last game is over and its summary has been written. */
+  closed: boolean;
+  /** The winning streak going into the next game. */
+  streak: number;
+}
+
+export interface Poll {
+  year: number;
+  /** "Preseason", "End of the regular season", "Final". */
+  label: string;
+  /** The top twenty-five: a school's index (-1 for the player), wins and losses. */
+  rows: Array<[number, number, number]>;
+  /** Where the player's team stands among the 200. */
+  mine: number;
+}
+
+export interface Stadium {
+  /** The plot on the map: an index into map.placed, or null when none has been placed. */
+  plot: number | null;
+  /** 0 is the rented field in town. 1 to 5 stand on the plot. */
+  tier: number;
+  /** The ticket price step, 0 to 4. */
+  price: number;
+  /** The highest tier earned by a season of near sell-outs. It stays earned until it is built. */
+  earned: number;
+  /** A tier under construction, and the tick it opens. */
+  work: { tier: number; done: number } | null;
+  /** This season's home crowds, as shares of the seats. */
+  gate: number[];
+  /** The average home crowd of the last season with home games, in people. It sets the yearly rate of ticket income. */
+  average: number;
+}
+
+export interface Football {
+  /** The first game year with a season. A save from before football starts at its next fall. */
+  firstYear: number;
+  nick: string;
+  /** The school's colour: an id from SCHOOL_COLOURS. */
+  colour: string;
+  conference: string;
+  /** The two divisions of six: school indexes, with -1 for the player, who is first in the first. */
+  divisions: [number[], number[]];
+  /** The rival: the school the last game of every season is against. */
+  rival: number;
+  coach: Coach;
+  /** Candidates offered while a coach decision is open. */
+  candidates: Coach[];
+  /** The last four signing classes, oldest first. */
+  classes: number[];
+  /** The pitch for the class being recruited. */
+  pitch: 'safe' | 'star';
+  season: SeasonState | null;
+  stadium: Stadium;
+  /** The TV and conference deal: what it pays a year, and the last game year it covers. 0 and 0 with none. */
+  tv: { perYear: number; until: number };
+  /** Athletic standing, 0 to 100. It follows results slowly, and lifts applications and the crowd. */
+  standing: number;
+  record: { w: number; l: number; seasons: number; titles: number; bowls: number; best: number };
+  poll: Poll | null;
+  /** How the last finished season went, in a line. */
+  last: { year: number; w: number; l: number; note: string } | null;
+  /** The tick of the last big home win, for the Superfans. 0 when there has been none. */
+  bigWin: number;
+}
+
+/** One choice the player is asked to make once a year (DESIGN.md 4.4). The inbox of the next layer shows these. */
+export interface Decision {
+  id: number;
+  kind: 'pitch' | 'coach' | 'stadium' | 'tv';
+  year: number;
+  title: string;
+  body: string;
+  opens: number;
+  closes: number;
+  options: Array<{ id: string; label: string; detail: string; cost: number }>;
+  /** The option that applies by itself when the window closes. */
+  fallback: string;
+  /** The advisor's pick, and who they are. */
+  advised: string;
+  advisor: string;
+  /** What the player picked. Some choices take effect at once, and the pitch on signing day. null until they pick. */
+  chosen: string | null;
+}
+
+export interface Decisions {
+  open: Decision[];
+  nextId: number;
+  /** How the last few were settled, newest last, for the list to show. */
+  past: Array<{ kind: Decision['kind']; year: number; title: string; outcome: string; byDefault: boolean; tick: number }>;
 }
 
 /** Litter, bins, workers and broken things. Keys are ids of placed things unless said otherwise. See DESIGN.md section 29. */
@@ -386,6 +604,31 @@ export interface Incidents {
   missed: number;
 }
 
+/**
+ * The little the academic year keeps (DESIGN.md 27): the semester's running
+ * Stress, the peak of the exam period in progress, and the year the first
+ * snow was last reported. Stress itself is worked out, never stored.
+ */
+export interface Term {
+  /** Stress added up tick by tick over the semester in progress. */
+  stressSum: number;
+  /** The tick that semester began, and the tick the sum was last brought up to. */
+  since: number;
+  lastTick: number;
+  /** Stress as it stood at that tick. */
+  lastStress: number;
+  /** The campus's part of Stress, read once a day: what Stress would be at the height of finals, out of 1. */
+  factor: number;
+  /** The highest Stress of the exam period in progress, its main cause, and the faculty's. 0 outside one. */
+  examPeak: number;
+  examCause: string;
+  facultyPeak: number;
+  /** The average Stress of the semester that last ended. */
+  lastAverage: number;
+  /** The game year the first snow was last reported in. */
+  snowYear: number;
+}
+
 export type LogKind =
   | 'built'
   | 'intake'
@@ -399,7 +642,16 @@ export type LogKind =
   | 'yearEnd'
   | 'costs'
   | 'grant'
-  | 'paused';
+  | 'paused'
+  // The football and calendar layer.
+  | 'calendar'
+  | 'exam'
+  | 'weather'
+  | 'anchor'
+  | 'game'
+  | 'football'
+  | 'decision'
+  | 'rankings';
 
 /** Something notable that happened. The away list is built from these. */
 export interface LogEntry {
@@ -408,6 +660,9 @@ export interface LogEntry {
   text: string;
   /** Numbers the UI may want without parsing the text. */
   data?: Record<string, number | string>;
+  /** The date in the game when it happened, as month * 100 + day, and the game year. Stamped by advance(), unless the line names its own. */
+  date?: number;
+  year?: number;
 }
 
 export interface AdvanceInfo {

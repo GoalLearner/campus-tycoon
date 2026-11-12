@@ -119,6 +119,8 @@ Section 4.9 lists every timer against this contract.
 
 ## 4. Time and calendar
 
+**Built on 2026-11-12 with football and the calendar.** Section 34 says what was built, and where it differs from what is written here.
+
 ### 4.1 The clock
 
 | Item | Value | Why |
@@ -783,6 +785,8 @@ Still open, and reported to the owner:
 
 ## 10. Athletics
 
+**Built on 2026-11-12 with football and the calendar.** Section 34 says what was built, and where it differs from what is written here.
+
 Athletics is half the fantasy, so it stays loud: game days visibly change the campus and the stadium is a long upgrade path.
 
 ### 10.1 The money model
@@ -845,6 +849,8 @@ At home games, crowds in school colors walk the paths to the stadium, tailgates 
 ---
 
 ## 11. The national field
+
+**Built on 2026-11-12 with football and the calendar.** Section 34 says what was built, and where it differs from what is written here.
 
 "Top 25" needs schools to be ranked against, and standing must be able to fall while the player stands still.
 
@@ -1466,6 +1472,7 @@ Defined precisely in section 19.
 - **Stand-ins:** Athletics funding fixed at full. Football lifts the single applicant pool. No crowds or band yet.
 - **Acceptance checks:** intakes and day games land in waking hours. A morning visit finds overnight results. A live game can be watched. A season of sell-outs earns a tier. Missing a weekend applies one-year defaults.
 - **Simulate must assert:** the favourite win rate; ten games per team per season and consistent standings; no annual window under 48 hours; the field's average does not drift; determinism still holds.
+- **Built 2026-11-12** as Stop B (section 34). 449 tests pass and the simulate script passes all 29 of its assertions, seven of them new. Not built, each with its reason in 34.2: the reading-days policy, the Board goal and commencement speaker, the Scorecard page and the grades on the Year-End report. The crowd walking to the stadium, the tailgates and the band are built, so "No crowds or band yet" no longer holds.
 
 ### Layer 2: Tiers and money levers
 
@@ -1682,6 +1689,8 @@ Every number below is expected to change. All live in `src/sim/config`.
 | Greek Row | Beds per stage, target share of enrollment | The table in 6.2; share to be set |
 | Simulate | Optimizer check-in interval | 2 hours |
 | Performance | 30 days of catch-up | Under one second on a desktop |
+| Calendar and Stress | Who is on campus in a break and in the summer term, what exams add, what a break and each kind of weather do to Happiness, the caps | `src/sim/config/season.ts`; the starting values are in 34.1 |
+| Football | Rating weights, the win curve, seats, tier costs and build times, ticket prices, what fans, a coach, staff and a TV deal are worth, noise by tier | `src/sim/config/football.ts`; the starting values are in 34.1 |
 
 ---
 
@@ -2229,6 +2238,14 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Move-in boxes, `scene.boxes` and `people.boxes` | The pack's crate with a parcel and its stack of boxes, stood by a dorm's door and beside a parent. Nobody carries one | Penzilla commission: a figure carrying a box |
 | Lit windows, `lit.housing.*` and `lit.academic.*` | Cut by the art build from each dorm's and lecture hall's own window glass and recoloured warm yellow, one picture for each wall. The game lays it over the building after dark and adds an orange glow. Hand-placed buildings (the library, the dining hall and the rest) have none | Keep, or lit versions drawn by the artist, and the same for the hand-placed buildings |
 | Ripples and sprinkler spray | Rings and dots made in code, as rain will be (33.3). The sprinkler has spray and no head | Penzilla commission: a sprinkler head. The ripples can stay |
+| Fans on a home game day | The ordinary student figures walking to the stadium, tinted in code with a softened school colour. A dark colour dulls their faces. Nobody wears a scarf or a jersey | Penzilla commission: a fan figure in a plain shirt that takes a colour cleanly |
+| The marching band, with `scene.drum` | Eight ordinary figures in two ranks on the practice lawn, tinted and stepping on the spot, with the Medieval pack's drum on the ground before each rank. Nobody holds an instrument | Penzilla commission: band figures with instruments |
+| Tailgate, `scene.parasol` and `scene.table` | The club table's parasol and table in a car park, with three tinted fans standing at it. No grill and no open car boot | Penzilla commission: a tailgate set |
+| Fans on the field after a big win | Twelve tinted figures jumping on the spot on the stadium's picture. No goalposts | The fan figure above |
+| The stadium plot while bare, and the practice lawn beside tiers one to three | The quad's mown lawn on each cell. No field lines and no goalposts | Penzilla commission: a practice field of 2 x 1, drawn with the stadium family |
+| A stadium tier going up, `lot.site` | The building-site tile of a zoned lot, on the two cells where the new part will stand | Keep |
+| Rain and snow | Streaks and flakes made in code, as 33.3 allows, with a faint grey over the whole campus in rain and a faint whiteness in snow. The ground never turns white, and nobody carries an umbrella or wears a coat | Keep the particles. Penzilla commission: umbrellas and coats, and snowy ground if wanted |
+| The mascot | Nothing. The packs have no mascot, so none is shown | Penzilla commission, with the team's nickname decided first |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
 
@@ -2247,6 +2264,8 @@ Any sprite assembled or rendered from now on is added to this table in the same 
 ## 27. Stress
 
 Asked for by the owner on 2026-11-11 as an addition to the calendar. It ships with the calendar in layer 1. Nothing here is built.
+
+**Built on 2026-11-12 with football and the calendar.** Section 34 says what was built, and where it differs from what is written here. The reading-days policy is not built (34.2).
 
 ### 27.1 Decisions
 
@@ -2304,6 +2323,8 @@ The owner accepted the proposal on all five points on 2026-11-11, unless he says
 Asked for by the owner on 2026-11-11, for the football and calendar layer. Both are simple and mostly visual. Nothing here is built.
 
 One hook is ready for it, built with Life and sound on 2026-11-12 (33.9): the map has a `setWeather` of clear, rain or snow. Rain already clears the lawns of scenes, stops the sprinklers, moves the trees more and is heard. The weather itself, its picture and its place in the calendar are still to build.
+
+**Built on 2026-11-12 with football and the calendar.** Section 34 says what was built, and where it differs from what is written here. Weather has rain and snow on screen, and no umbrellas, coats or wet paths (34.2).
 
 ### 28.1 Time of day
 
@@ -3374,6 +3395,8 @@ For this run of three stops the owner set a rule: where a choice is his, the bui
 
 Everything leaves through one limiter. Measured in the screenshot browser at the starting volumes: the loudest moment of a busy afternoon is 0.11 of full scale, and of a rainy night 0.14.
 
+**Changed with football and the calendar (section 34).** A tap, something built and something that could not be done are now Kenney's public-domain recordings (`public/assets/sound`), with the tones above as the fallback if a file does not load. Three of Kenney's short tunes mark a win, a loss and something earned. The crowd's murmur, footsteps and traffic are off (33.6), and the stadium's crowd with them. During a home game the band's drum is heard from the stadium: two low tones. Rain is heard for the first time, because the weather is built. The Menu has a Mute button above the two volumes.
+
 **Measured.** On this PC, in the screenshot browser at 390 by 844 with sound on. It is a PC and not a phone.
 
 | View | Crowd | People walking | Work in a frame |
@@ -3399,3 +3422,128 @@ A frame at 60 a second has 16.7 ms. Sound on or off made no difference that coul
 | A ring of friends stands among the quad's trees | A quad of two cells by two has a tree in each cell. The ring stands where the four cells meet |
 | Corners and waiting at crossings were checked from still frames | They cannot be judged from a still. They want a look in play |
 | Scenes do not check each other's ground | A club table and a food line could share a lawn on a crowded campus |
+
+---
+
+## 34. Football and the calendar, as built
+
+Built on 2026-11-12 as Stop B of the owner's run of three, on the branch `play-stop-b-football`. It is layer 1 of the build plan (section 18). Sections 4, 10, 11, 27 and 28 are the design. This section says what was built, each decision made for the owner with its alternative, how the balance moved and what is rough. `?demo=football&at=live` shows it, with `at` one of gameday, live, season, rivalry, finals, break, decisions and summer.
+
+Save version 12. A save from before is given a field of schools, a team and a plain calendar, and plays its first season the next fall.
+
+### 34.1 What was built
+
+| Part | What it is | Where |
+|---|---|---|
+| The anchored week | The clock keeps the game year in progress: which year it is, the tick its first day began, and how far its summer is stretched. A new game is given an anchor. The first class still moves in after fifteen minutes, a founding day of up to a day runs to the first anchor, and every day of the week begins there | `src/sim/calendar.ts`, `clock.week` |
+| Moving the anchor | Setup asks when the player's day starts, and the Menu can change it. A move stretches this year's summer by up to a day so the next fall begins on the new hour. Nothing is shortened, and a decision that closes at the fall anchor stays open for the longer summer. It can be moved again four weeks later | the `anchor` action |
+| The events of the year | Every holiday, break, exam week and first day of classes in the calendar's data leaves a line as it begins. Breaks and exams leave another as they end. Each line carries its date in the game | `src/sim/systems/season.ts` |
+| The away list by date | The calendar, football, decisions and rankings are grouped under their dates, oldest first. Anything older than a real week is told in the few lines marked to keep: a season's record, a title, a default that applied | `datedDays` in `src/sim/digest.ts` |
+| Stress | Worked out from the date and the campus whenever it is asked for, by the formula of 27.1. It is never stored. A row on the Happiness panel, a line on a student's card, and a report in the away list as each exam period ends, with its peak, its main cause, what would have eased it, and the faculty's own peak | `stressRead`, `stepSeason` |
+| What Stress costs | Up to ten points of Happiness above a Stress of 30. Up to two tenths of a grade point on a card. A semester whose average Stress ran high loses up to a hundredth more of its students | `config/season.ts` |
+| Breaks | A quarter of students are on campus in a break and 15% in the summer term. Happiness is four points higher while a break lasts and one point lower on the first day back. Food places and campus stores earn by who is there. The paths and lawns are quiet and most windows are dark | `dayRead`, `budget` |
+| Weather | Spells of three real hours, picked from the seed and the spell's number by the odds of the season: fair, sunny, rain, snow in winter, a heat wave in summer. A sunny spell adds a point and a half of Happiness, rain and snow take two, heat takes three. Food or a library in reach softens a dip by up to six tenths. The first snow of each year gets a line | `weatherAt`, `seasonLine` |
+| The national field | 199 other schools with invented names and nicknames, made once from a new random stream and stored in the save. Each has a pedigree and a rating, for academics and for football. Every year each rating is pulled toward its pedigree, knocked about, and carried by any rise or fall it is in. The field's average is held at 50 | `src/sim/systems/field.ts` |
+| Rankings day | At the day-5 anchor the school's academic rating is worked out from the inputs that exist (graduation, class size, reputation, retention, selectivity) and placed among the 200. The line says who moved and, if the school fell while standing still, who passed it | `rankingsDay` |
+| The conference | Eleven rivals from the middle of the field, in two divisions of six, under an invented name. The player's school is first in the first division, and its rival is beside it | `newFootball` |
+| The season | Ten games for every team on the calendar's Saturdays: an opener against a school from outside the conference, five division games, four crossovers that turn with the years, and the rivalry last, at home in odd years. Then the title game on the first Saturday of December, a bowl by where the poll puts the team, and the national title game on January 18 | `src/sim/systems/football.ts` |
+| A game | Rolled whole at kickoff from the football stream: the winner by the two ratings and the home edge, then the score by quarter. It is shown a quarter at a time for forty minutes. After a loss the recap names the biggest gap. A date in the game is shorter than a game, so the result is told under the Saturday it kicked off | `kickoff`, `finalWhistle`, `liveGame` |
+| The team | A rating from the coach, the roster (the last four signing classes), the stadium tier and funding, which is full until the slider exists. A coach has a rating and one of four traits | `teamRating` |
+| The annual decisions | The recruiting pitch (opens on day 3 for 48 hours, to signing day). The coach's contract in its last year, and the stadium when a tier is earned (day 5, 72 hours). The TV deal when it runs out (day 6, 48 hours). Each has an advisor's pick and a default that applies by itself | `src/sim/systems/decisions.ts` |
+| The stadium | A plot of two cells by three. A rented field of 3,000 seats before tier one, then 8,000, 16,000, 28,000, 45,000 and 70,000. A season of home games at 95% full earns the next tier. Building is a choice each spring, takes 24 to 60 hours and is paid from cash. The ticket price has five steps | `Stadium`, `fanDemand` |
+| Noise | A dorm within 2 to 6 cells of a stadium, by tier, has noise as part of Grounds. Happiness keeps its four causes | `noiseAt`, `approvalAt` |
+| Football's money | Tickets, with what the crowd spends, and the TV deal are income. Coaches and athletics staff are on the payroll. Athletics operations are under Other. The stadium's upkeep and utilities are with the buildings. The Money panel adds football's own profit and loss, with the applicants it draws and what they pay | `footballBooks`, `footballMoney` |
+| Game day | From an hour before a home kickoff most walkers head for the stadium in the school's colour, half as many again are out, tailgates set up in the car parks, the band forms up on the practice lawn, and food places earn two and a half times as much. After a big home win fans are on the field for five minutes. Before the first stadium the game is at a rented field in town, so the tailgates are the only sign on the map | `Walkers`, `Scenes`, `CampusScene` |
+| The personalities | Superfan: 2% of students with no athletic standing, up to 10% at the top, doubled on a home game day and for six hours after a big win. Varsity Athlete: the roster of ninety, always the same students, drawn in the pack's athlete figures. All-Nighter: 18% of students in finals week | `archetypeNow` |
+| The screens | Two chips on the top bar. The Football page: Season, Standings, Poll, Team and Rankings. The Decisions list. Stress and the week's line on the Happiness panel. Football's lines on the Money panel. The day's start and the school's colour in setup and the Menu | `src/ui/footballUi.ts`, `footballPanels.ts` |
+| Sound | Kenney's recordings for a tap, something built and something that could not be done, and three short tunes for a win, a loss and something earned. During a home game the band's drum is heard from the stadium. A Mute button | `src/app/sound.ts`, `public/assets/sound` |
+
+### 34.2 Decisions made for the owner
+
+Each was the build's to take under his rule for this run (33.9). None costs money, none is beyond undoing, and none changes something he explicitly decided.
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Kenney's audio | **Six files**, picked by measured length, level and pitch because nobody can listen here: the quietest short click for a tap, a low "drop" for something built, the softest error, and three plucked tunes that climb for a win and a reward and fall for a loss. The bell, the busker and the music stay made in code | Use more of the 238 files once someone has listened and chosen. Or keep everything made in code |
+| The Mute button | **One button above the two volumes in the Menu.** It silences sound and music together, leaves the two volumes as they were, is remembered between visits, and reads "Muted" while it is on | A speaker button on the top bar, one tap from the map. Not chosen because the top bar is already full on a phone |
+| The stadium's sound | **The band's drum only**: two low tones every few seconds while a home game is on. The crowd's murmur and roar were made from noise, which the owner heard as static (33.6), so they are off with the other noise-made layers | A recorded crowd. None of Kenney's three packs has one, so it waits for him to listen and choose |
+| A save with no anchor | **Given one the first time it is opened**: a day that starts at 7 AM, so the campus day begins at 9 AM. Its next summer runs longer to get there. The player is told once and can change it in the Menu | Ask with a question the first time it is opened |
+| The founding day's date | **Move-in week, August 12 to 18**, spread evenly over the founding day. The semester starts on its own date at the first anchor | Stretch the first fall instead. That would move every Saturday of the first season out of waking hours |
+| When clocks change | **The anchor is kept in UTC**, so after a daylight-saving change the campus day begins an hour off until the player moves it. The first move is free and it recharges every four weeks | Follow the phone's time zone by itself. The simulation would then depend on the device |
+| How fast Stress eases | **At once**: it is worked out from the date. A semester's average counts against retention from 20 to 36, since a whole semester averages far below its exam peak | A Stress that lingers after exams. The owner ruled out spirals |
+| Reading days before finals | **Not built.** With no Instruction funding yet it would cost nothing, so it would be the right answer every time | A switch now, given its cost in layer 2 |
+| What breaks do to money | **Food places and campus stores earn by who is on campus.** Tuition and room fees are untouched | Leave all income alone and make breaks for show only |
+| Weather on screen | **Rain and snow as light particles that keep their size at any zoom. Rain dulls the day a little, and snow lays a faint whiteness over the campus.** A sunny spell and a heat wave change Happiness and the word on the top bar, and have no picture. No umbrellas, coats or wet paths: there is no art for them | Wait for art before showing any weather |
+| Board goal and commencement speaker | **Not built.** Section 4.4 lists them with the annual decisions, and they belong to layers 5 and 6 | Flavour-only versions now |
+| Changing a choice | **The pitch can be changed until signing day. Every other choice takes effect at once and is done**, so an early yes to the stadium buys building time | Let every choice be changed until its window closes |
+| The first TV deal | **Offered the spring a stadium is going up or standing.** None at a rented field | A small deal from the first year |
+| The stadium plot | **A new campus has it from the first day**, north-east of the first buildings where no dorm hears it, and it can be moved while it is bare. **A campus that already exists places it from the Build menu**, under Athletics, free | Let the game pick a spot on an existing campus by itself |
+| School colours | **Eight to choose from**, asked at setup and changed in the Menu. Navy for a campus that already exists. The team's nickname comes from the seed | Ask for the nickname too |
+| Fans in the school's colour | **The ordinary figures, tinted.** On the art-to-fix list | Recolour clothes in the art build for a fixed list of colours, which grows the atlas. Or a commission |
+| The band, the mascot, the tailgates | **Eight figures in two ranks marking time, with two drums on the ground. A parasol, a table and three fans in a car park.** No mascot and no grill: there is no art | Leave the band out until it is drawn |
+| Game day before the first stadium | **Tailgates only.** The game is at a rented field in town (10.2), so nobody walks to the bare plot | Fans walking to the edge of the map toward town |
+| The field storming | **After any big home win**: the rivalry, an upset, or a win by seventeen or more. Fans on the field for five minutes. Nothing is damaged | Tie it to thin Campus Safety coverage with a repair bill, as 10.4 sketches. It needs a rule for the damage |
+| When noise counts | **All the time**, for dorms in reach of a stadium. A player who looks in once a day would never see a penalty that lasted forty minutes | Only while a home game is on |
+| What football costs a small school | **Every cost follows the size of the school**: the coach is paid a share of the contract below 1,000 students, staff are one to 400 students, operations and the field's rent are so much a student, and a stadium sets a floor under each. Fixed costs by tier came to 27% of the income of a campus of 60 | Fixed costs by tier, as first written |
+| Ticket income | **A yearly rate**, from the average crowd of the last season with home games, like every other line | A lump sum at each home game. The Money panel could not show it as a rate |
+| The poll | **Published three times a year**: before the season, at the end of the regular season, and after the bowls | Every week |
+| The other 188 schools | **One record a season each**, drawn from its rating. Only the conference plays its games one by one | Play every game in the country. It would cost catch-up time and nobody would see it |
+| The top bar | **Two chips**, one for football and one for open decisions. The academic rank is on the Rankings tab | A chip each for academic and athletic prestige, as 24.5 sketches. The top bar has no room |
+| The Year-End report | **Its line is as it was.** Grades against the field are on the Rankings tab, for Happiness and class size | Grades on the Year-End line |
+| Game-day visitors | **Nothing new.** Every game is on a Saturday of the game's calendar, so the weekend's tour groups and boosters are already out. The coach is not a figure on the map | A coach figure, when one is drawn |
+| The test players' summer cushion | **The test players keep 0.6% of a year's spending in hand**, as a person would. Football's early cost had the once-a-day test player $6K to $21K short on one quiet summer day | Leave them spending every dollar and let the grant cover it |
+| The tests' time limit | **Twenty seconds a test.** Two long tests take four seconds alone and passed the five-second limit when all ran together | Shorten the two tests |
+
+### 34.3 How the balance moved
+
+Measured by `npm run simulate`, the same script and seed, on main before this stop (`f05c3f0`) and on this branch.
+
+| Check | Before | After |
+|---|---|---|
+| Mid-game margin, casual and once-a-day players, years 3 to 8 | 14.8% to 17.1% | 13.2% to 17.5% |
+| Payroll as a share of spending on a mature campus (casual, once a day, optimizer) | 58%, 59%, 54% | 57%, 58%, 55% |
+| Payroll as a share of the casual player's income at the end | 49% | 46% |
+| A campus nobody touches, 90 students | Nets $111K a year and keeps 13 of every $100 | Nets $123K a year and keeps 14 |
+| Years to 500, 1,000, 2,000, 4,000 and 8,000 students | 2, 3, 4, 6, 11 | The same |
+| The once-a-day player at year 5 | 3,427 students, nets $5.8M, keeps 16 of every $100 | 3,374 students, nets $4.8M, keeps 13 |
+| The once-a-day player at year 10 | 7,474 students, nets $15M, keeps 18 | 7,510 students, nets $16M, keeps 18 |
+| The once-a-day player at year 20 | 8,884 students, nets $21M, keeps 21, endowment $167M | 8,970 students, nets $25M, keeps 23, endowment $156M |
+| State grants | $0 for every test player | $0 for the absent, casual and once-a-day players. $14K, once, for the player who spends every dollar |
+| A mature save from before real costs, after they phase in | Spends $72M a year and keeps 20 of every $100 | Spends $74M a year and keeps 18 |
+| 30 days of catch-up on the largest test campus | 0.23 s | 0.42 to 0.49 s over four runs |
+| 30 days of catch-up on a campus nobody tends | 0.26 s | 0.41 to 0.54 s |
+
+In words. The early years are thinner and the late years fatter. A young programme costs more than it earns: a coach, staff and a rented field against small crowds, and breaks take some food and store income. Once a stadium and a TV deal arrive it earns. The pace to every campus size did not move. Both margin checks and the payroll check pass. Catch-up takes nearly twice as long, because Stress and the weather are read every minute of the time away. It is still inside the one-second limit, with about half of it left.
+
+### 34.4 Tests and checks
+
+`tests/calendar.test.ts` (24 tests) and `tests/football.test.ts` (26) are new, with two more in `tests/life.test.ts` for the Mute button. `npm run simulate` has seven new checks:
+
+| Check | Result |
+|---|---|
+| A clear favourite wins about three games in four | 74.1% of 4,000 games with a ten-point edge |
+| Every team plays ten games every season and the standings add up | 63 of 63 finished seasons |
+| No annual decision is open for less than 48 hours | 188 decisions, the shortest open 48 hours |
+| The once-a-day player misses no decision | 53 decisions, none opened and closed between two visits |
+| The field's average does not drift | 0.00 points from 50 after 20 years, academics and football |
+| Stress and weather never spiral and stay inside their caps | Stress at most 10 on a break, 43 outside exam weeks and 74 at its highest. The season's line on Happiness between -7.7 and +5.5 points |
+| The once-a-day player gets an exam report for every exam period | 20 each for the four exam periods over 20 years |
+
+One advance equals many still holds, with a football season inside the span.
+
+### 34.5 What is rough
+
+| Rough | Why |
+|---|---|
+| Nobody has heard the six recordings, the band's drum or the rain | The recordings were picked by measurement. The drum and the rain are made in code |
+| A home game has no crowd sound | A crowd made in code is noise, which the owner heard as static. It needs a recording he has listened to |
+| The anchor and waking hours are untested on a phone | A kickoff's time on the Football page is the phone's own clock. Nobody has lived a week with it |
+| Fans, the band and the storm are tinted figures | No figure wears a scarf, carries an instrument or raises an arm. A dark colour dulls faces |
+| The crowd walking to the stadium needs a path to the plot | A plot with no path beside it has no gate. The plot of a new campus stands apart until the player lays a path to it |
+| Game day and the weather were checked from still frames | They cannot be judged from a still. They want a look in play |
+| Early seasons are losing seasons | A new programme rates about 43 in a conference around 48. On three test campuses it won three or four games in ten over its first six seasons, and went winless twice. A coach, signing classes and a stadium lift it. Every early loss recap names the stadium |
+| The player who spends every dollar took one $14K state grant | Football's early cost on a quiet summer day. A player who keeps anything in hand does not see it |
+| Catch-up is slower | Up to 0.54 s for thirty days, from about 0.25 s. The limit is one second |
+| After a daylight-saving change the day begins an hour off | The anchor is kept in UTC. The Menu moves it |
+| A decision's advisor is always the Athletic Director | The other advisors arrive with the inbox |
+| No Scorecard page, no grades on the Year-End line | The Rankings tab is the first version of both |

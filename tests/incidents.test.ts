@@ -146,11 +146,12 @@ describe('incidents', () => {
 
   it('never drag happiness down without end on a campus with no coverage', () => {
     let state = busy();
-    const first = campusHappiness(state).score;
+    // The four causes alone: the exam dip of the calendar is a separate line and is not what this is about.
+    const first = campusHappiness(state).base;
     let lowest = first;
     for (let hour = 0; hour < 5 * 24; hour += 3) {
       state = run(state, 180).state;
-      lowest = Math.min(lowest, campusHappiness(state).score);
+      lowest = Math.min(lowest, campusHappiness(state).base);
     }
     // It dips while incidents are open and comes back. It cannot fall by more than the safety cause holds.
     expect(lowest).toBeGreaterThan(first - 12);

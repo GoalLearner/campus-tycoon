@@ -2,20 +2,29 @@ import { VARIANTS_PER_STAGE } from './config/buildings';
 import { STARTER } from './config/map';
 import { WORLD } from './config/town';
 import { START_CASH, PHASE_STEPS } from './config/money';
-import { TICK_MS } from './config/time';
+import { FIRST_INTAKE_TICK, TICK_MS, TICKS_PER_DAY } from './config/time';
+import { minutesToAnchor } from './calendar';
 import { hashInts, seedStreams } from './rng';
 import { SAVE_VERSION } from './save';
 import { recomputeDesirability } from './systems/desirability';
 import { addPlaced } from './systems/placed';
 import { recomputeRates } from './systems/money';
 import { buildTown, startingParcels } from './systems/town';
-import type { Cell, GameState, MapState, Zone } from './types';
+import { makeField } from './systems/field';
+import { newFootball, scheduleScrimmage } from './systems/football';
+import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
 export interface NewGameOptions {
   seed: number;
   name: string;
   /** Real time, in epoch ms, at which the game is created. */
   now: number;
+  /**
+   * The anchor: the minute of the UTC day at which each day of the week
+   * begins, two hours after the player's day usually starts. Left out, the
+   * week begins with the first class and there is no founding day.
+   */
+  anchor?: number;
 }
 
 /** The whole map, bare: the starting land, the fields for sale, and the town laid in down its east side. */
@@ -82,12 +91,29 @@ function buildStarterCampus(map: MapState, seed: number): void {
   for (const p of STARTER.placed) addPlaced(map, p.type, p.x, p.y);
 }
 
+/** The academic year's small record, starting at a tick. */
+export function newTerm(tick: number): Term {
+  return { stressSum: 0, since: tick, lastTick: tick, lastStress: 0, factor: 0.6, examPeak: 0, examCause: 'season', facultyPeak: 0, lastAverage: 0, snowYear: 0 };
+}
+
+/**
+ * Give a campus its national field and its football programme. `firstYear`
+ * is the first game year with a season: 1 for a new campus, and the year
+ * after this one for a save from before football.
+ */
+export function startFootball(state: GameState, firstYear: number): void {
+  state.field = makeField(state.rng, state.school.name);
+  state.football = newFootball(state.rng, state.field, firstYear);
+}
+
 /** A brand-new campus, fifteen minutes before its first class moves in. */
 export function newGame(opts: NewGameOptions): GameState {
   const map = emptyMap(WORLD.width, WORLD.height, opts.seed >>> 0);
   buildStarterCampus(map, opts.seed);
   recomputeDesirability(map);
 
+  const anchor = opts.anchor === undefined ? null : ((Math.round(opts.anchor) % TICKS_PER_DAY) + TICKS_PER_DAY) % TICKS_PER_DAY;
+  const founding = anchor === null ? 0 : minutesToAnchor(opts.now + FIRST_INTAKE_TICK * TICK_MS, anchor);
   const state: GameState = {
     version: SAVE_VERSION,
     seed: opts.seed >>> 0,
@@ -98,6 +124,10 @@ export function newGame(opts: NewGameOptions): GameState {
       lastSimulatedAt: opts.now,
       createdAt: opts.now,
       weeksSkipped: 0,
+      // The first class moves in after fifteen minutes. The founding day runs from then to the first anchor.
+      week: { year: 1, start: FIRST_INTAKE_TICK + founding, extra: 0 },
+      anchor,
+      anchorMovedTick: -1,
     },
     school: { name: opts.name },
     money: {
@@ -123,7 +153,16 @@ export function newGame(opts: NewGameOptions): GameState {
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
     grounds: { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
+    term: newTerm(0),
+    // Filled in just below, from the football random stream.
+    field: { schools: [], reputation: 0, academic: 0, rank: 0, rankYear: 0, moved: null },
+    football: null as unknown as Football,
+    decisions: { open: [], nextId: 1, past: [] },
   };
+  startFootball(state, 1);
+  // A new campus has its stadium plot from the first day.
+  state.football.stadium.plot = state.map.placed.find((placed) => placed?.type === 'stadium')?.id ?? null;
+  scheduleScrimmage(state);
   recomputeRates(state);
   return state;
 }

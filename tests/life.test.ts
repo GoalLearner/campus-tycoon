@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DayPeriod } from '../src/app/daylight';
@@ -8,6 +8,10 @@ import {
   CROWD_FULL_AT,
   DEFAULT_MUSIC_VOLUME,
   DEFAULT_SOUND_VOLUME,
+  heardMusic,
+  heardSound,
+  muted,
+  setMuted,
   musicVolume,
   scenesFor,
   seasonOf,
@@ -313,6 +317,41 @@ describe('the soundscape follows what is on screen', () => {
   });
 });
 
+describe('the Mute button', () => {
+  it('silences sound and music together, leaves both volumes as they were set, and gives them back', () => {
+    setSoundVolume(0.65);
+    setMusicVolume(0.3);
+    expect(muted()).toBe(false);
+    expect(heardSound()).toBe(0.65);
+    expect(heardMusic()).toBe(0.3);
+    setMuted(true);
+    expect(muted()).toBe(true);
+    expect(heardSound()).toBe(0);
+    expect(heardMusic()).toBe(0);
+    // The stored volumes are untouched, and a slider moved while muted is kept too.
+    expect(soundVolume()).toBe(0.65);
+    expect(musicVolume()).toBe(0.3);
+    setMusicVolume(0.5);
+    expect(heardMusic()).toBe(0);
+    setMuted(false);
+    expect(heardSound()).toBe(0.65);
+    expect(heardMusic()).toBe(0.5);
+    setSoundVolume(DEFAULT_SOUND_VOLUME);
+    setMusicVolume(DEFAULT_MUSIC_VOLUME);
+  });
+
+  it('is kept on the device, apart from the saved game, and the engine plays what is heard', () => {
+    const rules = readFileSync(join(__dirname, '..', 'src/app/life.ts'), 'utf8');
+    expect(rules).toContain("'campus-tycoon.muted'");
+    const engine = readFileSync(join(__dirname, '..', 'src/app/sound.ts'), 'utf8');
+    expect(engine).toContain('heardSound()');
+    expect(engine).toContain('heardMusic()');
+    // The engine never reads the raw volumes, so it cannot play while muted.
+    expect(engine.includes('soundVolume()')).toBe(false);
+    expect(engine.includes('musicVolume()')).toBe(false);
+  });
+});
+
 describe('life and sound are for show', () => {
   const root = join(__dirname, '..');
   const read = (file: string): string => readFileSync(join(root, file), 'utf8');
@@ -329,7 +368,7 @@ describe('life and sound are for show', () => {
     }
     expect(serialize(state, 0)).toBe(before);
     // Nothing was added to the saved game for this stop.
-    expect(SAVE_VERSION).toBe(11);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(11);
     for (const word of ['weather', 'sound', 'music', 'windows', 'sprinkler']) expect(before.includes(`"${word}"`), `the save holds "${word}"`).toBe(false);
   });
 
@@ -374,7 +413,10 @@ describe('life and sound are for show', () => {
     expect(engine).toContain('clearInterval(this.timer)');
     expect(engine).toContain("document.addEventListener('visibilitychange'");
     expect(engine).toContain("window.addEventListener('pagehide'");
-    // The game ships no recorded audio: nothing is fetched or decoded.
-    for (const word of ['fetch(', 'decodeAudioData', '.mp3', '.ogg', '.wav', 'new Audio(']) expect(engine.includes(word), `sound.ts uses ${word}`).toBe(false);
+    // The only recorded audio is the six small files in public/assets/sound, fetched after the first tap.
+    expect(engine.match(/fetch\(/g)?.length).toBe(1);
+    expect(engine).toContain('./assets/sound/');
+    for (const word of ['.mp3', '.ogg', 'new Audio(', 'http']) expect(engine.includes(word), `sound.ts uses ${word}`).toBe(false);
+    for (const name of ['tap', 'built', 'cannot', 'win', 'loss', 'reward']) expect(existsSync(join(root, 'public/assets/sound', `${name}.wav`)), `${name}.wav ships`).toBe(true);
   });
 });

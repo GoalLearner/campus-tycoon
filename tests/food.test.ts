@@ -425,8 +425,8 @@ describe('the three Academics buildings', () => {
       expect(now.tutored).toBe(true);
       expect(now.gpa).toBeGreaterThanOrEqual(was.gpa);
       expect(now.gpa).toBeLessThanOrEqual(4);
-      // Three tenths better, unless they were already near the top of the scale.
-      if (was.gpa <= 4 - TUTORING_GPA) expect(now.gpa).toBeCloseTo(was.gpa + TUTORING_GPA, 6);
+      // Three tenths better, unless they were already near the top of the scale, or held up by its floor of 1.5.
+      if (was.gpa <= 4 - TUTORING_GPA && was.gpa > 1.5) expect(now.gpa).toBeCloseTo(was.gpa + TUTORING_GPA, 6);
       if (now.gpa > was.gpa) lifted += 1;
       // The card is otherwise the same student.
       expect({ ...now, gpa: 0, tutored: false }).toEqual({ ...was, gpa: 0, tutored: false });
