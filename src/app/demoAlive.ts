@@ -62,6 +62,61 @@ export function playCampus(students = 1500): GameState {
 }
 
 /**
+ * Food and Academics on one screen, for play stop 4b. `?demo=food`.
+ *
+ * - West, by the dorms: a burger grill, a taco stand and a pizza place in a
+ *   row, with picnic tables and bins in front of them. With the dining hall
+ *   that is four kinds of food in reach of every dorm.
+ * - East, by the lecture halls: the food court, the computer lab, the study
+ *   center and the makerspace along a walk of their own.
+ * - A smoothie bar beside a court, a convenience store, and a food truck.
+ */
+export function foodCampus(students = 1200): GameState {
+  const now = clock.now();
+  const started = now - 50 * 60_000;
+  let state = newGame({ seed: 20261111, name: 'Larkspur University', now: started });
+  state.money.cash = 9_000_000;
+  state = paint(state, 'housing', [[8, 13], [9, 13], [13, 13]]);
+  // Three kinds of food in a row south of the north walk, and somewhere to eat it.
+  state = place(state, 'burger', 5, 15);
+  state = place(state, 'taco', 8, 15);
+  state = place(state, 'pizza', 11, 15);
+  // Tables between them, so the ground in front of each stays clear for its line.
+  state = paint(state, 'table', [[7, 15], [10, 15], [13, 15], [7, 16]]);
+  state = paint(state, 'bench', [[4, 15], [10, 16]]);
+  state = paint(state, 'bin', [[4, 16], [13, 16]]);
+  // The lecture halls get a walk of their own, with the food court and the three Academics buildings on it.
+  state = paint(state, 'path', [[18, 18], ...rowBetween([18, 19], [28, 19])]);
+  state = paint(state, 'academic', [[22, 18]]);
+  state = place(state, 'foodcourt', 19, 20);
+  state = place(state, 'computerLab', 22, 20);
+  state = place(state, 'studyCenter', 25, 20);
+  state = place(state, 'makerspace', 23, 18);
+  state = paint(state, 'table', [[21, 20], [21, 21]]);
+  state = paint(state, 'bin', [[18, 20], [24, 20]]);
+  // A smoothie bar beside a court, a convenience store by the dorms, and a food truck by the far lecture halls.
+  state = place(state, 'courts', 6, 11);
+  state = place(state, 'smoothie', 8, 12);
+  state = place(state, 'convenience', 13, 12);
+  state = place(state, 'truck', 26, 18);
+  state = paint(state, 'bin', [[8, 11], [14, 12], [27, 18]]);
+  // A Facilities Yard with hands enough for all of it.
+  state = place(state, 'yard', 15, 11);
+  const yard = state.map.placed.find((placed) => placed?.type === 'yard');
+  if (yard) {
+    const hired = applyAction(state, { type: 'staff', yard: yard.id, workers: 4 });
+    if (hired.ok) state = hired.state;
+  }
+  state = advance(state, started, now).state;
+  if (students > 0) {
+    state = structuredClone(state);
+    const year = Math.round(students / 4);
+    state.cohorts = [students - year * 3, year, year, year];
+  }
+  return state;
+}
+
+/**
  * A campus the town cannot get into: no walk to College Avenue and no parking.
  * `?demo=unjoined`. The map says so at its edge.
  */

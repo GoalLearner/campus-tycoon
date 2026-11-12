@@ -4,7 +4,7 @@ import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { setCrowdSetting } from './crowd';
-import { playCampus, unjoinedCampus } from './demoAlive';
+import { foodCampus, playCampus, unjoinedCampus } from './demoAlive';
 import { session } from './session';
 import { store } from './store';
 
@@ -490,6 +490,8 @@ export function installDevTools(): void {
   } else if (params.get('demo') === 'play') {
     // &students=800 sets how many are enrolled, to show a quieter campus or a more crowded one.
     store.adopt(playCampus(Number(params.get('students') ?? 1500)), { ephemeral: true });
+  } else if (params.get('demo') === 'food') {
+    store.adopt(foodCampus(Number(params.get('students') ?? 1200)), { ephemeral: true });
   } else if (params.get('demo') === 'unjoined') {
     store.adopt(unjoinedCampus(), { ephemeral: true });
   } else if (params.get('demo') === 'mature') {

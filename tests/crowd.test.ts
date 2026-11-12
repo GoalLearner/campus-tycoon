@@ -8,9 +8,13 @@ import {
   FPS_DOWN_AFTER,
   FPS_UP_AFTER,
   FrameBudget,
+  MEAL_NOW,
+  mealNow,
   MIN_IN_VIEW,
   PLAY_NOW,
   playingNow,
+  QUEUE_SHOWN,
+  queueNow,
   stepOf,
   walkersWanted,
   type CrowdFacts,
@@ -133,6 +137,38 @@ describe('who is at a recreation building right now', () => {
     expect(playingNow(13, 8, 'morning')).toEqual({ playing: 5, waiting: 0 });
     expect(playingNow(0, 8, 'afternoon')).toEqual({ playing: 0, waiting: 0 });
     expect(playingNow(-3, 8, 'afternoon')).toEqual({ playing: 0, waiting: 0 });
+  });
+});
+
+describe('when each kind of food is busy, for show', () => {
+  const busiest = (kind: string): DayPeriod[] => PERIODS.filter((period) => MEAL_NOW[kind]![period] === Math.max(...PERIODS.map((p) => MEAL_NOW[kind]![p])));
+
+  it('follows the design: coffee in the morning, burgers and tacos at lunch, pizza in the evening, the diner at night', () => {
+    expect(busiest('coffee')).toEqual(['morning']);
+    expect(busiest('burger')).toEqual(['afternoon']);
+    expect(busiest('taco')).toEqual(['afternoon']);
+    expect(busiest('pizza')).toEqual(['evening']);
+    expect(MEAL_NOW.pizza!.night).toBeGreaterThan(MEAL_NOW.pizza!.afternoon);
+    expect(busiest('diner')).toEqual(['night']);
+    expect(busiest('convenience')).toEqual(['night']);
+    // Every kind of food the Build menu sells has its day.
+    for (const kind of Object.keys(PLACED).filter((type) => PLACED[type as keyof typeof PLACED].family === 'dining')) {
+      expect(MEAL_NOW[kind], kind).toBeDefined();
+      expect(Math.max(...PERIODS.map((period) => mealNow(kind, period))), kind).toBe(1);
+    }
+  });
+
+  it('draws a line that follows the students a place has and the hour, and never a long one', () => {
+    expect(queueNow(0, 'pizza', 'evening')).toBe(0);
+    expect(queueNow(120, 'taco', 'afternoon')).toBe(3);
+    expect(queueNow(120, 'taco', 'night')).toBe(0);
+    expect(queueNow(120, 'pizza', 'evening')).toBe(3);
+    expect(queueNow(120, 'pizza', 'morning')).toBe(0);
+    // A small stall has somebody at it when its food is busy.
+    expect(queueNow(8, 'coffee', 'morning')).toBe(1);
+    expect(queueNow(8, 'coffee', 'night')).toBe(0);
+    for (const period of PERIODS) expect(queueNow(100_000, 'dining', period)).toBeLessThanOrEqual(QUEUE_SHOWN);
+    expect(queueNow(100_000, 'dining', 'afternoon')).toBe(QUEUE_SHOWN);
   });
 });
 

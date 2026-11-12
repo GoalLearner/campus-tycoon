@@ -245,6 +245,26 @@ sprites['build.pool'] = {'layers': grass_under(2, 1) + [on_grid(PUBLIC + 'Pool.p
 FIELD = [[186, 662], [676, 384], [704, 372], [740, 366], [900, 452], [900, 530], [992, 590], [524, 868]]
 sprites['build.field'] = {'layers': grass_under(2, 2) + [on_grid(PUBLIC + 'Stadium_FootballSocker.png', 2, 2, cut=FIELD)]}
 sprites['build.coffee'] = {'layers': [on_grid(PUBLIC + 'StreetStand_Coffee.png'), on_grid(PUBLIC + 'StreetStand_Coffee_Front.png')]}
+# Play stop 4b: eight more places to eat and three Academics buildings. Every one is the pack's own picture,
+# used as drawn. The stand-ins are listed in DESIGN.md section 26.
+for key, name in (('burger', 'Burger'), ('diner', 'Breakfast'), ('pizza', 'Pizza'), ('taco', 'Mexican')):
+    sprites[f'build.{key}'] = {'layers': [on_grid(f'{FOOD}Restaurant_{name}.png', 2, 1), on_grid(f'{FOOD}Restaurant_{name}_Front.png', 2, 1)]}
+# The food court is the pack's open-air market of stalls and umbrellas.
+sprites['build.foodcourt'] = {'layers': [on_grid(SHOPS + 'Groceries_Market.png', 2, 2)] + [on_grid(f'{SHOPS}Groceries_Market_Front{n}.png', 2, 2) for n in (1, 2, 3)]}
+# The smoothie and juice bar is the ice-cream stand, and the convenience store the newspaper kiosk.
+sprites['build.smoothie'] = {'layers': [on_grid(PUBLIC + 'StreetStand_Icecream.png'), on_grid(PUBLIC + 'StreetStand_Icecream_Front.png')]}
+sprites['build.convenience'] = {'layers': [on_grid(PUBLIC + 'StreetStand_NewsPaper.png'), on_grid(PUBLIC + 'StreetStand_NewsPaper_Front.png')]}
+# The food truck is the box truck with an apple on its side, parked on its cell.
+sprites['build.truck'] = {'layers': [standing(CITY + 'Vehicles/Truck_Groceries_Front.png', 0.5, 0.78)]}
+# The computer lab is the electrician's workshop, and the makerspace the tool shop.
+sprites['build.computerlab'] = {'layers': [on_grid(SHOPS + 'Workplace_Electrician_OneFloor.png', 2, 1)]}
+sprites['build.makerspace'] = {'layers': [on_grid(SHOPS + 'Shop_Tools_OneFloor.png', 2, 1), on_grid(SHOPS + 'Shop_Tools_Front.png', 2, 1)]}
+# The study center is the plain roofed shop with the Medieval pack's open book on its two blank signs.
+BOOK = OLD + 'Decor/Book.png'
+sprites['build.studycenter'] = {'layers': [
+    on_grid(SHOPS + 'Shop_Empty_OneFloorRoofed.png', 2, 1, paste=[{'file': BOOK, 'box': [668, 480, 748, 560]}, {'file': BOOK, 'box': [436, 444, 492, 492]}]),
+    on_grid(SHOPS + 'Shop_Empty_Front.png', 2, 1),
+]}
 sprites['build.admin'] = {'layers': [on_grid(PUBLIC + 'Public_Townhall.png', 2, 2)]}
 
 # ------------------------------------------------------------------ icons --
@@ -316,6 +336,8 @@ recipe = {
     'people': people,
     'footprints': {
         'build.library': [2, 2], 'build.gym': [2, 1], 'build.dining': [2, 1], 'build.store': [2, 1], 'build.yard': [2, 1],
+        'build.burger': [2, 1], 'build.diner': [2, 1], 'build.pizza': [2, 1], 'build.taco': [2, 1], 'build.foodcourt': [2, 2],
+        'build.computerlab': [2, 1], 'build.makerspace': [2, 1], 'build.studycenter': [2, 1],
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
         'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.pool': [2, 1], 'build.field': [2, 2], 'build.admin': [2, 2], 'pond.large': [3, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
@@ -328,7 +350,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away.',
         },
         {
             'name': 'Football stadium (3D model)',

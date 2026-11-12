@@ -331,7 +331,7 @@ class Builder:
         return sprites
 
 
-def pack(sprites, size):
+def pack(sprites, width, height):
     """Shelf packing, tallest first. Returns {name: (x, y)} or None if it does not fit."""
     order = sorted(sprites, key=lambda n: (-sprites[n][0].height, n))
     x = y = PADDING
@@ -339,11 +339,11 @@ def pack(sprites, size):
     placed = {}
     for name in order:
         im = sprites[name][0]
-        if x + im.width + PADDING > size:
+        if x + im.width + PADDING > width:
             x = PADDING
             y += shelf + PADDING
             shelf = 0
-        if y + im.height + PADDING > size:
+        if y + im.height + PADDING > height:
             return None
         placed[name] = (x, y)
         x += im.width + PADDING
@@ -400,16 +400,18 @@ def main():
     if people:
         sprites.update(builder.people(people))
 
-    # A power-of-two atlas, so the browser can build smaller copies for zoomed-out views.
-    size = 256
+    # A power-of-two atlas, so the browser can build smaller copies for zoomed-out views. It may be twice
+    # as wide as it is tall: a phone holds the whole picture in memory, so it is never larger than it must be.
     placed = None
-    while placed is None:
-        size *= 2
-        if size > 4096:
-            raise SystemExit('The sprites do not fit in a 4096 atlas.')
-        placed = pack(sprites, size)
+    width = height = 0
+    for width, height in ((512, 512), (1024, 512), (1024, 1024), (2048, 1024), (2048, 2048), (4096, 2048), (4096, 4096)):
+        placed = pack(sprites, width, height)
+        if placed is not None:
+            break
+    if placed is None:
+        raise SystemExit('The sprites do not fit in a 4096 atlas.')
 
-    atlas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    atlas = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     frames = {}
     manifest_sprites = {}
     for key, (x, y) in placed.items():
@@ -436,7 +438,7 @@ def main():
     with open(os.path.join(out_dir, 'atlas.json'), 'w', encoding='utf-8', newline='\n') as f:
         json.dump({'frames': dict(sorted(frames.items())),
                    'meta': {'image': 'atlas.png', 'format': 'RGBA8888',
-                            'size': {'w': size, 'h': size}, 'scale': '1'}}, f, indent=1)
+                            'size': {'w': width, 'h': height}, 'scale': '1'}}, f, indent=1)
         f.write('\n')
     manifest = {
         'version': 1,
@@ -460,7 +462,7 @@ def main():
         json.dump(manifest, f, indent=1)
         f.write('\n')
     write_credits()
-    print(f'{len(sprites)} sprites packed into a {size} x {size} atlas in {os.path.relpath(out_dir, ROOT)}.')
+    print(f'{len(sprites)} sprites packed into a {width} x {height} atlas in {os.path.relpath(out_dir, ROOT)}.')
 
 
 if __name__ == '__main__':
