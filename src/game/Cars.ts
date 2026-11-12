@@ -44,6 +44,8 @@ const TRAFFIC: Record<DayPeriod, { busy: number; inbound: number }> = {
   evening: { busy: 1.2, inbound: 0.2 },
   night: { busy: 0.25, inbound: 0.3 },
 };
+/** How busy the busiest part of the day is: the rush the caps are sized for. */
+const RUSH_BUSY = 1.4;
 /** The town's own cars on its streets in each part of the day. */
 const TOWN_CARS: Record<DayPeriod, number> = { morning: 4, afternoon: 2, evening: 4, night: 1 };
 /** The share of driveways with a car standing in them. People are home at night and out by day. */
@@ -498,7 +500,9 @@ export class Cars {
     const scale = CROWD_STEPS[this.step]!.traffic;
     const students =
       this.drivers > 0 && this.parks.length > 0 && this.studentHomes.length > 0
-        ? Phaser.Math.Clamp(Math.round((this.drivers / DRIVERS_PER_CAR) * TRAFFIC[period].busy * scale), 1, Math.round(MAX_STUDENT_CARS * scale))
+        ? // The most on the road follows the time of day too: the full number at the morning rush, and fewer outside it,
+          // so a large campus is not at its rush all day.
+          Phaser.Math.Clamp(Math.round((this.drivers / DRIVERS_PER_CAR) * TRAFFIC[period].busy * scale), 1, Math.max(1, Math.round((MAX_STUDENT_CARS * scale * TRAFFIC[period].busy) / RUSH_BUSY)))
         : 0;
     const town = this.drives.length + this.ends.length >= 2 ? Math.max(1, Math.round(TOWN_CARS[period] * scale)) : 0;
 

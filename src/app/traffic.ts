@@ -23,12 +23,17 @@
 
 export type Heading = 'px' | 'nx' | 'py' | 'ny';
 
-/** Cars keep to one side of the road. Offsets from the middle of a cell, in cells. */
+/**
+ * Cars keep to one side of the road. Offsets from the middle of a cell, in
+ * cells. A little wider apart than they were (0.16 and 0.14), so two cars
+ * passing in opposite lanes overlap less. The pack's cars are wider than half
+ * its road, so they still brush.
+ */
 export const LANE: Record<Heading, { x: number; y: number }> = {
-  px: { x: 0, y: 0.16 },
-  nx: { x: 0, y: -0.16 },
-  py: { x: -0.14, y: 0 },
-  ny: { x: 0.14, y: 0 },
+  px: { x: 0, y: 0.21 },
+  nx: { x: 0, y: -0.21 },
+  py: { x: -0.2, y: 0 },
+  ny: { x: 0.2, y: 0 },
 };
 
 /** Which way each heading points, in cells. */
@@ -58,8 +63,8 @@ export const MERGE_ROOM = 1.05;
 /** A car that cannot move for this long gives up and leaves the road. It is a safety net, and the tests expect it never to be used. */
 export const GIVE_UP_MS = 60_000;
 /** Where people stand on the avenue: its campus-side walk, and its far kerb, as shares of the cell from its campus edge. */
-export const KERB_NEAR = 0.14;
-export const KERB_FAR = 0.9;
+export const KERB_NEAR = 0.09;
+export const KERB_FAR = 0.92;
 
 const NO_LANE = { x: 0, y: 0 };
 const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [

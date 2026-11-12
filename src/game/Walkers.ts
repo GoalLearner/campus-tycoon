@@ -77,7 +77,7 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 /** Townspeople out on the streets in each part of the day. */
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
 /** How far from the middle of a street its sidewalk runs. */
-const SIDEWALK = 0.36;
+const SIDEWALK = 0.41;
 /** Which sidewalk of its street a house is on: -1 above the street on the map, 1 below. */
 const sideOf = (house: Stop): number => (house.row !== undefined && house.cell.y < house.row ? -1 : 1);
 /** A tour ambles. */
