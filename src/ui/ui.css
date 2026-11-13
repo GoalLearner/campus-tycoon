@@ -68,8 +68,15 @@ button {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.1);
   padding: 10px 12px;
+  /* A thumb's width: 44 points is the least a tap target should be (DESIGN.md 47). */
+  min-height: 44px;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+select,
+input {
+  min-height: 44px;
 }
 
 button:active {
@@ -774,6 +781,11 @@ button.happy {
   border-top: 1px solid var(--line);
   font-size: 14px;
   text-align: left;
+}
+
+/* A row that is a button (what a student says) is a thumb tall, as every button (DESIGN.md 47). */
+button.student-row {
+  min-height: 44px;
 }
 
 .student-label {
@@ -1655,7 +1667,7 @@ button.money {
 
 .order-dismiss {
   align-self: flex-end;
-  min-height: 30px;
+  min-height: 44px;
   padding: 3px 12px;
   border-radius: 15px;
   font-size: 12.5px;
@@ -1803,7 +1815,7 @@ button.money {
 }
 
 .finish-go {
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px 12px;
   border-radius: 17px;
   font-size: 13px;
@@ -1844,7 +1856,7 @@ button.money {
 }
 
 .pick select {
-  min-height: 36px;
+  min-height: 44px;
   max-width: 55%;
   padding: 4px 8px;
   border: 1px solid var(--line);
@@ -1893,7 +1905,7 @@ button.money {
 
 .fb-tab {
   flex: 1 1 auto;
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 17px;
@@ -2209,7 +2221,7 @@ button.money {
 }
 
 .paper-more {
-  min-height: 40px;
+  min-height: 44px;
   margin-top: 2px;
   padding: 6px 10px;
   border: 1px solid #2b2619;
@@ -2419,7 +2431,7 @@ button.students {
 .policy-switch {
   flex: 0 0 auto;
   min-width: 58px;
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px 12px;
   border-radius: 17px;
   font-size: 13px;
@@ -2528,7 +2540,7 @@ button.students {
 .bench-keeps select {
   width: 100%;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   padding: 4px 8px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -2688,4 +2700,94 @@ button.students {
   font-size: 13px;
   text-align: center;
   opacity: 0.7;
+}
+
+/* A claimed order waits in place, faded, while its medal rises (DESIGN.md 47). */
+.order.claimed {
+  opacity: 0.4;
+  transition: opacity 0.3s ease-out;
+}
+
+/* The gift card as the paper opens with it: one line, the button, and the week as small marks (DESIGN.md 47). */
+.gift-card.compact {
+  gap: 6px;
+  padding: 8px 10px;
+}
+.gift-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gift-compact-text {
+  flex: 1;
+  min-width: 0;
+}
+.gift-card.compact .gift-title {
+  font-size: 15px;
+}
+.gift-card.compact .gift-line {
+  margin: 0;
+  font-size: 13px;
+}
+.gift-take-compact {
+  min-width: 76px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+.gift-marks {
+  display: flex;
+  gap: 4px;
+}
+.gift-mark {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+.gift-mark.filled {
+  background: var(--good, #7be495);
+}
+.gift-mark.next {
+  background: var(--accent);
+}
+.gift-mark.best:not(.filled):not(.next) {
+  background: rgba(255, 210, 74, 0.45);
+}
+
+/*
+ * Tap targets of at least 44 points (DESIGN.md 47). The floating buttons and the tools are drawn that tall. The top
+ * bar's small chips keep their look and get a tap area 44 points tall around them, inside the space between rows.
+ */
+.build-fab,
+.turn-fab,
+.collect-fab {
+  min-height: 44px;
+}
+.toolbar {
+  left: calc(var(--safe-left) + 6px);
+  right: calc(var(--safe-right) + 6px);
+  gap: 3px;
+  padding: 4px;
+}
+.tool {
+  min-width: 44px;
+  min-height: 44px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+.hud-chip.show,
+.menu-button,
+.students {
+  position: relative;
+}
+.hud-chip.show::before,
+.menu-button::before,
+.students::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: 44px;
+  transform: translate(-50%, -50%);
 }

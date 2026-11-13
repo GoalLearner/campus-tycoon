@@ -85,7 +85,11 @@ const PLAYING: Record<string, string> = {
 function indoorsText(doing: string): string {
   const playing = doing.startsWith('toPlace:') ? PLAYING[doing.slice(8)] : undefined;
   if (playing) return playing;
-  return INDOORS_BY_PERIOD[currentDaylight().period]?.[doing] ?? INDOORS[doing] ?? 'Out of sight';
+  const inside = INDOORS_BY_PERIOD[currentDaylight().period]?.[doing] ?? INDOORS[doing];
+  if (inside) return inside;
+  // Gone from view without going indoors anywhere the card knows: what they were last seen doing (DESIGN.md 47).
+  const seen = doingText(doing);
+  return `Last seen ${seen.charAt(0).toLowerCase()}${seen.slice(1)}`;
 }
 
 const MOOD_NAMES = ['Miserable', 'Unhappy', 'Fine', 'Happy', 'Delighted'];

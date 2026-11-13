@@ -437,8 +437,12 @@ export function momentPays(state: GameState, kind: MomentKind): MomentReward[] {
     .filter((pay) => pay.amount > 0);
 }
 
-export function momentPayWords(pays: readonly MomentReward[]): string {
-  const parts = pays.map((pay) => (pay.kind === 'xp' ? `${pay.amount.toLocaleString('en-US')} experience` : pay.kind === 'seals' ? `${pay.amount} Gold ${pay.amount === 1 ? 'Seal' : 'Seals'}` : `a grant of ${dollars(pay.amount)}`));
+/**
+ * What a moment pays, in words. `upTo` for one still to come: its grant comes out of the year's allowance, which may
+ * be smaller by then (DESIGN.md 47).
+ */
+export function momentPayWords(pays: readonly MomentReward[], upTo = false): string {
+  const parts = pays.map((pay) => (pay.kind === 'xp' ? `${pay.amount.toLocaleString('en-US')} experience` : pay.kind === 'seals' ? `${pay.amount} Gold ${pay.amount === 1 ? 'Seal' : 'Seals'}` : `a grant of ${upTo ? 'up to ' : ''}${dollars(pay.amount)}`));
   return parts.length <= 1 ? (parts[0] ?? 'nothing') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
@@ -575,7 +579,7 @@ export function momentViews(state: GameState, left: (ticks: number) => string): 
       else ask = `Graduate ${moment.target.toLocaleString('en-US')} seniors`;
       const when =
         moment.met === true ? 'Done' : moment.met === false ? 'It went by. There is always next year' : moment.at > state.clock.tick ? `In ${left(moment.at - state.clock.tick)}` : 'Today';
-      return { id: moment.id, name: spec.name, ask, when, done: moment.met === true, missed: moment.met === false, pays: momentPayWords(momentPays(state, moment.kind)) };
+      return { id: moment.id, name: spec.name, ask, when, done: moment.met === true, missed: moment.met === false, pays: momentPayWords(momentPays(state, moment.kind), moment.met !== true) };
     });
 }
 

@@ -6183,7 +6183,7 @@ For show only, like the walkers (13.8): nothing in `src/sim` reads it, nothing i
 | Small motion | A figure breathes, nods to music while playing, and moves a little while on a call. The open book on the desk turns a page every few seconds. Notes drift up from the speaker or the lute being played. No dialogue. Redrawn twelve times a second while open, and not at all when closed | `roomView.ts` |
 | Asleep | No bed: his packs have none, and nobody in the people pack can lie down. A sleeping student is shown honestly as a dark room with the lights out and nobody standing in it, and the line says they are asleep | |
 | Studying at the desk | Nobody in the people pack can sit, so a student studying stands at the desk, as students at a bench already do (32) | |
-| Town houses | Not built: a student who lives off campus has no Look inside. Next, with house walls and a door from his packs | |
+| Town houses | Not built: a student who lives off campus has no Look inside. Next, with house walls and a door from his packs. Built in 47, in the dorm room's own walls | |
 | Turns and phones | The room is its own picture, so it is the same at every turn of the view. The sheet fits a phone 375 wide and wider | `.room-sheet` in `src/ui/ui.css` |
 | The dev page | `&room=3` opens the room of the third dorm student the seed offers; `&roommate=1` only students with a roommate; `&roomdo=music` only those doing that at the hour shown; `&lookin=1` their card as if they had just walked home; `&card=home,follow` follows a student heading home | `src/app/devtools.ts` |
 
@@ -6224,5 +6224,63 @@ For show only, like the walkers (13.8): nothing in `src/sim` reads it, nothing i
 | There is no bed | His packs have none. The room shows no bed at any hour |
 | The walls are a stable's | Timber and plaster, honest pack art, but drawn for a stable. A commissioned dorm room would read better |
 | The icons are flat | The Sport and Games icons are drawn face on, not in the map's angle |
-| Town houses have no room yet | Next |
+| Town houses have no room yet | Next. Built in 47 |
 | Never run on a phone | Checked in the app's browser at 375 wide, in pictures and in tests on this PC |
+
+## 47. A polish pass for the phone
+
+On 2026-11-13, before the owner tests the night's work on his iPhone, asked for by the main session: the next step of 46, the rough lists of today's sections, every screen at three phone sizes, and a slow phone. No new feature, no tutorial and no instructions, as his standing preference is (35, 36). Nothing in the game's numbers moved: the one line in `src/sim` that changed is words on the orders board, and the long run's tables are the same.
+
+### 47.1 What was fixed
+
+| Fixed | As it is now | Where |
+|---|---|---|
+| A student living in town had no room to look into (46.4) | Look inside appears when a town student walks home, as for a dorm. The room is the same three plans; it has no roommate, and says the street they live on | `canLookInside`, `roomFor` in `src/app/room.ts`, `roomView.ts` |
+| The claim's medal rose over the next order (42.19) | A claimed order stays where it was, faded, while its medal rises, and the list closes up after | `settle` in `openOrders`, `src/ui/ui.ts`; `.order.claimed` |
+| A card read "Out of sight" when its figure walked off (42.23) | It says what they were last seen doing: "Last seen heading to the Dining hall". Only a card opened on someone the map never showed still says "Out of sight" | `indoorsText` in `src/ui/studentCard.ts` |
+| The paper said what was waiting in every edition (40.6) | Once in 20 hours while the same buildings wait, and at once when the list changes, remembered on the phone, as nothing in the save may hold it | `waitingToShow` in `src/ui/deskPanels.ts` |
+| A line could stand behind its building, out of sight (43.4) | A line is drawn only on a side that faces the viewer, or on a court's own strip of lawn. Where only the far sides are open, nobody stands in line | `wanted` in `src/game/Activity.ts` |
+| The gift card pushed the paper's headline down (44.4) | On the paper it is one line and a Take button, with the week as seven small marks; the headline stays on the first screen. The whole card is on the Level page | `compactCard` in `src/ui/rhythmUi.ts` |
+| A moment's grant could be smaller than the board said (44.4) | The board says "a grant of up to" the sum until the moment comes, as the grant comes out of what is left of the year's allowance | `momentPayWords` in `src/sim/systems/rhythm.ts` |
+| Tap targets under 44 points | Every button, picker and text box is 44 points tall at least. The seven tools are 44 by 44 or wider at 375 wide. The top bar's small chips keep their look and take a tap 44 points tall around them | `button`, `select`, `input`, `.tool`, the floating buttons, `.hud-chip`, `.menu-button`, `.students` in `src/ui/ui.css` |
+| The dev page's Inbox and Policies options opened the wrong page, and `&crowd` or `&pin` alone did nothing | They find the chip by its word, and `&crowd` and `&pin` work alone. Not seen by a player | `src/app/devtools.ts` |
+
+**Checked and already right.** With an iPhone's insets put in the page (47 points at the top, 34 at the bottom), nothing on any screen is under the notch or the home indicator: the top bar, the tools, Build, Turn, Collect all, the cards and every panel keep inside them. At 375 by 667, 390 by 844 and 430 by 932, on 17 screens each, no text is clipped, nothing is off the screen, every panel scrolls to its last line and its Close, and the founding screen and the first paper fit on the smallest.
+
+### 47.2 A slow phone
+
+Headless Edge on this PC drawing with its graphics card, the page's own work slowed by Chrome's CPU throttling, the model campus at 11 AM on an iPhone 14's screen, every frame taken as a screen takes it. Frame work is the map's own work in a frame, the mean of each second.
+
+| Run | Frame work | Frames a second | Crowd step |
+|---|---|---|---|
+| Full speed, Normal held | 3.1 to 3.5 ms | 59 to 60 | Normal |
+| Four times slower, Normal held | 12.3 to 15.4 ms | 45 to 60 | Normal |
+| Four times slower, Low held | 11.2 to 15.7 ms | 55 to 60 | Low |
+| Four times slower, left to the budget | 12.1 to 17.3 ms: over 16 in 2 seconds of 14 | 45 to 60, mostly 60 | Stays at Normal |
+| Six times slower, left to the budget | 20 to 32 ms at Normal | 27 to 45 | Low within 10 seconds, Sparse within 14. Frames back to 50 to 57 at 16 to 18 ms. Up to Low again after 8 good seconds |
+
+Four times slower, the map keeps up and the crowd stays: the budget of 28.5 steps down after three seconds in a row under eight tenths of the best rate (48 frames here), and the one second at 45 came among seconds of 53 to 60. Where frames truly run long, six times slower, the crowd steps down on its own, as designed, and comes back up when frames recover. Nothing was changed.
+
+Worth knowing: Low costs about what Normal does when the phone is slow. The walkers are not most of a frame's work; Sparse, with fewer people at the courts and benches, saves about a third. Only the page's own work was slowed here; the drawing was the PC's graphics card's, so a phone's drawing is not measured. Without frames being taken, headless Edge draws a frame or two a second, which the budget ignores (a tab put to sleep), so the runs above take every frame.
+
+### 47.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| A town house's room | The dorm room's own: the same timber and plaster walls, the same three plans, no roommate, the street under it. Timber and plaster read as a small house as well as a hall, and nothing in his packs shows a house from inside | Walls cut from a town house's outside, which reads as outdoors (46.3) |
+| When the gift card is short | Always on the paper; the whole card on the Level page | Short only on a small phone, which makes the paper differ between phones |
+| How often the paper says what is waiting | Once in 20 hours, about a real day, while the same buildings wait | Never again after the first, which hides a builder left idle for days |
+| Small chips in the top bar | Their look kept, with a tap area 44 points tall around each | Drawn 44 tall, which pushes the top bar down over the map |
+| Lines behind a building | Nobody stands in line where only the far sides are open | A line drawn on the far side regardless, which is seen through the building or not at all |
+
+### 47.4 Left for his word
+
+| Left | Why |
+|---|---|
+| A new game has no homecoming in its first year (44.4) | It begins within a day and a half of homecoming, and every window gives at least that much notice. Opening it with less notice, or starting new games earlier in the year, are his to choose |
+| Buying the big builds costs rank pace (45.4) | Stronger effects or cheaper running costs: his call |
+| The Honors College does nothing where the graduation rate already reads at the top (45.4) | How the academic rating reads the rate is a design choice |
+| The medal over a tall building sits against the building behind (42.15) | It needs a backing or an outline drawn: new art |
+| Fronts that face away, and the far edge's grey side, on a turned view (43.4) | The packs draw each building from one side |
+| No bed, nobody sitting or lying down, walls from a stable (46.4) | New art: a commission |
+| Things in motion at the moment of a turn (43.4) | A driver at a door keeps its depth for a moment. Seldom seen, and fixing it means tracking every vehicle's stop through a turn |

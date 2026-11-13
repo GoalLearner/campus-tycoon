@@ -137,13 +137,43 @@ function pollRow(line: PaperView['poll'][number]): HTMLElement {
   return row;
 }
 
+/**
+ * The line about buildings waiting in the Build menu is said once a real day while the same ones wait, not in every
+ * edition (DESIGN.md 47). Remembered on this phone, and decided once for each paper, however often it is drawn.
+ */
+const WAITING_SAID_KEY = 'campus-tycoon.waitingSaid';
+const WAITING_AGAIN_MS = 20 * 3_600_000;
+const waitingShown = new WeakMap<PaperView, Set<string>>();
+
+function waitingToShow(paper: PaperView): Set<string> {
+  const known = waitingShown.get(paper);
+  if (known) return known;
+  const show = new Set<string>();
+  for (const item of paper.top) {
+    if (item.go !== 'build' || !/waiting in the Build menu/.test(item.text)) continue;
+    let fresh = true;
+    try {
+      const said = JSON.parse(localStorage.getItem(WAITING_SAID_KEY) ?? 'null') as { text: string; at: number } | null;
+      if (said && said.text === item.text && Date.now() - said.at < WAITING_AGAIN_MS) fresh = false;
+      if (fresh) localStorage.setItem(WAITING_SAID_KEY, JSON.stringify({ text: item.text, at: Date.now() }));
+    } catch {
+      // Private browsing: it is said each time, as before.
+    }
+    if (fresh) show.add(item.text);
+  }
+  waitingShown.set(paper, show);
+  return show;
+}
+
 function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football' | 'build' | 'policies') => void): void {
   const page = el('div', 'paper');
   const edition = paper.edition;
   page.append(el('div', 'paper-name', edition.paper), el('div', 'paper-date', `${edition.dateline} · ${paper.awayFor}`), el('h2', 'paper-headline', edition.headline), el('p', 'paper-deck', edition.deck));
 
   const top = el('div', 'paper-top');
+  const waiting = waitingToShow(paper);
   for (const item of paper.top) {
+    if (item.go === 'build' && /waiting in the Build menu/.test(item.text) && !waiting.has(item.text)) continue;
     const where = item.go;
     const row = where ? button('', 'paper-item go', () => go(where)) : el('div', 'paper-item');
     row.append(el('span', 'paper-tag', item.tag), el('span', 'paper-text', item.text));
@@ -224,10 +254,14 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
     const drawGift = (): void => {
       slot.textContent = '';
       if (!giftReady(store.state) && !took) return;
-      const gift = giftCard(store.state, (words) => {
-        took = words;
-        drawGift();
-      });
+      const gift = giftCard(
+        store.state,
+        (words) => {
+          took = words;
+          drawGift();
+        },
+        true,
+      );
       if (gift) slot.append(gift);
       if (took) slot.append(el('p', 'gift-took', took));
     };

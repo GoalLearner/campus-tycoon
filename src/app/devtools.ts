@@ -362,7 +362,7 @@ function applyViewParams(params: URLSearchParams): void {
       }
     }, 2600);
   }
-  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather') && !params.has('movein') && !params.has('sound') && !params.has('storm')) return;
+  if (!view && !arrive && !look && !stadium && !town && card === null && !placing && !panel && !incident && !params.has('tool') && !params.has('overlay') && !params.has('person') && !params.has('scene') && !params.has('weather') && !params.has('movein') && !params.has('sound') && !params.has('storm') && !params.has('pin') && !params.has('crowd')) return;
   const wait = setInterval(() => {
     const scene = (window as unknown as { __scene?: DevScene }).__scene;
     if (!scene || !store.hasGame) return;
@@ -566,11 +566,13 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         if (params.has('finish')) setTimeout(() => document.querySelector<HTMLButtonElement>('.finish-go')?.click(), 3200);
       }
       // &panel=policies opens the Policies page as a tap on its chip would. &panel=goals opens the Goals page.
-      if (panel === 'policies') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip')].find((b) => b.textContent?.startsWith('Policies'))?.click(), 2600);
+      // The chips are a number over a word now, so each is found by its word.
+      const chip = (word: string): HTMLButtonElement | undefined => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip.show')].find((b) => (b.textContent ?? '').toLowerCase().includes(word));
+      if (panel === 'policies') setTimeout(() => chip('polic')?.click(), 2600);
       if (panel === 'goals') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
       // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
       if (panel === 'inbox') {
-        setTimeout(() => document.querySelector<HTMLButtonElement>('.hud-chips .hud-chip:last-child')?.click(), 1400);
+        setTimeout(() => chip('inbox')?.click(), 1400);
         const tab = params.get('tab');
         if (tab) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.fb-tab')].find((b) => b.textContent === tab)?.click(), 1900);
       }

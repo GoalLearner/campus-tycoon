@@ -31,9 +31,10 @@ function picture(key: string, size: number): HTMLCanvasElement {
  * the seventh the better gift. One tap takes today's. `after` is told when it
  * is taken, with the words of what it gave. null on a game without the layer.
  */
-export function giftCard(state: GameState, after: (words: string) => void): HTMLElement | null {
+export function giftCard(state: GameState, after: (words: string) => void, compact = false): HTMLElement | null {
   const view = giftView(state);
   if (!view) return null;
+  if (compact) return compactCard(state, view, after);
   const card = el('div', view.ready ? 'gift-card ready' : 'gift-card');
   card.append(el('div', 'gift-title', view.ready ? "Today's gift" : "Today's gift is taken"));
   const row = el('div', 'gift-boxes');
@@ -71,6 +72,41 @@ export function giftCard(state: GameState, after: (words: string) => void): HTML
   } else {
     card.append(el('p', 'gift-line', `Day ${view.next} comes tomorrow: ${next.words}. A day missed costs nothing: the card waits.`));
   }
+  return card;
+}
+
+/** Take today's gift, and tell `after` what it gave. */
+function take(after: (words: string) => void): void {
+  const result = store.dispatch({ type: 'takeGift' });
+  if (!result.ok || !result.gift) {
+    after(result.ok ? '' : result.error);
+    return;
+  }
+  sound.ui('collect');
+  const gift = result.gift;
+  after([`+${gift.xp} experience`, gift.cash > 0 ? `+${dollarsShort(gift.cash)}` : '', gift.seals > 0 ? `+${gift.seals} Gold ${gift.seals === 1 ? 'Seal' : 'Seals'}` : '', gift.decor ? 'a decoration, in storage' : ''].filter(Boolean).join(' · '));
+}
+
+/**
+ * The gift card as the paper opens with it: one line and the button, with the week's seven boxes as small marks
+ * under it, so the paper's headline stays on the first screen (DESIGN.md 47). The whole card is on the Level page.
+ */
+function compactCard(state: GameState, view: NonNullable<ReturnType<typeof giftView>>, after: (words: string) => void): HTMLElement {
+  const card = el('div', view.ready ? 'gift-card compact ready' : 'gift-card compact');
+  const next = view.boxes[view.next - 1]!;
+  const row = el('div', 'gift-compact-row');
+  const text = el('div', 'gift-compact-text');
+  text.append(el('div', 'gift-title', view.ready ? "Today's gift" : "Today's gift is taken"), el('div', 'gift-line', view.ready ? `Day ${view.next} of 7: ${next.words}` : `Day ${view.next} comes tomorrow`));
+  row.append(text);
+  if (view.ready) {
+    const button = el('button', 'primary gift-take-compact', next.best ? 'Open' : 'Take');
+    button.type = 'button';
+    button.addEventListener('click', () => take(after));
+    row.append(button);
+  }
+  const marks = el('div', 'gift-marks');
+  for (const box of view.boxes) marks.append(el('span', ['gift-mark', box.filled ? 'filled' : '', box.next ? 'next' : '', box.best ? 'best' : ''].filter(Boolean).join(' ')));
+  card.append(row, marks);
   return card;
 }
 

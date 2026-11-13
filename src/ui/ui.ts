@@ -1942,6 +1942,9 @@ export function mountUi(root: HTMLElement): void {
     setText(photoLine, caption.line);
   }
 
+  /** How long a claimed order stays in place, faded, while its medal rises: the burst's own length. */
+  const CLAIM_SETTLE_MS = 800;
+
   /**
    * The orders board (DESIGN.md 42.3): things to do. Opening it is what starts a new order's clock, so it tells
    * the game it has been looked at before it draws. A finished order is claimed with the medal's burst.
@@ -1955,6 +1958,12 @@ export function mountUi(root: HTMLElement): void {
       card.append(head, body, button('Close', 'wide', close));
       // What the page says about the last thing done on it. A toast would sit behind the page.
       let told = '';
+      // A claimed order stays where it was, faded, while its medal rises; then the list closes up under it.
+      const settle = (box: HTMLElement): void => {
+        box.classList.add('claimed');
+        for (const one of box.querySelectorAll('button')) one.remove();
+        window.setTimeout(draw, CLAIM_SETTLE_MS);
+      };
       const draw = (): void => {
         const view = ordersView(store.state);
         if (!view) {
@@ -1989,7 +1998,7 @@ export function mountUi(root: HTMLElement): void {
           card.append(burst);
           burst.addEventListener('animationend', () => burst.remove());
           told = '';
-          draw();
+          settle(box);
         }))
           body.append(part);
         for (const row of view.rows) {
@@ -2028,7 +2037,7 @@ export function mountUi(root: HTMLElement): void {
               card.append(burst);
               burst.addEventListener('animationend', () => burst.remove());
               told = '';
-              draw();
+              settle(box);
             });
             box.append(claim);
           } else {

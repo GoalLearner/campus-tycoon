@@ -180,9 +180,9 @@ export function mountRoomView(): { node: HTMLElement; render: (state: GameState 
         return;
       }
       const card = studentCard(state, ref);
-      title.textContent = card ? `${card.name}'s room` : 'Their room';
+      title.textContent = card ? (card.residence === 'dorm' ? `${card.name}'s room` : `${card.name}'s room in town`) : 'Their room';
       line.textContent = room.line;
-      mate.textContent = room.roommate ? `Roommate: ${room.roommate.name}` : 'A room of their own';
+      mate.textContent = room.roommate ? `Roommate: ${room.roommate.name}` : card?.residence === 'offCampus' ? (card.street ? `On ${card.street}` : 'In town') : 'A room of their own';
       const fresh = !open || open.key !== key;
       open = { key, room, hour, ref };
       if (fresh) {
