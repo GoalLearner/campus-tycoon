@@ -4865,9 +4865,9 @@ The targets stand: the Top 100 in week 7, and the Top 10 never before month five
 
 ---
 
-## 41. What each era unlocks (proposed)
+## 41. What each era unlocks
 
-The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". **This section is a proposal. Nothing in it is built. It waits for his go.**
+The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". He was sent it as one page and asked: "Approve this plan and build the Growth policies first?" He answered: "Yes, policies first". **Approved on 2026-11-12, to be built one stop for each era, the policies first. Nothing in it is built yet.**
 
 ### 41.1 One kind of thing for each era
 
