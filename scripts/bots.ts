@@ -6,6 +6,10 @@ import {
   placedUpkeep,
   recreationAt,
   SECOND_BUILDER_SEALS,
+  LABS,
+  LAB_SEAT_REACH,
+  labOf,
+  stageSpec,
   UNION_REACH,
   averageDesirability,
   BENEFITS_SHARE,
@@ -124,7 +128,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -896,6 +900,71 @@ function bigBuildSpot(state: GameState, type: PlacedType): Point | null {
   return best;
 }
 
+/**
+ * The research labs (DESIGN.md 49): a lab for every field, each built once the campus can afford to build it and to
+ * run it, by the rule the big builds are bought by.
+ */
+function labsWanted(state: GameState): PlacedType[] {
+  if (!botOptions.labs || !hasDaily(state)) return [];
+  const books = budget(state);
+  if (books.incomeTotal <= 0) return [];
+  const scale = scaleOf(state);
+  return LABS.map((spec) => spec.type)
+    .filter((type) => !labOf(state, type))
+    .filter((type) => {
+      const share = (100 * placedUpkeep(type, scale)) / books.incomeTotal;
+      return share < 0.5 || keeps(state) - share >= KEEPS_ENOUGH;
+    });
+}
+
+/** Where a lab goes: the free block with the most lecture-hall seats in its reach, nearest the Administration building on a tie. */
+function labSpot(state: GameState, type: PlacedType): Point | null {
+  const map = state.map;
+  const spec = PLACED[type];
+  const admin = map.placed.find((one) => one?.type === 'admin');
+  const [ax, ay] = admin ? [admin.x, admin.y] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  const halls = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.zone === 'academic' && lot.stage > 0);
+  let best: Point | null = null;
+  let score = -Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (!freeAt(state, x, y) || previewPlace(state, type, x, y).problem !== null) continue;
+      let seats = 0;
+      for (const hall of halls) {
+        const far = Math.max(Math.max(x - hall.x, 0, hall.x - (x + spec.w - 1)), Math.max(y - hall.y, 0, hall.y - (y + spec.h - 1)));
+        if (far <= LAB_SEAT_REACH) seats += stageSpec('academic', hall.stage, 1).capacity;
+      }
+      const here = seats * 1000 - Math.hypot(x - ax, y - ay);
+      if (here > score) {
+        score = here;
+        best = [x, y];
+      }
+    }
+  }
+  return best;
+}
+
+function placeLabs(state: GameState, reserve: number): { state: GameState; placed: number } {
+  let current = state;
+  let placed = 0;
+  for (const type of labsWanted(state)) {
+    if (!labsWanted(current).includes(type)) continue;
+    if (current.money.cash - placedCost(type, scaleOf(current)) < reserve) continue;
+    let spot = labSpot(current, type);
+    if (!spot) {
+      const cleared = clearForBigBuild(current, type);
+      if (!cleared) continue;
+      current = cleared.state;
+      spot = cleared.spot;
+    }
+    const result = applyAction(current, { type: 'place', building: type, x: spot[0], y: spot[1] });
+    if (!result.ok) continue;
+    current = result.state;
+    placed += 1;
+  }
+  return { state: current, placed };
+}
+
 export interface TurnResult {
   state: GameState;
   /** Purchases made this check-in. */
@@ -1334,6 +1403,10 @@ function takeTurnAfter(state: GameState, as: Style): TurnResult {
     const big = placeBigBuilds(current, reserve);
     current = big.state;
     purchases += big.placed;
+    // And a research lab for each field, once it can be afforded (DESIGN.md 49).
+    const labs = placeLabs(current, reserve);
+    current = labs.state;
+    purchases += labs.placed;
   }
 
   // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a

@@ -2,6 +2,10 @@ import type { PlacedType } from '../types';
 import { DECOR_POINT, DECOR_REACH } from './decor';
 import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
 import { COMMONS_POINTS, HONORS_RATE, UNION_REACH, UNION_STRENGTH, WELCOME_MORE } from './bigBuilds';
+import { LAB_REPUTATION, LAB_SEAT_REACH } from './labs';
+
+/** What a research lab does, for its card in the Build menu. */
+const LAB_EFFECT = `Findings to collect, and discoveries of its own. Faster near lecture halls. Reputation ${LAB_REPUTATION} point higher`;
 
 /**
  * Hand-placed buildings: what the Build menu offers. Each belongs to one
@@ -11,7 +15,7 @@ import { COMMONS_POINTS, HONORS_RATE, UNION_REACH, UNION_STRENGTH, WELCOME_MORE 
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era' | 'lab';
 
 export interface PlacedSpec {
   name: string;
@@ -252,6 +256,19 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   foundersCommons: {
     name: "Founders' Commons", category: 'Legacy', family: 'era', w: 3, h: 3, cost: 9_000_000, upkeepPerYear: 40_000,
     radius: 0, strength: 0, effect: `Grounds ${COMMONS_POINTS} points better for every student, wherever they live`, sprite: 'era.commons', flat: true, buildable: true, utilitiesPerYear: 0,
+  },
+  // The research labs (DESIGN.md 49): one for each field. Lecture-hall seats within its reach make it work faster.
+  labSciences: {
+    name: 'Sciences lab', category: 'Academics', family: 'lab', w: 2, h: 2, cost: 50_000, upkeepPerYear: 4_000,
+    radius: LAB_SEAT_REACH, strength: 0, effect: LAB_EFFECT, sprite: 'lab.sciences', flat: false, buildable: true,
+  },
+  labEngineering: {
+    name: 'Engineering lab', category: 'Academics', family: 'lab', w: 2, h: 2, cost: 50_000, upkeepPerYear: 4_000,
+    radius: LAB_SEAT_REACH, strength: 0, effect: LAB_EFFECT, sprite: 'lab.engineering', flat: false, buildable: true,
+  },
+  labHealth: {
+    name: 'Health lab', category: 'Academics', family: 'lab', w: 2, h: 2, cost: 50_000, upkeepPerYear: 4_000,
+    radius: LAB_SEAT_REACH, strength: 0, effect: LAB_EFFECT, sprite: 'lab.health', flat: false, buildable: true,
   },
 };
 

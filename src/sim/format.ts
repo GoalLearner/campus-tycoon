@@ -53,3 +53,13 @@ export function duration(ticks: number): string {
   if (h > 0) return m > 0 ? `${h} h ${m} m` : `${h} h`;
   return `${m} m`;
 }
+
+/** A school's short name: "Larkspur" from "Larkspur University", "Tansycroft" from "University of Tansycroft". */
+export function shortName(name: string): string {
+  const short = name
+    .trim()
+    .replace(/^(the\s+)?university\s+of\s+/i, '')
+    .replace(/\s+(state\s+university|university|college|institute|academy|tech|state)$/i, '')
+    .trim();
+  return short === '' ? name.trim() : short;
+}

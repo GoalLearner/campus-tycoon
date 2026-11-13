@@ -24,6 +24,7 @@ import {
 import { TOWN_DECOR_XP } from '../config/decor';
 import { PLACED } from '../config/placed';
 import { FIRST_INTAKE_TICK, TICKS_PER_HOUR, TICKS_PER_YEAR } from '../config/time';
+import { labRate, labsOnMap } from './labs';
 import { dollars, duration, headCount } from '../format';
 import { nextU32 } from '../rng';
 import { scaleOf } from '../scale';
@@ -188,7 +189,7 @@ function readNow(state: GameState, metric: OrderMetric, param: string | undefine
   }
 }
 
-const COUNTED: ReadonlySet<OrderMetric> = new Set(['trees', 'quads', 'furniture', 'collects', 'homeWins', 'sellOuts', 'crafts', 'decorPlaced']);
+const COUNTED: ReadonlySet<OrderMetric> = new Set(['trees', 'quads', 'furniture', 'collects', 'homeWins', 'sellOuts', 'crafts', 'decorPlaced', 'findings', 'discoveries']);
 const MARKED: ReadonlySet<OrderMetric> = new Set(['graduates', 'fullFall', 'cleanIntake', 'calmSemester', 'semesterLeft']);
 
 /** The mark of the calendar each measured number is read from, and whether less of it is better. */
@@ -234,6 +235,14 @@ function eligible(state: GameState, kind: OrderKind, seen: Look): boolean {
     case 'workshopOpen':
       // There is a Makerspace, and a level has brought a recipe.
       return workshopOpen(state);
+    case 'labsBusy': {
+      // The labs make as many as it asks in two thirds of its time, at the rates they work now (DESIGN.md 49).
+      const perHour = labsOnMap(state).reduce((sum, lab) => sum + labRate(state, lab).perHour, 0);
+      return perHour * (kind.hours ?? 48) * (2 / 3) >= (kind.target.n ?? 1);
+    }
+    case 'discoverySoon':
+      // A lab's next discovery is due in the first three quarters of its time.
+      return state.timers.some((timer) => timer.kind === 'discovery' && timer.due - state.clock.tick <= (kind.hours ?? 96) * 0.75 * TICKS_PER_HOUR);
   }
 }
 

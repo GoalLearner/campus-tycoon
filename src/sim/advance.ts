@@ -4,6 +4,7 @@ import { offerDaily, tellOrders } from './systems/orders';
 import { decorOnDayStart, onCraftDone } from './systems/decor';
 import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from './systems/rhythm';
 import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
+import { discoveryDue } from './systems/labs';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -166,6 +167,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
     case 'bigBuild':
       // A big build of an era has gone up (DESIGN.md 45): it opens, and the paper says so.
       bigBuildDone(state, timer.ref, log);
+      break;
+    case 'discovery':
+      // A research lab has made a discovery (DESIGN.md 49): the paper says so, and the next is on its way.
+      discoveryDue(state, timer.ref, log);
       break;
     case 'craftDone':
       // The Workshop has finished something: the paper says so. It waits on its bench for ever.

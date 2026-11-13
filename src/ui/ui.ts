@@ -86,6 +86,7 @@ import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
+import { labPage } from './labUi';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, SECOND_BUILDER_ENTRY, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
 import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
@@ -440,6 +441,8 @@ export function mountUi(root: HTMLElement): void {
   let actionLand: number | null = null;
   // Set instead when the panel is the Makerspace: the button opens the Workshop (DESIGN.md 42.6).
   let actionWorkshop = false;
+  // Set instead when the panel is a research lab: the button opens its discoveries (DESIGN.md 49).
+  let actionLab: number | null = null;
   // A decoration: move it, turn it, or put it away. All three are free, and nothing is lost (DESIGN.md 42.5).
   let decorHere: number | null = null;
   const inspectorDecor = el('div', 'inspector-decor');
@@ -469,6 +472,10 @@ export function mountUi(root: HTMLElement): void {
   const inspectorAction = button('Build a dining hall here', 'primary inspector-action', () => {
     if (actionWorkshop) {
       openWorkshop();
+      return;
+    }
+    if (actionLab !== null) {
+      openLab(actionLab);
       return;
     }
     if (actionLand !== null) {
@@ -677,7 +684,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season', 'rhythm']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season', 'rhythm', 'lab']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -1242,6 +1249,7 @@ export function mountUi(root: HTMLElement): void {
     const placedHere = selected ? placedAt(state.map, selected.x, selected.y) : null;
     actionLand = null;
     actionWorkshop = false;
+    actionLab = null;
     decorHere = null;
     staffYard = null;
     inspectorStaff.classList.remove('show');
@@ -1320,6 +1328,12 @@ export function mountUi(root: HTMLElement): void {
         actionWorkshop = true;
         const ready = craftsReady(state);
         setText(inspectorAction, ready > 0 ? `Open the Workshop · ${ready} ready` : 'Open the Workshop');
+        inspectorAction.classList.add('show');
+      } else if (PLACED[placedHere.type].family === 'lab') {
+        // A research lab: its discoveries, kept for good (DESIGN.md 49).
+        actionLab = placedHere.id;
+        const found = state.labs.found.filter((one) => one.lab === placedHere.type).length;
+        setText(inspectorAction, found > 0 ? `Discoveries · ${found}` : 'Discoveries');
         inspectorAction.classList.add('show');
       } else inspectorAction.classList.remove('show');
       inspector.classList.add('show');
@@ -1797,6 +1811,23 @@ export function mountUi(root: HTMLElement): void {
    * The Workshop (DESIGN.md 42.6): what each bench is making, what it keeps making, and the recipes. A bench's
    * recipe is a standing choice: collecting the finished thing starts the next one.
    */
+  /** A research lab's discoveries, newest first (DESIGN.md 49). */
+  function openLab(id: number): void {
+    const lab = store.state.map.placed[id];
+    if (!lab) return;
+    const page = labPage(store.state, lab);
+    openModal((close, card) => {
+      card.classList.add('card-fixed');
+      const body = el('div', 'card-scroll');
+      for (const one of page.discoveries) {
+        const row = el('div', 'order done');
+        row.append(el('span', 'order-from', one.when), el('span', 'order-title', one.text));
+        body.append(row);
+      }
+      card.append(el('h1', '', page.title), el('p', 'fine', page.lead), body, button('Close', 'wide', close));
+    });
+  }
+
   function openWorkshop(): void {
     openModal((close, card) => {
       card.classList.add('card-fixed');

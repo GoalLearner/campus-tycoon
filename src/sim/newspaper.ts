@@ -5,7 +5,7 @@ import { ERAS, RANK_GOALS } from './config/goals';
 import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
-import { dollars, duration, headCount } from './format';
+import { dollars, duration, headCount, shortName } from './format';
 import { hashInts } from './rng';
 import { buildings, enrollment, openCapacity } from './selectors';
 import { applicantsLift } from './systems/boosts';
@@ -78,15 +78,8 @@ export interface Edition {
 
 const sum = (values: readonly number[]): number => values.reduce((a, b) => a + b, 0);
 
-/** A school's short name: "Larkspur" from "Larkspur University", "Tansycroft" from "University of Tansycroft". */
-export function shortName(name: string): string {
-  const short = name
-    .trim()
-    .replace(/^(the\s+)?university\s+of\s+/i, '')
-    .replace(/\s+(state\s+university|university|college|institute|academy|tech|state)$/i, '')
-    .trim();
-  return short === '' ? name.trim() : short;
-}
+/** A school's short name: kept in format.ts, so the labs can say it too, and named here as before. */
+export { shortName };
 
 /** The paper's name. Picked once from the seed, so it never changes. */
 export function paperName(state: GameState): string {
@@ -258,6 +251,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'decision':
         if (entry.data?.byDefault === 1) out.push({ weight: 58, headline: 'A Decision Makes Itself; Committee Claims the Credit', deck: entry.text });
         break;
+      case 'lab':
+        // A research lab's discovery (DESIGN.md 49): its own headline, made when it was found.
+        if (entry.data?.discovery === 1 && typeof entry.data.headline === 'string') out.push({ weight: 64, headline: entry.data.headline, deck: entry.text });
+        break;
       default:
         break;
     }
@@ -349,12 +346,19 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
   }
   if (grounds.line) offer(grounds.first ? TOP_WEIGHTS.groundsFirst : 38, 'problem', grounds.line);
 
+  let discoveries = 0;
   for (const entry of log) {
     if (entry.kind === 'football' && (entry.data?.tier !== undefined || entry.data?.earned !== undefined || entry.data?.title === 1)) offer(TOP_WEIGHTS.goodNews, 'news', entry.text, 'football');
     else if (entry.kind === 'rankings') offer(TOP_WEIGHTS.goodNews - 1, 'news', entry.text);
     // A goal that is the headline is said once: in the line under the headline. Any other goal of the day is at the top.
     else if (entry.kind === 'goal' && entry.text !== lead.deck) offer(TOP_WEIGHTS.goal, 'news', entry.text);
     else if (entry.kind === 'exam' && Number(entry.data?.peak ?? 0) >= 60) offer(TOP_WEIGHTS.exams, 'problem', entry.text);
+    // A discovery that is not the headline is good news at the top, just under a game's result: the first of the
+    // edition's, with any others in the rest of the paper (DESIGN.md 49).
+    else if (entry.kind === 'lab' && entry.data?.discovery === 1 && entry.text !== lead.deck) {
+      offer(discoveries === 0 ? TOP_WEIGHTS.game - 1 : TOP_WEIGHTS.goodNews - 2, 'news', entry.text);
+      discoveries += 1;
+    }
   }
 
   ranked.sort((a, b) => b.weight - a.weight || a.order - b.order);

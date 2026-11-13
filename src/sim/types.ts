@@ -84,7 +84,11 @@ export type PlacedType =
   | 'studentUnion'
   | 'honorsCollege'
   | 'welcomeCenter'
-  | 'foundersCommons';
+  | 'foundersCommons'
+  // The research labs (DESIGN.md 42.6, as built in section 49): one for each field, bought from the Build menu.
+  | 'labSciences'
+  | 'labEngineering'
+  | 'labHealth';
 
 /** A hand-placed building. It is whole from the moment it is placed, but for a big build of an era, which goes up first. */
 export interface Placed {
@@ -297,7 +301,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild' | 'discovery';
 
 export interface Timer {
   due: number;
@@ -617,6 +621,32 @@ export interface GameState {
   rhythm: Rhythm;
   /** The big builds an era opens (DESIGN.md 45): how many can go up at once. What is built is on the map. */
   bigBuilds: BigBuilds;
+  /** The research labs (DESIGN.md 49): what each holds, and every discovery made. The labs themselves are on the map. */
+  labs: Labs;
+}
+
+/** One discovery a research lab made (DESIGN.md 49). Kept for good, even when its lab is cleared. */
+export interface Discovery {
+  /** The lab's type, which is its field. */
+  lab: PlacedType;
+  /** Which of the field's discoveries it is, an index into its list. */
+  line: number;
+  tick: number;
+  /** The game year it was made in. */
+  year: number;
+}
+
+/** The research labs (DESIGN.md 49). */
+export interface Labs {
+  /** By the lab's placed id: the tick its findings count from, as a filling building's does. */
+  since: Record<number, number>;
+  /** Every discovery, oldest first. */
+  found: Discovery[];
+  /** Findings collected in all. */
+  findings: number;
+  /** The cash the labs have taken from this year's allowance, and the year it is for. */
+  paid: number;
+  paidYear: number;
 }
 
 /** The big builds of the eras (DESIGN.md 45). */
@@ -988,6 +1018,7 @@ export type LogKind =
   | 'season'
   | 'rhythm'
   | 'bigBuild'
+  | 'lab'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

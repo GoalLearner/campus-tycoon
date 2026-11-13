@@ -85,6 +85,7 @@ import {
   UNION_REACH,
 } from '../sim';
 import type { BuildEntry } from './buildMenu';
+import { labEntries, labSummary } from './labUi';
 
 /**
  * Words and numbers for the Build menu, the panel of a placed building and the
@@ -173,7 +174,7 @@ function bigBuildEntries(state: GameState, scale: number): BuildEntry[] {
  */
 export function buildEntries(scale = 1, state?: GameState): BuildEntry[] {
   const earned: BuildEntry[] = state ? [...rewardsWaiting(state).map(rewardEntry), ...bigBuildEntries(state, scale)] : [];
-  const entries: BuildEntry[] = BUILD_ORDER.map((type) => {
+  const card = (type: PlacedType): BuildEntry => {
     const spec = PLACED[type];
     return {
       id: type,
@@ -185,7 +186,16 @@ export function buildEntries(scale = 1, state?: GameState): BuildEntry[] {
       upkeep: runningLine(type, scale),
       effect: effectLine(type, scale),
     };
-  });
+  };
+  const entries: BuildEntry[] = BUILD_ORDER.map(card);
+  // The research labs, after the other Academics buildings, on a game with goals (DESIGN.md 49).
+  if (state) {
+    let lastAcademic = -1;
+    entries.forEach((entry, n) => {
+      if (entry.category === 'Academics') lastAcademic = n;
+    });
+    entries.splice(lastAcademic + 1, 0, ...labEntries(state, scale, card));
+  }
   const soon = (key: string, name: string, effect: string, locked: string): BuildEntry => ({
     key,
     name,
@@ -340,6 +350,8 @@ function baseSummary(state: GameState, placed: Placed): string {
       return `${spec.effect}.`;
     case 'era':
       return bigBuildSummary(state, placed);
+    case 'lab':
+      return labSummary(state, placed);
   }
 }
 
@@ -447,6 +459,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
   if (spec.family === 'decor') return 'Costs nothing to keep · Moving it is free · Put away, it waits in storage';
   if (spec.family === 'reward') parts.push('Clear it and it goes back to the Build menu, free');
   else if (spec.family === 'era') parts.push(bigBuildSpec(placed.type) ? `One of a kind. Clear it and it can be bought again` : 'The Clear tool removes it');
+  else if (spec.family === 'lab') parts.push('One for each field. Clear it and it can be built again; its discoveries are kept');
   else if (spec.buildable) parts.push('The Clear tool removes it');
   return parts.join(' · ');
 }
