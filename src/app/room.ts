@@ -158,11 +158,16 @@ function roommateOf(state: GameState, ref: StudentRef, home: number): StudentRef
   return halls[Math.floor(roll(state, ref, 1) * halls.length)]!;
 }
 
-/** True when a card's student can be looked in on: they live in a dorm and the map has them indoors, home. */
+/**
+ * True when a card's student can be looked in on: the map has them indoors at home, in their dorm or in their house
+ * in town.
+ */
 export function canLookInside(state: GameState, ref: StudentRef, lastDoing: string | null, outside: boolean): boolean {
-  if (outside || (lastDoing !== 'toDorm' && lastDoing !== 'movingIn')) return false;
+  if (outside) return false;
   const card = studentCard(state, ref);
-  return card !== null && card.residence === 'dorm' && card.home !== null;
+  if (!card) return false;
+  if (lastDoing === 'toDorm' || lastDoing === 'movingIn') return card.residence === 'dorm' && card.home !== null;
+  return lastDoing === 'walkingHome' && card.residence === 'offCampus';
 }
 
 /** What they are doing, from the card and the hour. The same for the same student in the same hour. */
@@ -256,14 +261,19 @@ function lineOf(activity: RoomActivity, card: StudentCard, roommate: string | nu
   }
 }
 
-/** The room of a dorm student at an hour of the player's day, or null for anyone who has none to look into. */
+/**
+ * The room of a student at an hour of the player's day: in their dorm, or in their house in town. A room in town has
+ * no roommate. null for anyone with no home to look into.
+ */
 export function roomFor(state: GameState, ref: StudentRef, hour: number, figures: { crowd: number; look: (ref: StudentRef) => number }): Room | null {
   const card = studentCard(state, ref);
-  if (!card || card.residence !== 'dorm' || card.home === null) return null;
-  const home = card.home;
+  if (!card) return null;
+  const inDorm = card.residence === 'dorm' && card.home !== null;
+  if (!inDorm && card.residence !== 'offCampus') return null;
+  const home = inDorm ? card.home! : -1;
   const layout = hashInts(state.seed, home, ref.entryYear, ref.index, 9177) % ROOM_PLANS.length;
   const plan = ROOM_PLANS[layout]!;
-  const shared = roomShared(state, home);
+  const shared = inDorm && roomShared(state, home);
   const mate = shared ? roommateOf(state, ref, home) : null;
   const mateCard = mate ? studentCard(state, mate) : null;
   const activity = roomActivity(state, card, hour, mateCard !== null);

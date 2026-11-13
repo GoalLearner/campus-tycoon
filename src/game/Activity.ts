@@ -275,6 +275,8 @@ export class Activity {
   /** Who should be at a site right now, by role. */
   private wanted(site: Site): Array<[Role, number]> {
     const type = site.placed.type;
+    // Where the line stands can be seen: on a side facing the viewer, or on a court's own strip of lawn.
+    const seen = site.lineInFront || site.line.onDrawing === true;
     if (PLACED[type].family === 'seat') {
       // A bench or a picnic table: taken or not, the same until the part of the day changes.
       if (this.students <= 0) return [['seat', 0]];
@@ -290,7 +292,8 @@ export class Activity {
     }
     if (PLACED[type].family === 'dining') {
       // A line at the door when its kind of food is busy. At the food court they stand among the stalls first.
-      const queue = queueNow(site.eaters, type, this.period);
+      // A line that could only stand behind the building, out of sight, is not drawn (DESIGN.md 47).
+      const queue = seen ? queueNow(site.eaters, type, this.period) : 0;
       if (type !== 'foodcourt') return [['line', queue]];
       const among = Math.min(STALL_SPOTS.length, queue);
       return [
@@ -306,7 +309,7 @@ export class Activity {
     const role: Role = type === 'courts' ? 'court' : type === 'field' ? 'field' : type === 'track' ? 'runner' : type === 'pool' ? 'swimmer' : 'door';
     return [
       [role, playing],
-      ['line', Math.min(LINE_SHOWN, now.waiting)],
+      ['line', seen ? Math.min(LINE_SHOWN, now.waiting) : 0],
     ];
   }
 

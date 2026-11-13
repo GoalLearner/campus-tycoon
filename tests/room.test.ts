@@ -23,10 +23,15 @@ const RESIDENTS = sampleStudents(STATE, 60).filter((ref) => {
 const room = (ref: StudentRef, hour: number, state = STATE): Room => roomFor(state, ref, hour, looks)!;
 
 describe('a room', () => {
-  it('is only for a student who lives in a dorm, and the way in is the card once they are home', () => {
+  it('is for a student at home, in their dorm or their house in town, and the way in is the card once they are there', () => {
     expect(RESIDENTS.length).toBeGreaterThan(20);
     const commuter = sampleStudents(STATE, 60).find((ref) => studentCard(STATE, ref)?.residence === 'offCampus')!;
-    expect(roomFor(STATE, commuter, 12, looks)).toBeNull();
+    // A room in town has no roommate.
+    const town = roomFor(STATE, commuter, 12, looks)!;
+    expect(town).not.toBeNull();
+    expect(town.roommate).toBeNull();
+    expect(canLookInside(STATE, commuter, 'walkingHome', false)).toBe(true);
+    expect(canLookInside(STATE, commuter, 'walkingHome', true)).toBe(false);
     const ref = RESIDENTS[0]!;
     // Heading home, then indoors: the card may look in. Out walking, or indoors somewhere else, it may not.
     expect(canLookInside(STATE, ref, 'toDorm', false)).toBe(true);
@@ -34,6 +39,7 @@ describe('a room', () => {
     expect(canLookInside(STATE, ref, 'toDorm', true)).toBe(false);
     expect(canLookInside(STATE, ref, 'toClass', false)).toBe(false);
     expect(canLookInside(STATE, ref, null, false)).toBe(false);
+    expect(canLookInside(STATE, ref, 'walkingHome', false)).toBe(false);
     expect(canLookInside(STATE, commuter, 'toDorm', false)).toBe(false);
     // A small campus has dorms too.
     const small = freshGame();
