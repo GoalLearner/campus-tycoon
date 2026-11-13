@@ -4862,3 +4862,81 @@ The targets stand: the Top 100 in week 7, and the Top 10 never before month five
 | The test players set them down close together | They choose by the numbers, not by the look of it |
 | The drawings are in his private art repository only | A build without the token shows the labelled placeholder for all eight, as for the rest of his pack |
 | Never run on a phone | Checked in pictures and in tests on this PC |
+
+---
+
+## 41. What each era unlocks (proposed)
+
+The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". **This section is a proposal. Nothing in it is built. It waits for his go.**
+
+### 41.1 One kind of thing for each era
+
+| Era | Reached at | When, as measured (38.6, 40) | Opens |
+|---|---|---|---|
+| Growth | The Top 125 | About week 5 | Policies: four switches |
+| Flagship | The Top 75 | About week 12 | Three buildings to buy, and two more policies |
+| Legacy | The Top 25 | Weeks 19 to 24 | Three landmarks, and two more policies |
+
+Rules for all three:
+
+- An era only adds. Everything a game can build today stays for every game. Nothing is put behind an era that a player already has.
+- What an era opens is kept for good, whatever the rank does afterwards (section 3).
+- Each thing moves one number the game already has. There is no fifth cause of applicants and no fifth cause of Happiness.
+- Every drawing is from art the owner has, and he sees it on one sheet before it is used. No stand-ins: a thing with no drawing waits.
+- Each thing costs money, to buy or to keep. Since the cap, income no longer grows with the head count, and the Instruction slider is the only place for what a full campus keeps (38.6). These are the next.
+- The paper announces an era with what it opens, and the Goals page says what the next one will open.
+
+### 41.2 Growth: policies
+
+A Policies page with four switches, all off to begin with. Each has one gain and one named cost beyond money, as 12.1 has it, and a changed switch stays put until the next intake. No art.
+
+| Era | Policy | Gain | Cost |
+|---|---|---|---|
+| Growth | Reading days before finals | Lower exam Stress | Slightly lower grades that semester |
+| Growth | Tough grading | A better academic rating | A few more students leave each semester |
+| Growth | Freshmen live on campus | Fuller dorms and more room fees | A little Happiness |
+| Growth | Free student section | A fuller stadium and a little Happiness | Ticket income |
+| Flagship | All-night library | Softer finals | The library costs more to run |
+| Flagship | Parking fees | Income | Happiness of students who drive |
+| Legacy | Quiet hours | Fewer incidents | A little Happiness |
+| Legacy | Naming rights | Income | A little Happiness |
+
+All are from the list of 12.3, kept to the ones whose two sides exist in the game today. Every size is [T].
+
+### 41.3 Flagship: three buildings to buy
+
+One of each. Each costs many times what the Build menu's buildings cost, to build and to run [T]: a year of one should be in the range of a step of the Instruction slider.
+
+| Building | The one thing it does | The number it moves |
+|---|---|---|
+| Student Union | Things to do and somewhere to meet, over a much wider circle than a gym | Happiness |
+| Honors College | Lifts the graduation rate a little, across the campus | The academic rating |
+| Welcome Center | Each marketing step brings a little more | Applicants, through marketing |
+
+### 41.4 Legacy: three landmarks
+
+The prestige landmarks of 15.3. One of each, a large footprint, built over several real days, and one effect on the whole campus. Each is priced at about a month of what a well-run full campus keeps [T].
+
+| Landmark | The one thing it does | The number it moves |
+|---|---|---|
+| Grand Library | Softer finals for every student | Stress, and through it grades |
+| Hall of Champions | Bigger home crowds, and football pulls more applicants | Football |
+| Founders' Commons | A lift for every student, wherever they live | Happiness |
+
+The open point is art. It is not known that his packs hold three drawings grand enough. The sheet comes first, and a landmark with no drawing waits. Nothing is bought.
+
+### 41.5 Left out, and why
+
+| Left out | Why |
+|---|---|
+| More land | The model campus owns both of its fields. More would mean a bigger map, which is a large change to saves and to the camera |
+| Medium and high density, the unlock of 15.2 | With a cap of 50,000 students more beds bring no more students, and it is the largest build of all |
+| Greek Row and the tradition slots of 15.2 | Each is a stop of its own |
+
+### 41.6 Against the eight tests of 2.1, and what to measure
+
+None fails. Test 6, the long arc, is what this is for. Test 7, scale, is the nearest: nothing here adds land, so a landmark on a full campus means choosing what to clear, which 15.4 counts as part of the late game.
+
+To measure in each build, and to report to him: the pace of the rank goals (the Top 100 in about month two, the Top 10 not before month five), the money against his $12 to $17 kept of every $100 with a player who buys what each era opens, and that rank, applicants and selectivity still settle.
+
+Proposed order, one stop each: the policies, then the three buildings, then the landmarks.
