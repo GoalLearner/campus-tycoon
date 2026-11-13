@@ -4847,7 +4847,7 @@ The targets stand: the Top 100 in week 7, and the Top 10 never before month five
 | The headline | The building takes the place of the joke after the semicolon | Keep the joke, and name the building only in the line beneath |
 | The line about what is waiting | In every edition until they are placed | Once. That needs a mark in the save, and a player who missed that edition would never be told |
 | Sizes | As the pack drew each | All eight on one size, with some shrunk or stretched |
-| The word shared with the reference map | "Alumni" is printed on the reference map as an ordinary word, and not as that building's name. It is added to the test's list of ordinary words | Rename the building he approved |
+| The word shared with the reference map | The reference map prints the word "alumni" inside a longer label, and never as this building's name: checked by the main session, which also found none of the other seven names on it. The word is added to the test's list of ordinary words | Rename the building he approved |
 | The counter kept for this in the save since 37.11 | Left where it is, unused | Remove it, with a migration |
 | Where the test players put them | Where each lifts the most, on the visit it arrives | Beside the Administration building, as a person might for the look of it |
 
