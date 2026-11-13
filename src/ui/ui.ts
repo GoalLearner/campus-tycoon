@@ -74,6 +74,8 @@ import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { policiesView, policyChip } from './policyUi';
+import { collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from './levelUi';
+import { drawSprite, loadAtlas } from './atlas';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
@@ -304,7 +306,28 @@ export function mountUi(root: HTMLElement): void {
   const inboxButton = button('', 'hud-chip', () => openInbox(openModal));
   // Policies have a chip from the day the Growth era opens them, and none before (DESIGN.md section 41).
   const policyButton = button('', 'hud-chip', () => openSize('policies'));
-  chips.append(footballButton, inboxButton, policyButton);
+  // The University Level and the Gold Seals held (DESIGN.md section 42): one small button on the right of the row.
+  // The badge and the Seal are the pack's drawings, from the atlas. The level's number is text set on the badge.
+  const levelButton = button('', 'hud-chip level-chip', () => openLevel());
+  const levelBadge = el('span', 'level-badge');
+  const levelArt = document.createElement('canvas');
+  levelArt.className = 'level-art';
+  levelArt.width = 78;
+  levelArt.height = 78;
+  const levelNumber = el('span', 'level-number');
+  levelBadge.append(levelArt, levelNumber);
+  const sealArt = document.createElement('canvas');
+  sealArt.className = 'seal-art';
+  sealArt.width = 48;
+  sealArt.height = 60;
+  const sealCount = el('span', 'seal-count');
+  levelButton.append(levelBadge, sealArt, sealCount);
+  void loadAtlas().then((atlas) => {
+    drawSprite(levelArt, atlas, 'ui.level');
+    drawSprite(sealArt, atlas, 'ui.seal');
+  });
+  let shownLevel = -1;
+  chips.append(footballButton, inboxButton, policyButton, levelButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -423,6 +446,17 @@ export function mountUi(root: HTMLElement): void {
 
   // ---------------------------------------------------------------- build --
   const buildButton = button('Build', 'build-fab', () => openBuild());
+  // Collect all (DESIGN.md 42.4). The map shows the burst over each building as its marker goes.
+  const collectButton = button('', 'collect-fab', () => collectAll());
+  function collectAll(): void {
+    const result = store.dispatch({ type: 'collectAll' });
+    if (!result.ok) {
+      session.notify(result.error, 'error');
+      return;
+    }
+    sound.ui('collect');
+    if (result.gained) pushToast(gainedWords(result.gained));
+  }
   // Shown while a building picked from the menu is being placed.
   const placer = el('div', 'placer');
   const placerTitle = el('div', 'placer-title');
@@ -487,7 +521,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -516,7 +550,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -879,6 +913,20 @@ export function mountUi(root: HTMLElement): void {
     const policies = policyChip(state);
     setText(policyButton, policies ?? '');
     policyButton.classList.toggle('show', policies !== null);
+    const level = levelChip(state);
+    levelButton.classList.toggle('show', level !== null);
+    if (level) {
+      setText(levelNumber, String(level.level));
+      setText(sealCount, String(level.seals));
+      levelButton.setAttribute('aria-label', `University Level ${level.level}, ${level.seals} Gold Seals`);
+      // A level reached while the player is here has a short tune.
+      if (shownLevel > 0 && level.level > shownLevel) sound.jingle('reward');
+      shownLevel = level.level;
+    } else shownLevel = -1;
+    // Collect all: there once five or more buildings are ready, and gone again when they are collected.
+    const all = collectAllChip(state);
+    setText(collectButton, all ?? '');
+    collectButton.classList.toggle('show', all !== null);
     chips.classList.add('show');
 
     const tight = bottleneck(state);
@@ -1220,6 +1268,7 @@ export function mountUi(root: HTMLElement): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
     buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
+    collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     if (!type) return;
     setText(placerTitle, placingLine(type, scaleOf(store.state)));
     const ghost = session.ghost;
@@ -1477,7 +1526,12 @@ export function mountUi(root: HTMLElement): void {
               side.append(el('span', 'policy-mark', mark), text);
               box.append(side);
             }
-            if (row.locked) box.append(el('p', 'fine policy-locked', 'Set until the next class moves in.'));
+            if (row.locked) {
+              box.append(el('p', 'fine policy-locked', 'Set until the next class moves in.'));
+              // Seals can free it now (DESIGN.md 42.7): the same price and the same confirm as on the Level page.
+              const held = levelView(state)?.waits.find((wait) => wait.id === `policy:${row.id}`);
+              if (held) box.append(finishControl(held, draw));
+            }
             body.append(box);
           }
           if (policies.next) body.append(el('p', 'fine', policies.next));
@@ -1504,6 +1558,109 @@ export function mountUi(root: HTMLElement): void {
             if (row.fixLabel) detail.append(button(row.fixLabel, 'wide', () => goFix(row)));
             body.append(detail);
           }
+        }
+        body.scrollTop = scrolled;
+      };
+      draw();
+    });
+  }
+
+  /**
+   * "Finish now" for one wait (DESIGN.md 42.7): the price is on the button before the tap, and the tap asks
+   * once more before any Seal is spent. `done` runs after it is finished, to redraw whatever holds it.
+   */
+  function finishControl(wait: { id: string; name: string; price: number; can: boolean }, done: () => void): HTMLElement {
+    const box = el('div', 'finish');
+    const ask = (): void => {
+      box.textContent = '';
+      const go = button(`Finish now · ${wait.price} ${wait.price === 1 ? 'Seal' : 'Seals'}`, 'finish-go', confirm);
+      go.disabled = !wait.can;
+      box.append(go);
+      if (!wait.can) box.append(el('span', 'fine', `You have ${store.state.daily.seals}.`));
+    };
+    const confirm = (): void => {
+      box.textContent = '';
+      box.append(el('p', 'finish-ask', finishConfirm(wait)));
+      const row = el('div', 'finish-row');
+      row.append(
+        button(`Spend ${wait.price}`, 'primary', () => {
+          const result = store.dispatch({ type: 'finish', wait: wait.id });
+          if (!result.ok) session.notify(result.error, 'error');
+          else sound.ui('place');
+          done();
+        }),
+        button('Keep waiting', '', ask),
+      );
+      box.append(row);
+    };
+    ask();
+    return box;
+  }
+
+  /** The Level page: how far to the next level, what feeds it, what the next level gives, and what Seals can finish. */
+  function openLevel(): void {
+    openModal((close, card) => {
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      card.append(head, body, button('Close', 'wide', close));
+      const draw = (): void => {
+        const view = levelView(store.state);
+        if (!view) {
+          close();
+          return;
+        }
+        const scrolled = body.scrollTop;
+        head.textContent = '';
+        const top = el('div', 'level-top');
+        const badge = el('span', 'level-badge big');
+        const art = document.createElement('canvas');
+        art.className = 'level-art';
+        art.width = 216;
+        art.height = 216;
+        badge.append(art, el('span', 'level-number', String(view.level)));
+        void loadAtlas().then((atlas) => drawSprite(art, atlas, 'ui.level'));
+        const words = el('div', 'level-words');
+        const bar = el('div', 'cause-bar size-bar');
+        const fill = el('div', 'cause-fill');
+        fill.style.width = `${view.percent}%`;
+        bar.append(fill);
+        words.append(el('h1', '', view.title), bar, el('p', 'fine', view.line));
+        top.append(badge, words);
+        head.append(top);
+
+        body.textContent = '';
+        body.append(el('p', '', view.next));
+        if (view.ready) {
+          body.append(
+            el('p', 'fine', view.ready.line),
+            button('Collect', 'primary wide', () => {
+              collectAll();
+              draw();
+            }),
+          );
+        }
+        const sealsHead = el('div', 'money-head seals-head');
+        const seal = document.createElement('canvas');
+        seal.className = 'seal-art';
+        seal.width = 48;
+        seal.height = 60;
+        void loadAtlas().then((atlas) => drawSprite(seal, atlas, 'ui.seal'));
+        sealsHead.append(seal, el('span', '', `Gold Seals · ${view.seals}`));
+        body.append(sealsHead);
+        if (view.waits.length === 0) body.append(el('p', 'fine', 'A Seal finishes a wait at once. Nothing is waiting now.'));
+        for (const wait of view.waits) {
+          const row = el('div', 'wait');
+          const text = el('div', 'need-text');
+          text.append(el('span', 'need-name', wait.name), el('span', 'need-line', wait.detail));
+          row.append(text, finishControl(wait, draw));
+          body.append(row);
+        }
+        body.append(el('div', 'money-head', 'What earns experience'));
+        for (const feed of view.feeds) {
+          const line = el('div', 'size-row');
+          line.append(el('span', '', feed.name), el('span', 'size-value', feed.value));
+          body.append(line);
         }
         body.scrollTop = scrolled;
       };

@@ -7,6 +7,7 @@ import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone
 import { classSize, dormStudents, localsAmong } from './demand';
 import { enrollmentCap, landSizeGoals, roomUnderCap } from './goals';
 import { leavingMore, unlockPolicies } from './policies';
+import { earn } from './daily';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -242,6 +243,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   staffSemester(state, season, log);
   // A class has moved in: a policy changed since the last one may be changed again (DESIGN.md 41.7).
   unlockPolicies(state);
+  // And it is experience toward the University Level (DESIGN.md 42.2).
+  if (admitted > 0) earn(state, 'classIn', log);
   // A size goal lands here, at an intake, and nowhere else (DESIGN.md 37.2).
   landSizeGoals(state, log);
 }
@@ -380,6 +383,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
       text: `${headCount(seniors)} seniors graduated. ${headCount(state.stats.graduates)} alumni so far.`,
       data: { seniors, alumni: state.stats.graduates },
     });
+    earn(state, 'graduation', log);
   }
 }
 

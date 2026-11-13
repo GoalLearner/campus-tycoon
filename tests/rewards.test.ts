@@ -139,7 +139,7 @@ describe('a goal reached', () => {
     const { state, log } = ranked(170);
     expect(rewardsEarned(state)).toEqual(['fountain']);
     expect(rewardsWaiting(state)).toEqual(['fountain']);
-    expect(log[0]!.text).toBe("Test University is No. 170 of 200 for academics. The goal of the Top 175 is reached. It is kept for good. Founders' Fountain is yours to place, free, from the Build menu.");
+    expect(log[0]!.text).toBe("Test University is No. 170 of 200 for academics. The goal of the Top 175 is reached. It is kept for good. Founders' Fountain is yours to place, free, from the Build menu. It brings 5 Gold Seals.");
     const first = buildEntries(28, state)[0]!;
     expect(first).toMatchObject({ id: 'fountain', name: "Founders' Fountain", category: 'Earned', cost: 'Free', footprint: '2 x 2', upkeep: 'Costs nothing to run', effect: 'Lifts how the campus looks within 6 cells. Yours for the Top 175' });
     // The look preview, which has no game, shows none.
@@ -285,8 +285,8 @@ describe('clearing one', () => {
 
 describe('a save that has already reached rank goals', () => {
   it('finds their buildings waiting when it loads, with no change to the save', () => {
-    // The buildings themselves added nothing to the save. Version 17 came later, with policies.
-    expect(SAVE_VERSION).toBe(17);
+    // The buildings themselves added nothing to the save. Versions 17 and 18 came later, with policies and levels.
+    expect(SAVE_VERSION).toBe(18);
     // A game like the owner's own, which reached two goals before the buildings were switched on.
     const { state } = ranked(150);
     const text = serialize(state, T0);

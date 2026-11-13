@@ -59,5 +59,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: the eras now open something. On a game begun on the model campus, the Growth era at the Top 125 opens a Policies page: switches with one gain and one cost each, all off until you turn one on. Tap the student count to see what the next era will open.',
     );
   }
+  if (fromVersion < 18) {
+    notes.push(
+      'New: a game begun on the model campus has a University Level. Food places, the campus store and the stadium fill with a little extra: tap the medal over one to collect it. Nothing is lost for a day and a half. Levels, rank goals and eras bring Gold Seals, which can finish a wait at once.',
+    );
+  }
   return notes;
 }

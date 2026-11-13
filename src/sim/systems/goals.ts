@@ -5,6 +5,7 @@ import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment } from '../selectors';
 import type { GameState, Goals, LogEntry, PlacedType } from '../types';
+import { dailyOnGoals } from './daily';
 
 /**
  * The cap, the goals and the eras (DESIGN.md sections 37 and 38.4).
@@ -169,12 +170,18 @@ function land(state: GameState, log: LogEntry[], ladder: 'size' | 'rank', count:
   // A rank goal gives its building (section 40): free, in the Build menu, for as long as it is not on the map.
   const given = ladder === 'rank' ? RANK_REWARDS.slice(was, count) : [];
   if (given.length > 0) text += ` ${capital(list(given.map(rewardName)))} ${given.length === 1 ? 'is' : 'are'} yours to place, free, from the Build menu.`;
+  // Gold Seals for each goal and each era (section 42.7), said before the era so the era's own words end the line.
+  // The experience may reach a level: its line follows the goal's.
+  const after: LogEntry[] = [];
+  const sealsGiven = dailyOnGoals(state, ladder, count - was, era - eraWas, after);
+  if (sealsGiven > 0) text += ` ${one ? 'It brings' : 'They bring'} ${sealsGiven} Gold Seals.`;
   // An era says what it opens (section 41). A day that opens two says both.
   for (let n = eraWas + 1; n <= era; n++) {
     const opens = eraOpens(n);
     text += ` The ${ERAS[n]} era begins.${opens ? ` It opens ${opens}.` : ''}`;
   }
   log.push({ tick: state.clock.tick, kind: 'goal', text, data: { keep: 1, ladder, count, from: was, era: era > eraWas ? era : -1 } });
+  log.push(...after);
 }
 
 /** At an intake, once the class has moved in: every size goal the campus now stands at or above is reached. */

@@ -300,6 +300,16 @@ sprites['icon.noroad'] = {'layers': [standing(DECOR + 'GateDown.png', 0.5, 0.5, 
 sprites['icon.mischief'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.5, 0.5, scale=1.5)]}
 sprites['decor.hoop'] = {'layers': [standing(ICONS + 'BasketBallNet.png', 0.5, 0.5, scale=0.16)]}
 
+# ------------------------------------------------------- the daily layer --
+# The University Level, Gold Seals and collecting (DESIGN.md section 42). Each is the pack's own drawing, only
+# made smaller: nothing is cut, recoloured or assembled. The owner saw them on one sheet first and chose these.
+# The marker over a building that is ready to collect, which is also what rises when it is tapped.
+sprites['icon.collect'] = {'layers': [standing(ICONS + 'Medal_Gold.png', 0.5, 0.5, scale=0.24)]}
+# The Gold Seal, and the level badge that the level's number is set on. Both are shown in panels, larger than
+# anything on the map, so they are kept larger here.
+sprites['ui.seal'] = {'layers': [standing(ICONS + 'PinMedal_Gold.png', 0.5, 0.5, scale=0.6)]}
+sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5, scale=0.9)]}
+
 # ------------------------------------------------------------------ alive --
 # Markers at the edge of a campus the town cannot get into: the pack's arrow sign for a path, and its
 # blue square sign for parking. Both as drawn, a little larger so they read at phone zoom.

@@ -193,6 +193,8 @@ export * from './systems/goals';
 export * from './systems/policies';
 export * from './systems/policyWords';
 export * from './config/policies';
+export * from './systems/daily';
+export * from './config/daily';
 export * from './config/goals';
 export * from './newspaper';
 export * from './notify';

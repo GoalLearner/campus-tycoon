@@ -3790,6 +3790,42 @@
     }
    ]
   },
+  "icon.collect": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/Medal_Gold.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.24
+    }
+   ]
+  },
+  "ui.seal": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/PinMedal_Gold.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.6
+    }
+   ]
+  },
+  "ui.level": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/LaurelWreath.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.9
+    }
+   ]
+  },
   "icon.walkin": {
    "layers": [
     {

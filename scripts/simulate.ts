@@ -58,6 +58,12 @@ import {
   POLICIES,
   policiesOpen,
   policyWords,
+  collectCashPerYear,
+  collectables,
+  HOME_GAMES_PER_YEAR,
+  levelAt,
+  SEAL_HOURS,
+  waits,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -93,6 +99,8 @@ const YEARS = Number(option('years', '20'));
 if (args.includes('--no-slider')) botOptions.slider = false;
 // `-- --no-policies` runs them with every switch an era opens left off, as a campus that never visits the page.
 if (args.includes('--no-policies')) botOptions.policies = false;
+// `-- --no-daily` runs them without the daily layer: nothing collected and no Seal spent.
+if (args.includes('--no-daily')) botOptions.daily = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -125,6 +133,10 @@ interface YearRow {
   /** Of every $100 that comes in, how much is kept. */
   kept: number;
   endowment: number;
+  /** The daily layer: the University Level, experience and Seals held, two days into the week. */
+  level: number;
+  xp: number;
+  seals: number;
 }
 
 interface Run {
@@ -181,6 +193,19 @@ interface Seen {
   rankWeeks: number[];
   /** Policies: how many times a switch was turned on or off, and lines of the paper about them that broke the tone guide. */
   switches: number;
+  /**
+   * The daily layer: the level after the first sitting, what was collected over the run, what the cap had
+   * already cost when it was collected, Seals spent and waits finished, and every price a wait was seen at.
+   */
+  firstSitting: number;
+  collectXp: number;
+  collectCash: number;
+  collectLost: number;
+  collects: number;
+  sealsSpent: number;
+  finished: number;
+  prices: number[];
+  levelLines: number;
   /** Goals whose headline was not in the paper of the visit after they were reached. */
   goalsUnsaid: number;
   /** The most students the campus ever held, whenever it was looked at. */
@@ -214,6 +239,15 @@ const newSeen = (): Seen => ({
   sizeWeeks: SIZE_GOALS.map(() => 0),
   rankWeeks: RANK_GOALS.map(() => 0),
   switches: 0,
+  firstSitting: 1,
+  collectXp: 0,
+  collectCash: 0,
+  collectLost: 0,
+  collects: 0,
+  sealsSpent: 0,
+  finished: 0,
+  prices: [],
+  levelLines: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
 });
@@ -234,6 +268,7 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'inbox' && entry.data?.closes !== undefined) seen.desk.push({ opens: entry.tick, closes: Number(entry.data.closes), key: String(entry.data.key) });
     if (entry.kind === 'inbox' && entry.data?.byDefault === 1) seen.deskDefaults += 1;
     if (entry.kind === 'policy') seen.switches += 1;
+    if (entry.kind === 'level') seen.levelLines += 1;
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -286,6 +321,9 @@ function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
     spending: state.money.spendingPerYear,
     kept: state.money.incomePerYear > 0 ? (100 * (state.money.incomePerYear - state.money.spendingPerYear)) / state.money.incomePerYear : 0,
     endowment: state.money.endowment,
+    level: state.daily.level,
+    xp: state.daily.xp,
+    seals: state.daily.seals,
   };
 }
 
@@ -307,6 +345,17 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
   // The player acts once before move-in, as a person would in their first session.
   const first = takeTurn(state, style);
   state = first.state;
+  const daily = (turn: ReturnType<typeof takeTurn>): void => {
+    if (!turn.daily) return;
+    seen.collectXp += turn.daily.xp;
+    seen.collectCash += turn.daily.cash;
+    seen.collectLost += turn.daily.lost;
+    seen.collects += turn.daily.count;
+    seen.sealsSpent += turn.daily.spent;
+    seen.finished += turn.daily.finished;
+  };
+  daily(first);
+  seen.firstSitting = state.daily.level;
 
   // Each year's row is read two days into the fall, once the new class and its waitlist have settled.
   let nextRowAt = T0 + 2 * DAY_MS;
@@ -352,8 +401,10 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
 
     if (style !== 'absent') {
       seen.visits.push(state.clock.tick);
+      for (const wait of waits(state)) seen.prices.push(wait.price);
       const turn = takeTurn(state, style);
       state = turn.state;
+      daily(turn);
       checkIns += 1;
       if (turn.purchases > 0) checkInsWithPurchase += 1;
       if (turn.blockedByCash && turn.purchases === 0) checkInsBlocked += 1;
@@ -1012,12 +1063,15 @@ function assertModelCampus(seed: number): void {
   for (const run of runs) console.log(`${run.style} ${run.seed} ends with: ${run.final.policies.on.map((id) => POLICIES.find((spec) => spec.id === id)?.name ?? id).join(', ') || 'no policy on'}`);
   console.log('');
 
-  // The same players with every switch left off (DESIGN.md section 41): the campus that never opens the page.
+  // The same players with every switch left off (DESIGN.md section 41) and the daily layer never touched
+  // (section 42): nothing collected, no Seal spent. The campus that never opens either page.
   botOptions.policies = false;
+  botOptions.daily = false;
   const plain = seeds.flatMap((one) => styles.map((style) => play(style, one, PACE_WEEKS, 'model')));
   botOptions.policies = !args.includes('--no-policies');
+  botOptions.daily = !args.includes('--no-daily');
   const plainOf = (style: Style): Run[] => plain.filter((run) => run.style === style);
-  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF');
+  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF AND NOTHING COLLECTED');
   console.log(`${'goal'.padEnd(18)}${head}`);
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${plain.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
   console.log(`${'rank at the end'.padEnd(18)}${plain.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
@@ -1105,6 +1159,82 @@ function assertModelCampus(seed: number): void {
       'the last rank goal can be reached: the player who works every cause gets to the Top 10, in months',
       strivers.every((run) => run.seen.rankWeeks[7]! >= 20),
       strivers.map((run) => `seed ${run.seed}: the Top 10 at ${weekOf(run.seen.rankWeeks[7]!)}, No. ${run.final.field.rank} at the end, looks ${averageDesirability(run.final).toFixed(0)} of 100, marketing at step ${run.final.money.marketing}, a tier ${run.final.football.stadium.tier} stadium, ${Math.round((100 * enrollment(run.final)) / Math.max(1, capacity(run.final).needs.find((need) => need.id === 'seats')!.have))}% of seats taken`).join('; '),
+    );
+  }
+
+  // The daily layer (DESIGN.md section 42): the University Level, Gold Seals and collecting.
+  {
+    const at = (run: Run, week: number): YearRow => run.rows[Math.min(run.rows.length, week) - 1]!;
+    const perWeek = (run: Run, from: number, to: number, pick: (row: YearRow) => number): number => (pick(at(run, to)) - pick(at(run, from))) / (to - from);
+    const earned = (run: Run): number => run.final.daily.seals + run.seen.sealsSpent;
+    const share = (run: Run): number => (run.seen.collectXp + run.seen.collectLost > 0 ? run.seen.collectXp / (run.seen.collectXp + run.seen.collectLost) : 1);
+    const cashPerYear = (run: Run): number => run.seen.collectCash / PACE_WEEKS;
+    const income = (run: Run): number => budget(run.final).incomeTotal;
+    const mean = (list: number[]): number => (list.length > 0 ? list.reduce((sum, n) => sum + n, 0) / list.length : 0);
+    console.log('THE UNIVERSITY LEVEL, GOLD SEALS AND COLLECTING');
+    console.log(`${''.padEnd(26)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(26)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    row('level, first sitting', (run) => String(run.seen.firstSitting));
+    for (const week of [1, 4, 12, PACE_WEEKS]) row(`level at week ${week}`, (run) => String(at(run, week).level));
+    row('levels a week, 1 to 4', (run) => perWeek(run, 1, 4, (r) => r.level).toFixed(1));
+    row('levels a week, 4 to 12', (run) => perWeek(run, 4, 12, (r) => r.level).toFixed(1));
+    row(`levels a week, 12 to ${PACE_WEEKS}`, (run) => perWeek(run, 12, PACE_WEEKS, (r) => r.level).toFixed(1));
+    row('Seals earned in all', (run) => String(earned(run)));
+    row('Seals earned a week', (run) => (earned(run) / PACE_WEEKS).toFixed(1));
+    row('Seals spent', (run) => String(run.seen.sealsSpent));
+    row('waits finished', (run) => String(run.seen.finished));
+    row('price of a wait, mean', (run) => mean(run.seen.prices).toFixed(1));
+    row('price of a wait, most', (run) => String(run.seen.prices.length > 0 ? Math.max(...run.seen.prices) : 0));
+    row('buildings collected', (run) => String(run.seen.collects));
+    row('experience collected', (run) => String(run.seen.collectXp));
+    row('lost to the cap', (run) => String(run.seen.collectLost));
+    row('share collected', (run) => `${(100 * share(run)).toFixed(1)}%`);
+    row('cash collected a year', (run) => dollarsShort(cashPerYear(run)));
+    row('of every $100 that comes in', (run) => `$${((100 * cashPerYear(run)) / income(run)).toFixed(3)}`);
+    console.log('');
+
+    const dailies = of('daily');
+    const first = runs.every((run) => run.seen.firstSitting >= 3 && run.seen.firstSitting <= 6);
+    const later = dailies.map((run) => perWeek(run, 12, PACE_WEEKS, (r) => r.level));
+    const middle = dailies.map((run) => perWeek(run, 4, 12, (r) => r.level));
+    check(
+      'the University Level comes at the pace asked: several levels in the first sitting, then about one every day or two for the once-a-day player',
+      first && [...later, ...middle].every((n) => n >= 3.5 && n <= 7),
+      `${runs.map((run) => `${run.style} ${run.seed}: level ${run.seen.firstSitting} after the first sitting, ${at(run, 1).level} at week 1, ${at(run, 4).level} at week 4, ${at(run, 12).level} at week 12, ${at(run, PACE_WEEKS).level} at week ${PACE_WEEKS}`).join('; ')}. The once-a-day player gains ${middle.map((n) => n.toFixed(1)).join(' and ')} levels a week in weeks 4 to 12 and ${later.map((n) => n.toFixed(1)).join(' and ')} after`,
+    );
+    // A level never falls, every level reached was told once, and the level is the one the experience makes.
+    const told = runs.every((run) => run.final.daily.level === levelAt(run.final.daily.xp).level && run.final.daily.news.length <= 1 && run.rows.every((r, n) => n === 0 || (r.level >= run.rows[n - 1]!.level && r.xp >= run.rows[n - 1]!.xp)));
+    check(
+      'experience only rises, and the level told is the level the experience makes',
+      told && runs.every((run) => run.seen.levelLines > 0),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.final.daily.xp} experience, level ${run.final.daily.level}, ${run.seen.levelLines} lines for its levels`).join('; '),
+    );
+    const weekly = runs.map((run) => earned(run) / PACE_WEEKS);
+    const price = mean(runs.flatMap((run) => run.seen.prices));
+    check(
+      'Gold Seals come at about one Finish now a week',
+      weekly.every((n) => n >= 0.6 * price && n <= 2.5 * price) && price >= 2,
+      `${runs.map((run) => `${run.style} ${run.seed}: ${earned(run)} earned, ${(earned(run) / PACE_WEEKS).toFixed(1)} a week, ${run.seen.sealsSpent} spent on ${run.seen.finished} waits`).join('; ')}. A wait costs ${price.toFixed(1)} Seals on average when one is there to finish, a Seal for every ${SEAL_HOURS} hours left`,
+    );
+    check(
+      'a player who comes once a day gets all of the collectable extra, and so does one who comes twice',
+      [...of('daily'), ...of('casual'), ...of('striver')].every((run) => run.seen.collectLost === 0 && run.seen.collectXp > 0),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.collectXp} experience from ${run.seen.collects} buildings collected, ${run.seen.collectLost} lost to the cap`).join('; '),
+    );
+    // The cash is a rate with a cap: a year of it is a small known sum, far inside the room the money target leaves.
+    const most = Math.max(...runs.map((run) => (100 * cashPerYear(run)) / income(run)));
+    const ceiling = Math.max(...runs.map((run) => (100 * collectCashPerYear(run.final, TICKS_PER_YEAR, HOME_GAMES_PER_YEAR)) / income(run)));
+    check(
+      'collecting pays a little cash and no more: under a tenth of a dollar in every $100 that comes in, at the very most',
+      most <= 0.1 && ceiling <= 0.1,
+      `${runs.map((run) => `${run.style} ${run.seed}: ${dollarsShort(cashPerYear(run))} a year, $${((100 * cashPerYear(run)) / income(run)).toFixed(3)} of every $100`).join('; ')}. The most a campus could ever collect in a year is $${ceiling.toFixed(3)} of every $100`,
+    );
+    // A campus nobody visits loses nothing but the extra itself, and a game with no goals has no layer at all.
+    const idle = alone.final;
+    check(
+      'the layer is a bonus: a campus nobody visits still levels from what happens by itself, and holds what it could not collect',
+      idle.daily.level > 1 && idle.daily.seals > 0 && collectables(idle).length > 0 && plain.every((run) => run.seen.collects === 0 && run.seen.sealsSpent === 0),
+      `left alone for five years it reaches level ${idle.daily.level} with ${idle.daily.seals} Seals and ${collectables(idle).length} buildings holding something; the players who never collect reach level ${plain.map((run) => run.final.daily.level).join(', ')}`,
     );
   }
 

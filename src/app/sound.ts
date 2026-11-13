@@ -380,11 +380,17 @@ class SoundEngine {
   }
 
   /** A soft sound for a tap, for something built, and for something that could not be done. */
-  ui(kind: 'tap' | 'place' | 'error'): void {
+  ui(kind: 'tap' | 'place' | 'error' | 'collect'): void {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running' || this.hidden) return;
-    if (this.playFile(kind === 'tap' ? 'tap' : kind === 'place' ? 'built' : 'cannot')) return;
     const at = ctx.currentTime + 0.005;
+    // Collecting: two quick notes up, bright and short, so several in a row do not pile into noise.
+    if (kind === 'collect') {
+      this.tone(this.soundBus, 'triangle', 880, 880, at, 0.07, 0.11, 0.004);
+      this.tone(this.soundBus, 'triangle', 1318.5, 1318.5, at + 0.06, 0.12, 0.1, 0.004);
+      return;
+    }
+    if (this.playFile(kind === 'tap' ? 'tap' : kind === 'place' ? 'built' : 'cannot')) return;
     if (kind === 'tap') this.tone(this.soundBus, 'sine', 720, 560, at, 0.07, 0.1, 0.004);
     else if (kind === 'place') {
       this.tone(this.soundBus, 'triangle', 392, 392, at, 0.16, 0.13, 0.006);

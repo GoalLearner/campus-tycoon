@@ -351,6 +351,35 @@ export interface Policies {
   news: Array<{ id: string; on: boolean }>;
 }
 
+/**
+ * The daily layer (DESIGN.md section 42): the University Level, Gold Seals
+ * and what there is to collect. Only a game with goals uses it. What each
+ * source of experience pays, what a level gives and what a building holds
+ * are in `config/daily.ts`.
+ */
+export interface Daily {
+  /** Experience earned in all. It never falls, and the level is worked out from it. */
+  xp: number;
+  /** The level reached and paid for: its Seals given and its line told. */
+  level: number;
+  /** Gold Seals held. */
+  seals: number;
+  /** The tick the layer began in this game. A building never collected counts from a day before it. */
+  began: number;
+  /** When each filling building was last collected: a tick, by its id in `map.placed`. */
+  since: Record<number, number>;
+  /** Buildings that have just opened and hold their opening bonus: placed by hand, or a lot's own building. */
+  opened: Array<{ kind: 'placed' | 'lot'; id: number }>;
+  /** The ticks of the opening bonuses given in the last real day. */
+  openings: number[];
+  /** Home games played since the stadium was last collected, up to the few it holds. */
+  games: number;
+  /** The ticks of the last few home wins: the campus store fills faster for a day after each. */
+  wins: number[];
+  /** Lines not yet told: each becomes one line in the log on the next tick. */
+  news: string[];
+}
+
 export interface Staffing {
   /** Faculty and staff on the payroll now. */
   faculty: number;
@@ -448,6 +477,7 @@ export interface GameState {
   goals: Goals | null;
   staffing: Staffing;
   policies: Policies;
+  daily: Daily;
 }
 
 // ------------------------------------------------------------- football --
@@ -805,6 +835,7 @@ export type LogKind =
   | 'costs'
   | 'staff'
   | 'policy'
+  | 'level'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

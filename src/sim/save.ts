@@ -15,6 +15,7 @@ import { recomputeDesirability } from './systems/desirability';
 import { buildTown, startingParcels } from './systems/town';
 import { PLACED } from './config/placed';
 import { mealLoads } from './systems/food';
+import { backPay, newDaily } from './systems/daily';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -23,7 +24,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 18;
 
 export interface SaveFile {
   v: number;
@@ -266,6 +267,16 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof state.policies !== 'object' || state.policies === null) state.policies = { on: [], locked: [], news: [] };
     return state;
   },
+  // Version 18: the University Level, Gold Seals and collecting (DESIGN.md section 42). A game already in play is
+  // given the experience its goals, eras and graduations so far have earned, so nobody starts behind.
+  17: (state) => {
+    if (typeof state.daily !== 'object' || state.daily === null) {
+      const game = state as unknown as GameState;
+      game.daily = newDaily(game.clock.tick);
+      backPay(game);
+    }
+    return state;
+  },
 };
 
 /**
@@ -331,7 +342,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

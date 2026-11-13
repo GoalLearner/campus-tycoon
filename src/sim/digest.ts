@@ -131,6 +131,11 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   // Costs phasing in: where they stand now. One line, however many steps were taken while away.
   lines.push(...latestText(log, 'costs'));
 
+  // Levels reached (DESIGN.md 42.2): the one line, or the last of several with how many there were.
+  const levels = log.filter((entry) => entry.kind === 'level');
+  if (levels.length === 1) lines.push(levels[0]!.text);
+  else if (levels.length > 1) lines.push(`${levels.length} levels up. ${levels[levels.length - 1]!.text}`);
+
   // A policy turned on or off: one line each (DESIGN.md 41.7).
   for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
 
