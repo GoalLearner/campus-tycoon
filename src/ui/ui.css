@@ -2632,3 +2632,60 @@ button.students {
   font-weight: 600;
   color: var(--muted);
 }
+
+/* A peek inside a student's room (DESIGN.md 46): a sheet over the map, above the card. */
+.room-sheet {
+  display: none;
+  position: absolute;
+  left: calc(var(--safe-left) + 8px);
+  right: calc(var(--safe-right) + 8px);
+  top: calc(var(--safe-top) + 64px);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 10px 12px 12px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  z-index: 6;
+}
+.room-sheet.show {
+  display: block;
+}
+.room-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.room-title {
+  font-weight: 700;
+  font-size: 16px;
+}
+.room-close {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.room-canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 10px;
+  background: #1a1f1c;
+  image-rendering: pixelated;
+}
+.room-line {
+  margin-top: 8px;
+  font-size: 15px;
+  text-align: center;
+}
+.room-mate {
+  margin-top: 2px;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.7;
+}

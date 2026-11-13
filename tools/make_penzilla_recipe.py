@@ -317,6 +317,49 @@ COMMONS_THINGS = [
 ]
 sprites['era.commons'] = {'layers': grass_under(3, 3) + [on_grid(TILES + 'Sidewalk_Tile9.png', shift=[x, y]) for x, y in sorted(COMMONS_PAVING, key=lambda c: (c[0] + c[1], c[0]))] + COMMONS_THINGS}
 
+# ------------------------------------------------------------- a dorm room --
+# A peek inside a student's room (DESIGN.md section 46). The packs have no inside walls, no floor and no bed, so a room
+# is laid out at run time from these pieces on a grid of its own, each the pack's own drawing as drawn. The walls are
+# the Medieval stable's back corner, its two faces taken apart so a room can be two cells along each wall; the floor
+# is the city pack's square paver. Each piece stands on the middle of its cell, so the room can move it by any part of
+# a cell. Listed on section 26 as assembled.
+OLD_DECOR = OLD + 'Decor/'
+sprites['room.wall.left'] = {'layers': [on_grid(OLD + 'Buildings/Stable_Back.png')], 'side': 'sw'}
+sprites['room.wall.right'] = {'layers': [on_grid(OLD + 'Buildings/Stable_Back.png')], 'side': 'se'}
+sprites['room.floor'] = {'layers': [on_grid(TILES + 'Concreet.png')]}
+ROOM_PIECES = {
+    'desk': (DECOR + 'Table.png', 1),
+    'chair': (DECOR + 'ChairBack.png', 1),
+    'chairFront': (DECOR + 'ChairFront.png', 1),
+    'shelf': (DECOR + 'Cabinette.png', 1),
+    'speaker': (DECOR + 'Jukebox.png', 0.8),
+    'notes': (DECOR + 'Notes1.png', 0.9),
+    'notes2': (DECOR + 'Notes2.png', 0.9),
+    'plant': (PLANTS + 'Plant13.png', 0.8),
+    'rug': (OLD_DECOR + 'Rug.png', 1),
+    'drapes': (OLD_DECOR + 'Drapes.png', 0.9),
+    'book': (OLD_DECOR + 'Book.png', 0.8),
+    'papers': (OLD_DECOR + 'Papers.png', 0.8),
+    'scroll': (OLD_DECOR + 'Scroll.png', 0.7),
+    'stool': (OLD_DECOR + 'Stool.png', 1),
+    'lute': (OLD_DECOR + 'MusicLute.png', 0.8),
+    'cup': (OLD_DECOR + 'Cup.png', 0.6),
+    'apple': (OLD_DECOR + 'Apple.png', 0.5),
+    'bread': (OLD_DECOR + 'Bread.png', 0.6),
+    'basket': (OLD_DECOR + 'Basket.png', 0.8),
+    'box': (OLD_DECOR + 'Box.png', 0.8),
+    'ball': (ICONS + 'BasketBall.png', 0.13),
+    'soccerBall': (ICONS + 'SockerFootBall.png', 0.13),
+    'kettlebell': (ICONS + 'KettleBell_Red.png', 0.1),
+    'controller': (ICONS + 'Controler.png', 0.13),
+    'chess': (ICONS + 'Chess_White.png', 0.14),
+    'cards': (ICONS + 'PlayingCards.png', 0.12),
+    'dice': (ICONS + 'DiceRoll.png', 0.12),
+    'trophy': (ICONS + 'Trophy_Bronze.png', 0.14),
+}
+for name, (file, scale) in ROOM_PIECES.items():
+    sprites[f'room.{name}'] = {'layers': [standing(file, 0.5, 0.5, scale=scale)]}
+
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
 sprites['icon.injury'] = {'layers': [{'file': SHOPS + 'Shop_Pharmacy_OneFloorRoofed.png', 'crop': [632, 416, 772, 606], 'stand': [0.5, 0.5], 'recolour': 'cross'}]}
@@ -574,7 +617,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk.',
         },
         {
             'name': 'Football stadium (3D model)',

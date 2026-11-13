@@ -59,6 +59,8 @@ class Session {
   person: PersonRef | null = null;
   /** True while the camera keeps that student in view. */
   following = false;
+  /** The student whose room is open (DESIGN.md 46). Only ever the student whose card is open. */
+  room: StudentRef | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
   doing: string | null = null;
   /** A cell the map should glide to. A new `seq` means a new request. */
@@ -207,6 +209,22 @@ class Session {
     this.student = null;
     this.person = null;
     this.following = false;
+    this.room = null;
+    this.emit();
+  }
+
+  /** Look inside the room of the student whose card is open (DESIGN.md 46). The camera stops following. */
+  openRoom(): void {
+    if (!this.student) return;
+    this.room = this.student;
+    this.following = false;
+    this.emit();
+  }
+
+  /** Back to the card. */
+  closeRoom(): void {
+    if (!this.room) return;
+    this.room = null;
     this.emit();
   }
 
