@@ -92,6 +92,7 @@ import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, 
 import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
+import { mountRoomView } from './roomView';
 
 /**
  * The HUD and every panel, as plain HTML over the map. It reads the game from
@@ -503,6 +504,7 @@ export function mountUi(root: HTMLElement): void {
   inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorStaff, inspectorDecor, inspectorAction);
 
   const studentPanel = mountStudentCard();
+  const roomPanel = mountRoomView();
   const personPanel = mountPersonCard();
 
   // ---------------------------------------------------------------- build --
@@ -646,7 +648,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, turnButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, turnButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2228,6 +2230,7 @@ export function mountUi(root: HTMLElement): void {
       chip.classList.remove('show');
       inspector.classList.remove('show');
       studentPanel.render(null);
+      roomPanel.render(null);
       personPanel.render(null);
       if (!modalOpen) openSetup();
       return;
@@ -2238,6 +2241,7 @@ export function mountUi(root: HTMLElement): void {
     renderHud(state);
     renderInspector(state);
     studentPanel.render(state);
+    roomPanel.render(state);
     personPanel.render(state);
     renderModeBar();
     renderPlacer(state);

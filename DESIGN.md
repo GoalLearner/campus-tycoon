@@ -1661,7 +1661,7 @@ Noted for the owner on 2026-11-12. An idea only: a 3D version of a player's own 
 
 ### 20.5 Peek inside: a student at home (later, not built)
 
-The owner, 2026-11-13, while playing: "I wish you could follow a person to and inside their house like in the sims...that would be so cool to see people in their house or something." He was told it comes in two sizes, and asked whether to put it on the roadmap for after the daily layer. He answered: "Yes, add it". **Nothing here is built or scheduled.**
+The owner, 2026-11-13, while playing: "I wish you could follow a person to and inside their house like in the sims...that would be so cool to see people in their house or something." He was told it comes in two sizes, and asked whether to put it on the roadmap for after the daily layer. He answered: "Yes, add it". **Nothing here is built or scheduled.** On 2026-11-13 the peek-inside size was built: section 46.
 
 | Size | What it is | Where it belongs |
 |---|---|---|
@@ -2364,6 +2364,10 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Honors College, `era.honors` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 | Welcome Center, `era.welcome` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 | Building site of two cells, `build.site.wide` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| A dorm room, `room.wall.left` and `room.wall.right` (46) | The Medieval stable's back corner with its two faces taken apart, laid three and two panels long to make the two back walls of a room. A stable's timber and plaster, not a dorm's | Penzilla commission: a dorm room cut-away, walls and floor, with a bed |
+| A dorm room's floor, `room.floor` (46) | The city pack's concrete tile, four of them | The same commission |
+| A dorm room's furniture and things, `room.*` (46) | The packs' own table, chair, shelves, rug, drapes, stool, books, papers, scroll, lute, jukebox, music notes, cup, apple, bread, basket, box and plant, each as drawn, put down together at run time. The balls, trophy, kettlebell, controller, chess piece, cards and dice are the Sport and Games icons, drawn face on and shrunk to stand in a room | Keep, with the commission above for anything that should be in the room's angle |
+| Nobody sits or lies down in a room (46) | A figure stands at the desk to study; a sleeping student is a dark room with nobody in it, as the packs have no bed and no lying figure | Penzilla commission: seated and sleeping figures, and a bed |
 
 Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one, and turn with the view (43). The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
 
@@ -6154,3 +6158,71 @@ The casual and the once-a-day player stay inside $12 to $17 either way. Buying t
 | On a full campus there is no room for the landmark | A player clears ground for it, as 41.6 expected. The test players clear a block of lawn by the Administration building |
 | The test players do not show what a person would choose | They buy each as soon as the money rule allows. A person may wait, or never buy one |
 | Never run on a phone | Checked in pictures and in tests on this PC |
+
+---
+
+## 46. Peek inside: a student at home, as built
+
+The peek-inside size of 20.5, built on 2026-11-13 on the owner's overnight word relayed by the main session: "perfect handle all of that with my approval on all... if you finish these...keep going", which took in the art. His words that started it: "I wish you could follow a person to and inside their house like in the sims...that would be so cool to see people in their house or something ... the sims feature would be soo cool by giving them those personalities and behaviors." He chose the peek-inside size for now. Students who live their own lives stay Student mode on the roadmap (20.3).
+
+For show only, like the walkers (13.8): nothing in `src/sim` reads it, nothing is saved, and no number moves. A room is worked out when it is opened, from the student's seeded identity, the live campus numbers and the hour on the player's clock, as the card is.
+
+### 46.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The way in | A student who walks into their dorm, followed or not: their card's Doing now reads "In the dorm" (or "Asleep in the dorm" at night) and gains a "Look inside" button where Follow was. Only a student who lives in a dorm has one | `canLookInside` in `src/app/room.ts`, `src/ui/studentCard.ts` |
+| The room | A sheet over the map with the student's name, "Back" to the card, and a cut-away room: a floor two cells by two with its two back walls standing, drawn on a canvas of its own with the map's own projection. The card waits behind it | `src/ui/roomView.ts`, `mountRoomView` |
+| Three plans | The desk against the left wall and a rug in the middle; the desk against the right wall and the sofa along the left; the desk in the back corner with a rug in front. Chosen from the seed, the hall and the student, so neighbours' rooms differ | `ROOM_PLANS` |
+| What is always there | A desk and a chair, the shelves, a floor lamp, drapes on the wall, and the rug or the sofa. A student in a club has the school's banner up | `roomFor` |
+| Their things, from the card | Books and a scroll for a Scholar, the Stressed-Out and a Super Senior. A little untidiness for a Slacker: papers, a basket, a box. A ball and a trophy for an athlete or a Superfan. A speaker for a Party Animal, cards for the Class Clown. A chess set for the Chess Club, dice for the Board Game Club, a soccer ball for Intramural Soccer, a controller for Robotics and Coding, a plant for the Garden Club, bread for the Baking Club. A plant for someone who feeds the squirrels, an apple for the always hungry, a cup for the caffeine-powered. A lute and a speaker for a music major and the music clubs. The first thing of each part of the card comes before a second of any, so a crowded room still shows every part | `belongings` |
+| A roommate | When the hall's rooms are shared: the hall has grown to its second stage and the campus's dorms are more than half full. Someone else who lives in that hall, from the seed, named under the room. Out in the middle of the day, unless they are playing a game with the student | `roomShared`, `roommateOf` |
+| What they are doing | From the card and the hour on the player's clock. Asleep at night (midnight to eight; a Night Owl two to ten; an All-Nighter four to nine; a Scholar eleven to seven). Getting ready in the hour and a half after waking. In finals week, studying. With Stress of 60 or more, mostly studying. Otherwise one each hour, weighted by the card: study (Scholars and the Stressed-Out most), play music (music majors and clubs), a call (the Homesick, anyone in a long-distance relationship, the Social Butterfly and the Charmer), a game with the roommate (the Chess and Board Game clubs and the Class Clown most; only with a roommate), stretching after practice (athletes and Superfans), or taking it easy (the Slacker and the Party Animal most) | `roomActivity` |
+| The line under the room | In the card's voice: "Studying at the desk", "Studying late by the desk lamp", "Studying for finals at the desk", "Asleep. The lights are out.", "Getting ready for the day", "Playing music", "On a call home", "On a call with someone far away", "A game with Indigo, their roommate", "Stretching after practice", "Taking it easy", "Winding down for the night". Worked out again each quarter of an hour while the room is open, so it changes as the hour does | `lineOf` |
+| The light | Daylight by day. From eight in the evening to six in the morning the room is dim and the floor lamp glows. Asleep, the lights are out and the room is dark | `roomView.ts` |
+| Small motion | A figure breathes, nods to music while playing, and moves a little while on a call. The open book on the desk turns a page every few seconds. Notes drift up from the speaker or the lute being played. No dialogue. Redrawn twelve times a second while open, and not at all when closed | `roomView.ts` |
+| Asleep | No bed: his packs have none, and nobody in the people pack can lie down. A sleeping student is shown honestly as a dark room with the lights out and nobody standing in it, and the line says they are asleep | |
+| Studying at the desk | Nobody in the people pack can sit, so a student studying stands at the desk, as students at a bench already do (32) | |
+| Town houses | Not built: a student who lives off campus has no Look inside. Next, with house walls and a door from his packs | |
+| Turns and phones | The room is its own picture, so it is the same at every turn of the view. The sheet fits a phone 375 wide and wider | `.room-sheet` in `src/ui/ui.css` |
+| The dev page | `&room=3` opens the room of the third dorm student the seed offers; `&roommate=1` only students with a roommate; `&roomdo=music` only those doing that at the hour shown; `&lookin=1` their card as if they had just walked home; `&card=home,follow` follows a student heading home | `src/app/devtools.ts` |
+
+**The art.** The packs have no inside walls, no floor and no bed, so a room is put together at run time from pack pieces, each as drawn (section 26). The walls are the Medieval stable's back corner, its two faces taken apart; the pack drew that corner a little off its cell, so its left face is 0.64 of a cell long and its right face 0.89, and three of one and two of the other close the room to within a few hundredths. The floor is the city pack's concrete tile. The furniture is the city pack's table, chair, shelves and floor lamp, and the Medieval pack's rug, drapes, stool, books, papers, scroll, lute, cup, apple, bread, basket and box. The speaker is the city pack's jukebox and the music notes its own. The balls, trophy, kettlebell, controller, chess piece, cards and dice are the Sport and Games icons, shrunk to stand in the room. The sofa and the banner are the decorations of 42.20. The figures are the walkers' own.
+
+### 46.2 Measured
+
+| Measured | Result |
+|---|---|
+| Frame work of the map with a room open, at the Normal crowd on this PC | 3.3 to 5.0 ms, mean 3.9, against 2.9 to 3.8 ms, mean 3.4, with none open. The room draws on its own small canvas, twelve times a second, outside the map's frame |
+| Working out a room | Once when opened and once a quarter hour after: one card, and a few hundred seeded students to find a roommate |
+| Followed home, in the app's browser | A student heading back to the dorm was followed; when they went indoors the card read "In the dorm" with Look inside, the room opened, and Back returned to the card |
+| Plans | All three come up among the model campus's dorm students |
+| Changes nothing | The tests save a campus before and after working out rooms for twenty students at five hours and find it the same; no file in `src/sim` reads the room |
+| Tests | 10 new: 823 in all. The long run's 78 checks pass and its tables are the same as before, line for line |
+
+### 46.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The way in | "Look inside" where Follow was, once the student has walked into their dorm, followed or not | Only after Follow, which hides it from a player who watched them walk in |
+| Where it is drawn | A sheet over the map, the card waiting behind it, "Back" to return | A new screen, which loses the map |
+| Walls | The stable's back corner, its faces taken apart and laid at their own lengths | The stable corner stretched to a cell, which makes one wall taller than the other. Or walls cut from an apartment block's outside, which reads as outdoors |
+| Floor | The concrete tile, which joins without gaps | The square paver, drawn inset so the floor shows gaps |
+| Shared rooms | When the hall has grown to its second stage and the campus's dorms are more than half full | Every room shared, or none. Nothing in the game said which, so this reads two live numbers |
+| Asleep | A dark room with nobody standing in it | A bed made up from other furniture: a stand-in |
+| Studying | Standing at the desk | A chair with a figure stood in front of it, which reads as standing anyway |
+| The hour | The player's own clock, as the map's light | The game's calendar hour, which runs a day in half a real hour |
+| How often it changes | Each quarter hour of the player's clock while open | Each minute, which would make a game or a call flicker between things |
+| What is in a room | Only things the card says, and nothing embarrassing: a Slacker's untidiness is papers, a basket and a box | Clothes on the floor and the like, which the tone guide rules out |
+| Town houses | Left for next: they need a house's walls and door | Built now in a dorm room's walls, which would be wrong for a house |
+
+### 46.4 Rough
+
+| Rough | Why |
+|---|---|
+| Nobody sits or lies down | The people pack's figures only stand and walk. A student studies standing at the desk, and sleeps out of sight |
+| There is no bed | His packs have none. The room shows no bed at any hour |
+| The walls are a stable's | Timber and plaster, honest pack art, but drawn for a stable. A commissioned dorm room would read better |
+| The icons are flat | The Sport and Games icons are drawn face on, not in the map's angle |
+| Town houses have no room yet | Next |
+| Never run on a phone | Checked in the app's browser at 375 wide, in pictures and in tests on this PC |

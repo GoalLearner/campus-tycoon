@@ -1,4 +1,5 @@
 import { stayingWords } from '../app/activityPeople';
+import { canLookInside } from '../app/room';
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { studentCard, studentFigure, studentKey, type GameState } from '../sim';
@@ -152,7 +153,12 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
   const follow = el('button', 'student-follow', 'Follow');
   follow.type = 'button';
   follow.addEventListener('click', () => session.setFollowing(!session.following));
-  doing.line.append(follow);
+  // Home in their dorm: a look inside their room (DESIGN.md 46).
+  const inside = el('button', 'student-follow student-inside', 'Look inside');
+  inside.type = 'button';
+  inside.hidden = true;
+  inside.addEventListener('click', () => session.openRoom());
+  doing.line.append(follow, inside);
 
   // 3 and 4.
   const grades = row('GPA');
@@ -232,6 +238,10 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     follow.hidden = stayingWords(session.doing) !== null;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
+    // Followed home, or simply gone indoors at their hall: the room can be looked into.
+    const home = canLookInside(state, ref, lastDoing, outside);
+    inside.hidden = !home;
+    if (home) follow.hidden = true;
 
     // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
     // The ratio as this student meets it: how many of them there are to a member of faculty (DESIGN.md 38).
@@ -252,7 +262,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
       : null;
     reason.disabled = target === null;
 
-    node.classList.add('show');
+    // Looking inside their room, the card waits behind it (DESIGN.md 46).
+    node.classList.toggle('show', session.room === null);
   }
 
   return { node, render };

@@ -1,4 +1,6 @@
-import { DECOR, gainXp, giveDecor, hurryCraft, readyToCollect } from '../sim';
+import { DECOR, gainXp, giveDecor, hurryCraft, readyToCollect, sampleStudents } from '../sim';
+import { roomFor, roomShared } from './room';
+import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
 import { clock } from './clock';
@@ -254,6 +256,7 @@ interface DevScene {
     arrive(count: number): void;
     update(deltaMs: number): void;
     studentsNear(worldX: number, worldY: number): Array<{ entryYear: number; index: number }>;
+    doing(key: string): string | null;
   };
   art: { people: { roles?: Record<string, number> } | null };
   standerIn(role: string): { student: { entryYear: number; index: number } | null; look: number } | null;
@@ -306,6 +309,31 @@ function applyViewParams(params: URLSearchParams): void {
   const stadium = params.get('demo') === 'stadium';
   const town = params.get('demo') === 'town';
   const card = params.get('card');
+  // &room=3 opens the card and the room of the third student the seed offers who lives in a dorm (DESIGN.md 46).
+  // &roommate=1 counts only students whose room is shared. &hour= sets the hour the room is read at, as for the map.
+  const roomAt = Number(params.get('room') ?? NaN);
+  if (Number.isInteger(roomAt) && roomAt >= 0) {
+    setTimeout(() => {
+      const state = store.state;
+      const residents = sampleStudents(state, 60).filter((ref) => {
+        const one = studentCard(state, ref);
+        if (!one || one.residence !== 'dorm' || one.home === null) return false;
+        if (params.has('roommate') && !roomShared(state, one.home)) return false;
+        // &roomdo=music picks only students doing that in their room at the hour shown.
+        const doing = params.get('roomdo');
+        return !doing || roomFor(state, ref, shownHour(), { crowd: 16, look: () => 0 })?.activity === doing;
+      });
+      const ref = residents[roomAt % Math.max(1, residents.length)];
+      if (!ref) return;
+      session.openStudent(ref);
+      // &lookin=1 shows their card as if they had just walked into their dorm, with Look inside on it, and no room yet.
+      if (params.has('lookin')) {
+        session.setDoing('toDorm');
+        return;
+      }
+      session.openRoom();
+    }, 2800);
+  }
   const placing = params.get('place');
   const panel = params.get('panel');
   const incident = params.get('incident');
@@ -573,7 +601,9 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           const saddest = [...near].sort(
             (a, b) => (studentCard(store.state, a)?.happiness ?? 100) - (studentCard(store.state, b)?.happiness ?? 100),
           )[0];
-          const student = nth === 'unhappy' ? saddest : near[Math.min(near.length - 1, Number(nth) || 0)];
+          // &card=home,follow picks a student in sight who is heading back to their dorm, to follow them home (DESIGN.md 46).
+          const homeward = near.find((one) => scene.walkers.doing(`${one.entryYear}:${one.index}`) === 'toDorm');
+          const student = nth === 'unhappy' ? saddest : nth === 'home' ? homeward : near[Math.min(near.length - 1, Number(nth) || 0)];
           if (!student) return;
           session.openStudent(student);
           if (mode === 'follow') session.setFollowing(true);
