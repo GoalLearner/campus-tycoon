@@ -70,6 +70,7 @@ import {
   enrollmentCap,
   nextApplicants,
 } from '../sim';
+import { craftsReady, decorSpec, hasMakerspace, previewDecor, waits as waitsNow } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
@@ -77,6 +78,8 @@ import { policiesView, policyChip } from './policyUi';
 import { collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from './levelUi';
 import { footballStat, inboxStat, policyStat, type StatChip } from './chips';
 import { ordersChip, ordersView, paidWords } from './ordersUi';
+import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from './decorUi';
+import { sharePhoto } from '../app/photo';
 import { drawSprite, loadAtlas } from './atlas';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
@@ -433,7 +436,39 @@ export function mountUi(root: HTMLElement): void {
   let actionLot: { x: number; y: number } | null = null;
   // Set instead when the panel is a field for sale: the button buys it.
   let actionLand: number | null = null;
+  // Set instead when the panel is the Makerspace: the button opens the Workshop (DESIGN.md 42.6).
+  let actionWorkshop = false;
+  // A decoration: move it, turn it, or put it away. All three are free, and nothing is lost (DESIGN.md 42.5).
+  let decorHere: number | null = null;
+  const inspectorDecor = el('div', 'inspector-decor');
+  const decorTurn = button('Turn', '', () => {
+    if (decorHere === null) return;
+    const result = store.dispatch({ type: 'turnDecor', placed: decorHere });
+    if (!result.ok) session.notify(result.error, 'error');
+  });
+  inspectorDecor.append(
+    button('Move', 'primary', () => {
+      const placed = decorHere === null ? null : store.state.map.placed[decorHere];
+      if (!placed || !placed.decor) return;
+      session.startDecor(placed.decor, placed.id, placed.flip === true);
+      session.setGhost(placed.x, placed.y);
+    }),
+    decorTurn,
+    button('Put away', '', () => {
+      if (decorHere === null) return;
+      const result = store.dispatch({ type: 'storeDecor', placed: decorHere });
+      if (!result.ok) session.notify(result.error, 'error');
+      else {
+        session.clearSelection();
+        session.notify('Put away. It is in storage, in the Build menu.');
+      }
+    }),
+  );
   const inspectorAction = button('Build a dining hall here', 'primary inspector-action', () => {
+    if (actionWorkshop) {
+      openWorkshop();
+      return;
+    }
     if (actionLand !== null) {
       const result = store.dispatch({ type: 'buyLand', parcel: actionLand });
       if (result.ok) {
@@ -464,7 +499,7 @@ export function mountUi(root: HTMLElement): void {
   const more = button('+', 'staff-button', () => changeStaff(1));
   const staffCount = el('span', 'staff-count');
   inspectorStaff.append(fewer, staffCount, more);
-  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorStaff, inspectorAction);
+  inspector.append(inspectorClose, inspectorTitle, inspectorState, inspectorFacts, inspectorStaff, inspectorDecor, inspectorAction);
 
   const studentPanel = mountStudentCard();
   const personPanel = mountPersonCard();
@@ -487,10 +522,51 @@ export function mountUi(root: HTMLElement): void {
   const placerTitle = el('div', 'placer-title');
   const placerState = el('div', 'placer-state');
   const placerButtons = el('div', 'placer-buttons');
+  // A decoration bought with Gold Seals asks once more before a Seal is spent.
+  let sealAsked: string | null = null;
+  const placeDecoration = (id: string, ghost: { x: number; y: number }): void => {
+    const moving = session.moving;
+    // What it does is said as it lands: how many buildings near it look better for it.
+    const before = liftsNear(store.state, ghost.x, ghost.y);
+    const lifted = (): number => liftedCount(before, liftsNear(store.state, ghost.x, ghost.y));
+    if (moving !== null) {
+      const result = store.dispatch({ type: 'moveDecor', placed: moving, x: ghost.x, y: ghost.y });
+      if (!result.ok) {
+        session.notify(result.error, 'error');
+        return;
+      }
+      sound.ui('place');
+      session.notify(decorPlacedWords(store.state, id, 'moved', lifted()));
+      session.setTool('look');
+      return;
+    }
+    const preview = previewDecor(store.state, id, ghost.x, ghost.y);
+    if (preview.way === 'seals' && preview.problem === null && sealAsked !== `${id}:${ghost.x}:${ghost.y}`) {
+      sealAsked = `${id}:${ghost.x}:${ghost.y}`;
+      render();
+      return;
+    }
+    sealAsked = null;
+    const result = store.dispatch({ type: 'placeDecor', id, x: ghost.x, y: ghost.y, flip: session.decorFlip });
+    if (!result.ok) {
+      session.notify(result.error, 'error');
+      return;
+    }
+    sound.ui('place');
+    session.notify(decorPlacedWords(store.state, id, preview.way ?? 'cash', lifted()));
+    // Another of the same can go down at once while storage has one, or the shelf sells it for cash.
+    const next = previewDecor(store.state, id, ghost.x, ghost.y).way;
+    if (next === 'storage' || next === 'cash') session.startDecor(id, null, session.decorFlip);
+    else session.setTool('look');
+  };
   const placeButton = button('Place', 'primary', () => {
     const type = session.placing;
     const ghost = session.ghost;
     if (!type || !ghost) return;
+    if (type === 'decor') {
+      if (session.decor) placeDecoration(session.decor, ghost);
+      return;
+    }
     const result = store.dispatch({ type: 'place', building: type, x: ghost.x, y: ghost.y });
     if (!result.ok) {
       session.notify(result.error, 'error');
@@ -537,10 +613,21 @@ export function mountUi(root: HTMLElement): void {
   clearer.append(clearerTitle, clearerState, clearerButtons);
 
   function openBuild(): void {
-    openBuildMenu(root, buildEntries(scaleOf(store.state), store.state), (entry) => {
+    const entries = buildEntries(scaleOf(store.state), store.state);
+    const later = entries.findIndex((entry) => entry.category === 'On the way');
+    entries.splice(later < 0 ? entries.length : later, 0, ...decorEntries(store.state));
+    openBuildMenu(root, entries, (entry) => {
       // Roads, bins, benches and tables are laid by dragging. Everything else is placed one at a time.
       if (entry.id?.startsWith(TOOL_ENTRY)) session.setTool(entry.id.slice(TOOL_ENTRY.length) as Tool);
-      else if (entry.id) session.startPlacing(entry.id as PlacedType);
+      else if (entry.id?.startsWith(DECOR_ENTRY)) session.startDecor(entry.id.slice(DECOR_ENTRY.length));
+      else if (entry.id === WORKSHOP_ENTRY) {
+        // The Workshop is in the Makerspace. A campus with none is handed one to place.
+        if (hasMakerspace(store.state)) openWorkshop();
+        else {
+          session.startPlacing('makerspace');
+          session.notify('The Workshop is in the Makerspace. Place one and it opens.');
+        }
+      } else if (entry.id) session.startPlacing(entry.id as PlacedType);
     });
   }
 
@@ -575,7 +662,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -717,6 +804,13 @@ export function mountUi(root: HTMLElement): void {
         );
       }
 
+      // Photo mode (DESIGN.md 42.5): the bars go away, and the campus can be shared as a picture.
+      card.append(
+        button('Photo', 'wide', () => {
+          close();
+          session.setPhoto(true);
+        }),
+      );
       if (store.visiting === null) card.append(
         button('Export save', 'wide', () => {
           void exportSave(store.exportText(), store.state.school.name).then((how) => {
@@ -1112,8 +1206,11 @@ export function mountUi(root: HTMLElement): void {
     const cell = selected ? cellAt(state.map, selected.x, selected.y) : null;
     const placedHere = selected ? placedAt(state.map, selected.x, selected.y) : null;
     actionLand = null;
+    actionWorkshop = false;
+    decorHere = null;
     staffYard = null;
     inspectorStaff.classList.remove('show');
+    inspectorDecor.classList.remove('show');
     setText(inspectorAction, 'Build a dining hall here');
     // A broken street lamp: what broke it, whether a yard covers it, and when it will be fixed.
     const lamp = selected ? lampSummary(state, selected.x, selected.y) : null;
@@ -1165,9 +1262,15 @@ export function mountUi(root: HTMLElement): void {
       return;
     }
     if (placedHere) {
-      setText(inspectorTitle, PLACED[placedHere.type].name);
+      const decoration = decorPanel(placedHere);
+      setText(inspectorTitle, decoration?.title ?? PLACED[placedHere.type].name);
       setText(inspectorState, placedSummary(state, placedHere));
       setText(inspectorFacts, placedFacts(state, placedHere));
+      if (decoration) {
+        decorHere = placedHere.id;
+        decorTurn.classList.toggle('hidden', !decoration.turns);
+        inspectorDecor.classList.add('show');
+      }
       if (placedHere.type === 'yard') {
         staffYard = placedHere.id;
         const workers = workersAt(state, placedHere.id);
@@ -1177,7 +1280,13 @@ export function mountUi(root: HTMLElement): void {
         more.disabled = workers >= YARD_MAX_WORKERS;
         inspectorStaff.classList.add('show');
       }
-      inspectorAction.classList.remove('show');
+      // The Workshop is in the Makerspace: its panel is the way in.
+      if (placedHere.type === 'makerspace' && workshopPage(state)) {
+        actionWorkshop = true;
+        const ready = craftsReady(state);
+        setText(inspectorAction, ready > 0 ? `Open the Workshop · ${ready} ready` : 'Open the Workshop');
+        inspectorAction.classList.add('show');
+      } else inspectorAction.classList.remove('show');
       inspector.classList.add('show');
       return;
     }
@@ -1290,6 +1399,37 @@ export function mountUi(root: HTMLElement): void {
     buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     if (!type) return;
+    setText(placeButton, 'Place');
+    if (type === 'decor' && session.decor) {
+      // A decoration: from storage, from its shelf for cash or Gold Seals, or one on the map being moved.
+      const id = session.decor;
+      const moving = session.moving !== null;
+      setText(placerTitle, decorPlacingLine(state, id, moving));
+      const spot = session.ghost;
+      const look = spot ? previewDecor(state, id, spot.x, spot.y) : null;
+      let problem = look?.problem ?? null;
+      // One being moved is paid for already, and may be set down where it stands.
+      if (moving && look) {
+        const from = state.map.placed[session.moving!];
+        problem = problem === 'blocked' && from && from.x === look.x && from.y === look.y ? null : problem === 'blocked' || problem === 'offMap' ? problem : null;
+      }
+      let line = moving ? 'Tap the map where it should go.' : 'Tap the map where it should go. Each kind near a dorm or a lecture hall lifts how it looks.';
+      if (problem === 'blocked') line = 'Something is in the way. It needs empty ground.';
+      else if (problem === 'offMap') line = 'That does not fit on your land.';
+      else if (problem === 'cash') line = `You have ${dollars(state.money.cash)}. It costs ${dollars(look!.cost)}.`;
+      else if (problem === 'seals') line = `You have ${state.daily.seals} Gold Seals. It takes ${look!.seals}.`;
+      else if (problem === 'locked') line = `${decorSpec(id)?.name ?? 'That'} cannot be got just now.`;
+      else if (look && look.way === 'seals' && !moving) {
+        const asked = sealAsked === `${id}:${look.x}:${look.y}`;
+        line = asked ? `Spend ${look.seals} of your ${state.daily.seals} Gold Seals? It is yours for good.` : `${look.seals} Gold Seals. You have ${state.daily.seals}.`;
+        setText(placeButton, asked ? `Spend ${look.seals}` : 'Place');
+      }
+      setText(placerState, line);
+      placer.classList.toggle('bad', problem !== null);
+      placeButton.disabled = !look || problem !== null;
+      return;
+    }
+    sealAsked = null;
     setText(placerTitle, placingLine(type, scaleOf(store.state)));
     const ghost = session.ghost;
     const preview = ghost ? previewPlace(state, type, ghost.x, ghost.y) : null;
@@ -1618,6 +1758,173 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /**
+   * The Workshop (DESIGN.md 42.6): what each bench is making, what it keeps making, and the recipes. A bench's
+   * recipe is a standing choice: collecting the finished thing starts the next one.
+   */
+  function openWorkshop(): void {
+    openModal((close, card) => {
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      card.append(head, body, button('Close', 'wide', close));
+      let benchAsked = false;
+      const draw = (): void => {
+        const page = workshopPage(store.state);
+        if (!page) {
+          close();
+          return;
+        }
+        const scrolled = body.scrollTop;
+        head.textContent = '';
+        head.append(el('h1', '', 'The Workshop'));
+        if (page.lead) head.append(el('p', 'fine', page.lead));
+        body.textContent = '';
+        if (!page.makerspace) {
+          body.append(
+            button('Place a Makerspace', 'primary wide', () => {
+              close();
+              session.startPlacing('makerspace');
+            }),
+          );
+        }
+        const open = page.recipes.filter((recipe) => recipe.locked === '');
+        const pending = waitsNow(store.state);
+        for (const bench of page.benches) {
+          const box = el('div', bench.ready ? 'order done' : 'order');
+          box.append(el('span', 'order-from', page.benches.length > 1 ? `Bench ${bench.index + 1}` : 'The bench'));
+          box.append(el('span', 'order-title', bench.making || 'Nothing on it'));
+          box.append(el('span', 'order-pays', bench.line));
+          if (bench.ready) {
+            box.append(
+              button('Collect', 'primary wide', () => {
+                const result = store.dispatch({ type: 'collectCraft', bench: bench.index });
+                if (!result.ok) session.notify(result.error, 'error');
+                else {
+                  sound.ui('collect');
+                  pushToast(result.note ?? 'Collected. It is in storage, in the Build menu.');
+                }
+                draw();
+              }),
+            );
+          } else if (bench.making) {
+            const wait = pending.find((one) => one.id === `craft:${bench.index}`);
+            if (wait) box.append(finishControl({ id: wait.id, name: wait.name, price: wait.price, can: store.state.daily.seals >= wait.price }, draw));
+          }
+          if (page.makerspace && open.length > 0) {
+            // What it keeps making. A native picker: it is one choice from a short list.
+            const row = el('label', 'bench-keeps');
+            const pick = document.createElement('select');
+            const none = document.createElement('option');
+            none.value = '';
+            none.textContent = 'Nothing';
+            pick.append(none);
+            for (const recipe of open) {
+              const option = document.createElement('option');
+              option.value = recipe.id;
+              option.textContent = `${recipe.name} · ${recipe.line}`;
+              pick.append(option);
+            }
+            pick.value = open.find((recipe) => recipe.name === bench.recipe)?.id ?? '';
+            pick.addEventListener('change', () => {
+              const result = store.dispatch({ type: 'setRecipe', bench: bench.index, recipe: pick.value === '' ? null : pick.value });
+              if (!result.ok) session.notify(result.error, 'error');
+              else if (result.note) session.notify(result.note, 'error');
+              else if (pick.value !== '') sound.ui('place');
+              draw();
+            });
+            row.append(el('span', '', 'Keeps making'), pick);
+            box.append(row);
+          }
+          body.append(box);
+        }
+        if (page.secondBench > 0 && page.makerspace) {
+          const more = el('div', 'finish');
+          if (!benchAsked) {
+            const go = button(`A second bench · ${page.secondBench} Gold Seals`, 'finish-go', () => {
+              benchAsked = true;
+              draw();
+            });
+            go.disabled = store.state.daily.seals < page.secondBench;
+            more.append(go);
+            if (go.disabled) more.append(el('span', 'fine', `You have ${store.state.daily.seals}.`));
+          } else {
+            more.append(el('p', 'finish-ask', `Spend ${page.secondBench} of your ${store.state.daily.seals} Gold Seals on a second bench? It is yours for good.`));
+            const row = el('div', 'finish-row');
+            row.append(
+              button(`Spend ${page.secondBench}`, 'primary', () => {
+                const result = store.dispatch({ type: 'buyBench' });
+                if (!result.ok) session.notify(result.error, 'error');
+                else sound.ui('place');
+                benchAsked = false;
+                draw();
+              }),
+              button('Not now', '', () => {
+                benchAsked = false;
+                draw();
+              }),
+            );
+            more.append(row);
+          }
+          body.append(more);
+        }
+        body.append(el('span', 'order-from recipes-title', 'Recipes'));
+        void loadAtlas().then((atlas) => {
+          const list = el('div', 'recipes');
+          for (const recipe of page.recipes) {
+            const line = el('div', recipe.locked ? 'recipe locked' : 'recipe');
+            const picture = document.createElement('canvas');
+            picture.width = 96;
+            picture.height = 96;
+            drawSprite(picture, atlas, recipe.sprite);
+            const text = el('div', 'recipe-text');
+            text.append(el('span', 'order-title', recipe.name), el('span', 'fine', recipe.locked ? `Comes at ${recipe.locked}` : `${recipe.line}${recipe.owned > 0 ? ` · you have ${recipe.owned}` : ''}`));
+            line.append(picture, text);
+            list.append(line);
+          }
+          body.append(list);
+          body.scrollTop = scrolled;
+        });
+      };
+      draw();
+    });
+  }
+
+  /**
+   * Photo mode (DESIGN.md 42.5): the bars go, the campus is framed with the school's name and rank under it,
+   * and Share hands the picture to the phone's share sheet, or saves it in a browser.
+   */
+  const photoBar = el('div', 'photo-bar');
+  const photoName = el('div', 'photo-name');
+  const photoLine = el('div', 'photo-line');
+  const photoCaptionBox = el('div', 'photo-caption');
+  photoCaptionBox.append(photoName, photoLine);
+  const photoButtons = el('div', 'photo-buttons');
+  const photoShare = button('Share', 'primary', () => {
+    const snap = session.snap;
+    if (!snap) return;
+    photoShare.disabled = true;
+    void snap()
+      .then((image) => sharePhoto(image, photoCaption(store.state)))
+      .then((how) => {
+        if (how === 'saved') pushToast('Saved to your downloads.');
+      })
+      .catch(() => session.notify('The picture could not be shared.', 'error'))
+      .finally(() => {
+        photoShare.disabled = false;
+      });
+  });
+  photoButtons.append(photoShare, button('Done', '', () => session.setPhoto(false)));
+  photoBar.append(photoButtons, photoCaptionBox);
+  root.append(photoBar);
+  function renderPhoto(state: GameState): void {
+    root.classList.toggle('photo-mode', session.photo);
+    if (!session.photo) return;
+    const caption = photoCaption(state);
+    setText(photoName, caption.name);
+    setText(photoLine, caption.line);
+  }
+
+  /**
    * The orders board (DESIGN.md 42.3): things to do. Opening it is what starts a new order's clock, so it tells
    * the game it has been looked at before it draws. A finished order is claimed with the medal's burst.
    */
@@ -1887,6 +2194,7 @@ export function mountUi(root: HTMLElement): void {
     personPanel.render(state);
     renderModeBar();
     renderPlacer(state);
+    renderPhoto(state);
     renderClearer();
     renderTools();
 

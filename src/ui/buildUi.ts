@@ -68,6 +68,7 @@ import {
   type Placed,
   type PlacedType,
   RANK_GOALS,
+  DECOR_CAP,
   rewardGoal,
   rewardsWaiting,
 } from '../sim';
@@ -226,6 +227,11 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
+    case 'decor': {
+      // What a decoration does, in its own numbers (DESIGN.md 42.5).
+      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      return `It lifts how the campus looks at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells. Each kind near a lot counts once, and all of them together add ${DECOR_CAP} points at most.`;
+    }
     case 'reward': {
       // What it does, and which goal earned it (DESIGN.md section 40).
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
@@ -344,6 +350,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
     parts.push(staff > 0 ? `Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits` : 'No staff to pay until the first class arrives');
   }
   parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
+  if (spec.family === 'decor') return 'Costs nothing to keep · Moving it is free · Put away, it waits in storage';
   if (spec.family === 'reward') parts.push('Clear it and it goes back to the Build menu, free');
   else if (spec.buildable) parts.push('The Clear tool removes it');
   return parts.join(' · ');

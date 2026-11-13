@@ -1,4 +1,5 @@
 import { scaleOf } from '../scale';
+import { DECOR_CAP, DECOR_POINT, DECOR_REACH } from '../config/decor';
 import { placedCost, placedUpkeep } from '../config/placed';
 import {
   PLACED,
@@ -169,6 +170,29 @@ export function rewardLift(map: MapState, x: number, y: number): number {
     best = Math.max(best, spec.strength * fade);
   }
   return best;
+}
+
+/**
+ * Points of desirability the decorations near a lot add to it (DESIGN.md
+ * 42.5): one input with one cap. Each kind of decoration in reach counts
+ * once, at its nearest, fading with distance, and all of them together never
+ * add more than the cap. So a second of the same kind beside the first adds
+ * nothing: it is variety that lifts a campus, and a decoration bought with
+ * Gold Seals counts exactly as a free one does.
+ */
+export function decorLift(map: MapState, x: number, y: number): number {
+  // A campus with none, which is every game with no goals, pays nothing for this.
+  const families = map.care?.byFamily;
+  if (families && !families.decor?.length) return 0;
+  const nearest: Record<string, number> = {};
+  for (const placed of inReach(map, 'decor', x, y)) {
+    if (!placed.decor) continue;
+    const fade = (DECOR_REACH + 1 - cellsFrom(placed, x, y)) / (DECOR_REACH + 1);
+    if (fade > (nearest[placed.decor] ?? 0)) nearest[placed.decor] = fade;
+  }
+  let lift = 0;
+  for (const kind in nearest) lift += DECOR_POINT * nearest[kind]!;
+  return Math.min(DECOR_CAP, lift);
 }
 
 /**

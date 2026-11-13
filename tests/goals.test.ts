@@ -433,6 +433,8 @@ describe('the main street', () => {
     expected.daily = loaded.state.daily;
     // Version 19 adds the orders board, which a game with no goals never uses either (tests/orders.test.ts).
     expected.orders = loaded.state.orders;
+    // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
+    expected.decor = loaded.state.decor;
     expected.rng.orders = loaded.state.rng.orders;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();

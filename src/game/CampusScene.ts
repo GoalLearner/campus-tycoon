@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { STAYING, type Stander } from '../app/activityPeople';
 import { planTraffic } from '../app/traffic';
 import { clock } from '../app/clock';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
@@ -7,7 +8,7 @@ import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -110,6 +111,10 @@ export class CampusScene extends Phaser.Scene {
   private activity!: Activity;
   /** Small scenes that come and go: club tables, pickup games, a busker, the boxes of move-in day. */
   private scenes!: Scenes;
+  /** Students standing in an activity or a small scene, by key. Shared with the walkers, so nobody is in two places. */
+  private readonly staying = new Set<string>();
+  /** The ring under such a student while their card is open. */
+  private stayRing: Phaser.GameObjects.Ellipse | null = null;
   /** Ripples and sprinklers. */
   private ambient!: Ambient;
   /** Lit windows on dorms and lecture halls after dark. */
@@ -174,6 +179,8 @@ export class CampusScene extends Phaser.Scene {
   private placedDirty = true;
   /** Where a medal floats over each building that is ready to collect, by its key, with what it holds. */
   private collectSpots = new Map<string, CollectSpot>();
+  /** Where the hammer floats while the Workshop holds something finished. null when it does not. */
+  private craftSpot: CollectSpot | null = null;
   /** The experience and the game the markers were last drawn for: a marker gone with experience gained was collected. */
   private collectXp = -1;
   private collectGame = '';
@@ -193,8 +200,11 @@ export class CampusScene extends Phaser.Scene {
     this.walkers = new Walkers(this, this.art, this.iso);
     this.cars = new Cars(this, this.art, this.iso);
     this.crew = new GroundsWorkers(this, this.art, this.iso);
-    this.activity = new Activity(this, this.art, this.iso);
-    this.scenes = new Scenes(this, this.art, this.iso);
+    // Students standing in an activity or a small scene. With the walkers' own list, nobody is in two places.
+    const walking = (key: string): boolean => this.walkers.isOut(key);
+    this.activity = new Activity(this, this.art, this.iso, this.staying, walking);
+    this.scenes = new Scenes(this, this.art, this.iso, this.staying, walking);
+    this.walkers.setElsewhere(this.staying);
     this.ambient = new Ambient(this, this.art, this.iso);
     this.windows = new Windows(this, this.art, this.iso, LIGHT_DEPTH + 1);
     // A car waits at a crossing while somebody is walking over it, and a walker waits at the kerb for a car.
@@ -211,6 +221,8 @@ export class CampusScene extends Phaser.Scene {
     }
     this.placed = new PlacedSprites(this, this.art, this.iso);
     this.lightLayer = this.add.rectangle(0, 0, 200_000, 200_000, 0xffffff, 0).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.MULTIPLY);
+    // Photo mode asks the map for a picture of itself (DESIGN.md 42.5).
+    session.snap = () => this.snapshot();
     // Dev builds: reach the scene from the console, for screenshots and checks.
     if (import.meta.env.DEV) {
       (window as unknown as Record<string, unknown>).__scene = this;
@@ -340,6 +352,8 @@ export class CampusScene extends Phaser.Scene {
     this.crew.clear();
     this.activity.clear();
     this.scenes.clear();
+    this.staying.clear();
+    this.stayRing?.setVisible(false);
     this.ambient.clear();
     this.windows.clear();
     this.swayers.clear();
@@ -570,6 +584,19 @@ export class CampusScene extends Phaser.Scene {
     return this.walkers.peopleNear(midX, midY).find((person) => person.role === role) ?? null;
   }
 
+  /**
+   * Dev screenshots: the first student standing in an activity or a small
+   * scene in a role ('court', 'line', 'seat', 'pickup' and so on), with the
+   * view put on them. null when nobody is.
+   */
+  standerIn(role: string): Stander | null {
+    const who = this.activity.firstIn(role) ?? this.scenes.firstIn(role);
+    if (!who) return null;
+    const camera = this.cameras.main;
+    camera.setScroll(who.x - camera.width / 2, who.y - camera.height / 2 + (camera.height * 0.12) / camera.zoom);
+    return who;
+  }
+
   /** Dev screenshots: a class moves in now, with its parents and boxes. */
   moveInNow(count: number): void {
     this.pendingArrivals += count;
@@ -791,6 +818,16 @@ export class CampusScene extends Phaser.Scene {
     this.overlay.fillPoints(this.iso.diamond(x, y), true);
   }
 
+  /**
+   * A picture of the campus as it is drawn now, for photo mode (DESIGN.md 42.5). The engine hands over the frame
+   * it has just drawn, so nothing that is not on the map is in it.
+   */
+  snapshot(): Promise<HTMLImageElement> {
+    return new Promise((resolve) => {
+      this.game.renderer.snapshot((image) => resolve(image as HTMLImageElement));
+    });
+  }
+
   /** Extra things for the dev look previews to put on the map. */
   setPlaced(items: readonly PlacedItem[]): void {
     this.devItems = [...items];
@@ -849,6 +886,16 @@ export class CampusScene extends Phaser.Scene {
         this.showStadium(state, placed, items);
         continue;
       }
+      if (placed.type === 'decor') {
+        // A decoration's drawing is its own (DESIGN.md 42.5). One being moved is shown faint where it still stands.
+        const shown = decorSprite(state, placed.decor);
+        if (!this.art.has(shown)) continue;
+        const item: PlacedItem = { key: shown, x: placed.x, y: placed.y, w: 1, h: 1, layer: 'object', id: placed.id };
+        if (placed.flip) item.flip = true;
+        if (session.moving === placed.id) item.alpha = 0.35;
+        items.push(item);
+        continue;
+      }
       items.push({ key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });
       // A cone stands beside anything broken until a worker has fixed it.
       if (isBrokenThing(state, placed.id) && this.art.has('grounds.cone')) items.push({ key: 'grounds.cone', x: placed.x, y: placed.y, forward: 1 });
@@ -891,13 +938,20 @@ export class CampusScene extends Phaser.Scene {
       items.push({ key: incident.kind === 'injury' ? 'icon.injury' : 'icon.mischief', x: over.x, y: over.y, w: over.w, h: over.h, layer: 'float', lift: over.lift });
     }
     this.showCollect(state, items);
+    this.showCraft(state, items);
     if (session.placing && session.ghost) {
       const spec = PLACED[session.placing];
       const sprite = this.spriteFor(session.placing);
       // Drawn in front of whatever it overlaps, so the player can always see where it would go.
-      items.push({ key: sprite.key, x: session.ghost.x, y: session.ghost.y, w: spec.w, h: spec.h, layer: 'object', alpha: 0.7, forward: 1 });
+      const ghost: PlacedItem = { key: sprite.key, x: session.ghost.x, y: session.ghost.y, w: spec.w, h: spec.h, layer: 'object', alpha: 0.7, forward: 1 };
+      if (session.placing === 'decor' && session.decor) {
+        ghost.key = decorSprite(state, session.decor);
+        if (session.decorFlip) ghost.flip = true;
+      }
+      if (this.art.has(ghost.key)) items.push(ghost);
     }
-    this.placed.set(items);
+    // Photo mode shows the campus and nothing floating over it: no medal, no icon, no marker.
+    this.placed.set(session.photo ? items.filter((item) => item.layer !== 'float') : items);
   }
 
   // ----------------------------------------------------------- collecting --
@@ -972,6 +1026,19 @@ export class CampusScene extends Phaser.Scene {
     return null;
   }
 
+  /**
+   * The Workshop (DESIGN.md 42.6): a hammer floats over the Makerspace while a bench holds something finished.
+   * A tap on it opens the Makerspace's panel, which has the way in.
+   */
+  private showCraft(state: GameState, items: PlacedItem[]): void {
+    this.craftSpot = null;
+    if (!this.art.has('icon.craft') || craftsReady(state) === 0) return;
+    const shop = state.map.placed.find((placed) => placed && placed.type === 'makerspace');
+    if (!shop) return;
+    this.craftSpot = { x: shop.x, y: shop.y, w: shop.w, h: shop.h, lift: 122, xp: 0 };
+    items.push({ key: 'icon.craft', x: shop.x, y: shop.y, w: shop.w, h: shop.h, layer: 'float', lift: 122 });
+  }
+
   /** Collect what one building holds. The burst follows from the marker going. */
   private collect(key: string): void {
     const result = store.dispatch({ type: 'collect', key });
@@ -982,6 +1049,11 @@ export class CampusScene extends Phaser.Scene {
   private ghostTints(): Array<{ cells: Point[]; colour: number; alpha: number }> {
     if (!session.placing || !session.ghost || !store.hasGame) return [];
     const preview = previewPlace(store.state, session.placing, session.ghost.x, session.ghost.y);
+    // A decoration being moved may be set down where it already stands.
+    if (session.moving !== null) {
+      const from = store.state.map.placed[session.moving];
+      if (from && from.x === session.ghost.x && from.y === session.ghost.y) preview.problem = null;
+    }
     return [
       { cells: reachCells(store.state.map, session.placing, session.ghost.x, session.ghost.y), colour: 0x8fd3ff, alpha: 0.2 },
       { cells: preview.cells, colour: preview.problem === null ? 0x6fe38c : 0xff6b5c, alpha: 0.55 },
@@ -1247,7 +1319,17 @@ export class CampusScene extends Phaser.Scene {
 
     const student = session.student;
     const key = student ? studentKey(student) : null;
-    session.setDoing(key ? this.walkers.doing(key) : null);
+    const walking = key ? this.walkers.doing(key) : null;
+    // Not out walking: they may be standing in a game, a line or a small scene, which the card says in its own words.
+    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key)) : null;
+    session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null);
+    // A ring on the ground under them, as under a walker whose card is open.
+    if (there) {
+      const ring = this.stayRing ?? this.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
+      this.stayRing = ring;
+      ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
+      ring.setPosition(there.x, there.y).setDepth(there.depth - 0.2).setVisible(true);
+    } else this.stayRing?.setVisible(false);
     const at = key && session.following ? this.walkers.spot(key) : null;
     // They went indoors: there is nobody left to follow.
     if (session.following && !at) session.setFollowing(false);
@@ -1536,6 +1618,17 @@ export class CampusScene extends Phaser.Scene {
       this.collect(medal);
       return;
     }
+    // The hammer over the Makerspace: the Workshop has finished something.
+    if (this.craftSpot) {
+      const spot = this.craftSpot;
+      const at = this.iso.toWorld(spot.x + spot.w / 2, spot.y + spot.h / 2);
+      const near = (26 * this.dpr) / this.cameras.main.zoom;
+      if (Math.abs(world.x - at.x) <= near && Math.abs(world.y - (at.y - spot.lift - 20)) <= near * 1.3) {
+        session.closeStudent();
+        session.select(spot.x, spot.y);
+        return;
+      }
+    }
     // An incident's icon says what happened and whether anyone is coming.
     const reach = (26 * this.dpr) / this.cameras.main.zoom;
     for (const incident of store.state.incidents.active) {
@@ -1563,8 +1656,19 @@ export class CampusScene extends Phaser.Scene {
       session.lookAt(spot.x, spot.y);
       return;
     }
-    // A walker is in front of whatever they are walking past.
-    const walker = this.walkers.walkerAt(world.x, world.y, (14 * this.dpr) / this.cameras.main.zoom);
+    // A person is in front of whatever they are standing on or walking past: a tap near one is a tap on them, not
+    // on the court or the lawn behind. The nearest wins, whoever draws them.
+    const thumb = (14 * this.dpr) / this.cameras.main.zoom;
+    const walker = this.walkers.walkerAt(world.x, world.y, thumb);
+    const figure = this.activity.figureAt(world.x, world.y, thumb);
+    const actor = this.scenes.actorAt(world.x, world.y, thumb);
+    const stander = figure && actor ? (figure.far <= actor.far ? figure : actor) : (figure ?? actor);
+    if (stander && (!walker || stander.far < walker.far)) {
+      // Someone in a game, a line, at a table or in a small scene is a student, with the ordinary card.
+      if (stander.student) session.openStudent(stander.student, stander.look);
+      else session.notify('Staff. Students arrive with the first class.');
+      return;
+    }
     if (walker) {
       if (walker.student) session.openStudent(walker.student);
       else if (walker.person) session.openPerson(walker.person);

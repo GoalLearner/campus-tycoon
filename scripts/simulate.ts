@@ -66,6 +66,12 @@ import {
   waits,
   hasDaily,
   orderCashCeiling,
+  DECOR,
+  DECOR_CAP,
+  decorCounts,
+  decorLift,
+  SEASON_SETS,
+  liveSeason,
   orderSlots,
   orderViews,
   ORDER_KINDS,
@@ -110,6 +116,8 @@ if (args.includes('--no-policies')) botOptions.policies = false;
 if (args.includes('--no-daily')) botOptions.daily = false;
 // `-- --no-orders` runs them without the orders board: never looked at, so no order ever starts.
 if (args.includes('--no-orders')) botOptions.orders = false;
+// `-- --no-decor` runs them without decorations or the Workshop: nothing set out, nothing made.
+if (args.includes('--no-decor')) botOptions.decor = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -146,6 +154,11 @@ interface YearRow {
   level: number;
   xp: number;
   seals: number;
+  /** Decorations owned and on the map, things the Workshop has made, and Seals spent on decorations and the second bench. */
+  decor: number;
+  decorPlaced: number;
+  crafted: number;
+  decorSeals: number;
 }
 
 interface Run {
@@ -359,6 +372,10 @@ function yearRow(state: GameState, year: number, turnedAway: number): YearRow {
     level: state.daily.level,
     xp: state.daily.xp,
     seals: state.daily.seals,
+    decor: decorCounts(state).owned,
+    decorPlaced: decorCounts(state).placed,
+    crafted: state.decor.tally.crafted ?? 0,
+    decorSeals: state.decor.tally.sealsSpent ?? 0,
   };
 }
 
@@ -383,7 +400,8 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     const looked = applyAction(state, { type: 'seeOrders' });
     if (!looked.ok) return;
     const views = orderViews(looked.state);
-    const has = views.some((view) => view.sitting && !view.done);
+    // Something for this sitting: an order that can be finished in one, or one already finished and waiting to be claimed.
+    const has = views.some((view) => (view.sitting && !view.done) || view.done);
     // The last visit falls on the first hour of a day the run never finishes: it is looked at, and not counted as a day.
     const day = at >= end ? seen.orderDay : Math.floor((at - T0) / DAY_MS);
     if (day !== seen.orderDay) {
@@ -1140,10 +1158,12 @@ function assertModelCampus(seed: number): void {
   // looked at. What the campus does by the slow game alone.
   botOptions.daily = false;
   botOptions.orders = false;
+  botOptions.decor = false;
   const bare = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
   botOptions.policies = !args.includes('--no-policies');
   botOptions.daily = !args.includes('--no-daily');
   botOptions.orders = !args.includes('--no-orders');
+  botOptions.decor = !args.includes('--no-decor');
   console.log('AND WITH NONE OF IT: NO SWITCH, NOTHING COLLECTED, THE ORDERS BOARD NEVER LOOKED AT');
   console.log(`${'goal'.padEnd(18)}${bare.map((run) => `${run.style} ${run.seed}`.padStart(14)).join('')}`);
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${bare.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
@@ -1241,7 +1261,8 @@ function assertModelCampus(seed: number): void {
   {
     const at = (run: Run, week: number): YearRow => run.rows[Math.min(run.rows.length, week) - 1]!;
     const perWeek = (run: Run, from: number, to: number, pick: (row: YearRow) => number): number => (pick(at(run, to)) - pick(at(run, from))) / (to - from);
-    const earned = (run: Run): number => run.final.daily.seals + run.seen.sealsSpent;
+    // Everything earned: what is held, what finished a wait, and what bought a decoration or the second bench.
+    const earned = (run: Run): number => run.final.daily.seals + run.seen.sealsSpent + (run.final.decor.tally.sealsSpent ?? 0);
     const share = (run: Run): number => (run.seen.collectXp + run.seen.collectLost > 0 ? run.seen.collectXp / (run.seen.collectXp + run.seen.collectLost) : 1);
     const cashPerYear = (run: Run): number => run.seen.collectCash / PACE_WEEKS;
     const income = (run: Run): number => budget(run.final).incomeTotal;
@@ -1288,7 +1309,8 @@ function assertModelCampus(seed: number): void {
     const price = mean(runs.flatMap((run) => run.seen.prices));
     check(
       'Gold Seals come at about one Finish now a week',
-      weekly.every((n) => n >= 0.6 * price && n <= 2.5 * price) && price >= 2,
+      // The Workshop's short waits brought the average price down, so a week's Seals now finish two or three.
+      weekly.every((n) => n >= 0.6 * price && n <= 4 * price) && price >= 2,
       `${runs.map((run) => `${run.style} ${run.seed}: ${earned(run)} earned, ${(earned(run) / PACE_WEEKS).toFixed(1)} a week, ${run.seen.sealsSpent} spent on ${run.seen.finished} waits`).join('; ')}. A wait costs ${price.toFixed(1)} Seals on average when one is there to finish, a Seal for every ${SEAL_HOURS} hours left`,
     );
     check(
@@ -1350,7 +1372,7 @@ function assertModelCampus(seed: number): void {
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLooks} looks, at most ${run.seen.orderMostOpen} open, ${run.seen.orderOver} over, ${run.seen.orderShort} too short`).join('; '),
     );
     check(
-      'on every real day a player looks in, the board has an order that can be finished in one sitting',
+      'on every real day a player looks in, the board has an order that can be finished in one sitting, or one finished and waiting to be claimed',
       runs.every((run) => run.seen.orderDays > 0 && run.seen.orderDaysWith === run.seen.orderDays),
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderDaysWith} of ${run.seen.orderDays} days, and ${run.seen.orderLooksWith} of ${run.seen.orderLooks} visits (a later visit the same day finds it already done)`).join('; '),
     );
@@ -1381,6 +1403,100 @@ function assertModelCampus(seed: number): void {
       'the paper says each new order and each finished one, and the board is a bonus: a campus that never looks at it loses nothing',
       runs.every((run) => run.seen.orderLines >= tally(run, 'claimed')) && bare.every((run) => tally(run, 'claimed') === 0 && tally(run, 'missed') === 0 && run.final.orders.open.every((order) => order.seen === undefined)) && alone.final.orders.open.length === orderSlots(alone.final),
       `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLines} lines`).join('; ')}. Never looked at: ${bare.map((run) => `${run.final.orders.open.length} waiting unseen`).join(', ')}, none begun, none missed; the campus left alone holds ${alone.final.orders.open.length}, all unseen`,
+    );
+  }
+
+  // Decorations, the Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6, as built from 42.20).
+  {
+    const at = (run: Run, week: number): YearRow => run.rows[Math.min(run.rows.length, week) - 1]!;
+    const tally = (run: Run, what: string): number => run.final.decor.tally[what] ?? 0;
+    const lots = (state: GameState) => state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.stage >= 1);
+    const lifts = (state: GameState): number[] => lots(state).map((b) => decorLift(state.map, b.x, b.y));
+    const mean = (list: number[]): number => (list.length > 0 ? list.reduce((sum, n) => sum + n, 0) / list.length : 0);
+    /** The same campus with every decoration put away. */
+    const putAway = (state: GameState): GameState => {
+      let out = state;
+      for (const placed of state.map.placed) {
+        if (!placed || placed.type !== 'decor') continue;
+        const done = applyAction(out, { type: 'storeDecor', placed: placed.id });
+        if (done.ok) out = done.state;
+      }
+      return out;
+    };
+    const without = new Map(runs.map((run) => [run, putAway(run.final)]));
+    const sealsSpent = (run: Run): number => run.seen.sealsSpent + tally(run, 'sealsSpent');
+    const sealsEarned = (run: Run): number => run.final.daily.seals + sealsSpent(run);
+    console.log('DECORATIONS, THE WORKSHOP AND GOLD SEALS');
+    console.log(`${''.padEnd(34)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    for (const week of [1, 4, 12, PACE_WEEKS]) row(`decorations owned, week ${week}`, (run) => String(at(run, week).decor));
+    row('on the map at the end', (run) => String(decorCounts(run.final).placed));
+    row('in storage at the end', (run) => String(decorCounts(run.final).stored));
+    row('kinds owned, of ' + DECOR.filter((spec) => spec.home.kind !== 'founder').length, (run) => String(decorCounts(run.final).kinds));
+    row('bought for cash', (run) => String(tally(run, 'bought')));
+    row('bought for Gold Seals', (run) => String(tally(run, 'boughtSeals')));
+    row('given by the town', (run) => String(tally(run, 'given')));
+    row('made in the Workshop', (run) => String(tally(run, 'crafted')));
+    row('made a week, weeks 1 to 4', (run) => ((at(run, 4).crafted - at(run, 1).crafted) / 3).toFixed(1));
+    row('made a week, weeks 12 to ' + PACE_WEEKS, (run) => ((at(run, PACE_WEEKS).crafted - at(run, 12).crafted) / (PACE_WEEKS - 12)).toFixed(1));
+    row('benches', (run) => String(run.final.decor.benches.length));
+    row('mean lift to a lot, of ' + DECOR_CAP, (run) => mean(lifts(run.final)).toFixed(2));
+    row('lots at the cap', (run) => `${lifts(run.final).filter((lift) => lift >= DECOR_CAP - 0.01).length} of ${lots(run.final).length}`);
+    row('looks, of 100', (run) => averageDesirability(run.final).toFixed(1));
+    row('looks with them put away', (run) => averageDesirability(without.get(run)!).toFixed(1));
+    row('applicants a fall', (run) => String(fallApplicants(run.final).total));
+    row('applicants with them put away', (run) => String(fallApplicants(without.get(run)!).total));
+    row('Seals earned a week', (run) => (sealsEarned(run) / PACE_WEEKS).toFixed(1));
+    row('Seals spent a week', (run) => (sealsSpent(run) / PACE_WEEKS).toFixed(1));
+    row('  of them on decorations', (run) => (tally(run, 'sealsSpent') / PACE_WEEKS).toFixed(1));
+    for (const week of [1, 4, 12, PACE_WEEKS]) row(`Seals held, week ${week}`, (run) => String(at(run, week).seals));
+    console.log('');
+
+    const worth = runs.map((run) => fallApplicants(run.final).total - fallApplicants(without.get(run)!).total);
+    check(
+      'decorations lift how a campus looks a little, through one input with one cap, and nothing else',
+      runs.every((run) => lifts(run.final).every((lift) => lift >= 0 && lift <= DECOR_CAP + 1e-9) && averageDesirability(run.final) >= averageDesirability(without.get(run)!)) &&
+        runs.every((run) => averageDesirability(run.final) - averageDesirability(without.get(run)!) <= DECOR_CAP + 1e-9),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${decorCounts(run.final).placed} on the map lift a lot by ${mean(lifts(run.final)).toFixed(2)} of ${DECOR_CAP} on average, looks ${averageDesirability(run.final).toFixed(1)} against ${averageDesirability(without.get(run)!).toFixed(1)} with them put away`).join('; ')}. That is worth ${Math.min(...worth)} to ${Math.max(...worth)} applicants a fall`,
+    );
+    check(
+      'nothing is ever lost: every decoration bought, made or given is on the map or in storage',
+      runs.every((run) => decorCounts(run.final).owned === tally(run, 'bought') + tally(run, 'boughtSeals') + tally(run, 'crafted') + tally(run, 'given')),
+      runs.map((run) => `${run.style} ${run.seed}: ${decorCounts(run.final).owned} owned from ${tally(run, 'bought')} bought, ${tally(run, 'boughtSeals')} for Seals, ${tally(run, 'crafted')} made and ${tally(run, 'given')} given`).join('; '),
+    );
+    const dailies = of('daily');
+    check(
+      'a player gets a new decoration often, and the once-a-day player loses nothing by it: a finished craft waits',
+      runs.every((run) => at(run, 1).decor >= 5 && at(run, 4).decor >= 20 && tally(run, 'crafted') > 0) && dailies.every((run) => run.final.decor.benches.every((bench) => bench.making === null || bench.done !== null)),
+      runs.map((run) => `${run.style} ${run.seed}: ${at(run, 1).decor} owned at week 1, ${at(run, 4).decor} at week 4, ${at(run, 12).decor} at week 12, ${at(run, PACE_WEEKS).decor} at week ${PACE_WEEKS}; ${tally(run, 'crafted')} made`).join('; '),
+    );
+    // Seals now have something to buy. A week's Seals buy about one special thing, and a balance still builds.
+    const special = mean(DECOR.flatMap((spec) => (spec.home.kind === 'seals' ? [spec.home.price] : [])));
+    check(
+      'Gold Seals buy about one special thing a week',
+      runs.every((run) => sealsEarned(run) / PACE_WEEKS >= 0.6 * special && sealsEarned(run) / PACE_WEEKS <= 2.5 * special && tally(run, 'boughtSeals') > 0),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${(sealsEarned(run) / PACE_WEEKS).toFixed(1)} earned a week, ${(sealsSpent(run) / PACE_WEEKS).toFixed(1)} spent, ${run.final.daily.seals} held at the end, ${tally(run, 'boughtSeals')} decorations bought with them`).join('; ')}. A decoration for Seals costs ${special.toFixed(1)} on average`,
+    );
+    // The players who use none of it, and the campus nobody visits.
+    check(
+      'decorating is a bonus: a campus that never opens the shelf or the Workshop loses nothing',
+      bare.every((run) => decorCounts(run.final).placed === 0 && tally(run, 'bought') === 0 && tally(run, 'crafted') === 0) && decorCounts(alone.final).owned === 0 && alone.final.decor.benches.every((bench) => bench.making === null),
+      `${bare.map((run) => `${run.style} ${run.seed}: ${decorCounts(run.final).owned} owned, none set out`).join('; ')}; the campus left alone owns ${decorCounts(alone.final).owned}`,
+    );
+    // The seasonal sets, by the real calendar: every day of a year is in one set or in none, and each set comes back.
+    const days = Array.from({ length: 365 }, (_, n) => Date.UTC(2027, 0, 1) + n * 86_400_000);
+    const liveOn = (ms: number): string => {
+      const probe = structuredClone(alone.final);
+      probe.clock.lastSimulatedAt = ms;
+      probe.clock.nextTickAt = ms;
+      return liveSeason(probe)?.id ?? '';
+    };
+    const lived = days.map(liveOn);
+    const counts = SEASON_SETS.map((set) => lived.filter((id) => id === set.id).length);
+    check(
+      'each seasonal set is live for some weeks of every real year, and what was bought stays',
+      counts.every((n) => n >= 21 && n <= 92) && SEASON_SETS.every((set) => DECOR.some((spec) => spec.home.kind === 'season' && spec.home.season === set.id)),
+      `${SEASON_SETS.map((set, n) => `${set.name}: ${counts[n]} days of 2027, ${DECOR.filter((spec) => spec.home.kind === 'season' && spec.home.season === set.id).length} decorations`).join('; ')}; ${lived.filter((id) => id === '').length} days with no set`,
     );
   }
 

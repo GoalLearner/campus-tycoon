@@ -1,4 +1,5 @@
 import type { PlacedType } from '../types';
+import { DECOR_POINT, DECOR_REACH } from './decor';
 import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
 
 /**
@@ -9,12 +10,12 @@ import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned' | 'Decor';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -162,6 +163,13 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   garage: {
     name: 'Parking structure', category: 'Roads and parking', family: 'parking', w: 2, h: 2, cost: 160_000, upkeepPerYear: 6_000,
     radius: 0, strength: 0, effect: 'Lets 100 locals drive in. Needs a road to a town street', sprite: 'build.garage', flat: false, buildable: true, cars: 100,
+  },
+  // Every decoration (DESIGN.md 42.5). One row for all of them: each is one cell, costs nothing to keep and
+  // lifts how the campus looks near it. Which decoration a placed one is, its name and its drawing are in
+  // config/decor.ts. It is not bought here: it comes from a shelf, an order or the Workshop.
+  decor: {
+    name: 'Decoration', category: 'Decor', family: 'decor', w: 1, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: DECOR_REACH, strength: DECOR_POINT, effect: `Lifts how the campus looks within ${DECOR_REACH} cells`, sprite: 'decoration.flowers', flat: false, buildable: false, utilitiesPerYear: 0,
   },
   bin: {
     name: 'Trash bin', category: 'Grounds', family: 'bin', w: 1, h: 1, cost: 1_500, upkeepPerYear: 0,

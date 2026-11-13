@@ -197,6 +197,15 @@ function civilFromDays(days: number): { year: number; month: number; day: number
   return { year: yearOfEra + era * 400 + (month <= 2 ? 1 : 0), month, day: dayOfYear - Math.floor((153 * mp + 2) / 5) + 1 };
 }
 
+/**
+ * The real date of a moment on the game's own clock, by the UTC calendar.
+ * Worked out from the number alone, so the sim never asks the device what
+ * day it is.
+ */
+export function realDate(ms: number): { year: number; month: number; day: number } {
+  return civilFromDays(Math.floor(ms / 86_400_000));
+}
+
 export interface GameDate {
   /** 1 to 12. */
   month: number;

@@ -34,6 +34,8 @@ export interface Cell {
 
 /** The hand-placed buildings of the Build menu. Their numbers live in config/placed.ts. */
 export type PlacedType =
+  /** A decoration (DESIGN.md 42.5): one type for all of them. Which one it is, is on the thing itself. */
+  | 'decor'
   | 'library'
   | 'dining'
   | 'coffee'
@@ -90,6 +92,10 @@ export interface Placed {
   h: number;
   /** The tick it was placed and paid for. -1 for one the campus began with. */
   builtTick: number;
+  /** A decoration only: which one, an id from `DECOR`. */
+  decor?: string;
+  /** A decoration only: turned to run the other way. */
+  flip?: boolean;
 }
 
 export interface Rebuild {
@@ -284,7 +290,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone';
 
 export interface Timer {
   due: number;
@@ -403,8 +409,33 @@ export interface Order {
   target?: number;
   /** The line of the Capacity page or the building it is about. */
   param?: string;
+  /** The decoration it pays, fixed when it is first seen: an id from `DECOR`. */
+  gift?: string;
   /** The tick it was found done. It then waits to be claimed, for as long as it takes. */
   done?: number;
+}
+
+/**
+ * One bench of the Workshop (DESIGN.md 42.6). The recipe is a standing
+ * choice: when a finished thing is collected, the next of the same begins.
+ */
+export interface Bench {
+  /** What it makes: a decoration's id, or null while it stands idle. */
+  recipe: string | null;
+  /** What is on the bench now, and the tick it is finished. null with nothing on it. A finished thing waits for ever. */
+  making: string | null;
+  done: number | null;
+}
+
+/** Decorations owned and not on the map, and the Workshop (DESIGN.md 42.5 and 42.6). */
+export interface Decor {
+  /** In storage, by decoration id. Nothing is ever sold or lost. */
+  stored: Record<string, number>;
+  benches: Bench[];
+  /** Running counts for the long run: bought, crafted, given, placed. */
+  tally: Record<string, number>;
+  /** The seasonal set that was live when the day last began, so a set opening is told once. '' for none. */
+  season: string;
 }
 
 export interface Orders {
@@ -524,6 +555,7 @@ export interface GameState {
   policies: Policies;
   daily: Daily;
   orders: Orders;
+  decor: Decor;
 }
 
 // ------------------------------------------------------------- football --
@@ -883,6 +915,8 @@ export type LogKind =
   | 'policy'
   | 'level'
   | 'order'
+  | 'craft'
+  | 'season'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

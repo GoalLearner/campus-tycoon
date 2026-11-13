@@ -670,6 +670,8 @@ describe('a save from version 15', () => {
     expected.daily = state.daily;
     // Version 19 adds the orders board and its stream of numbers (tests/orders.test.ts has those).
     expected.orders = state.orders;
+    // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
+    expected.decor = state.decor;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -698,9 +700,9 @@ describe('a save from version 15', () => {
   });
 
   it('tells an upgraded save what is new, once', () => {
-    // Two of its own, and the ones versions 17, 18 and 19 added after it (the policies, daily and orders tests).
+    // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(5);
+    expect(notes.length).toBe(6);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

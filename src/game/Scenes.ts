@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
+import { findStudent, sceneWords, type SceneRole, type Stander } from '../app/activityPeople';
 import type { Scenes as Wanted } from '../app/life';
-import { dateAt, ownedAt, type GameState } from '../sim';
+import { dateAt, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
 
@@ -16,6 +17,10 @@ import type { Iso } from './iso';
  * time the map is opened that day. Every piece is a sprite from the art pack.
  * Nothing here is saved, nothing changes a number, and nothing runs while
  * the game is closed.
+ *
+ * Each person in a scene is one enrolled student (DESIGN.md 13.12), found
+ * from the seed by `findStudent`, so a tap on them opens the ordinary student
+ * card.
  */
 
 const FADE_MS = 450;
@@ -33,12 +38,17 @@ const PICNIC_SPACING = 2;
 const OPEN_GROUND = ['empty', 'path', 'quad', 'crossing'];
 
 type Kind = 'club' | 'pickup' | 'busker' | 'boxes' | 'picnic' | 'tailgate' | 'band' | 'storm';
+/** The order of the kinds, for the seeded pick of who is in which scene. */
+const KINDS: readonly Kind[] = ['club', 'pickup', 'busker', 'boxes', 'picnic', 'tailgate', 'band', 'storm'];
 /** People in the marching band, in two ranks, and fans on the field after a big win. */
 const BAND_SIZE = 8;
 const STORM_SIZE = 12;
 
 interface Actor {
   sprite: Phaser.GameObjects.Image;
+  /** What they are in the scene, and who they are. null until they are found, and on a campus with no students. */
+  role: SceneRole;
+  student: StudentRef | null;
   look: number;
   x: number;
   y: number;
@@ -125,11 +135,21 @@ export class Scenes {
   private tint: number | null = null;
   /** True for the few minutes fans are on the field after a big home win. */
   private storming = false;
+  private state: GameState | null = null;
+  /** The students people in scenes are found among: the same sample walkers are drawn from. */
+  private everyone: StudentRef[] = [];
 
+  /**
+   * `staying` is every student standing somewhere on the map for a while, here
+   * or in an activity, and `walking` says who is out walking. Between them
+   * nobody is in two places.
+   */
   constructor(
     private scene: Phaser.Scene,
     private art: Art,
     private iso: Iso,
+    private staying: Set<string> = new Set(),
+    private walking: (key: string) => boolean = () => false,
   ) {
     this.people = art.people;
   }
@@ -154,6 +174,16 @@ export class Scenes {
   /** Read the map again: where a club table, a ring, a rug and a busker could go today. */
   setMap(state: GameState): void {
     const { width, height, cells, buildings, placed } = state.map;
+    this.state = state;
+    // A class came or went: everyone in a scene is found again, since one of them may have graduated.
+    const sample = sampleStudents(state);
+    if (sample.length !== this.everyone.length || sample[0]?.entryYear !== this.everyone[0]?.entryYear) {
+      this.everyone = sample;
+      for (const scene of this.scenes.values()) {
+        for (const actor of scene.actors) this.release(actor);
+        for (const actor of scene.actors) this.cast(scene, actor);
+      }
+    }
     const date = dateAt(state.clock);
     this.day = date.month * 32 + date.day;
     const kind = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
@@ -267,13 +297,36 @@ export class Scenes {
     scene.props.push({ sprite, x, y, ball: how.ball ?? false, sways: how.sways ?? false, flat: how.flat ?? false });
   }
 
-  private actor(scene: Scene, look: number, x: number, y: number, direction: WalkDirection, plays = false, marches = false): void {
+  /** `look` is the figure they are drawn as on a campus with no students yet. With students, they are drawn as themselves. */
+  private actor(scene: Scene, role: SceneRole, look: number, x: number, y: number, direction: WalkDirection, plays = false, marches = false): void {
     const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
     // On a game day the fans and the band are in the school's colour: the figure itself is tinted.
     if (marches || scene.kind === 'tailgate') {
       if (this.tint !== null) sprite.setTint(this.tint);
     }
-    scene.actors.push({ sprite, look, x, y, direction, plays, marches, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '' });
+    const actor: Actor = { sprite, role, student: null, look, x, y, direction, plays, marches, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '' };
+    scene.actors.push(actor);
+    this.cast(scene, actor);
+  }
+
+  /** Someone in a scene stops being anybody: the scene has gone, or the classes changed. */
+  private release(actor: Actor): void {
+    if (actor.student) this.staying.delete(studentKey(actor.student));
+    actor.student = null;
+  }
+
+  /** Find who someone in a scene is: a student nobody else on the map is, from the seed, the scene, the day and their place in it. */
+  private cast(scene: Scene, actor: Actor): void {
+    const state = this.state;
+    const people = this.people;
+    if (!state || !people) return;
+    const place = (scene.x * 131 + scene.y) * KINDS.length + KINDS.indexOf(scene.kind) + this.day * 100_003;
+    const student = findStudent(state.seed, this.everyone, place, scene.actors.indexOf(actor), (key) => this.staying.has(key) || this.walking(key));
+    actor.student = student;
+    if (!student) return;
+    this.staying.add(studentKey(student));
+    actor.look = studentFigure(state, student, Math.max(1, Math.min(people.looks, people.crowd ?? people.looks)), people.roles?.athlete);
+    actor.shownKey = '';
   }
 
   /** Bring the scenes on the map in line with what the rule asks for. */
@@ -299,8 +352,8 @@ export class Scenes {
         this.prop(scene, 'scene.parasol', at.x + 0.36, at.y + 0.36);
         this.prop(scene, 'scene.table', at.x + 0.64, at.y + 0.64);
         this.prop(scene, 'scene.sign', at.x + 0.28, at.y + 1.0);
-        this.actor(scene, look(at.x * 97 + at.y, this.day), at.x + 0.26, at.y + 0.52, 'se');
-        this.actor(scene, look(at.x * 97 + at.y, this.day + 1), at.x + 1.08, at.y + 0.56, 'nw');
+        this.actor(scene, 'clubHost', look(at.x * 97 + at.y, this.day), at.x + 0.26, at.y + 0.52, 'se');
+        this.actor(scene, 'clubVisitor', look(at.x * 97 + at.y, this.day + 1), at.x + 1.08, at.y + 0.56, 'nw');
       }
 
       for (let n = 0; n < shown(wanted.pickupGames, this.quadBlocks.length, 'play.volleyball'); n++) {
@@ -316,7 +369,7 @@ export class Scenes {
           const angle = turn + (k / RING_PLAYERS) * Math.PI * 2;
           const x = at.x + 1 + Math.cos(angle) * RING_RADIUS;
           const y = at.y + 1 + Math.sin(angle) * RING_RADIUS;
-          this.actor(scene, look(at.x * 53 + at.y + k, this.day + 3), x, y, facing(x, y, at.x + 1, at.y + 1), true);
+          this.actor(scene, 'pickup', look(at.x * 53 + at.y + k, this.day + 3), x, y, facing(x, y, at.x + 1, at.y + 1), true);
         }
       }
 
@@ -329,8 +382,8 @@ export class Scenes {
         const scene = this.begin(key, 'picnic', at.x, at.y, 1, 1);
         this.prop(scene, 'scene.rug', at.x + 0.5, at.y + 0.5, { flat: true });
         this.prop(scene, 'scene.basket', at.x + 0.4, at.y + 0.44);
-        this.actor(scene, look(at.x * 71 + at.y, this.day + 5), at.x + 0.36, at.y + 0.76, 'se');
-        this.actor(scene, look(at.x * 71 + at.y, this.day + 6), at.x + 0.8, at.y + 0.42, 'sw');
+        this.actor(scene, 'picnic', look(at.x * 71 + at.y, this.day + 5), at.x + 0.36, at.y + 0.76, 'se');
+        this.actor(scene, 'picnic', look(at.x * 71 + at.y, this.day + 6), at.x + 0.8, at.y + 0.42, 'sw');
       }
 
       // A home game: tailgates in the car parks, each a parasol, a table and a few fans.
@@ -342,9 +395,9 @@ export class Scenes {
         const scene = this.begin(key, 'tailgate', at.x, at.y, 2, 2);
         this.prop(scene, 'scene.parasol', at.x + 0.3, at.y + 1.5);
         this.prop(scene, 'scene.table', at.x + 0.62, at.y + 1.82);
-        this.actor(scene, look(at.x * 61 + at.y, 1), at.x + 0.2, at.y + 1.9, 'se');
-        this.actor(scene, look(at.x * 61 + at.y, 2), at.x + 1.0, at.y + 1.55, 'sw');
-        this.actor(scene, look(at.x * 61 + at.y, 3), at.x + 1.05, at.y + 2.05, 'nw');
+        this.actor(scene, 'tailgate', look(at.x * 61 + at.y, 1), at.x + 0.2, at.y + 1.9, 'se');
+        this.actor(scene, 'tailgate', look(at.x * 61 + at.y, 2), at.x + 1.0, at.y + 1.55, 'sw');
+        this.actor(scene, 'tailgate', look(at.x * 61 + at.y, 3), at.x + 1.05, at.y + 2.05, 'nw');
       }
 
       // The band, in two ranks on the practice lawn beside the stadium, marking time with a drum before each rank.
@@ -356,7 +409,7 @@ export class Scenes {
           const scene = this.begin(key, 'band', ground.x, ground.y + 2, 2, 1);
           for (let k = 0; k < BAND_SIZE; k++) {
             const rank = Math.floor(k / (BAND_SIZE / 2));
-            this.actor(scene, look(ground.x * 43 + k, 9), ground.x + 0.28 + (k % (BAND_SIZE / 2)) * 0.48, ground.y + 2.3 + rank * 0.42, 'sw', false, true);
+            this.actor(scene, 'band', look(ground.x * 43 + k, 9), ground.x + 0.28 + (k % (BAND_SIZE / 2)) * 0.48, ground.y + 2.3 + rank * 0.42, 'sw', false, true);
           }
           this.prop(scene, 'scene.drum', ground.x + 0.2, ground.y + 2.96);
           this.prop(scene, 'scene.drum', ground.x + 1.2, ground.y + 2.96);
@@ -372,7 +425,7 @@ export class Scenes {
           for (let k = 0; k < STORM_SIZE; k++) {
             const x = ground.x + STORM_FIELD.x0 + mix(k, 3) * (STORM_FIELD.x1 - STORM_FIELD.x0);
             const y = ground.y + STORM_FIELD.y0 + mix(k, 5) * (STORM_FIELD.y1 - STORM_FIELD.y0);
-            this.actor(scene, look(k * 17 + ground.x, 13), x, y, (['se', 'sw', 'nw', 'ne'] as const)[k % 4]!, false, true);
+            this.actor(scene, 'storm', look(k * 17 + ground.x, 13), x, y, (['se', 'sw', 'nw', 'ne'] as const)[k % 4]!, false, true);
           }
         }
       }
@@ -384,7 +437,7 @@ export class Scenes {
         if (!this.scenes.has(key)) {
           // A figure with the pack's drum in front of them and its lute beside them: no figure can hold anything.
           const scene = this.begin(key, 'busker', Math.floor(at.x), Math.floor(at.y), 1, 1);
-          this.actor(scene, look(this.day, 11), at.x, at.y, 'sw');
+          this.actor(scene, 'busker', look(this.day, 11), at.x, at.y, 'sw');
           this.prop(scene, 'scene.drum', at.x + 0.06, at.y + 0.24);
           this.prop(scene, 'scene.lute', at.x - 0.26, at.y + 0.06);
         }
@@ -410,6 +463,7 @@ export class Scenes {
     for (const scene of this.scenes.values()) {
       scene.alpha = scene.leaving ? scene.alpha - dt / FADE_MS : Math.min(1, scene.alpha + dt / FADE_MS);
       if (scene.leaving && scene.alpha <= 0) {
+        for (const actor of scene.actors) this.release(actor);
         for (const actor of scene.actors) actor.sprite.destroy();
         for (const prop of scene.props) prop.sprite.destroy();
         this.scenes.delete(scene.key);
@@ -471,6 +525,45 @@ export class Scenes {
     }
   }
 
+  // ------------------------------------------------------- student cards --
+
+  private stander(actor: Actor, far: number): Stander {
+    return { student: actor.student, look: actor.look, words: sceneWords(actor.role), x: actor.sprite.x, y: actor.sprite.y, far, depth: actor.sprite.depth };
+  }
+
+  /** The person in a scene at a point of the world, or null. `reach` widens each one, as it does a walker. */
+  actorAt(worldX: number, worldY: number, reach: number): Stander | null {
+    let found: Stander | null = null;
+    for (const scene of this.scenes.values()) {
+      if (scene.leaving || !scene.seen || scene.alpha < 0.5) continue;
+      for (const actor of scene.actors) {
+        const box = actor.sprite.getBounds();
+        if (worldX < box.x - reach || worldX > box.right + reach || worldY < box.y - reach || worldY > box.bottom + reach) continue;
+        const far = Math.hypot(worldX - box.centerX, worldY - box.centerY);
+        if (!found || far < found.far) found = this.stander(actor, far);
+      }
+    }
+    return found;
+  }
+
+  /** Where a student is and what they are doing, when they are in one of the scenes. */
+  find(key: string): Stander | null {
+    for (const scene of this.scenes.values()) {
+      if (scene.leaving) continue;
+      for (const actor of scene.actors) if (actor.student && studentKey(actor.student) === key) return this.stander(actor, 0);
+    }
+    return null;
+  }
+
+  /** The first person in a role, for a dev screenshot. */
+  firstIn(role: string): Stander | null {
+    for (const scene of this.scenes.values()) {
+      if (scene.leaving || !scene.seen) continue;
+      for (const actor of scene.actors) if (actor.role === role && actor.student) return this.stander(actor, 0);
+    }
+    return null;
+  }
+
   /** How many scenes of each kind are on the map. For the dev readout and for screenshots. */
   get counts(): Record<Kind, number> {
     const counts: Record<Kind, number> = { club: 0, pickup: 0, busker: 0, boxes: 0, picnic: 0, tailgate: 0, band: 0, storm: 0 };
@@ -492,6 +585,7 @@ export class Scenes {
 
   clear(): void {
     for (const scene of this.scenes.values()) {
+      for (const actor of scene.actors) this.release(actor);
       for (const actor of scene.actors) actor.sprite.destroy();
       for (const prop of scene.props) prop.sprite.destroy();
     }

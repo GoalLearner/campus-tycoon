@@ -21,6 +21,7 @@ import {
   type OrderReward,
   type OrderWhen,
 } from '../config/orders';
+import { TOWN_DECOR_XP } from '../config/decor';
 import { PLACED } from '../config/placed';
 import { FIRST_INTAKE_TICK, TICKS_PER_HOUR, TICKS_PER_YEAR } from '../config/time';
 import { dollars, duration, headCount } from '../format';
@@ -31,6 +32,7 @@ import type { GameState, LogEntry, Order, Orders, PlacedType } from '../types';
 import { capacity, type NeedId } from './capacity';
 import { growthShortage } from './demand';
 import { budget } from './budget';
+import { decorSpec, giveDecor, townGift, workshopOpen } from './decor';
 import { gainXp, hasDaily, readyToCollect } from './daily';
 import { enrollmentCap, rewardName, rewardsWaiting } from './goals';
 import { campusClean } from './grounds';
@@ -186,7 +188,7 @@ function readNow(state: GameState, metric: OrderMetric, param: string | undefine
   }
 }
 
-const COUNTED: ReadonlySet<OrderMetric> = new Set(['trees', 'quads', 'furniture', 'collects', 'homeWins', 'sellOuts']);
+const COUNTED: ReadonlySet<OrderMetric> = new Set(['trees', 'quads', 'furniture', 'collects', 'homeWins', 'sellOuts', 'crafts', 'decorPlaced']);
 const MARKED: ReadonlySet<OrderMetric> = new Set(['graduates', 'fullFall', 'cleanIntake', 'calmSemester', 'semesterLeft']);
 
 /** The mark of the calendar each measured number is read from, and whether less of it is better. */
@@ -229,6 +231,9 @@ function eligible(state: GameState, kind: OrderKind, seen: Look): boolean {
     case 'readyToCollect':
       // As many as it asks for are ready now, so it is done in this sitting.
       return seen.ready() >= (kind.target.n ?? 1);
+    case 'workshopOpen':
+      // There is a Makerspace, and a level has brought a recipe.
+      return workshopOpen(state);
   }
 }
 
@@ -396,6 +401,11 @@ function begin(state: GameState, order: Order, seen: Look, today = false): void 
   order.kind = kind.id;
   order.giver = kind.giver;
   order.seen = tick;
+  // A decoration it pays is the one of the town's own the campus holds fewest of, fixed now.
+  if (kind.reward.some((reward) => reward.kind === 'decor')) {
+    const gift = townGift(state);
+    if (gift) order.gift = gift;
+  }
   ordersCountRaw(state.orders, `seen:${kind.id}`);
   const least = ORDER_LEAST_HOURS * TICKS_PER_HOUR;
   order.until = kind.point ? nextPoint(state, kind.point, tick + least) : tick + Math.max(ORDER_LEAST_HOURS, kind.hours ?? ORDER_LEAST_HOURS) * TICKS_PER_HOUR;
@@ -496,12 +506,32 @@ export function orderRewards(state: GameState, order: Order): OrderReward[] {
   const kind = kindOf(order.kind);
   if (!kind) return [];
   const left = orderCashLeft(state);
-  return kind.reward.map((reward): OrderReward => (reward.kind === 'cash' ? { kind: 'cash', amount: Math.min(left, reward.amount * scaleOf(state)) } : reward)).filter((reward) => reward.amount > 0);
+  const out: OrderReward[] = [];
+  let xp = 0;
+  for (const reward of kind.reward) {
+    if (reward.kind === 'cash') out.push({ kind: 'cash', amount: Math.min(left, reward.amount * scaleOf(state)) });
+    else if (reward.kind === 'xp') xp += reward.amount;
+    // A decoration, or experience in its place once the town has no more of its own to give.
+    else if (reward.kind === 'decor') {
+      if (order.gift) out.push({ kind: 'decor', amount: 1, id: order.gift });
+      else xp += TOWN_DECOR_XP;
+    } else out.push(reward);
+  }
+  if (xp > 0) out.push({ kind: 'xp', amount: xp });
+  return out.filter((reward) => reward.amount > 0);
 }
 
 /** A reward list in words: "200 experience", "$56,000 and 60 experience". */
 export function rewardWords(rewards: readonly OrderReward[]): string {
-  const parts = rewards.map((reward) => (reward.kind === 'xp' ? `${reward.amount} experience` : reward.kind === 'seals' ? `${reward.amount} Gold ${reward.amount === 1 ? 'Seal' : 'Seals'}` : dollars(reward.amount)));
+  const parts = rewards.map((reward) =>
+    reward.kind === 'xp'
+      ? `${reward.amount} experience`
+      : reward.kind === 'seals'
+        ? `${reward.amount} Gold ${reward.amount === 1 ? 'Seal' : 'Seals'}`
+        : reward.kind === 'decor'
+          ? (decorSpec(reward.id)?.a ?? 'a decoration')
+          : dollars(reward.amount),
+  );
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
@@ -631,8 +661,9 @@ export function seeOrders(state: GameState): void {
   if (ranOut.length > 0) {
     orders.note = `${ranOut.length === 1 ? `Time ran out on "${ranOut[0]}".` : `Time ran out on ${ranOut.length} orders.`} Nothing is lost, and a new order comes tomorrow.`;
   }
-  // Something for today: the day's new order was a long one, and nothing else here can be finished in one sitting.
-  if (ORDER_SECOND_FOR_TODAY && begun > 0 && orders.open.length < orderSlots(state) && !sittingOpen(state) && sittingToAsk(state, seen)) {
+  // Something for today: the day's new order was a long one, or time ran out on one and left a place, and nothing
+  // else here can be finished in one sitting. Each can happen once a day at most, so looking again brings no more.
+  if (ORDER_SECOND_FOR_TODAY && (begun > 0 || ranOut.length > 0) && orders.open.length < orderSlots(state) && !sittingOpen(state) && sittingToAsk(state, seen)) {
     const second = offer(state);
     begin(state, second, seen, true);
     ordersCountRaw(orders, 'second');
@@ -655,7 +686,11 @@ export function claimOrder(state: GameState, id: number): { rewards: OrderReward
   let xp = 0;
   for (const reward of rewards) {
     if (reward.kind === 'xp') xp += reward.amount;
-    else if (reward.kind === 'seals') {
+    else if (reward.kind === 'decor') {
+      // It goes to storage, to be placed for nothing.
+      if (reward.id) giveDecor(state, reward.id);
+      orders.tally.decor = (orders.tally.decor ?? 0) + 1;
+    } else if (reward.kind === 'seals') {
       state.daily.seals += reward.amount;
       orders.tally.seals = (orders.tally.seals ?? 0) + reward.amount;
     } else {

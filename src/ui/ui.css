@@ -782,6 +782,9 @@ button.happy {
   font-size: 12.5px;
 }
 
+.student-follow[hidden] {
+  display: none;
+}
 .student-follow.active {
   background: var(--accent);
   border-color: var(--accent);
@@ -2309,4 +2312,146 @@ button.students {
 
 .need-detail p {
   margin: 0;
+}
+
+/* ------------------------------------------------- decorations (42.5) -- */
+
+/* A decoration's panel: move it, turn it, put it away. */
+.inspector-decor {
+  display: none;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.inspector-decor.show {
+  display: flex;
+}
+
+.inspector-decor button {
+  flex: 1;
+  min-height: 44px;
+}
+
+.inspector-decor button.hidden {
+  display: none;
+}
+
+/* The Workshop: what a bench keeps making, and the recipes. */
+/* The choice sits under its label, so a long recipe and its price are read whole on a phone. */
+.bench-keeps {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.bench-keeps select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.recipes-title {
+  display: block;
+  margin: 14px 0 6px;
+}
+
+.recipes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recipe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recipe canvas {
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+
+.recipe-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.recipe.locked {
+  opacity: 0.55;
+}
+
+/* Photo mode: the bars go, and the school's name and rank sit under the campus. */
+.photo-bar {
+  display: none;
+}
+
+.photo-mode > :not(.photo-bar):not(.modal-root):not(.toast) {
+  display: none !important;
+}
+
+.photo-mode .photo-bar {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.photo-buttons {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  right: calc(var(--safe-right) + 10px);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+/* Dark behind the words, whatever part of the campus is under them. */
+.photo-buttons button {
+  min-height: 44px;
+  padding: 6px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.photo-buttons .primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16201b;
+}
+
+.photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 14px) calc(var(--safe-left) + 16px);
+  background: rgba(20, 26, 22, 0.92);
+}
+
+.photo-name {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.photo-line {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
 }

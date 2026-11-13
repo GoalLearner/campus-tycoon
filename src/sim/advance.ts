@@ -1,6 +1,7 @@
 import { tellPolicies } from './systems/policies';
 import { tellDaily } from './systems/daily';
 import { offerDaily, tellOrders } from './systems/orders';
+import { decorOnDayStart, onCraftDone } from './systems/decor';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -154,6 +155,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
     case 'scrimmage':
       scrimmage(state, timer.ref, log);
       break;
+    case 'craftDone':
+      // The Workshop has finished something: the paper says so. It waits on its bench for ever.
+      onCraftDone(state, timer.ref, timer.due, log);
+      break;
     case 'decision':
       break;
   }
@@ -176,6 +181,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       openRoutine(state, day, log);
       // The orders board: one new order a real day, while it has room. A stub, with nothing read from the campus.
       offerDaily(state, log);
+      // A seasonal set of decorations that has just opened is told once (DESIGN.md 42.5).
+      decorOnDayStart(state, log);
       break;
     }
     case 'fallIntake':

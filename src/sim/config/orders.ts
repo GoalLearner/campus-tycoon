@@ -32,8 +32,13 @@ export const GIVERS: Record<GiverId, GiverSpec> = {
   donors: { name: 'The {donor} family', called: 'the {donor} family', weight: 2 },
 };
 
-/** What an order pays. Decorations come with the stop that has them: one more kind here, and the town's orders take it. */
-export type OrderReward = { kind: 'xp'; amount: number } | { kind: 'seals'; amount: number } | { kind: 'cash'; amount: number };
+/** What an order pays. A new kind of reward is one more line here, and one place that pays it. */
+export type OrderReward =
+  | { kind: 'xp'; amount: number }
+  | { kind: 'seals'; amount: number }
+  | { kind: 'cash'; amount: number }
+  /** A decoration of the town's own (DESIGN.md 42.5). Which one is fixed when the order is first seen. */
+  | { kind: 'decor'; amount: number; id?: string };
 
 /** The numbers an order may ask for. Each is read by one function in `systems/orders.ts`. */
 export type OrderMetric =
@@ -55,6 +60,8 @@ export type OrderMetric =
   | 'collects'
   | 'homeWins'
   | 'sellOuts'
+  | 'crafts'
+  | 'decorPlaced'
   // Measured once, at a point of the calendar.
   | 'graduates'
   | 'fullFall'
@@ -66,7 +73,7 @@ export type OrderMetric =
 export type OrderPoint = 'intake' | 'fallIntake' | 'graduation' | 'semesterEnd' | 'fallEnd';
 
 /** What must be so for a kind to be offered. Each is one small check in `systems/orders.ts`. */
-export type OrderWhen = 'rowNotOk' | 'rewardWaiting' | 'roomToPlant' | 'parkingNotOk' | 'streetNotWalking' | 'hasStadiumPlot' | 'collects' | 'readyToCollect' | 'seatsWanted' | 'homeGamesAhead';
+export type OrderWhen = 'rowNotOk' | 'rewardWaiting' | 'roomToPlant' | 'parkingNotOk' | 'streetNotWalking' | 'hasStadiumPlot' | 'collects' | 'readyToCollect' | 'seatsWanted' | 'homeGamesAhead' | 'workshopOpen';
 
 export interface OrderKind {
   id: string;
@@ -105,6 +112,8 @@ const xp = (amount: number): OrderReward => ({ kind: 'xp', amount });
 const seals = (amount: number): OrderReward => ({ kind: 'seals', amount });
 /** A grant from the state, on the small campus's count. */
 const grant = (amount: number): OrderReward => ({ kind: 'cash', amount });
+/** One of the town's own decorations. Once the campus holds them all it is experience instead. */
+const gift: OrderReward = { kind: 'decor', amount: 1 };
 
 export const ORDER_KINDS: readonly OrderKind[] = [
   // ---- your advisors: what holds the campus back, with its fix. They pay experience.
@@ -123,13 +132,16 @@ export const ORDER_KINDS: readonly OrderKind[] = [
   { id: 'noWaitlist', giver: 'state', title: 'Turn nobody away for want of a bed or a seat', ask: 'When the next class moves in, have a bed and a seat for everyone you admit.', metric: 'cleanIntake', target: { n: 1 }, point: 'intake', reward: [grant(4000), xp(100)] },
   { id: 'keepStudents', giver: 'state', title: 'Lose no more than {n} students this semester', ask: 'The state funds the students who stay. Happiness is what keeps them.', metric: 'semesterLeft', target: { add: 0 }, point: 'semesterEnd', reward: [grant(4000), xp(100)] },
 
-  // ---- the town: litter, parking, the avenue. It pays experience until there are decorations to give.
-  { id: 'plantTrees', giver: 'town', title: 'Plant {n} trees', ask: 'The avenue looks bare from our side of it.', metric: 'trees', target: { n: 8 }, hours: 36, reward: [xp(120)], sitting: true, when: 'roomToPlant', always: true },
+  // ---- the town: litter, parking, the avenue. It pays a decoration of its own, and a little experience.
+  // A round of collecting, the order any campus can do for nothing, pays experience alone.
+  { id: 'plantTrees', giver: 'town', title: 'Plant {n} trees', ask: 'The avenue looks bare from our side of it.', metric: 'trees', target: { n: 8 }, hours: 36, reward: [gift, xp(60)], sitting: true, when: 'roomToPlant', always: true },
   // Free, and there on any campus with somewhere to eat: asked when that many are ready, so it is done in one sitting.
   { id: 'collectRound', giver: 'town', title: 'Collect from {n} buildings', ask: 'The shops and the food places like to see the president come by.', metric: 'collects', target: { n: 6 }, hours: 36, reward: [xp(100)], sitting: true, when: 'readyToCollect' },
-  { id: 'benches', giver: 'town', title: 'Set out {n} benches, tables or bins', ask: 'Somewhere to sit, and somewhere to put a wrapper.', metric: 'furniture', target: { n: 4 }, hours: 36, reward: [xp(120)], sitting: true, when: 'roomToPlant' },
-  { id: 'cleaner', giver: 'town', title: 'Bring the campus to {n}% clean', ask: 'Litter blows down the avenue. Bins beside where students eat, and workers to empty them.', metric: 'clean', target: { add: 3, most: 95 }, hours: 48, reward: [xp(160)], upkeep: true },
-  { id: 'parkingOk', giver: 'town', title: 'A parking space for every student who drives', ask: 'They park on our streets when the campus has no room. The Capacity page says how many spaces are short.', metric: 'rowOk', target: { n: 1 }, hours: 48, reward: [xp(160)], when: 'parkingNotOk', upkeep: true },
+  { id: 'benches', giver: 'town', title: 'Set out {n} benches, tables or bins', ask: 'Somewhere to sit, and somewhere to put a wrapper.', metric: 'furniture', target: { n: 4 }, hours: 36, reward: [gift, xp(60)], sitting: true, when: 'roomToPlant' },
+  { id: 'cleaner', giver: 'town', title: 'Bring the campus to {n}% clean', ask: 'Litter blows down the avenue. Bins beside where students eat, and workers to empty them.', metric: 'clean', target: { add: 3, most: 95 }, hours: 48, reward: [gift, xp(100)], upkeep: true },
+  { id: 'parkingOk', giver: 'town', title: 'A parking space for every student who drives', ask: 'They park on our streets when the campus has no room. The Capacity page says how many spaces are short.', metric: 'rowOk', target: { n: 1 }, hours: 48, reward: [gift, xp(100)], when: 'parkingNotOk', upkeep: true },
+  // The Workshop (DESIGN.md 42.6): one thing takes a day or two to make, so the town gives three days.
+  { id: 'craftOne', giver: 'town', title: 'Make something at the Workshop', ask: 'The avenue is dressed for the season, and the town would like to see the campus join in.', metric: 'crafts', target: { n: 1 }, hours: 72, reward: [gift, xp(60)], when: 'workshopOpen' },
 
   // ---- donors: looks, football, landmarks. They pay Gold Seals: one for a short order and two for a season's,
   // which with the levels' own keeps a free player near a wait and a half a week (42.7, and 42.17).
@@ -137,6 +149,7 @@ export const ORDER_KINDS: readonly OrderKind[] = [
   { id: 'placeReward', giver: 'donors', title: 'Place {what}', ask: 'It was earned and it is waiting in the Build menu. We would like to see it stand.', metric: 'rewardPlaced', target: { n: 1 }, hours: 36, reward: [seals(1), xp(60)], sitting: true, when: 'rewardWaiting' },
   { id: 'levelUp', giver: 'donors', title: 'Reach University Level {n}', ask: 'A school on the move is one worth giving to.', metric: 'level', target: { add: 1 }, hours: 48, reward: [seals(1), xp(60)], always: true },
   { id: 'homeWin', giver: 'donors', title: 'Win {n} home games', ask: 'We have seats at the stadium and we would like something to cheer.', metric: 'homeWins', target: { n: 1 }, point: 'fallEnd', reward: [seals(2), xp(100)], when: 'homeGamesAhead' },
+  { id: 'craftTwo', giver: 'donors', title: 'Make {n} things at the Workshop', ask: 'We like to see what the students can build with their own hands.', metric: 'crafts', target: { n: 2 }, hours: 96, reward: [seals(2), xp(100)], when: 'workshopOpen' },
   { id: 'sellOuts', giver: 'donors', title: 'Fill the stadium at {n} home games', ask: 'A full house looks well. The ticket price and a good team both fill seats.', metric: 'sellOuts', target: { n: 2 }, point: 'fallEnd', reward: [seals(2), xp(100)], when: 'homeGamesAhead' },
 ];
 
