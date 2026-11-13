@@ -3,7 +3,7 @@ import { findStudent, sceneWords, type SceneRole, type Stander } from '../app/ac
 import type { Scenes as Wanted } from '../app/life';
 import { dateAt, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
-import type { Iso } from './iso';
+import type { Box, Iso } from './iso';
 
 /**
  * Small scenes that come and go (DESIGN.md section 33.4): a club's table on a
@@ -88,6 +88,12 @@ interface Scene {
   seen: boolean;
   /** Boxes only: when they are carried in. */
   untilMs: number;
+  /**
+   * The drawing the scene is laid out on, or null for one laid on the grass of the map. A scene on a drawing keeps
+   * its look when the view is turned: its people and props go where the turned view draws that drawing, mirrored
+   * with it (DESIGN.md section 43). Every spot below is given as the map has it with no turn.
+   */
+  host: Box | null;
 }
 
 /**
@@ -128,7 +134,7 @@ export class Scenes {
   /** The day of the game's year: scenes move from day to day and stay put within one. */
   private day = 0;
   /** Flat car parks, where a tailgate can be set up. */
-  private carParks: Array<{ x: number; y: number }> = [];
+  private carParks: Box[] = [];
   /** The stadium's plot and the tier that stands on it, or null with no plot. */
   private stadium: { x: number; y: number; w: number; h: number; tier: number } | null = null;
   /** The school's colour on a home game day, laid over fans and the band. null on any other day. */
@@ -248,7 +254,7 @@ export class Scenes {
     this.stadium = null;
     for (const thing of placed) {
       if (!thing) continue;
-      if (thing.type === 'parking') this.carParks.push({ x: thing.x, y: thing.y });
+      if (thing.type === 'parking') this.carParks.push({ x: thing.x, y: thing.y, w: thing.w, h: thing.h });
       if (thing.type === 'stadium') this.stadium = { x: thing.x, y: thing.y, w: thing.w, h: thing.h, tier: state.football.stadium.tier };
     }
 
@@ -274,7 +280,7 @@ export class Scenes {
         old.leaving = false;
         continue;
       }
-      const scene = this.begin(key, 'boxes', dorm.x, dorm.y, 1, 1);
+      const scene = this.begin(key, 'boxes', dorm.x, dorm.y, 1, 1, { x: dorm.x, y: dorm.y, w: 1, h: 1 });
       scene.untilMs = timeMs + MOVE_IN_MS;
       // Two stacks by the door, in front of the building.
       this.prop(scene, this.art.has('scene.boxes') ? 'scene.boxes' : 'people.boxes', dorm.x + 0.3, dorm.y + 1.12);
@@ -282,8 +288,8 @@ export class Scenes {
     }
   }
 
-  private begin(key: string, kind: Kind, x: number, y: number, w: number, h: number): Scene {
-    const scene: Scene = { key, kind, x, y, w, h, actors: [], props: [], alpha: 0, leaving: false, seen: false, untilMs: 0 };
+  private begin(key: string, kind: Kind, x: number, y: number, w: number, h: number, host: Box | null = null): Scene {
+    const scene: Scene = { key, kind, x, y, w, h, actors: [], props: [], alpha: 0, leaving: false, seen: false, untilMs: 0, host };
     this.scenes.set(key, scene);
     return scene;
   }
@@ -347,7 +353,7 @@ export class Scenes {
         keep.add(key);
         if (this.scenes.has(key)) continue;
         // A table under a parasol with the club's member behind it, a sign board in front, a banner behind, and a visitor.
-        const scene = this.begin(key, 'club', at.x, at.y, 1, 1);
+        const scene = this.begin(key, 'club', at.x, at.y, 1, 1, { x: at.x, y: at.y, w: 1, h: 1 });
         this.prop(scene, 'scene.banner', at.x + 0.82, at.y + 0.1, { sways: true });
         this.prop(scene, 'scene.parasol', at.x + 0.36, at.y + 0.36);
         this.prop(scene, 'scene.table', at.x + 0.64, at.y + 0.64);
@@ -362,7 +368,7 @@ export class Scenes {
         keep.add(key);
         if (this.scenes.has(key)) continue;
         // Friends in a ring where the quad's four cells meet, keeping a ball in the air between them.
-        const scene = this.begin(key, 'pickup', at.x, at.y, 2, 2);
+        const scene = this.begin(key, 'pickup', at.x, at.y, 2, 2, { x: at.x, y: at.y, w: 2, h: 2 });
         this.prop(scene, 'play.volleyball', at.x + 1, at.y + 1, { ball: true });
         const turn = mix(at.x, at.y + this.day) * Math.PI * 2;
         for (let k = 0; k < RING_PLAYERS; k++) {
@@ -379,7 +385,7 @@ export class Scenes {
         keep.add(key);
         if (this.scenes.has(key)) continue;
         // A rug on the grass with a basket on it, and two friends. No figure in the pack sits or lies, so they stand.
-        const scene = this.begin(key, 'picnic', at.x, at.y, 1, 1);
+        const scene = this.begin(key, 'picnic', at.x, at.y, 1, 1, { x: at.x, y: at.y, w: 1, h: 1 });
         this.prop(scene, 'scene.rug', at.x + 0.5, at.y + 0.5, { flat: true });
         this.prop(scene, 'scene.basket', at.x + 0.4, at.y + 0.44);
         this.actor(scene, 'picnic', look(at.x * 71 + at.y, this.day + 5), at.x + 0.36, at.y + 0.76, 'se');
@@ -392,7 +398,8 @@ export class Scenes {
         const key = `tailgate:${at.x},${at.y}`;
         keep.add(key);
         if (this.scenes.has(key) || !this.art.has('scene.table')) continue;
-        const scene = this.begin(key, 'tailgate', at.x, at.y, 2, 2);
+        // Laid out on the car park's own drawing, mirrored with it on a quarter turn.
+        const scene = this.begin(key, 'tailgate', at.x, at.y, 2, 2, at);
         this.prop(scene, 'scene.parasol', at.x + 0.3, at.y + 1.5);
         this.prop(scene, 'scene.table', at.x + 0.62, at.y + 1.82);
         this.actor(scene, 'tailgate', look(at.x * 61 + at.y, 1), at.x + 0.2, at.y + 1.9, 'se');
@@ -421,7 +428,8 @@ export class Scenes {
         const key = `storm:${ground.x},${ground.y}`;
         keep.add(key);
         if (!this.scenes.has(key)) {
-          const scene = this.begin(key, 'storm', ground.x, ground.y, 2, 2);
+          // On the stadium's own pitch: two cells by two at tiers one to three, and by three at four and five.
+          const scene = this.begin(key, 'storm', ground.x, ground.y, 2, 2, { x: ground.x, y: ground.y, w: 2, h: ground.tier >= 4 ? 3 : 2 });
           for (let k = 0; k < STORM_SIZE; k++) {
             const x = ground.x + STORM_FIELD.x0 + mix(k, 3) * (STORM_FIELD.x1 - STORM_FIELD.x0);
             const y = ground.y + STORM_FIELD.y0 + mix(k, 5) * (STORM_FIELD.y1 - STORM_FIELD.y0);
@@ -495,12 +503,14 @@ export class Scenes {
         ballY = a.y + (b.y - a.y) * part;
         lift = 20 + Math.sin(part * Math.PI) * 30;
       }
+      // Where a spot of the scene falls in the turned view: on its drawing, or on the map's own grass.
+      const host = scene.host;
+      const place = (x: number, y: number): { x: number; y: number } => (host ? this.iso.onDrawing(host, x - host.x, y - host.y) : { x, y });
       for (const prop of scene.props) {
-        const x = prop.ball ? ballX : prop.x;
-        const y = prop.ball ? ballY : prop.y;
-        const at = this.iso.toWorld(x, y);
+        const spot = place(prop.ball ? ballX : prop.x, prop.ball ? ballY : prop.y);
+        const at = this.iso.toWorld(spot.x, spot.y);
         // A rug is under everyone on its cell. Everything else stands among the people by where its base is.
-        const depth = prop.flat ? this.iso.depth(scene.x, scene.y, 0) + 0.5 : (x + y - 1) * 4 + 2.45;
+        const depth = prop.flat ? this.iso.depth(scene.x, scene.y, 0) + 0.5 : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.45;
         prop.sprite.setPosition(at.x, at.y - (prop.ball ? lift : 0)).setDepth(depth).setAlpha(alpha);
         if (prop.sways) prop.sprite.setRotation(Math.sin(seconds * 1.7 + prop.x * 3.1) * 0.05 * wind);
       }
@@ -517,9 +527,14 @@ export class Scenes {
           actor.shownKey = key;
         }
         actor.sprite.setFlipX(flipFrom !== undefined);
-        const at = this.iso.toWorld(actor.x, actor.y);
+        // The way they face is the scene's own, on the screen: a scene keeps its look at every turn.
+        const spot = place(actor.x, actor.y);
+        const at = this.iso.toWorld(spot.x, spot.y);
         // Fans on the field are drawn over the stadium they are standing in.
-        const depth = scene.kind === 'storm' ? (scene.x + scene.w + scene.y + scene.h - 2) * 4 + 1.2 + (actor.x + actor.y) * 0.01 : (actor.x + actor.y - 1) * 4 + 2.5;
+        const depth =
+          scene.kind === 'storm' && host
+            ? this.iso.front(host.x, host.y, host.w, host.h) * 4 + 1.2 + this.iso.sum(spot.x, spot.y) * 0.01
+            : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
         actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? STORM_FIELD.lift : 0)).setDepth(depth).setAlpha(alpha);
       }
     }

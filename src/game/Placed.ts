@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Art } from './art';
-import type { Iso } from './iso';
+import { mirrorHeading, type Box, type Heading, type Iso } from './iso';
 
 /**
  * Draws things that are placed by hand and can cover more than one cell:
@@ -36,6 +36,23 @@ export interface PlacedItem {
   id?: number;
   /** Draw this many cells further forward than its spot, for something resting on a flat item such as a car on a car park. */
   forward?: number;
+  /**
+   * The footprint of the drawing this stands on, such as the car park a car
+   * stands on. Its spot then moves with that drawing when the view is turned,
+   * and it is mirrored with it (DESIGN.md section 43).
+   */
+  on?: Box;
+  /** A drawing that runs one way, such as bunting: mirrored on a quarter turn, as a footprint that is not square is. */
+  turns?: boolean;
+}
+
+const HEADINGS: readonly string[] = ['px', 'py', 'nx', 'ny'];
+
+/** A car's sprite, mirrored with the lot it stands on: car.3.ny becomes car.3.nx. Anything else is as it was. */
+function mirroredKey(key: string): string {
+  const cut = key.lastIndexOf('.');
+  const heading = key.slice(cut + 1);
+  return cut > 0 && HEADINGS.includes(heading) ? `${key.slice(0, cut)}.${mirrorHeading(heading as Heading)}` : key;
 }
 
 interface Drawn {
@@ -55,31 +72,45 @@ export class PlacedSprites {
 
   set(items: readonly PlacedItem[]): void {
     this.clear();
+    const iso = this.iso;
     for (const item of items) {
       if (!this.art.has(item.key)) continue;
       const w = item.w ?? 1;
       const h = item.h ?? 1;
       const layer = item.layer ?? 'object';
+      // On a turned view (DESIGN.md section 43) a drawing still faces the viewer. One whose footprint is not square
+      // is mirrored about its top corner on a quarter turn, so it lies along its turned footprint. Something standing
+      // on another drawing goes where that drawing has it, mirrored with it.
+      const host = item.on;
+      const hostMirrored = host ? iso.mirrors(host.w, host.h) : false;
+      const key = hostMirrored ? mirroredKey(item.key) : item.key;
+      const mirrored = !host && (iso.mirrors(w, h) || (item.turns === true && iso.odd));
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
-      this.art.apply(sprite, item.key);
-      sprite.setAlpha(item.alpha ?? 1).setFlipX(item.flip === true);
+      this.art.apply(sprite, this.art.has(key) ? key : item.key);
+      if (mirrored) sprite.setOrigin(1 - sprite.originX, sprite.originY);
+      sprite.setAlpha(item.alpha ?? 1).setFlipX((item.flip === true) !== mirrored);
 
-      let at = this.iso.toWorld(item.x, item.y);
-      if (layer === 'ground') {
+      let at = iso.boxTop(item.x, item.y, w, h);
+      if (host) {
+        // Its spot on the host's drawing, in the drawing's own cells.
+        const spot = iso.onDrawing(host, item.x - host.x, item.y - host.y);
+        at = iso.toWorld(spot.x, spot.y);
+        sprite.setDepth((iso.sum(spot.x, spot.y) + w - 1 + h - 1) * 4 + 1);
+      } else if (layer === 'ground') {
         // After the tiles behind it and before the tiles in front. A wide one would otherwise be
         // drawn before the tiles beside its far corners, and their earth would lie over its shore.
-        sprite.setDepth((item.x + item.y + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5);
+        sprite.setDepth((iso.back(item.x, item.y, w, h) + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5);
       } else if (layer === 'object') {
         // Sorted by its front cell, so things behind it stay behind all of it.
-        sprite.setDepth((item.x + w - 1 + item.y + h - 1) * 4 + 1);
+        sprite.setDepth(iso.front(item.x, item.y, w, h) * 4 + 1);
       } else if (layer === 'person') {
-        at = this.iso.toWorld(item.x + 0.5, item.y + 0.5);
-        sprite.setDepth((item.x + item.y) * 4 + 2.5);
+        at = iso.toWorld(item.x + 0.5, item.y + 0.5);
+        sprite.setDepth((iso.sum(item.x + 0.5, item.y + 0.5) - 1) * 4 + 2.5);
       } else {
-        at = this.iso.toWorld(item.x + w / 2, item.y + h / 2);
+        at = iso.toWorld(item.x + w / 2, item.y + h / 2);
         at.y -= item.lift ?? 90;
         sprite.setOrigin(0.5, 1);
-        sprite.setDepth(900_000 + item.x + item.y);
+        sprite.setDepth(900_000 + iso.sum(item.x + w / 2, item.y + h / 2));
       }
       if (item.forward) sprite.setDepth(sprite.depth + item.forward * 4);
       sprite.setPosition(at.x, at.y);

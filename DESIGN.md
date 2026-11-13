@@ -2339,9 +2339,29 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | The model campus's halls | Drawn at the low tier's size, though each lecture hall there counts for 1,400 seats and each residence hall for 840 beds (35.7) | Taller halls, which come with the density tiers of 6.2 |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
+| Burger grill, `build.burger` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Late-night diner, `build.diner` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Dining hall, `build.dining` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Pizza place, `build.pizza` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Taco stand, `build.taco` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Campus store, `build.store` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Computer lab, `build.computerlab` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Gym, `build.gym` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Makerspace, `build.makerspace` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Study center, `build.studycenter` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Grounds yard, `build.yard` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Car park, `build.parking` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Aquatics pool, `build.pool` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Alumni House, `reward.alumni` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Post office, `reward.post` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Radio station, `reward.radio` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Stadium, tier four, `stadium.4` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Stadium, tier five, `stadium.5` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Town driveway tile, `town.driveway` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Town garden tile, `town.garden` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 | School banner, `decoration.banner.crimson` to `decoration.banner.maroon` (42.20) | The Medieval pack's red banner with its cloth turned to each of the eight school colours by the art build: eight pictures, and the one the game shows is the school's. Shown to the owner on his art sheet and picked on 2026-11-12. A line of shading one pixel wide down the cloth's left edge keeps a little of the red, seen only zoomed far in | Keep. Or a commissioned banner whose cloth takes any colour cleanly |
 
-Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one. The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one, and turn with the view (43). The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
 
 **Planned.** The stand-ins of play stop 4b moved into the table above when it was built, on 2026-11-11. The pizza place and the taco stand are used as drawn, two cells wide with their patios, which was the owner's choice. One is left:
 
@@ -5770,3 +5790,77 @@ The casual and the once-a-day player are inside $12 to $17 in every year and wee
 | A figure who leaves while their card is open | The card stays, and "Doing now" reads "Out of sight" |
 | More orders a week | 11.5 to 12.2 offered, where it was 10.0 to 10.2: the Workshop's orders, and the order for a sitting that replaces one that ran out |
 | Never run on a phone | The share sheet in particular. Checked in pictures and in tests on this PC, at 390 wide |
+
+---
+
+## 43. Turning the view
+
+Asked by the owner on 2026-11-13, playing on his phone: "I would like to rotate the map around too on the phone, i can only go up and down". Asked whether he meant turning the whole view, he answered: "Turn the whole view". A sheet showed him three ways with his own art (`docs/handoff/turn-view-sheet.html`), and he picked: "turn and rotate all the way". That is way A, four quarter turns round the full circle, with the mirroring the sheet listed, a Turn button, and the two-finger twist he asked for with "rotate". A smooth turn to any angle is not possible with drawings made from one side: the view snaps by quarters. Built on 2026-11-13. Nothing in the simulation, the save or the long run changed.
+
+### 43.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The turn | Four quarter turns, clockwise on the screen. Each tap of Turn is a quarter, and four come home. The spot in the middle of the screen stays in the middle | `session.turnView`, `applyTurn` in `src/game/CampusScene.ts` |
+| How | The map keeps its own cells. The projection lays them down a quarter, a half or three quarters round, as the view's own cells, and draws those exactly as the map was drawn before. Every place that draws goes through it: a point (a walker, a car), a cell (a tile, a tree), a footprint (a building), or a spot on a drawing (a player on a court) | `Iso` in `src/game/iso.ts` |
+| The ground | Road and path pieces are chosen again for the turned grid, by turning which sides join. Crossings swap with the road. The town's driveway and garden tiles, which run one way, are mirrored on a quarter turn. The lake, the ponds, the courts, the field and the pool are each one drawing and stay as drawn | `iso.mask`, `syncMap` |
+| Buildings | Every drawing faces the viewer at every turn. A footprint that is not square (the 16 kinds of two-cell building, and the stadium at tiers four and five) is mirrored about its top corner on a quarter or three-quarter turn, so it lies along its turned footprint. The half turn mirrors nothing. Square buildings, dorms, lecture halls, houses, trees and every one-cell thing keep their drawing. The four decorations that run one way turn with the view | `Placed.ts`, `iso.mirrors` |
+| Draw order | Worked out in the view's cells: what is nearer the viewer is drawn later, at every turn. A line of people beside a building stands in front of it when its side faces the viewer. Lit windows count what stands in front of a wall on the screen. A tap on a tall building finds it in front of the cell under the finger | `iso.depth`, `iso.sum`, `iso.front`, `iso.step` |
+| People and cars | They walk and drive the map as before, and face the way they move on the screen. What is drawn beside someone (a pennant, a parent's boxes, a broom, a driver's boxes) stays at their side on the screen | `iso.face`, `iso.heading`, `iso.offset` |
+| On a drawing | Players on the courts and the field, runners, swimmers, people among the food court's stalls and at a seat, the study group's book, the ball, cars parked on a lot, a tailgate, fans on the field after a big win, move-in boxes, a club's table, a ring of friends and a picnic all move with the drawing they are on, mirrored with it. A line on the grass and the band on the practice lawn follow the grid. Ripples begin on the pond's own water | `iso.onDrawing`, `Activity.ts`, `Scenes.ts`, `Ambient.ts` |
+| Taps | The cell under a finger, the point of the map under it, and every person and building hit as drawn | `iso.toCell`, `iso.toMap` |
+| Placing | The ghost is drawn as the building will be, mirrored at a quarter turn, over its footprint in green or red and its reach in blue on the turned cells | `showPlaced`, `ghostTints` |
+| Markers | Medals, the hammer, incident icons, the car-park barrier and the edge signs float over the middle of what they are about, at every turn | |
+| The camera | Roams the turned map. Following a student works at every turn. Photo mode has a Turn button of its own, to frame the campus from any side | `clampCamera`, `photoBar` in `src/ui/ui.ts` |
+| The Turn button | The word Turn, low on the left, opposite Build. It hides when Build does | `turn-fab` in `src/ui/ui.css` |
+| The twist | Two fingers turned 35 degrees or more while their gap changes by less than a tenth. When they lift, the view turns the nearest number of quarters. A gesture that has zoomed can never turn, and one that turns never zooms: when a gesture becomes a twist, the camera goes back to where the fingers found it. While twisting, the map leans up to 22 degrees their way | `src/app/twist.ts`, `onMove` |
+| Remembered | The phone remembers which way the player last faced, as it remembers the crowd setting. It is not in the save | `campus-tycoon.turn` in `src/app/session.ts` |
+| The dev page | `&turn=1`, `2` or `3` opens the map turned | `src/app/devtools.ts` |
+| Art | Nothing new. The mirrored drawings are listed on section 26 | |
+
+### 43.2 Measured
+
+On the model campus at the Normal crowd, held there, at 390 by 844 on this PC's software renderer:
+
+| Turn | Work in a frame, mean | Range of five readings |
+|---|---|---|
+| None, as today | 4.25 ms | 3.0 to 6.1 ms |
+| A quarter | 3.58 ms | 3.0 to 4.2 ms |
+| A half | 4.54 ms | 3.7 to 7.2 ms |
+| Three quarters | 4.11 ms | 3.1 to 5.0 ms |
+
+Steady frames cost the same at every turn: nothing more is drawn. A turn lays every tile again in 2.0 to 3.0 ms, and the redraw that follows takes 7.2 to 13.4 ms, so a turn is about one frame on this PC.
+
+Taps, at all four turns, in three parts of the campus: 586 people in activities and 1,062 walkers were each tapped on their figure, and each tap opened that person's card, with no misses. A two-cell building (mirrored on the quarter turns), a dorm, the courts and three path cells were each tapped and selected at every turn. A tap on a collect medal collects first, as before.
+
+The twist, played with real two-finger touches in a desktop browser: pinches out and in, straight or drifting by up to 30 degrees, only zoomed; a twist of 28 degrees did nothing; 70 degrees clockwise turned a quarter, 100 degrees anticlockwise turned a quarter back, and 160 degrees turned a half; a gesture that zoomed first and then turned 80 degrees only zoomed. After every twist the zoom was where it began.
+
+Tests: 19 new (12 for the turn, 7 for the twist): 778 in all. The long run's 72 checks pass and its tables are the same as before.
+
+### 43.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The way | His pick: four quarter turns, with the two-cell buildings mirrored | A half turn only. Or no mirroring, which the sheet showed looks wrong |
+| Which way a tap turns | Clockwise on the screen | Anticlockwise. Or two buttons, one each way |
+| The button | The word Turn, as the word Photo is used with no camera drawn | An arrow drawing, which would be new art |
+| The twist | Built, because it held in testing: it acts only on a clear twist and never zooms in the same gesture | Left out, with the button alone |
+| When a gesture is a twist | 35 degrees of turn with the gap within a tenth | A smaller angle, which a pinch can make |
+| While twisting | The map leans up to 22 degrees, then snaps | Nothing moves until the fingers lift |
+| Where the turn is kept | On the phone, beside the crowd setting | In the save. Or forgotten each time the game opens |
+| Turn in photo mode | Yes, beside Share and Done | Only outside photo mode |
+| Something on a drawing | Moves with the drawing | Moves with the grid, which would stand players off their court |
+| A line on the grass | Follows the grid, on the side chosen for it | Moves with the building's drawing |
+| The ground tile kept under a flat drawing | The one at its top corner as turned | The one at the map's own top corner, which then lies over the drawing |
+
+### 43.4 Rough
+
+| Rough | Why |
+|---|---|
+| Never run on a phone | Checked in pictures and tests on this PC, and the twist with touch events in a desktop browser |
+| Fronts that face away | Every drawing shows its front, so on some turns a door faces away from its path or street, as the sheet showed |
+| The far edge comes to the front | The road along the map's far edge becomes the near edge on a turn and shows its grey side |
+| A turn is about one frame | 10 to 16 ms on this PC, perhaps a short pause on a slower phone |
+| Fans after a big win at tiers four and five | They stand partly on the stands, at every turn: where they stand was measured on the smaller stadium, before this stop |
+| A line may stand behind its building | When only the far sides of a building are open on a turn, its line stands there |
+| Things in motion at the moment of a turn | A truck's driver at a door keeps the depth it had until the truck leaves, and a ripple finishes where it began |

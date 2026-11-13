@@ -776,8 +776,10 @@ export class Walkers {
   }
 
   private draw(walker: Walker, people: PeopleSpec): void {
-    const flipFrom = people.flip?.[walker.direction];
-    const facing = flipFrom ?? walker.direction;
+    // They walk the map. On a turned view they face the way they go on the screen (DESIGN.md section 43).
+    const direction = this.iso.face(walker.direction);
+    const flipFrom = people.flip?.[direction];
+    const facing = flipFrom ?? direction;
     const frame = walker.lingerMs > 0 ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
     const key = `person.${walker.look}.${facing}.${frame}`;
     if (key !== walker.shownKey) {
@@ -788,7 +790,7 @@ export class Walkers {
     const at = this.iso.toWorld(walker.x, walker.y);
     walker.sprite.setPosition(at.x, at.y);
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
-    walker.sprite.setDepth((walker.x + walker.y - 1) * 4 + 2.5);
+    walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
     // A fan on the way to the game wears the school's colour: the figure itself is tinted, since none has a scarf.
     const fan = this.fanTint !== null && walker.kind === 'student' && walker.goal === this.stadiumStop;
@@ -799,7 +801,8 @@ export class Walkers {
     }
     if (walker.prop) {
       // Beside them: no figure in the pack can hold anything. A pennant moves in the wind.
-      const beside = this.iso.toWorld(walker.x + 0.2, walker.y + 0.04);
+      const off = this.iso.offset(0.2, 0.04);
+      const beside = { x: at.x + off.x, y: at.y + off.y };
       const sway = walker.kind === 'guide' ? Math.sin(this.scene.time.now / 420 + walker.stride / 400) * 0.1 * this.wind : 0;
       walker.prop.setPosition(beside.x, beside.y).setRotation(sway).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
     }

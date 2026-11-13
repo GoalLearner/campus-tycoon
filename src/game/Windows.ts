@@ -96,10 +96,15 @@ export class Windows {
         const base = `lit.${prefix}.${count > 0 ? building.variant % count : 0}`;
         const order = mix(y * width + x, 7);
         const academic = cell.zone === 'academic';
-        // The building straight in front hides the lower half of both walls.
-        const clear = !tall(x + 1, y + 1);
-        if (this.art.has(`${base}.sw`)) this.walls.push({ id: `${x},${y},sw`, x, y, key: `${base}.sw`, order, academic, open: clear && !tall(x, y + 1) });
-        if (this.art.has(`${base}.se`)) this.walls.push({ id: `${x},${y},se`, x, y, key: `${base}.se`, order, academic, open: clear && !tall(x + 1, y) });
+        // The building straight in front hides the lower half of both walls. In front is in front on the screen,
+        // as the view is turned (DESIGN.md section 43): the walls are the drawing's own, which faces the viewer.
+        const ahead = (dx: number, dy: number): boolean => {
+          const at = this.iso.step(x, y, dx, dy);
+          return tall(at.x, at.y);
+        };
+        const clear = !ahead(1, 1);
+        if (this.art.has(`${base}.sw`)) this.walls.push({ id: `${x},${y},sw`, x, y, key: `${base}.sw`, order, academic, open: clear && !ahead(0, 1) });
+        if (this.art.has(`${base}.se`)) this.walls.push({ id: `${x},${y},se`, x, y, key: `${base}.se`, order, academic, open: clear && !ahead(1, 0) });
       }
     }
     this.sync(0, 0);
@@ -134,7 +139,7 @@ export class Windows {
       for (const wall of this.walls) {
         // Lecture halls empty out late: half as many are lit as dorms.
         if (wall.order >= (wall.academic ? share * 0.5 : share)) continue;
-        const at = this.iso.toWorld(wall.x, wall.y);
+        const at = this.iso.cellTop(wall.x, wall.y);
         if (at.x < view.x - 200 || at.x > view.right + 200 || at.y < view.y - 80 || at.y > view.bottom + 320) continue;
         wanted.add(wall.id);
         let lit = this.shown.get(wall.id);
