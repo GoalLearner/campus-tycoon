@@ -4723,3 +4723,43 @@ No difference that can be told from the spread between runs.
 | Cars still turn on the spot | As before (25.7) |
 | The junction of the campus road beside the last side street | The two junctions touch, so they are one zone and one car goes through both at a time |
 | Not seen on a phone | Checked in pictures and in tests on this PC |
+
+---
+
+## 40. A building for each rank goal
+
+Asked of the owner on 2026-11-12, once the cap had made the rank goals the long climb (38.4): "Switch on the eight reward buildings from the sheet, one for each rank goal?" He answered: "Yes, as shown". The sheet is the one he was sent that morning with eight picks and four spares from the art he already owns (37.7). **Approved, and not built yet.**
+
+### 40.1 Which building for which goal
+
+In the order of the sheet, one to a goal:
+
+| Rank goal | Building |
+|---|---|
+| Top 175 | Founders' Fountain |
+| Top 150 | Campus Post Office |
+| Top 125 | Campus Cinema |
+| Top 100 | Campus Radio |
+| Top 75 | University Museum |
+| Top 50 | Alumni House |
+| Top 25 | Broadcast Tower |
+| Top 10 | Bell Tower |
+
+The four spares on the sheet (Transit Station, Clock Tower, Guest House, Old Mill) are not used. The size goal, a full campus, gives a headline and no building.
+
+### 40.2 The rules, with the choices made for him
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| What a goal gives | Its building, free, waiting in the Build menu until it is placed. It never expires (15.3) | Placed for the player, on a spot the game picks |
+| What a building does | One thing: it lifts how the campus looks around it, which is one of the four causes of applicants (37.3). It costs nothing to place and nothing to keep [T] | A different effect for each. Eight effects are more to explain than eight goals are worth |
+| A later goal's building | Lifts a little more than an earlier one's [T] | All eight the same |
+| A building cleared | Goes back to the Build menu. A reward is never lost (section 3) | Gone for good |
+| A game that has already reached goals | Finds those goals' buildings waiting in the Build menu when it loads | Only goals reached from now on give one |
+| A game begun on the small campus | Has no goals, so no buildings | The old ladder of 15.2 for it |
+| The paper | The headline of a rank goal names the building it gives, and the first issue after an upgrade says which are waiting | Nothing said |
+| Eras | Still a name. What an era unlocks is for the milestones layer (15.2) | Hang the buildings on the eras |
+
+To measure in the build, and to report to him: the pace of the rank goals with every building placed (the Top 100 in about month two, the Top 10 not before month five), that rank, applicants and selectivity still settle, and the money against his $12 to $17 kept of every $100.
+
+The art is from his paid packs: it goes in the private art repository and never in the public one. Each building is the pack's own drawing, used as drawn.
