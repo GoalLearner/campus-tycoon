@@ -195,6 +195,8 @@ export * from './systems/policyWords';
 export * from './config/policies';
 export * from './systems/daily';
 export * from './config/daily';
+export * from './systems/orders';
+export * from './config/orders';
 export * from './config/goals';
 export * from './newspaper';
 export * from './notify';

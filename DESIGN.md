@@ -5110,7 +5110,7 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 
 ## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store
 
-Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15.
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15. Stop 2, the orders board, is built: 42.16 to 42.19.
 
 Two things he said that govern all of it:
 
@@ -5395,9 +5395,187 @@ Collecting itself is not in these numbers: its cash goes straight to the bank an
 | Seals pile up | There is one thing to spend them on, and a campus has few waits. The test players end with over 300. Decorations and the workshop come in later stops |
 | Finish now moves the rank goals a little | On one of two seeds a goal came up to two weeks sooner. It is what buying time does. If he wants the pace untouched, faculty can be left out of what a Seal finishes |
 | The level is a large number late | About 235 at week 44. Nothing hangs on the number yet |
-| The level button drops to a second row at 375 wide | When Football, a long Inbox line and Policies are all showing. It is still one tap |
+| The level button drops to a second row at 375 wide | When Football, a long Inbox line and Policies are all showing. It is still one tap. Put right with stop 2: every button of the row is now a number over a word, and five hold one row (42.16) |
 | A level reached is seldom at the top of the paper | It is a line in the rest of the paper, behind games, goals and decisions. There are five a week |
 | The first week is quicker than the rest | Six to eight levels in week 1, because the first levels are cheap. That is on purpose |
 | A building placed and cleared a dozen times a day still pays its opening bonus each time | The dozen is the cap. It costs half the building's price each time after the first minute |
 | The medal over a tall building sits against the building behind it | It bobs, which helps. A dark roof behind it hides its ribbon |
+| Never run on a phone | Checked in pictures and in tests on this PC, at 390 and 375 wide |
+
+### 42.16 Stop 2 as built: the orders board
+
+Built on 2026-11-12, on the owner's "Yes, orders next". Only a game with goals has the board. A game begun on the small campus has none, and its long-run tables print the same numbers. The Board goals of 15.4 were never built: the board stands where they would have.
+
+| Thing | As built | Where |
+|---|---|---|
+| The board | Its own button beside Inbox, and the page it opens. Each order says who asks, what for, the giver's own words, how far along it is, how long is left and what it pays. A finished one has Claim. Any other has Dismiss | `openOrders` in `src/ui/ui.ts`, `ordersView` and `ordersChip` in `src/ui/ordersUi.ts` |
+| An order | A number the game already has, a target set from where the campus stands, a length and a reward. Nothing is made or delivered | `OrderKind` in `src/sim/config/orders.ts` |
+| The kinds | Twenty, all data. A kind that reads a number already listed is one more entry, and so is a giver: a test adds one of each and plays it through | `ORDER_KINDS`, `GIVERS`, `tests/orders.test.ts` |
+| The numbers | Three sorts. Read from the campus as it stands, when somebody asks: Happiness, Safety & health, Food & fun, how clean the campus is, seats, the University Level, a line of the Capacity page, an earned building placed. Counted from when the order was first seen: trees planted, cells of quad laid, benches, tables and bins set out, buildings collected, home wins, full houses. Measured once at a point of the calendar: the seniors who graduate, a full fall class, nobody turned away, the semester's Stress, the students who left | `readNow`, `ordersCount`, `ordersMark` in `src/sim/systems/orders.ts` |
+| Who gives them | Four givers, each a name, a voice and a weight (3, 2, 3, 2). A new order comes from a giver who has none on the board, where there is one | `GIVERS`, `pickGiver` |
+| The advisors | A line of the Capacity page, a step at a time, asked by the advisor it belongs to by title and name. Happiness, Safety & health, Food & fun. The semester's Stress. They pay experience | |
+| The state | Seats, the graduating class, a full fall, nobody turned away, the students who stay. It pays a grant and a little experience | |
+| The town | Trees, benches, a round of collecting, litter, parking. It pays experience until there are decorations to give: a decoration is one more kind of reward | |
+| Donors | Quad, placing a building that was earned, the next level, home wins, full houses. They pay Gold Seals. The family is the game's own, from its name pools by the game's seed, the same one Naming rights uses | `giverName`, `donorName` |
+| What an order pays | Experience, 60 to 300. Gold Seals, one for a short order and two for a season's. A grant of $2,000 or $4,000 on the small campus's count, which is $56,000 or $112,000 on the model campus. No rank points | `OrderReward`, `orderRewards` |
+| The cap on cash | $12,000 a school year on the small campus's count, $336,000 on the model campus. Past it a grant pays its experience alone until the next fall, and the board says so in what the order pays | `ORDER_CASH_YEAR`, `orderCashLeft` |
+| How many at once | Three. A fourth place at level 5 and a fifth at level 20, both entries in the list of what a level opens. Nine kinds of order are opened by levels 3 to 26, one at a time | `orderSlots`, `LEVEL_UNLOCKS` in `src/sim/config/daily.ts` |
+| One new order a day | At the start of each day of the campus week, while the board has room. It is offered as a stub: who gives it, and a number from the game's own seeded stream. Nothing about the campus is read on a tick | `offerDaily`, the `orders` stream in `src/sim/rng.ts` |
+| First seen | Opening the board is an action. It gives each new order what it asks, sets its target and starts its clock. The kind is one of the giver's that a level has opened, that fits the campus as it is now, and that is neither on the board nor lately dismissed | `seeOrders`, `chooseKind`, `begin` |
+| Two lengths | Short: 36 or 48 hours from when it is first seen. Season: to the next point of the calendar that is at least 36 hours away, which is a class moving in, the fall class, graduation, the end of a semester or the end of the fall | `nextPoint`, `ORDER_LEAST_HOURS` |
+| Always one for a sitting | Ten kinds are marked as done in one sitting. The order that fills the last place of a full board is one of them when no other open order is. And on a day whose new order is a long one, with nothing else for a sitting on the board, a second order comes with it that is (42.18) | `sitting`, `ORDER_SECOND_FOR_TODAY` |
+| The order that is always there | A round of collecting: six buildings, asked only when six are ready. It is free, and every campus with somewhere to eat can do it | `collectRound`, `readyToCollect` |
+| Nothing that costs the campus its margin | Seven kinds mean something with a yearly cost: a building to staff, a lot to teach in. They are asked only while the campus keeps $15 or more of every $100 | `upkeep`, `ORDER_UPKEEP_KEPT` |
+| A finished order | Waits for a tap, for as long as it takes. Claim pays, and the gold medal rises from the order with what it paid | `claimOrder` |
+| A missed order | Costs nothing. It is taken off at the next look, with one line on the board: "Time ran out on ... Nothing is lost, and a new order comes tomorrow." If the number is there when the player looks, it counts, even a little late. Nothing runs out unseen | `orderStatus` |
+| A dismissed order | Free, and replaced the next day. That kind is not asked again for a week | `dismissOrder`, `ORDER_REST_HOURS` |
+| The paper | A new order is a line. Several are one line with how many. A finished one is a line each | `awayLines` in `src/sim/digest.ts` |
+| The row of buttons | Every button is now a number over a word, as the student count is: "5-5 football", "1 · 2 d to decide", "4 new orders", "1 on policies", then the level and the Seals. Five hold one row at 375 wide. What moved: the Football button no longer says when the next game is, and the Inbox button gives the time left in its largest unit alone. The full sentences are what a screen reader hears | `src/ui/chips.ts`, `statChip` in `src/ui/ui.ts` |
+| The Level page | Lists an order done among what earns experience, and names the kind of order or the place on the board that the next level opens | `XP_SOURCES`, `levelView` |
+| The save | Version 19, one migration: the stream, the board and its first three orders, with nothing said. A version 18 fixture of a game like the owner's loads with nothing else moved | `MIGRATIONS[18]`, `tests/fixtures/save-v18-model.json` |
+| Art | None new. The claim uses the gold medal on a ribbon he chose for collecting, so nothing here is for section 26 | |
+
+**The twenty kinds.**
+
+| Giver | Order | Length | Pays | One sitting | Opens at level |
+|---|---|---|---|---|---|
+| Advisors | A line of the Capacity page: reach a number two in a hundred higher | 48 hours | 160 experience | Yes | 1 |
+| Advisors | Lift Happiness one point | 48 hours | 160 experience | Yes | 1 |
+| Advisors | Lift Safety & health one point | 48 hours | 160 experience | Yes | 3 |
+| Advisors | Lift Food & fun one point | 48 hours | 160 experience | Yes | 4 |
+| Advisors | End the semester with Stress no higher than the last | Season | 300 experience | | 1 |
+| The state | Have 560 more seats | 48 hours | $56,000 and 60 experience | Yes | 1 |
+| The state | Graduate 96 in 100 of the senior class | Season | $112,000 and 100 experience | | 1 |
+| The state | Be full when the fall class moves in | Season | $112,000 and 100 experience | | 1 |
+| The state | Lose no more students this semester than the last | Season | $112,000 and 100 experience | | 16 |
+| The state | Turn nobody away for want of a bed or a seat | Season | $112,000 and 100 experience | | 23 |
+| The town | Plant 8 trees | 36 hours | 120 experience | Yes | 1 |
+| The town | Collect from 6 buildings | 36 hours | 100 experience | Yes | 1 |
+| The town | Set out 4 benches, tables or bins | 36 hours | 120 experience | Yes | 7 |
+| The town | Bring the campus three points cleaner | 48 hours | 160 experience | | 9 |
+| The town | A parking space for every student who drives | 48 hours | 160 experience | | 26 |
+| Donors | Lay 6 cells of quad | 36 hours | 1 Gold Seal and 60 experience | Yes | 1 |
+| Donors | Place a building that was earned | 36 hours | 1 Gold Seal and 60 experience | Yes | 1 |
+| Donors | Reach the next University Level | 48 hours | 1 Gold Seal and 60 experience | | 1 |
+| Donors | Win a home game this fall | Season | 2 Gold Seals and 100 experience | | 11 |
+| Donors | Fill the stadium at two home games this fall | Season | 2 Gold Seals and 100 experience | | 13 |
+
+### 42.17 Stop 2, measured
+
+The test players look at the board first on every visit, do what an order names in the way its own words say, dismiss one the campus has no ground or no money for, and claim what is finished. The long run plays every player three ways: with everything in use, with the switches off and nothing else changed, and one of each with none of it, the board never looked at.
+
+**The board.** A real week, two seeds each, over 44 weeks.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Orders offered | 10.1 to 10.2 | 10.0 to 10.2 | 10.2 |
+| Of them a second order for today | 3.0 to 3.1 | 3.0 to 3.1 | 3.2 |
+| Finished and claimed | 8.1 to 8.2 | 8.3 to 8.6 | 8.6 to 8.7 |
+| Dismissed | 1.6 to 1.8 | 1.5 to 1.7 | 1.5 |
+| Missed | 0.2 to 0.3 | 0.0 | 0.0 |
+| Share finished | 80% to 82% | 83% to 85% | 85% |
+| Real days with an order for one sitting | 308 of 308 | 308 of 308 | 308 of 308 |
+| Experience from orders | 974 to 1,013 | 1,039 to 1,083 | 1,081 to 1,086 |
+| Gold Seals from orders | 1.8 to 1.9 | 1.9 | 2.0 to 2.2 |
+| Cash from orders, a year | $112K to $121K | $108K to $113K | $115K |
+| Of every $100 that comes in | $0.024 to $0.025 | $0.023 to $0.024 | $0.024 to $0.025 |
+
+The once-a-day player finishes 83% to 85% of what is offered and misses one order in 44 weeks. Nearly everything dismissed is trees, benches or quad: the test players keep their bare ground for streets and lots, and run out of anywhere else to plant. A person can plant where they like. The most a campus could ever be paid in a year is $0.072 of every $100.
+
+**What came up**, for the once-a-day player over 44 weeks, both seeds added together: seen, then claimed.
+
+| Giver | Orders |
+|---|---|
+| Advisors | The semester's Stress 93 and 91. A line of the Capacity page 20 and 19. Food & fun 15 and 1. Happiness 1 and 1. Safety & health 0 |
+| The state | The graduating class 25 and 25. The students who stay 24 and 24. Nobody turned away 18 and 18. A full fall 16 and 15. More seats 10 and 10 |
+| The town | A round of collecting 305 and 305. Benches 113 and 63. Trees 107 and 57. Litter 0. Parking 0 |
+| Donors | Quad 49 and 22. The next level 37 and 37. A full stadium 27 and 26. A home win 28 and 28. An earned building 1 and 1 |
+
+**Levels.**
+
+| Measured | Casual | Once a day | Works every cause | Stop 1 |
+|---|---|---|---|---|
+| Level after the first sitting | 5 | 5 | 5 | 4 |
+| Level at week 1 | 9 | 7 to 8 | 7 to 9 | 6 to 8 |
+| Level at week 4 | 28 | 27 | 27 | 22 to 23 |
+| Level at week 12 | 69 to 81 | 71 | 67 to 70 | 51 to 66 |
+| Level at week 44 | 243 to 290 | 234 to 238 | 227 to 228 | 215 to 239 |
+| Levels a week, weeks 12 to 44 | 5.4 to 6.5 | 5.1 to 5.2 | 4.9 to 5.0 | 5.1 to 5.4 |
+| Gold Seals earned a week | 11.4 to 12.9 | 11.1 to 11.3 | 11.0 to 11.2 | 8.6 to 9.4 |
+
+Orders bring about a thousand experience a week, and the first month is five levels ahead of where it was. By week 44 the once-a-day player stands where they did. The reason is in what the test players build: with orders to answer they spend their spare on what the orders name, places to play and Safety & health, and build fewer second and third kinds of food. Food places are what fill with experience, so they collect from about 15 buildings a day where they collected from 22. Seals come two a week faster, which is the donors.
+
+**The pace of the rank goals.** This is what moved most.
+
+| Goal | Casual | Once a day | Works every cause | Stop 1: casual, once a day, works every cause |
+|---|---|---|---|---|
+| Top 100 | 7 | 7 | 7 | 7, 7, 7 |
+| Top 75 | 11 to 12 | 11 to 12 | 11 to 12 | 11 to 12 for each |
+| Top 50 | 14 to 16 | 14 to 16 | 14 to 16 | 14 to 17, 14 to 17, 14 to 16 |
+| Top 25 | 20 to 21 | 20 to 21 | 20 to 21 | 22 to 24, 22, 20 to 21 |
+| Top 10 | 28 to 29 | 25 to 29 | 24 to 29 | 31 to 39, 33 to 39, 25 to 29 |
+| Rank at week 44 | 2nd to 4th | 2nd to 3rd | 2nd to 3rd | 7th to 9th, 7th, 2nd to 3rd |
+| How the campus looks, of 100 | 67.8 to 69.0 | 68.4 to 69.0 | 68.5 to 68.7 | 62.8 to 63.1, 62.8 to 63.1, 68.9 to 69.0 |
+
+The player who works every cause is where they were. The casual and the once-a-day player now keep pace with them: the Top 25 one to three weeks sooner, the Top 10 three to ten weeks sooner, and 2nd to 4th at week 44 where they were 7th to 9th. The cause is one thing. The town's and the donors' orders ask for trees, benches and quad, and a player who answers them ends with a campus that looks 68 of 100 where it looked 63. How the campus looks is one of the four causes of applicants, and the player who works every cause was already planting. With none of the layer used, the same players reach the Top 10 in weeks 39, 37 and 29, as before. His targets stand: the Top 100 in week 7, and the Top 10 never before week 24. With the switches off and nothing else changed, no goal is more than one week from where it is with them on.
+
+**Money.** Kept of every $100.
+
+| Measured | Everything in use | Stop 1, in use |
+|---|---|---|
+| A new game, as it opens | $16.60 | $16.60 |
+| The casual player, years 3 to 8 | $13.80 to $14.80 | $13.30 to $15.20 |
+| The once-a-day player, years 3 to 8 | $13.20 to $14.50 | $12.70 to $14.20 |
+| The player who works every cause, years 3 to 8 | $11.50 to $14.00 | $13.00 to $14.50 |
+| The casual player, weeks 9 to 44 | $13.90 to $15.90 | $14.00 to $16.10 |
+| The once-a-day player, weeks 9 to 44 | $13.90 to $16.00 | $13.70 to $16.10 |
+| The player who works every cause, weeks 9 to 44 | $12.40 to $15.50 | $13.10 to $15.60 |
+
+The casual and the once-a-day player are inside his range in every year and every week measured. The player who works every cause dips to $11.50 in one early year on one seed, under his $12, and is back inside it from week 9. That player builds everything the board asks in the first weeks, while a new campus keeps $16.60 and the advisors are free to ask, on top of everything they already build. Asking only above $15 is what holds it there: at $14 the same player fell to $10.60, and with no such rule, as first built, the casual player fell to $12.00 and the long run's own check failed.
+
+**Settling.** Rank, applicants and selectivity settle as they did: 0.7 rating points and 429 of 20,538 applicants in the last ten of thirty years.
+
+**Speed.** Thirty days of catch-up take 135 ms on a new model campus and 212 ms on a tended one. A tick offers an order as two numbers and tells a line. Reading the whole board takes under a millisecond, and it is read when the board or its button is drawn.
+
+**Tests and long runs.** 34 new tests in `tests/orders.test.ts`: 721 in all. Seven new long-run checks: 66 in all.
+
+### 42.18 Stop 2, decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Two lines of 42.3 that cannot both hold | "One new order each real day" and "at least one open order can always be finished in one sitting". A player who finishes their one-sitting order each day has none left the next morning, so that day's one order would have to be one for a sitting, every day, and the state's and the donors' season orders would never come. Kept the promise: on a day whose new order is a long one, with nothing else for a sitting on the board, a second order comes with it. That is three days in seven, so ten orders a week and not seven | One a day and no more, with the promise kept only on a full board: measured, the once-a-day player found something for a sitting on 58% to 64% of days. Or one a day, always for a sitting: no season orders. It is one line to turn off (`ORDER_SECOND_FOR_TODAY`) |
+| What "one sitting" needs on any campus | A round of collecting is asked when six buildings are ready. It is free, and there on every campus with somewhere to eat | Lean on planting and building alone: a campus with no bare ground and no money to spare then has nothing for today |
+| When an order's kind is fixed | When it is first seen, from a number drawn when it was offered | When it is offered. That reads the campus on a tick, and asks for what was true days ago |
+| Orders that mean a yearly cost | Asked only while the campus keeps $15 or more of every $100 | Asked whenever. The board then talks a player out of the money target: measured above |
+| How far a step is | One point of Happiness, Safety & health or Food & fun. Two in a hundred of a line of the Capacity page. 560 seats. All are what one building or one lot gives | Back to OK in one order, which a campus at its cap can never do for seats |
+| The grant | $2,000 and $4,000 on the small campus's count, with $12,000 a school year as the cap | A share of income, which grows with the campus. Or no cap: the state's orders alone could then be farmed by dismissing the others |
+| Seals from donors | One for a short order, two for a season's | Two and three, as first built: 12.5 Seals a week in all, two waits' worth |
+| What the town pays | Experience, until there are decorations | A stand-in item now |
+| A dismissed kind | Rests a week | May come back tomorrow. The test players were asked for the same thing they had just declined |
+| A missed order | Taken off at the next look, with one kind line. Done a little late still counts | Taken off on the tick it runs out, which needs the board read on a tick |
+| Where a dismissal is said | On the board's own page | A toast, which sits behind the page |
+| What levels open | A fourth place at level 5 and a fifth at level 20. Nine kinds of order from level 3 to 26, one at a time | Everything open from the start, and the levels with nothing to give but Seals |
+| The row of buttons | A number over a word on each | A second row, or drawings in place of words, which would be new art |
+| The paper | Order lines sit under Also, in the rest of the paper | At the top, where games, goals and decisions are |
+| The claim | The gold medal he chose rises with what the order paid | A new drawing |
+| Left out: an order for beds | A dorm goes up on a new lot only while beds are wanted. On a campus with spare beds the order could not be finished | |
+| Left out: an order to lift how the campus looks by a point | The score moves too slowly for one sitting. "Lay 6 cells of quad" is in its place | |
+| Left out: an order to open a walk from a town street | Some streets are too far for any path to bring inside the walk. The order could not always be finished, and would not say why | |
+| How the test players use it | Look first, then collect, then answer what is sensible, dismiss what the campus has no ground or money for, claim | Take everything |
+| The comparison runs | Switches off with nothing else changed, to show what the switches move. And one of each player with none of the layer, to show what all of it moves | One set with everything off, as at stop 1. The board moves the pace by more than the switches do, so one set could not show either |
+
+### 42.19 Stop 2, rough
+
+| Rough | Why |
+|---|---|
+| The board brings the casual and the once-a-day player up to the keenest player's pace | The Top 10 three to ten weeks sooner, and 2nd to 4th at week 44 where it was 7th to 9th. It is the trees, benches and quad the orders ask for. If he wants the old gap between kinds of player, those orders can ask for less or come less often |
+| The keenest test player dips under $12 once | $11.50 in one early year on one seed, in the weeks when a new campus keeps $16.60 and the advisors may ask for buildings. From week 9 it is $12.40 or more |
+| A round of collecting comes up three and a half times a week for the test players | It is the one order every campus can do today for nothing, and the test players dismiss about half of the planting orders for want of ground. A person who plants where they like will see it less |
+| The advisors mostly ask about Stress once a campus keeps under $15 | Their other orders all mean a yearly cost, and wait for the margin. A new campus, at $16.60, hears all of them |
+| The season orders nearly always pay | The graduating class, a full fall, nobody turned away, the students who stay and the semester's Stress were claimed 173 times of 176 by the once-a-day player. They ask a healthy campus to stay healthy. That is "easy and rewarding", and it is also a grant most weeks |
+| Two kinds never came up for the test players | Litter, because their campuses stay clean and the order needs $15 kept. Parking, because their car parks are never short |
+| Ten orders a week, not seven | The second order for today, three days in seven |
+| A campus that is perfect and paved has nothing for one sitting on a day with nothing to collect | Every one-sitting kind needs ground, a need, an earned building waiting or six buildings ready. Not seen in any run |
+| Experience from collecting fell for the test players | Fewer food places built, as above. Nothing in collecting changed |
+| The claim's medal rises over the next order on the list | The finished order leaves as it is claimed, and the next moves up under the medal for the 0.8 seconds it shows |
 | Never run on a phone | Checked in pictures and in tests on this PC, at 390 and 375 wide |

@@ -7,7 +7,7 @@ import type { RngState, RngStream } from './types';
  */
 
 // New streams are added at the end: each takes its start from the one before, so the earlier ones never move.
-const STREAMS: readonly RngStream[] = ['growth', 'intake', 'names', 'events', 'football'];
+const STREAMS: readonly RngStream[] = ['growth', 'intake', 'names', 'events', 'football', 'orders'];
 
 /** One step of mulberry32. Returns the next state and a 32-bit output. */
 function step(a: number): { next: number; out: number } {

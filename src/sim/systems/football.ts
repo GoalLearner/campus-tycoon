@@ -1,6 +1,7 @@
 import { fansLift } from './boosts';
 import { fansMore, freeSeats } from './policies';
 import { dailyOnHomeGame } from './daily';
+import { ordersOnHomeGame } from './orders';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -586,6 +587,8 @@ export function finalWhistle(state: GameState, slot: number, log: LogEntry[]): v
     markRatesDirty(state);
     // The daily layer: a win pays experience, and the game leaves a bonus at the stadium.
     if (game.home) dailyOnHomeGame(state, won, log);
+    // And the orders board counts a home win and a full house.
+    if (game.home) ordersOnHomeGame(state, won, game.crowd, game.seats);
   }
   if (slot < 10) {
     for (const [winner, loser, conf, div] of season.pending) {

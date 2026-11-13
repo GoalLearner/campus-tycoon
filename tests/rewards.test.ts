@@ -285,8 +285,8 @@ describe('clearing one', () => {
 
 describe('a save that has already reached rank goals', () => {
   it('finds their buildings waiting when it loads, with no change to the save', () => {
-    // The buildings themselves added nothing to the save. Versions 17 and 18 came later, with policies and levels.
-    expect(SAVE_VERSION).toBe(18);
+    // The buildings themselves added nothing to the save. Versions 17 to 19 came later, with policies, levels and orders.
+    expect(SAVE_VERSION).toBe(19);
     // A game like the owner's own, which reached two goals before the buildings were switched on.
     const { state } = ranked(150);
     const text = serialize(state, T0);

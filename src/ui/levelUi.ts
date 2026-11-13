@@ -9,6 +9,7 @@ import {
   readyToCollect,
   waits,
   XP_SOURCES,
+  ORDER_KINDS,
   type GameState,
   type XpSourceId,
 } from '../sim';
@@ -57,6 +58,8 @@ const seals = (n: number): string => `${n} Gold ${n === 1 ? 'Seal' : 'Seals'}`;
 function feedValue(id: XpSourceId): string {
   const source = XP_SOURCES[id];
   if (source.xp > 0) return `+${source.xp}`;
+  // An order pays what it says: the page gives the most any one of them does.
+  if (id === 'order') return `up to +${Math.max(...ORDER_KINDS.flatMap((kind) => kind.reward.filter((reward) => reward.kind === 'xp').map((reward) => reward.amount)))}`;
   const most = Math.max(...Object.values(COLLECT).map((rate) => Math.floor((rate?.xpPerHour ?? 0) * COLLECT_HOURS)));
   return `up to +${most}`;
 }

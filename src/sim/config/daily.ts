@@ -32,6 +32,7 @@ export interface XpSource {
 
 export const XP_SOURCES = {
   collect: { name: 'Collecting from a building', xp: 0, itself: false, note: 'by how long it has filled' },
+  order: { name: 'An order done on the board', xp: 0, itself: false, note: 'what the order pays' },
   placed: { name: 'A building you place opens', xp: 40, itself: false },
   opened: { name: 'A dorm or lecture hall opens', xp: 15, itself: false },
   homeGame: { name: 'A home game, collected at the stadium', xp: 40, itself: false },
@@ -58,14 +59,35 @@ export const LEVEL_MOST = 800;
  * of order comes with a later stop: each is one more kind here, and one more
  * entry in `LEVEL_UNLOCKS`.
  */
-export type LevelGift = { kind: 'seals'; count: number } | { kind: 'unlock'; what: 'decoration' | 'recipe' | 'order'; id: string; name: string };
+export type LevelGift = { kind: 'seals'; count: number } | { kind: 'unlock'; what: 'decoration' | 'recipe' | 'order' | 'slot'; id: string; name: string };
 
 /** Gold Seals for every level reached, and for every fifth level. */
 export const SEALS_PER_LEVEL = 1;
 export const SEALS_FIFTH_LEVEL = 3;
 
-/** What a level opens besides its Seals, by the level reached. Empty until the stops that have something to open. */
-export const LEVEL_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {};
+const order = (id: string, name: string): LevelGift => ({ kind: 'unlock', what: 'order', id, name });
+const slot = (name: string): LevelGift => ({ kind: 'unlock', what: 'slot', id: 'orders', name });
+
+/**
+ * What a level opens besides its Seals, by the level reached. The orders
+ * board (42.3) gave the levels their first: a fourth and a fifth order open
+ * at once, and kinds of order by their id in `ORDER_KINDS`. A kind not
+ * listed here is open from the start. Decorations and recipes come with the
+ * stops that have them.
+ */
+export const LEVEL_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
+  3: [order('safer', 'orders about Safety & health')],
+  4: [order('fedAndBusy', 'orders about Food & fun')],
+  5: [slot('a fourth order on the board')],
+  7: [order('benches', 'orders about benches')],
+  9: [order('cleaner', 'orders about litter')],
+  11: [order('homeWin', 'orders about home wins')],
+  13: [order('sellOuts', 'orders about a full stadium')],
+  16: [order('keepStudents', 'orders about students who stay')],
+  20: [slot('a fifth order on the board')],
+  23: [order('noWaitlist', 'orders about the waitlist')],
+  26: [order('parkingOk', 'orders about parking')],
+};
 
 // ------------------------------------------------------------- Gold Seals --
 

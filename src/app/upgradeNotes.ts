@@ -64,5 +64,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: a game begun on the model campus has a University Level. Food places, the campus store and the stadium fill with a little extra: tap the medal over one to collect it. Nothing is lost for a day and a half. Levels, rank goals and eras bring Gold Seals, which can finish a wait at once.',
     );
   }
+  if (fromVersion < 19) {
+    notes.push(
+      'New: a game begun on the model campus has an orders board, beside the Inbox. Your advisors, the state, the town and a family of donors ask for things the campus can do, and pay experience, Gold Seals or a small grant. A new order comes each day. Its clock starts when you first see it, and missing one costs nothing.',
+    );
+  }
   return notes;
 }
