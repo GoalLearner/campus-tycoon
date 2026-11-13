@@ -1604,6 +1604,7 @@ It includes a web app manifest, an icon, and a service worker so it opens withou
 | Goals | A reset that founds a new campus with legacy bonuses |
 | Students | The rest of the archetype and quirk catalogue, as content updates |
 | Students | Student mode: play as one student of your own university (20.3) |
+| Students | Peek inside: follow a student home and see them in their dorm room (20.5). Next after the daily layer of section 42 |
 | Far future | A campus to walk through in 3D, perhaps as a companion game on Roblox (20.4) |
 
 ### 20.2 Cut order if v1 slips
@@ -1657,6 +1658,27 @@ Asked for by the owner on 2026-11-12, for the later roadmap. Nothing here is bui
 ### 20.4 A campus to walk through in 3D (far future)
 
 Noted for the owner on 2026-11-12. An idea only: a 3D version of a player's own campus to walk through, possibly as a companion game on Roblox. What could carry over is the save's map, meaning which building stands on which cell, and its names. The art would all be new, because the game's art is 2D.
+
+### 20.5 Peek inside: a student at home (later, not built)
+
+The owner, 2026-11-13, while playing: "I wish you could follow a person to and inside their house like in the sims...that would be so cool to see people in their house or something." He was told it comes in two sizes, and asked whether to put it on the roadmap for after the daily layer. He answered: "Yes, add it". **Nothing here is built or scheduled.**
+
+| Size | What it is | Where it belongs |
+|---|---|---|
+| Peek inside | A student followed home (the Follow on their card already walks the camera with them) opens their room as a cut-away scene: at a desk studying, asleep, playing music, on a call. What they are doing comes from their card and the hour: high Stress means studying, a night owl is up late, a homebody is in more often, finals week fills the desks. Their roommate is there when the hall's beds are shared | After the daily layer of section 42, as its own stop |
+| Lives with needs and routines | Students who choose what to do next, make friends and remember: the life simulation of a famous series, on a campus | Student mode (20.3) |
+
+**The peek-inside stop, as it would be built.**
+
+| Decision | Recommended | Why |
+|---|---|---|
+| What it changes | Nothing in `src/sim` and nothing in the save. A room is worked out from the student's seeded identity and the live campus numbers when it is opened, as the student card is (13.8) | The walkers' rule: for show only |
+| Which rooms | Dorm rooms first. The town's houses later, for the students who live off campus | Dorms are where most students are |
+| What a room shows | One cut-away room, the student, perhaps a roommate, and a few things that say who they are: books for a scholar, a guitar for a musician, a ball for an athlete, a mess for a slacker | The card's quirk and nature, made visible |
+| The way in | Follow a student; when they reach their hall, a "Look inside" button on their card | Reuses Follow. No new control on the map |
+| Its tone | 4+ (section 16): nothing in a room breaks the tone guide, and a room is never somewhere a student is embarrassed | His standing rule |
+
+**Art.** His packs have furniture (chairs, tables, a cabinet, a lamp, a rug, drapes, books, a stool) but no bed, no room walls and no floor for an inside view. A room would be put together from those pieces and whatever is missing. He sees it on one sheet first, and anything assembled goes on section 26. Nothing is bought without asking him.
 
 ---
 
