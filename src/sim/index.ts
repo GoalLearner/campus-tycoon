@@ -63,6 +63,7 @@ export {
   inReach,
   libraryLift,
   rewardLift,
+  decorLift,
   nearestSpot,
   placedAt,
   previewPlace,
@@ -197,6 +198,8 @@ export * from './systems/daily';
 export * from './config/daily';
 export * from './systems/orders';
 export * from './config/orders';
+export * from './systems/decor';
+export * from './config/decor';
 export * from './config/goals';
 export * from './newspaper';
 export * from './notify';
@@ -212,3 +215,4 @@ export { parseSave, serialize, validate, migrate, SAVE_VERSION, type LoadResult,
 export * from './selectors';
 export * from './format';
 export { awayLines, datedDays, summarizeAway, type AwayDay, type AwayFacts, type AwayLine, type AwaySummary } from './digest';
+export { hashInts } from './rng';

@@ -69,5 +69,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: a game begun on the model campus has an orders board, beside the Inbox. Your advisors, the state, the town and a family of donors ask for things the campus can do, and pay experience, Gold Seals or a small grant. A new order comes each day. Its clock starts when you first see it, and missing one costs nothing.',
     );
   }
+  if (fromVersion < 20) {
+    notes.push(
+      'New: decorations. The Build menu has a Decor shelf that grows with your level, a shelf for Gold Seals and the set of the season. The town now pays its orders in decorations, and the Workshop in the Makerspace makes banners and bunting. Each kind near a dorm or a lecture hall lifts how it looks a little. Nothing is ever lost: put one away and it waits in storage. The Menu has a Photo button.',
+    );
+  }
   return notes;
 }

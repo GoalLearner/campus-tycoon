@@ -1,3 +1,4 @@
+import { decorSpec, hurryCraft } from './decor';
 import { ticksToIntake } from '../calendar';
 import {
   COLLECT,
@@ -434,6 +435,10 @@ export function waits(state: GameState): Wait[] {
     const spec = POLICIES.find((one) => one.id === id);
     if (spec) wait(`policy:${id}`, spec.name, 'Its switch is free again', toClass);
   }
+  // The Workshop (DESIGN.md 42.6): what is on a bench and not yet finished.
+  state.decor.benches.forEach((bench, index) => {
+    if (bench.making !== null && bench.done !== null && bench.done > tick) wait(`craft:${index}`, decorSpec(bench.making)?.name ?? 'The Workshop', 'It is ready', bench.done - tick);
+  });
   return out;
 }
 
@@ -454,6 +459,8 @@ export function finishNow(state: GameState, id: string): string | null {
     const next = nextSemesterStaff(state);
     state.staffing.faculty = Math.max(state.staffing.faculty, next.faculty);
     state.staffing.staff = Math.max(state.staffing.staff, next.staff);
+  } else if (id.startsWith('craft:')) {
+    hurryCraft(state, Number(id.slice('craft:'.length)));
   } else {
     const policy = id.slice('policy:'.length);
     state.policies.locked = state.policies.locked.filter((one) => one !== policy);

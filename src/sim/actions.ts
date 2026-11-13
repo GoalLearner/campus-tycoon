@@ -26,6 +26,7 @@ import { ERA_AT_RANK, ERAS } from './config/goals';
 import { policyLocked, policyOn, policySpec } from './systems/policies';
 import { collectOne, collectReady, dailyOnCleared, dailyOnPlaced, finishNow, hasDaily } from './systems/daily';
 import { claimOrder, dismissOrder, ordersCount, seeOrders } from './systems/orders';
+import { buyBench, collectCraft, moveDecor, placeDecor, setRecipe, storeDecor, turnDecor } from './systems/decor';
 import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
@@ -74,7 +75,17 @@ export type Action =
   | { type: 'seeOrders' }
   /** Claim a finished order, or dismiss one that is not wanted. */
   | { type: 'claimOrder'; id: number }
-  | { type: 'dismissOrder'; id: number };
+  | { type: 'dismissOrder'; id: number }
+  /** Place a decoration: one from storage if there is one, or bought from its shelf. `flip` turns one that runs one way. */
+  | { type: 'placeDecor'; id: string; x: number; y: number; flip?: boolean }
+  /** Move a decoration on the map, put it away into storage, or turn it. All three are free. */
+  | { type: 'moveDecor'; placed: number; x: number; y: number }
+  | { type: 'storeDecor'; placed: number }
+  | { type: 'turnDecor'; placed: number }
+  /** The Workshop: choose what a bench makes (null stops it), collect what it finished, or buy the second bench. */
+  | { type: 'setRecipe'; bench: number; recipe: string | null }
+  | { type: 'collectCraft'; bench: number }
+  | { type: 'buyBench' };
 
 export interface PaintPreview {
   tool: Tool;
@@ -93,7 +104,7 @@ export interface PaintPreview {
 }
 
 export type ActionResult =
-  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number }; paid?: OrderReward[] }
+  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number }; paid?: OrderReward[]; note?: string }
   | { ok: false; state: GameState; error: string };
 
 /** What one cell of a tool costs on a campus of a given scale (DESIGN.md 35.7). */
@@ -125,6 +136,8 @@ function fixedInPlace(state: GameState, index: number): boolean {
   const id = map.cells[index]!.placedId;
   const placed = id === null ? null : map.placed[id];
   if (!placed) return false;
+  // A decoration is never fixed: clearing one puts it away.
+  if (placed.type === 'decor') return false;
   // The stadium plot can be moved while it is bare. Once a stadium stands on it, or is being built, it stays.
   if (placed.type === 'stadium') return state.football.stadium.tier > 0 || state.football.stadium.work !== null;
   return !PLACED[placed.type].buildable;
@@ -214,6 +227,11 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
 function clearCell(state: GameState, map: MapState, x: number, y: number): void {
   const cell = map.cells[y * map.width + x]!;
   if (cell.placedId !== null) {
+    // A decoration is never lost: clearing it puts it away, to be placed again for nothing.
+    if (map.placed[cell.placedId]?.type === 'decor') {
+      storeDecor(state, cell.placedId);
+      return;
+    }
     // Clearing any cell of a hand-placed building takes the whole building.
     if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
     dailyOnCleared(state, 'placed', cell.placedId);
@@ -499,6 +517,60 @@ function collect(state: GameState, key: string | null): ActionResult {
 }
 
 /**
+ * Decorations and the Workshop (DESIGN.md 42.5 and 42.6). Placing, moving,
+ * turning and putting away change the map, so how each lot looks is worked
+ * out again. Nothing here can be lost: what is cleared goes to storage.
+ */
+type DecorAction = Extract<Action, { type: 'placeDecor' | 'moveDecor' | 'storeDecor' | 'turnDecor' | 'setRecipe' | 'collectCraft' | 'buyBench' }>;
+
+function decorate(state: GameState, action: DecorAction): ActionResult {
+  if (!hasDaily(state)) return { ok: false, state, error: 'This campus has no decorations.' };
+  const next = structuredClone(state);
+  const mapChanged = (cost: number): ActionResult => {
+    recomputeDesirability(next.map);
+    markRatesDirty(next);
+    evaluateGrowth(next);
+    return { ok: true, state: next, cost, changed: 1 };
+  };
+  switch (action.type) {
+    case 'placeDecor': {
+      const done = placeDecor(next, action.id, action.x, action.y, action.flip === true);
+      if (typeof done === 'string') return { ok: false, state, error: done };
+      return mapChanged(done.cost);
+    }
+    case 'moveDecor': {
+      const problem = moveDecor(next, action.placed, action.x, action.y);
+      return problem ? { ok: false, state, error: problem } : mapChanged(0);
+    }
+    case 'storeDecor': {
+      const problem = storeDecor(next, action.placed);
+      return problem ? { ok: false, state, error: problem } : mapChanged(0);
+    }
+    case 'turnDecor': {
+      const problem = turnDecor(next, action.placed);
+      return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
+    case 'setRecipe': {
+      const before = next.money.cash;
+      const problem = setRecipe(next, action.bench, action.recipe);
+      // A recipe the campus cannot pay for yet is still chosen: the bench waits, and the reason is passed on.
+      if (problem && next.decor.benches[action.bench]?.recipe !== action.recipe) return { ok: false, state, error: problem };
+      return { ok: true, state: next, cost: before - next.money.cash, changed: 1, ...(problem ? { note: problem } : {}) };
+    }
+    case 'collectCraft': {
+      const before = next.money.cash;
+      const made = collectCraft(next, action.bench);
+      if (typeof made === 'string') return { ok: false, state, error: made };
+      return { ok: true, state: next, cost: before - next.money.cash, changed: 1, gained: { xp: made.xp, cash: 0, count: 1 }, ...(made.next ? { note: made.next } : {}) };
+    }
+    case 'buyBench': {
+      const problem = buyBench(next);
+      return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
+  }
+}
+
+/**
  * The orders board (DESIGN.md 42.3). Looking at it is an action, because
  * that is when a new order is given what it asks and its clock starts.
  */
@@ -575,6 +647,14 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'claimOrder':
     case 'dismissOrder':
       return orders(state, action);
+    case 'placeDecor':
+    case 'moveDecor':
+    case 'storeDecor':
+    case 'turnDecor':
+    case 'setRecipe':
+    case 'collectCraft':
+    case 'buyBench':
+      return decorate(state, action);
   }
 }
 

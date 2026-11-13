@@ -17,6 +17,17 @@ import {
   orderStatus,
   orderViews,
   hasDaily,
+  craftReady,
+  DECOR_CAP,
+  DECOR_REACH,
+  decorLift,
+  decorOffers,
+  decorOwned,
+  decorSpec,
+  hasMakerspace,
+  recipesOpen,
+  WORKSHOP_BENCHES,
+  WORKSHOP_SECOND_SEALS,
   readyToCollect,
   TICKS_PER_HOUR,
   waits,
@@ -105,7 +116,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -979,6 +990,140 @@ function plantGreen(state: GameState, reserve: number, most: number): { state: G
   return { state: current, planted };
 }
 
+/** Gold Seals a test player keeps back for a wait worth finishing, before buying anything with them. */
+const SEALS_KEPT = 12;
+/** A test player makes this many of each thing the Workshop can make, and no more. */
+const CRAFT_ENOUGH = 6;
+/**
+ * Decorations and the Workshop (DESIGN.md 42.5 and 42.6), as a player who visits would use them.
+ *
+ * - What the Workshop has finished is collected, and each bench is set to the recipe the campus holds fewest
+ *   of. That is a standing choice, so the next one begins by itself.
+ * - A second bench is bought once there are Seals to spare.
+ * - A few decorations a visit are set out where they do most: beside the dorm or lecture hall whose look they
+ *   lift least so far, and always a kind that lot does not have near it yet, since a second of the same adds
+ *   nothing. One from storage first, which is free. Then the cheapest on the shelf.
+ * - One special decoration for Gold Seals a real week, while more than a wait's worth of Seals would be left.
+ */
+function useDecor(state: GameState, as: Style): GameState {
+  if (!botOptions.decor || !hasDaily(state)) return state;
+  let current = state;
+  const run = (action: Parameters<typeof applyAction>[1]): boolean => {
+    const result = applyAction(current, action);
+    if (result.ok) current = result.state;
+    return result.ok;
+  };
+  const recipes = recipesOpen(current);
+  if (hasMakerspace(current) && recipes.length > 0) {
+    if (current.decor.benches.length < WORKSHOP_BENCHES && current.daily.seals >= WORKSHOP_SECOND_SEALS + SEALS_KEPT) run({ type: 'buyBench' });
+    // What the open orders still ask the Workshop for, less what is already on a bench.
+    let asked = 0;
+    for (const order of current.orders.open) {
+      if (order.done !== undefined || (order.kind !== 'craftOne' && order.kind !== 'craftTwo')) continue;
+      const status = orderStatus(current, order);
+      asked += Math.max(0, status.target - status.value);
+    }
+    asked -= current.decor.benches.filter((bench) => bench.making !== null).length;
+    // Each bench's standing choice, set before anything is collected, so that collecting starts the right thing
+    // or nothing. Enough of a thing is enough: a bench goes on to what the campus has least of, and stands idle
+    // once it has a few of everything, unless an order wants something made.
+    for (let index = 0; index < current.decor.benches.length; index++) {
+      const others = current.decor.benches.filter((_, n) => n !== index).map((bench) => bench.recipe);
+      const free = [...recipes].filter((spec) => !others.includes(spec.id) || recipes.length === 1).sort((a, b) => decorOwned(current, a.id) - decorOwned(current, b.id));
+      let want = free.find((spec) => decorOwned(current, spec.id) < CRAFT_ENOUGH) ?? null;
+      if (!want && asked > 0) {
+        want = free[0] ?? null;
+        asked -= 1;
+      }
+      if ((want?.id ?? null) !== current.decor.benches[index]!.recipe) run({ type: 'setRecipe', bench: index, recipe: want?.id ?? null });
+    }
+  }
+  current.decor.benches.forEach((bench, index) => {
+    if (craftReady(current, bench)) run({ type: 'collectCraft', bench: index });
+  });
+  const reserve = Math.max(20_000 * scaleOf(current), Math.round(current.money.spendingPerYear * 0.006));
+  const most = as === 'casual' ? 2 : as === 'striver' ? 5 : 3;
+  const rank = { storage: 0, cash: 1, seals: 2 } as const;
+  type Lot = { x: number; y: number; lift: number };
+  const lotsNow = (): Lot[] =>
+    current.map.buildings
+      .filter((building): building is NonNullable<typeof building> => !!building && building.stage >= 1)
+      .map((building) => ({ x: building.x, y: building.y, lift: decorLift(current.map, building.x, building.y) }))
+      .sort((a, b) => a.lift - b.lift);
+  /** The kinds of decoration within reach of a lot. A second of a kind adds nothing there. */
+  const nearKinds = (lot: Lot): Set<string> => {
+    const near = new Set<string>();
+    for (const placed of current.map.placed) {
+      if (placed && placed.type === 'decor' && placed.decor && Math.max(Math.abs(placed.x - lot.x), Math.abs(placed.y - lot.y)) <= DECOR_REACH) near.add(placed.decor);
+    }
+    return near;
+  };
+  /** The nearest free ground to a lot, off the streets to come. */
+  const spotBy = (lot: Lot, reach: number): Point | null => {
+    for (let r = 1; r <= reach; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = lot.x + dx;
+          const y = lot.y + dy;
+          if (freeAt(current, x, y) && !onStreetPlan(x, y) && !keptForServices(x, y)) return [x, y];
+        }
+      }
+    }
+    return null;
+  };
+  // One special thing for Gold Seals a real week, while a wait's worth would still be left: the kind the campus has
+  // fewest of. It is bought for how it looks, so it goes where it lifts a lot if it can and anywhere with room if not.
+  const special = decorOffers(current)
+    .filter((offer) => offer.spec.home.kind === 'seals' && offer.way === 'seals' && current.daily.seals - offer.seals >= SEALS_KEPT)
+    .sort((a, b) => a.placed - b.placed || a.seals - b.seals)[0];
+  if (special && (current.decor.tally.boughtSeals ?? 0) < current.clock.week.year) {
+    const lots = lotsNow();
+    let spot: Point | null = null;
+    for (const lot of lots) {
+      if (lot.lift >= DECOR_CAP - 0.05 || nearKinds(lot).has(special.spec.id)) continue;
+      spot = spotBy(lot, DECOR_REACH);
+      if (spot) break;
+    }
+    for (const lot of spot ? [] : lots) {
+      spot = spotBy(lot, 12);
+      if (spot) break;
+    }
+    if (!spot) {
+      // No free ground is left. It takes the place of an everyday one, the kind there is most of on the map, and
+      // that one goes to storage: nothing is lost.
+      const count = new Map<string, number>();
+      for (const placed of current.map.placed) {
+        if (placed && placed.type === 'decor' && placed.decor && decorSpec(placed.decor)?.home.kind === 'shelf') count.set(placed.decor, (count.get(placed.decor) ?? 0) + 1);
+      }
+      const commonest = [...count.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]?.[0];
+      const sameNear = (x: number, y: number): boolean =>
+        current.map.placed.some((placed) => placed && placed.type === 'decor' && placed.decor === special.spec.id && Math.max(Math.abs(placed.x - x), Math.abs(placed.y - y)) <= 2 * DECOR_REACH);
+      const olds = current.map.placed.filter((placed): placed is NonNullable<typeof placed> => !!placed && placed.type === 'decor' && placed.decor === commonest);
+      const old = olds.find((placed) => !sameNear(placed.x, placed.y)) ?? olds[0];
+      if (old && run({ type: 'storeDecor', placed: old.id })) spot = [old.x, old.y];
+    }
+    if (spot) run({ type: 'placeDecor', id: special.spec.id, x: spot[0], y: spot[1] });
+  }
+  // Then a few a visit where they do most: lots in the order decorations have lifted them least. One with no free
+  // ground near it is passed over.
+  let set = 0;
+  for (const lot of lotsNow()) {
+    if (set >= most || lot.lift >= DECOR_CAP - 0.05) break;
+    // Placing one beside a neighbour may have lifted this lot already.
+    if (decorLift(current.map, lot.x, lot.y) >= DECOR_CAP - 0.05) continue;
+    const near = nearKinds(lot);
+    const pick = decorOffers(current)
+      .filter((offer) => offer.way !== null && offer.way !== 'seals' && !near.has(offer.spec.id))
+      .filter((offer) => offer.way !== 'cash' || current.money.cash - offer.cost >= reserve)
+      .sort((a, b) => rank[a.way!] - rank[b.way!] || a.cost - b.cost)[0];
+    if (!pick) continue;
+    const spot = spotBy(lot, DECOR_REACH);
+    if (spot && run({ type: 'placeDecor', id: pick.spec.id, x: spot[0], y: spot[1] })) set += 1;
+  }
+  return current;
+}
+
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
   // The visit opens with the button that says an order is new: the board is looked at, which starts its orders.
@@ -989,10 +1134,10 @@ export function takeTurn(state: GameState, as: Style): TurnResult {
   // Then what is ready to collect, as a player's visit would.
   const collected = useDaily(state);
   if (collected) {
-    const rest = takeTurnAfter(useOrders(collected.state), as);
+    const rest = takeTurnAfter(useDecor(useOrders(collected.state), as), as);
     return { ...rest, daily: collected.daily };
   }
-  return takeTurnAfter(useOrders(state), as);
+  return takeTurnAfter(useDecor(useOrders(state), as), as);
 }
 
 function takeTurnAfter(state: GameState, as: Style): TurnResult {

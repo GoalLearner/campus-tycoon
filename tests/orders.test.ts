@@ -131,13 +131,14 @@ describe('the kinds of order, as data', () => {
       // Short, or to a point of the calendar: one or the other, and never under 36 hours.
       expect((kind.hours !== undefined) !== (kind.point !== undefined)).toBe(true);
       if (kind.hours !== undefined) expect(kind.hours).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS);
-      if (kind.hours !== undefined) expect(kind.hours).toBeLessThanOrEqual(48);
+      // A short order runs two days at most, except one that waits on the Workshop, which takes a day or two to make a thing.
+      if (kind.hours !== undefined) expect(kind.hours).toBeLessThanOrEqual(kind.metric === 'crafts' ? 96 : 48);
       // What can be done in one sitting does not wait on the calendar.
       if (kind.sitting) expect(kind.point).toBeUndefined();
       expect(kind.reward.length).toBeGreaterThan(0);
       for (const reward of kind.reward) {
         // Experience, Gold Seals or cash. No rank points, ever.
-        expect(['xp', 'seals', 'cash']).toContain(reward.kind);
+        expect(['xp', 'seals', 'cash', 'decor']).toContain(reward.kind);
         expect(reward.amount).toBeGreaterThan(0);
       }
     }
@@ -145,13 +146,15 @@ describe('the kinds of order, as data', () => {
     expect(ORDER_SLOTS).toBe(3);
   });
 
-  it('gives each giver its usual reward: experience, a grant, experience for now, and Gold Seals', () => {
+  it('gives each giver its usual reward: experience, a grant, a decoration, and Gold Seals', () => {
     const pays = (giver: string, what: string): boolean => ORDER_KINDS.filter((kind) => kind.giver === giver).every((kind) => kind.reward.some((reward) => reward.kind === what));
     const only = (giver: string, what: string): boolean => ORDER_KINDS.filter((kind) => kind.giver === giver).every((kind) => kind.reward.every((reward) => reward.kind === what));
     expect(only('advisors', 'xp')).toBe(true);
     expect(pays('state', 'cash')).toBe(true);
-    // The town pays experience until there are decorations to give.
-    expect(only('town', 'xp')).toBe(true);
+    // The town pays a decoration of its own on most orders (tests/decor.test.ts), and some experience on every one.
+    expect(pays('town', 'xp')).toBe(true);
+    expect(ORDER_KINDS.filter((kind) => kind.giver === 'town' && kind.reward.some((reward) => reward.kind === 'decor')).length).toBeGreaterThanOrEqual(4);
+    for (const kind of ORDER_KINDS) if (kind.giver !== 'town') expect(kind.reward.some((reward) => reward.kind === 'decor')).toBe(false);
     expect(pays('donors', 'seals')).toBe(true);
     // Cash comes from the state alone, and Seals from donors alone.
     for (const kind of ORDER_KINDS) {
@@ -403,6 +406,28 @@ describe('the board', () => {
     expect(kindOf(next.orders.open.find((order) => order.id === 905)!.kind).sitting).toBeUndefined();
     expect(next.orders.tally.second).toBeUndefined();
   });
+
+  it('brings one for today when time runs out on the only order that could be finished in a sitting', () => {
+    // A long order, and one for a sitting whose time has passed with nothing done.
+    const { state } = asked('graduateClass');
+    const short = state.orders.open.find((order) => order.id !== 900)!;
+    expect(kindOf(short.kind!).sitting).toBe(true);
+    expect(status(state, short.id).done).toBe(false);
+    short.until = state.clock.tick - 1;
+    const seconds = state.orders.tally.second ?? 0;
+    const seen = act(state, { type: 'seeOrders' });
+    // The one that ran out is off the board with a kind word, and another for a sitting has its place.
+    expect(seen.orders.note).toMatch(/^Time ran out on /);
+    expect(seen.orders.tally.missed).toBe(1);
+    expect(seen.orders.tally.second).toBe(seconds + 1);
+    expect(seen.orders.open).toHaveLength(2);
+    expect(seen.orders.open.some((order) => order.id === short.id)).toBe(false);
+    expect(orderViews(seen).some((one) => one.sitting && !one.done)).toBe(true);
+    // Looking again brings no more.
+    const again = act(seen, { type: 'seeOrders' });
+    expect(again.orders.open).toHaveLength(2);
+    expect(again.orders.tally.second).toBe(seconds + 1);
+  });
 });
 
 describe('what the board will ask', () => {
@@ -467,7 +492,7 @@ describe('an order', () => {
   it('counts what is done from the moment it is first seen', () => {
     const before = act(fresh(), { type: 'paint', tool: 'tree', cells: bare(BASE, 3) });
     const { state, order } = asked('plantTrees', before);
-    expect(view(state, order.id)).toMatchObject({ from: 'The town', title: 'Plant 8 trees', progress: '0 of 8', done: false, reward: '120 experience', sitting: true, season: false });
+    expect(view(state, order.id)).toMatchObject({ from: 'The town', title: 'Plant 8 trees', progress: '0 of 8', done: false, reward: 'a flower box and 60 experience', sitting: true, season: false });
     const some = act(state, { type: 'paint', tool: 'tree', cells: bare(state, 3) });
     expect(view(some, order.id)).toMatchObject({ progress: '3 of 8', done: false });
     expect(view(some, order.id).share).toBeCloseTo(3 / 8);
@@ -483,18 +508,23 @@ describe('an order', () => {
     const xp = done.daily.xp;
     const result = applyAction(done, { type: 'claimOrder', id: order.id });
     if (!result.ok) throw new Error(result.error);
-    expect(result.paid).toEqual([{ kind: 'xp', amount: 120 }]);
-    expect(paidWords(result.paid!)).toBe('+120 experience');
+    expect(result.paid).toEqual([
+      { kind: 'decor', amount: 1, id: 'flowerBox' },
+      { kind: 'xp', amount: 60 },
+    ]);
+    expect(paidWords(result.paid!)).toBe('+a flower box and 60 experience');
     const claimed = result.state;
-    expect(claimed.daily.xp).toBe(xp + 120);
+    expect(claimed.daily.xp).toBe(xp + 60);
+    // The decoration is in storage, to be placed for nothing.
+    expect(claimed.decor.stored.flowerBox).toBe(1);
     expect(claimed.orders.open.some((one) => one.id === order.id)).toBe(false);
-    expect(claimed.orders.tally).toMatchObject({ claimed: 1, 'claimed:plantTrees': 1, xp: 120 });
+    expect(claimed.orders.tally).toMatchObject({ claimed: 1, 'claimed:plantTrees': 1, xp: 60, decor: 1 });
     expect(applyAction(claimed, { type: 'claimOrder', id: order.id })).toMatchObject({ ok: false, error: 'That order is not on the board.' });
     const told = advance(claimed, claimed.clock.lastSimulatedAt, claimed.clock.lastSimulatedAt + MIN);
     const lines = told.log.filter((entry) => entry.kind === 'order' && entry.data?.done === 1);
-    expect(lines.map((entry) => entry.text)).toEqual(['Order done for the town: Plant 8 trees. It paid 120 experience.']);
+    expect(lines.map((entry) => entry.text)).toEqual(['Order done for the town: Plant 8 trees. It paid a flower box and 60 experience.']);
     expect(told.state.orders.news).toEqual([]);
-    expect(awayLines(told.log, facts(told.state)).map((line) => line.text)).toContain('Order done for the town: Plant 8 trees. It paid 120 experience.');
+    expect(awayLines(told.log, facts(told.state)).map((line) => line.text)).toContain('Order done for the town: Plant 8 trees. It paid a flower box and 60 experience.');
     expect(advance(told.state, told.state.clock.lastSimulatedAt, told.state.clock.lastSimulatedAt + MIN).log.filter((entry) => entry.kind === 'order')).toEqual([]);
   });
 
@@ -571,7 +601,7 @@ describe('an order', () => {
     expect(months.orders.note).toBe('');
     expect(applyAction(months, { type: 'dismissOrder', id: order.id })).toMatchObject({ ok: false, error: 'That order is finished. Claim it.' });
     const claimed = act(months, { type: 'claimOrder', id: order.id });
-    expect(claimed.daily.xp).toBe(months.daily.xp + 120);
+    expect(claimed.daily.xp).toBe(months.daily.xp + 60);
   });
 
   it('costs nothing when it is missed, and says so kindly', () => {
@@ -777,7 +807,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(18);
-      expect(SAVE_VERSION).toBe(19);
+      expect(SAVE_VERSION).toBe(20);
       // A game already in play opens with its first three orders, none seen, and nothing said.
       expect(state.orders.open).toHaveLength(3);
       expect(state.orders.open.every((order) => order.seen === undefined && order.kind === undefined && order.offered === file.state.clock.tick)).toBe(true);
@@ -786,6 +816,8 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.orders = state.orders;
+      // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
+      expected.decor = state.decor;
       expected.rng.orders = state.rng.orders;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
@@ -807,8 +839,9 @@ describe('saves', () => {
     });
 
     it('is told what is new, once', () => {
+      // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

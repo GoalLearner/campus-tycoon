@@ -12,7 +12,7 @@ import {
 import { PLACED, POND_GREEN_SHARE } from '../config/placed';
 import { PARKING_NOISE, ROAD_NOISE } from '../config/town';
 import type { MapState, Zone } from '../types';
-import { libraryLift, rewardLift } from './placed';
+import { decorLift, libraryLift, rewardLift } from './placed';
 import { refreshTownAccess } from './town';
 import { refreshCare } from './grounds';
 
@@ -165,6 +165,8 @@ export interface ScoreParts {
   library: number;
   /** Added by a rank goal's building in reach. Either zone. */
   reward: number;
+  /** Added by the decorations in reach, capped. Either zone. */
+  decor: number;
   /** Subtracted from the score. Housing only. */
   walkPenalty: number;
   /** -1 when there is no route. Housing only. */
@@ -179,9 +181,10 @@ export function scoreParts(map: MapState, x: number, y: number, zone: Zone, walk
   const penalty = zone === 'housing' ? walkPenalty(walk) : 0;
   const library = zone === 'academic' ? libraryLift(map, x, y) : 0;
   const reward = rewardLift(map, x, y);
+  const decor = decorLift(map, x, y);
   const noise = noiseAt(map, x, y);
-  const total = Math.max(0, Math.min(100, BASE_SCORE + green + library + reward - penalty - noise));
-  return { base: BASE_SCORE, green, library, reward, walkPenalty: penalty, walkMinutes: walk, noise, total };
+  const total = Math.max(0, Math.min(100, BASE_SCORE + green + library + reward + decor - penalty - noise));
+  return { base: BASE_SCORE, green, library, reward, decor, walkPenalty: penalty, walkMinutes: walk, noise, total };
 }
 
 /** Refresh map.score and map.walkMinutes for every cell. */

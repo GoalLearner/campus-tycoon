@@ -65,7 +65,8 @@ export function openBuildMenu(root: HTMLElement, entries: readonly BuildEntry[],
         if (entry.locked) {
           text.append(el('div', 'build-soon', entry.locked));
         } else {
-          text.append(el('div', 'build-cost', `${entry.cost} · ${entry.footprint}`));
+          // Every decoration is one cell, so its card leaves the size out.
+          text.append(el('div', 'build-cost', entry.footprint ? `${entry.cost} · ${entry.footprint}` : entry.cost));
           text.append(el('div', 'build-upkeep', entry.upkeep));
         }
         text.append(el('div', 'build-effect', entry.effect));

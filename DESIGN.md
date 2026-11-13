@@ -1106,6 +1106,22 @@ Named regulars and their four-year story stay in layer 6, as designed in 13.5.
 
 **Standing instruction from the owner, 2026-11-11:** as each real system arrives, its stand-in on the card is swapped for it, and the owner is told at the time. Done with play stop 1: dining and recreation as causes of happiness, and recreation in the social-life count. Done with play stop 2: safety as a cause of happiness, regrouped the same day into four causes at full weight (24.2). The swaps still owed: noise as a cause of happiness; the academic score for grades; and the four remaining personalities (Superfan, Varsity Athlete, Greek Loyalist, Pledge) with football and Greek Row. Student Life spots, recreation and events also join the social-life count behind the relationship line. Hopeless Romantic and Heartbroken join the relationship odds when they ship. The face drawn in code stays.
 
+### 13.9 People in a game, a line or a scene
+
+From the owner's play, relayed on 2026-11-12: "I can't click on the people playing or participating in the activity to see their cards." Built on 2026-11-13 with stop 3 of the daily layer (42.20). `src/app/activityPeople.ts`, `src/game/Activity.ts`, `src/game/Scenes.ts`, and the tap in `src/game/CampusScene.ts`.
+
+| Decision | Why |
+|---|---|
+| Every person drawn in an activity is one enrolled student with the ordinary card: players on the courts and the field, runners, swimmers, someone at the gym's door, a line at a place to eat or to play, people at a bench or a picnic table, people among the food court's stalls. So is everyone in a small scene: a club's table, a ring on a quad, a picnic, the busker, a tailgate, the band, fans on the field | Nobody in an activity or a scene is anything but a student, so no figure needed other words. Walkers who are not students keep the cards of 32 |
+| Who it is comes from the game's seed, the place and the figure's own spot in it, as a walker's does. The same student for as long as they stay, and the same again when the map is opened later that day | A card that changed under the thumb would read as a fault |
+| Nobody is in two places. A figure is never a student who is out walking or standing somewhere else, and a student who is standing somewhere is not sent out walking | One shared list of who is standing, so it costs nothing. If the first eight students the seed offers are all busy, the first stands there anyway. Never seen |
+| "Doing now" says it in plain words: "Playing on the Outdoor courts", "In a match on the Recreation field", "Swimming at the Aquatics pool", "Running laps on the track", "In line at the Burger grill", "Getting food at the Food court", "Studying with a group at a picnic table", "Eating at a bench", "Having a picnic on the grass", "Marching with the band" | A seat reads the part of the day, the food beside it and the study group at it, as the map does |
+| A person in front wins a tap over the court or the lawn behind, with a walker's reach for a thumb. Between a walker and a figure, the nearer wins | His ask. Only a tap clear of everyone opens the building |
+| Follow is hidden for someone staying put | They are not going anywhere |
+| A player on a court, the field or the track is drawn in the athletes' kit, and the card's picture shows them that way. Anyone else is drawn as they walk about | The card agrees with the map |
+| A ring on the ground under them while the card is open, as under a walker | |
+| For show only. Nothing is saved, and nothing in `src/sim` reads it | 13.8's rule |
+
 ---
 
 ## 14. Identity: Greek Row, traditions and flavour
@@ -2301,8 +2317,9 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | The model campus's halls | Drawn at the low tier's size, though each lecture hall there counts for 1,400 seats and each residence hall for 840 beds (35.7) | Taller halls, which come with the density tiers of 6.2 |
 | Art for builds without the art key | No sprite for any hand-placed building: a plain building or a lawn stands in. The walking people are rendered from Kenney's 3D characters | Render Kenney's public-domain kits properly, one stand-in for each building family |
 | App icon and launch screen | Placeholders made by a script | Real artwork, in layer 7 |
+| School banner, `decoration.banner.crimson` to `decoration.banner.maroon` (42.20) | The Medieval pack's red banner with its cloth turned to each of the eight school colours by the art build: eight pictures, and the one the game shows is the school's. Shown to the owner on his art sheet and picked on 2026-11-12. A line of shading one pixel wide down the cloth's left edge keeps a little of the red, seen only zoomed far in | Keep. Or a commissioned banner whose cloth takes any colour cleanly |
 
-Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it.
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one. The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
 
 **Planned.** The stand-ins of play stop 4b moved into the table above when it was built, on 2026-11-11. The pizza place and the taco stand are used as drawn, two cells wide with their patios, which was the owner's choice. One is left:
 
@@ -5110,7 +5127,7 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 
 ## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store
 
-Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15. Stop 2, the orders board, is built: 42.16 to 42.19.
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15. Stop 2, the orders board, is built: 42.16 to 42.19. Stop 3, decorating, the Workshop and photo mode, is built: 42.20 to 42.23.
 
 Two things he said that govern all of it:
 
@@ -5581,3 +5598,153 @@ Two of these were marked for his word, and both were settled by the main session
 | Experience from collecting fell for the test players | Fewer food places built, as above. Nothing in collecting changed |
 | The claim's medal rises over the next order on the list | The finished order leaves as it is claimed, and the next moves up under the medal for the 0.8 seconds it shows |
 | Never run on a phone | Checked in pictures and in tests on this PC, at 390 and 375 wide |
+
+### 42.20 Stop 3 as built: decorating, the Workshop and photo mode
+
+Built on 2026-11-13, on the owner's "Go ahead with stop 3 (decorating, the Workshop, photo mode). Start with the art sheet as planned and wait for my pick before building." His pick from the sheet, on 2026-11-12, was "As picked": all forty decorations as shown; the stone statue kept back as the Founder's statue; the school banner in the school's colour; fall as the first seasonal set and summer the second, with winter and spring left empty; the word "Photo" with no camera drawn; the hammer as the Workshop's marker. Only a game with goals has any of it. A game begun on the small campus has none, and its long-run tables print the same numbers.
+
+| Thing | As built | Where |
+|---|---|---|
+| A decoration | One kind of placed thing, one cell, with the decoration named in it. Fifty-one in a list: the forty from his sheet and eleven in the two seasonal sets. A new one is one row | `DECOR` in `src/sim/config/decor.ts`, `src/sim/systems/decor.ts` |
+| What it does | Lifts how the dorms and lecture halls near it look, and nothing else: one point right beside a lot, fading to nothing past three cells. Each kind counts once at a lot, the nearest of it. All of them together add 3 at most. It is one more part of a lot's score, beside trees, the library and the rank goals' buildings. Three kinds from the cash shelf beside a lot reach the cap, and one bought with Seals counts as any other kind | `decorLift` in `src/sim/systems/placed.ts`, `DECOR_REACH`, `DECOR_POINT`, `DECOR_CAP` |
+| The Decor shelf | Twenty, bought with cash, one opened by each of twenty levels: Red flowers 2, Globe lamp 6, Clipped hedge 10, Boulder 12, Mailbox 14, Lantern 17, Three planters 18, Garden parasol 21, Table and chairs 22, Stepping stones 24, Topiary 27, Stone well 28, Low stone wall 29, Sofa bench 31, Campus map 33, Tall lamp 37, Swing set 40, Garden pool 45, Wishing well 50, Water tower 60. The Build menu shows what is open and the next two to come. $17K to $336K on the model campus | `LEVEL_UNLOCKS` in `src/sim/config/daily.ts`, `decorEntries` in `src/ui/decorUi.ts` |
+| From the town | Six, given by its orders: the flower box, the hedge planter, the cottage garden, the flower stall, the gumball machine and the market stall. An order for trees, benches, a cleaner campus or parking pays the one the campus has fewest of, fixed when the order is first seen. Three of each, then 60 experience in its place | `townGift`, `TOWN_DECOR_EACH`, `TOWN_DECOR_XP` |
+| The Seal shelf | Six, open from the first day: Bronze sculpture 6, Stone fountain 8, Reflecting pool 8, Champions' cup 10, Lookout tower 12, Windmill 14 Gold Seals. Each does exactly what a free one does. Placing one asks once more before a Seal is spent | `seals` homes, the placer in `src/ui/ui.ts` |
+| The Workshop | Seven recipes at the Makerspace, each opened by a level: String lights 8, School banner 15, Bunting 19, Ribbon pole 25, Gold rope line 30, Stage 35, Marquee 42. Each takes one or two days and costs cash. A bench keeps making what it was set to, one after another, and what is finished waits for ever. Collecting it puts it in storage with 40 experience. A second bench costs 20 Seals, once. Finish now costs what any wait does, a Seal for every six hours left | `workshopView`, `setRecipe`, `collectCraft`, `buyBench`, `hurryCraft` |
+| The Workshop on the map | The hammer floats over the Makerspace while something is ready, and the paper has a line. The Makerspace's panel opens the Workshop | `showCraft` in `src/game/CampusScene.ts` |
+| A campus with no Makerspace | The Workshop's card in the Build menu says so, and a tap on it begins placing a Makerspace | `WORKSHOP_ENTRY` |
+| Orders for the Workshop | Two new kinds: the town's "Make something at the Workshop" (72 hours, a decoration and 60 experience) and the donors' "Make 2 things at the Workshop" (96 hours, 2 Seals and 100 experience). Asked only when there is a Makerspace and a recipe | `craftOne`, `craftTwo` in `src/sim/config/orders.ts` |
+| The Founder's statue | The stone statue. Kept back for the Founder's Pack of 42.7, and it cannot be got in this stop | home `founder` |
+| Storage | The first shelf of the Build menu, "In storage", and free to place. A decoration's panel has Put away, and so does clearing its cell. Nothing is ever sold or lost | `storeDecor`, `state.decor.stored` |
+| Moving and turning | Free. A decoration's panel has Move, Turn (for the four that run one way) and Put away. Placing or moving one says how many buildings near it look better for it, and nothing when none does | `moveDecor`, `turnDecor`, `decorPlacedWords` |
+| The school banner | Drawn in the school's colour. It changes when the colour does | `decorSprite` |
+| The seasonal sets | Fall, live 1 October to 30 November, with five. Summer, live 15 June to 15 August, with six. By the real date, in world time (UTC), the same every year. A line in the paper when one opens. What was bought stays for good. Winter and spring have none, and nothing stands in | `SEASON_SETS`, `liveSeason` |
+| Photo mode | Menu, then Photo. Every bar goes. The map can still be dragged and pinched to frame it, and the school's name and its rank sit on a band along the foot. Share opens the share sheet on a phone, the browser's own sharing where it can share a file, and otherwise saves the picture. Done brings the bars back | `setPhoto`, `src/app/photo.ts` |
+| The save | Version 20, one migration: an empty storage and one idle bench. A version 19 fixture of a game like the owner's loads with nothing else moved | `MIGRATIONS[19]`, `tests/fixtures/save-v19-model.json` |
+| Art | Fifty-nine new pictures from the packs he owns: 306 in the recipe where there were 247. The atlas holds 780 in 4096 x 2048, 4.2 MB. One altered drawing, the banner (26) | `tools/make_penzilla_recipe.py` |
+| The shirt design at the campus store (42.4) | Left out. The packs have no shirt to colour, so it needs new art and a picker: not nearly free | |
+
+Two changes to the orders board came with it. When time runs out on the only order that could be finished in a sitting, another for a sitting comes the same day, once. And every person in a game, a line or a scene has a card (13.9).
+
+### 42.21 Stop 3, measured
+
+The test players collect what the Workshop has finished, set each bench to what the campus has fewest of until it has six of each, and keep a bench at work while an order wants something made. Each visit they set out a few decorations where they do most: beside the dorm or lecture hall they lift least, always a kind it does not have near it, from storage first and then the cheapest on the shelf. Once a real week they buy one special decoration for Seals while a wait's worth would still be left. Two seeds each, 44 weeks.
+
+**The pace of the rank goals.**
+
+| Goal | Casual | Once a day | Works every cause | Orders board (42.17): casual, once a day, works every cause |
+|---|---|---|---|---|
+| Top 100 | 7 | 7 | 7 | 7, 7, 7 |
+| Top 75 | 11 to 12 | 11 to 12 | 11 to 12 | 11 to 12 for each |
+| Top 50 | 14 to 16 | 14 to 16 | 14 to 16 | 14 to 16 for each |
+| Top 25 | 20 to 21 | 20 to 21 | 20 to 21 | 20 to 21 for each |
+| Top 10 | 25 to 27 | 25 to 27 | 24 to 27 | 28 to 29, 25 to 29, 24 to 29 |
+| Rank at week 44 | 2nd to 3rd | 2nd to 3rd | 2nd to 3rd | 2nd to 4th, 2nd to 3rd, 2nd to 3rd |
+
+The keenest player still reaches the Top 10 no sooner than week 24, which is the edge of his target, never before month five. The cap of 3 holds it there, so it was not made smaller. The casual player comes one to three weeks sooner than with the board alone. With the switches off and nothing else changed, no goal is more than one week from where it is with them on.
+
+**What decorations are worth.** At week 44, against the same campus with every decoration put away.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| On the map | 115 and 122 | 112 and 108 | 119 and 127 |
+| Mean lift to a dorm or lecture hall, of 3 | 1.51 and 1.63 | 1.45 and 1.50 | 1.64 and 1.59 |
+| Lots at the cap, of 88 | 16 and 19 | 12 and 15 | 22 and 20 |
+| How the campus looks, of 100 | 69.2 and 68.5 | 68.8 and 68.3 | 69.3 and 69.1 |
+| The same with them put away | 67.6 and 66.9 | 67.3 and 66.8 | 67.7 and 67.5 |
+| Applicants a fall | 18,180 and 18,136 | 18,133 and 18,105 | 20,722 and 20,727 |
+| The same with them put away | 17,991 and 17,931 | 17,948 and 17,918 | 20,487 and 20,497 |
+
+About a point and a half of looks, worth 185 to 235 applicants a fall, one in a hundred. Few lots reach the cap: on the model campus no lot has more than four free cells beside it, and those are shared with trees and quads. Every lot at the cap would be about 3 points of looks, which by the same measure is worth about 370 to 470 applicants a fall. That figure is worked out from the slope above, not measured.
+
+**Decorations owned, and what the Workshop made.**
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Owned at week 1 | 8 | 6 | 10 |
+| Owned at week 4 | 94 | 72 to 73 | 112 |
+| Owned at week 12 | 142 to 145 | 132 to 136 | 154 to 156 |
+| Owned at week 44 | 228 to 244 | 221 to 235 | 229 to 242 |
+| In storage at week 44 | 115 to 123 | 110 to 128 | 103 to 123 |
+| Bought with cash | 65 | 49 to 54 | 74 to 78 |
+| Given by the town | 18 | 18 to 19 | 19 |
+| Made in the Workshop a week, weeks 1 to 4 | 6.3 to 6.7 | 5.7 to 6.3 | 6.3 |
+| Made a week, weeks 12 to 44 | 1.6 to 2.2 | 1.8 to 2.1 | 1.3 to 1.8 |
+| Orders for the Workshop, seen and claimed | 58 and 58, 64 and 64 | 60 and 60, 66 and 66 | 59 and 58, 49 and 49 |
+
+**Gold Seals.** A real week.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Earned a week | 11.4 to 12.1 | 12.4 to 13.1 | 11.6 to 12.6 |
+| Spent a week | 11.1 to 11.5 | 11.0 to 11.1 | 10.9 to 11.0 |
+| Of it on decorations and the second bench | 9.5 to 10.0 | 10.0 | 10.0 |
+| Special decorations bought | 44 in 44 weeks | 44 | 44 |
+| Held at week 1 | 10 to 12 | 9 to 11 | 9 to 11 |
+| Held at week 4 | 14 to 17 | 12 to 17 | 13 to 16 |
+| Held at week 12 | 13 to 20 | 26 to 35 | 23 to 25 |
+| Held at week 44 | 16 to 17 | 55 to 78 | 19 to 67 |
+
+A Seal decoration costs 9.7 on average and a free player earns about 12 a week, so one special thing a week, with a little to spare for a wait. The balance no longer piles up: at the orders board it was over 300 by week 44.
+
+**Levels.**
+
+| Measured | Casual | Once a day | Works every cause | Orders board |
+|---|---|---|---|---|
+| Week 1 | 8 to 9 | 7 to 8 | 7 to 8 | 7 to 9 |
+| Week 4 | 28 | 27 to 29 | 26 to 28 | 27 to 28 |
+| Week 12 | 71 to 74 | 71 to 79 | 70 to 71 | 67 to 81 |
+| Week 44 | 238 to 243 | 241 to 268 | 237 to 249 | 227 to 290 |
+
+**Money.** Kept of every $100.
+
+| Measured | Casual | Once a day | Works every cause | Orders board: the same three |
+|---|---|---|---|---|
+| Years 3 to 8 | $13.80 to $15.60 | $13.00 to $15.50 | $11.30 to $14.00 | $13.80 to $14.80, $13.20 to $14.50, $11.50 to $14.00 |
+| Weeks 9 to 44 | $13.90 to $16.00 | $13.80 to $16.30 | $11.60 to $15.60 | $13.90 to $15.90, $13.90 to $16.00, $12.40 to $15.50 |
+
+The casual and the once-a-day player are inside $12 to $17 in every year and week measured. The keenest player dips under $12 in one early year on one seed, as before, and now in one week of the later ones too. Why it moved is not pinned down: it moves with what that player builds, and when.
+
+**The orders board.** A real week: 11.5 to 12.2 offered (10.0 to 10.2 before), 4.5 to 5.1 of them a second for today, 8.9 to 10.2 claimed, 77% to 84% finished. Every real day a player looked in, the board had an order to finish in one sitting or one already finished to claim.
+
+**The once-a-day player loses nothing.** A finished craft waits until it is collected, for ever, and the next begins only then. A seasonal set comes back every year, and what was bought from it stays. Tests hold both, and so does the long run.
+
+**Speed.** With 112 decorations in view, a frame takes 3.4 to 3.9 ms on this PC, against 3.5 to 3.9 ms with none. A week away catches up in 0.08 to 0.13 seconds on a tended campus with 115 out, and 0.06 to 0.07 with them put away. Nothing walks the decorations on a tick: a lot's lift is worked out when a decoration is placed, moved or put away, with the rest of the lot's score.
+
+**Tests and long runs.** 38 new tests: 759 in all. Six new long-run checks: 72 in all.
+
+### 42.22 Stop 3, decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| How a decoration is kept | One kind of placed thing, with the decoration named in it and a list of fifty-one | Fifty-one kinds of placed thing |
+| Variety | Each kind counts once at a lot, the nearest of it | Every decoration counts. Then three flower pots cap a lot and nobody needs a second kind |
+| The size of the lift | One point beside a lot, over three cells, 3 at most. Measured, it leaves the keenest player's Top 10 at week 24 | 5 at most. Not tried: 3 already sits on the edge of his target |
+| The Seal shelf | Open from the first day | Behind levels. A Seal has nothing to buy early on then |
+| Seal prices | 6 to 14 Seals each, 20 for the second bench, and Finish now at the rate of every other wait. About one special thing a week for a free player | Dearer, so Seals go to waits. They piled over 300 at the orders board with nothing else to buy |
+| A craft | A standing choice that starts the next by itself, as 42.6 asks. It costs cash | A tap for each batch. Or free, which makes the shelf pointless |
+| What the town pays once it has given all six three times | 60 experience | Seals, which would make the town a second donor. Or cash, which the yearly cap would mostly swallow |
+| Shelf levels | Moved a little from the sheet's "about" levels, so no level opens two things | As on the sheet, with two openings on some levels and none on others |
+| When a set is live | By the real date in world time (UTC), the same on every phone | The phone's own time zone. The simulation is the same on every phone and never reads a time zone |
+| Placing one that is also in storage | Storage first, free | Buy a new one, and ask about storage |
+| Spending Seals | The placer asks once more, "Spend 6 of your 40 Gold Seals? It is yours for good." | Spend on the first tap |
+| What placing one says | How many buildings near it look better for it | A number of points. Or nothing |
+| The shirt design | Left out | A shirt drawn here, which section 26's rule would put on the list to fix |
+| A time-out on the only order for a sitting | Another for a sitting comes the same day, once | Wait for the next day's order, with nothing for a sitting until then |
+| What the long run counts as something for this sitting | An unfinished order for a sitting, or a finished one waiting to be claimed | Unfinished ones only. One day in 1,848 failed that way, with four finished orders waiting |
+| People in activities | Students found from the seed, nobody in two places | Faces with no card, or a card that says only "a student" |
+
+### 42.23 Stop 3, rough
+
+| Rough | Why |
+|---|---|
+| The test players keep 103 to 128 decorations in storage by week 44 | They make what orders ask for and set out only where it lifts a lot. A person will set them out where they look nice |
+| Few lots reach the cap | The model campus has little free ground beside its lots. Placing is where a person's taste will differ most from the test players' |
+| The keenest test player dips under $12 | $11.30 in one early year and $11.60 in one later week, on one seed. At the orders board it was $11.50 and $12.40 |
+| The casual player reaches the Top 10 sooner | Week 25 to 27, where it was 28 to 29 at the orders board. The keenest player is unchanged at 24 to 27 |
+| The banner keeps a trace of red | One pixel of shading down the cloth's left edge (26) |
+| Winter and spring have no set | His art has nothing for them |
+| Nothing on the map says which kinds a lot already has near it | The placing words say how many buildings looked better, and nothing when none did |
+| A figure who leaves while their card is open | The card stays, and "Doing now" reads "Out of sight" |
+| More orders a week | 11.5 to 12.2 offered, where it was 10.0 to 10.2: the Workshop's orders, and the order for a sitting that replaces one that ran out |
+| Never run on a phone | The share sheet in particular. Checked in pictures and in tests on this PC, at 390 wide |

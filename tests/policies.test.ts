@@ -693,6 +693,8 @@ describe('a save from version 16', () => {
     expected.daily = state.daily;
     // Version 19 adds the orders board and its stream of numbers (tests/orders.test.ts has those).
     expected.orders = state.orders;
+    // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
+    expected.decor = state.decor;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -736,9 +738,9 @@ describe('a save from version 16', () => {
   });
 
   it('is told what is new, once', () => {
-    // Its own, and the ones versions 18 and 19 added after it (tests/daily.test.ts, tests/orders.test.ts).
+    // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(3);
+    expect(notes).toHaveLength(4);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

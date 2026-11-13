@@ -1,3 +1,4 @@
+import { CRAFT_XP, DECOR } from './decor';
 import { TICKS_PER_HOUR } from './time';
 import type { PlacedFamily } from './placed';
 
@@ -33,6 +34,7 @@ export interface XpSource {
 export const XP_SOURCES = {
   collect: { name: 'Collecting from a building', xp: 0, itself: false, note: 'by how long it has filled' },
   order: { name: 'An order done on the board', xp: 0, itself: false, note: 'what the order pays' },
+  craft: { name: 'Something the Workshop made, collected', xp: CRAFT_XP, itself: false },
   placed: { name: 'A building you place opens', xp: 40, itself: false },
   opened: { name: 'A dorm or lecture hall opens', xp: 15, itself: false },
   homeGame: { name: 'A home game, collected at the stadium', xp: 40, itself: false },
@@ -75,7 +77,7 @@ const slot = (name: string): LevelGift => ({ kind: 'unlock', what: 'slot', id: '
  * listed here is open from the start. Decorations and recipes come with the
  * stops that have them.
  */
-export const LEVEL_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
+const ORDER_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
   3: [order('safer', 'orders about Safety & health')],
   4: [order('fedAndBusy', 'orders about Food & fun')],
   5: [slot('a fourth order on the board')],
@@ -88,6 +90,24 @@ export const LEVEL_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
   23: [order('noWaitlist', 'orders about the waitlist')],
   26: [order('parkingOk', 'orders about parking')],
 };
+
+/**
+ * What a level opens besides its Seals, by the level reached: the orders
+ * above, and every decoration of the Decor shelf and every Workshop recipe
+ * at the level its own row in `DECOR` names (DESIGN.md 42.5 and 42.6). So a
+ * new decoration is one row there, and the levels take it up.
+ */
+function unlocks(): Record<number, LevelGift[]> {
+  const out: Record<number, LevelGift[]> = {};
+  for (const [level, gifts] of Object.entries(ORDER_UNLOCKS)) out[Number(level)] = [...gifts];
+  for (const spec of DECOR) {
+    if (spec.home.kind === 'shelf') (out[spec.home.level] ??= []).push({ kind: 'unlock', what: 'decoration', id: spec.id, name: `${spec.a} for the Decor shelf` });
+    else if (spec.home.kind === 'workshop') (out[spec.home.level] ??= []).push({ kind: 'unlock', what: 'recipe', id: spec.id, name: `the Workshop's recipe for ${spec.a}` });
+  }
+  return out;
+}
+
+export const LEVEL_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = unlocks();
 
 // ------------------------------------------------------------- Gold Seals --
 

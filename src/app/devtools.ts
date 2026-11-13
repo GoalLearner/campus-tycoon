@@ -1,4 +1,4 @@
-import { gainXp, readyToCollect } from '../sim';
+import { DECOR, gainXp, giveDecor, hurryCraft, readyToCollect } from '../sim';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
 import { clock } from './clock';
@@ -256,6 +256,7 @@ interface DevScene {
     studentsNear(worldX: number, worldY: number): Array<{ entryYear: number; index: number }>;
   };
   art: { people: { roles?: Record<string, number> } | null };
+  standerIn(role: string): { student: { entryYear: number; index: number } | null; look: number } | null;
   setPlaced(items: LookScene['items']): void;
   setTints(tints: LookScene['tints']): void;
   scale: { zoom: number };
@@ -275,6 +276,8 @@ interface DevScene {
  *   &card=2           open the student card of the third-nearest walker to the middle
  *   &card=2,follow    the same, with Follow on
  *   &card=unhappy     the least happy student in sight
+ *   &card=in:court    the first student standing in that role, with the view put on them: court, field, runner,
+ *                     swimmer, door, line, seat, stall, clubHost, clubVisitor, pickup, picnic, busker, tailgate, band, storm
  *   &place=gym,11,11  begin placing a building with its ghost at a cell
  *   &panel=happiness  open the Happiness panel
  *   &panel=money      open the Money panel; &group=payroll opens one of its groups
@@ -284,6 +287,14 @@ interface DevScene {
  *   &collect=all      collect everything that is ready; &collect=3 collects that many; &slowburst slows the burst
  *   &panel=orders     open the orders board; &ordersdone finishes the counting orders first, &claim=1 then taps
  *                     Claim and &dismiss=1 taps Dismiss; &ordersclaim claims them at once, for the paper
+ *   &stored=sofa:2,banner:1   put decorations in storage; &decor=120 stands that many about the campus, a mix
+ *                     of kinds; &placedecor=sofa,3,15 begins placing one with its ghost at a cell, and
+ *                     &movedecor=1 begins moving the first on the map
+ *   &dress=fountain:20:23,bunting:21:24:flip   set those decorations out at those cells
+ *   &craft=bunting    set the Workshop's bench to make it; &craftdone finishes what is on it; &benches=2 gives
+ *                     the second bench; &panel=workshop opens the Workshop
+ *   &panel=build      open the Build menu; &shelf=Decor scrolls it to that heading
+ *   &photo            photo mode
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -506,6 +517,20 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         if (params.has('claim')) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.order button')].find((b) => b.textContent === 'Claim')?.click(), 3400);
         if (params.has('dismiss')) setTimeout(() => document.querySelector<HTMLButtonElement>('.order-dismiss')?.click(), 3400);
       }
+      // &panel=workshop opens the Workshop from the Makerspace's own panel, as a player would.
+      if (panel === 'workshop') {
+        setTimeout(() => {
+          const shop = store.state.map.placed.find((placed) => placed && placed.type === 'makerspace');
+          if (shop) session.select(shop.x, shop.y);
+        }, 2600);
+        setTimeout(() => document.querySelector<HTMLButtonElement>('.inspector-action.show')?.click(), 3200);
+      }
+      // &panel=build opens the Build menu. &shelf=Decor scrolls it to the heading that begins with that word.
+      if (panel === 'build') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('.build-fab')?.click(), 2600);
+        const shelf = params.get('shelf');
+        if (shelf) setTimeout(() => [...document.querySelectorAll('.build-category')].find((node) => node.textContent?.startsWith(shelf))?.scrollIntoView(), 3400);
+      }
       // &panel=level opens the Level page as a tap on its button would. &finish=1 then taps the first Finish now.
       if (panel === 'level') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('.level-chip')?.click(), 2600);
@@ -532,6 +557,17 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           const camera = scene.cameras.main;
           const near = scene.walkers.studentsNear(camera.scrollX + camera.width / 2, camera.scrollY + camera.height / 2);
           const [nth, mode] = card.split(',');
+          if (nth?.startsWith('in:')) {
+            // They may not have come into view yet: look again for a few seconds.
+            let tries = 0;
+            const look = (): void => {
+              const who = scene.standerIn(nth.slice(3));
+              if (who?.student) session.openStudent(who.student, who.look);
+              else if (++tries < 12) setTimeout(look, 500);
+            };
+            look();
+            return;
+          }
           // &card=unhappy picks the least happy student in sight.
           const saddest = [...near].sort(
             (a, b) => (studentCard(store.state, a)?.happiness ?? 100) - (studentCard(store.state, b)?.happiness ?? 100),
@@ -669,6 +705,74 @@ export function installDevTools(): void {
       // &ordersclaim then claims them, so that with &away the paper has its line for each.
       if (params.has('ordersclaim')) for (const order of [...store.state.orders.open]) store.dispatch({ type: 'claimOrder', id: order.id });
     }
+    // Decorations and the Workshop (DESIGN.md 42.5 and 42.6).
+    if (store.hasGame && (params.has('stored') || params.has('decor') || params.has('dress') || params.has('craft') || params.has('benches'))) {
+      let dressed = structuredClone(store.state);
+      for (const part of (params.get('stored') ?? '').split(',').filter(Boolean)) {
+        const [id, count] = part.split(':');
+        for (let n = 0; n < (Number(count) || 1); n++) giveDecor(dressed, id!);
+      }
+      if (params.has('benches')) while (dressed.decor.benches.length < Number(params.get('benches'))) dressed.decor.benches.push({ recipe: null, making: null, done: null });
+      // &decor=120: every third free cell beside a dorm or a lecture hall takes the next kind, until that many stand.
+      const want = Number(params.get('decor') ?? 0);
+      if (want > 0) {
+        const kinds = DECOR.filter((spec) => spec.home.kind !== 'founder');
+        let n = 0;
+        const map = dressed.map;
+        for (let i = 0; i < map.cells.length && n < want; i++) {
+          const x = i % map.width;
+          const y = Math.floor(i / map.width);
+          if ((x + 2 * y) % 3 !== 0 || previewPlace(dressed, 'decor', x, y).problem !== null) continue;
+          const near = map.buildings.some((lot) => lot && Math.max(Math.abs(lot.x - x), Math.abs(lot.y - y)) <= 3);
+          if (!near) continue;
+          const id = kinds[n % kinds.length]!.id;
+          giveDecor(dressed, id);
+          const placed = applyAction(dressed, { type: 'placeDecor', id, x, y });
+          if (placed.ok) dressed = placed.state;
+          n += 1;
+        }
+      }
+      // &dress=fountain:20:23,banner:19:22,bunting:21:24:flip sets those out at those cells.
+      for (const part of (params.get('dress') ?? '').split(',').filter(Boolean)) {
+        const [id, x, y, flip] = part.split(':');
+        giveDecor(dressed, id!);
+        const placed = applyAction(dressed, { type: 'placeDecor', id: id!, x: Number(x), y: Number(y), flip: flip === 'flip' });
+        if (placed.ok) dressed = placed.state;
+      }
+      if (params.has('craft')) {
+        const level = Math.max(dressed.daily.level, 60);
+        dressed.daily.level = level;
+        const set = applyAction(dressed, { type: 'setRecipe', bench: 0, recipe: params.get('craft') });
+        if (set.ok) dressed = set.state;
+        if (params.has('craftdone')) hurryCraft(dressed, 0);
+        // &craft2=banner sets the second bench to work as well, so one is finished and one is under way.
+        if (params.has('craft2')) {
+          const second = applyAction(dressed, { type: 'setRecipe', bench: 1, recipe: params.get('craft2') });
+          if (second.ok) dressed = second.state;
+        }
+      }
+      store.adopt(dressed, { ephemeral: true });
+      if (params.has('craftdone')) {
+        clock.skip(120_000);
+        store.catchUp();
+      }
+    }
+    const placeDecor = params.get('placedecor')?.split(',');
+    if (placeDecor && placeDecor.length === 3) {
+      setTimeout(() => {
+        session.startDecor(placeDecor[0]!);
+        session.setGhost(Number(placeDecor[1]), Number(placeDecor[2]));
+      }, 2600);
+    }
+    if (params.has('movedecor')) {
+      setTimeout(() => {
+        const first = store.state.map.placed.find((placed) => placed && placed.type === 'decor');
+        if (!first || !first.decor) return;
+        session.startDecor(first.decor, first.id, first.flip === true);
+        session.setGhost(first.x + 1, first.y);
+      }, 2600);
+    }
+    if (params.has('photo')) setTimeout(() => session.setPhoto(true), 2600);
     if (params.has('collect')) {
       const many = params.get('collect');
       setTimeout(() => {

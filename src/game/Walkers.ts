@@ -238,6 +238,8 @@ export class Walkers {
   private stopAt = new Map<number, Stop>();
   /** Students out walking now, so nobody is in two places. */
   private out = new Set<string>();
+  /** Students standing somewhere for a while, in a game, a line or a small scene. They are not sent walking as well. */
+  private elsewhere: ReadonlySet<string> = new Set();
   /** Crossing cells with somebody on them this frame. Cars wait for them. */
   private crossingNow = new Set<number>();
   private marked: string | null = null;
@@ -509,7 +511,7 @@ export class Walkers {
       if (this.everyone.length > 0) {
         // The newest students who live in that dorm.
         const free = (this.residents.get(to.cell.y * this.width + to.cell.x) ?? []).filter(
-          (ref) => !this.out.has(studentKey(ref)) && !taken.has(studentKey(ref)),
+          (ref) => this.free(ref) && !taken.has(studentKey(ref)),
         );
         const newest = free.filter((ref) => ref.entryYear === year);
         student = pick(newest.length > 0 ? newest : free) ?? null;
@@ -626,14 +628,30 @@ export class Walkers {
   }
 
   /** A student to step out of a stop: someone who lives there, when it is a dorm. */
+  /** True for a student who is not on the map already: not out walking, and not standing in an activity or a scene. */
+  private free(ref: StudentRef): boolean {
+    const key = studentKey(ref);
+    return !this.out.has(key) && !this.elsewhere.has(key);
+  }
+
+  /** Told by the map: who is standing in an activity or a small scene. */
+  setElsewhere(staying: ReadonlySet<string>): void {
+    this.elsewhere = staying;
+  }
+
+  /** True while that student is out walking. */
+  isOut(key: string): boolean {
+    return this.out.has(key);
+  }
+
   private studentFor(from: Stop): StudentRef | null {
     if (from.zone === 'housing') {
       const here = this.residents.get(from.cell.y * this.width + from.cell.x) ?? [];
-      return pick(here.filter((ref) => !this.out.has(studentKey(ref)))) ?? null;
+      return pick(here.filter((ref) => this.free(ref))) ?? null;
     }
     for (let tries = 0; tries < 8; tries++) {
       const ref = pick(this.everyone);
-      if (ref && !this.out.has(studentKey(ref))) return ref;
+      if (ref && this.free(ref)) return ref;
     }
     return null;
   }
@@ -700,7 +718,7 @@ export class Walkers {
     if (!people || this.walkers.length >= CROWD_STEPS[this.step]!.alive) return false;
     // Nobody is in two places: a student by who they are, anyone else by their own card.
     const key = student ? studentKey(student) : extra.person ? `p:${personKey(extra.person)}` : null;
-    if (key !== null && this.out.has(key)) return false;
+    if (key !== null && (this.out.has(key) || this.elsewhere.has(key))) return false;
     const route = extra.route ?? this.routeBetween(from, to);
     if (!route || route.length < 2) return false;
     const looks = Math.min(people.looks, people.crowd ?? people.looks);
@@ -800,7 +818,7 @@ export class Walkers {
    * The walker at a point of the world, or null. `reach` widens each sprite,
    * because a walker is a small thing to hit with a thumb.
    */
-  walkerAt(worldX: number, worldY: number, reach: number): { student: StudentRef | null; person: PersonRef | null; neighbour: boolean } | null {
+  walkerAt(worldX: number, worldY: number, reach: number): { student: StudentRef | null; person: PersonRef | null; neighbour: boolean; far: number } | null {
     let found: Walker | null = null;
     let nearest = Infinity;
     for (const walker of this.walkers) {
@@ -813,7 +831,7 @@ export class Walkers {
         found = walker;
       }
     }
-    return found ? { student: found.student, person: found.person, neighbour: found.kind === 'neighbour' } : null;
+    return found ? { student: found.student, person: found.person, neighbour: found.kind === 'neighbour', far: nearest } : null;
   }
 
   private walkerOf(key: string): Walker | undefined {
@@ -889,7 +907,7 @@ export class Walkers {
       if (out < Math.max(wanted, this.period === 'night' ? 0 : 1)) {
         const house = pick(this.commuterHouses)!;
         const hall = pick(classes)!;
-        const student = this.offCampus.length > 0 ? pick(this.offCampus.filter((ref) => !this.out.has(studentKey(ref)))) ?? null : null;
+        const student = this.offCampus.length > 0 ? pick(this.offCampus.filter((ref) => this.free(ref))) ?? null : null;
         const inbound = Math.random() < flow.inbound;
         // A stream that has only just begun is seeded along its length, so the street is not empty.
         if (student || this.offCampus.length === 0) this.start(inbound ? house : hall, inbound ? hall : house, out < wanted * 0.5, student, 'commuter');

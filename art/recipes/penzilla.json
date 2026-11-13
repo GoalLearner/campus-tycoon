@@ -34,6 +34,86 @@
    "saturation": 0.9,
    "value": 0.82,
    "minSaturation": 0.5
+  },
+  "banner.crimson": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 5.6,
+   "saturation": 0.776,
+   "value": 0.893,
+   "minSaturation": 0.8
+  },
+  "banner.navy": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 220.9,
+   "saturation": 0.681,
+   "value": 0.642,
+   "minSaturation": 0.8
+  },
+  "banner.forest": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 145.1,
+   "saturation": 0.632,
+   "value": 0.581,
+   "minSaturation": 0.8
+  },
+  "banner.gold": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 41.1,
+   "saturation": 0.795,
+   "value": 1.042,
+   "minSaturation": 0.8
+  },
+  "banner.purple": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 268.5,
+   "saturation": 0.574,
+   "value": 0.819,
+   "minSaturation": 0.8
+  },
+  "banner.orange": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 25.6,
+   "saturation": 0.795,
+   "value": 1.042,
+   "minSaturation": 0.8
+  },
+  "banner.teal": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 180.0,
+   "saturation": 0.783,
+   "value": 0.665,
+   "minSaturation": 0.8
+  },
+  "banner.maroon": {
+   "from": [
+    8,
+    25
+   ],
+   "to": 345.0,
+   "saturation": 0.721,
+   "value": 0.567,
+   "minSaturation": 0.8
   }
  },
  "glass": {
@@ -3826,6 +3906,720 @@
     }
    ]
   },
+  "decoration.statue": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Statue.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.sculpture": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Sculpture.png",
+     "stand": [
+      0.677734375,
+      0.677734375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.cup": {
+   "layers": [
+    {
+     "file": "penzilla/SportAndGames/Trophy_Gold.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 0.34
+    }
+   ]
+  },
+  "decoration.windmill": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/Mill.png",
+     "stand": [
+      0.900390625,
+      0.900390625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.lookout": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/TowerWood.png",
+     "stand": [
+      0.8271484375,
+      0.8271484375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.waterTower": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Watertower.png",
+     "stand": [
+      0.7607421875,
+      0.7607421875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.fountain": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Fountain.png",
+     "stand": [
+      0.69921875,
+      0.69921875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.reflectingPool": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/WaterBasin.png",
+     "stand": [
+      0.900390625,
+      0.900390625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.gardenPool": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Garden_Pool.png",
+     "stand": [
+      0.7802734375,
+      0.7802734375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.wishingWell": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/WellRood.png",
+     "stand": [
+      0.66015625,
+      0.66015625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.stoneWell": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Well.png",
+     "stand": [
+      0.66015625,
+      0.66015625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.flowers": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1.2
+    }
+   ]
+  },
+  "decoration.flowerBox": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant2.png",
+     "stand": [
+      0.6220703125,
+      0.6220703125
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.planters": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant13.png",
+     "stand": [
+      0.646484375,
+      0.646484375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.topiary": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant8.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.hedge": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Bushes7.png",
+     "stand": [
+      0.72265625,
+      0.72265625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.hedgePlanter": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Bushes9.png",
+     "stand": [
+      0.7119140625,
+      0.7119140625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.cottageGarden": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Houses/Garden_Rustic.png",
+     "stand": [
+      0.9306640625,
+      0.9306640625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.flowerStall": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/StreetStand_Flowers.png",
+     "stand": [
+      0.90234375,
+      0.90234375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.globeLamp": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Lamp.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.stringLights": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Lights.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.lantern": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Lantern.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1.6
+    }
+   ]
+  },
+  "decoration.tallLamp": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/StreetLight.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.ribbonPole": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/PoleFestive.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.sofa": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Seat.png",
+     "stand": [
+      0.6796875,
+      0.6796875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.tableSet": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/TableSet3.png",
+     "stand": [
+      0.701171875,
+      0.701171875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.parasol": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Parasol.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.swingSet": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Swingset.png",
+     "stand": [
+      0.7451171875,
+      0.7451171875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.campusMap": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/SignMap.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.mailbox": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Mailbox.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.gumball": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/GumballMachine.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.boulder": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Rock1.png",
+     "stand": [
+      0.6376953125,
+      0.6376953125
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.steppingStones": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/StonePath_Tile1.png",
+     "stand": [
+      0.791015625,
+      0.791015625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.stoneWall": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Fences/StoneFence1.png",
+     "stand": [
+      0.7509765625,
+      0.7509765625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.ropeLine": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/Vip2.png",
+     "stand": [
+      0.6953125,
+      0.6953125
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.stage": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Podium.png",
+     "stand": [
+      0.875,
+      0.875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.marquee": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Tent.png",
+     "stand": [
+      0.734375,
+      0.734375
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.stall": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/MarketStand.png",
+     "stand": [
+      0.7861328125,
+      0.7861328125
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.pumpkins": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/MarketProduce_Gourds.png",
+     "stand": [
+      0.7060546875,
+      0.7060546875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.hayBales": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/Hay.png",
+     "stand": [
+      0.796875,
+      0.796875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.haystack": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/HayStack.png",
+     "stand": [
+      0.6494140625,
+      0.6494140625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.appleCrate": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/AppleCrate.png",
+     "stand": [
+      0.666015625,
+      0.666015625
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.autumnHedge": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Fences/Hedge4.png",
+     "stand": [
+      0.7919921875,
+      0.7919921875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.lounger": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolChair.png",
+     "stand": [
+      0.6171875,
+      0.6171875
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.beachParasol": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolParasol.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.lifeguardChair": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolLifeguardChair.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.beachBall": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolBall.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1.3
+    }
+   ]
+  },
+  "decoration.poolFloat": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/PoolFloatie.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1.3
+    }
+   ]
+  },
+  "decoration.iceCreamSign": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/DecorItems/IceCreamSign.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "scale": 1
+    }
+   ]
+  },
+  "decoration.bunting": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Fences/Festive1.png",
+     "stand": [
+      0.76171875,
+      0.76171875
+     ],
+     "scale": 1,
+     "crop": [
+      200,
+      0,
+      512,
+      1024
+     ]
+    }
+   ]
+  },
+  "decoration.banner.crimson": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.crimson"
+    }
+   ]
+  },
+  "decoration.banner.navy": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.navy"
+    }
+   ]
+  },
+  "decoration.banner.forest": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.forest"
+    }
+   ]
+  },
+  "decoration.banner.gold": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.gold"
+    }
+   ]
+  },
+  "decoration.banner.purple": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.purple"
+    }
+   ]
+  },
+  "decoration.banner.orange": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.orange"
+    }
+   ]
+  },
+  "decoration.banner.teal": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.teal"
+    }
+   ]
+  },
+  "decoration.banner.maroon": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Banner.png",
+     "stand": [
+      0.56,
+      0.56
+     ],
+     "recolour": "banner.maroon"
+    }
+   ]
+  },
+  "icon.craft": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Decor/Hammer.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 3.2
+    }
+   ]
+  },
   "icon.walkin": {
    "layers": [
     {
@@ -4442,7 +5236,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour."
   },
   {
    "name": "Football stadium (3D model)",

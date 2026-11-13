@@ -310,6 +310,117 @@ sprites['icon.collect'] = {'layers': [standing(ICONS + 'Medal_Gold.png', 0.5, 0.
 sprites['ui.seal'] = {'layers': [standing(ICONS + 'PinMedal_Gold.png', 0.5, 0.5, scale=0.6)]}
 sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5, scale=0.9)]}
 
+# ----------------------------------------------------------- decorations --
+# The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
+# drawing, made smaller and stood on its cell: nothing is cut or assembled. One is recoloured, and it is on the
+# list of section 26: the school banner, whose red cloth is turned to each of the eight school colours.
+# A name here is a decoration's id in src/sim/config/decor.ts.
+HOUSES = CITY + 'Houses/'
+FENCES = CITY + 'Fences/'
+OLD_DECOR = OLD + 'Decor/'
+OLD_BUILT = OLD + 'Buildings/'
+OLD_FENCES = OLD + 'Fences/'
+POST = 'post'    # a post, a pot or a figure: it stands on the middle of its cell
+BASE = 'base'    # it stands on a base as wide as the drawing, set in the middle of its cell
+DECORATIONS = {
+    'statue': (OLD_DECOR + 'Statue.png', POST, 1),
+    'sculpture': (DECOR + 'Sculpture.png', BASE, 1),
+    # From the sport set, which is drawn as large flat icons: it is shrunk further than the map's own drawings.
+    'cup': (ICONS + 'Trophy_Gold.png', POST, 0.34),
+    'windmill': (OLD_BUILT + 'Mill.png', BASE, 1),
+    'lookout': (OLD_BUILT + 'TowerWood.png', BASE, 1),
+    'waterTower': (DECOR + 'Watertower.png', BASE, 1),
+    'fountain': (OLD_DECOR + 'Fountain.png', BASE, 1),
+    'reflectingPool': (DECOR + 'WaterBasin.png', BASE, 1),
+    'gardenPool': (HOUSES + 'Garden_Pool.png', BASE, 1),
+    'wishingWell': (OLD_DECOR + 'WellRood.png', BASE, 1),
+    'stoneWell': (OLD_DECOR + 'Well.png', BASE, 1),
+    # Three small things are drawn very small, and are shown a little larger, as the bins are.
+    'flowers': (PLANTS + 'Plant1.png', POST, 1.2),
+    'flowerBox': (PLANTS + 'Plant2.png', BASE, 1),
+    'planters': (PLANTS + 'Plant13.png', BASE, 1),
+    'topiary': (PLANTS + 'Plant8.png', POST, 1),
+    'hedge': (PLANTS + 'Bushes7.png', BASE, 1),
+    'hedgePlanter': (PLANTS + 'Bushes9.png', BASE, 1),
+    'cottageGarden': (HOUSES + 'Garden_Rustic.png', BASE, 1),
+    'flowerStall': (PUBLIC + 'StreetStand_Flowers.png', BASE, 1),
+    'globeLamp': (DECOR + 'Lamp.png', POST, 1),
+    'stringLights': (DECOR + 'Lights.png', POST, 1),
+    'lantern': (OLD_DECOR + 'Lantern.png', POST, 1.6),
+    'tallLamp': (OLD_DECOR + 'StreetLight.png', POST, 1),
+    'ribbonPole': (OLD_DECOR + 'PoleFestive.png', POST, 1),
+    'sofa': (DECOR + 'Seat.png', BASE, 1),
+    'tableSet': (DECOR + 'TableSet3.png', BASE, 1),
+    'parasol': (DECOR + 'Parasol.png', POST, 1),
+    'swingSet': (DECOR + 'Swingset.png', BASE, 1),
+    'campusMap': (DECOR + 'SignMap.png', POST, 1),
+    'mailbox': (DECOR + 'Mailbox.png', POST, 1),
+    'gumball': (DECOR + 'GumballMachine.png', POST, 1),
+    'boulder': (OLD_DECOR + 'Rock1.png', BASE, 1),
+    'steppingStones': (TILES + 'StonePath_Tile1.png', BASE, 1),
+    'stoneWall': (OLD_FENCES + 'StoneFence1.png', BASE, 1),
+    'ropeLine': (DECOR + 'Vip2.png', BASE, 1),
+    'stage': (OLD_DECOR + 'Podium.png', BASE, 1),
+    'marquee': (OLD_DECOR + 'Tent.png', BASE, 1),
+    'stall': (OLD_BUILT + 'MarketStand.png', BASE, 1),
+    # The fall set.
+    'pumpkins': (OLD_BUILT + 'MarketProduce_Gourds.png', BASE, 1),
+    'hayBales': (OLD_BUILT + 'Hay.png', BASE, 1),
+    'haystack': (OLD_DECOR + 'HayStack.png', BASE, 1),
+    'appleCrate': (DECOR + 'AppleCrate.png', BASE, 1),
+    'autumnHedge': (FENCES + 'Hedge4.png', BASE, 1),
+    # The summer set.
+    'lounger': (DECOR + 'PoolChair.png', BASE, 1),
+    'beachParasol': (DECOR + 'PoolParasol.png', POST, 1),
+    'lifeguardChair': (DECOR + 'PoolLifeguardChair.png', POST, 1),
+    'beachBall': (DECOR + 'PoolBall.png', POST, 1.3),
+    'poolFloat': (DECOR + 'PoolFloatie.png', POST, 1.3),
+    'iceCreamSign': (DECOR + 'IceCreamSign.png', POST, 1),
+}
+
+
+def drawn_width(file, crop=None):
+    """How wide a pack drawing is once the empty margin round it is trimmed, in the pack's own pixels."""
+    from PIL import Image
+    im = Image.open(os.path.join(ROOT, 'art', 'source', file)).convert('RGBA')
+    if crop:
+        im = im.crop(tuple(crop))
+    box = im.getbbox()
+    return box[2] - box[0]
+
+
+def decoration(file, how, scale, **more):
+    """A decoration stood on its cell: a post on the middle, anything on a base with that base in the middle."""
+    at = 0.56 if how == POST else min(0.95, 0.5 + drawn_width(file, more.get('crop')) / 512 / 2)
+    return {'layers': [standing(file, at, at, scale=scale, **more)]}
+
+
+for name, (file, how, scale) in DECORATIONS.items():
+    sprites[f'decoration.{name}'] = decoration(file, how, scale)
+# Bunting on two posts. The file has a stray line of pixels down its left edge, which is left out.
+sprites['decoration.bunting'] = decoration(OLD_FENCES + 'Festive1.png', BASE, 1, crop=[200, 0, 512, 1024])
+# The school banner, once for each school colour: the same eight as SCHOOL_COLOURS in src/sim/config/football.ts.
+# Only the red cloth changes. Its hue is turned to the school's and its brightness matched; the dark outline, the
+# pole and the artist's shading are left as drawn.
+SCHOOL_COLOURS = {'crimson': 0xc0392b, 'navy': 0x2c4a8a, 'forest': 0x2e7d4f, 'gold': 0xe0a82e, 'purple': 0x7b4bb0, 'orange': 0xe07a2e, 'teal': 0x1f8f8f, 'maroon': 0x7a2238}
+BANNER_RED = (215, 55, 0)
+banner_rules = {}
+
+
+def hsv(rgb):
+    import colorsys
+    h, s_, v = colorsys.rgb_to_hsv(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
+    return h * 360, s_, v
+
+
+for colour, value in SCHOOL_COLOURS.items():
+    hue, sat, val = hsv(((value >> 16) & 255, (value >> 8) & 255, value & 255))
+    _, red_sat, red_val = hsv(BANNER_RED)
+    banner_rules[f'banner.{colour}'] = {'from': [8, 25], 'to': round(hue, 1), 'saturation': round(sat / red_sat, 3), 'value': round(val / red_val, 3), 'minSaturation': 0.8}
+    sprites[f'decoration.banner.{colour}'] = {'layers': [standing(OLD_DECOR + 'Banner.png', 0.56, 0.56, recolour=f'banner.{colour}')]}
+# What floats over the Makerspace when the Workshop has finished something: the old-town pack's hammer.
+sprites['icon.craft'] = {'layers': [standing(OLD_DECOR + 'Hammer.png', 0.5, 0.5, scale=3.2)]}
+
 # ------------------------------------------------------------------ alive --
 # Markers at the edge of a campus the town cannot get into: the pack's arrow sign for a path, and its
 # blue square sign for parking. Both as drawn, a little larger so they read at phone zoom.
@@ -407,6 +518,7 @@ recipe = {
         'comment': 'A mown lawn: the same grass, a little greener and brighter.',
         'lawn': {'from': [45, 95], 'to': 76, 'saturation': 1.0, 'value': 1.13},
         'cross': {'from': [0, 30], 'to': 135, 'saturation': 0.9, 'value': 0.82, 'minSaturation': 0.5},
+        **banner_rules,
     },
     'glass': {
         # The pack's window glass is one flat blue. Lit, it is a pale warm yellow, which the game deepens with an orange glow.
@@ -436,7 +548,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour.',
         },
         {
             'name': 'Football stadium (3D model)',

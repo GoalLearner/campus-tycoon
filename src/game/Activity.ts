@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
+import { activityWords, findStudent, type ActivityRole, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, SEAT_REACH, type GameState, type Placed, type PlayUse } from '../sim';
+import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import type { Iso } from './iso';
 
@@ -18,6 +19,9 @@ import type { Iso } from './iso';
  * Afternoons and evenings are busiest. Where each figure stands and how it
  * moves is only for show. Nothing here is saved, nothing here changes a
  * number, and nothing here runs while the game is closed.
+ *
+ * Each figure is one enrolled student (DESIGN.md 13.12), found from the seed
+ * by `findStudent`, so a tap on them opens the ordinary student card.
  */
 
 /** Of the students playing at a building, the most that are drawn on it. A court fits two games. */
@@ -55,11 +59,16 @@ const STALL_SPOTS: ReadonlyArray<readonly [number, number]> = [
 const RECOUNT_MS = 900;
 const FADE_MS = 350;
 
-type Role = 'court' | 'field' | 'runner' | 'swimmer' | 'door' | 'line' | 'seat' | 'stall';
+type Role = ActivityRole;
+/** The order of the roles, for the seeded pick of who stands where. */
+const ROLES: readonly Role[] = ['court', 'field', 'runner', 'swimmer', 'door', 'line', 'seat', 'stall'];
+const SPORTY: readonly Role[] = ['court', 'field', 'runner'];
 
 interface Figure {
   sprite: Phaser.GameObjects.Image;
   role: Role;
+  /** Who this is. null until they are found, and on a campus with no students. */
+  student: StudentRef | null;
   look: number;
   /** Its place in the building's own crowd, which fixes where it stands. */
   slot: number;
@@ -110,11 +119,21 @@ export class Activity {
   private recountAt = 0;
   /** Figures drawn at the last count, for the dev readout. */
   private drawn = 0;
+  private state: GameState | null = null;
+  /** The students figures are found among: the same sample walkers are drawn from. */
+  private everyone: StudentRef[] = [];
 
+  /**
+   * `staying` is every student standing somewhere on the map for a while, here
+   * or in a small scene, and `walking` says who is out walking. Between them
+   * nobody is in two places.
+   */
   constructor(
     private scene: Phaser.Scene,
     private art: Art,
     private iso: Iso,
+    private staying: Set<string> = new Set(),
+    private walking: (key: string) => boolean = () => false,
   ) {
     this.people = art.people;
   }
@@ -138,6 +157,13 @@ export class Activity {
   /** Read the recreation buildings, benches and tables again, with their numbers. Called whenever the game changes. */
   setMap(state: GameState): void {
     const { width, height, cells } = state.map;
+    this.state = state;
+    // A class came or went: everyone standing somewhere is found again, since one of them may have graduated.
+    const sample = sampleStudents(state);
+    if (sample.length !== this.everyone.length || sample[0]?.entryYear !== this.everyone[0]?.entryYear) {
+      this.everyone = sample;
+      for (const site of this.sites) for (const figure of site.figures) this.release(figure);
+    }
     // Queues and players have their own caps, so they follow the real enrollment at any campus scale.
     this.students = enrollment(state);
     const kept = new Map<number, Site>();
@@ -205,8 +231,30 @@ export class Activity {
     this.recountAt = 0;
   }
 
+  /** A figure stops being anybody: they have gone, or the classes changed. */
+  private release(figure: Figure): void {
+    if (figure.student) this.staying.delete(studentKey(figure.student));
+    figure.student = null;
+  }
+
+  /** Find who a figure is: a student nobody else on the map is, from the seed, the building and the figure's own spot. */
+  private cast(site: Site, figure: Figure): void {
+    const state = this.state;
+    const people = this.people;
+    if (!state || !people) return;
+    const student = findStudent(state.seed, this.everyone, site.placed.id * ROLES.length + ROLES.indexOf(figure.role), figure.slot, (key) => this.staying.has(key) || this.walking(key));
+    figure.student = student;
+    if (!student) return;
+    this.staying.add(studentKey(student));
+    // On a court, a pitch or the track everyone wears the kit. Anywhere else they are drawn as they walk about.
+    if (SPORTY.includes(figure.role) && people.roles?.athlete !== undefined) return;
+    figure.look = studentFigure(state, student, Math.min(people.looks, people.crowd ?? people.looks), people.roles?.athlete);
+    figure.shownKey = '';
+  }
+
   private empty(site: Site): void {
     for (const figure of site.figures) {
+      this.release(figure);
       figure.sprite.setVisible(false);
       this.pool.push(figure.sprite);
     }
@@ -275,12 +323,13 @@ export class Activity {
           sprite.setVisible(true).setAlpha(0).setCrop();
           const sporty = role === 'court' || role === 'field' || role === 'runner';
           const look = sporty && athletes !== undefined ? athletes + ((site.placed.id + n) % 4) : Math.floor(mix(site.placed.id * 13 + n, 5) * Math.min(16, crowd));
-          site.figures.push({ sprite, role, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '' });
+          site.figures.push({ sprite, role, student: null, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '' });
         }
         // The last to come are the first to go.
         for (let n = have.length - 1; n >= want; n--) have[n]!.leaving = true;
       }
       if (!seen) for (const figure of site.figures) figure.leaving = true;
+      for (const figure of site.figures) if (!figure.leaving && figure.student === null) this.cast(site, figure);
       this.setProps(site, seen);
     }
   }
@@ -425,6 +474,7 @@ export class Activity {
         const figure = site.figures[i]!;
         figure.alpha = figure.leaving ? figure.alpha - dt / FADE_MS : Math.min(1, figure.alpha + dt / FADE_MS);
         if (figure.leaving && figure.alpha <= 0) {
+          this.release(figure);
           figure.sprite.setVisible(false);
           this.pool.push(figure.sprite);
           site.figures.splice(i, 1);
@@ -470,6 +520,58 @@ export class Activity {
     }
   }
 
+  // ------------------------------------------------------- student cards --
+
+  /** What a figure is doing now, in the words its card shows. */
+  private words(site: Site, figure: Figure): string {
+    const spec = PLACED[site.placed.type];
+    const eating = site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
+    const studying = site.study && this.studyShare > 0 && site.figures.filter((one) => !one.leaving && one.role === 'seat').length >= 2;
+    return activityWords(figure.role, { type: site.placed.type, name: spec.name, food: spec.family === 'dining', eating, studying }, this.period);
+  }
+
+  private stander(site: Site, figure: Figure, far: number): Stander {
+    const at = this.iso.toWorld(figure.x, figure.y);
+    return { student: figure.student, look: figure.look, words: this.words(site, figure), x: at.x, y: at.y, far, depth: figure.sprite.depth };
+  }
+
+  /** The figure at a point of the world, or null. `reach` widens each one, as it does a walker. */
+  figureAt(worldX: number, worldY: number, reach: number): Stander | null {
+    let found: Stander | null = null;
+    for (const site of this.sites) {
+      for (const figure of site.figures) {
+        if (figure.leaving || figure.alpha < 0.5) continue;
+        const box = figure.sprite.getBounds();
+        // Only the top of a swimmer is above the water.
+        const bottom = figure.role === 'swimmer' ? box.y + box.height * 0.5 : box.bottom;
+        if (worldX < box.x - reach || worldX > box.right + reach || worldY < box.y - reach || worldY > bottom + reach) continue;
+        const far = Math.hypot(worldX - box.centerX, worldY - (box.y + bottom) / 2);
+        if (!found || far < found.far) found = this.stander(site, figure, far);
+      }
+    }
+    return found;
+  }
+
+  /** Where a student is and what they are doing, when they are one of the figures here. */
+  find(key: string): Stander | null {
+    for (const site of this.sites) {
+      for (const figure of site.figures) {
+        if (!figure.leaving && figure.student && studentKey(figure.student) === key) return this.stander(site, figure, 0);
+      }
+    }
+    return null;
+  }
+
+  /** The first figure in a role, for a dev screenshot. */
+  firstIn(role: string): Stander | null {
+    for (const site of this.sites) {
+      for (const figure of site.figures) {
+        if (!figure.leaving && figure.role === role && figure.student && figure.alpha >= 0.5) return this.stander(site, figure, 0);
+      }
+    }
+    return null;
+  }
+
   /** Figures the numbers ask for at the buildings in view. For the dev readout. */
   get count(): number {
     return this.drawn;
@@ -477,6 +579,7 @@ export class Activity {
 
   clear(): void {
     for (const site of this.sites) {
+      for (const figure of site.figures) this.release(figure);
       for (const figure of site.figures) figure.sprite.destroy();
       for (const prop of site.props) prop.destroy();
     }

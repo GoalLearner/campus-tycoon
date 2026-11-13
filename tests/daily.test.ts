@@ -133,31 +133,34 @@ describe('the University Level', () => {
   });
 
   it('gives a Seal with every level and more at every fifth, with room for what later stops will open', () => {
-    expect(levelGifts(2)).toEqual([{ kind: 'seals', count: SEALS_PER_LEVEL }]);
+    // The Seals come first. Level 2 also puts the first decoration on the Decor shelf (tests/decor.test.ts).
+    expect(levelGifts(2)[0]).toEqual({ kind: 'seals', count: SEALS_PER_LEVEL });
+    expect(levelGifts(2)[1]).toMatchObject({ kind: 'unlock', what: 'decoration', id: 'flowers' });
     // The Seals come first. Level 5 also opens a fourth place on the orders board (tests/orders.test.ts).
     expect(levelGifts(5)[0]).toEqual({ kind: 'seals', count: SEALS_FIFTH_LEVEL });
-    expect(levelGifts(10)).toEqual([{ kind: 'seals', count: SEALS_FIFTH_LEVEL }]);
+    expect(levelGifts(1000)).toEqual([{ kind: 'seals', count: SEALS_FIFTH_LEVEL }]);
     expect(SEALS_FIFTH_LEVEL).toBeGreaterThan(SEALS_PER_LEVEL);
-    expect(giftWords(levelGifts(2))).toBe('1 Gold Seal');
-    expect(giftWords(levelGifts(10))).toBe('3 Gold Seals');
+    expect(giftWords(levelGifts(2))).toBe('1 Gold Seal and red flowers for the Decor shelf');
+    expect(giftWords(levelGifts(1000))).toBe('3 Gold Seals');
+    expect(giftWords(levelGifts(999))).toBe('1 Gold Seal');
     expect(giftWords(levelGifts(5))).toBe('3 Gold Seals and a fourth order on the board');
-    // What a level opens besides its Seals is a list. The orders board put the first entries in it (tests/orders.test.ts):
-    // every one is a kind of order or one more order on the board. A decoration or a recipe is one more entry.
+    // What a level opens besides its Seals is a list: a kind of order, one more order on the board, a decoration
+    // for the Decor shelf or a Workshop recipe (tests/orders.test.ts, tests/decor.test.ts). One more is one entry.
     for (const gifts of Object.values(LEVEL_UNLOCKS)) {
       for (const gift of gifts) {
         expect(gift.kind).toBe('unlock');
-        if (gift.kind === 'unlock') expect(['order', 'slot']).toContain(gift.what);
+        if (gift.kind === 'unlock') expect(['order', 'slot', 'decoration', 'recipe']).toContain(gift.what);
       }
     }
-    expect(LEVEL_UNLOCKS[2]).toBeUndefined();
+    expect(LEVEL_UNLOCKS[999]).toBeUndefined();
     const list = LEVEL_UNLOCKS as Record<number, unknown>;
-    list[2] = [{ kind: 'unlock', what: 'decoration', id: 'testBench', name: 'a garden bench' }];
+    list[999] = [{ kind: 'unlock', what: 'decoration', id: 'testBench', name: 'a garden bench' }];
     try {
-      expect(giftWords(levelGifts(2))).toBe('1 Gold Seal and a garden bench');
-      expect(levelView(model())!.next).toBe('Level 2 gives 1 Gold Seal and a garden bench.');
+      expect(giftWords(levelGifts(999))).toBe('1 Gold Seal and a garden bench');
     } finally {
-      delete list[2];
+      delete list[999];
     }
+    expect(levelView(model())!.next).toBe(`Level 2 gives ${giftWords(levelGifts(2))}.`);
   });
 
   it('only rises, pays each level once, and says several at once in one line', () => {
@@ -170,7 +173,7 @@ describe('the University Level', () => {
     gainXp(state, 1, log);
     expect(state.daily.level).toBe(2);
     expect(state.daily.seals).toBe(SEALS_PER_LEVEL);
-    expect(log.map((entry) => entry.text)).toEqual(['Test University reaches University Level 2: 1 Gold Seal.']);
+    expect(log.map((entry) => entry.text)).toEqual([`Test University reaches University Level 2: ${giftWords(levelGifts(2))}.`]);
     expect(log[0]!.kind).toBe('level');
     // Nothing takes experience away.
     gainXp(state, -500, log);
@@ -598,7 +601,7 @@ describe('the Level page and the paper', () => {
     const view = levelView(state)!;
     expect(view.title).toBe('University Level 1');
     expect(view.line).toBe(`0 of ${LEVEL_FIRST} experience to Level 2`);
-    expect(view.next).toBe('Level 2 gives 1 Gold Seal.');
+    expect(view.next).toBe(`Level 2 gives ${giftWords(levelGifts(2))}.`);
     expect(view.seals).toBe(0);
     expect(view.waits).toEqual([]);
     // Every source is listed, the ones that happen by themselves first, each with what it pays.
@@ -630,7 +633,7 @@ describe('the Level page and the paper', () => {
     const state = model();
     const one: LogEntry[] = [];
     gainXp(state, LEVEL_FIRST, one);
-    expect(awayLines(one, facts(state)).map((line) => line.text)).toContain('Test University reaches University Level 2: 1 Gold Seal.');
+    expect(awayLines(one, facts(state)).map((line) => line.text)).toContain(`Test University reaches University Level 2: ${giftWords(levelGifts(2))}.`);
     gainXp(state, levelCost(2), one);
     const lines = awayLines(one, facts(state)).map((line) => line.text);
     expect(lines).toContain(`2 levels up. Test University reaches University Level 3: ${giftWords(levelGifts(3))}.`);
@@ -668,6 +671,8 @@ describe('a save from version 17', () => {
     expected.daily = newDaily(file.state.clock.tick);
     // Version 19 adds the orders board and its stream of numbers (tests/orders.test.ts has those).
     expected.orders = state.orders;
+    // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
+    expected.decor = state.decor;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -735,9 +740,9 @@ describe('a save from version 17', () => {
   });
 
   it('is told what is new, once', () => {
-    // Its own, and the one version 19 added after it (tests/orders.test.ts).
+    // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(2);
+    expect(notes).toHaveLength(3);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

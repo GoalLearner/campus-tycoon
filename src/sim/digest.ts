@@ -142,6 +142,9 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   if (fresh.length === 1) lines.push(fresh[0]!.text);
   else if (fresh.length > 1) lines.push(`${fresh.length} new orders are on the board.`);
 
+  // The Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6): something finished is a line each, and so is a set opening.
+  for (const entry of log) if (entry.kind === 'craft' || entry.kind === 'season') lines.push(entry.text);
+
   // A policy turned on or off: one line each (DESIGN.md 41.7).
   for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
 

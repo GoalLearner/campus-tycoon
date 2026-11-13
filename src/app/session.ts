@@ -26,9 +26,21 @@ class Session {
   placing: PlacedType | null = null;
   /** Where its top corner would go. null until the player taps the map. */
   ghost: { x: number; y: number } | null = null;
+  /** While `placing` is 'decor': which decoration, an id from the list of them. */
+  decor: string | null = null;
+  /** A decoration on the map that is being moved: its index in the map's list. null when one is being placed new. */
+  moving: number | null = null;
+  /** Turned to run the other way, for a decoration that can be. */
+  decorFlip = false;
+  /** True while photo mode has put the bars away (DESIGN.md 42.5). */
+  photo = false;
+  /** Set by the map once it is drawing: a picture of the campus as it is drawn now. */
+  snap: (() => Promise<HTMLImageElement>) | null = null;
   selected: { x: number; y: number } | null = null;
   /** The student whose card is open. */
   student: StudentRef | null = null;
+  /** The figure that student is drawn as on the map now, when it is not their everyday one. null for the everyday one. */
+  studentLook: number | null = null;
   /** Someone who is not a student whose card is open: a professor, a worker, a visitor. Never both at once. */
   person: PersonRef | null = null;
   /** True while the camera keeps that student in view. */
@@ -62,6 +74,9 @@ class Session {
     this.clearing = null;
     this.placing = null;
     this.ghost = null;
+    this.decor = null;
+    this.moving = null;
+    this.decorFlip = false;
     this.overlay = null;
     if (tool !== 'look') {
       this.selected = null;
@@ -72,10 +87,30 @@ class Session {
     this.emit();
   }
 
+  /** Begin placing a decoration from the Build menu, or moving one that is on the map. */
+  startDecor(id: string, moving: number | null = null, flip = false): void {
+    this.startPlacing('decor');
+    this.decor = id;
+    this.moving = moving;
+    this.decorFlip = flip;
+    this.emit();
+  }
+
+  /** Photo mode: the bars go away, and come back when it is left. */
+  setPhoto(on: boolean): void {
+    if (this.photo === on) return;
+    if (on) this.setTool('look');
+    this.photo = on;
+    this.emit();
+  }
+
   /** Begin placing a building picked from the Build menu. */
   startPlacing(type: PlacedType): void {
     this.tool = 'place';
     this.placing = type;
+    this.decor = null;
+    this.moving = null;
+    this.decorFlip = false;
     this.ghost = null;
     this.preview = null;
     this.selected = null;
@@ -129,8 +164,10 @@ class Session {
     this.emit();
   }
 
-  openStudent(ref: StudentRef): void {
+  /** `look` is the figure they were drawn as when tapped, where that is not their everyday one: a player in the kit. */
+  openStudent(ref: StudentRef, look: number | null = null): void {
     this.student = ref;
+    this.studentLook = look;
     this.person = null;
     this.following = false;
     this.doing = null;
@@ -163,10 +200,11 @@ class Session {
     this.emit();
   }
 
-  /** Told by the map, which is where the walker is. */
-  setDoing(doing: string | null): void {
-    if (this.doing === doing) return;
+  /** Told by the map, which is where the student is: what they are doing, and the figure they are drawn as if not their everyday one. */
+  setDoing(doing: string | null, look: number | null = null): void {
+    if (this.doing === doing && this.studentLook === look) return;
     this.doing = doing;
+    this.studentLook = look;
     this.emit();
   }
 

@@ -17,6 +17,7 @@ import { PLACED } from './config/placed';
 import { mealLoads } from './systems/food';
 import { backPay, newDaily } from './systems/daily';
 import { firstOrders, newOrders } from './systems/orders';
+import { newDecor } from './systems/decor';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -25,7 +26,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 19;
+export const SAVE_VERSION = 20;
 
 export interface SaveFile {
   v: number;
@@ -290,6 +291,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 20: decorations and the Workshop (DESIGN.md 42.5 and 42.6). An empty storage and one idle bench.
+  // Nothing on the map changes, and nothing is asked of the player.
+  19: (state) => {
+    if (typeof state.decor !== 'object' || state.decor === null) (state as unknown as GameState).decor = newDecor();
+    return state;
+  },
 };
 
 /**
@@ -355,7 +362,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

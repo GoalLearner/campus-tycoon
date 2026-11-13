@@ -1,3 +1,4 @@
+import { stayingWords } from '../app/activityPeople';
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { studentCard, studentFigure, studentKey, type GameState } from '../sim';
@@ -59,6 +60,9 @@ const SEATS: Record<string, { a: string; at: Record<DayPeriod, string> }> = {
 
 /** A walker on the way to, or at, a named place such as the Dining hall. */
 function doingText(doing: string): string {
+  // Standing in a game, a line or a small scene: the map has the words already.
+  const staying = stayingWords(doing);
+  if (staying) return staying;
   // A bench or a picnic table: what they are doing there depends on the time of day.
   const seat = SEATS[doing.slice(8)];
   if (seat && doing.startsWith('toPlace:')) return `Looking for ${seat.a}`;
@@ -212,7 +216,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     const people = atlas?.people;
     if (atlas && people) {
       const looks = Math.min(people.looks, people.crowd ?? people.looks);
-      const sprite = `person.${studentFigure(state, ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`;
+      // As they are drawn on the map now: a player on a court is in the kit.
+      const sprite = `person.${session.studentLook ?? studentFigure(state, ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`;
       if (sprite !== shownLook) {
         shownLook = sprite;
         portrait.classList.toggle('missing', !drawSprite(portrait, atlas, sprite));
@@ -223,6 +228,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     const outside = session.doing !== null;
     setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : 'Out of sight');
     follow.disabled = !outside;
+    // Someone staying put has nowhere to be followed to.
+    follow.hidden = stayingWords(session.doing) !== null;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
 
