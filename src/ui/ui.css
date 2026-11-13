@@ -2791,3 +2791,22 @@ button.students {
   height: 44px;
   transform: translate(-50%, -50%);
 }
+
+/* The Account page (DESIGN.md 48). Only the dev server shows it: cloud saves are switched off in every build. */
+.card .apple-sign-in {
+  background: #000;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.card .account-status {
+  font-size: 13.5px;
+}
+.card .account-head {
+  margin: 6px 0 0;
+  font-size: 15px;
+}
+.account-campuses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

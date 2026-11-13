@@ -5316,7 +5316,7 @@ One stop each, each verified and played before the next.
 3. Decorating, the workshop and photo mode. A sheet of art for him first.
 4. The daily gift, the goals for the year, the calendar orders and one seasonal set.
 5. The big builds of section 41: the three Flagship buildings and the three landmarks. A sheet of art for him first.
-6. Accounts and cloud saves.
+6. Accounts and cloud saves. Built switched off, code and local tests only: section 48.
 7. The store. It needs his Paid Apps Agreement with Apple first.
 
 Seals are earned and spent from the first stop, so the economy is tuned before any money is involved. After launch: leaderboards and visits, the research labs, the pass, conferences.
@@ -6284,3 +6284,85 @@ Worth knowing: Low costs about what Normal does when the phone is slow. The walk
 | Fronts that face away, and the far edge's grey side, on a turned view (43.4) | The packs draw each building from one side |
 | No bed, nobody sitting or lying down, walls from a stable (46.4) | New art: a commission |
 | Things in motion at the moment of a turn (43.4) | A driver at a door keeps its depth for a moment. Seldom seen, and fixing it means tracking every vehicle's stop through a turn |
+
+## 48. Accounts and cloud saves, as built and switched off
+
+Stop 6 of 42.11, built on 2026-11-13 on the main session's brief, inside the queue the owner approved that night. Because it touches his accounts, it is code and local tests only, and switched off: nothing was deployed or created on his Cloudflare account, no key, token or secret of his was made or entered, and `ios/` was not touched. Every build of the game leaves it out, so his phone build is unchanged. What he does to switch it on is in 48.4, each step his. Nothing in `src/sim` changed, the save has no new version, and the long run's tables are the same.
+
+### 48.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The switch | Off in every build. Only the dev server loads the sync, the Account page and the choice between two campuses, and only when it is given a server's address (`&cloud=` on the dev page, or `VITE_CLOUD_URL`). A production build was searched: none of it is in. The play copy, which runs on the dev server, shows nothing without the address | `src/main.ts`, `CLOUD_SAVES_FLAG` and `cloudAddress` in `src/app/cloud.ts`, `src/ui/ui.ts` |
+| The server | A Cloudflare Worker. D1 holds the accounts, the sessions and one row a campus. R2 holds each campus's latest save, gzipped, under the account and the campus. The server never opens a save and never simulates a game | `server/src/index.ts`, `server/migrations/0001_init.sql`, `server/wrangler.toml` |
+| Its routes | `POST /v1/sign-in` (an Apple identity token in, a session out), `POST /v1/sign-out`, `GET /v1/campuses` (the account's campuses), `PUT /v1/campuses/:id` (upload), `GET /v1/campuses/:id` (the latest), `DELETE /v1/account` (the account and everything in it), `POST /v1/apple/notices` (Apple's notice that a player stopped using Sign in with Apple) | `route` |
+| What is kept about a player | Apple's user ID for the app, and nothing else: no name, and no email even when Apple sends one. A session is a random token the phone keeps; the server keeps only its hash. A session lasts a year | `accounts`, `sessions` |
+| Signing in | Sign in with Apple, and nothing else. The server checks the identity token against Apple's public keys, fetched at run time from Apple and kept an hour (fetched again at once for a key not seen before): the signature, that Apple issued it, that it is for the app's bundle ID, that it has not expired, and the nonce when the phone asked for one | `checkAppleToken` in `server/src/apple.ts`, `server/src/jwt.ts` |
+| Apple's key | With the Sign in with Apple key given to the server as secrets (48.4), signing in also trades Apple's one-time code for a refresh token, and deleting the account revokes it, as Apple asks of apps that use Sign in with Apple. Without the key, everything else works, and deletion says there was nothing to revoke | `refreshTokenFor`, `revoke` |
+| An upload | The whole save, as the Export button makes it (the game only: an unread away list stays on the phone), gzipped, with the revision it was made from and a small header: the school's name, its level, its rank, its tick and its own clock. The server stamps it with its own time, writes the save, then writes the row only if the revision is still the one the phone had, so two phones at once cannot both win. Only the latest save is kept. A save over 2 MB gzipped, or not gzip, is refused; an account keeps up to 20 campuses | `upload` |
+| When the phone uploads | After a save lands on the phone, when signed in and online: at once when the app is being put away, and otherwise at most once every ten minutes. Offline the game plays as before; the next save after it is back goes up | `CloudSync.afterSave` in `src/app/cloud.ts`, `onSaved` in `src/app/store.ts` |
+| Another phone saved since | Checked when the game opens and at every upload. Nothing is overwritten and nothing is merged: a choice opens by itself, "Two saves of Larp University", with each campus's level, rank and time ("played 5 m ago", "saved 2 h ago"). Keep this iPhone's: it goes up over the other. Keep the other: it comes down and is loaded in place. It cannot be closed without choosing; nothing uploads until the player has chosen | `check`, `keepHere`, `keepThere`, `openConflict` in `src/ui/accountUi.ts` |
+| Catch-up | On the phone, from the save's own clock, as before. A campus that comes down is opened as a save on the phone is: caught up to now | `adoptCloudSave` in `src/app/store.ts` |
+| The clock rules (42.9) | The server keeps, for each campus, how far the save's own clock stands ahead of what real time allows: the larger of how far it is ahead of the server's clock now, and the lead it had at its last upload plus however much further its clock has gone since than real time has. A lead of more than ten minutes marks the campus until real time catches up with it. Nothing is banned: a marked campus syncs as any other, and would only be left off the boards | `clockMark` in `server/src/clock.ts`, `lead_ms`, `ahead_until` |
+| The Account page | Menu, Account. Signed out: one line and "Sign in with Apple". Signed in: when it last synced, the account's campuses with each one's level, rank and time (tap another twice to play it here; this one goes up first), Sync now, Sign out, and Delete account (tap twice: every campus in the account goes, and the campus on this iPhone stays) | `openAccountPage` |
+| A new campus | A new game, or a save file loaded, is a campus of its own on the account. It never overwrites the last one | `onNewCampus` |
+| What the phone remembers | The session, which campus on the account this phone's save is, and its revision, in the phone's own storage. Nothing is added to the save, so the save keeps its version | `localKeyValue`, `Remembered` |
+| Signing in on the iPhone | Written against the Sign in with Apple plugin's interface and not run: adding the plugin changes `ios/`, which is the owner's step. Until then it finds no plugin and does nothing | `appleSignIn` in `src/app/signIn.ts` |
+| A server on this computer | `node server/dev.mjs` runs the Worker on Miniflare with a local database and bucket (in `server/.wrangler/`, git-ignored) and a stand-in for Apple that signs test tokens with a key made each time it starts. The dev page then takes `?cloud=http://127.0.0.1:8790&fakeApple=http://127.0.0.1:8791` | `server/dev.mjs`, `devSignIn` |
+| Bought Seals on the server (42.9) | Not built: they come with the store, stop 7 | |
+
+### 48.2 Measured
+
+| Measured | Result |
+|---|---|
+| The server's tests | 12, on Miniflare with test keys standing in for Apple's: signing in, and the same player again; eight kinds of failed token (signed by someone else, for another app, not from Apple, expired, issued in the future, a key Apple never published, no user, not a token), each refused for its own reason, and a wrong nonce; every route refused without a session; an upload, the list and a download of the same bytes, stamped with the server's time; a phone that had not seen the latest told so, and nothing changed; only the latest save kept; one account kept from another's campuses; what is not a save refused; a campus whose clock runs ahead marked and still kept; an account deleted with everything in it, and Apple's refresh token revoked; an account deleted on Apple's notice, and a forged notice refused; signing out; the app's cross-origin requests; and the same without Apple's key |
+| The clock rules | 5 tests: a week of honest play, a phone up to half an hour fast or slow, and a phone put away for days are never marked; a save ahead of the server, a day gained between two uploads, and a phone whose clock was a day behind put right are marked, until real time catches up |
+| The phone's side | 7 tests, two phones on one account against the real server: nothing goes up before signing in or while offline, a save waits up to ten minutes, putting the app away sends it; the save comes back byte for byte; another phone's upload makes a choice with each one's level, rank and time, nothing goes up while the player decides, each choice keeps what it says; a new game is a campus of its own; deleting the account from one phone signs the other out at its next upload, and each keeps its campus; the switch is off outside the dev server |
+| The size of an upload | A model campus's save is 251,136 bytes, and 18,033 bytes gzipped (42.9 estimated 250 KB and 17 KB) |
+| How long a sync takes here | Making the save, gzipping it and uploading it to the Worker, which writes R2 and D1: 16.5 ms at the median of ten, 28.8 ms at most. A download: 5.4 ms at the median. On this PC, with the server on Miniflare: a phone's trip to Cloudflare is not in it |
+| In the app's browser at 390 wide | Against the server on this PC: signed in, the campus went up and was listed; a second phone's upload made the choice open by itself; the other campus was kept and loaded; the account was deleted and the campus stayed on the phone |
+| A production build | Searched for the sync, the Account page and Apple's addresses: none of it is in |
+| The long run | Every table the same as the phone polish run |
+
+**What it would cost**, checked on Cloudflare's own pages on 2026-11-13. The free plan: Workers, 100,000 requests a day and 10 ms of CPU a request; D1, 5 million rows read and 100,000 rows written a day, 5 GB in all and 500 MB a database; R2, 10 GB-month of storage, a million writes and lists ("Class A") and ten million reads ("Class B") a month, with deleting and data out free. An upload is one R2 write, one row written and three read in D1, and one request. A player who plays an hour a day makes about ten uploads, so the first limit met is R2's million writes a month: about 3,300 such players a day, for nothing. Their saves take about 60 MB. Taking R2 asks for a subscription at checkout; Cloudflare's page does not say whether that needs a card. Nothing is to be paid for without asking him.
+
+### 48.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Saves kept | The latest of each campus | Every revision, which grows without end; a lost save is on the phone, or is the other campus of a choice |
+| Level, rank and clock on the record | From the small header the phone sends with the save | The server opening every save, which costs CPU against the free plan's 10 ms a request. The boards, later, should read their numbers from the saves themselves, as 42.9 says |
+| How often a phone uploads | Every ten minutes at most while open, and at once when put away | Every save (once a minute), ten times the writes |
+| The session | The server's own, for a year, only its hash kept | Apple's identity token each time, which expires within minutes and would send the player back to Apple |
+| What is kept about a player | Apple's user ID alone | The email Apple may send, which nothing needs |
+| The clock rules | A lead carried from upload to upload until real time catches up, with ten minutes' slack | A mark on the one upload alone, which a save could shake off at its next |
+| Choosing between two campuses | It opens by itself, and cannot be closed without a choice | A note to settle later, while uploads wait unseen |
+| Playing another campus here | This one goes up first, then the other comes down | Replacing it at once, which would lose up to ten minutes |
+| A new game or a loaded file | A campus of its own on the account | Replacing the account's campus |
+| Deleting the account | Everything in it goes even if Apple's revoke fails; the campus on the phone stays | Stopping when Apple fails, which leaves a player who asked for deletion with an account |
+| Who may call the server | Any web page, as sessions are tokens and not cookies | Only the app's own origin, which differs between the web build and the iPhone |
+| The tests | The real Worker on Miniflare, which wrangler already brought (pinned as a dev dependency with esbuild) | Fakes of D1 and R2, which test less |
+
+### 48.4 For him, to switch it on later
+
+Each step is his, or mine on his word. None is needed for the game as it is.
+
+1. **Apple: the capability.** In his Apple Developer account, Certificates, Identifiers & Profiles, Identifiers: turn on Sign in with Apple for the App ID `com.goallearner.campustycoon` (an Account Holder or Admin can). Then a new App Store provisioning profile, as the old one does not carry it.
+2. **Apple: the key.** Keys: a new key with Sign in with Apple, tied to that App ID. Apple lets him download the `.p8` file once only. Note its Key ID and his Team ID. The key goes to the server as secrets, never into the repository: `npx wrangler secret put APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` (the whole `.p8` file).
+3. **Cloudflare.** Turn on R2 (a checkout step), then `npx wrangler r2 bucket create campus-tycoon-saves`, `npx wrangler d1 create campus-tycoon-cloud` (its ID goes in `server/wrangler.toml` in place of `SET-WHEN-CREATED`), `npx wrangler d1 migrations apply campus-tycoon-cloud --remote`, the three secrets, and `npx wrangler deploy` from `server/`. The Worker's address is the game's `VITE_CLOUD_URL`.
+4. **Apple: the notices.** In the App ID's Sign in with Apple settings, the server-to-server notification address: `<the Worker's address>/v1/apple/notices`.
+5. **The app.** Add the Sign in with Apple plugin (`@capacitor-community/apple-sign-in`) and run the iOS sync, which changes `ios/`; turn on the capability in Xcode; build with `VITE_CLOUD_URL`; and turn the switch on in the game's code. That is a stop of its own, tried on his iPhone first.
+6. **The App Store.** The privacy answers gain a user ID, linked to the player, for the app's own use. Deleting the account inside the app, which the App Store asks for, is built.
+
+### 48.5 Rough
+
+| Rough | Why |
+|---|---|
+| Never run on a phone or on Cloudflare | Code and local tests only, as asked. Sign in with Apple on the iPhone is written and not run |
+| The session token is kept in the web view's storage | The iPhone's keychain would be safer; it comes with the plugin, at switching on |
+| Apple's refresh token is kept as written | Keeping it encrypted needs one more secret of his |
+| An upload made as the app is put away may not finish | The phone can stop it. The next save after opening sends it |
+| The record's level and rank come from the phone | Enough to show a choice; the boards will read the saves themselves |
+| A choice that opens while the paper is up takes its place | The paper waits, unread, for the next time the app opens |
+| A 409 shows in the browser's console | The browser's own line for an answer of "another phone saved since" |
+| No boards yet | The clock marks are kept for them |

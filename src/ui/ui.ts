@@ -706,6 +706,15 @@ export function mountUi(root: HTMLElement): void {
     modalOpen = true;
   }
 
+  // Cloud saves (DESIGN.md 48) are switched off in every build. Only the dev server loads the Account page, and only
+  // when the sync has a server to talk to.
+  let account: { open: () => void } | null = null;
+  if (import.meta.env.DEV) {
+    void import('./accountUi').then((module) => {
+      account = module.mountAccount(openModal, pushToast);
+    });
+  }
+
   /** A labelled choice from a short list, one row. */
   function pick(label: string, select: HTMLSelectElement): HTMLElement {
     const row = el('label', 'pick');
@@ -848,6 +857,15 @@ export function mountUi(root: HTMLElement): void {
           });
         }),
       );
+      if (store.visiting === null && account !== null) {
+        const page = account;
+        card.append(
+          button('Account', 'wide', () => {
+            close();
+            page.open();
+          }),
+        );
+      }
       // Day and night follow the player's own clock. This shows the campus in daylight at any hour.
       const daylight = button('', 'wide', () => {
         setAlwaysDaylight(!alwaysDaylight());

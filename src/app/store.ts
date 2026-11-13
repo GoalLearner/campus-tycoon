@@ -36,11 +36,15 @@ export type { AwayReport } from './away';
 
 type Listener = () => void;
 type LogListener = (entries: LogEntry[]) => void;
+/** Told after each save lands on the phone. `puttingAway` when the app is being put away. */
+type SavedListener = (puttingAway: boolean) => void;
 
 export class Store {
   private current: GameState | null = null;
   private listeners = new Set<Listener>();
   private logListeners = new Set<LogListener>();
+  private savedListeners = new Set<SavedListener>();
+  private newCampusListeners = new Set<Listener>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private lastSavedTick = -1;
@@ -97,6 +101,22 @@ export class Store {
   onLive(listener: LogListener): () => void {
     this.logListeners.add(listener);
     return () => this.logListeners.delete(listener);
+  }
+
+  /** Hear after each save lands on the phone. Cloud saves upload from here (DESIGN.md 48). */
+  onSaved(listener: SavedListener): () => void {
+    this.savedListeners.add(listener);
+    return () => this.savedListeners.delete(listener);
+  }
+
+  /** Hear when the phone begins another campus: a new game, a save file loaded, or the game deleted. */
+  onNewCampus(listener: Listener): () => void {
+    this.newCampusListeners.add(listener);
+    return () => this.newCampusListeners.delete(listener);
+  }
+
+  private newCampus(): void {
+    for (const listener of this.newCampusListeners) listener();
   }
 
   /** Load the saved game, falling back to the backup. Returns whether a game was loaded. */
@@ -219,6 +239,7 @@ export class Store {
     this.lastExportAt = null;
     this.recent = [];
     this.loadProblem = null;
+    this.newCampus();
     void requestPersistentStorage();
     this.saveNow();
     this.emit();
@@ -253,8 +274,31 @@ export class Store {
     // The file that was just loaded is itself a backup, as old as the day it was made.
     this.lastExportAt = result.savedAt > 0 ? result.savedAt : null;
     this.recent = [];
+    this.newCampus();
     this.catchUp();
     this.saveNow();
+    this.emit();
+    return null;
+  }
+
+  /**
+   * Put a campus from the cloud in place of this phone's (DESIGN.md 48): the player chose it. It is caught up from
+   * its own clock, as a save opened on the phone is. Returns an error message, or null on success.
+   */
+  adoptCloudSave(text: string): string | null {
+    const result = parseSave(text);
+    if (!result.ok) return result.reason;
+    this.current = result.state;
+    this.ephemeral = false;
+    this.visiting = null;
+    this.upgradeNotes = result.migratedFrom !== null ? upgradeNotes(result.migratedFrom) : [];
+    clock.follow(result.state.clock.lastSimulatedAt);
+    this.chooseAnchor();
+    this.away = null;
+    this.welcome = false;
+    this.recent = [];
+    this.catchUp();
+    void this.flush(false, false);
     this.emit();
     return null;
   }
@@ -265,6 +309,7 @@ export class Store {
     this.welcome = false;
     this.lastExportAt = null;
     this.recent = [];
+    this.newCampus();
     await clearSaves();
     this.emit();
   }
@@ -353,12 +398,15 @@ export class Store {
     this.saveTimer = setTimeout(() => this.saveNow(), delayMs);
   }
 
-  saveNow(): void {
-    void this.flush();
+  saveNow(puttingAway = false): void {
+    void this.flush(puttingAway);
   }
 
-  /** Write the save and wait for it to land. Used before the page reloads for an update. */
-  async flush(): Promise<void> {
+  /**
+   * Write the save and wait for it to land. Used before the page reloads for an update. `puttingAway` when the app
+   * is being put away; `tell` false for a save that came from the cloud, which has nothing new to send back.
+   */
+  async flush(puttingAway = false, tell = true): Promise<void> {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
@@ -370,6 +418,7 @@ export class Store {
     } catch {
       // Storage can fail in private browsing. The game keeps running in memory.
     }
+    if (tell) for (const listener of this.savedListeners) listener(puttingAway);
   }
 
   /** Start the once-a-second heartbeat and save whenever the app is put away. */
@@ -377,10 +426,10 @@ export class Store {
     if (this.heartbeat) return;
     this.heartbeat = setInterval(() => this.catchUp(), 1000);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') this.saveNow();
+      if (document.visibilityState === 'hidden') this.saveNow(true);
       else this.catchUp();
     });
-    window.addEventListener('pagehide', () => this.saveNow());
+    window.addEventListener('pagehide', () => this.saveNow(true));
   }
 }
 
