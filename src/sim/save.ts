@@ -21,6 +21,7 @@ import { newDecor } from './systems/decor';
 import { newRhythm } from './systems/rhythm';
 import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
+import { newTraditions } from './systems/traditions';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -29,7 +30,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 23;
+export const SAVE_VERSION = 24;
 
 export interface SaveFile {
   v: number;
@@ -320,6 +321,17 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof state.labs !== 'object' || state.labs === null) (state as unknown as GameState).labs = newLabs();
     return state;
   },
+  // Version 24: traditions (DESIGN.md 50). None chosen. A game that has had its first commencement has its first place
+  // open, and is told so at the start of its next day; its eras open the others.
+  23: (state) => {
+    if (typeof state.traditions !== 'object' || state.traditions === null) {
+      const traditions = newTraditions();
+      const classes = Array.isArray(state.classes) ? (state.classes as Array<{ finishedOnTime?: number; finishedLate?: number }>) : [];
+      traditions.began = classes.some((record) => (record.finishedOnTime ?? 0) + (record.finishedLate ?? 0) > 0);
+      (state as unknown as GameState).traditions = traditions;
+    }
+    return state;
+  },
 };
 
 /**
@@ -385,7 +397,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

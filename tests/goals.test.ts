@@ -438,6 +438,7 @@ describe('the main street', () => {
     expected.rhythm = loaded.state.rhythm;
     expected.bigBuilds = loaded.state.bigBuilds;
     expected.labs = loaded.state.labs;
+    expected.traditions = loaded.state.traditions;
     expected.rng.orders = loaded.state.rng.orders;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();

@@ -698,6 +698,7 @@ describe('a save from version 16', () => {
     expected.rhythm = state.rhythm;
     expected.bigBuilds = state.bigBuilds;
     expected.labs = state.labs;
+    expected.traditions = state.traditions;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -743,7 +744,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(7);
+    expect(notes).toHaveLength(8);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

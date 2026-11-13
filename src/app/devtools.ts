@@ -1,4 +1,4 @@
-import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, readyToCollect, sampleStudents } from '../sim';
+import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { shownHour } from './daylight';
@@ -902,6 +902,24 @@ export function installDevTools(): void {
         });
         store.adopt(set, { ephemeral: true });
       }
+    }
+    // &traditions=fightSong,lanternWalk has those chosen, each kept &kept=3 times, with their days to come
+    // (DESIGN.md 50); &tradplaces=1 leaves a place open to choose one.
+    if (params.has('traditions') && store.hasGame) {
+      const set = structuredClone(store.state);
+      set.traditions.began = true;
+      const kept = Number(params.get('kept') ?? 3);
+      const year = set.clock.week.year;
+      for (const id of (params.get('traditions') ?? '').split(',').filter((one) => traditionSpec(one))) {
+        const spec = traditionSpec(id)!;
+        set.traditions.chosen.push({ id, chosen: set.clock.tick, kept, years: Array.from({ length: kept }, (_, n) => [year - kept + n, 1] as [number, number]), warned: 0 });
+        const next = spec.day === 'rivalryGame' ? null : nextDay(set, spec.day);
+        if (next) addTimer(set, next.at, 'tradition', set.traditions.chosen.length - 1);
+      }
+      set.traditions.slots = set.traditions.chosen.length;
+      // The goals' eras give the places: a dev page that wants one more open says so.
+      if (params.has('tradplaces')) set.goals!.reached.push({ ladder: 'era', n: set.goals!.reached.filter((one) => one.ladder === 'era').length + 1, year });
+      store.adopt(set, { ephemeral: true });
     }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);

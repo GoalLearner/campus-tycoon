@@ -1,5 +1,6 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
+import { chooseTradition } from './systems/traditions';
 import { scaleOf } from './scale';
 import { placedCost } from './config/placed';
 import { PLACED } from './config/placed';
@@ -72,6 +73,8 @@ export type Action =
   /** Collect what one building holds, by its key, or everything whose marker shows. */
   | { type: 'collect'; key: string }
   | { type: 'collectAll' }
+  /** Choose a tradition for an open place (DESIGN.md 50). */
+  | { type: 'chooseTradition'; id: string }
   /** Finish a wait now, for its price in Gold Seals: 'stadium', 'faculty', or 'policy:' and a policy's id. */
   | { type: 'finish'; wait: string }
   /** Look at the orders board: new orders are given what they ask and their clocks start. */
@@ -682,6 +685,11 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'buySecondBuilder': {
       const next = structuredClone(state);
       const problem = buySecondBuilder(next);
+      return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
+    case 'chooseTradition': {
+      const next = structuredClone(state);
+      const problem = chooseTradition(next, action.id);
       return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
     }
   }

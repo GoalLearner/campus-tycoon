@@ -301,7 +301,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild' | 'discovery';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild' | 'discovery' | 'tradition';
 
 export interface Timer {
   due: number;
@@ -623,6 +623,36 @@ export interface GameState {
   bigBuilds: BigBuilds;
   /** The research labs (DESIGN.md 49): what each holds, and every discovery made. The labs themselves are on the map. */
   labs: Labs;
+  /** Traditions (DESIGN.md 50): those chosen, and how often each has been kept. */
+  traditions: Traditions;
+}
+
+/** A tradition a campus chose (DESIGN.md 50). */
+export interface KeptTradition {
+  /** An id from `TRADITIONS`. */
+  id: string;
+  /** The tick it was chosen. */
+  chosen: number;
+  /** The times it has been kept. What it lifts grows with it. It never falls. */
+  kept: number;
+  /** Every school year its day came since it was chosen: the year, and 1 when kept or 0 when not. The record book. */
+  years: Array<[number, number]>;
+  /** The school year it was last said to be at risk, so it is said once. 0 when never. */
+  warned: number;
+}
+
+/** Traditions (DESIGN.md 50). */
+export interface Traditions {
+  /** True once the first commencement has passed: it opens the first place for a tradition. */
+  began: boolean;
+  /** Places open when last told, so a new one is told once. */
+  slots: number;
+  /** In the order chosen. A choice is for good. */
+  chosen: KeptTradition[];
+  /** True while the campus holds the Rivalry Trophy: it won the last rivalry game. */
+  trophy: boolean;
+  /** Lines waiting from an action, said on the next tick. */
+  news: string[];
 }
 
 /** One discovery a research lab made (DESIGN.md 49). Kept for good, even when its lab is cleared. */
@@ -1019,6 +1049,7 @@ export type LogKind =
   | 'rhythm'
   | 'bigBuild'
   | 'lab'
+  | 'tradition'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

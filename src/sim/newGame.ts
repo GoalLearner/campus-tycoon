@@ -1,5 +1,6 @@
 import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
+import { newTraditions } from './systems/traditions';
 import { newInbox } from './systems/inbox';
 import { stageSpec } from './config/buildings';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
@@ -217,6 +218,7 @@ export function newGame(opts: NewGameOptions): GameState {
     rhythm: newRhythm(),
     bigBuilds: newBigBuilds(),
     labs: newLabs(),
+    traditions: newTraditions(),
   };
   firstOrders(state);
   startFootball(state, 1);

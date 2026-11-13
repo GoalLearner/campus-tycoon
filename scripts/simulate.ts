@@ -94,6 +94,10 @@ import {
   bigBuildOf,
   LABS,
   LAB_CASH_SHARE,
+  TRADITIONS,
+  traditionShare,
+  traditionSlots,
+  CAUSE_NAMES,
   ORDER_CASH_YEAR,
   labOf,
   placedCost,
@@ -134,6 +138,8 @@ if (args.includes('--no-decor')) botOptions.decor = false;
 if (args.includes('--no-big-builds')) botOptions.bigBuilds = false;
 // --no-labs: no research lab is built (DESIGN.md 49).
 if (args.includes('--no-labs')) botOptions.labs = false;
+// --no-traditions: no tradition is chosen (DESIGN.md 50).
+if (args.includes('--no-traditions')) botOptions.traditions = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -1192,8 +1198,10 @@ function assertModelCampus(seed: number): void {
   botOptions.orders = false;
   botOptions.decor = false;
   botOptions.labs = false;
+  botOptions.traditions = false;
   const bare = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
   botOptions.labs = !args.includes('--no-labs');
+  botOptions.traditions = !args.includes('--no-traditions');
   botOptions.policies = !args.includes('--no-policies');
   botOptions.daily = !args.includes('--no-daily');
   botOptions.orders = !args.includes('--no-orders');
@@ -1566,6 +1574,51 @@ function assertModelCampus(seed: number): void {
       "the labs' grants come out of the shared yearly allowance, and never take more than their share of it",
       runs.every((run) => years(run).every((year) => (run.seen.labPaid[year] ?? 0) <= LAB_CASH_SHARE * allowance(run) + 1 && (run.seen.allowancePaid[year] ?? 0) <= allowance(run) + 1)),
       runs.map((run) => `${run.style} ${run.seed}: labs ${dollarsShort(Math.max(0, ...years(run).map((year) => run.seen.labPaid[year] ?? 0)))} at most in a year, everyone ${dollarsShort(Math.max(0, ...years(run).map((year) => run.seen.allowancePaid[year] ?? 0)))}, of ${dollarsShort(allowance(run))}`).join('; '),
+    );
+  }
+
+  // Traditions (DESIGN.md 50): what each player chose and kept, what they lift at the end, and the same players with none.
+  {
+    const weekAt = (tick: number): number => Math.floor((tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
+    const short = (id: string): string => (TRADITIONS.find((spec) => spec.id === id)?.name ?? id).replace('Rivalry ', '').replace('Homecoming ', '');
+    const liftWords = (state: GameState, id: string): string => {
+      const spec = TRADITIONS.find((one) => one.id === id)!;
+      const chosen = state.traditions.chosen.find((one) => one.id === id)!;
+      const share = traditionShare(state, chosen);
+      const lift = spec.lift;
+      return lift.kind === 'cause' ? `${CAUSE_NAMES[lift.cause]} +${(lift.points * share).toFixed(1)}` : lift.kind === 'exams' ? `finals Stress -${(lift.points * share).toFixed(1)}` : `crowd +${(lift.lift * share * 100).toFixed(1)}%`;
+    };
+    botOptions.traditions = false;
+    const noTradition = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
+    botOptions.traditions = !args.includes('--no-traditions');
+    const mine = runs.filter((run) => run.seed === seed);
+    console.log('TRADITIONS');
+    for (const run of runs) {
+      const chosen = run.final.traditions.chosen;
+      console.log(`${`${run.style} ${run.seed}`.padEnd(12)} places ${traditionSlots(run.final)}: ${chosen.map((one) => `${short(one.id)} (week ${weekAt(one.chosen)}) kept ${one.kept}, missed ${one.years.filter(([, kept]) => kept === 0).length}: ${liftWords(run.final, one.id)}`).join('; ') || 'none'}`);
+    }
+    console.log('');
+    console.log(`THE SAME PLAYERS, SEED ${seed}, WITH NO TRADITION`);
+    console.log(`${''.padEnd(34)}${mine.map((run) => `${run.style} trad.`.padStart(14)).join('')}${noTradition.map((run) => `${run.style} none`.padStart(14)).join('')}`);
+    const both = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${[...mine, ...noTradition].map((run) => cell(run).padStart(14)).join('')}`);
+    RANK_GOALS.forEach((goal, n) => both(`Top ${goal}`, (run) => weekOf(run.seen.rankWeeks[n]!)));
+    both('rank at the end', (run) => `No. ${run.final.field.rank}`);
+    both('happiness at the end', (run) => campusHappiness(run.final).base.toFixed(1));
+    both('kept of every $100 at the end', (run) => `$${budget(run.final).kept.toFixed(2)}`);
+    console.log('');
+
+    check(
+      'traditions open as designed: the first place at the first commencement and one with each era, four at most, and every one chosen is kept on its day',
+      runs.every((run) => {
+        const chosen = run.final.traditions.chosen;
+        return chosen.length <= 4 && chosen.length <= traditionSlots(run.final) && chosen.length >= 3 && chosen.every((one) => one.kept > 0);
+      }) && [...bare, ...noTradition].every((run) => run.final.traditions.chosen.length === 0),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.final.traditions.chosen.length} of ${traditionSlots(run.final)} places, kept ${run.final.traditions.chosen.map((one) => one.kept).join(', ')}`).join('; '),
+    );
+    check(
+      'a tradition not met costs nothing: that year does not count, and its count is the years it was kept',
+      runs.every((run) => run.final.traditions.chosen.every((one) => one.kept === one.years.filter(([, kept]) => kept === 1).length)),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.final.traditions.chosen.map((one) => `${one.years.filter(([, kept]) => kept === 1).length} kept, ${one.years.filter(([, kept]) => kept === 0).length} not`).join('; ')}`).join(' | '),
     );
   }
 
