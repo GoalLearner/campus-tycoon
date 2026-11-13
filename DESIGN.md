@@ -1260,6 +1260,8 @@ The map alone will not carry the late game forever. The roadmap (section 20) ext
 
 ## 16. Tone guide and age rating
 
+**Changed in part by the owner on 2026-11-13, see section 52 (real-life college content):** alcohol is allowed with consequences, light hazing exists in Greek Row as a system, setbacks and heartbreak are normal, and the rating target is 13+. Where this section and section 52 disagree, section 52 stands.
+
 This section is written before any inbox or newspaper content.
 
 ### 16.1 Voice

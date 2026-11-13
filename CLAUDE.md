@@ -97,8 +97,8 @@ Update this section at the end of every layer.
 
 - Everything is fictional. No real universities, conferences, mascots, fraternities, sororities, people or brands. Generators must be collision-proof by construction, with a blocklist as the second line.
 - Follow the tone guide (DESIGN.md section 16) for every line of player-facing text.
-- **No alcohol, tobacco, drug or gambling references anywhere.** One would move the App Store rating to 13+, which the owner has ruled out.
-- The joke sits on top and the number sits underneath. Jokes aim at institutions, never at students. Events harm buildings, budgets and pride, never people.
+- **Real-life college content (the owner, 2026-11-13; DESIGN.md 52 replaces parts of 16):** alcohol is allowed, shown plainly and never graphically, always with a cost the player can see, and kept infrequent; light hazing exists in Greek Row as a system with consequences, never physical harm and never forced drinking or eating; heartbreak, rejection and failure are normal and recovered from. **Still out:** tobacco, vaping, drugs, gambling, sexual content, assault, self-harm, suicide, eating disorders, drug addiction, serious violence. **The rating target is 13+** (52.2): frequent alcohol references would make it 18+ and frequent heavy themes 16+, so both are rationed and checked in the long run. The icon and screenshots stay 4+.
+- The joke sits on top and the number sits underneath. Jokes aim at institutions, never at students. Consequences reach students in proportion (a hangover, a missed class, a broken heart); nothing serious, nobody dies.
 
 ## Commands
 
