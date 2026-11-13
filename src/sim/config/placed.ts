@@ -9,12 +9,12 @@ import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -46,6 +46,9 @@ export interface PlacedSpec {
   /** Clearing it returns the whole price, whenever it is cleared. The food truck drives off. */
   fullRefund?: boolean;
 }
+
+/** [T] How far a rank goal's building lifts the look of the campus, in cells from its wall. */
+const REWARD_REACH = 6;
 
 export const PLACED: Record<PlacedType, PlacedSpec> = {
   library: {
@@ -186,7 +189,51 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Administration building', category: 'Landmarks', family: 'landmark', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Where the university began', sprite: 'build.admin', flat: false, buildable: false,
   },
+  // A building for each rank goal (DESIGN.md section 40). One rule for all eight: each lifts how the campus
+  // looks around it, by `strength` points of desirability at its wall, fading to nothing just past its reach.
+  // They cost nothing to place and nothing to keep. A later goal's lifts a little more [T]. None is sold: a
+  // goal reached puts its building in the Build menu, and it is there again if the building is ever cleared.
+  fountain: {
+    name: "Founders' Fountain", category: 'Earned', family: 'reward', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 6, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.fountain', flat: true, buildable: true, utilitiesPerYear: 0,
+  },
+  postOffice: {
+    name: 'Campus Post Office', category: 'Earned', family: 'reward', w: 2, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 7, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.post', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  cinema: {
+    name: 'Campus Cinema', category: 'Earned', family: 'reward', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 8, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.cinema', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  radio: {
+    name: 'Campus Radio', category: 'Earned', family: 'reward', w: 2, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 9, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.radio', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  museum: {
+    name: 'University Museum', category: 'Earned', family: 'reward', w: 2, h: 2, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 10, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.museum', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  alumniHouse: {
+    name: 'Alumni House', category: 'Earned', family: 'reward', w: 2, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 11, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.alumni', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  broadcastTower: {
+    name: 'Broadcast Tower', category: 'Earned', family: 'reward', w: 1, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 12, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.broadcast', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  bellTower: {
+    name: 'Bell Tower', category: 'Earned', family: 'reward', w: 1, h: 1, cost: 0, upkeepPerYear: 0,
+    radius: REWARD_REACH, strength: 14, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.bell', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
 };
+
+/**
+ * The building each rank goal gives, in the order of the goals: the Top 175
+ * first, the Top 10 last (DESIGN.md 40.1, the owner's sheet). A goal reached
+ * puts its building in the Build menu, free, for as long as it is not on the
+ * map.
+ */
+export const RANK_REWARDS: readonly PlacedType[] = ['fountain', 'postOffice', 'cinema', 'radio', 'museum', 'alumniHouse', 'broadcastTower', 'bellTower'];
 
 /** The order of the Build menu. */
 /** What a building costs on a campus of a given scale (DESIGN.md 35.7). */

@@ -11,11 +11,12 @@ import { applicantsLift } from './systems/boosts';
 import { budget, marketingLift } from './systems/budget';
 import { averageDesirability, capacityWanted } from './systems/demand';
 import { athleticLift, seatsNow } from './systems/football';
-import { nextSizeGoal, sizeGoal } from './systems/goals';
+import { nextSizeGoal, rewardName, rewardOf, rewardsWaiting, sizeGoal } from './systems/goals';
+import { PLACED, RANK_REWARDS } from './config/placed';
 import { inReach } from './systems/placed';
 import { roomPlan } from './systems/plan';
 import { sampleStudents, studentCard } from './systems/students';
-import type { GameState, LogEntry } from './types';
+import type { GameState, LogEntry, PlacedType } from './types';
 
 /**
  * The campus newspaper (DESIGN.md 12.5 and section 36). It is the front of
@@ -36,7 +37,7 @@ export interface TopItem {
   kind: TopKind;
   text: string;
   /** Where a tap on it leads, when it leads anywhere. */
-  go?: 'inbox' | 'football';
+  go?: 'inbox' | 'football' | 'build';
 }
 
 export interface PollLine {
@@ -182,6 +183,11 @@ const CLIMBED = ['Provost Seen Practising a Modest Smile', 'Rival Deans Request 
 const WON = ['Band Takes Full Credit', 'Trustees Suddenly Remember Their Seats', 'Bookstore Runs Out of Scarves', 'Parking Office Declares It a Coincidence'];
 const LOST = ['Coach Praises "Several Good Minutes"', 'Band Reported in Fine Form', 'Fans Admire the Weather', 'Athletics Office Points to the Schedule'];
 
+/** The second half of a rank goal's headline: the building it gives. */
+function rewardHeadline(type: PlacedType): string {
+  return `${PLACED[type].name} Is Yours to Build`;
+}
+
 interface Lead {
   weight: number;
   headline: string;
@@ -217,7 +223,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         const size = entry.data?.ladder === 'size';
         const n = Number(entry.data?.count ?? 1) - 1;
         const what = era > 0 ? `The ${ERAS[era]} Era Begins at ${school}` : size ? `${school} Is Full at ${headCount(sizeGoal(state, n))} Students` : `${school} Enters the Top ${RANK_GOALS[n]}`;
-        out.push({ weight: era > 0 ? 106 : size ? 104 : 103, headline: `${what}; ${pickLine(state, entry.tick, size ? GREW : CLIMBED)}`, deck: entry.text });
+        // A rank goal's headline names the building it gives (DESIGN.md section 40).
+        const given = size ? undefined : rewardOf(n);
+        const second = given ? rewardHeadline(given) : pickLine(state, entry.tick, size ? GREW : CLIMBED);
+        out.push({ weight: era > 0 ? 106 : size ? 104 : 103, headline: `${what}; ${second}`, deck: entry.text });
         break;
       }
       case 'rankings': {
@@ -309,6 +318,23 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
     const wins = games.filter((entry) => entry.data?.won === 1).length;
     const tally = games.length > 1 ? `${wins} won and ${games.length - wins} lost while you were away. ` : '';
     offer(weightOf(best), 'game', `${tally}${best.text}`, 'football');
+  }
+
+  // Buildings a rank goal gave that are still waiting to be placed (section 40). Those a goal of this very
+  // edition gave are named with the goal, so only the rest are said here: after an upgrade, that is all of them.
+  const fresh = new Set<PlacedType>();
+  for (const entry of log) {
+    if (entry.kind !== 'goal' || entry.data?.ladder !== 'rank') continue;
+    for (let n = Number(entry.data?.from ?? 0); n < Number(entry.data?.count ?? 0); n++) {
+      const given = rewardOf(n);
+      if (given) fresh.add(given);
+    }
+  }
+  const waitingToPlace = rewardsWaiting(state).filter((type) => !fresh.has(type));
+  if (waitingToPlace.length > 0) {
+    const names = waitingToPlace.map(rewardName);
+    const said = names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    offer(TOP_WEIGHTS.reward, 'news', `${said.charAt(0).toUpperCase()}${said.slice(1)} ${names.length === 1 ? 'is' : 'are'} waiting in the Build menu, free to place. ${names.length === 1 ? 'It lifts' : 'Each lifts'} how the campus looks.`, 'build');
   }
 
   for (const line of awayLines(log, facts)) {
@@ -430,7 +456,7 @@ export function welcomeEdition(state: GameState): Edition {
 
 /** Every line an edition could print that is written here, for the tone check. */
 export function newspaperLines(): string[] {
-  return [...WON, ...LOST, ...GREW, ...CLIMBED, ...ERAS.map((era) => `The ${era} Era Begins at Larkspur`), ...Object.values(COMPLAINT), ...WELCOME.map((line) => line('Larkspur'))];
+  return [...WON, ...LOST, ...GREW, ...CLIMBED, ...RANK_REWARDS.map(rewardHeadline), ...ERAS.map((era) => `The ${era} Era Begins at Larkspur`), ...Object.values(COMPLAINT), ...WELCOME.map((line) => line('Larkspur'))];
 }
 
 /** Used by the tests: the number of students on campus the poll could ask. */

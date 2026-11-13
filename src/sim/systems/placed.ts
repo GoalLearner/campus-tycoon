@@ -152,6 +152,26 @@ export function libraryLift(map: MapState, x: number, y: number): number {
 }
 
 /**
+ * Points of desirability a rank goal's building adds to a lot here: the best
+ * one in reach counts, fading with distance (DESIGN.md section 40). So eight
+ * of them in one corner lift it no more than the best of the eight, and they
+ * are worth most spread across the campus.
+ */
+export function rewardLift(map: MapState, x: number, y: number): number {
+  // A campus with none of them, which is every game with no goals, pays nothing for this. It is read for every
+  // lot whose Happiness is read, in catch-up too.
+  const families = map.care?.byFamily;
+  if (families && !families.reward?.length) return 0;
+  let best = 0;
+  for (const placed of inReach(map, 'reward', x, y)) {
+    const spec = PLACED[placed.type];
+    const fade = (spec.radius + 1 - cellsFrom(placed, x, y)) / (spec.radius + 1);
+    best = Math.max(best, spec.strength * fade);
+  }
+  return best;
+}
+
+/**
  * The nearest free ground to a lot where a building would still reach it: the
  * spot the "build one here" shortcut offers. Ground beside a path wins a tie.
  * null when nothing in reach is free.

@@ -475,7 +475,7 @@ export function mountUi(root: HTMLElement): void {
   clearer.append(clearerTitle, clearerState, clearerButtons);
 
   function openBuild(): void {
-    openBuildMenu(root, buildEntries(scaleOf(store.state)), (entry) => {
+    openBuildMenu(root, buildEntries(scaleOf(store.state), store.state), (entry) => {
       // Roads, bins, benches and tables are laid by dragging. Everything else is placed one at a time.
       if (entry.id?.startsWith(TOOL_ENTRY)) session.setTool(entry.id.slice(TOOL_ENTRY.length) as Tool);
       else if (entry.id) session.startPlacing(entry.id as PlacedType);
@@ -607,6 +607,8 @@ export function mountUi(root: HTMLElement): void {
     store.upgradeNotes = [];
     openAwayScreen(openModal, report, notes, (where) => {
       if (where === 'inbox') openInbox(openModal);
+      // A building a rank goal gave is waiting in the Build menu.
+      else if (where === 'build') openBuild();
       else openFootball(openModal);
     });
   }

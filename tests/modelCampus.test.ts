@@ -251,7 +251,7 @@ const REFERENCE = join(ROOT, 'art', 'reference', 'campus-map-reference.pdf');
 /** Ordinary words any campus map prints. A word here is not a name, wherever it came from. */
 const ORDINARY = new Set(
   (
-    'academic administration apartments astronomy athletics avenue building business campus center central centre chemistry club college commons communication community computer ' +
+    'academic administration alumni apartments astronomy athletics avenue building business campus center central centre chemistry club college commons communication community computer ' +
     'construction content cottage court courts east education engineering facilities faculty field fields food fraternity gallery graphics hall health house housing information ' +
     'international lane letters library main mathematics medical music north office parking physics plaza pool receiving recital recreation reserved residence resource road safety ' +
     'school science sciences semester services sharing shuttle softball south square stadium state station street student students studies tennis theatre tower track transit union ' +

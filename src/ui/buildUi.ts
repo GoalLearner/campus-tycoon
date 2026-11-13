@@ -65,6 +65,9 @@ import {
   type GameState,
   type Placed,
   type PlacedType,
+  RANK_GOALS,
+  rewardGoal,
+  rewardsWaiting,
 } from '../sim';
 import type { BuildEntry } from './buildMenu';
 
@@ -79,8 +82,28 @@ const footprint = (w: number, h: number): string => `${w} x ${h}`;
 export const TOOL_ENTRY = 'tool:';
 export const ROAD_ENTRY = `${TOOL_ENTRY}road`;
 
-/** The Build menu: what can be built now, then what is on the way. */
-export function buildEntries(scale = 1): BuildEntry[] {
+/** A card for a building a rank goal gave, while it waits to be placed: free, and first in the menu. */
+function rewardEntry(type: PlacedType): BuildEntry {
+  const spec = PLACED[type];
+  return {
+    id: type,
+    key: spec.sprite,
+    name: spec.name,
+    category: spec.category,
+    cost: 'Free',
+    footprint: footprint(spec.w, spec.h),
+    upkeep: 'Costs nothing to run',
+    effect: `${spec.effect}. Yours for the Top ${RANK_GOALS[rewardGoal(type)]}`,
+  };
+}
+
+/**
+ * The Build menu: what a rank goal has given and is waiting to be placed,
+ * then what can be built now, then what is on the way. `state` is the game:
+ * left out, as the look preview does, nothing has been earned.
+ */
+export function buildEntries(scale = 1, state?: GameState): BuildEntry[] {
+  const earned: BuildEntry[] = state ? rewardsWaiting(state).map(rewardEntry) : [];
   const entries: BuildEntry[] = BUILD_ORDER.map((type) => {
     const spec = PLACED[type];
     return {
@@ -131,7 +154,7 @@ export function buildEntries(scale = 1): BuildEntry[] {
   const firstCarPark = entries.findIndex((entry) => entry.category === 'Roads and parking');
   entries.splice(firstCarPark < 0 ? entries.length : firstCarPark, 0, road);
   entries.push(soon('build.studentlife', 'Student Life', 'A zone for clubs and events', 'Coming later'));
-  return entries;
+  return [...earned, ...entries];
 }
 
 function lotsInReach(state: GameState, placed: Placed, zone: 'housing' | 'academic'): number {
@@ -201,6 +224,11 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
+    case 'reward': {
+      // What it does, and which goal earned it (DESIGN.md section 40).
+      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      return `Yours for reaching the Top ${RANK_GOALS[rewardGoal(placed.type)]}. It lifts how the campus looks at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells, and looks are one of the four things that bring applicants.`;
+    }
     case 'athletics':
       return stadiumSummary(state);
     case 'medical':
@@ -314,7 +342,8 @@ export function placedFacts(state: GameState, placed: Placed): string {
     parts.push(staff > 0 ? `Staff of ${staff}: ${dollars(staff * withBenefits(CARE_STAFF_PAY))} a year with benefits` : 'No staff to pay until the first class arrives');
   }
   parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
-  if (spec.buildable) parts.push('The Clear tool removes it');
+  if (spec.family === 'reward') parts.push('Clear it and it goes back to the Build menu, free');
+  else if (spec.buildable) parts.push('The Clear tool removes it');
   return parts.join(' · ');
 }
 

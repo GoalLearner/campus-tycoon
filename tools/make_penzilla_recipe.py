@@ -280,6 +280,18 @@ sprites['build.studycenter'] = {'layers': [
 ]}
 sprites['build.admin'] = {'layers': [on_grid(PUBLIC + 'Public_Townhall.png', 2, 2)]}
 
+# -------------------------------------------------------- reward buildings --
+# One for each rank goal (DESIGN.md section 40). Each is the pack's own drawing, as drawn, on the block of cells
+# the pack drew it for. The fountain is a park laid flat, so it brings its own grass, as the pond does.
+sprites['reward.fountain'] = {'layers': grass_under(2, 2) + [on_grid(PUBLIC + 'Park_Fountain.png', 2, 2)]}
+sprites['reward.post'] = {'layers': [on_grid(PUBLIC + 'PostOffice.png', 2, 1)]}
+sprites['reward.cinema'] = {'layers': [on_grid(PUBLIC + 'Leasure_Cinema.png', 2, 2), on_grid(PUBLIC + 'Leasure_Cinema_Front.png', 2, 2)]}
+sprites['reward.radio'] = {'layers': [on_grid(PUBLIC + 'RadioStation.png', 2, 1)]}
+sprites['reward.museum'] = {'layers': [on_grid(PUBLIC + 'Leasure_Museum.png', 2, 2), on_grid(PUBLIC + 'Leasure_Museum_Front.png', 2, 2)]}
+sprites['reward.alumni'] = {'layers': [on_grid(PUBLIC + 'Hotel_ThreeFloors.png', 2, 1)]}
+sprites['reward.broadcast'] = {'layers': [on_grid(PUBLIC + 'TeleTower.png')]}
+sprites['reward.bell'] = {'layers': [on_grid(OLD + 'Buildings/TowerStoneRoofed.png')]}
+
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
 sprites['icon.injury'] = {'layers': [{'file': SHOPS + 'Shop_Pharmacy_OneFloorRoofed.png', 'crop': [632, 416, 772, 606], 'stand': [0.5, 0.5], 'recolour': 'cross'}]}
@@ -404,6 +416,7 @@ recipe = {
         'build.parking': [2, 1], 'build.track': [2, 2], 'build.courts': [2, 2], 'build.medical': [2, 2],
         'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.pool': [2, 1], 'build.field': [2, 2], 'build.admin': [2, 2], 'pond.large': [3, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
+        'reward.fountain': [2, 2], 'reward.post': [2, 1], 'reward.cinema': [2, 2], 'reward.radio': [2, 1], 'reward.museum': [2, 2], 'reward.alumni': [2, 1],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
     'credits': [
