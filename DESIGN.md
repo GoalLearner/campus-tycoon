@@ -5110,7 +5110,7 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 
 ## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store
 
-Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on.
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15.
 
 Two things he said that govern all of it:
 
@@ -5255,3 +5255,149 @@ One stop each, each verified and played before the next.
 Seals are earned and spent from the first stop, so the economy is tuned before any money is involved. After launch: leaderboards and visits, the research labs, the pass, conferences.
 
 To measure at every stop, and to report to him: the pace of the rank goals (the Top 100 in about month two, the Top 10 not before month five), the money against his $12 to $17 kept of every $100, how many levels and Seals each test player earns a week, and that rank, applicants and selectivity still settle.
+
+### 42.12 Stop 1 as built: the University Level, Gold Seals and collecting
+
+Built on 2026-11-12, on the owner's "Build it". Only a game with goals has the layer, as only such a game has the cap and the policies. A game begun on the small campus has no level, no Seals and nothing to collect, and its long-run tables print the same numbers.
+
+| Thing | As built | Where |
+|---|---|---|
+| Experience | One number that only rises. Eleven sources, kept as data: each has a name, an amount and whether it happens by itself. A later stop adds its own (an order done, the daily gift) as one more entry, and the Level page lists it | `XP_SOURCES` in `src/sim/config/daily.ts`, `gainXp` and `earn` in `src/sim/systems/daily.ts` |
+| By itself | A class moves in 80, a home win 60, graduation 200, a rank goal 300, a full campus 300, an era 500, a dorm or lecture hall that grows 10. So a player who comes once a day levels, and so does a campus nobody visits | The same |
+| By hand | Collecting from a building (what it held), a building placed by hand that opens 40, a dorm or lecture hall that opens 15, a home game collected at the stadium 40 | The same |
+| The level | Worked out from experience. Level 2 asks 60, each level 40 more than the last, and none more than 800. It never falls | `levelAt`, `levelCost` |
+| What a level gives | One Gold Seal, three at every fifth level, and a line in the paper. Several levels reached at once are one line. The list of what a level opens besides its Seals is data, and is empty until the stops that have a decoration, a recipe or an order to open | `levelGifts`, `LEVEL_UNLOCKS` |
+| Gold Seals | One balance in the save. From levels, and 5 for a rank goal, 5 for a full campus and 10 for an era, on the day each is reached: the goal's own line says how many | `dailyOnGoals`, called from `land` in `src/sim/systems/goals.ts` |
+| Nothing is sold | No store, no purchase, no price in money anywhere | |
+| Collecting | Food places and the campus store fill by the hour. What one holds is worked out from the time since it was last collected, when somebody asks. Nothing runs on a tick, and no lot is walked | `collectables` |
+| How much it holds | 36 hours' worth, counted in time. Its marker shows once it has filled for six hours | `COLLECT_HOURS`, `COLLECT_READY_HOURS` |
+| What it pays | Experience, and a little cash: 0.8 experience and $2 an hour for a food place, 1.2 and $3 for a campus store, the dollars on the small campus's count. Rounding is carried, so collecting often pays exactly what collecting seldom pays | `COLLECT` |
+| The store after a home win | Fills twice as fast for a day | `STORE_WIN_TIMES`, `STORE_WIN_TICKS` |
+| The stadium | A home game leaves 40 experience and a little cash at the stadium plot. It holds three games. A fourth, or a game on a campus with no stadium plot, pays its experience at once | `dailyOnHomeGame`, `GAMES_HELD` |
+| A building that has just opened | Holds an opening bonus, ready at once. A dozen a real day at most, so building and clearing is not a way to level. A bin or a bench is not a building | `dailyOnPlaced`, `dailyOnBuilt`, `OPENINGS_PER_DAY` |
+| Normal income | Not touched. Collecting is not in the budget, and what the campus keeps of every $100 is the same before a collect as after | `tests/daily.test.ts` |
+| On the map | A medal floats and bobs over each building that is ready. A tap on the medal, or on the building under it, collects: the medal rises and fades with the experience it paid, and there is a short sound. The next tap on the building opens its panel as before | `showCollect`, `burst`, `collectUnder` in `src/game/CampusScene.ts` |
+| Collect all | A button above Build, there while five or more buildings are ready | `collectAllChip` in `src/ui/levelUi.ts` |
+| The top bar | One small button on the right of the row that holds Inbox: the level on its badge, and the Seals held. At 375 wide with every other button showing it drops to a second row | `levelChip` |
+| The Level page | One tap from that button: how far to the next level, what the next level gives, what is ready to collect, the Seals held and what they can finish, and what earns experience | `levelView`, `openLevel` in `src/ui/ui.ts` |
+| Finish now | On the three waits the game already had: a stadium tier going up, faculty hired and on their way, and a policy held until the next class. A Seal for every six hours left, and never less than one. The price is on the button, and the tap asks once more before a Seal is spent. Also on a held policy's own switch | `waits`, `sealPrice`, `finishNow` |
+| No new wait | Nothing that had no wait has one now, and nothing has a limit it did not have | |
+| The paper | A level reached is a line: one for one, or the last of several with how many | `awayLines` in `src/sim/digest.ts` |
+| A game already in play | Is given the experience and Seals of the goals, eras and graduations it has behind it, and loads at that level with nothing said | `backPay` |
+| A new game, and a game new to the layer | Finds every food place and store full, so the first sitting has something to tap | `HEAD_START_HOURS` |
+| The save | Version 18, one migration. A version 17 fixture of a game like the owner's loads with nothing else moved | `MIGRATIONS[17]`, `tests/fixtures/save-v17-model.json` |
+
+**The art.** Three drawings, all from packs the owner already has and by the artist who drew his buildings: the gold pin medal is the Gold Seal, the laurel wreath is the level badge with the level's number set on it as text, and the gold medal on a ribbon is the marker over a ready building and what rises when it is collected. Each is the pack's own drawing, only made smaller: nothing is cut, recoloured or assembled, so nothing here is for section 26. He saw all of it on one sheet first (`docs/handoff/level-icons-sheet.html`), with one or two alternatives for each, and chose. His choice for the marker and the burst was the medal and not the first pick, a heap of coins that broke into loose coins: enlarged, the heap read as a muddy orange shape that could be taken for food, and the marker is the one thing a player has to spot and tap. His packs have no star and no sparkle, and none was downloaded. The collecting sound is two short notes made in code. A level reached plays the reward tune the game already had.
+
+### 42.13 Stop 1, measured
+
+The test players collect whatever is ready on every visit, and spend Seals on a stadium tier going up or on faculty on their way when the wait has six hours or more to run. The long run plays every player twice: with the layer and the policies in use, and with neither touched.
+
+**Levels.** Real weeks, two seeds each.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Level after the first sitting | 4 | 4 | 4 |
+| Level at week 1 | 7 to 8 | 6 to 7 | 6 to 7 |
+| Level at week 4 | 22 to 23 | 22 | 22 |
+| Level at week 12 | 63 to 66 | 58 to 62 | 51 |
+| Level at week 44 | 236 to 239 | 232 to 235 | 215 |
+| Levels a week, weeks 1 to 4 | 4.7 to 5.3 | 5.0 to 5.3 | 5.0 to 5.3 |
+| Levels a week, weeks 4 to 12 | 5.1 to 5.4 | 4.5 to 5.0 | 3.6 |
+| Levels a week, weeks 12 to 44 | 5.4 | 5.4 | 5.1 |
+
+That is three levels in the first sitting, then one about every day and a third for the once-a-day player. A player who never collects reaches level 64 by week 44 from what happens by itself, and a campus nobody visits reaches level 16 in five weeks.
+
+**Gold Seals.**
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Earned in 44 weeks | 410 to 412 | 404 to 407 | 379 to 382 |
+| Earned a week | 9.3 to 9.4 | 9.2 to 9.3 | 8.6 to 8.7 |
+| Spent | 75 | 50 | 45 |
+| Waits finished | 11 | 9 | 8 |
+| What a wait costs, on average | 6.2 to 6.3 | 4.5 | 4.5 to 4.8 |
+| The most a wait cost | 15 | 13 | 13 |
+
+A wait costs about six Seals when there is one to finish, so a week's Seals finish one, with a little over. The test players found only eight to eleven waits worth finishing in 44 weeks, so most of their Seals are unspent: there is nothing else to spend them on until the stops that bring decorations and the workshop.
+
+**Collecting.**
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Buildings collected | 13,968 to 14,218 | 6,892 to 7,033 | 6,202 to 6,230 |
+| Experience collected | 150,369 to 152,718 | 147,200 to 149,859 | 133,884 to 134,352 |
+| Lost to the 36 hours | 0 | 0 | 0 |
+| Share of the extra collected | 100% | 100% | 100% |
+| Cash collected a year | $253K to $257K | $243K to $248K | $221K to $222K |
+| Of every $100 that comes in | $0.053 to $0.054 | $0.051 | $0.047 |
+
+The once-a-day player gets all of it. The most any campus could collect in a year, emptied before it is ever full, is $0.054 of every $100.
+
+**The pace of the rank goals.** With neither the layer nor the policies touched, the table is the one of 40.4 to the week. With both in use, seed 1 is the table of 41.10 to the week. Seed 2 reaches some goals sooner: the Top 75 in week 11 where it was 12, the Top 50 in week 14 where it was 16, and the Top 10 in weeks 31, 33 and 25 where it was 33, 33 and 26. That is "Finish now" doing what it says: faculty and a stadium tier arrive days sooner. The targets stand: the Top 100 in week 7, and the Top 10 never before month five.
+
+| Goal | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Top 100 | 7 | 7 | 7 |
+| Top 75 | 11 to 12 | 11 to 12 | 11 to 12 |
+| Top 50 | 14 to 17 | 14 to 17 | 14 to 16 |
+| Top 25 | 22 to 24 | 22 | 20 to 21 |
+| Top 10 | 31 to 39 | 33 to 39 | 25 to 29 |
+| Rank at week 44 | 7th to 9th | 7th | 2nd to 3rd |
+
+**Money.** Kept of every $100.
+
+| Measured | Layer and policies in use | Neither touched |
+|---|---|---|
+| A new game, as it opens | $16.60 | $16.60 |
+| The casual player, years 3 to 8 | $13.30 to $15.20 | $12.90 to $14.90 |
+| The once-a-day player, years 3 to 8 | $12.70 to $14.20 | $12.70 to $14.20 |
+| The player who works every cause, years 3 to 8 | $13.00 to $14.50 | $13.10 to $14.50 |
+| The casual player, weeks 9 to 44 | $14.00 to $16.10 | $14.20 to $16.50 |
+| The once-a-day player, weeks 9 to 44 | $13.70 to $16.10 | $13.80 to $16.30 |
+| The player who works every cause, weeks 9 to 44 | $13.10 to $15.60 | $13.10 to $15.50 |
+
+Collecting itself is not in these numbers: its cash goes straight to the bank and is $0.05 of every $100. The small moves are faculty arriving a semester sooner where a Seal brought them.
+
+**Settling.** Rank, applicants and selectivity settle as they did: 0.7 rating points and 430 of 20,569 applicants in the last ten of thirty years.
+
+**Speed.** Thirty days of catch-up take 155 ms on a new model campus and 229 ms on a tended one, much as before: nothing in the layer runs on a tick but telling a level. The work in one frame on this PC, looking at the whole campus at the morning rush: 3.48 to 3.76 ms with all twelve medals showing and 3.36 to 3.72 ms with none.
+
+**Tests and long runs.** 25 new tests in `tests/daily.test.ts`: 687 in all. Six new long-run checks: 59 in all.
+
+### 42.14 Stop 1, decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Where the level and the Seals show | One small button on the right of the row that holds Inbox | On the first row of the top bar, which is full. Or two buttons, which is one more to fit at 375 wide |
+| What a level asks | 60 for the first, 40 more for each, 800 at most | A cost that keeps rising for ever. The campus's experience a day stops rising once it is built, so levels would slow to a crawl |
+| What a level gives now | One Seal, three at every fifth | Two and five, as first built. It came to nineteen Seals a week, three waits' worth |
+| Experience for building | A building that opens holds a bonus to tap, a dozen a day at most. Growing pays by itself | Experience on the tap that builds. Clearing gives the money back within a minute, so tapping build and clear would be a way to level |
+| The 36 hours | Counted in time, so the store's faster filling after a win is never cut off | Counted in what is held. The once-a-day player then lost a little at the store after every home win |
+| When the marker shows | After six hours of filling | At once. The map would never be clear of markers |
+| What a tap on a ready building does | Collects. The next tap opens its panel | Only the medal collects. It is a small thing to hit on a phone |
+| The cash | A flat rate an hour for each kind of building, with the 36 hours as its cap | A share of the building's own income. That needs each building's income worked out when asked, and would grow with the campus |
+| Home games | A win pays by itself. The game leaves a bonus at the stadium, which holds three | Only a tap. A fall has five or six home games in three days |
+| A campus with no stadium plot | The game's experience is paid at once | Lost, or held where nothing can be tapped |
+| Finish now, where | On the Level page, with every wait and its price, and on a held policy's own switch | Only where each wait is. Three pages to find them on |
+| Finish now, the price | A Seal for every six hours left | A flat price. The last hour of a wait would cost what the first day does |
+| Finish now for faculty | Those on their way arrive at once. Nobody who is leaving is touched | Also send the leavers now, which is a way to save money with Seals |
+| A game already in play | Back pay, with nothing said | A line for each level, which would be a page of them |
+| The marker and the burst | The gold medal on a ribbon, his choice from the sheet | The heap of coins that breaks into loose coins, the first pick |
+| A star or a sparkle | None: his packs have none, and nothing was downloaded | A free drawing from outside his packs |
+| The collecting sound | Two short notes made in code | A recorded sound, which would be one more file |
+| How the test players spend Seals | A stadium tier, then faculty, when six hours or more are left. Never a held policy | Spend every Seal as it comes |
+
+### 42.15 Stop 1, rough
+
+| Rough | Why |
+|---|---|
+| Seals pile up | There is one thing to spend them on, and a campus has few waits. The test players end with over 300. Decorations and the workshop come in later stops |
+| Finish now moves the rank goals a little | On one of two seeds a goal came up to two weeks sooner. It is what buying time does. If he wants the pace untouched, faculty can be left out of what a Seal finishes |
+| The level is a large number late | About 235 at week 44. Nothing hangs on the number yet |
+| The level button drops to a second row at 375 wide | When Football, a long Inbox line and Policies are all showing. It is still one tap |
+| A level reached is seldom at the top of the paper | It is a line in the rest of the paper, behind games, goals and decisions. There are five a week |
+| The first week is quicker than the rest | Six to eight levels in week 1, because the first levels are cheap. That is on purpose |
+| A building placed and cleared a dozen times a day still pays its opening bonus each time | The dozen is the cap. It costs half the building's price each time after the first minute |
+| The medal over a tall building sits against the building behind it | It bobs, which helps. A dark roof behind it hides its ribbon |
+| Never run on a phone | Checked in pictures and in tests on this PC, at 390 and 375 wide |
