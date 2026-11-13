@@ -1,5 +1,6 @@
 import { fansLift } from './boosts';
 import { fansMore, freeSeats } from './policies';
+import { dailyOnHomeGame } from './daily';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -583,6 +584,8 @@ export function finalWhistle(state: GameState, slot: number, log: LogEntry[]): v
     });
     // A home game ending changes what food earns again.
     markRatesDirty(state);
+    // The daily layer: a win pays experience, and the game leaves a bonus at the stadium.
+    if (game.home) dailyOnHomeGame(state, won, log);
   }
   if (slot < 10) {
     for (const [winner, loser, conf, div] of season.pending) {

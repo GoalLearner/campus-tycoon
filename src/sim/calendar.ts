@@ -147,6 +147,16 @@ export function nextMilestone(at: At): Upcoming {
   return { event: 'fallIntake', inTicks: yearLength(week) - t };
 }
 
+/** Ticks from now until the next class moves in, fall or spring. Always at least 1. */
+export function ticksToIntake(at: At): number {
+  const tick = tickOf(at);
+  if (tick < FIRST_INTAKE_TICK) return FIRST_INTAKE_TICK - tick;
+  const week = weekOf(at);
+  const t = tick - week.start;
+  if (t < 0) return -t;
+  return t < SPRING_INTAKE_TICK_IN_YEAR ? SPRING_INTAKE_TICK_IN_YEAR - t : Math.max(1, yearLength(week) - t);
+}
+
 // ------------------------------------------------------------- the anchor --
 
 /** The real moment, in epoch ms, at which a tick happens or happened. */

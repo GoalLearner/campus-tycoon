@@ -4,6 +4,7 @@ import { hashInts } from '../rng';
 import { addTimer } from '../timers';
 import type { Building, GameState, LogEntry } from '../types';
 import { markRatesDirty } from './money';
+import { dailyOnBuilt } from './daily';
 
 /**
  * Timed builds. The old building keeps serving at its old stage until the new
@@ -43,4 +44,6 @@ export function finishBuild(state: GameState, buildingId: number, log: LogEntry[
         : `A ${ZONE_NOUN[b.zone]} building grew to stage ${b.stage}: ${spec.capacity.toLocaleString('en-US')} ${unit}.`,
     data: { zone: b.zone, stage: b.stage, x: b.x, y: b.y, capacity: spec.capacity },
   });
+  // The daily layer: a building that grows pays experience, and one that opens holds a bonus to collect.
+  dailyOnBuilt(state, buildingId, wasStage, log);
 }

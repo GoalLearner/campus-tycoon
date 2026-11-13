@@ -1,3 +1,5 @@
+import { gainXp, readyToCollect } from '../sim';
+import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
@@ -278,6 +280,8 @@ interface DevScene {
  *   &panel=money      open the Money panel; &group=payroll opens one of its groups
  *   &panel=policies   open the Policies page (with &rank=120 or better, so an era has opened it)
  *   &policies=a,b     turn those policies on; &unlock=1 then lets them be changed again, as a class moving in does
+ *   &panel=level      open the Level page; &xp=900 and &seals=20 give experience and Gold Seals first
+ *   &collect=all      collect everything that is ready; &collect=3 collects that many; &slowburst slows the burst
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -493,6 +497,11 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         const row = params.get('row');
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
+      // &panel=level opens the Level page as a tap on its button would. &finish=1 then taps the first Finish now.
+      if (panel === 'level') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('.level-chip')?.click(), 2600);
+        if (params.has('finish')) setTimeout(() => document.querySelector<HTMLButtonElement>('.finish-go')?.click(), 3200);
+      }
       // &panel=policies opens the Policies page as a tap on its chip would. &panel=goals opens the Goals page.
       if (panel === 'policies') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip')].find((b) => b.textContent?.startsWith('Policies'))?.click(), 2600);
       if (panel === 'goals') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
@@ -623,6 +632,22 @@ export function installDevTools(): void {
         freed.policies.locked = freed.policies.locked.filter((id) => !(params.get('unlock') ?? '').split(',').includes(id) && params.get('unlock') !== '1');
         store.adopt(freed, { ephemeral: true });
       }
+    }
+    // The daily layer (DESIGN.md section 42): &xp=900 gives experience, &seals=20 sets the Gold Seals held, and
+    // &collect=all collects everything ready (&collect=3, that many) a few seconds in, so the burst can be seen.
+    if (store.hasGame && (params.has('xp') || params.has('seals'))) {
+      const given = structuredClone(store.state);
+      gainXp(given, Number(params.get('xp') ?? 0));
+      if (params.has('seals')) given.daily.seals = Number(params.get('seals'));
+      store.adopt(given, { ephemeral: true });
+    }
+    if (params.has('slowburst')) collectShow.burstMs = 9000;
+    if (params.has('collect')) {
+      const many = params.get('collect');
+      setTimeout(() => {
+        if (many === 'all') store.dispatch({ type: 'collectAll' });
+        else for (const one of readyToCollect(store.state).slice(0, Number(many) || 1)) store.dispatch({ type: 'collect', key: one.key });
+      }, Number(params.get('collectAt') ?? 5000));
     }
     // &standing=115 gives the campus the published rating of the school at that rank, so its next rankings day
     // lands it about there. With &away, that is the paper of the day a goal and an era are reached.

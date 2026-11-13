@@ -689,6 +689,8 @@ describe('a save from version 16', () => {
     const expected = structuredClone(file.state);
     expected.version = SAVE_VERSION;
     expected.policies = { on: [], locked: [], news: [] };
+    // Version 18 adds the daily layer (tests/daily.test.ts has that).
+    expected.daily = state.daily;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -731,8 +733,9 @@ describe('a save from version 16', () => {
   });
 
   it('is told what is new, once', () => {
+    // Its own, and the one version 18 added after it (tests/daily.test.ts).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(1);
+    expect(notes).toHaveLength(2);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

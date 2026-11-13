@@ -7,7 +7,7 @@ import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -56,6 +56,19 @@ const BADGE_LIFT = { low: 74, tall: 168 } as const;
  */
 const HINT_TEXT = { walk: 'Connect a path here\nso locals can walk in', drive: 'Build parking with a road\nhere so locals can drive in' } as const;
 const HINT_LIFT = 26;
+
+/** How long a collected building's medal takes to rise and fade. The dev page slows it, to take its picture. */
+export const collectShow = { burstMs: 700 };
+
+/** A building that is ready to collect: its block of cells, how high its medal floats, and what it holds. */
+interface CollectSpot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  lift: number;
+  xp: number;
+}
 /** Where cars park on a surface lot, as steps along it from its top corner. */
 const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
@@ -159,6 +172,11 @@ export class CampusScene extends Phaser.Scene {
   /** Items the dev previews put on the map, beside the buildings in the game state. */
   private devItems: PlacedItem[] = [];
   private placedDirty = true;
+  /** Where a medal floats over each building that is ready to collect, by its key, with what it holds. */
+  private collectSpots = new Map<string, CollectSpot>();
+  /** The experience and the game the markers were last drawn for: a marker gone with experience gained was collected. */
+  private collectXp = -1;
+  private collectGame = '';
   /** A point of the world the camera is gliding to, after a tap on a card's reason. */
   private glide: { x: number; y: number } | null = null;
   private focusSeq = 0;
@@ -872,6 +890,7 @@ export class CampusScene extends Phaser.Scene {
       const over = this.incidentPlace(state, incident);
       items.push({ key: incident.kind === 'injury' ? 'icon.injury' : 'icon.mischief', x: over.x, y: over.y, w: over.w, h: over.h, layer: 'float', lift: over.lift });
     }
+    this.showCollect(state, items);
     if (session.placing && session.ghost) {
       const spec = PLACED[session.placing];
       const sprite = this.spriteFor(session.placing);
@@ -879,6 +898,84 @@ export class CampusScene extends Phaser.Scene {
       items.push({ key: sprite.key, x: session.ghost.x, y: session.ghost.y, w: spec.w, h: spec.h, layer: 'object', alpha: 0.7, forward: 1 });
     }
     this.placed.set(items);
+  }
+
+  // ----------------------------------------------------------- collecting --
+
+  /**
+   * The daily layer (DESIGN.md 42.4): a medal floats over every building that
+   * is ready to collect. What is ready is the simulation's, worked out from
+   * time. A medal that has gone since the last look, on the same game and
+   * with experience gained, was collected: it rises and fades, with the
+   * experience it paid. That covers a tap here and the Collect all button
+   * alike.
+   */
+  private showCollect(state: GameState, items: PlacedItem[]): void {
+    const ready = new Map<string, CollectSpot>();
+    if (this.art.has('icon.collect')) {
+      for (const one of readyToCollect(state)) {
+        // A dorm or a lecture hall is a storey or two. A building placed by hand is as tall as its kind.
+        const placed = one.key.startsWith('p') ? state.map.placed[Number(one.key.slice(1))] : null;
+        const lift = placed ? (PLACED[placed.type].flat ? 40 : 122) : 112;
+        ready.set(one.key, { x: one.x, y: one.y, w: one.w, h: one.h, lift, xp: one.xp });
+        items.push({ key: 'icon.collect', x: one.x, y: one.y, w: one.w, h: one.h, layer: 'float', lift });
+      }
+    }
+    const game = `${state.seed}:${state.school.name}`;
+    const xp = state.daily?.xp ?? 0;
+    if (game === this.collectGame && xp > this.collectXp) {
+      for (const [key, spot] of this.collectSpots) if (!ready.has(key)) this.burst(spot);
+    }
+    this.collectGame = game;
+    this.collectXp = xp;
+    this.collectSpots = ready;
+  }
+
+  /** The medal of a building just collected rises and fades, with the experience it paid. For show only. */
+  private burst(spot: CollectSpot): void {
+    const at = this.iso.toWorld(spot.x + spot.w / 2, spot.y + spot.h / 2);
+    const medal = this.add.image(at.x, at.y - spot.lift, '__DEFAULT');
+    this.art.apply(medal, 'icon.collect');
+    medal.setOrigin(0.5, 1).setDepth(1_000_000);
+    const label = this.add
+      .text(at.x, at.y - spot.lift - medal.displayHeight - 4, `+${spot.xp}`, {
+        fontFamily: '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        fontSize: '24px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#16201b',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(1_000_001);
+    this.tweens.add({
+      targets: [medal, label],
+      y: '-=64',
+      alpha: 0,
+      duration: collectShow.burstMs,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        medal.destroy();
+        label.destroy();
+      },
+    });
+  }
+
+  /** The key of the ready building whose medal is under a point of the world, or null. */
+  private collectUnder(worldX: number, worldY: number): string | null {
+    const reach = (26 * this.dpr) / this.cameras.main.zoom;
+    for (const [key, spot] of this.collectSpots) {
+      const at = this.iso.toWorld(spot.x + spot.w / 2, spot.y + spot.h / 2);
+      // The medal stands on its lift and is about fifty tall: its middle is half of that higher.
+      if (Math.abs(worldX - at.x) <= reach && Math.abs(worldY - (at.y - spot.lift - 25)) <= reach * 1.3) return key;
+    }
+    return null;
+  }
+
+  /** Collect what one building holds. The burst follows from the marker going. */
+  private collect(key: string): void {
+    const result = store.dispatch({ type: 'collect', key });
+    if (result.ok) sound.ui('collect');
   }
 
   /** While placing: the footprint in green or red, and the reach in blue. */
@@ -1433,6 +1530,12 @@ export class CampusScene extends Phaser.Scene {
       session.setGhost(cx - Math.floor((spec.w - 1) / 2), cy - Math.floor((spec.h - 1) / 2));
       return;
     }
+    // A medal over a building that is ready: a tap on it collects.
+    const medal = this.collectUnder(world.x, world.y);
+    if (medal) {
+      this.collect(medal);
+      return;
+    }
     // An incident's icon says what happened and whether anyone is coming.
     const reach = (26 * this.dpr) / this.cameras.main.zoom;
     for (const incident of store.state.incidents.active) {
@@ -1498,7 +1601,9 @@ export class CampusScene extends Phaser.Scene {
     }
     const building = this.placed.hit(world.x, world.y);
     if (building) {
-      session.select(building.x, building.y);
+      // A tap on a building that is ready collects it. The next tap opens its panel.
+      if (building.id !== undefined && this.collectSpots.has(`p${building.id}`)) this.collect(`p${building.id}`);
+      else session.select(building.x, building.y);
       return;
     }
     const [x, y] = this.buildingUnder(screenX, screenY) ?? this.cellAt(screenX, screenY);
@@ -1513,6 +1618,11 @@ export class CampusScene extends Phaser.Scene {
     const from = messy === undefined ? null : map.placed[messy];
     if (from && cell.kind !== 'lot' && cell.kind !== 'placed') {
       session.select(from.x, from.y);
+      return;
+    }
+    // A dorm or a lecture hall that has just opened: the first tap takes its opening bonus.
+    if (cell.buildingId !== null && this.collectSpots.has(`b${cell.buildingId}`)) {
+      this.collect(`b${cell.buildingId}`);
       return;
     }
     const forSale = parcelAt(map, x, y)?.owned === false;

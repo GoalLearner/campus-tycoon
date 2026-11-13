@@ -519,6 +519,32 @@ button:active {
   display: none;
 }
 
+/* Collect all: above Build, and only there while five or more buildings are ready. */
+.collect-fab {
+  display: none;
+  position: absolute;
+  right: calc(var(--safe-right) + 12px);
+  bottom: calc(var(--safe-bottom) + 132px);
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--good);
+  border-color: var(--good);
+  color: #10160f;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.collect-fab.show {
+  display: block;
+}
+
+.collect-fab.hidden,
+.inspector.show ~ .collect-fab,
+.student.show ~ .collect-fab {
+  display: none;
+}
+
 .inspector.show ~ .build-fab,
 .student.show ~ .build-fab {
   display: none;
@@ -1346,6 +1372,124 @@ button.money {
 .hud-chip.show {
   display: inline-flex;
   align-items: center;
+}
+
+/* The University Level and the Gold Seals held: pushed to the right of the row, and kept small. */
+.hud-chip.level-chip {
+  margin-left: auto;
+  gap: 4px;
+  padding: 2px 9px 2px 4px;
+}
+
+.level-badge {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+}
+
+.level-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.level-number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.seal-art {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 20px;
+}
+
+.seal-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.level-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.level-badge.big {
+  width: 72px;
+  height: 72px;
+}
+
+.level-badge.big .level-number {
+  font-size: 30px;
+}
+
+.level-words {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.level-words h1,
+.level-words p {
+  margin: 0;
+}
+
+.seals-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wait {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+}
+
+/* The name keeps its room. A Finish now that has grown into its question drops to the line below. */
+.wait .need-text {
+  flex: 1 1 150px;
+}
+
+.finish {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.finish-go {
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 17px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.finish-go:disabled {
+  opacity: 0.55;
+}
+
+.finish-ask {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.finish-row {
+  display: flex;
+  gap: 8px;
 }
 
 .hud-chip.urgent {

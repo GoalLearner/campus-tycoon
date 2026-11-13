@@ -24,6 +24,7 @@ import { RANK_GOALS } from './config/goals';
 import { eraOf, rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
 import { ERA_AT_RANK, ERAS } from './config/goals';
 import { policyLocked, policyOn, policySpec } from './systems/policies';
+import { collectOne, collectReady, dailyOnCleared, dailyOnPlaced, finishNow, hasDaily } from './systems/daily';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
 
@@ -61,7 +62,12 @@ export type Action =
   /** Choose the school's colour. */
   | { type: 'colour'; colour: string }
   /** Turn a policy on or off. It then stays as it is until the next class moves in. */
-  | { type: 'policy'; id: string; on: boolean };
+  | { type: 'policy'; id: string; on: boolean }
+  /** Collect what one building holds, by its key, or everything whose marker shows. */
+  | { type: 'collect'; key: string }
+  | { type: 'collectAll' }
+  /** Finish a wait now, for its price in Gold Seals: 'stadium', 'faculty', or 'policy:' and a policy's id. */
+  | { type: 'finish'; wait: string };
 
 export interface PaintPreview {
   tool: Tool;
@@ -80,7 +86,7 @@ export interface PaintPreview {
 }
 
 export type ActionResult =
-  | { ok: true; state: GameState; cost: number; changed: number }
+  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number } }
   | { ok: false; state: GameState; error: string };
 
 /** What one cell of a tool costs on a campus of a given scale (DESIGN.md 35.7). */
@@ -203,11 +209,13 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
   if (cell.placedId !== null) {
     // Clearing any cell of a hand-placed building takes the whole building.
     if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
+    dailyOnCleared(state, 'placed', cell.placedId);
     removePlaced(map, cell.placedId);
     return;
   }
   if (cell.buildingId !== null) {
     cancelTimers(state, 'buildDone', cell.buildingId);
+    dailyOnCleared(state, 'lot', cell.buildingId);
     map.buildings[cell.buildingId] = null;
   }
   cell.kind = 'empty';
@@ -299,6 +307,8 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   // A yard opens with a worker on its books.
   if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
   if (type === 'stadium') next.football.stadium.plot = built.id;
+  // The daily layer: it begins to fill from now, and holds its opening bonus.
+  dailyOnPlaced(next, built.id);
   next.money.cash -= preview.cost;
   next.money.yearSpent += preview.cost;
   recomputeDesirability(next.map);
@@ -457,6 +467,35 @@ function setPolicy(state: GameState, id: string, on: boolean): ActionResult {
   return { ok: true, state: next, cost: 0, changed: 1 };
 }
 
+/**
+ * Collect what a building holds (DESIGN.md 42.4): one by its key, or every
+ * one whose marker shows. Mostly experience and a little cash. It is a
+ * bonus: leaving it costs nothing for 36 hours, and normal income never
+ * waits on it.
+ */
+function collect(state: GameState, key: string | null): ActionResult {
+  if (!hasDaily(state)) return { ok: false, state, error: 'There is nothing to collect here.' };
+  const next = structuredClone(state);
+  if (key === null) {
+    const all = collectReady(next);
+    if (all.count === 0) return { ok: false, state, error: 'Nothing is ready to collect yet.' };
+    return { ok: true, state: next, cost: 0, changed: all.count, gained: all };
+  }
+  const paid = collectOne(next, key);
+  if (!paid) return { ok: false, state, error: 'There is nothing to collect there yet.' };
+  return { ok: true, state: next, cost: 0, changed: 1, gained: { ...paid, count: 1 } };
+}
+
+/** Finish a wait now, for Gold Seals (DESIGN.md 42.7). The price is the one `waits` quotes. */
+function finish(state: GameState, wait: string): ActionResult {
+  if (!hasDaily(state)) return { ok: false, state, error: 'There is nothing to finish here.' };
+  const next = structuredClone(state);
+  const problem = finishNow(next, wait);
+  if (problem) return { ok: false, state, error: problem };
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 function setColour(state: GameState, colour: string): ActionResult {
   if (!SCHOOL_COLOURS.some((one) => one.id === colour)) return { ok: false, state, error: 'That is not one of the colours.' };
   if (colour === state.football.colour) return { ok: true, state, cost: 0, changed: 0 };
@@ -493,6 +532,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return setColour(state, action.colour);
     case 'policy':
       return setPolicy(state, action.id, action.on);
+    case 'collect':
+      return collect(state, action.key);
+    case 'collectAll':
+      return collect(state, null);
+    case 'finish':
+      return finish(state, action.wait);
   }
 }
 

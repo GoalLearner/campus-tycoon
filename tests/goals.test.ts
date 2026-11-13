@@ -122,7 +122,7 @@ describe('size goals', () => {
     const reached = run.log.filter((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size');
     expect(reached.length).toBe(1);
     for (const goal of reached) expect(intakes.has(goal.tick)).toBe(true);
-    expect(reached[0]!.text).toBe('Test University has 50,000 students: the campus is full. The goal of 50,000 students is reached. It is kept for good.');
+    expect(reached[0]!.text).toBe('Test University has 50,000 students: the campus is full. The goal of 50,000 students is reached. It is kept for good. It brings 5 Gold Seals.');
   });
 
   it('are kept for good, whatever the campus does afterwards', () => {
@@ -146,12 +146,14 @@ describe('size goals', () => {
     const log: LogEntry[] = [];
     landSizeGoals(state, log);
     expect(state.goals!.size).toBe(1);
-    expect(log.length).toBe(1);
+    // One goal line. The experience it brings may reach a level, which has a line of its own (tests/daily.test.ts).
+    const goals = (): LogEntry[] => log.filter((entry) => entry.kind === 'goal');
+    expect(goals().length).toBe(1);
     expect(log[0]!.data).toMatchObject({ ladder: 'size', count: 1, from: 0, era: -1 });
     expect(state.goals!.reached.map((entry) => entry.ladder)).toEqual(['size']);
     // Asked again with nothing new, it says nothing.
     landSizeGoals(state, log);
-    expect(log.length).toBe(1);
+    expect(goals().length).toBe(1);
     // A save that reached three of the eight before the cap keeps all three, by their own names.
     const kept = structuredClone(model());
     kept.goals = { size: 3, rank: 0, rewards: 0, reached: [0, 1, 2].map((n) => ({ ladder: 'size' as const, n, year: 2 + n })) };
@@ -206,7 +208,7 @@ describe('the academic rank on a game with goals', () => {
     state.field.rank = 120;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
-    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.");
+    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. They bring 25 Gold Seals. The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.");
     state.field.rank = 190;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
@@ -427,6 +429,8 @@ describe('the main street', () => {
     expected.map.care.meals = loaded.state.map.care.meals!;
     // Version 17 adds the policies, every one off (tests/policies.test.ts has those).
     expected.policies = { on: [], locked: [], news: [] };
+    // Version 18 adds the daily layer, which a game with no goals never uses (tests/daily.test.ts).
+    expected.daily = loaded.state.daily;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

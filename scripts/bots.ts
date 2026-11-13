@@ -14,6 +14,10 @@ import {
   rewardLift,
   rewardsWaiting,
   enrollmentCap,
+  hasDaily,
+  readyToCollect,
+  TICKS_PER_HOUR,
+  waits,
   footballBooks,
   HOME_GAMES_PER_YEAR,
   housedIfOn,
@@ -99,7 +103,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true };
+export const botOptions = { slider: true, policies: true, daily: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -751,6 +755,34 @@ export interface TurnResult {
   purchases: number;
   /** True when the bot wanted to buy something and could not afford it. */
   blockedByCash: boolean;
+  /** The daily layer: what this visit collected, what the cap had already cost, and the Seals it spent on finishing waits. */
+  daily?: { xp: number; cash: number; count: number; lost: number; spent: number; finished: number };
+}
+
+/**
+ * The daily layer (DESIGN.md section 42), as a player who visits would use it: everything whose marker shows
+ * is collected, and Seals go on a wait worth finishing. A stadium going up comes first, then faculty on
+ * their way. A policy is left to free itself, and a wait with under six hours to run is left to finish.
+ */
+function useDaily(state: GameState): { state: GameState; daily: NonNullable<TurnResult['daily']> } | null {
+  if (!botOptions.daily || !hasDaily(state)) return null;
+  let current = state;
+  const lost = readyToCollect(current).reduce((sum, one) => sum + one.lost, 0);
+  const all = applyAction(current, { type: 'collectAll' });
+  const gained = all.ok && all.gained ? all.gained : { xp: 0, cash: 0, count: 0 };
+  if (all.ok) current = all.state;
+  let spent = 0;
+  let finished = 0;
+  for (const id of ['stadium', 'faculty']) {
+    const wait = waits(current).find((one) => one.id === id);
+    if (!wait || wait.price > current.daily.seals || wait.ticksLeft < 6 * TICKS_PER_HOUR) continue;
+    const done = applyAction(current, { type: 'finish', wait: id });
+    if (!done.ok) continue;
+    current = done.state;
+    spent += wait.price;
+    finished += 1;
+  }
+  return { state: current, daily: { ...gained, lost, spent, finished } };
 }
 
 /** One check-in. The absent player does nothing. */
@@ -790,6 +822,16 @@ function plantGreen(state: GameState, reserve: number, most: number): { state: G
 
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
+  // The visit opens with what is ready to collect, as a player's would.
+  const collected = useDaily(state);
+  if (collected) {
+    const rest = takeTurnAfter(collected.state, as);
+    return { ...rest, daily: collected.daily };
+  }
+  return takeTurnAfter(state, as);
+}
+
+function takeTurnAfter(state: GameState, as: Style): TurnResult {
   // The striver looks in once a day and buys as the once-a-day player does. What it adds comes after.
   const striver = as === 'striver';
   const style: Style = striver ? 'daily' : as;
