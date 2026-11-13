@@ -90,7 +90,14 @@ import {
   toneProblem,
   type GameState,
   type LogEntry,
+  BIG_BUILDS,
+  bigBuildOf,
+  placedCost,
+  placedUpkeep,
+  scaleOf,
+  type PlacedType,
 } from '../src/sim';
+import { removePlaced } from '../src/sim/systems/placed';
 import { botOptions, takeTurn, type Style } from './bots';
 
 /**
@@ -119,6 +126,8 @@ if (args.includes('--no-daily')) botOptions.daily = false;
 if (args.includes('--no-orders')) botOptions.orders = false;
 // `-- --no-decor` runs them without decorations or the Workshop: nothing set out, nothing made.
 if (args.includes('--no-decor')) botOptions.decor = false;
+// `-- --no-big-builds` runs them without buying what the Flagship and Legacy eras open (DESIGN.md 45).
+if (args.includes('--no-big-builds')) botOptions.bigBuilds = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -1145,12 +1154,14 @@ function assertModelCampus(seed: number): void {
   for (const run of runs) console.log(`${run.style} ${run.seed} ends with: ${run.final.policies.on.map((id) => POLICIES.find((spec) => spec.id === id)?.name ?? id).join(', ') || 'no policy on'}`);
   console.log('');
 
-  // The same players with every switch left off (DESIGN.md section 41), and nothing else changed: what the
-  // switches move, and nothing more.
+  // The same players with nothing an era opens used (DESIGN.md section 41): every switch left off and no big build
+  // bought (section 45), and nothing else changed. What the eras move, and nothing more.
   botOptions.policies = false;
+  botOptions.bigBuilds = false;
   const plain = seeds.flatMap((one) => styles.map((style) => play(style, one, PACE_WEEKS, 'model')));
+  botOptions.bigBuilds = !args.includes('--no-big-builds');
   const plainOf = (style: Style): Run[] => plain.filter((run) => run.style === style);
-  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF');
+  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF AND NOTHING BIG BUILT');
   console.log(`${'goal'.padEnd(18)}${head}`);
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${plain.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
   console.log(`${'rank at the end'.padEnd(18)}${plain.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
@@ -1226,7 +1237,7 @@ function assertModelCampus(seed: number): void {
       const says = (style: Style, from: number, to: number): string => `${offRange(style, from, to).low.toFixed(1)}% to ${offRange(style, from, to).high.toFixed(1)}%`;
       const regular = (['casual', 'daily'] as const).flatMap((style) => [offRange(style, 3, 8), offRange(style, 9, PACE_WEEKS)]);
       check(
-        'with every switch left off the same players keep $12 to $17 too, in years 3 to 8 and in the later weeks',
+        'with every switch left off and nothing big built, the same players keep $12 to $17 too, in years 3 to 8 and in the later weeks',
         Math.min(...regular.map((one) => one.low)) >= 12 && Math.max(...regular.map((one) => one.high)) <= 17,
         `switches off, years 3 to 8: ${styles.map((style) => `${style} ${says(style, 3, 8)}`).join(', ')}; weeks 9 to ${PACE_WEEKS}: ${styles.map((style) => `${style} ${says(style, 9, PACE_WEEKS)}`).join(', ')}. With the switches in use, years 3 to 8: ${styles.map((style) => `${style} ${range(style, 3, 8)}`).join(', ')}; weeks 9 to ${PACE_WEEKS}: ${styles.map((style) => `${style} ${range(style, 9, PACE_WEEKS)}`).join(', ')}`,
       );
@@ -1404,6 +1415,72 @@ function assertModelCampus(seed: number): void {
       'the paper says each new order and each finished one, and the board is a bonus: a campus that never looks at it loses nothing',
       runs.every((run) => run.seen.orderLines >= tally(run, 'claimed')) && bare.every((run) => tally(run, 'claimed') === 0 && tally(run, 'missed') === 0 && run.final.orders.open.every((order) => order.seen === undefined)) && alone.final.orders.open.length === orderSlots(alone.final),
       `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLines} lines`).join('; ')}. Never looked at: ${bare.map((run) => `${run.final.orders.open.length} waiting unseen`).join(', ')}, none begun, none missed; the campus left alone holds ${alone.final.orders.open.length}, all unseen`,
+    );
+  }
+
+  // The big builds of the eras (DESIGN.md 45): when each player bought each, and what each does at the end in its own
+  // number, against the same campus with it taken away.
+  {
+    const weekAt = (tick: number): number => Math.floor((tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
+    const eraWeek = (run: Run, era: number): number => run.seen.rankWeeks[[0, 2, 4, 6][era]!] ?? 0;
+    const without = (run: Run, type: PlacedType): GameState => {
+      const copy = structuredClone(run.final);
+      const placed = bigBuildOf(copy, type);
+      if (placed) removePlaced(copy.map, placed.id);
+      copy.money.ratesDirty = true;
+      return copy;
+    };
+    const cause = (state: GameState, id: string): number => 100 * (campusHappiness(state).causes.find((one) => one.id === id)?.level ?? 0);
+    const grad = (state: GameState): number => academicInputs(state).find((input) => input.id === 'graduation')?.level ?? 0;
+    console.log('WHAT THE ERAS OPEN: THE BIG BUILDS');
+    console.log(`${''.padEnd(34)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    row('Flagship era, Legacy era: week', (run) => `${weekOf(eraWeek(run, 2))}, ${weekOf(eraWeek(run, 3))}`.replace(/week /g, ''));
+    for (const spec of BIG_BUILDS) {
+      row(`${PLACED[spec.type].name}: bought, week`, (run) => {
+        const placed = bigBuildOf(run.final, spec.type);
+        return placed ? `${weekAt(placed.builtTick)}${placed.done === undefined ? '' : ' (going up)'}` : 'not bought';
+      });
+    }
+    row('second builder hired', (run) => (run.final.bigBuilds.slots >= 2 ? 'yes' : 'no'));
+    const upkeep = (run: Run): number => BIG_BUILDS.reduce((sum, spec) => {
+      const placed = bigBuildOf(run.final, spec.type);
+      return sum + (placed && placed.done === undefined ? placedUpkeep(spec.type, scaleOf(run.final)) : 0);
+    }, 0);
+    const price = (run: Run): number => BIG_BUILDS.reduce((sum, spec) => sum + (bigBuildOf(run.final, spec.type) ? placedCost(spec.type, scaleOf(run.final)) : 0), 0);
+    row('paid to build them', (run) => dollarsShort(price(run)));
+    row('to run them, a year', (run) => dollarsShort(upkeep(run)));
+    row('  of every $100 that comes in', (run) => `$${((100 * upkeep(run)) / Math.max(1, budget(run.final).incomeTotal)).toFixed(2)}`);
+    row('Union: Food & fun, with / without', (run) => (bigBuildOf(run.final, 'studentUnion') ? `${cause(run.final, 'life').toFixed(1)} / ${cause(without(run, 'studentUnion'), 'life').toFixed(1)}` : '-'));
+    row('Union: Happiness, with / without', (run) => (bigBuildOf(run.final, 'studentUnion') ? `${campusHappiness(run.final).base.toFixed(1)} / ${campusHappiness(without(run, 'studentUnion')).base.toFixed(1)}` : '-'));
+    row('Honors: graduation input, w / w-o', (run) => (bigBuildOf(run.final, 'honorsCollege') ? `${grad(run.final).toFixed(1)} / ${grad(without(run, 'honorsCollege')).toFixed(1)}` : '-'));
+    row('Honors: academic rating, w / w-o', (run) => (bigBuildOf(run.final, 'honorsCollege') ? `${academicRating(run.final).toFixed(1)} / ${academicRating(without(run, 'honorsCollege')).toFixed(1)}` : '-'));
+    row('Welcome: applicants, with / w-o', (run) => (bigBuildOf(run.final, 'welcomeCenter') ? `${fallApplicants(run.final).total} / ${fallApplicants(without(run, 'welcomeCenter')).total}` : '-'));
+    row('Commons: Grounds, with / without', (run) => (bigBuildOf(run.final, 'foundersCommons') ? `${cause(run.final, 'grounds').toFixed(1)} / ${cause(without(run, 'foundersCommons'), 'grounds').toFixed(1)}` : '-'));
+    row('Commons: Happiness, with / w-o', (run) => (bigBuildOf(run.final, 'foundersCommons') ? `${campusHappiness(run.final).base.toFixed(1)} / ${campusHappiness(without(run, 'foundersCommons')).base.toFixed(1)}` : '-'));
+    console.log('');
+
+    check(
+      'a big build is bought only once its era has come, one of each, and every one bought opens',
+      runs.every((run) =>
+        BIG_BUILDS.every((spec) => {
+          const all = run.final.map.placed.filter((placed) => placed?.type === spec.type);
+          if (all.length > 1) return false;
+          const placed = all[0];
+          if (!placed) return true;
+          const era = eraWeek(run, spec.era);
+          return era > 0 && weekAt(placed.builtTick) >= era && (placed.done === undefined || run.final.clock.tick - placed.builtTick < spec.hours * TICKS_PER_HOUR + 1);
+        }),
+      ),
+      runs.map((run) => `${run.style} ${run.seed}: ${BIG_BUILDS.map((spec) => {
+        const placed = bigBuildOf(run.final, spec.type);
+        return `${PLACED[spec.type].name} ${placed ? `week ${weekAt(placed.builtTick)}` : 'not bought'}`;
+      }).join(', ')}`).join('; '),
+    );
+    check(
+      'nothing big is built on a small campus or by a player who leaves the eras alone',
+      plain.every((run) => BIG_BUILDS.every((spec) => !bigBuildOf(run.final, spec.type))),
+      plain.map((run) => `${run.style} ${run.seed}: none`).join('; '),
     );
   }
 

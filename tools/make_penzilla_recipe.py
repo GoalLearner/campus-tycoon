@@ -292,6 +292,31 @@ sprites['reward.alumni'] = {'layers': [on_grid(PUBLIC + 'Hotel_ThreeFloors.png',
 sprites['reward.broadcast'] = {'layers': [on_grid(PUBLIC + 'TeleTower.png')]}
 sprites['reward.bell'] = {'layers': [on_grid(OLD + 'Buildings/TowerStoneRoofed.png')]}
 
+# ------------------------------------------------------- the eras' big builds --
+# What the Flagship and Legacy eras open (DESIGN.md section 45). The three Flagship buildings are the pack's own
+# drawings, as drawn, on the block the pack drew each for. The Grand Library and the Hall of Champions have none
+# that honestly fits, and wait.
+sprites['era.union'] = {'layers': [on_grid(SHOPS + 'Groceries_Mall.png', 2, 2)]}
+sprites['era.honors'] = {'layers': [on_grid(PUBLIC + 'Hotel_TwoFloors.png', 2, 1)]}
+sprites['era.welcome'] = {'layers': [on_grid(PUBLIC + 'Hotel_OneFloor.png', 2, 1)]}
+# The pack's building site for a block of two cells, for a big build of that size while it goes up.
+sprites['build.site.wide'] = {'layers': [on_grid(PUBLIC + 'Construction_1x2.png', 2, 1)]}
+# Founders' Commons is a green of three cells by three, laid out from the packs' own pieces, each as drawn: the grass,
+# a cross of paving, the statue in the middle, trees, lamps, benches and flowers. It is on section 26 as assembled.
+COMMONS_PAVING = [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)]
+COMMONS_THINGS = [
+    standing(PLANTS + 'Tree1.png', 0.5, 0.5),
+    standing(PLANTS + 'Tree13.png', 2.5, 0.45),
+    standing(PLANTS + 'Tree13.png', 0.45, 2.5),
+    standing(OLD + 'Decor/StreetLight.png', 1.85, 0.95),
+    standing(OLD + 'Decor/StreetLight.png', 0.95, 1.85),
+    standing(OLD + 'Decor/Statue.png', 1.5, 1.5, scale=1.7),
+    standing(OLD + 'Decor/Bench.png', 2.45, 1.75),
+    standing(OLD + 'Decor/Bench.png', 1.75, 2.45, flip=True),
+    standing(PLANTS + 'Plant1.png', 2.55, 2.55, scale=1.2),
+]
+sprites['era.commons'] = {'layers': grass_under(3, 3) + [on_grid(TILES + 'Sidewalk_Tile9.png', shift=[x, y]) for x, y in sorted(COMMONS_PAVING, key=lambda c: (c[0] + c[1], c[0]))] + COMMONS_THINGS}
+
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
 sprites['icon.injury'] = {'layers': [{'file': SHOPS + 'Shop_Pharmacy_OneFloorRoofed.png', 'crop': [632, 416, 772, 606], 'stand': [0.5, 0.5], 'recolour': 'cross'}]}
@@ -539,6 +564,7 @@ recipe = {
         'build.safety': [2, 2], 'build.stadium': [2, 2], 'stadium.1': [2, 2], 'stadium.2': [2, 2], 'stadium.3': [2, 2], 'stadium.4': [2, 3], 'stadium.5': [2, 3], 'build.parking.large': [2, 2], 'build.garage': [2, 2], 'build.pool': [2, 1], 'build.field': [2, 2], 'build.admin': [2, 2], 'pond.large': [3, 3], 'build.studentlife': [2, 2], 'build.school': [2, 2],
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
         'reward.fountain': [2, 2], 'reward.post': [2, 1], 'reward.cinema': [2, 2], 'reward.radio': [2, 1], 'reward.museum': [2, 2], 'reward.alumni': [2, 1],
+        'era.union': [2, 2], 'era.honors': [2, 1], 'era.welcome': [2, 1], 'era.commons': [3, 3], 'build.site.wide': [2, 1],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
     'credits': [
@@ -548,7 +574,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together.',
         },
         {
             'name': 'Football stadium (3D model)',

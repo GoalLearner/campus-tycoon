@@ -79,9 +79,14 @@ export type PlacedType =
   | 'museum'
   | 'alumniHouse'
   | 'broadcastTower'
-  | 'bellTower';
+  | 'bellTower'
+  // What the eras open (DESIGN.md 41.3 and 41.4, as built in section 45): bought, one of each, built over real days.
+  | 'studentUnion'
+  | 'honorsCollege'
+  | 'welcomeCenter'
+  | 'foundersCommons';
 
-/** A hand-placed building. It is whole from the moment it is placed. */
+/** A hand-placed building. It is whole from the moment it is placed, but for a big build of an era, which goes up first. */
 export interface Placed {
   id: number;
   type: PlacedType;
@@ -96,6 +101,8 @@ export interface Placed {
   decor?: string;
   /** A decoration only: turned to run the other way. */
   flip?: boolean;
+  /** A big build of an era (DESIGN.md 45) still going up: the tick it opens. Left out once it is open. */
+  done?: number;
 }
 
 export interface Rebuild {
@@ -290,7 +297,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild';
 
 export interface Timer {
   due: number;
@@ -608,6 +615,16 @@ export interface GameState {
   decor: Decor;
   /** The daily gift, the goals for the year and the moments of the calendar (DESIGN.md 42.8, as built in section 44). */
   rhythm: Rhythm;
+  /** The big builds an era opens (DESIGN.md 45): how many can go up at once. What is built is on the map. */
+  bigBuilds: BigBuilds;
+}
+
+/** The big builds of the eras (DESIGN.md 45). */
+export interface BigBuilds {
+  /** How many can go up at once: one, and two once the second builder is bought for Seals. */
+  slots: number;
+  /** Lines waiting from an action, said on the next tick. */
+  news: string[];
 }
 
 // ------------------------------------------------------------- football --
@@ -970,6 +987,7 @@ export type LogKind =
   | 'craft'
   | 'season'
   | 'rhythm'
+  | 'bigBuild'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

@@ -2360,6 +2360,10 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Town driveway tile, `town.driveway` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 | Town garden tile, `town.garden` (43) | Its drawing as described above, or as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 | School banner, `decoration.banner.crimson` to `decoration.banner.maroon` (42.20) | The Medieval pack's red banner with its cloth turned to each of the eight school colours by the art build: eight pictures, and the one the game shows is the school's. Shown to the owner on his art sheet and picked on 2026-11-12. A line of shading one pixel wide down the cloth's left edge keeps a little of the red, seen only zoomed far in | Keep. Or a commissioned banner whose cloth takes any colour cleanly |
+| Founders' Commons, `era.commons` (45) | Laid out from the packs' own pieces, each as drawn: nine grass tiles, a cross of five paving tiles, the Medieval pack's statue enlarged in the middle, three trees, two street lamps, two benches (one mirrored to face the other) and a pot of flowers. Nobody drew it as one landmark | Penzilla commission, 3 x 3: a landmark green with a founders' statue. Or keep if it passes his look |
+| Honors College, `era.honors` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Welcome Center, `era.welcome` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
+| Building site of two cells, `build.site.wide` (45) | Its drawing as drawn by the pack; mirrored for the turned view on a quarter and a three-quarter turn, so it lies along its turned footprint. The half turn draws it as it is | Keep. Or a drawing of its other side, if the packs ever have one |
 
 Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one, and turn with the view (43). The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
 
@@ -4928,7 +4932,7 @@ The targets stand: the Top 100 in week 7, and the Top 10 never before month five
 
 ## 41. What each era unlocks
 
-The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". He was sent it as one page and asked: "Approve this plan and build the Growth policies first?" He answered: "Yes, policies first". **Approved on 2026-11-12, to be built one stop for each era, the policies first. The policies are built: 41.7 onward has them as built and as measured. The three buildings of 41.3 and the three landmarks of 41.4 are not built.**
+The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". He was sent it as one page and asked: "Approve this plan and build the Growth policies first?" He answered: "Yes, policies first". **Approved on 2026-11-12, to be built one stop for each era, the policies first. The policies are built: 41.7 onward has them as built and as measured. The three buildings of 41.3 and the three landmarks of 41.4 are not built.** On 2026-11-13 the three buildings and Founders' Commons were built: section 45. The Grand Library and the Hall of Champions wait for drawings.
 
 ### 41.1 One kind of thing for each era
 
@@ -6022,3 +6026,131 @@ The gift's and the moments' grants come out of the orders' yearly allowance, so 
 | Working out the phone's notices takes longer | It plays forward a morning at a time to see what is ready: 35 to 37 thousandths of a second for three days on the model campus on this PC, against 20 to 22 before. It runs when the game is put away |
 | More decorations in storage | The test players hold 197 to 209 by week 44, where they held 103 to 128 at stop 3: the card's two a week, set out only where they lift a lot. A person will set them out where they look nice |
 | Never run on a phone | The morning notice in particular. Checked in pictures and tests on this PC, at 390 wide |
+
+---
+
+## 45. The big builds of the eras, as built
+
+The three buildings of 41.3 and the landmarks of 41.4, built on 2026-11-13 on the owner's overnight word relayed by the main session: "perfect handle all of that with my approval on all... if you finish these...keep going", which took in the art. The rules of 41.1 stand: an era only adds, each thing moves one number the game already has through the cause it belongs to, there is no fifth cause, nothing a game could build before is put behind an era, and a thing with no drawing that honestly fits waits. Only a game with goals has them: the small campus has no eras, and its long-run tables print the same numbers as before.
+
+### 45.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| What each era opens | Flagship, at the Top 75: the Student Union, the Honors College and the Welcome Center. Legacy, at the Top 25: Founders' Commons. One of each | `BIG_BUILDS` in `src/sim/config/bigBuilds.ts` |
+| Waiting for art | The Grand Library and the Hall of Champions. No drawing in his packs honestly fits either (45.3), so neither is in the game, and the page says so | `BIG_BUILDS_WAITING` |
+| In the Build menu | Under the era's own heading, Flagship or Legacy, after what a rank goal gave and before the rest: the drawing, the price, the size, what it costs a year to run, how long it takes to go up, and what it does. One not yet opened by its era is not shown, and one that stands is on the map and not in the menu | `bigBuildEntries` in `src/ui/buildUi.ts` |
+| Buying one | Placed as any building is. A second of a kind is refused while one stands or goes up, and one whose era has not come is refused with the rank that opens it | `cannotStart` in `src/sim/systems/bigBuilds.ts`, `place` in `src/sim/actions.ts` |
+| Going up | A Flagship building takes a day, a landmark three. While it goes up it is the pack's own building site on its block (the two-by-two site, or the two-by-one), does nothing, costs nothing to run and holds no bonus to collect. Then it opens by itself, with its line in the paper, its opening bonus to collect, and its upkeep from then on. A player away a week loses nothing | `startBigBuild`, `bigBuildDone`, `showSite` in `src/game/CampusScene.ts` |
+| The builder | One goes up at a time. The menu card of another says when the builder is free | `goingUp` |
+| The second builder | A card in the Build menu, 20 Gold Seals once, for good: two can then go up at once. It is the second slot of 42.7 | `buySecondBuilder`, `SECOND_BUILDER_ENTRY` |
+| Finish now | Each one going up is a wait on the Level page, at the usual rate of a Seal for every six hours left: 4 Seals for a building, 12 for the landmark | `waits`, `finishNow` in `src/sim/systems/daily.ts` |
+| Clearing one | As any building: half its price back after the undo time. One going up takes its timer with it. Either can be bought again | `bigBuildCleared` |
+| The paper | The era's line names what it opens to buy: "The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and two more policies: ...". The Goals page says the same of the next era. A start is a line in the paper, and an opening is good news near the top | `eraOpens` in `src/sim/systems/goals.ts`, `src/sim/digest.ts` |
+| The Student Union | Somewhere to meet over a wide circle: at every dorm and lecture hall within 16 cells of its wall (a gym reaches 8) it counts as recreation of 0.5, the part of Food & fun that recreation is, never past full. It has no line to wait in. Its own panel says how many lots it reaches | `unionAt`, `recreationAt` in `src/sim/systems/play.ts` |
+| The Honors College | The graduation rate the academic rating reads is 2 points higher, never past all of a class, and the Rankings page says so on that line: "92% of a class finishes, 2 of them with the Honors College". A campus whose rate already reads at the top of the scale (95% or more) gains nothing there | `honorsRate`, `academicInputs` in `src/sim/systems/field.ts` |
+| The Welcome Center | Each step of marketing brings a quarter more: step 4 brings 17.5 in a hundred instead of 14. With marketing off it brings nothing, and its panel says so | `welcomeMore`, `marketingLift` in `src/sim/systems/budget.ts` |
+| Founders' Commons | Grounds 5 points better at every dorm and lecture hall, wherever students live: inside Grounds, never past full, and named on that line of the Happiness panel and every student card, as a policy is (41.8) | `commonsLift`, `causeShifts` in `src/sim/systems/policies.ts` |
+| Prices | On the model campus: the Student Union $33.6M and $8.4M a year, the Honors College $28M and $7M a year, the Welcome Center $22.4M and $6.2M a year, Founders' Commons $252M and $1.1M a year. The dearest building to buy from the rest of the Build menu, the parking structure, is $4.5M | `PLACED` in `src/sim/config/placed.ts` |
+| Art | The Student Union is the city pack's glass shopping hall, the Honors College its two-floor brick hall, the Welcome Center its one-floor brick building with an awning, each as drawn. Founders' Commons is laid out from the packs' own pieces: grass, a cross of paving, the statue in the middle, trees, street lamps, benches and flowers (section 26). The building site of two cells is the city pack's own. Every one is in the private atlas only | `tools/make_penzilla_recipe.py` |
+| The turned view | The two-by-one buildings and their site are mirrored on a quarter and three-quarter turn, by the rule of 43. The others are square | |
+| Saves | Version 22. One migration gives an older save one builder and nothing going up. A version 21 fixture of a model campus like his, named Larp University, upgrades in the tests. The upgrade note says what is new | `src/sim/save.ts`, `tests/fixtures/save-v21-model.json`, `src/app/upgradeNotes.ts` |
+| The dev page | `&rank=20&big=studentUnion,foundersCommons` places those, open; `&going=` leaves one going up; `&builders=2` hires the second builder | `src/app/devtools.ts` |
+
+### 45.2 Measured
+
+The test players buy as 45.3 has it. Two seeds each, 44 real weeks. The comparison is the same players with nothing an era opens used: every switch off and nothing big built.
+
+**When each player could afford and bought each.** The week each was bought; the eras came in weeks 11 and 12 (Flagship) and 20 to 22 (Legacy).
+
+| Big build | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Student Union | 19 and 14 | 14 and 11 | 13 and 12 |
+| Honors College | 13 and 12 | 12 and 11 | 23 and 12 |
+| Welcome Center | Not bought: marketing is off | Not bought: marketing is off | 43 and 31 |
+| Founders' Commons | 23 and 21 | 22 and 21 | 22 and 21 |
+| The second builder | No | No and yes | No and yes |
+| Paid to build them | $313.6M | $313.6M | $336.0M |
+| To run them, a year | $17M, $3.50 to $3.60 of every $100 | the same | $23M, $4.90 to $5.00 |
+
+Most were bought within three weeks of their era. The casual player's first Union waited seven and the keenest player's first Honors College eleven, held back by the rule that the campus must still keep $13.50 of every $100 once it pays to run it. Founders' Commons waits only for its price, saved in a day or two, and on every campus the players cleared a block of lawn for it.
+
+**What each does, in its own number.** At week 44, against the same campus with it taken away.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Student Union: Food & fun, with and without | 91.0 / 87.3, 87.7 / 80.5 | 85.2 / 81.5, 86.5 / 77.5 | 90.8 / 86.6, 81.8 / 77.2 |
+| Student Union: Happiness | 95.3 / 94.3, 91.6 / 89.6 | 92.3 / 91.3, 91.9 / 89.4 | 94.0 / 92.8, 90.4 / 89.1 |
+| Honors College: the graduation input | 100.0 / 99.4, 100.0 / 96.6 | 97.0 / 93.3, 95.9 / 92.3 | 100.0 / 98.5, 100.0 / 96.4 |
+| Honors College: the academic rating | 82.7 / 82.5, 82.6 / 81.6 | 83.2 / 82.1, 82.5 / 81.4 | 84.0 / 83.6, 83.0 / 82.0 |
+| Welcome Center: applicants a fall | | | 21,468 / 20,834, 21,405 / 20,772 |
+| Founders' Commons: Grounds | 66.0 / 64.6, 65.8 / 64.0 | 65.5 / 63.8, 65.6 / 63.9 | 66.2 / 65.0, 65.1 / 63.5 |
+| Founders' Commons: Happiness | 95.3 / 94.9, 91.6 / 91.2 | 92.3 / 91.8, 91.9 / 91.4 | 94.0 / 93.7, 90.4 / 90.0 |
+
+The Union lifts Food & fun about 4 to 9 points and Happiness 1 to 2.5. The Honors College lifts the academic rating by up to 1.1 points, and by 0.2 where the rate already reads near the top. The Welcome Center brings about 630 more applicants a fall at step 4 of marketing. Founders' Commons lifts Grounds 1.2 to 1.8 points across the campus, not 5: on a well-kept campus many lots already have full Grounds (two fifths, in a probe at week 1).
+
+**The pace of the rank goals.** The real week each is reached.
+
+| Goal | Casual | Once a day | Works every cause | With nothing an era opens used: the same three |
+|---|---|---|---|---|
+| Top 100 | 7 | 7 | 7 | 7, 7, 7 |
+| Top 75 | 11 to 12 | 11 to 12 | 11 to 12 | the same |
+| Top 50 | 14 to 16 | 14 to 16 | 14 to 16 | the same |
+| Top 25 | 20 to 22 | 20 to 21 | 20 to 21 | 20 to 21 for each |
+| Top 10 | 29 to 31 | 27 to 31 | 25 to 29 | 27, 24 to 27, 24 to 29 |
+| Rank at week 44 | 3rd to 4th | 2nd to 3rd | 3rd to 4th | 2nd to 3rd for each |
+
+The Top 10 never comes before week 24. It comes 0 to 4 weeks later for a player who buys them, 2 on average: the running costs come out of what the campus keeps, and the test players then fund fewer faculty with the Instruction slider (one to every 19 or 20 students at week 44, against 17 to 19 at stop 4). As first built, with the Union at $10.1M a year and the Honors College at $8.4M, it was the same or later. The buildings' own lifts to the rating do not make up for a step of faculty.
+
+**Money.** Kept of every $100.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Years 3 to 8, buying them | $13.70 to $15.40 | $13.00 to $15.50 | $11.30 to $14.00 |
+| Years 3 to 8, nothing an era opens used | $13.70 to $15.50 | $13.00 to $15.50 | $11.30 to $14.00 |
+| Weeks 9 to 44, buying them | $12.20 to $15.50 | $12.90 to $15.90 | $10.70 to $14.70 |
+| Weeks 9 to 44, nothing an era opens used | $14.00 to $15.90 | $14.20 to $16.10 | $11.80 to $15.50 |
+
+The casual and the once-a-day player stay inside $12 to $17 either way. Buying them takes $1.30 to $1.80 off the later weeks' low. The keenest player dips under $12 in an early year and some later weeks, as before, and a little further with them. The endowment holds $2.09B to $2.56B at week 44, against $2.60B to $3.01B at stop 4: the $314M to $336M they cost.
+
+**Seals.** 12.2 to 13.1 earned a week (12.5 to 13.5 at stop 4). Two players hired the second builder for 20 Seals. The test players finish a big build's wait when they would still hold 12 Seals after it.
+
+**Speed.** With the four standing on the model campus, a frame takes 2.8 to 4.5 ms on this PC, against 2.9 to 3.6 ms without them. A week away catches up in 0.05 to 0.13 seconds with them, and 0.06 with them taken away. Nothing walks them on a tick: each effect is read where its rule is read.
+
+**Tests and long runs.** 16 new tests: 813 in all. Two new long-run checks: 78 in all, every one passing. The small campus's tables are the same as before, line for line.
+
+### 45.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The drawings | The city pack's glass shopping hall for the Student Union, its two-floor brick hall for the Honors College, its one-floor brick building with an awning for the Welcome Center, each as drawn | The grander train station, fire station, hospital or water works, each of which plainly reads as what it was drawn for |
+| The Grand Library | Waits. The pack's library is already the Build menu's library, and nothing else reads as a library | The library drawing again, larger: a stand-in. Or the Medieval church, which reads as a church |
+| The Hall of Champions | Waits. Nothing in the packs is a hall: the roofed stadiums are stadiums, and the podium and trophies are icons | A roofed stadium named a hall: a stand-in |
+| Founders' Commons | Laid out from pack pieces as a green with the statue in the middle, on section 26. A commons is a green, so it is honest | Wait for a commission, which would leave the Legacy era with no landmark |
+| How long they take | A day for a building, three days for a landmark, as 41.4 asks | Minutes, as the Build menu's buildings: then nothing is going up for a player to look forward to |
+| While going up | A building site that does nothing and costs nothing to run, and no bonus to collect until it opens | Its effect at once. Or its upkeep at once |
+| The builder | One at a time, two with the second builder for 20 Seals, as 42.7 has it | As many at once as cash allows |
+| One builder busy | Every other card says when it is free, and the second builder's own card says its price | Each card repeating the price of the second builder |
+| The Student Union's reach | 16 cells, twice a gym's, at a recreation of 0.5, with no line to wait in | The recreation rule with its crowding, which would put people playing on a building site |
+| The Honors College | 2 points of graduation rate, read by the academic rating and named on its line | More: a sooner Top 10 for those who buy it. 3 points was not tried, as the rank goals came later with the buildings bought, not sooner |
+| The Welcome Center | A quarter more from each step of marketing | A fixed number of applicants, which would be a fifth cause |
+| Founders' Commons' lift | 5 points of Grounds at every lot, inside the cause and never past full, named as a policy is | 3, as first built: about 1 point across a well-kept campus, as two fifths of its lots already have full Grounds. Or a lift to how the campus looks, which the rank goals' buildings already give |
+| Running costs | The Union $8.4M a year, the Honors College $7M, the Welcome Center $6.2M: inside the $6M to $16M a step of the Instruction slider costs. Founders' Commons $1.1M: it is a green | As first tried, $10.1M, $8.4M and $6.2M. The test players who bought all three paid for them with two steps of faculty, and reached the Top 10 up to four weeks later |
+| Prices | Many times a Build menu building: $22.4M to $33.6M. Founders' Commons $252M, about a month of what a well-run full campus keeps | |
+| The test players | Buy each when its era has come, when the price leaves the visit's reserve, and when they would still keep $13.50 of every $100 once it pays to run. The Welcome Center only with marketing on. Founders' Commons is judged by its price alone, as it runs at a quarter of a dollar in every $100. They save its price rather than paying it into the endowment, and on a full campus clear a block of lawn, trees or empty ground for it by the Administration building | Buy whatever opens at once. Then the Welcome Center, bought with marketing off, did nothing for $6.2M a year. As first built they never had the landmark's price in cash and never had room for it |
+| Where the test players put them | The Union where it reaches the most lots that want more to do. The rest nearest the Administration building | |
+| The long run's comparison | The players with nothing an era opens used: every switch off and nothing big built, in one set of runs | A fourth set of runs, for about three minutes more |
+
+### 45.4 Rough
+
+| Rough | Why |
+|---|---|
+| Buying them costs rank pace | They are paid for out of what the campus keeps, and the test players then fund fewer faculty with the Instruction slider: the Top 10 comes 0 to 4 weeks later, 2 on average, and the rank at week 44 is a place lower. It is the trade 41.3 set: a year of one is about a step of the slider. Stronger effects, or lower running costs, would make them pay for themselves; that is his call |
+| The Grand Library and the Hall of Champions wait | No drawing in his packs honestly fits either. The Legacy era opens one landmark |
+| Founders' Commons is assembled | From the packs' own pieces (section 26). It may want a commissioned landmark |
+| The Honors College does nothing on a campus that already finishes 95% or more of a class | The academic rating reads the rate on a scale that is full at 95%. Its panel and the Rankings page say what it adds |
+| Founders' Commons does less where Grounds is already full | It adds inside the cause and never past full, as a policy does. About two fifths of the lots of a well-kept campus were there in a probe, so it came to 1.2 to 1.8 points across the campus |
+| The Welcome Center does nothing with marketing off | It adds to what marketing brings. Its panel says so, and the casual and once-a-day test players, who leave marketing off, never buy it |
+| On a full campus there is no room for the landmark | A player clears ground for it, as 41.6 expected. The test players clear a block of lawn by the Administration building |
+| The test players do not show what a person would choose | They buy each as soon as the money rule allows. A person may wait, or never buy one |
+| Never run on a phone | Checked in pictures and in tests on this PC |

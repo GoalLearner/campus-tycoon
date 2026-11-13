@@ -1,4 +1,12 @@
 import {
+  bigBuildOf,
+  bigBuildsOffered,
+  cannotStart,
+  goingUp,
+  placedUpkeep,
+  recreationAt,
+  SECOND_BUILDER_SEALS,
+  UNION_REACH,
   averageDesirability,
   BENEFITS_SHARE,
   budget,
@@ -116,7 +124,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -444,7 +452,9 @@ function setPolicies(state: GameState, style: Style): GameState {
  * its cash for the next class.
  */
 function payIntoEndowment(state: GameState, style: Style): GameState {
-  const keep = Math.max(1_000_000 * scaleOf(state), state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5));
+  // A big build of an era the campus means to buy (DESIGN.md 45) is saved for: its price stays in cash.
+  const saving = bigBuildsWanted(state).reduce((least, type) => Math.min(least, placedCost(type, scaleOf(state))), Infinity);
+  const keep = Math.max(1_000_000 * scaleOf(state), state.money.spendingPerYear * (style === 'optimizer' ? 0.25 : 0.5), Number.isFinite(saving) ? saving * 1.05 : 0);
   const spare = Math.floor(state.money.cash - keep);
   if (spare < 100_000 * scaleOf(state)) return state;
   const result = applyAction(state, { type: 'endow', amount: spare });
@@ -762,6 +772,130 @@ function placeRewards(state: GameState): { state: GameState; placed: number } {
   return { state: current, placed };
 }
 
+/**
+ * The big builds an era opens (DESIGN.md 45), bought as a player who reads the Money panel would buy them: once the
+ * era has come, when the price leaves the visit's reserve, and when the campus would still keep enough of every $100
+ * once it pays to run. The Student Union goes where it reaches the most dorms and lecture halls that want more to do;
+ * the others go on free ground nearest the Administration building. A big build waiting on the builder hires the
+ * second one, with Seals to spare.
+ */
+/**
+ * The big builds this campus would buy now if it had the cash: open, not yet on the map, worth having (the Welcome
+ * Center only with marketing on, since it adds to marketing and nothing else), and leaving enough kept of every
+ * $100 once it pays to run.
+ */
+function bigBuildsWanted(state: GameState): PlacedType[] {
+  if (!botOptions.bigBuilds || !state.goals || !state.bigBuilds) return [];
+  const books = budget(state);
+  if (books.incomeTotal <= 0) return [];
+  const scale = scaleOf(state);
+  return bigBuildsOffered(state)
+    .map((spec) => spec.type)
+    .filter((type) => !bigBuildOf(state, type))
+    .filter((type) => type !== 'welcomeCenter' || state.money.marketing > 0)
+    .filter((type) => {
+      const share = (100 * placedUpkeep(type, scale)) / books.incomeTotal;
+      // Under half a dollar of every $100 a year, as the landmark is, it is judged by its price alone.
+      return share < 0.5 || keeps(state) - share >= KEEPS_ENOUGH;
+    });
+}
+
+function placeBigBuilds(state: GameState, reserve: number): { state: GameState; placed: number } {
+  if (!botOptions.bigBuilds || !state.goals || !state.bigBuilds) return { state, placed: 0 };
+  let current = state;
+  let placed = 0;
+  for (const type of bigBuildsWanted(state)) {
+    // What was bought this visit may have changed what the campus can afford to run.
+    if (!bigBuildsWanted(current).includes(type)) continue;
+    const scale = scaleOf(current);
+    if (current.money.cash - placedCost(type, scale) < reserve) continue;
+    if (cannotStart(current, type) !== null && goingUp(current).length >= current.bigBuilds.slots) {
+      if (current.bigBuilds.slots >= 2 || current.daily.seals - SECOND_BUILDER_SEALS < SEALS_KEPT) continue;
+      const hired = applyAction(current, { type: 'buySecondBuilder' });
+      if (!hired.ok) continue;
+      current = hired.state;
+    }
+    let spot = bigBuildSpot(current, type);
+    if (!spot) {
+      const cleared = clearForBigBuild(current, type);
+      if (!cleared) continue;
+      current = cleared.state;
+      spot = cleared.spot;
+    }
+    const result = applyAction(current, { type: 'place', building: type, x: spot[0], y: spot[1] });
+    if (!result.ok) continue;
+    current = result.state;
+    placed += 1;
+  }
+  return { state: current, placed };
+}
+
+/**
+ * A campus with no free block big enough clears one, as 41.6 says a full campus must: the block nearest the
+ * Administration building whose every cell is lawn, a tree or empty ground the campus owns. Nothing with a
+ * building on it, and no path, is cleared. null when there is no such block.
+ */
+function clearForBigBuild(state: GameState, type: PlacedType): { state: GameState; spot: Point } | null {
+  const map = state.map;
+  const spec = PLACED[type];
+  const admin = map.placed.find((one) => one?.type === 'admin');
+  const [ax, ay] = admin ? [admin.x, admin.y] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  let best: Point | null = null;
+  let near = Infinity;
+  for (let y = 0; y + spec.h <= map.height; y++) {
+    for (let x = 0; x + spec.w <= map.width; x++) {
+      const far = Math.hypot(x - ax, y - ay);
+      if (far >= near) continue;
+      let ok = true;
+      for (let cy = y; cy < y + spec.h && ok; cy++) {
+        for (let cx = x; cx < x + spec.w && ok; cx++) {
+          const kind = kindAt(state, cx, cy);
+          ok = ownedAt(map, cx, cy) && (kind === 'empty' || kind === 'quad' || kind === 'tree');
+        }
+      }
+      if (ok) {
+        near = far;
+        best = [x, y];
+      }
+    }
+  }
+  if (!best) return null;
+  const cells: Point[] = [];
+  for (let cy = best[1]; cy < best[1] + spec.h; cy++) for (let cx = best[0]; cx < best[0] + spec.w; cx++) if (kindAt(state, cx, cy) !== 'empty') cells.push([cx, cy]);
+  if (cells.length === 0) return { state, spot: best };
+  const cleared = applyAction(state, { type: 'paint', tool: 'clear', cells });
+  return cleared.ok ? { state: cleared.state, spot: best } : null;
+}
+
+/** Where a big build goes: the Student Union where it reaches the most lots that want more to do, the rest nearest the Administration building. */
+function bigBuildSpot(state: GameState, type: PlacedType): Point | null {
+  const map = state.map;
+  const spec = PLACED[type];
+  const admin = map.placed.find((one) => one?.type === 'admin');
+  const [ax, ay] = admin ? [admin.x, admin.y] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  const lots = type === 'studentUnion' ? map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0 && recreationAt(state, lot.x, lot.y) < 1) : [];
+  let best: Point | null = null;
+  let score = -Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (!freeAt(state, x, y) || previewPlace(state, type, x, y).problem !== null) continue;
+      let here: number;
+      if (type === 'studentUnion') {
+        here = 0;
+        for (const lot of lots) {
+          const far = Math.max(Math.max(x - lot.x, 0, lot.x - (x + spec.w - 1)), Math.max(y - lot.y, 0, lot.y - (y + spec.h - 1)));
+          if (far <= UNION_REACH) here += 1;
+        }
+      } else here = -Math.hypot(x - ax, y - ay);
+      if (here > score) {
+        score = here;
+        best = [x, y];
+      }
+    }
+  }
+  return best;
+}
+
 export interface TurnResult {
   state: GameState;
   /** Purchases made this check-in. */
@@ -790,6 +924,15 @@ function useDaily(state: GameState): { state: GameState; daily: NonNullable<Turn
     const wait = waits(current).find((one) => one.id === id);
     if (!wait || wait.price > current.daily.seals || wait.ticksLeft < 6 * TICKS_PER_HOUR) continue;
     const done = applyAction(current, { type: 'finish', wait: id });
+    if (!done.ok) continue;
+    current = done.state;
+    spent += wait.price;
+    finished += 1;
+  }
+  // A big build of an era (DESIGN.md 45) is finished with Seals to spare: what is kept for a wait above stays.
+  for (const wait of waits(current).filter((one) => one.id.startsWith('build:'))) {
+    if (current.daily.seals - wait.price < SEALS_KEPT || wait.ticksLeft < 6 * TICKS_PER_HOUR) continue;
+    const done = applyAction(current, { type: 'finish', wait: wait.id });
     if (!done.ok) continue;
     current = done.state;
     spent += wait.price;
@@ -1187,6 +1330,10 @@ function takeTurnAfter(state: GameState, as: Style): TurnResult {
     const rewards = placeRewards(current);
     current = rewards.state;
     purchases += rewards.placed;
+    // Then what an era has opened to buy, when the campus can afford to build it and to run it (DESIGN.md 45).
+    const big = placeBigBuilds(current, reserve);
+    current = big.state;
+    purchases += big.placed;
   }
 
   // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a

@@ -9,6 +9,7 @@ import { enrollment, openCapacity } from '../selectors';
 import type { GameState, LogEntry, Policies, Zone } from '../types';
 import { eraOf } from './goals';
 import { driversNow, offCampusNow } from './town';
+import { commonsLift } from './bigBuilds';
 
 /**
  * Policies (DESIGN.md sections 12 and 41): the switches an era opens.
@@ -138,8 +139,11 @@ function touched(state: GameState, zone: Zone, among: EffectOf<'cause'>['among']
  */
 export function causeShifts(state: GameState, zone: Zone): CauseShift[] {
   const found = effects(state, 'cause');
-  if (found.length === 0) return [];
+  // Founders' Commons (DESIGN.md 45) is read the same way: inside Grounds, for everyone, its name beside it.
+  const commons = commonsLift(state);
+  if (found.length === 0 && commons === 0) return [];
   const out: CauseShift[] = [];
+  if (commons > 0) out.push({ id: 'foundersCommons', name: PLACED.foundersCommons.name, cause: 'grounds', delta: commons });
   for (const { spec, effect } of found) {
     const delta = (effect.points / 100) * touched(state, zone, effect.among);
     if (delta !== 0) out.push({ id: spec.id, name: spec.name, cause: effect.cause, delta });

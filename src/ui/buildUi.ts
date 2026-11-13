@@ -71,6 +71,18 @@ import {
   DECOR_CAP,
   rewardGoal,
   rewardsWaiting,
+  bigBuildOf,
+  bigBuildSpec,
+  bigBuildsOffered,
+  cannotStart,
+  commonsLift,
+  goingUp,
+  honorsRate,
+  marketingLift,
+  unionAt,
+  welcomeMore,
+  SECOND_BUILDER_SEALS,
+  UNION_REACH,
 } from '../sim';
 import type { BuildEntry } from './buildMenu';
 
@@ -100,13 +112,67 @@ function rewardEntry(type: PlacedType): BuildEntry {
   };
 }
 
+/** The Build menu card that hires the second builder for Seals: two big builds can then go up at once. */
+export const SECOND_BUILDER_ENTRY = 'builder:second';
+
+/**
+ * The big builds an era has opened (DESIGN.md 45), under the era's name: one
+ * not yet bought, with its price and upkeep; one going up, with when it opens;
+ * and, while there is one builder, the card that hires a second. One that
+ * stands is on the map and not here.
+ */
+function bigBuildEntries(state: GameState, scale: number): BuildEntry[] {
+  const out: BuildEntry[] = [];
+  const offered = bigBuildsOffered(state);
+  for (const spec of offered) {
+    const placed = PLACED[spec.type];
+    const there = bigBuildOf(state, spec.type);
+    if (there && there.done === undefined) continue;
+    const card: BuildEntry = {
+      id: spec.type,
+      key: placed.sprite,
+      name: placed.name,
+      category: placed.category,
+      cost: dollarsShort(placedCost(spec.type, scale)),
+      footprint: footprint(placed.w, placed.h),
+      upkeep: `${runningLine(spec.type, scale)}. Goes up in ${duration(spec.hours * 60)}`,
+      effect: placed.effect,
+    };
+    const busy = goingUp(state);
+    if (there) card.locked = `Being built: it opens in ${duration(there.done! - state.clock.tick)}`;
+    else if (busy.length >= state.bigBuilds.slots) {
+      // The card says only when a builder is free. The second builder's own card says what it costs.
+      const first = busy[0]!;
+      card.locked = busy.length === 1 ? `A builder is free when the ${PLACED[first.type].name} opens, in ${duration(first.done! - state.clock.tick)}` : 'Both builders are busy';
+    } else {
+      const why = cannotStart(state, spec.type);
+      if (why) card.locked = why;
+    }
+    out.push(card);
+  }
+  if (offered.length > 0 && state.bigBuilds.slots < 2) {
+    out.push({
+      id: SECOND_BUILDER_ENTRY,
+      key: 'build.site',
+      name: 'A second builder',
+      category: offered[0] ? PLACED[offered[0].type].category : 'Flagship',
+      cost: `${SECOND_BUILDER_SEALS} Gold Seals`,
+      footprint: '',
+      upkeep: 'Once, for good',
+      effect: 'Two big builds go up at once',
+    });
+  }
+  return out;
+}
+
 /**
  * The Build menu: what a rank goal has given and is waiting to be placed,
- * then what can be built now, then what is on the way. `state` is the game:
- * left out, as the look preview does, nothing has been earned.
+ * then the big builds an era has opened, then what can be built now, then
+ * what is on the way. `state` is the game: left out, as the look preview
+ * does, nothing has been earned.
  */
 export function buildEntries(scale = 1, state?: GameState): BuildEntry[] {
-  const earned: BuildEntry[] = state ? rewardsWaiting(state).map(rewardEntry) : [];
+  const earned: BuildEntry[] = state ? [...rewardsWaiting(state).map(rewardEntry), ...bigBuildEntries(state, scale)] : [];
   const entries: BuildEntry[] = BUILD_ORDER.map((type) => {
     const spec = PLACED[type];
     return {
@@ -272,6 +338,34 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'landmark':
       return `${spec.effect}.`;
+    case 'era':
+      return bigBuildSummary(state, placed);
+  }
+}
+
+/** A big build of an era (DESIGN.md 45): going up, or what it does, in its own number. */
+function bigBuildSummary(state: GameState, placed: Placed): string {
+  const name = PLACED[placed.type].name;
+  if (placed.done !== undefined) return `Being built. The ${name} opens in ${duration(placed.done - state.clock.tick)}. The Seals panel can finish it now.`;
+  switch (placed.type) {
+    case 'studentUnion': {
+      let lots = 0;
+      for (const building of state.map.buildings) if (building && building.stage > 0 && unionAt(state.map, building.x, building.y) > 0) lots += 1;
+      return `Somewhere to meet for ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${UNION_REACH} cells: it is part of Food & fun there, with no line to wait in.`;
+    }
+    case 'honorsCollege':
+      return `The graduation rate the academic rating reads is ${Math.round(honorsRate(state) * 100)} points higher, across the campus. The Rankings page names it on that line.`;
+    case 'welcomeCenter': {
+      const lift = marketingLift(state);
+      const more = welcomeMore(state);
+      return lift > 0
+        ? `Marketing brings ${Math.round(lift * 100)} in a hundred more applicants, ${Math.round((lift * more) / (1 + more) * 100)} of them for the Welcome Center.`
+        : `It adds ${Math.round(more * 100)} in a hundred to what each step of marketing brings. Marketing is off, so it brings nothing now.`;
+    }
+    case 'foundersCommons':
+      return `Grounds ${Math.round(commonsLift(state) * 100)} points better at every dorm and lecture hall, wherever students live. The Happiness panel names it on the Grounds line.`;
+    default:
+      return `${PLACED[placed.type].effect}.`;
   }
 }
 
@@ -352,6 +446,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
   parts.push(cost > 0 ? `Upkeep and utilities ${dollars(cost)} a year` : 'Costs nothing to run');
   if (spec.family === 'decor') return 'Costs nothing to keep · Moving it is free · Put away, it waits in storage';
   if (spec.family === 'reward') parts.push('Clear it and it goes back to the Build menu, free');
+  else if (spec.family === 'era') parts.push(bigBuildSpec(placed.type) ? `One of a kind. Clear it and it can be bought again` : 'The Clear tool removes it');
   else if (spec.buildable) parts.push('The Clear tool removes it');
   return parts.join(' · ');
 }

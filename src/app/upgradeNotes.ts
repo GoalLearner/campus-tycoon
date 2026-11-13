@@ -79,5 +79,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       "New: a gift each day. The paper opens with a card of seven boxes, and one tap takes today's: the seventh is the better gift. A day missed costs nothing. The orders board now has three goals for the year, paid at commencement, and special orders for Homecoming, the rivalry, finals week and commencement.",
     );
   }
+  if (fromVersion < 22) {
+    notes.push(
+      "New: big builds. The Flagship era, at the Top 75, opens three buildings to buy: the Student Union, the Honors College and the Welcome Center. The Legacy era, at the Top 25, opens Founders' Commons. Each goes up over real days, and the Build menu has a second builder for Gold Seals.",
+    );
+  }
   return notes;
 }

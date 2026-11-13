@@ -230,13 +230,13 @@ describe('an era opens its switches', () => {
 
     // The later eras say theirs too.
     const second = ranked(70, state).log.find((entry) => entry.kind === 'goal')!;
-    expect(second.text.endsWith('The Flagship era begins. It opens two more policies: All-night library and Parking fees.')).toBe(true);
+    expect(second.text.endsWith("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and two more policies: All-night library and Parking fees.")).toBe(true);
     const third = ranked(20, ranked(70, state).state).log.find((entry) => entry.kind === 'goal')!;
-    expect(third.text.endsWith('The Legacy era begins. It opens two more policies: Quiet hours and Naming rights.')).toBe(true);
+    expect(third.text.endsWith("The Legacy era begins. It opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.")).toBe(true);
     // A day that opens two eras at once says both.
     const both = ranked(20, state).log.find((entry) => entry.kind === 'goal')!;
-    expect(both.text).toContain('The Flagship era begins. It opens two more policies: All-night library and Parking fees.');
-    expect(both.text).toContain('The Legacy era begins. It opens two more policies: Quiet hours and Naming rights.');
+    expect(both.text).toContain("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and two more policies: All-night library and Parking fees.");
+    expect(both.text).toContain("The Legacy era begins. It opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     // An edition with no era in it has no such line.
     expect(edition(state, [], facts(state)).top.some((item) => item.go === 'policies')).toBe(false);
   });
@@ -246,8 +246,8 @@ describe('an era opens its switches', () => {
     expect(nextEra(start)).toEqual({ era: 1, name: 'Growth', top: 125, opens: eraOpens(1) });
     expect(sizeView(start).era).toBe('Era: Arrival');
     expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.');
-    expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens two more policies: All-night library and Parking fees.');
-    expect(sizeView(flagship()).eraNext).toBe('The Legacy era, at the Top 25, opens two more policies: Quiet hours and Naming rights.');
+    expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and two more policies: All-night library and Parking fees.');
+    expect(sizeView(flagship()).eraNext).toBe("The Legacy era, at the Top 25, opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     expect(sizeView(legacy()).eraNext).toBe('');
     expect(nextEra(legacy())).toBeNull();
     // The Policies page says the same under its switches, and nothing once every era is open.
@@ -696,6 +696,7 @@ describe('a save from version 16', () => {
     // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
     expected.decor = state.decor;
     expected.rhythm = state.rhythm;
+    expected.bigBuilds = state.bigBuilds;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -741,7 +742,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(5);
+    expect(notes).toHaveLength(6);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

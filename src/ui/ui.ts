@@ -86,7 +86,7 @@ import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
-import { hoodSummary, housingFixLines, lampSummary, parcelSummary, TOOL_ENTRY } from './buildUi';
+import { hoodSummary, housingFixLines, lampSummary, parcelSummary, SECOND_BUILDER_ENTRY, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
 import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
 import { sound } from '../app/sound';
@@ -624,6 +624,15 @@ export function mountUi(root: HTMLElement): void {
       // Roads, bins, benches and tables are laid by dragging. Everything else is placed one at a time.
       if (entry.id?.startsWith(TOOL_ENTRY)) session.setTool(entry.id.slice(TOOL_ENTRY.length) as Tool);
       else if (entry.id?.startsWith(DECOR_ENTRY)) session.startDecor(entry.id.slice(DECOR_ENTRY.length));
+      else if (entry.id === SECOND_BUILDER_ENTRY) {
+        // The second builder is bought for Seals, once (DESIGN.md 45).
+        const result = store.dispatch({ type: 'buySecondBuilder' });
+        if (!result.ok) session.notify(result.error, 'error');
+        else {
+          sound.ui('collect');
+          session.notify('A second builder is hired: two big builds can go up at once.');
+        }
+      }
       else if (entry.id === WORKSHOP_ENTRY) {
         // The Workshop is in the Makerspace. A campus with none is handed one to place.
         if (hasMakerspace(store.state)) openWorkshop();
