@@ -44,7 +44,7 @@ workflows:
       vars:
         # The app's Apple ID number: App Store Connect > the app > App Information.
         # It is not a secret. The build stops with a clear message while it is empty.
-        APP_STORE_ID: ""
+        APP_STORE_ID: "6834290285"
         # Compiles in the time-skip panel. It stays hidden until the version line in
         # the Menu is tapped seven times. Leave this out of any App Store release build.
         TESTER_TOOLS: "1"
