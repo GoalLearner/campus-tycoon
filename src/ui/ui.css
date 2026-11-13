@@ -2810,3 +2810,23 @@ button.students {
   flex-direction: column;
   gap: 6px;
 }
+
+/* Traditions (DESIGN.md 50): a card each, like a policy's. One at risk says so in the warning colour. */
+.tradition-state {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--good, #7be495);
+}
+.tradition-state.risk {
+  color: var(--warn, #f0c36a);
+}
+.card p.tradition-line {
+  font-size: 13px;
+  margin: 2px 0 0;
+}
+.card p.tradition-line.risk {
+  color: var(--warn, #f0c36a);
+}
+.policy.tradition.at-risk {
+  border-color: var(--warn, #f0c36a);
+}

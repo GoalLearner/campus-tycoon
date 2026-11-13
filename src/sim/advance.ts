@@ -5,6 +5,7 @@ import { decorOnDayStart, onCraftDone } from './systems/decor';
 import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from './systems/rhythm';
 import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
 import { discoveryDue } from './systems/labs';
+import { tellTraditions, traditionDue, traditionsOnDayStart } from './systems/traditions';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -107,6 +108,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellOrders(state, log);
   tellRhythm(state, log);
   tellBigBuilds(state, log);
+  tellTraditions(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -172,6 +174,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
       // A research lab has made a discovery (DESIGN.md 49): the paper says so, and the next is on its way.
       discoveryDue(state, timer.ref, log);
       break;
+    case 'tradition':
+      // A tradition's day (DESIGN.md 50): kept, or not this year.
+      traditionDue(state, timer.ref, log);
+      break;
     case 'craftDone':
       // The Workshop has finished something: the paper says so. It waits on its bench for ever.
       onCraftDone(state, timer.ref, timer.due, log);
@@ -202,6 +208,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       decorOnDayStart(state, log);
       // The moments of the calendar that are near open, and the goals for the year are set if none are (DESIGN.md 44).
       rhythmOnDayStart(state, log);
+      // A place for a tradition newly open, and a tradition at risk, are told (DESIGN.md 50).
+      traditionsOnDayStart(state, log);
       break;
     }
     case 'fallIntake':

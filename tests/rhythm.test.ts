@@ -313,7 +313,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(23);
+    expect(SAVE_VERSION).toBe(24);
   });
 
   describe('from version 20', () => {
@@ -334,6 +334,7 @@ describe('saves', () => {
       // Version 22 adds the big builds of the eras (tests/bigBuilds.test.ts has those), and 23 the labs (tests/labs.test.ts).
       expected.bigBuilds = state.bigBuilds;
       expected.labs = state.labs;
+      expected.traditions = state.traditions;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
@@ -341,7 +342,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(3);
+      expect(notes).toHaveLength(4);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

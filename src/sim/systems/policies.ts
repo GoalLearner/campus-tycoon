@@ -10,6 +10,7 @@ import type { GameState, LogEntry, Policies, Zone } from '../types';
 import { eraOf } from './goals';
 import { driversNow, offCampusNow } from './town';
 import { commonsLift } from './bigBuilds';
+import { traditionEffects } from './traditions';
 
 /**
  * Policies (DESIGN.md sections 12 and 41): the switches an era opens.
@@ -68,12 +69,16 @@ function active(state: GameState): readonly PolicySpec[] {
 
 type EffectOf<K extends PolicyEffect['kind']> = Extract<PolicyEffect, { kind: K }>;
 
-/** Every effect of one kind among the policies that are on, with the policy it belongs to. */
-function effects<K extends PolicyEffect['kind']>(state: GameState, kind: K): Array<{ spec: PolicySpec; effect: EffectOf<K> }> {
-  const out: Array<{ spec: PolicySpec; effect: EffectOf<K> }> = [];
+/**
+ * Every effect of one kind among the policies that are on, with the policy it belongs to, and among the traditions a
+ * campus keeps (DESIGN.md 50), each named for its tradition: the same hooks, and the same notes on the same lines.
+ */
+function effects<K extends PolicyEffect['kind']>(state: GameState, kind: K): Array<{ spec: Pick<PolicySpec, 'id' | 'name'>; effect: EffectOf<K> }> {
+  const out: Array<{ spec: Pick<PolicySpec, 'id' | 'name'>; effect: EffectOf<K> }> = [];
   for (const spec of active(state)) {
     for (const effect of [...spec.gains, ...spec.costs]) if (effect.kind === kind) out.push({ spec, effect: effect as EffectOf<K> });
   }
+  for (const one of traditionEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
   return out;
 }
 

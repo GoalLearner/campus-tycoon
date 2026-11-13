@@ -87,5 +87,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 23) {
     notes.push('New: research labs, under Academics in the Build menu. One for each field: findings to collect, and discoveries of their own in the paper.');
   }
+  if (fromVersion < 24) {
+    notes.push('New: traditions. After the first commencement, and with each era, the Traditions page behind the student count has one to choose. Each is kept on its day and lifts a little more every year.');
+  }
   return notes;
 }

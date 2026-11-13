@@ -222,3 +222,5 @@ export * from './config/bigBuilds';
 export * from './systems/bigBuilds';
 export * from './config/labs';
 export * from './systems/labs';
+export * from './config/traditions';
+export * from './systems/traditions';

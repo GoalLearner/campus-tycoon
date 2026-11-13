@@ -1150,6 +1150,8 @@ Greek Row is the biggest identity item. It is the last thing cut (section 20).
 
 ### 14.2 Traditions
 
+Built, adapted to the game as it is now: section 50, which records each change with this table as the alternative.
+
 | Decision | Why |
 |---|---|
 | Four slots: the first at the first Year-End, then one per era | A tradition early, and more as the school ages |
@@ -6431,3 +6433,81 @@ The long run's six test players on the model campus, 44 weeks each, against the 
 | Discoveries come round again after twelve in a field | About four weeks of one lab. Twelve more each is a list to write |
 | A lab's rate is read now and applied to the hours it has filled | As a store's bonus after a win is. A slider moved just before a collect counts for the whole stretch |
 | Never run on a phone | Checked in the app's browser at 390 wide and in pictures on this PC |
+
+## 50. Traditions, as built
+
+The traditions of 14.2, adapted to the game as it is now and built on 2026-11-13 on the main session's brief, after the owner said "Keep building". Each change from 14.2 is in 50.2, with the original as the alternative. His rule governs it: "Make the game easy and rewarding so users stick around and play." A tradition is a bonus: nothing about one can hurt the campus. Only a game with goals has traditions; the small campus's tables are the same, line for line.
+
+### 50.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| Places | Four. The first opens at the first commencement (a school year is a real week, so in the first week), then one with each era: Growth, Flagship and Legacy. A place newly open is told once in the paper. A choice is for good | `traditionSlots`, `chooseTradition` in `src/sim/systems/traditions.ts` |
+| The eight | Each with its day, the standing condition it is checked against, and what it lifts at its fullest: | `TRADITIONS` in `src/sim/config/traditions.ts` |
+| Rivalry Lantern Walk | The day of the rivalry. Six cells of quad inside a Campus Safety office's reach. Safety & health, 2 points | |
+| Fight Song | The home opener. A stadium of the campus's own. A crowd 4% larger wanting seats at home games | |
+| Lucky Fountain | Fall finals. Founders' Fountain, with a path beside it. Stress at finals, 2 points lower | |
+| Rivalry Trophy | The rivalry game. Nothing: it is played for every year. A crowd 4% larger, the whole while the campus holds the trophy and half while it does not | |
+| Homecoming Parade | Homecoming. A road from a town street to the stadium. Food & fun, 2 points | |
+| Victory Bell | The end of the football season. The Bell Tower, and a home win in the fall. Food & fun, 2 points | |
+| Senior Walk | Commencement. A quad of six cells or more, with a path beside it. Grounds, 2 points | |
+| Midnight Breakfast | Spring finals. A Late-night diner on campus. Stress at finals, 2 points lower | |
+| Its day | A timer at that point of the calendar: the home opener's date, Homecoming's, the rivalry's, an hour before the last exam of the fall or the spring, and commencement. The Rivalry Trophy and the Victory Bell are decided as the rivalry game, the season's last, ends | `nextDay`, `traditionDue`, `traditionsOnGame` |
+| Kept | When its condition holds on its day: its count goes up one, and the paper says so with the count: "The 5th Rivalry Lantern Walk: students carried paper lanterns across the quad to wish the team well against Whingarth State." On a quiet day it is the headline: "Larp Keeps Its 5th Rivalry Lantern Walk; Alumni Say It Was Better in Their Day" | `record`, `leads` in `src/sim/newspaper.ts` |
+| Not met | That year does not count, and that is all: the count is kept, nothing is taken, and the paper says so: "No Lucky Fountain this year: it needs Founders' Fountain, with a path beside it. It is kept for next year, and nothing is lost." | `record` |
+| At risk | Whenever its condition does not hold, its card says At risk in the warning colour. And once a year, at the start of a day 60 hours or less before its day, the paper says so, with the way to the page: "The Midnight Breakfast is at risk: it needs a Late-night diner on campus. Its day is in 1 d 16 h." There is time to put it right | `traditionsOnDayStart` |
+| What it lifts | A share of its fullest that grows with its count, with diminishing returns: the count over the count and three. Kept once, a quarter; three times, a half; nine times, three quarters; never the whole. Through the hooks the policies already have: inside one of the four causes of Happiness, off Stress at finals, or more of a crowd wanting seats, named for the tradition on that number's line. No fifth cause, nothing on the academic rating, and no rank points. Read from the counts alone, so it costs nothing on a tick | `traditionEffects`, `traditionShare`, `effects` in `src/sim/systems/policies.ts` |
+| The page | Behind the student count, beside Policies: the places taken and when the next comes; each tradition chosen with its day and how long until it, its condition (At risk when it does not hold), what it lifts now, how often it has been kept and its record ("Year 3 ✓ · Year 4 –"); and, while a place is open, the others to choose from, each with its condition (marked "not yet" when the campus does not meet it now) and what it lifts at its fullest. The Goals page has a button to it, "Traditions · choose one" while a place waits | `traditionsView` in `src/ui/traditionsUi.ts`, `openSize` in `src/ui/ui.ts` |
+| The record book | Every year since a tradition was chosen, kept or not, is kept with it, and listed on its card | `KeptTradition.years` |
+| Saves | Version 24. A game that has had its first commencement opens with its first place, and is told so at the start of its next day; its eras open the others. Nothing is chosen for it | `MIGRATIONS[23]`, `tests/fixtures/save-v23-model.json` |
+| The test players | As each place opens, the first tradition in the list whose condition the campus meets then; the Rivalry Trophy when none does. A player who uses none of the daily layer chooses none | `chooseTraditions` in `scripts/bots.ts` |
+| The dev page | `&traditions=lanternWalk,victoryBell&kept=4` has those chosen, each kept four times; `&tradplaces=1` opens one more place | `src/app/devtools.ts` |
+| Art | Nothing new: the page is words, and the paper carries the days | |
+
+### 50.2 Changed from 14.2
+
+| Decision | Chosen | The original (14.2), now the alternative |
+|---|---|---|
+| When the places open | At the first commencement, then with each era | At the first Year-End, then with each era. Commencement is the same week, and is a moment the paper already makes |
+| Breaking one | Costs nothing. A year whose condition is not met does not count, the count is kept, and the card says At risk beforehand so the player can put it right | It costs happiness and giving, scaled by the streak, which then resets |
+| The streak | The times it has been kept, which never falls | Consecutive years, which a missed one ends |
+| The rivalry's tradition | A Lantern Walk: paper lanterns on a quad inside Campus Safety's reach. It lifts Safety & health | A Rivalry Bonfire, which the tone guide keeps off campus, and an edge in the rivalry game, which would move results |
+| Fight Song | A stadium of the campus's own; a larger crowd | Student Life at full funding, which keeps the band: there is no Student Life funding in the game |
+| The lucky statue | The Lucky Fountain: Founders' Fountain, the first rank goal's building, with a path beside it | A statue: the stone statue is the Founder's, and is not for sale |
+| Rivalry Trophy | A larger crowd | Donations: the game has no giving yet, and a money line would move the money target |
+| Homecoming Parade | A road from a town street to the stadium; Food & fun | An unbroken path from the town edge; the donation spike |
+| Victory Bell | The Bell Tower and a home win, checked as the season ends; Food & fun | Rung after each home win, a day for every win |
+| Senior Walk | A quad of six cells or more, with a path beside it; Grounds | The gate and a path through the main quad; the graduating class's alumni affinity, which the game does not have |
+| Midnight Breakfast | A Late-night diner on campus; Stress at finals | Student Life at full funding |
+| What each lifts | One number, through its cause | One or two each |
+| The finals traditions | Two points off Stress at finals, at the fullest | Four: in the long run the once-a-day player who kept the Midnight Breakfast from its first week then kept $11.60 of every $100 in one later week, under his $12. Fewer students left after finals, and it funded more faculty for the fuller campus. At two, its weeks are as they are with no tradition |
+| A choice | For good | Changed at will, which makes the count meaningless |
+| Where the page is | A tab behind the student count, beside Policies | A chip of its own on the top bar, which has no room for one more |
+
+### 50.3 Measured
+
+The long run's six test players on the model campus, 44 weeks each. Each chooses the first tradition its campus meets as a place opens: the casual player reads the list from the top, the once-a-day player from the bottom, the striver from the middle.
+
+| Measured | Result |
+|---|---|
+| Places | Every player had all four by week 20 to 22: the first in week 1, then weeks 5, 11 or 12, and 20 to 22, as the eras came |
+| Chosen | Casual: the Lantern Walk, the Fight Song, the Rivalry Trophy and the Senior Walk. Once a day: the Midnight Breakfast, the Senior Walk, the Rivalry Trophy and the Fight Song. Striver: the Senior Walk, the Midnight Breakfast, the Lantern Walk and the Fight Song. The Lucky Fountain, the Homecoming Parade and the Victory Bell were not met when a place opened, so no test player chose them |
+| Kept by week 44 | 43 times for the first chosen, 39 or 40 for the second, 32 or 33 for the third, 22 to 25 for the fourth. None was ever missed |
+| What they lift at week 44 | Safety & health 1.8 to 1.9 points, Grounds 1.8 to 1.9, Stress at finals 1.9 lower, a crowd 3.5% to 3.7% larger, each named on its line |
+| Happiness | 92.6, 93.8 and 93.4 at the end, against 92.3, 93.5 and 93.0 for the same players with no tradition |
+| The pace of the rank goals | The same week for every goal, with and without: the Top 10 in weeks 29, 31 and 31 on the one seed. Over both seeds, weeks 25 to 31. Never before week 24 |
+| The money | Years 3 to 8 keep $13.9 to $15.6 of every $100 (casual), $13.1 to $15.0 (once a day) and $11.6 to $13.8 (striver), as before traditions. The later weeks: $12.3 to $15.7, $12.7 to $15.9 and $11.4 to $14.3 |
+| Levels | The once-a-day player made 6.0 and 6.8 levels a week in weeks 4 to 12, and 6.0 and 7.0 after: traditions pay no experience |
+| The small campus | Every table the same, line for line |
+| Tests | 10 new, 869 in all. Two new long-run checks: the places open as designed and every tradition chosen is kept on its day; and a tradition's count is the years it was kept, with a year not met simply not counted. 82 checks in all |
+| On a phone | The Traditions page at 375 by 667 with an iPhone's insets: no target under 44 points, nothing off the screen, no text cut off |
+
+### 50.4 Rough
+
+| Rough | Why |
+|---|---|
+| The Lantern Walk is on the rivalry's day, not its eve | Its day is the date the calendar has. The paper still says it is for the team before the game |
+| The Victory Bell can only be kept late | The Bell Tower is the last rank goal's building |
+| The headline's second half is the same for every tradition | One line, written once. More would be a list to write |
+| A condition is read on the day, not over the year | A campus can meet it on the day and not before. The page shows At risk whenever it does not hold |
+| No record book of its own | The list on each card is enough for now |

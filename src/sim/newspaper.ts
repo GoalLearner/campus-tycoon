@@ -38,7 +38,7 @@ export interface TopItem {
   kind: TopKind;
   text: string;
   /** Where a tap on it leads, when it leads anywhere. */
-  go?: 'inbox' | 'football' | 'build' | 'policies';
+  go?: 'inbox' | 'football' | 'build' | 'policies' | 'traditions';
 }
 
 export interface PollLine {
@@ -255,6 +255,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         // A research lab's discovery (DESIGN.md 49): its own headline, made when it was found.
         if (entry.data?.discovery === 1 && typeof entry.data.headline === 'string') out.push({ weight: 64, headline: entry.data.headline, deck: entry.text });
         break;
+      case 'tradition':
+        // A tradition kept on its day (DESIGN.md 50): "Larp Keeps Its 4th Homecoming Parade".
+        if (entry.data?.keep === 1 && typeof entry.data.headline === 'string') out.push({ weight: 63, headline: entry.data.headline, deck: entry.text });
+        break;
       default:
         break;
     }
@@ -353,6 +357,12 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
     // A goal that is the headline is said once: in the line under the headline. Any other goal of the day is at the top.
     else if (entry.kind === 'goal' && entry.text !== lead.deck) offer(TOP_WEIGHTS.goal, 'news', entry.text);
     else if (entry.kind === 'exam' && Number(entry.data?.peak ?? 0) >= 60) offer(TOP_WEIGHTS.exams, 'problem', entry.text);
+    // A tradition (DESIGN.md 50): kept, at the top as good news; at risk, as a problem to put right; a place newly open,
+    // as news that leads to the page; one not met this year, further down. Each leads to the Traditions page.
+    else if (entry.kind === 'tradition' && entry.text !== lead.deck) {
+      const weight = entry.data?.keep === 1 ? TOP_WEIGHTS.goodNews : entry.data?.atRisk === 1 ? TOP_WEIGHTS.exams + 1 : entry.data?.slot !== undefined ? TOP_WEIGHTS.reward - 2 : TOP_WEIGHTS.built;
+      offer(weight, entry.data?.atRisk === 1 ? 'problem' : 'news', entry.text, 'traditions');
+    }
     // A discovery that is not the headline is good news at the top, just under a game's result: the first of the
     // edition's, with any others in the rest of the paper (DESIGN.md 49).
     else if (entry.kind === 'lab' && entry.data?.discovery === 1 && entry.text !== lead.deck) {

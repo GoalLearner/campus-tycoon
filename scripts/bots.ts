@@ -8,6 +8,9 @@ import {
   SECOND_BUILDER_SEALS,
   LABS,
   LAB_SEAT_REACH,
+  TRADITIONS,
+  conditionHolds,
+  traditionToChoose,
   labOf,
   stageSpec,
   UNION_REACH,
@@ -128,7 +131,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true, traditions: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -965,6 +968,27 @@ function placeLabs(state: GameState, reserve: number): { state: GameState; place
   return { state: current, placed };
 }
 
+/**
+ * Traditions (DESIGN.md 50): as each place opens, the player chooses one whose condition the campus meets now; the
+ * Rivalry Trophy, which always counts, when none does. Each kind of player reads the list its own way, so the long run
+ * sees more of the eight: the casual player from the top, the once-a-day player from the bottom, the striver from the
+ * middle.
+ */
+function chooseTraditions(state: GameState, as: Style): GameState {
+  if (!botOptions.traditions || !hasDaily(state)) return state;
+  const order = as === 'daily' ? [...TRADITIONS].reverse() : as === 'striver' ? [...TRADITIONS.slice(4), ...TRADITIONS.slice(0, 4)] : [...TRADITIONS];
+  let current = state;
+  while (traditionToChoose(current)) {
+    const free = order.filter((spec) => !current.traditions.chosen.some((one) => one.id === spec.id));
+    const pick = free.find((spec) => conditionHolds(current, spec.condition)) ?? free.find((spec) => spec.condition === 'always') ?? free[0];
+    if (!pick) break;
+    const result = applyAction(current, { type: 'chooseTradition', id: pick.id });
+    if (!result.ok) break;
+    current = result.state;
+  }
+  return current;
+}
+
 export interface TurnResult {
   state: GameState;
   /** Purchases made this check-in. */
@@ -1407,6 +1431,8 @@ function takeTurnAfter(state: GameState, as: Style): TurnResult {
     const labs = placeLabs(current, reserve);
     current = labs.state;
     purchases += labs.placed;
+    // And a tradition for each place open (DESIGN.md 50).
+    current = chooseTraditions(current, as);
   }
 
   // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a

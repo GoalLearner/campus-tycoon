@@ -87,6 +87,7 @@ import { capacityView, instructionView, sizeView, type CapacityRow } from './siz
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { labPage } from './labUi';
+import { traditionsButton, traditionsView } from './traditionsUi';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, SECOND_BUILDER_ENTRY, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
 import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
@@ -684,7 +685,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season', 'rhythm', 'lab']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season', 'rhythm', 'lab', 'tradition']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -791,6 +792,8 @@ export function mountUi(root: HTMLElement): void {
       else if (where === 'build') openBuild();
       // An era opened switches: straight to them.
       else if (where === 'policies') openSize('policies');
+      // A tradition's day, or one at risk, or a place to choose one (DESIGN.md 50).
+      else if (where === 'traditions') openSize('traditions');
       else openFootball(openModal);
     });
   }
@@ -1613,10 +1616,10 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
-  let campusPage: 'goals' | 'capacity' | 'policies' = 'goals';
+  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' = 'goals';
 
   /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
-  function openSize(page: 'goals' | 'capacity' | 'policies' = campusPage): void {
+  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' = campusPage): void {
     campusPage = page;
     /** The row of the Capacity page that is open. One at a time. */
     let openRow: string | null = null;
@@ -1656,12 +1659,16 @@ export function mountUi(root: HTMLElement): void {
         // The Policies page is there once an era has opened a switch, and not before.
         const policies = policiesView(state);
         if (campusPage === 'policies' && !policies) campusPage = 'goals';
+        // The Traditions page is there once the first commencement has opened a place (DESIGN.md 50).
+        const traditions = traditionsView(state);
+        if (campusPage === 'traditions' && !traditions) campusPage = 'goals';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        const pages: Array<['goals' | 'capacity' | 'policies', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
         if (policies) pages.push(['policies', 'Policies']);
+        if (traditions) pages.push(['traditions', 'Traditions']);
         for (const [id, label] of pages) {
           const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
             campusPage = id;
@@ -1711,6 +1718,16 @@ export function mountUi(root: HTMLElement): void {
               }),
             );
           }
+          const toTraditions = traditionsButton(state);
+          if (toTraditions) {
+            body.append(
+              button(toTraditions, 'wide', () => {
+                campusPage = 'traditions';
+                body.scrollTop = 0;
+                draw();
+              }),
+            );
+          }
           if (size.reached.length > 0) {
             body.append(el('div', 'money-head', 'Goals reached'));
             for (const line of size.reached) body.append(el('p', 'fine', line));
@@ -1745,6 +1762,34 @@ export function mountUi(root: HTMLElement): void {
             body.append(box);
           }
           if (policies.next) body.append(el('p', 'fine', policies.next));
+        } else if (campusPage === 'traditions' && traditions) {
+          // Traditions (DESIGN.md 50): those kept, then, while a place is open, those to choose from.
+          body.append(el('p', 'fine', traditions.places));
+          for (const row of traditions.chosen) {
+            const box = el('div', row.holds ? 'policy on tradition' : 'policy tradition at-risk');
+            const top = el('div', 'policy-top');
+            top.append(el('span', 'policy-name', row.name), el('span', row.holds ? 'tradition-state' : 'tradition-state risk', row.holds ? row.status : 'At risk'));
+            box.append(top, el('p', 'tradition-line', `${row.when}${row.next ? ` · ${row.next}` : ''}`), el('p', row.holds ? 'tradition-line' : 'tradition-line risk', `Needs: ${row.needs}`), el('p', 'tradition-line', row.lifts));
+            if (!row.holds) box.append(el('p', 'tradition-line', row.status));
+            if (row.record) box.append(el('p', 'fine', row.record));
+            body.append(box);
+          }
+          if (traditions.choices.length > 0) {
+            body.append(el('div', 'money-head', 'Choose a tradition'));
+            for (const row of traditions.choices) {
+              const box = el('div', 'policy tradition');
+              const top = el('div', 'policy-top');
+              const pick = button('Choose', 'policy-switch', () => {
+                const result = store.dispatch({ type: 'chooseTradition', id: row.id });
+                if (!result.ok) session.notify(result.error, 'error');
+                body.scrollTop = 0;
+                draw();
+              });
+              top.append(el('span', 'policy-name', row.name), pick);
+              box.append(top, el('p', 'tradition-line', row.when), el('p', row.holds ? 'tradition-line' : 'tradition-line risk', `Needs: ${row.needs}${row.holds ? '' : ' (not yet)'}`), el('p', 'tradition-line', row.lifts));
+              body.append(box);
+            }
+          }
         } else {
           body.append(el('p', 'fine', needs.lead));
           for (const row of needs.rows) {
