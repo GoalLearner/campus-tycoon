@@ -5108,9 +5108,9 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 
 ---
 
-## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store (agreed, not built)
+## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store
 
-Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design. None of it is built, and none of it is to be built until he says build.**
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on.
 
 Two things he said that govern all of it:
 
