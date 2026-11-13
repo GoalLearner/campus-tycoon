@@ -24,6 +24,7 @@ import {
   type NeedId,
   type NeedStatus,
 } from '../sim';
+import { eraNextLine } from './policyUi';
 
 /**
  * Words for the screen that opens from the student count on the top bar
@@ -55,6 +56,8 @@ export interface SizeView {
   rankNext: string;
   /** "Era: Growth". '' on a game with no goals. */
   era: string;
+  /** What the next era will open, and at which rank. '' when there is none left or the game has no eras. */
+  eraNext: string;
   /** Goals reached, newest first. Empty on a game with no goals. */
   reached: string[];
 }
@@ -108,6 +111,7 @@ export function sizeView(state: GameState): SizeView {
     rank: rank > 0 ? `No. ${rank} of 200 for academics` : 'Not yet ranked. The first rankings come out in the spring.',
     rankNext: goals && rankGoal !== null ? `Next goal: Top ${rankGoal}` : goals ? 'Every rank goal is reached.' : '',
     era: goals ? `Era: ${eraName(goals)}` : '',
+    eraNext: eraNextLine(state),
     reached: goalsReached(state),
   };
 }

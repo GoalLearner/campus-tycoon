@@ -23,7 +23,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 16;
+export const SAVE_VERSION = 17;
 
 export interface SaveFile {
   v: number;
@@ -260,6 +260,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (map.care && !map.care.meals) map.care.meals = mealLoads(map, map.placed.filter((placed): placed is Placed => !!placed && PLACED[placed.type].family === 'dining'));
     return state;
   },
+  // Version 17: policies (DESIGN.md section 41). Every switch is off, whatever era the game has reached, so
+  // nothing about the campus moves on the day it loads.
+  16: (state) => {
+    if (typeof state.policies !== 'object' || state.policies === null) state.policies = { on: [], locked: [], news: [] };
+    return state;
+  },
 };
 
 /**
@@ -325,7 +331,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

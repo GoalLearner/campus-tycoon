@@ -1,5 +1,6 @@
 import { smallCount } from '../scale';
 import { offCampusNow } from './town';
+import { mischiefTimes } from './policies';
 import {
   INCIDENT_EVAL_TICKS,
   INCIDENT_LINES,
@@ -124,7 +125,7 @@ export function spawnIncidents(state: GameState): void {
   const dorms = state.map.buildings.filter((b) => b && b.zone === 'housing' && b.stage > 0);
   const beds = openCapacity(state, 'housing');
   const crowding = beds > 0 ? Math.min(1, Math.max(0, students - offCampusNow(state)) / beds) : 0;
-  if (dorms.length > 0 && state.incidents.active.length < MAX_ACTIVE_INCIDENTS && mischiefRoll < Math.min(0.9, scale * MISCHIEF_RATE * crowding * crowding)) {
+  if (dorms.length > 0 && state.incidents.active.length < MAX_ACTIVE_INCIDENTS && mischiefRoll < Math.min(0.9, scale * MISCHIEF_RATE * crowding * crowding) * mischiefTimes(state)) {
     const where = dorms[Math.min(dorms.length - 1, Math.floor(mischiefPick * dorms.length))]!;
     begin(state, 'mischief', where.x, where.y, 'a dorm');
   }

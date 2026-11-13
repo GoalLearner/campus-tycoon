@@ -1,4 +1,5 @@
 import { fansLift } from './boosts';
+import { fansMore, freeSeats } from './policies';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -389,6 +390,8 @@ export function fanDemand(state: GameState, big = false): number {
   if (big) fans *= FANS.bigGame;
   // A pep rally, a parade, adverts on the scoreboard: what the desk has set going, for a few days.
   fans *= 1 + fansLift(state);
+  // A policy that fills the stands: a free student section does (DESIGN.md 41.7).
+  fans *= 1 + fansMore(state);
   return Math.round(fans);
 }
 
@@ -914,7 +917,8 @@ export function footballBooks(state: GameState): FootballBooks {
   const coach = Math.round(f.coach.pay * Math.min(1, students / COACH_FULL_PAY_STUDENTS));
   const rent = tier === 0 ? Math.min(FIELD_RENT, students * FIELD_RENT_PER_STUDENT) : 0;
   return {
-    tickets: HOME_GAMES_PER_YEAR * crowd * ((TICKET_PRICE[f.stadium.price] ?? 0) + CONCESSIONS_PER_FAN),
+    // Seats a policy gives away earn no ticket. What the crowd spends inside is earned all the same.
+    tickets: HOME_GAMES_PER_YEAR * crowd * ((TICKET_PRICE[f.stadium.price] ?? 0) * (1 - freeSeats(state).share) + CONCESSIONS_PER_FAN),
     tv: f.tv.until >= state.clock.week.year ? f.tv.perYear : 0,
     pay: coach + staff * ATHLETICS_STAFF_PAY,
     coach,

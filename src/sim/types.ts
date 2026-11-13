@@ -337,6 +337,20 @@ export interface Admissions {
  * are head counts kept in the save: hired at the start of a semester and
  * leaving at the start of one, a semester behind the students.
  */
+/**
+ * Policies (DESIGN.md section 41): the switches an era opens. Only a game
+ * begun on the model campus can open any. What each one is lives in
+ * `config/policies.ts`. The save keeps only which are on.
+ */
+export interface Policies {
+  /** The ids of the policies that are on. */
+  on: string[];
+  /** Those changed since the last class moved in. Each stays as it is until the next one does. */
+  locked: string[];
+  /** Changes not yet told: each becomes one line in the log on the next tick. */
+  news: Array<{ id: string; on: boolean }>;
+}
+
 export interface Staffing {
   /** Faculty and staff on the payroll now. */
   faculty: number;
@@ -433,6 +447,7 @@ export interface GameState {
   /** The goals of a game begun on the model campus. null on a game begun on the small campus, which has none. */
   goals: Goals | null;
   staffing: Staffing;
+  policies: Policies;
 }
 
 // ------------------------------------------------------------- football --
@@ -789,6 +804,7 @@ export type LogKind =
   | 'yearEnd'
   | 'costs'
   | 'staff'
+  | 'policy'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

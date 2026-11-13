@@ -22,6 +22,7 @@ import type { Field, GameState, LogEntry, RngState, School } from '../types';
 import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
 import { begunHere, yearAcceptance } from './admissions';
 import { landRankGoals } from './goals';
+import { ratingShift } from './policies';
 import { classPressure, crowding } from './season';
 import { classSizeNow, facultyStretched, ratioTarget } from './staffing';
 
@@ -208,13 +209,22 @@ export function academicInputs(state: GameState): AcademicInput[] {
   // Retention as the four causes of Happiness give it, between its floor and its ceiling.
   const last = state.admissions.lastSemester;
   const retention = last ? Math.max(0, Math.min(1, last.happiness / 100)) : null;
-  return [
+  const inputs: AcademicInput[] = [
     { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes` },
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : 100 * retention, detail: retention === null ? 'No semester has ended yet' : `${(100 * (RETENTION_FLOOR + RETENTION_SPAN * retention)).toFixed(1)}% return each semester` },
     { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
   ];
+  // A policy that is on moves the input it belongs to, and is named on that input's line (DESIGN.md 41.7).
+  for (const input of inputs) {
+    if (input.level === null) continue;
+    const shift = ratingShift(state, input.id);
+    if (shift.points === 0) continue;
+    input.level = Math.max(0, Math.min(100, input.level + shift.points));
+    input.detail = `${input.detail}. ${shift.notes.join('. ')}`;
+  }
+  return inputs;
 }
 
 /** The weighted sum of the inputs that exist, on the field's 0 to 100. */

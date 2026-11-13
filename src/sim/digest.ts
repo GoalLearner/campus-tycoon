@@ -131,6 +131,9 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   // Costs phasing in: where they stand now. One line, however many steps were taken while away.
   lines.push(...latestText(log, 'costs'));
 
+  // A policy turned on or off: one line each (DESIGN.md 41.7).
+  for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
+
   // Faculty a semester behind the students, or still on the payroll after them: the latest word on it.
   as(TOP_WEIGHTS.staff, 'problem');
   lines.push(...latestText(log, 'staff'));

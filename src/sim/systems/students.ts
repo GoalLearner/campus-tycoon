@@ -65,6 +65,7 @@ import { townLiving } from './town';
 import { socialTables } from './grounds';
 import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
 import { classSizeNow, teaching } from './staffing';
+import { ratingShift } from './policies';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -239,7 +240,8 @@ export function teachingQuality(state: GameState): number {
   // How small classes are, from two things in equal parts: how full the seats are, and how many students there
   // are to a member of faculty (DESIGN.md 38.5).
   const seated = 1 - Math.max(0, Math.min(1, (taken - SEATS_COMFORTABLE) / (1 - SEATS_COMFORTABLE)));
-  const room = (seated + 1 - teaching(state)) / 2;
+  // A policy that moves class size in the academic rating moves grades with it: fewer teaching days, lower marks.
+  const room = Math.max(0, Math.min(1, (seated + 1 - teaching(state)) / 2 + ratingShift(state, 'classSize').points / 100));
   return TEACHING_WEIGHTS.lots * lots + TEACHING_WEIGHTS.room * room;
 }
 

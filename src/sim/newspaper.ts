@@ -1,3 +1,4 @@
+import { policiesAt } from './systems/policies';
 import { dateAt, formatDate } from './calendar';
 import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand';
 import { ERAS, RANK_GOALS } from './config/goals';
@@ -37,7 +38,7 @@ export interface TopItem {
   kind: TopKind;
   text: string;
   /** Where a tap on it leads, when it leads anywhere. */
-  go?: 'inbox' | 'football' | 'build';
+  go?: 'inbox' | 'football' | 'build' | 'policies';
 }
 
 export interface PollLine {
@@ -336,6 +337,11 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
     const said = names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
     offer(TOP_WEIGHTS.reward, 'news', `${said.charAt(0).toUpperCase()}${said.slice(1)} ${names.length === 1 ? 'is' : 'are'} waiting in the Build menu, free to place. ${names.length === 1 ? 'It lifts' : 'Each lifts'} how the campus looks.`, 'build');
   }
+
+  // An era that opened switches while away: one line that leads to the Policies page (section 41).
+  let opened = 0;
+  for (const entry of log) if (entry.kind === 'goal' && Number(entry.data?.era ?? -1) > 0) opened += policiesAt(Number(entry.data?.era)).length;
+  if (opened > 0) offer(TOP_WEIGHTS.reward - 1, 'news', `${opened === 1 ? 'One new switch is' : `${opened} new switches are`} on the Policies page. ${opened === 1 ? 'It is' : 'All are'} off until you turn ${opened === 1 ? 'it' : 'them'} on.`, 'policies');
 
   for (const line of awayLines(log, facts)) {
     if (line.weight <= 0) continue;

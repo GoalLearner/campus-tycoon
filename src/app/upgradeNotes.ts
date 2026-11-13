@@ -54,5 +54,10 @@ export function upgradeNotes(fromVersion: number): string[] {
     );
     notes.push('New: a campus that opened whole is full at 50,000 students. Applicants past that are turned away, which makes it more selective, and the rank goals are the long climb. No student is asked to leave.');
   }
+  if (fromVersion < 17) {
+    notes.push(
+      'New: the eras now open something. On a game begun on the model campus, the Growth era at the Top 125 opens a Policies page: switches with one gain and one cost each, all off until you turn one on. Tap the student count to see what the next era will open.',
+    );
+  }
   return notes;
 }

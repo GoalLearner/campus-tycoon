@@ -20,6 +20,7 @@ import { buildTown, startingParcels } from './systems/town';
 import { makeField, openingStanding } from './systems/field';
 import { newGoals } from './systems/goals';
 import { newStaffing } from './systems/staffing';
+import { newPolicies } from './systems/policies';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
@@ -199,6 +200,8 @@ export function newGame(opts: NewGameOptions): GameState {
     goals: model ? newGoals() : null,
     // Nobody is on the payroll until the first class arrives (DESIGN.md 38).
     staffing: newStaffing(),
+    // Every switch is off until an era opens it and the player turns it on (DESIGN.md 41).
+    policies: newPolicies(),
   };
   startFootball(state, 1);
   // A model campus is a school already standing: it opens with a standing, near the foot of the ladder (DESIGN.md 37.4).

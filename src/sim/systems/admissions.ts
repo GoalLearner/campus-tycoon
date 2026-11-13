@@ -6,6 +6,7 @@ import { enrollment, openCapacity } from '../selectors';
 import { type ClassRecord, type GameState, type LogEntry, type Season, type Zone } from '../types';
 import { classSize, dormStudents, localsAmong } from './demand';
 import { enrollmentCap, landSizeGoals, roomUnderCap } from './goals';
+import { leavingMore, unlockPolicies } from './policies';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -239,6 +240,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   });
   // A semester begins: faculty and staff hired a semester ago arrive, and those no longer needed have left.
   staffSemester(state, season, log);
+  // A class has moved in: a policy changed since the last one may be changed again (DESIGN.md 41.7).
+  unlockPolicies(state);
   // A size goal lands here, at an intake, and nowhere else (DESIGN.md 37.2).
   landSizeGoals(state, log);
 }
@@ -315,7 +318,9 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const mood = campusHappiness(state);
   // A semester of sustained high Stress costs a few more students: a hundredth at the very worst.
   const stress = closeSemester(state);
-  const stays = mood.retention * (1 - stressLoss(stress));
+  // A policy may ask a few more to leave: tough grading does (DESIGN.md 41.7).
+  const harder = leavingMore(state);
+  const stays = mood.retention * (1 - stressLoss(stress)) * (1 - harder.share);
   const c = state.cohorts;
   const { year } = calendarAt(state.clock);
   const next: [number, number, number, number] = [0, 0, 0, 0];
@@ -343,6 +348,8 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
+  // How many of those who left a policy sent: the share it asks, of those who would otherwise have stayed.
+  const byPolicy = Math.min(left, Math.round(before * mood.retention * (1 - stressLoss(stress)) * harder.share));
   if (log && before > 0) {
     log.push({
       tick: state.clock.tick,
@@ -350,8 +357,8 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
       text:
         left === 0
           ? 'The semester ended and every student is staying on.'
-          : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.`,
-      data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress) },
+          : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.${byPolicy > 0 ? ` ${harder.by.join(' and ')}: ${headCount(byPolicy)} of them.` : ''}`,
+      data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress), policy: byPolicy },
     });
   }
 }

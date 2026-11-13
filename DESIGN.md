@@ -934,6 +934,8 @@ Final wording follows the tone guide.
 | Deferred Rush | Less academic drag | Fall happiness |
 | Chapter Grade Standard | Less academic drag | Chapter membership |
 
+Eight of these are built, as switches the eras open: Reading days before finals, Tough grading, the freshman live-on rule, Free student section, All-night library, Parking fees, Quiet Hours and Naming rights. Section 41.7 onward has each as built, with its sizes and what it measured.
+
 ### 12.4 Events
 
 All sit inside the tone guide (section 16).
@@ -4867,7 +4869,7 @@ The targets stand: the Top 100 in week 7, and the Top 10 never before month five
 
 ## 41. What each era unlocks
 
-The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". He was sent it as one page and asked: "Approve this plan and build the Growth policies first?" He answered: "Yes, policies first". **Approved on 2026-11-12, to be built one stop for each era, the policies first. Nothing in it is built yet.**
+The owner, 2026-11-12: "eras should unlock something real (buildings, policies, land, or landmarks). Propose what when we reach the milestones layer." With the rank goals as the long climb (38.4) and a building for each of them (section 40), he was asked whether to have it proposed now and said: "Yes, propose". He was sent it as one page and asked: "Approve this plan and build the Growth policies first?" He answered: "Yes, policies first". **Approved on 2026-11-12, to be built one stop for each era, the policies first. The policies are built: 41.7 onward has them as built and as measured. The three buildings of 41.3 and the three landmarks of 41.4 are not built.**
 
 ### 41.1 One kind of thing for each era
 
@@ -4940,3 +4942,166 @@ None fails. Test 6, the long arc, is what this is for. Test 7, scale, is the nea
 To measure in each build, and to report to him: the pace of the rank goals (the Top 100 in about month two, the Top 10 not before month five), the money against his $12 to $17 kept of every $100 with a player who buys what each era opens, and that rank, applicants and selectivity still settle.
 
 Proposed order, one stop each: the policies, then the three buildings, then the landmarks.
+
+### 41.7 Policies, as built
+
+Built on 2026-11-12, on the owner's "Yes, policies first". All eight are built. None had to be left out.
+
+| Thing | As built | Where |
+|---|---|---|
+| The list | Eight policies, as data: a name, the era that opens it, its gain and its cost in plain words, the effects behind each, and its two lines for the paper. A ninth policy is one more entry, and a test adds one to prove it | `POLICIES` in `src/sim/config/policies.ts` |
+| What a policy is made of | Ten kinds of effect. Each lands on a number the game already had: points of one of the four causes of Happiness, points off Stress in exam weeks, points of one input of the academic rating, a share more of each class leaving, freshmen in spare beds, more fans, free seats, more upkeep for one kind of building, income from each driver or from a donor, and less mischief | `PolicyEffect`, `src/sim/systems/policies.ts` |
+| The page | The third page of the screen behind the student count, beside Goals and Capacity. It is not there before the Growth era. One box for each switch the game has, and under them what the next era will add | `policiesView` in `src/ui/policyUi.ts`, `openSize` in `src/ui/ui.ts` |
+| One tap from the top bar | A chip, "Policies", beside the Inbox chip, from the day Growth opens it and not before. It says how many are on | `policyChip` |
+| A switch | Its gain and its cost in plain words, and under each what it would be on this campus today, before it is touched. The numbers come from the same functions the effect itself uses, so the switch and what follows cannot disagree | `policyWords` in `src/sim/systems/policyWords.ts` |
+| The lock | A switch changed stays as it is until the next class moves in, fall or spring, and says so under itself. Nothing is timed and nothing is paid. Left alone for ever, a switch never moves | `setPolicy` in `src/sim/actions.ts`, `unlockPolicies` in `runIntake` |
+| The eras | Growth opens four, Flagship two more, Legacy two more. The thresholds are where they were. Nothing a game could build or do before is behind an era | `policiesOpen` |
+| The day an era begins | The goal's own line says what the era opens. The era leads the headline, and one line at the top of the paper leads to the Policies page | `eraOpens` and `land` in `src/sim/systems/goals.ts`, `edition` in `src/sim/newspaper.ts` |
+| The Goals page | Under the era's name: what the next era will open, and at which rank. Once an era has opened switches, a button to them | `nextEra`, `sizeView().eraNext` |
+| A switch turned on or off | One line in the log on the next minute, so one line in the paper and in the away list | `tellPolicies`, log kind `policy` |
+| The save | Version 17. It keeps which policies are on, which are held until the next class, and changes not yet told. One migration: every switch off, whatever era the game has reached | `MIGRATIONS[16]` in `src/sim/save.ts` |
+| A game begun on the small campus | Has no eras, so no page and no chip. Every rule above answers "nothing" at once on a game with no switch on, and the small campus's long-run tables print the same numbers | |
+
+### 41.8 No fifth cause: where each effect lands
+
+This was decided first, as the part most likely to go wrong.
+
+| What a policy does to | Where it goes | Where it is named |
+|---|---|---|
+| Happiness | Inside one of the four causes. It is added to that cause's level at every lot it touches, never past full or below nothing, so the campus number, every student card and the share of students who stay all read the same thing | On that cause's own line of the Happiness panel: "Parking fees −3" |
+| Stress | Off the top in finals week, and four tenths of it at midterms, the way help from the desk comes off. It is in the semester's average as well, so it reaches how many students stay | Beside Stress on the Happiness panel |
+| The academic rating | On the input it belongs to | In that input's line on the Rankings page |
+| Who stays | A share more of every class leaves when a semester ends | In the semester's line in the paper, and beside the share who stay on the Happiness panel |
+| Money | A line of its own, named for the policy, when it is income. Inside the line it changes when it is a cost | The Money panel |
+| Applicants | No policy moves applicants directly | |
+
+Which cause, for each policy that touches Happiness:
+
+| Policy | Cause | Whose | Why that cause |
+|---|---|---|---|
+| Freshmen live on campus | Grounds | The dorms, by the share of those living there it housed | Fuller dorms are louder and less tidy, which is what Grounds measures |
+| Free student section | Food & fun | Everyone | A game is something to do |
+| Parking fees | Food & fun | The lecture halls, where students from town are read, by the share of them who drive | A student who pays to park has less to spend |
+| Quiet hours | Food & fun | Everyone | Less to do in the evening |
+| Naming rights | Grounds | Everyone | A donor's name on the buildings |
+
+Two places were deliberately not used. The line for the week, where exams and the weather sit, does not move how many students stay, so a cost put there would be for show. Walk to class is read only at dorms, so a cost for those who drive cannot sit in it.
+
+### 41.9 The eight, with their sizes
+
+Every size is [T], in `src/sim/config/policies.ts`.
+
+| Era | Policy | Its gain, as built | Its cost, as built |
+|---|---|---|---|
+| Growth | Reading days before finals | 20 points off Stress in finals week, and 8 at midterms | Class size in the academic rating 1 point lower, for the teaching days given up. Grades on student cards follow it down a little |
+| Growth | Tough grading | Reputation in the academic rating 6 points higher, from the day it is turned on | 0.4% more of every class leaves at the end of each semester: about 200 students at 50,000. Those students do not graduate, so the graduation rate in the rating falls as their classes finish |
+| Growth | Freshmen live on campus | Freshmen from town take the beds nobody is in, at $3,000 a bed. They take only spare beds, so no class is ever short of a bed because of them | Grounds 30 points lower for the freshmen it houses, so the dorms feel it by their share |
+| Growth | Free student section | A fifth more fans want a seat, and Food & fun 3 points higher for everyone | A quarter of the seats earn no ticket. What a fan spends inside is still earned |
+| Flagship | All-night library | 20 points off Stress in finals week for students with a library or a computer lab in reach, and 8 at midterms | Each library and computer lab costs $4,000 more a year to run on the small campus's count: $112,000 each on the model campus |
+| Flagship | Parking fees | $450 a year from every student who drives | Food & fun 18 points lower for those who drive, so the lecture halls feel it by their share |
+| Legacy | Quiet hours | Mischief in the dorms happens a quarter as often | Food & fun 1 point lower for everyone |
+| Legacy | Naming rights | A donor pays $125,000 a year on the small campus's count: $3,500,000 on the model campus | Grounds 3 points lower for everyone |
+
+All the policies together never take more than 30 points off Stress.
+
+The donor of Naming rights is a family made from the game's own two halves of a surname, by the seed: nobody's real name, and the same family every time the game is opened.
+
+### 41.10 Measured
+
+The test players set each switch by a rule a reader of the switch would follow (`setPolicies` in `scripts/bots.ts`): easing exams where a semester's Stress runs over 20, quiet hours where cover is thin, the money switches while the campus keeps too little, freshmen in any spare bed, the student section while it costs next to nothing. Only the once-a-day player takes tough grading. The long run plays every player twice: with the switches in use, and with every one left off.
+
+**The pace, with the switches in use.** The real week each goal is reached, over 44 weeks, on two seeds. With every switch left off the table is the one of 40.4, to the week.
+
+| Goal | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Top 125, the Growth era | 5 | 5 | 5 |
+| Top 100 | 7 | 7 | 7 |
+| Top 75, the Flagship era | 11 to 12 | 12 | 12 |
+| Top 50 | 14 to 17 | 16 to 17 | 16 |
+| Top 25, the Legacy era | 22 to 24 | 22 to 23 | 19 to 21 |
+| Top 10 | 33 to 39 | 33 to 39 | 26 to 29 |
+| Rank at week 44 | 7th to 9th | 7th to 8th | 1st to 2nd |
+| The same with every switch off | 7th to 11th | 6th | 1st to 2nd |
+| Policies on at the end | 2 of 8 | 3 of 8 | 2 of 8 |
+
+The targets stand: the Top 100 in week 7, and the Top 10 never before month five. No goal is more than two weeks apart between the two tables. The one difference is the once-a-day player, who took tough grading at the Growth era and kept it: the Top 10 came in week 39 against week 37 on one seed, and it ends 7th and 8th against 6th and 6th.
+
+**Money.** Kept of every $100. An era's switches moved nothing.
+
+| Measured | Switches in use | Every switch off |
+|---|---|---|
+| A new game, as it opens | $16.60 | $16.60 |
+| The casual player, years 3 to 8 | $12.90 to $14.90 | $12.90 to $14.90 |
+| The once-a-day player, years 3 to 8 | $12.70 to $14.20 | $12.70 to $14.20 |
+| The player who works every cause, years 3 to 8 | $13.10 to $14.50 | $13.10 to $14.50 |
+| The casual player, weeks 9 to 44 | $14.20 to $16.50 | $14.20 to $16.50 |
+| The once-a-day player, weeks 9 to 44 | $13.70 to $16.20 | $13.80 to $16.30 |
+| The player who works every cause, weeks 9 to 44 | $13.10 to $15.50 | $13.10 to $15.50 |
+
+Years 3 to 8 are the same in both columns because no era has opened yet. One thing to know: a casual player who turned both money switches on whenever the campus kept under $15.20, and off only above $16.60, kept up to $17.70 in the later weeks. That rule was tried and dropped. The rule kept takes the money under $13.80 and gives it back above $14.80.
+
+**Rank, applicants and selectivity still settle.** The campus of the player who works every cause, with its switches as it left them, was left alone thirty more years: in the last ten the published rating moves 0.7 points and applicants by 430 in 20,569, at 1st or 2nd. A campus left alone from the start reads as it did (38.6).
+
+**What each policy is worth, in its own numbers.** One switch on for six years against the same campus with it off, every era open. Three campuses, each read in the fall with 50,000 students: the once-a-day player's after its long run (keeps $15.12, Happiness 91.6, a semester's Stress 15.6, nothing unanswered, 9th), a campus nobody ever tended (keeps $16.35, Happiness 77.7, Stress 19.6, 162 incidents a year unanswered, 86th), and that campus with half its dining, recreation, medical and safety buildings gone (keeps $18.92, Happiness 60.2, Stress 20.6, 197 unanswered, 95th).
+
+| Policy | The once-a-day campus | A campus nobody tends | Half its cover gone |
+|---|---|---|---|
+| Reading days before finals | Stress 1.1 lower, nobody more stays, rating 0.2 lower | Stress 1.1 lower, 49 more students stay a year, rating 0.1 lower | Stress 1.2 lower, 51 more stay a year, Happiness 0.1 higher, rating 0.1 higher |
+| Tough grading | Rating 0.9 higher, 397 more leave a year and are replaced each fall | Rating 0.4 higher, 395 more leave | Rating 0.4 higher, 407 more leave |
+| Freshmen live on campus | Keeps $0.86 more ($4.9M a year), Happiness 0.26 lower | Keeps $1.02 more, Happiness 0.26 lower | Keeps $1.00 more, Happiness 0.27 lower |
+| Free student section | Keeps $0.21 less ($1.35M a year, at a large stadium), Happiness 0.43 higher, 19 more stay | Keeps $0.01 less ($57,750 a year), Happiness 0.79 higher, 35 more stay | Keeps $0.01 less, Happiness 0.91 higher, 28 more stay |
+| All-night library | Keeps $0.08 less ($448,000 a year for 4 buildings), Stress 0.7 lower, nobody more stays | Keeps $0.04 less ($224,000 for 2), Stress 0.6 lower, 26 more stay | Keeps $0.04 less, Stress 0.6 lower, 30 more stay, Happiness 0.14 higher |
+| Parking fees | Keeps $0.59 more ($4.1M a year), Happiness 1.15 lower, 57 more leave, rating 0.2 lower | Keeps $0.67 more, Happiness 1.15 lower, 57 more leave, rating 0.3 lower | Keeps $0.65 more, Happiness 0.59 lower, 36 more leave |
+| Quiet hours | Happiness 0.28 lower, 13 more leave, no incident fewer: none goes unanswered there | 42 fewer unanswered a year, Happiness 0.14 lower | 76 fewer unanswered a year, Happiness 0.10 higher |
+| Naming rights | Keeps $0.53 more ($3.5M a year), Happiness 0.85 lower, 39 more leave, rating 0.2 lower | Keeps $0.60 more, Happiness 0.85 lower, 38 more leave | Keeps $0.58 more, Happiness 0.79 lower, 48 more leave |
+
+Tough grading over time, on the once-a-day campus, on against off: the rating is 1.0 higher after a year, 0.9 after six, 0.8 after twenty and 0.5 after thirty, as the graduation rate in the rating falls by 0.5, 1.5 and 2.0 points. That campus had 44 years of classes behind it. A campus that turns it on at the Growth era has five, so the classes it thins soon outweigh the rest: that is the once-a-day player of the pace table, a place or two lower by week 44.
+
+**Is any of them simply the right answer?** For each, a campus better off with it on and one better off with it off, from the tables above, or a plain statement that it is one-sided.
+
+| Policy | Better off with it on | Better off with it off | Verdict |
+|---|---|---|---|
+| Reading days before finals | The campus with half its cover gone: 51 more students stay a year and the rating is 0.1 higher | The once-a-day campus: nothing is gained and the rating is 0.2 lower | A choice. It pays where a semester's Stress passes 20 |
+| Tough grading | The once-a-day campus, with 44 years of classes behind it: 0.9 on the rating at six years and still 0.5 at thirty | The once-a-day player who took it at the Growth era and kept it: 7th and 8th at week 44 against 6th and 6th, and the Top 10 two weeks later on one seed | A choice. A lift now, given back as the classes it thins come to outnumber the rest |
+| Freshmen live on campus | All three: about a dollar more of every $100 for a quarter of a point of Happiness | None | **One-sided, toward on.** In term a full campus has about 240 spare beds, worth $723,000 a year. Most of the rest comes in the weeks after the seniors leave |
+| Free student section | The campus nobody tends: $57,750 a year for 0.79 of Happiness and 35 more students staying | None clearly. At the once-a-day campus's large stadium it gives up $1.35M a year for 0.43 of Happiness: about even | **One-sided at a small stadium**, a choice at a large one |
+| All-night library | The campus with half its cover gone: 30 more students stay a year for $224,000 | The once-a-day campus: $448,000 a year and nobody more stays | A choice. It pays where Stress passes 20 and libraries are in reach |
+| Parking fees | A campus that keeps too little. None of the three does, so on none of them did the money buy back the Happiness | The once-a-day campus: $4.1M it had no need of, for 1.15 of Happiness and 0.2 off the rating | A trade of Happiness for money, not a winner. The casual player took it only in the weeks the campus kept under $13.80 |
+| Quiet hours | The campus with half its cover gone: 76 fewer incidents a year go unanswered and Happiness is 0.10 higher | The once-a-day campus: nothing goes unanswered there, and it costs 0.28 of Happiness | A choice. It pays where cover is thin |
+| Naming rights | As Parking fees | The once-a-day campus: $3.5M for 0.85 of Happiness and 0.2 off the rating | A trade of Happiness for money, not a winner |
+
+**Speed.** Thirty days of catch-up take 146 ms on a new model campus and 220 ms on a tended one with its switches on.
+
+**Tests and long runs.** 30 new tests in `tests/policies.test.ts`: 662 in all. Three new long-run checks: 53 in all. The small campus's long-run tables print the same numbers as before this stop.
+
+### 41.11 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Where the page opens from | A third page of the screen behind the student count, with a chip under the top bar from the day Growth opens it. The Goals page has a button to it under the era's name | A button of its own on the top bar, which is full, or a line in the Menu, which is two taps |
+| Where a cost to Happiness goes | Inside Grounds or Food & fun, by the table of 41.8, and named on that cause's line | A line of its own beside the causes. That is a fifth cause, which he ruled out |
+| What easing exams does | It comes off the top in exam weeks and is in the semester's average, so it reaches how many students stay | Off the display only, as help from the desk is. A gain for show |
+| The cost of Reading days | On class size in the academic rating, for the teaching days given up. Grades on student cards follow, because they read the same teaching | Lower grades on the cards alone. Grades feed nothing, so it would cost nothing |
+| Freshmen live on campus | Freshmen from town take only the beds nobody is in | Every freshman from town needs a bed. The model campus would be about 5,400 beds short the next fall and turn 6,000 students away: a trap behind a switch |
+| The gain of Tough grading | On Reputation, as 24.4 already had it | On the rating as a whole, a number with no line to name it on |
+| The cost of Tough grading | Students who really leave, so the graduation rate follows as their classes finish, and the switch says so | A cost that ends the day the switch is turned off. It would be a free lift |
+| The lock | Until the next class moves in, fall or spring, as 12.1 has it | A timed window. He asked for none |
+| The headline the day of an era | The era leads, the building is still named, and the goal's own line says what the era opens | A headline about the switches, with the building left out |
+| The donor of Naming rights | A family made from the game's own halves of a surname, by the seed | A list of donors kept apart, which would be one more list to keep clear of real names |
+| Which policies were left out | None. All eight could be made of numbers the game had | |
+| A policy later taken off the list | A save that names it ignores it: nothing breaks and nothing is on | A migration for each removal |
+| How the test players use them | Each by a rule a reader of the switch would follow, written beside the rule | Every switch on from the day it opens |
+
+### 41.12 Rough
+
+| Rough | Why |
+|---|---|
+| Each switch is small | On purpose. The largest moves what the campus keeps by about a dollar in a hundred, or Happiness by about a point. None changes the week a goal is reached by more than two |
+| Free student section is one-sided at a small stadium | At the stadium a campus opens with it gives up $57,750 a year for a real lift to Happiness. It becomes a choice only as the stadium grows |
+| Freshmen live on campus is one-sided wherever beds are spare | It pays $3,000 a bed for a small cost to Grounds. On a full campus in term there are about 240 spare beds, so it is worth little until dorms are added |
+| What Freshmen live on campus is worth swings with the calendar | After the seniors leave, their beds are spare until the fall class arrives, and freshmen from town fill them for those weeks. The switch quotes today's figure |
+| The cost of Tough grading outlasts the switch | The rating counts every class that ever finished, so classes thinned while it was on stay in the graduation rate for good. The switch says the rating remembers |
+| Easing exams helps only a stressed campus | Stress costs students only when a semester's average passes 20. A well-run campus sits under that and gains a calmer finals week and nothing else |
+| The model campus seldom needs the money | It keeps $13 to $17 of every $100 without it. Parking fees and Naming rights are for the player who wants more faculty sooner |
+| The lines on a switch run to three on a narrow phone | Each says its own numbers. Fewer words would mean fewer numbers |
+| Never run on a phone | Checked in pictures and in tests on this PC |

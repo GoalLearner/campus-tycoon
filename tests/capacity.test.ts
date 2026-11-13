@@ -664,6 +664,8 @@ describe('a save from version 15', () => {
     expected.staffing = state.staffing;
     expected.admissions.year = state.admissions.year;
     expected.map.care.meals = state.map.care.meals!;
+    // Version 17 adds the policies, every one off (tests/policies.test.ts has those).
+    expected.policies = { on: [], locked: [], news: [] };
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -691,8 +693,9 @@ describe('a save from version 15', () => {
   });
 
   it('tells an upgraded save what is new, once', () => {
+    // Two of its own, and the one version 17 added after it (tests/policies.test.ts).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(2);
+    expect(notes.length).toBe(3);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
