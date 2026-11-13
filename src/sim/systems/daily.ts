@@ -1,4 +1,5 @@
 import { goingUp, hurryBigBuild } from './bigBuilds';
+import { collectLab, labHolds, labsOnMap } from './labs';
 import { decorSpec, hurryCraft } from './decor';
 import { ticksToIntake } from '../calendar';
 import {
@@ -325,6 +326,16 @@ export function collectables(state: GameState): Collectable[] {
     one.full = 1;
     one.ready = true;
   }
+  // A research lab's findings (DESIGN.md 49).
+  for (const lab of labsOnMap(state)) {
+    const holds = labHolds(state, lab);
+    if (holds.findings <= 0) continue;
+    const one = at(`p${lab.id}`, PLACED[lab.type].name, lab.x, lab.y, lab.w, lab.h);
+    one.xp += holds.xp;
+    one.cash += holds.cash;
+    one.full = Math.max(one.full, holds.full);
+    if (holds.ready) one.ready = true;
+  }
   // A building that has just opened.
   for (const opened of daily.opened) {
     if (opened.kind === 'placed') {
@@ -362,6 +373,8 @@ export function collectOne(state: GameState, key: string, pay = true): { xp: num
   if (!one || one.xp <= 0) return null;
   const daily = state.daily;
   const tick = state.clock.tick;
+  // A research lab pays its grant itself, out of the shared allowance.
+  let paidItself = false;
   if (key.startsWith('p')) {
     const id = Number(key.slice(1));
     const placed = state.map.placed[id];
@@ -373,12 +386,17 @@ export function collectOne(state: GameState, key: string, pay = true): { xp: num
       daily.since[id] = tick - Math.round(carried * TICKS_PER_HOUR);
     }
     if (state.football.stadium.plot === id) daily.games = 0;
+    // A research lab (DESIGN.md 49): its findings, with their grant out of the shared allowance.
+    if (placed && PLACED[placed.type].family === 'lab') {
+      one.cash = collectLab(state, placed)?.cash ?? 0;
+      paidItself = true;
+    }
     if (daily.opened.some((opened) => opened.kind === 'placed' && opened.id === id)) daily.opened = daily.opened.filter((opened) => !(opened.kind === 'placed' && opened.id === id));
   } else {
     const id = Number(key.slice(1));
     daily.opened = daily.opened.filter((opened) => !(opened.kind === 'lot' && opened.id === id));
   }
-  state.money.cash += one.cash;
+  if (!paidItself) state.money.cash += one.cash;
   if (pay) gainXp(state, one.xp);
   return { xp: one.xp, cash: one.cash };
 }

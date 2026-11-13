@@ -220,3 +220,5 @@ export * from './config/rhythm';
 export * from './systems/rhythm';
 export * from './config/bigBuilds';
 export * from './systems/bigBuilds';
+export * from './config/labs';
+export * from './systems/labs';

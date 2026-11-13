@@ -24,6 +24,7 @@ import { begunHere, yearAcceptance } from './admissions';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
 import { honorsRate } from './bigBuilds';
+import { labReputation } from './labs';
 import { classPressure, crowding } from './season';
 import { classSizeNow, facultyStretched, ratioTarget } from './staffing';
 
@@ -227,6 +228,13 @@ export function academicInputs(state: GameState): AcademicInput[] {
     if (shift.points === 0) continue;
     input.level = Math.max(0, Math.min(100, input.level + shift.points));
     input.detail = `${input.detail}. ${shift.notes.join('. ')}`;
+  }
+  // The research labs (DESIGN.md 49) lift Reputation a little, once it exists, and say so on its line.
+  const labs = labReputation(state);
+  const reputation = inputs.find((input) => input.id === 'reputation');
+  if (labs > 0 && reputation && reputation.level !== null) {
+    reputation.level = Math.min(100, reputation.level + labs);
+    reputation.detail = `${reputation.detail}. The research labs add ${labs} ${labs === 1 ? 'point' : 'points'}`;
   }
   return inputs;
 }

@@ -1,4 +1,5 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
+import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { scaleOf } from './scale';
 import { placedCost } from './config/placed';
 import { PLACED } from './config/placed';
@@ -241,6 +242,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
     // Clearing any cell of a hand-placed building takes the whole building.
     if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
     if (map.placed[cell.placedId]?.done !== undefined) bigBuildCleared(state, cell.placedId);
+    if (state.labs?.since[cell.placedId] !== undefined) labCleared(state, cell.placedId);
     dailyOnCleared(state, 'placed', cell.placedId);
     removePlaced(map, cell.placedId);
     return;
@@ -333,6 +335,11 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
     const why = cannotStart(state, type);
     if (why) return { ok: false, state, error: why };
   }
+  // A research lab: one for each field, on a game with goals (DESIGN.md 49).
+  if (isLab(type)) {
+    const why = cannotBuildLab(state, type);
+    if (why) return { ok: false, state, error: why };
+  }
   if (type === 'stadium' && state.football.stadium.plot !== null && state.map.placed[state.football.stadium.plot]) {
     return { ok: false, state, error: 'The campus already has a stadium plot. Clear it first to move it.' };
   }
@@ -348,6 +355,7 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
   if (type === 'stadium') next.football.stadium.plot = built.id;
   if (isBigBuild(type)) startBigBuild(next, built);
+  if (isLab(type)) labPlaced(next, built);
   // The daily layer: it begins to fill from now, and holds its opening bonus. A big build does so when it opens.
   if (!isBigBuild(type)) dailyOnPlaced(next, built.id);
   next.money.cash -= preview.cost;

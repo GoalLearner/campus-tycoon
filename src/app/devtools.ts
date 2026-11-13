@@ -1,4 +1,5 @@
-import { DECOR, gainXp, giveDecor, hurryCraft, readyToCollect, sampleStudents } from '../sim';
+import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, readyToCollect, sampleStudents } from '../sim';
+import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
@@ -615,6 +616,24 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
   }, 100);
 }
 
+/** Dev page: a free block for a research lab with the most lecture halls within its reach. */
+function labDevSpot(state: GameState, type: PlacedType): Point | null {
+  let best: Point | null = null;
+  let most = -1;
+  for (let y = 0; y < state.map.height; y++) {
+    for (let x = 0; x < state.map.width; x++) {
+      if (previewPlace(state, type, x, y).problem !== null) continue;
+      let halls = 0;
+      for (const lot of state.map.buildings) if (lot && lot.zone === 'academic' && Math.abs(lot.x - x) <= 8 && Math.abs(lot.y - y) <= 8) halls += 1;
+      if (halls > most) {
+        most = halls;
+        best = [x, y];
+      }
+    }
+  }
+  return best;
+}
+
 export function installDevTools(): void {
   (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
   const params = new URLSearchParams(window.location.search);
@@ -866,6 +885,23 @@ export function installDevTools(): void {
       const ratings = set.field.schools.map((school) => school.ar).sort((a, b) => b - a);
       set.field.academic = ratings[Math.min(ratings.length, standing) - 1] ?? set.field.academic;
       store.adopt(set, { ephemeral: true });
+    }
+    // &labs=1 builds the three research labs near the lecture halls (DESIGN.md 49). &discover=2 has their next
+    // discoveries come within that many hours, so the paper of &away has them.
+    if (params.has('labs') && store.hasGame) {
+      for (const spec of LABS) {
+        const spot = labDevSpot(store.state, spec.type);
+        if (spot) store.dispatch({ type: 'place', building: spec.type, x: spot[0], y: spot[1] });
+      }
+      const soon = Number(params.get('discover') ?? 0);
+      if (soon > 0) {
+        const set = structuredClone(store.state);
+        labsOnMap(set).forEach((lab, n) => {
+          cancelTimers(set, 'discovery', lab.id);
+          addTimer(set, set.clock.tick + Math.round(soon * 60) + n * 30, 'discovery', lab.id);
+        });
+        store.adopt(set, { ephemeral: true });
+      }
     }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);

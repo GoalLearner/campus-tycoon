@@ -2369,7 +2369,7 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | A dorm room's furniture and things, `room.*` (46) | The packs' own table, chair, shelves, rug, drapes, stool, books, papers, scroll, lute, jukebox, music notes, cup, apple, bread, basket, box and plant, each as drawn, put down together at run time. The balls, trophy, kettlebell, controller, chess piece, cards and dice are the Sport and Games icons, drawn face on and shrunk to stand in a room | Keep, with the commission above for anything that should be in the room's angle |
 | Nobody sits or lies down in a room (46) | A figure stands at the desk to study; a sleeping student is a dark room with nobody in it, as the packs have no bed and no lying figure | Penzilla commission: seated and sleeping figures, and a bed |
 
-Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one, and turn with the view (43). The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
+Edits that are kept and need no fix: the red cross on the Medical Center recoloured green, and on the Health lab (49), the grass tile brightened for lawns and its rim painted over so tiles join, and road pieces and cars mirrored to face every way, the shuttle bus and the two delivery trucks with them. The football on the recreation field is the Sport and Games pack's ball, shrunk to fit the pitch. The pennant beside an admissions guide is the Medieval pack's banner and the boxes beside a delivery driver are the city pack's, both shrunk. Every person with a job is the people pack's own figure, as drawn (32.6). The face on the student card is drawn in code, and the owner approved it. The decorations of 42.20 are the packs' drawings as drawn: bunting leaves out a stray line of pixels down the left edge of its file, and the four that run one way (bunting, the gold rope line, the low stone wall and the autumn hedge) are mirrored when the player turns one, and turn with the view (43). The hammer over the Makerspace is the Medieval pack's hammer, enlarged.
 
 **Planned.** The stand-ins of play stop 4b moved into the table above when it was built, on 2026-11-11. The pizza place and the taco stand are used as drawn, two cells wide with their patios, which was the owner's choice. One is left:
 
@@ -5250,7 +5250,7 @@ The rule for any making: a standing choice, never a tap for each batch, and what
 |---|---|---|
 | The makerspace builds items for events | At launch, as the Workshop: one decoration crafted at a time, a day or two each, and a finished one waits for ever. Recipes come with levels. A second craft slot and "Finish now" cost Seals. An order can ask for a crafted item | It is the once-a-day loop exactly: collect yesterday's, start another |
 | The bookstore's merchandise sells more after wins | At launch, as a line of 42.4 and no chain | |
-| Labs turn research into grants and patents | Later, as the first true chain: a field picked once, findings that bank up, small capped grants, named discoveries to collect | It needs a new building and a pass over the money |
+| Labs turn research into grants and patents | Later, as the first true chain: a field picked once, findings that bank up, small capped grants, named discoveries to collect. Built: section 49 | It needs a new building and a pass over the money |
 | Dining kitchens turn supplies into meals | No | Dining works. Supplies would be a tax on it |
 
 ### 42.7 The store (his choice, and his limits)
@@ -6366,3 +6366,68 @@ Each step is his, or mine on his word. None is needed for the game as it is.
 | A choice that opens while the paper is up takes its place | The paper waits, unread, for the next time the app opens |
 | A 409 shows in the browser's console | The browser's own line for an answer of "another phone saved since" |
 | No boards yet | The clock marks are kept for them |
+
+## 49. The research labs, as built
+
+The first true making chain of 42.6, built on 2026-11-13 on the main session's brief, inside the queue the owner approved that night ("if you finish these...keep going"). His rule for all of it: "Make the game easy and rewarding so users stick around and play." A lab is a bonus: nothing needs a tap to keep, nothing spoils, and a once-a-day player loses nothing. Only a game with goals has labs. The small campus's tables are the same, line for line.
+
+### 49.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| A lab | A building bought from the Build menu, under Academics: the Sciences lab, the Engineering lab and the Health lab, one of each. Which lab is built is the field, picked once. Two cells by two, $50,000 on the small campus's count ($1.4 million on the model campus) and $4,000 a year to run ($112,000), with utilities by its size: $280,000 a year in all on the model campus | `LABS` in `src/sim/config/labs.ts`, rows of `PLACED` |
+| Findings | Bank up on their own: about six a day at a rate of one, held up to 36 hours' worth, as every building that fills (42.4). The medal shows once a lab holds three. The rate is the lecture-hall seats within 8 cells (half the rate with none, the whole with 300 seats on the small campus's count, 8,400 on the model campus) times the faculty funding (the Instruction slider at its middle is one; each step up or down is 5 in 100 more or less) | `labRate`, `findingsHeld` in `src/sim/systems/labs.ts` |
+| Collecting | A tap on the medal, or Collect all, takes every whole finding; the part of one still filling is kept. Each pays 2 experience and a grant of $25 on the small campus's count ($700) | `collectLab`, `collectables` |
+| Discoveries | Made by the lab itself, on its own timer: one every 60 hours at a rate of one, about three a week. Each pays 20 experience and a grant of $500 ($14,000), is told in the paper ("Larp chemists make an ink that washes out of anything") and is kept for good in the lab's list, even when the lab is cleared. Each field has twelve, written to the tone guide and made up: a greener glue, a robot that waters the quad, the best hour for a nap. They come in turn from a start the seed picks, and only after all twelve does one come again | `discoveryDue`, `discoveryText`, `DiscoveryLine` |
+| The paper | A discovery is its own headline on a quiet day: "Larp Chemists Find a Greener Glue; Committee Requests a Sample". On a busier one the first of the edition's discoveries is at the top, just under a game's result, and any others are in the rest of the paper | `leads`, `edition` in `src/sim/newspaper.ts` |
+| The money | Every lab grant comes out of the same yearly allowance as the orders', the gift's and the moments' (42.3, 44), so the money target holds; and the labs take at most a quarter of it. Past that, findings and discoveries pay their experience alone until the next fall | `labCashLeft`, `LAB_CASH_SHARE` |
+| The one number it moves | Reputation, one of the academic rating's inputs (24.4): a point higher for each lab that stands, once the first rankings day has given Reputation a value. The rating's Reputation line names it. No new cause, and nothing about it needs collecting | `labReputation`, `academicInputs` in `src/sim/systems/field.ts` |
+| Orders | The state: "Collect 12 research findings", in 48 hours, for a grant and experience, asked only when the labs make twelve in two thirds of that time. The donors: "Make a discovery", in 96 hours, for a Gold Seal and experience, asked only when a lab's next discovery is due in the first three quarters of it | `labFindings`, `labDiscovery` in `ORDER_KINDS` |
+| The lab's panel | Tap a lab: what it holds, about how many a day and why, when its next discovery comes, and what the labs lift. Its Discoveries button lists every discovery it has made, newest first | `labSummary`, `labPage` in `src/ui/labUi.ts`, `openLab` in `src/ui/ui.ts` |
+| Saves | Version 23: what each lab holds is counted from a tick, and every discovery is a few numbers. A version 22 game comes through with nothing else moved, and is told once that labs are new | `MIGRATIONS[22]`, `tests/fixtures/save-v22-model.json` |
+| The art | His city pack's own drawings, as drawn, on the block the pack drew each for: the Sciences lab is the water plant (with its front piece), the Engineering lab the power plant, the Health lab the doctor's office, its red cross turned green as the Medical Center's is | `lab.*` in `tools/make_penzilla_recipe.py` |
+| The test players | Each builds a lab for every field as soon as the campus can afford to build it and to run it, by the big builds' rule, on the free block with the most lecture-hall seats in reach, and collects it as it collects everything else. A player who uses none of the daily layer builds none | `placeLabs` in `scripts/bots.ts` |
+| The dev page | `&labs=1` builds the three on the model campus near the lecture halls; `&discover=2` brings their next discoveries within two hours, so `&away` has them in the paper | `src/app/devtools.ts` |
+
+### 49.2 Measured
+
+The long run's six test players on the model campus, 44 weeks each, against the run before labs.
+
+| Measured | Result |
+|---|---|
+| Findings and discoveries | Every player built all three labs in its first week, and collected 126 to 128 findings a week (about six a day from each lab) and 8.4 to 8.5 discoveries a week (about three from each) |
+| The labs' grants | $68,000 to $73,000 a year, a fifth of the year's allowance of $336,000, and never more than $84,000 in a year, their quarter. Every player spent the whole allowance, with labs and without |
+| What the other grants paid | The gift's cash $44,000 to $49,000 a year (from $66,000 to $89,000), the moments' $156,000 to $181,000 (from $196,000 to $207,000), the orders' $39,000 to $59,000 (from $41,000 to $70,000) |
+| Levels | The once-a-day player made 6.0 and 6.8 levels a week in weeks 4 to 12, and 5.9 and 6.9 after (5.6 and 6.4, and 5.6 and 6.3, before). Inside 42.2's 3.5 to 7 |
+| Gold Seals | 12.8 to 13.7 a week (12.2 to 13.1 before): the donors' discovery order pays one |
+| The pace of the rank goals | The Top 10 in weeks 29, 31, 31, 27, 28 and 25 (31, 31, 29, 29, 27 and 25 before); the Top 25 in weeks 20 to 22, as before. Never before week 24. The same three players on one seed with no lab reach the Top 10 in weeks 31, 31 and 29, against 29, 31 and 31 with |
+| The money | Years 3 to 8 keep $13.9 to $15.6 of every $100 (casual), $13.1 to $15.0 (once a day) and $11.6 to $13.8 (striver), against $13.7 to $15.4, $13.0 to $15.5 and $11.3 to $14.0 before |
+| The rating | Three labs lift the Reputation input 3 points and the academic rating half a point (83.0 against 82.5, for one) |
+| The small campus | Every table the same, line for line |
+| Tests | 12 new, 859 in all. Two new long-run checks: a lab for each field only on a game with goals, making findings and discoveries; and the labs' grants inside the shared allowance and their quarter of it. 80 checks in all |
+| In the app's browser at 390 wide | The three cards under Academics; a lab placed, its medal after a day, its panel, its Discoveries list; the paper with a discovery at the top |
+
+### 49.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The fields | Sciences, Engineering and Health: the three his packs have a fitting drawing for | A fourth field, as the brief suggested: his packs have nothing that reads as its lab, and nothing is shown without art |
+| How a field is picked | By which lab is bought: three cards, one of each | One lab card and a choice after placing, which is a second step for the same thing |
+| What fills | Findings, by time, to 36 hours' worth, as collecting | Findings that never stop filling, which makes a week away a jackpot and the cap meaningless |
+| Discoveries | Made by the lab on a timer, so a player who only opens the paper gets them, and told there | Made at a collect, which a once-a-day player would only ever see as a toast |
+| Experience | 2 a finding and 20 a discovery | 5 and 50, the first try: in a trial run the once-a-day player then made 7.1 to 7.3 levels a week, over the 7 that 42.2's pace allows |
+| Cash | Out of the shared allowance, and at most a quarter of it | An allowance of its own on top, about $84,000 more a year on the model campus, two cents of every $100: the gift, the moments and the orders would keep what they paid before |
+| What a lab lifts | Reputation, a point for each lab that stands | A lift for each discovery, which would fade when a player stopped collecting: something that needs a tap to keep |
+| How much | One point each: three labs lift the rating by half a point. The Top 10 is no sooner for it | More, which the pace target (the Top 10 never before week 24) allows little room for |
+| The orders' windows | Asked only when the labs can do them in time | Asked any time, which offers orders that can be missed for want of a lab's luck |
+
+### 49.4 Rough
+
+| Rough | Why |
+|---|---|
+| The Health lab looks like the Medical Center | Both are the city pack's doctors' buildings with a green cross. A different drawing, or a commissioned lab, would tell them apart |
+| No fourth field | No drawing in his packs reads as a lab for it |
+| The labs' grants come out of what the gift, the moments and the orders paid | The allowance is shared, as asked: a keen player's gift cash fell from $66,000 to $89,000 a year to $44,000 to $49,000, and the moments' and the orders' grants by about as much again. An allowance of its own is his call |
+| Discoveries come round again after twelve in a field | About four weeks of one lab. Twelve more each is a list to write |
+| A lab's rate is read now and applied to the hours it has filled | As a store's bonus after a win is. A slider moved just before a collect counts for the whole stretch |
+| Never run on a phone | Checked in the app's browser at 390 wide and in pictures on this PC |

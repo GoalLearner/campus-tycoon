@@ -20,6 +20,7 @@ import { firstOrders, newOrders } from './systems/orders';
 import { newDecor } from './systems/decor';
 import { newRhythm } from './systems/rhythm';
 import { newBigBuilds } from './systems/bigBuilds';
+import { newLabs } from './systems/labs';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -28,7 +29,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 22;
+export const SAVE_VERSION = 23;
 
 export interface SaveFile {
   v: number;
@@ -314,6 +315,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof state.bigBuilds !== 'object' || state.bigBuilds === null) (state as unknown as GameState).bigBuilds = newBigBuilds();
     return state;
   },
+  // Version 23: the research labs (DESIGN.md 49). None on the map yet, nothing held and nothing found.
+  22: (state) => {
+    if (typeof state.labs !== 'object' || state.labs === null) (state as unknown as GameState).labs = newLabs();
+    return state;
+  },
 };
 
 /**
@@ -379,7 +385,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

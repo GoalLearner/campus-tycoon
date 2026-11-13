@@ -62,6 +62,8 @@ export type OrderMetric =
   | 'sellOuts'
   | 'crafts'
   | 'decorPlaced'
+  | 'findings'
+  | 'discoveries'
   // Measured once, at a point of the calendar.
   | 'graduates'
   | 'fullFall'
@@ -73,7 +75,7 @@ export type OrderMetric =
 export type OrderPoint = 'intake' | 'fallIntake' | 'graduation' | 'semesterEnd' | 'fallEnd';
 
 /** What must be so for a kind to be offered. Each is one small check in `systems/orders.ts`. */
-export type OrderWhen = 'rowNotOk' | 'rewardWaiting' | 'roomToPlant' | 'parkingNotOk' | 'streetNotWalking' | 'hasStadiumPlot' | 'collects' | 'readyToCollect' | 'seatsWanted' | 'homeGamesAhead' | 'workshopOpen';
+export type OrderWhen = 'rowNotOk' | 'rewardWaiting' | 'roomToPlant' | 'parkingNotOk' | 'streetNotWalking' | 'hasStadiumPlot' | 'collects' | 'readyToCollect' | 'seatsWanted' | 'homeGamesAhead' | 'workshopOpen' | 'labsBusy' | 'discoverySoon';
 
 export interface OrderKind {
   id: string;
@@ -130,6 +132,8 @@ export const ORDER_KINDS: readonly OrderKind[] = [
   { id: 'graduateClass', giver: 'state', title: 'Graduate {n} seniors this spring', ask: 'The state pays for degrees. Keep this class together to commencement.', metric: 'graduates', target: { share: 0.96 }, point: 'graduation', reward: [grant(4000), xp(100)], always: true },
   { id: 'stayFull', giver: 'state', title: 'Be full when the fall class moves in', ask: 'A full campus is what the state funds. Have every place taken on move-in day.', metric: 'fullFall', target: { n: 1 }, point: 'fallIntake', reward: [grant(4000), xp(100)] },
   { id: 'noWaitlist', giver: 'state', title: 'Turn nobody away for want of a bed or a seat', ask: 'When the next class moves in, have a bed and a seat for everyone you admit.', metric: 'cleanIntake', target: { n: 1 }, point: 'intake', reward: [grant(4000), xp(100)] },
+  // The research labs (DESIGN.md 49): findings the labs will have made well inside the time it gives.
+  { id: 'labFindings', giver: 'state', title: 'Collect {n} research findings', ask: 'The state funds research that gets written up. Collect what the labs have found.', metric: 'findings', target: { n: 12 }, hours: 48, reward: [grant(2000), xp(60)], when: 'labsBusy' },
   { id: 'keepStudents', giver: 'state', title: 'Lose no more than {n} students this semester', ask: 'The state funds the students who stay. Happiness is what keeps them.', metric: 'semesterLeft', target: { add: 0 }, point: 'semesterEnd', reward: [grant(4000), xp(100)] },
 
   // ---- the town: litter, parking, the avenue. It pays a decoration of its own, and a little experience.
@@ -149,6 +153,8 @@ export const ORDER_KINDS: readonly OrderKind[] = [
   { id: 'placeReward', giver: 'donors', title: 'Place {what}', ask: 'It was earned and it is waiting in the Build menu. We would like to see it stand.', metric: 'rewardPlaced', target: { n: 1 }, hours: 36, reward: [seals(1), xp(60)], sitting: true, when: 'rewardWaiting' },
   { id: 'levelUp', giver: 'donors', title: 'Reach University Level {n}', ask: 'A school on the move is one worth giving to.', metric: 'level', target: { add: 1 }, hours: 48, reward: [seals(1), xp(60)], always: true },
   { id: 'homeWin', giver: 'donors', title: 'Win {n} home games', ask: 'We have seats at the stadium and we would like something to cheer.', metric: 'homeWins', target: { n: 1 }, point: 'fallEnd', reward: [seals(2), xp(100)], when: 'homeGamesAhead' },
+  // A research lab's next discovery, offered only when one is due well inside the time it gives (DESIGN.md 49).
+  { id: 'labDiscovery', giver: 'donors', title: 'Make a discovery', ask: 'We would love to read about the labs in the paper. Their next discovery will do.', metric: 'discoveries', target: { n: 1 }, hours: 96, reward: [seals(1), xp(80)], when: 'discoverySoon' },
   { id: 'craftTwo', giver: 'donors', title: 'Make {n} things at the Workshop', ask: 'We like to see what the students can build with their own hands.', metric: 'crafts', target: { n: 2 }, hours: 96, reward: [seals(2), xp(100)], when: 'workshopOpen' },
   { id: 'sellOuts', giver: 'donors', title: 'Fill the stadium at {n} home games', ask: 'A full house looks well. The ticket price and a good team both fill seats.', metric: 'sellOuts', target: { n: 2 }, point: 'fallEnd', reward: [seals(2), xp(100)], when: 'homeGamesAhead' },
 ];

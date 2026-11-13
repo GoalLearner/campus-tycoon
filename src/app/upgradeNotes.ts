@@ -84,5 +84,8 @@ export function upgradeNotes(fromVersion: number): string[] {
       "New: big builds. The Flagship era, at the Top 75, opens three buildings to buy: the Student Union, the Honors College and the Welcome Center. The Legacy era, at the Top 25, opens Founders' Commons. Each goes up over real days, and the Build menu has a second builder for Gold Seals.",
     );
   }
+  if (fromVersion < 23) {
+    notes.push('New: research labs, under Academics in the Build menu. One for each field: findings to collect, and discoveries of their own in the paper.');
+  }
   return notes;
 }

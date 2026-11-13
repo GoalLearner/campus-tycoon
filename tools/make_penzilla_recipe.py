@@ -299,6 +299,13 @@ sprites['reward.bell'] = {'layers': [on_grid(OLD + 'Buildings/TowerStoneRoofed.p
 sprites['era.union'] = {'layers': [on_grid(SHOPS + 'Groceries_Mall.png', 2, 2)]}
 sprites['era.honors'] = {'layers': [on_grid(PUBLIC + 'Hotel_TwoFloors.png', 2, 1)]}
 sprites['era.welcome'] = {'layers': [on_grid(PUBLIC + 'Hotel_OneFloor.png', 2, 1)]}
+# ------------------------------------------------------------ research labs --
+# One for each field (DESIGN.md section 49), each the pack's own drawing, as drawn, on the block the pack drew it for.
+# The doctor's office has its red cross turned green, as the Medical Center's is.
+sprites['lab.sciences'] = {'layers': [on_grid(PUBLIC + 'Industrial_WaterPlant.png', 2, 2), on_grid(PUBLIC + 'Industrial_WaterPlant_Front.png', 2, 2)]}
+sprites['lab.engineering'] = {'layers': [on_grid(PUBLIC + 'Industrial_PowerPlant.png', 2, 2)]}
+sprites['lab.health'] = {'layers': [on_grid(PUBLIC + 'Doctor_Office.png', 2, 2, recolour='cross')]}
+
 # The pack's building site for a block of two cells, for a big build of that size while it goes up.
 sprites['build.site.wide'] = {'layers': [on_grid(PUBLIC + 'Construction_1x2.png', 2, 1)]}
 # Founders' Commons is a green of three cells by three, laid out from the packs' own pieces, each as drawn: the grass,
@@ -608,6 +615,7 @@ recipe = {
         'build.college': [2, 2], 'build.university': [2, 2], 'build.site': [2, 2], 'pond.medium': [2, 2],
         'reward.fountain': [2, 2], 'reward.post': [2, 1], 'reward.cinema': [2, 2], 'reward.radio': [2, 1], 'reward.museum': [2, 2], 'reward.alumni': [2, 1],
         'era.union': [2, 2], 'era.honors': [2, 1], 'era.welcome': [2, 1], 'era.commons': [3, 3], 'build.site.wide': [2, 1],
+        'lab.sciences': [2, 2], 'lab.engineering': [2, 2], 'lab.health': [2, 2],
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
     'credits': [
@@ -617,7 +625,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk.',
         },
         {
             'name': 'Football stadium (3D model)',

@@ -675,6 +675,7 @@ describe('a save from version 17', () => {
     expected.decor = state.decor;
     expected.rhythm = state.rhythm;
     expected.bigBuilds = state.bigBuilds;
+    expected.labs = state.labs;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -744,7 +745,7 @@ describe('a save from version 17', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(5);
+    expect(notes).toHaveLength(6);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

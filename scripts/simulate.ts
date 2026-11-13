@@ -92,6 +92,10 @@ import {
   type LogEntry,
   BIG_BUILDS,
   bigBuildOf,
+  LABS,
+  LAB_CASH_SHARE,
+  ORDER_CASH_YEAR,
+  labOf,
   placedCost,
   placedUpkeep,
   scaleOf,
@@ -128,6 +132,8 @@ if (args.includes('--no-orders')) botOptions.orders = false;
 if (args.includes('--no-decor')) botOptions.decor = false;
 // `-- --no-big-builds` runs them without buying what the Flagship and Legacy eras open (DESIGN.md 45).
 if (args.includes('--no-big-builds')) botOptions.bigBuilds = false;
+// --no-labs: no research lab is built (DESIGN.md 49).
+if (args.includes('--no-labs')) botOptions.labs = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -257,6 +263,9 @@ interface Seen {
   goalsUnsaid: number;
   /** The most students the campus ever held, whenever it was looked at. */
   mostStudents: number;
+  /** By game year: what the research labs took of the yearly allowance, and what all of its takers did (DESIGN.md 49). */
+  labPaid: Record<number, number>;
+  allowancePaid: Record<number, number>;
 }
 
 const newSeen = (): Seen => ({
@@ -295,6 +304,8 @@ const newSeen = (): Seen => ({
   finished: 0,
   prices: [],
   levelLines: 0,
+  labPaid: {},
+  allowancePaid: {},
   orderLooks: 0,
   orderLooksWith: 0,
   orderDay: -1,
@@ -318,7 +329,15 @@ function tone(seen: Seen, lines: readonly string[]): void {
 }
 
 /** Read what a stretch of time left in the log, and how the campus stands at the end of it. */
+/** What the year's allowance has paid so far, by year: the labs' part and everyone's (DESIGN.md 49). */
+function paidSoFar(seen: Seen, state: GameState): void {
+  if (!state.labs || !state.orders) return;
+  seen.labPaid[state.labs.paidYear] = Math.max(seen.labPaid[state.labs.paidYear] ?? 0, state.labs.paid);
+  seen.allowancePaid[state.orders.paidYear] = Math.max(seen.allowancePaid[state.orders.paidYear] ?? 0, state.orders.paid);
+}
+
 function look(seen: Seen, state: GameState, log: LogEntry[]): void {
+  paidSoFar(seen, state);
   for (const entry of log) {
     if (entry.kind === 'decision' && entry.data?.closes !== undefined) seen.decisions.push({ opens: entry.tick, closes: Number(entry.data.closes), kind: String(entry.data.kind) });
     if (entry.kind === 'exam') seen.exams[String(entry.data?.id)] = (seen.exams[String(entry.data?.id)] ?? 0) + 1;
@@ -495,6 +514,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
       board(now);
       const turn = takeTurn(state, style);
       state = turn.state;
+      paidSoFar(seen, state);
       daily(turn);
       checkIns += 1;
       if (turn.purchases > 0) checkInsWithPurchase += 1;
@@ -1171,7 +1191,9 @@ function assertModelCampus(seed: number): void {
   botOptions.daily = false;
   botOptions.orders = false;
   botOptions.decor = false;
+  botOptions.labs = false;
   const bare = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
+  botOptions.labs = !args.includes('--no-labs');
   botOptions.policies = !args.includes('--no-policies');
   botOptions.daily = !args.includes('--no-daily');
   botOptions.orders = !args.includes('--no-orders');
@@ -1481,6 +1503,69 @@ function assertModelCampus(seed: number): void {
       'nothing big is built on a small campus or by a player who leaves the eras alone',
       plain.every((run) => BIG_BUILDS.every((spec) => !bigBuildOf(run.final, spec.type))),
       plain.map((run) => `${run.style} ${run.seed}: none`).join('; '),
+    );
+  }
+
+  // The research labs (DESIGN.md 49): what each player built, what the labs made and paid, and the same players with
+  // no lab, for what they change.
+  {
+    const weekAt = (tick: number): number => Math.floor((tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
+    const years = (run: Run): number[] => Object.keys(run.seen.allowancePaid).map(Number).filter((year) => year > 0);
+    const perYear = (run: Run, of: Record<number, number>): number => {
+      const list = years(run);
+      return list.length === 0 ? 0 : list.reduce((sum, year) => sum + (of[year] ?? 0), 0) / list.length;
+    };
+    const allowance = (run: Run): number => ORDER_CASH_YEAR * scaleOf(run.final);
+    const reputation = (state: GameState): number => academicInputs(state).find((input) => input.id === 'reputation')?.level ?? 0;
+    const withoutLabs = (run: Run): GameState => {
+      const copy = structuredClone(run.final);
+      for (const spec of LABS) {
+        const placed = labOf(copy, spec.type);
+        if (placed) removePlaced(copy.map, placed.id);
+      }
+      copy.money.ratesDirty = true;
+      return copy;
+    };
+    botOptions.labs = false;
+    const noLab = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
+    botOptions.labs = !args.includes('--no-labs');
+    const mine = runs.filter((run) => run.seed === seed);
+    console.log('THE RESEARCH LABS');
+    console.log(`${''.padEnd(34)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    for (const spec of LABS) row(`${spec.name}: built, week`, (run) => {
+      const placed = labOf(run.final, spec.type);
+      return placed ? String(weekAt(placed.builtTick)) : 'not built';
+    });
+    row('findings collected a week', (run) => (run.final.labs.findings / PACE_WEEKS).toFixed(1));
+    row('discoveries a week', (run) => (run.final.labs.found.length / PACE_WEEKS).toFixed(1));
+    row('lab grants a year', (run) => dollarsShort(perYear(run, run.seen.labPaid)));
+    row('  of the year\'s allowance', (run) => `${((100 * perYear(run, run.seen.labPaid)) / allowance(run)).toFixed(0)}%`);
+    row('allowance paid a year, everyone', (run) => `${dollarsShort(perYear(run, run.seen.allowancePaid))} of ${dollarsShort(allowance(run))}`);
+    row('Reputation input, with / without', (run) => `${reputation(run.final).toFixed(1)} / ${reputation(withoutLabs(run)).toFixed(1)}`);
+    row('academic rating, with / without', (run) => `${academicRating(run.final).toFixed(1)} / ${academicRating(withoutLabs(run)).toFixed(1)}`);
+    console.log('');
+    console.log(`THE SAME PLAYERS, SEED ${seed}, WITH NO LAB`);
+    console.log(`${''.padEnd(34)}${mine.map((run) => `${run.style} labs`.padStart(14)).join('')}${noLab.map((run) => `${run.style} none`.padStart(14)).join('')}`);
+    const both = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${[...mine, ...noLab].map((run) => cell(run).padStart(14)).join('')}`);
+    RANK_GOALS.forEach((goal, n) => both(`Top ${goal}`, (run) => weekOf(run.seen.rankWeeks[n]!)));
+    both('rank at the end', (run) => `No. ${run.final.field.rank}`);
+    both('level at the end', (run) => String(run.final.daily.level));
+    both('levels a week', (run) => (run.final.daily.level / PACE_WEEKS).toFixed(2));
+    both('kept of every $100 at the end', (run) => `$${budget(run.final).kept.toFixed(2)}`);
+    console.log('');
+
+    check(
+      'a research lab is built one for each field, only on a game with goals, and makes findings and discoveries of its own',
+      runs.every((run) => LABS.every((spec) => run.final.map.placed.filter((placed) => placed?.type === spec.type).length <= 1)) &&
+        runs.every((run) => !LABS.some((spec) => labOf(run.final, spec.type)) || (run.final.labs.findings > 0 && run.final.labs.found.length > 0)) &&
+        [...bare, ...noLab].every((run) => LABS.every((spec) => !labOf(run.final, spec.type))),
+      runs.map((run) => `${run.style} ${run.seed}: ${LABS.filter((spec) => labOf(run.final, spec.type)).length} labs, ${run.final.labs.findings} findings, ${run.final.labs.found.length} discoveries`).join('; '),
+    );
+    check(
+      "the labs' grants come out of the shared yearly allowance, and never take more than their share of it",
+      runs.every((run) => years(run).every((year) => (run.seen.labPaid[year] ?? 0) <= LAB_CASH_SHARE * allowance(run) + 1 && (run.seen.allowancePaid[year] ?? 0) <= allowance(run) + 1)),
+      runs.map((run) => `${run.style} ${run.seed}: labs ${dollarsShort(Math.max(0, ...years(run).map((year) => run.seen.labPaid[year] ?? 0)))} at most in a year, everyone ${dollarsShort(Math.max(0, ...years(run).map((year) => run.seen.allowancePaid[year] ?? 0)))}, of ${dollarsShort(allowance(run))}`).join('; '),
     );
   }
 

@@ -116,7 +116,7 @@ const rest = (state: GameState): unknown => {
 describe('the kinds of order, as data', () => {
   it('has about twenty kinds from four givers, each a number, a length and a reward', () => {
     expect(ORDER_KINDS.length).toBeGreaterThanOrEqual(18);
-    expect(ORDER_KINDS.length).toBeLessThanOrEqual(24);
+    expect(ORDER_KINDS.length).toBeLessThanOrEqual(26);
     expect(new Set(ORDER_KINDS.map((kind) => kind.id)).size).toBe(ORDER_KINDS.length);
     expect(Object.keys(GIVERS).sort()).toEqual(['advisors', 'donors', 'state', 'town']);
     for (const giver of Object.keys(GIVERS)) {
@@ -131,8 +131,9 @@ describe('the kinds of order, as data', () => {
       // Short, or to a point of the calendar: one or the other, and never under 36 hours.
       expect((kind.hours !== undefined) !== (kind.point !== undefined)).toBe(true);
       if (kind.hours !== undefined) expect(kind.hours).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS);
-      // A short order runs two days at most, except one that waits on the Workshop, which takes a day or two to make a thing.
-      if (kind.hours !== undefined) expect(kind.hours).toBeLessThanOrEqual(kind.metric === 'crafts' ? 96 : 48);
+      // A short order runs two days at most, except one that waits on the Workshop, which takes a day or two to make a thing,
+      // or on a research lab's next discovery, which is only asked for when one is due well inside its four days.
+      if (kind.hours !== undefined) expect(kind.hours).toBeLessThanOrEqual(kind.metric === 'crafts' || kind.metric === 'discoveries' ? 96 : 48);
       // What can be done in one sitting does not wait on the calendar.
       if (kind.sitting) expect(kind.point).toBeUndefined();
       expect(kind.reward.length).toBeGreaterThan(0);
@@ -807,7 +808,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(18);
-      expect(SAVE_VERSION).toBe(22);
+      expect(SAVE_VERSION).toBe(23);
       // A game already in play opens with its first three orders, none seen, and nothing said.
       expect(state.orders.open).toHaveLength(3);
       expect(state.orders.open.every((order) => order.seen === undefined && order.kind === undefined && order.offered === file.state.clock.tick)).toBe(true);
@@ -820,6 +821,7 @@ describe('saves', () => {
       expected.decor = state.decor;
       expected.rhythm = state.rhythm;
       expected.bigBuilds = state.bigBuilds;
+      expected.labs = state.labs;
       expected.rng.orders = state.rng.orders;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
@@ -843,7 +845,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(4);
+      expect(notes).toHaveLength(5);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
