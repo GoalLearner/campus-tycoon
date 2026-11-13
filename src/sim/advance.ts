@@ -2,6 +2,7 @@ import { tellPolicies } from './systems/policies';
 import { tellDaily } from './systems/daily';
 import { offerDaily, tellOrders } from './systems/orders';
 import { decorOnDayStart, onCraftDone } from './systems/decor';
+import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from './systems/rhythm';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -102,6 +103,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellDaily(state, log);
   // And an order claimed gets its line (DESIGN.md 42.16).
   tellOrders(state, log);
+  tellRhythm(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -155,6 +157,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
     case 'scrimmage':
       scrimmage(state, timer.ref, log);
       break;
+    case 'moment':
+      // A moment of the calendar measured on the clock: finals week (DESIGN.md 44).
+      rhythmOnTimer(state, timer.ref, log);
+      break;
     case 'craftDone':
       // The Workshop has finished something: the paper says so. It waits on its bench for ever.
       onCraftDone(state, timer.ref, timer.due, log);
@@ -183,6 +189,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       offerDaily(state, log);
       // A seasonal set of decorations that has just opened is told once (DESIGN.md 42.5).
       decorOnDayStart(state, log);
+      // The moments of the calendar that are near open, and the goals for the year are set if none are (DESIGN.md 44).
+      rhythmOnDayStart(state, log);
       break;
     }
     case 'fallIntake':
@@ -192,6 +200,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       }
       runIntake(state, 'fall', log);
       evaluateGrowth(state);
+      // The fall class is in: the year's goals are set (DESIGN.md 44).
+      rhythmOnFallIntake(state, log);
       break;
     case 'springIntake':
       semesterEnd(state, log);

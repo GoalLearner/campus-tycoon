@@ -690,6 +690,12 @@ export function installDevTools(): void {
       if (params.has('seals')) given.daily.seals = Number(params.get('seals'));
       store.adopt(given, { ephemeral: true });
     }
+    // &giftbox=6 fills six boxes of the gift card, so the next is the seventh (DESIGN.md 44).
+    if (store.hasGame && params.has('giftbox') && store.state.rhythm) {
+      const card = structuredClone(store.state);
+      card.rhythm.box = Math.max(0, Math.min(6, Number(params.get('giftbox')) || 0));
+      store.adopt(card, { ephemeral: true });
+    }
     if (params.has('slowburst')) {
       collectShow.burstMs = 9000;
       document.documentElement.style.setProperty('--burst-ms', '9000ms');

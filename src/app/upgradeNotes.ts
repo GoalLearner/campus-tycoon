@@ -74,5 +74,10 @@ export function upgradeNotes(fromVersion: number): string[] {
       'New: decorations. The Build menu has a Decor shelf that grows with your level, a shelf for Gold Seals and the set of the season. The town now pays its orders in decorations, and the Workshop in the Makerspace makes banners and bunting. Each kind near a dorm or a lecture hall lifts how it looks a little. Nothing is ever lost: put one away and it waits in storage. The Menu has a Photo button.',
     );
   }
+  if (fromVersion < 21) {
+    notes.push(
+      "New: a gift each day. The paper opens with a card of seven boxes, and one tap takes today's: the seventh is the better gift. A day missed costs nothing. The orders board now has three goals for the year, paid at commencement, and special orders for Homecoming, the rivalry, finals week and commencement.",
+    );
+  }
   return notes;
 }

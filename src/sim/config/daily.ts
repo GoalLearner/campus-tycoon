@@ -45,16 +45,24 @@ export const XP_SOURCES = {
   rankGoal: { name: 'A rank goal reached', xp: 300, itself: true },
   sizeGoal: { name: 'A full campus', xp: 300, itself: true },
   era: { name: 'An era begins', xp: 500, itself: true },
+  gift: { name: "The day's gift", xp: 0, itself: false, note: 'what the card gives' },
+  moment: { name: 'A moment of the calendar that went well', xp: 0, itself: false, note: 'what it pays' },
+  yearGoal: { name: 'A goal for the year met', xp: 0, itself: true, note: 'paid at commencement' },
 } as const satisfies Record<string, XpSource>;
 
 export type XpSourceId = keyof typeof XP_SOURCES;
 
 // ----------------------------------------------------------------- levels --
 
-/** Experience to go from level 1 to level 2, how much more each level asks, and the most any level asks. */
+/**
+ * Experience to go from level 1 to level 2, how much more each level asks, and the most any level asks. The most was
+ * 800 until the daily rhythm (DESIGN.md 44) added its experience: 1,000 keeps a level coming every day or two.
+ */
 export const LEVEL_FIRST = 60;
 export const LEVEL_STEP = 40;
-export const LEVEL_MOST = 800;
+export const LEVEL_MOST = 1_000;
+/** The most a level asked before save version 21, for moving a saved game's experience onto the new costs. */
+export const LEVEL_MOST_BEFORE_21 = 800;
 
 /**
  * What a level gives. Seals now. A decoration, a workshop recipe or a kind
@@ -63,9 +71,12 @@ export const LEVEL_MOST = 800;
  */
 export type LevelGift = { kind: 'seals'; count: number } | { kind: 'unlock'; what: 'decoration' | 'recipe' | 'order' | 'slot'; id: string; name: string };
 
-/** Gold Seals for every level reached, and for every fifth level. */
+/**
+ * Gold Seals for every level reached, and for every fifth level. The fifth gave 3 until the daily rhythm (DESIGN.md
+ * 44): its Seals moved to the seventh gift and the stretch goal of the year.
+ */
 export const SEALS_PER_LEVEL = 1;
-export const SEALS_FIFTH_LEVEL = 3;
+export const SEALS_FIFTH_LEVEL = 2;
 
 const order = (id: string, name: string): LevelGift => ({ kind: 'unlock', what: 'order', id, name });
 const slot = (name: string): LevelGift => ({ kind: 'unlock', what: 'slot', id: 'orders', name });

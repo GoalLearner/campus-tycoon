@@ -70,12 +70,13 @@ import {
   enrollmentCap,
   nextApplicants,
 } from '../sim';
-import { craftsReady, decorSpec, hasMakerspace, previewDecor, waits as waitsNow } from '../sim';
+import { craftsReady, decorSpec, giftReady, hasMakerspace, previewDecor, waits as waitsNow } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { policiesView, policyChip } from './policyUi';
 import { collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from './levelUi';
+import { boardTop, giftCard } from './rhythmUi';
 import { footballStat, inboxStat, policyStat, type StatChip } from './chips';
 import { ordersChip, ordersView, paidWords } from './ordersUi';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from './decorUi';
@@ -665,7 +666,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order', 'craft', 'season', 'rhythm']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -1035,7 +1036,9 @@ export function mountUi(root: HTMLElement): void {
     if (level) {
       setText(levelNumber, String(level.level));
       setText(sealCount, String(level.seals));
-      levelButton.setAttribute('aria-label', `University Level ${level.level}, ${level.seals} Gold Seals`);
+      const gift = giftReady(state);
+      levelButton.classList.toggle('gift', gift);
+      levelButton.setAttribute('aria-label', `University Level ${level.level}, ${level.seals} Gold Seals${gift ? ". Today's gift is waiting" : ''}`);
       // A level reached while the player is here has a short tune.
       if (shownLevel > 0 && level.level > shownLevel) sound.jingle('reward');
       shownLevel = level.level;
@@ -1953,6 +1956,31 @@ export function mountUi(root: HTMLElement): void {
         body.textContent = '';
         if (view.note) body.append(el('p', 'order-note', view.note));
         if (told) body.append(el('p', 'order-note', told));
+        // The goals for the year, then the calendar's moments: they take none of the board's places (DESIGN.md 44).
+        for (const part of boardTop(store.state, (row, box) => {
+          const result = store.dispatch({ type: 'claimMoment', id: row.id });
+          if (!result.ok) {
+            session.notify(result.error, 'error');
+            draw();
+            return;
+          }
+          sound.ui('collect');
+          const from = box.getBoundingClientRect();
+          const within = card.getBoundingClientRect();
+          const burst = el('div', 'claim-burst');
+          const medal = document.createElement('canvas');
+          medal.width = 84;
+          medal.height = 98;
+          void loadAtlas().then((atlas) => drawSprite(medal, atlas, 'icon.collect'));
+          burst.append(el('span', 'claim-paid', result.paid ? paidWords(result.paid) : ''), medal);
+          burst.style.left = `${from.left - within.left + from.width / 2}px`;
+          burst.style.top = `${from.top - within.top + from.height / 2}px`;
+          card.append(burst);
+          burst.addEventListener('animationend', () => burst.remove());
+          told = '';
+          draw();
+        }))
+          body.append(part);
         for (const row of view.rows) {
           const box = el('div', row.done ? 'order done' : 'order');
           box.append(el('span', 'order-from', row.from), el('span', 'order-title', row.title));
@@ -2045,6 +2073,12 @@ export function mountUi(root: HTMLElement): void {
         head.append(top);
 
         body.textContent = '';
+        // The day's gift (DESIGN.md 44): taken here, or on the paper.
+        const gift = giftCard(store.state, (words) => {
+          if (words) session.notify(words);
+          draw();
+        });
+        if (gift) body.append(gift);
         body.append(el('p', '', view.next));
         if (view.ready) {
           body.append(

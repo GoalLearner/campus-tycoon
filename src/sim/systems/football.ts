@@ -2,6 +2,7 @@ import { fansLift } from './boosts';
 import { fansMore, freeSeats } from './policies';
 import { dailyOnHomeGame } from './daily';
 import { ordersOnHomeGame } from './orders';
+import { rhythmOnGame } from './rhythm';
 import { calendarAt, dateAt, tickOfDate } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
@@ -589,6 +590,8 @@ export function finalWhistle(state: GameState, slot: number, log: LogEntry[]): v
     if (game.home) dailyOnHomeGame(state, won, log);
     // And the orders board counts a home win and a full house.
     if (game.home) ordersOnHomeGame(state, won, game.crowd, game.seats);
+    // Homecoming and the rivalry are moments of the calendar (DESIGN.md 44).
+    rhythmOnGame(state, slot, won, game.home, game.crowd, game.seats, log);
   }
   if (slot < 10) {
     for (const [winner, loser, conf, div] of season.pending) {

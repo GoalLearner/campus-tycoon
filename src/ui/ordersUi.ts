@@ -1,4 +1,4 @@
-import { hasDaily, orderCounts, orderSlots, orderViews, rewardWords, type GameState, type OrderReward, type OrderView } from '../sim';
+import { hasDaily, momentsDone, orderCounts, orderSlots, orderViews, rewardWords, type GameState, type MomentReward, type OrderReward, type OrderView } from '../sim';
 import type { StatChip } from './chips';
 
 /**
@@ -34,12 +34,14 @@ export function ordersView(state: GameState): OrdersView | null {
 export function ordersChip(state: GameState): StatChip | null {
   const counts = orderCounts(state);
   if (!counts) return null;
-  if (counts.done > 0) return { value: `${counts.done} done`, label: 'orders', tone: 'good' };
+  // A moment of the calendar that went well waits to be claimed as an order does (DESIGN.md 44).
+  const done = counts.done + momentsDone(state);
+  if (done > 0) return { value: `${done} done`, label: 'orders', tone: 'good' };
   if (counts.fresh > 0) return { value: `${counts.fresh} new`, label: 'orders', tone: 'urgent' };
   return { value: counts.open > 0 ? String(counts.open) : '', label: 'orders', tone: '' };
 }
 
 /** What a claimed order paid, for the burst and the toast: "150 experience". */
-export function paidWords(rewards: readonly OrderReward[]): string {
+export function paidWords(rewards: readonly (OrderReward | MomentReward)[]): string {
   return `+${rewardWords(rewards)}`;
 }

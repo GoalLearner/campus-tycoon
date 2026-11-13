@@ -37,6 +37,7 @@ import {
   STRESS_HAPPINESS,
   teamRating,
   TICKS_PER_HOUR,
+  dollars,
   advisorLines,
   FIRST_INTAKE_TICK,
   RANK_GOALS,
@@ -1403,6 +1404,54 @@ function assertModelCampus(seed: number): void {
       'the paper says each new order and each finished one, and the board is a bonus: a campus that never looks at it loses nothing',
       runs.every((run) => run.seen.orderLines >= tally(run, 'claimed')) && bare.every((run) => tally(run, 'claimed') === 0 && tally(run, 'missed') === 0 && run.final.orders.open.every((order) => order.seen === undefined)) && alone.final.orders.open.length === orderSlots(alone.final),
       `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLines} lines`).join('; ')}. Never looked at: ${bare.map((run) => `${run.final.orders.open.length} waiting unseen`).join(', ')}, none begun, none missed; the campus left alone holds ${alone.final.orders.open.length}, all unseen`,
+    );
+  }
+
+  // The daily rhythm (DESIGN.md 42.8, as built in section 44): the gift, the goals for the year, the calendar's moments.
+  {
+    const tally = (run: Run, what: string): number => run.final.rhythm.tally[what] ?? 0;
+    const weeks = PACE_WEEKS;
+    const kinds = ['homecoming', 'rivalry', 'finals', 'commencement'] as const;
+    console.log('THE DAILY RHYTHM: THE GIFT, GOALS FOR THE YEAR AND THE CALENDAR');
+    console.log(`${''.padEnd(34)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    row('gifts taken', (run) => String(tally(run, 'gifts')));
+    row('cards completed', (run) => String(tally(run, 'cards')));
+    row('gift experience a week', (run) => (tally(run, 'giftXp') / weeks).toFixed(0));
+    row('gift cash a year', (run) => dollars(tally(run, 'giftCash') / weeks));
+    row('gift Seals a week', (run) => (tally(run, 'giftSeals') / weeks).toFixed(1));
+    row('gift decorations a week', (run) => (tally(run, 'giftDecor') / weeks).toFixed(1));
+    row('years with goals set', (run) => String(tally(run, 'yearsSet')));
+    row('goals met, of those set', (run) => `${tally(run, 'goalsMet')} of ${tally(run, 'goalsSet')}`);
+    row('goal experience a week', (run) => (tally(run, 'yearXp') / weeks).toFixed(0));
+    row('goal Seals a week', (run) => (tally(run, 'yearSeals') / weeks).toFixed(1));
+    for (const kind of kinds) row(`${kind}: opened, met`, (run) => `${tally(run, `opened:${kind}`)}, ${tally(run, `met:${kind}`)}`);
+    row('moment experience a week', (run) => (tally(run, 'momentPaid:xp') / weeks).toFixed(0));
+    row('moment Seals a week', (run) => (tally(run, 'momentPaid:seals') / weeks).toFixed(1));
+    row('moment cash a year', (run) => dollars(tally(run, 'momentPaid:cash') / weeks));
+    row('least notice of a moment, hours', (run) => (tally(run, 'leastLead') / TICKS_PER_HOUR).toFixed(0));
+    console.log('');
+
+    const days = PACE_WEEKS * 7;
+    check(
+      "the day's gift fills a box on every real day a player looks in, and a day missed resets nothing",
+      runs.every((run) => tally(run, 'gifts') >= days - 1 && tally(run, 'gifts') <= days + 1 && Math.abs(tally(run, 'cards') - Math.floor(tally(run, 'gifts') / 7)) <= 1),
+      runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'gifts')} gifts in ${days} days, ${tally(run, 'cards')} cards`).join('; '),
+    );
+    check(
+      'goals for the year are set each year and paid at commencement, and one missed costs nothing',
+      runs.every((run) => tally(run, 'yearsSet') >= PACE_WEEKS - 1 && tally(run, 'goalsMet') <= tally(run, 'goalsSet') && tally(run, 'goalsSet') === 3 * tally(run, 'yearsSet')),
+      runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'yearsSet')} years, ${tally(run, 'goalsMet')} of ${tally(run, 'goalsSet')} goals met`).join('; '),
+    );
+    check(
+      'every moment of the calendar opens a day and a half or more before it comes, and comes round every year',
+      runs.every((run) => tally(run, 'leastLead') >= 36 * TICKS_PER_HOUR && kinds.every((kind) => tally(run, `opened:${kind}`) >= PACE_WEEKS - 2)),
+      runs.map((run) => `${run.style} ${run.seed}: ${kinds.map((kind) => `${kind} ${tally(run, `opened:${kind}`)} opened, ${tally(run, `met:${kind}`)} met`).join(', ')}; least notice ${(tally(run, 'leastLead') / TICKS_PER_HOUR).toFixed(0)} h`).join('; '),
+    );
+    check(
+      'a campus that never takes a gift or claims a moment loses nothing by it',
+      bare.every((run) => tally(run, 'gifts') === 0 && Object.keys(run.final.rhythm.tally).every((key) => !key.startsWith('claimed:'))),
+      bare.map((run) => `${run.style} ${run.seed}: no gift taken, nothing claimed`).join('; '),
     );
   }
 

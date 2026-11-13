@@ -9,6 +9,7 @@ import {
   HEAD_START_HOURS,
   LEVEL_FIRST,
   LEVEL_MOST,
+  LEVEL_MOST_BEFORE_21,
   LEVEL_STEP,
   LEVEL_UNLOCKS,
   OPENINGS_PER_DAY,
@@ -57,9 +58,25 @@ export function hasDaily(state: GameState): boolean {
 
 // ----------------------------------------------------------------- levels --
 
-/** Experience to go from a level to the next. */
-export function levelCost(level: number): number {
-  return Math.min(LEVEL_MOST, LEVEL_FIRST + LEVEL_STEP * Math.max(0, level - 1));
+/** Experience to go from a level to the next. `most` is the most a level asks: today's, unless an older save's. */
+export function levelCost(level: number, most = LEVEL_MOST): number {
+  return Math.min(most, LEVEL_FIRST + LEVEL_STEP * Math.max(0, level - 1));
+}
+
+/**
+ * Experience saved under the costs before version 21, moved onto today's: the same level, and the same share of the
+ * way into it. A level never falls (DESIGN.md 42.2).
+ */
+export function relevelXp(xp: number): number {
+  let level = 1;
+  let left = Math.max(0, Math.floor(xp));
+  while (left >= levelCost(level, LEVEL_MOST_BEFORE_21)) {
+    left -= levelCost(level, LEVEL_MOST_BEFORE_21);
+    level += 1;
+  }
+  let total = 0;
+  for (let n = 1; n < level; n++) total += levelCost(n);
+  return total + Math.floor((left * levelCost(level)) / levelCost(level, LEVEL_MOST_BEFORE_21));
 }
 
 /** The level a total of experience has reached, and how far into it: 1 with none. */

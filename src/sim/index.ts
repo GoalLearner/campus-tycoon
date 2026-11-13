@@ -216,3 +216,5 @@ export * from './selectors';
 export * from './format';
 export { awayLines, datedDays, summarizeAway, type AwayDay, type AwayFacts, type AwayLine, type AwaySummary } from './digest';
 export { hashInts } from './rng';
+export * from './config/rhythm';
+export * from './systems/rhythm';

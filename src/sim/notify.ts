@@ -3,6 +3,10 @@ import { timeOfTick } from './calendar';
 import { CLOSING_SOON_TICKS, TOP_WEIGHTS } from './config/inbox';
 import { TICK_MS, TICKS_PER_DAY } from './config/time';
 import type { GameState, LogEntry } from './types';
+import { craftsReady } from './systems/decor';
+import { orderCounts } from './systems/orders';
+import { giftReady, momentsDone } from './systems/rhythm';
+import { GIFT_CARD } from './config/rhythm';
 
 /**
  * Notifications (DESIGN.md 2.3 and 36.6). iPhone app only.
@@ -32,10 +36,13 @@ export const NOTICE_AWAKE_HOURS = 15;
 /** A notice about a closing decision is worth sending only with this much time left to act. */
 export const NOTICE_LEAST_LEFT_TICKS = 2 * 60;
 
+/** The morning notice of what is ready comes this many minutes after the player's day starts. */
+export const READY_AFTER_WAKE = 30;
+
 export interface Notice {
   /** The real moment it shows, in milliseconds. */
   at: number;
-  kind: 'closing' | 'result';
+  kind: 'closing' | 'result' | 'ready';
   title: string;
   body: string;
 }
@@ -125,7 +132,28 @@ export function planNotices(state: GameState, options: NoticeOptions): Notice[] 
   if (perDay === 0) return [];
   const now = state.clock.lastSimulatedAt;
   const end = now + (options.days ?? NOTICE_DAYS) * DAY_MINUTES * MINUTE;
-  const ahead = advance(state, now, end);
+  // Played forward a morning at a time, so what is ready each morning can be read (DESIGN.md 44). The log is the
+  // same as one long step would give.
+  const mornings: number[] = [];
+  for (let day = dayOf(now, options).day; ; day++) {
+    const at = dayStart(day, options) + READY_AFTER_WAKE * MINUTE;
+    if (at >= end) break;
+    if (at > now) mornings.push(at);
+  }
+  const readyByDay = new Map<number, Notice>();
+  const logs: LogEntry[] = [];
+  let cursor = state;
+  let from = now;
+  for (const at of mornings) {
+    const step = advance(cursor, from, at);
+    logs.push(...step.log);
+    cursor = step.state;
+    from = at;
+    const ready = readyNotice(cursor, at);
+    if (ready) readyByDay.set(dayOf(at, options).day, ready);
+  }
+  const last = advance(cursor, from, end);
+  const ahead = { log: [...logs, ...last.log] };
   const when = (tick: number): number => timeOfTick(state.clock, tick);
 
   // Everything that will close without the player: what is open and unanswered now, and what opens while away.
@@ -180,7 +208,7 @@ export function planNotices(state: GameState, options: NoticeOptions): Notice[] 
   }
 
   const out: Notice[] = [];
-  const days = new Set<number>([...byDay.keys(), ...news.keys()]);
+  const days = new Set<number>([...byDay.keys(), ...news.keys(), ...readyByDay.keys()]);
   for (const day of days) {
     let room = perDay;
     const group = byDay.get(day);
@@ -196,8 +224,27 @@ export function planNotices(state: GameState, options: NoticeOptions): Notice[] 
       });
       room -= 1;
     }
+    // One notice a morning at most of what is ready: the day's gift, things finished, orders done.
+    const ready = readyByDay.get(day);
+    if (ready && room > 0) {
+      out.push(ready);
+      room -= 1;
+    }
     const list = (news.get(day) ?? []).sort((a, b) => b.weight - a.weight || a.at - b.at);
     for (const result of list.slice(0, room)) out.push({ at: result.at, kind: 'result', title: result.title, body: result.body });
   }
   return out.sort((a, b) => a.at - b.at);
+}
+
+/** What is ready on a campus at a moment, as one notice: the day's gift, things the Workshop finished, orders done. null with nothing. */
+function readyNotice(state: GameState, at: number): Notice | null {
+  const gift = giftReady(state);
+  const made = craftsReady(state);
+  const done = (orderCounts(state)?.done ?? 0) + momentsDone(state);
+  if (!gift && made === 0 && done === 0) return null;
+  const parts: string[] = [];
+  if (gift) parts.push(state.rhythm.box === GIFT_CARD.length - 1 ? 'The seventh gift of the card is waiting: the better one.' : `Day ${state.rhythm.box + 1} of the gift card is waiting.`);
+  if (made > 0) parts.push(made === 1 ? 'Something is finished at the Workshop.' : `${made} things are finished at the Workshop.`);
+  if (done > 0) parts.push(done === 1 ? 'An order is done.' : `${done} orders are done.`);
+  return { at, kind: 'ready', title: gift ? "Today's gift is ready" : 'Ready on campus', body: short(parts.join(' ')) };
 }

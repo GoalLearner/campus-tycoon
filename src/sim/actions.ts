@@ -27,6 +27,7 @@ import { policyLocked, policyOn, policySpec } from './systems/policies';
 import { collectOne, collectReady, dailyOnCleared, dailyOnPlaced, finishNow, hasDaily } from './systems/daily';
 import { claimOrder, dismissOrder, ordersCount, seeOrders } from './systems/orders';
 import { buyBench, collectCraft, moveDecor, placeDecor, setRecipe, storeDecor, turnDecor } from './systems/decor';
+import { claimMoment, takeGift, type GiftPaid } from './systems/rhythm';
 import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
@@ -85,7 +86,10 @@ export type Action =
   /** The Workshop: choose what a bench makes (null stops it), collect what it finished, or buy the second bench. */
   | { type: 'setRecipe'; bench: number; recipe: string | null }
   | { type: 'collectCraft'; bench: number }
-  | { type: 'buyBench' };
+  | { type: 'buyBench' }
+  // The daily rhythm (DESIGN.md 44): today's gift, and a moment of the calendar that went well.
+  | { type: 'takeGift' }
+  | { type: 'claimMoment'; id: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -104,7 +108,7 @@ export interface PaintPreview {
 }
 
 export type ActionResult =
-  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number }; paid?: OrderReward[]; note?: string }
+  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number }; paid?: OrderReward[]; note?: string; gift?: GiftPaid }
   | { ok: false; state: GameState; error: string };
 
 /** What one cell of a tool costs on a campus of a given scale (DESIGN.md 35.7). */
@@ -655,7 +659,26 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'collectCraft':
     case 'buyBench':
       return decorate(state, action);
+    case 'takeGift':
+    case 'claimMoment':
+      return rhythmAction(state, action);
   }
+}
+
+/** Today's gift, and claiming a moment of the calendar (DESIGN.md 44). */
+function rhythmAction(state: GameState, action: { type: 'takeGift' } | { type: 'claimMoment'; id: number }): ActionResult {
+  if (!hasDaily(state)) return { ok: false, state, error: 'There is no gift or calendar here.' };
+  const next = structuredClone(state);
+  if (action.type === 'takeGift') {
+    const gift = takeGift(next);
+    if (typeof gift === 'string') return { ok: false, state, error: gift };
+    markRatesDirty(next);
+    return { ok: true, state: next, cost: 0, changed: 1, gift, gained: { xp: gift.xp, cash: gift.cash, count: 1 } };
+  }
+  const claimed = claimMoment(next, action.id);
+  if (typeof claimed === 'string') return { ok: false, state, error: claimed };
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1, paid: claimed.pays };
 }
 
 /** The cells a drag covers: a straight row or column from one cell to another. */

@@ -290,7 +290,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment';
 
 export interface Timer {
   due: number;
@@ -382,6 +382,56 @@ export interface Daily {
   games: number;
   /** The ticks of the last few home wins: the campus store fills faster for a day after each. */
   wins: number[];
+  /** Lines not yet told: each becomes one line in the log on the next tick. */
+  news: string[];
+}
+
+/** A goal for the year (DESIGN.md 44): a kind from `YEAR_KINDS`, how hard, where its number stood and where it must reach. */
+export interface YearGoal {
+  kind: string;
+  level: 'easy' | 'medium' | 'stretch';
+  from: number;
+  target: number;
+  /** Set at commencement: whether it was met. */
+  met?: boolean;
+}
+
+/**
+ * A moment of the calendar on the board (DESIGN.md 44): Homecoming, the
+ * rivalry, finals week or commencement. What it asks is fixed when it opens.
+ */
+export interface Moment {
+  id: number;
+  kind: 'homecoming' | 'rivalry' | 'finals' | 'commencement';
+  /** Which one: "homecoming:3", "finals:3:fallFinals". It opens once. */
+  key: string;
+  /** The tick the moment comes, and the tick it opened. */
+  at: number;
+  opened: number;
+  /** The number to reach or stay under, and what it means: "fill" or "win" at Homecoming, "home" or "away" at the rivalry. */
+  target: number;
+  param: string;
+  /** Set when measured: the number seen, whether it went well, and when. */
+  result: number | null;
+  met: boolean | null;
+  measured: number | null;
+}
+
+export interface Rhythm {
+  /** The player's day the gift was last taken (`giftDayNow`), or -1 for never. */
+  giftDay: number;
+  /** Boxes filled on the card now: 0 to 6. The seventh taken starts a fresh card. */
+  box: number;
+  /** This year's goals, from move-in to commencement. null between. */
+  year: { year: number; set: number; until: number; goals: YearGoal[] } | null;
+  /** How last year's goals went. */
+  lastYear: { year: number; met: number; of: number; xp: number; seals: number } | null;
+  moments: Moment[];
+  nextId: number;
+  /** The last few moments opened, so none opens twice. */
+  opened: string[];
+  /** Running counts for the long run's tables. */
+  tally: Record<string, number>;
   /** Lines not yet told: each becomes one line in the log on the next tick. */
   news: string[];
 }
@@ -556,6 +606,8 @@ export interface GameState {
   daily: Daily;
   orders: Orders;
   decor: Decor;
+  /** The daily gift, the goals for the year and the moments of the calendar (DESIGN.md 42.8, as built in section 44). */
+  rhythm: Rhythm;
 }
 
 // ------------------------------------------------------------- football --
@@ -917,6 +969,7 @@ export type LogKind =
   | 'order'
   | 'craft'
   | 'season'
+  | 'rhythm'
   | 'grant'
   | 'paused'
   // The football and calendar layer.
