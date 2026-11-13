@@ -8,6 +8,7 @@ import { scoreParts } from './desirability';
 import { diningAt, foodKindsAt } from './food';
 import { noiseAt } from './football';
 import { causeShifts, type CauseShift } from './policies';
+import { chapterNoiseAt } from './greek';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
 import { recreationAt } from './play';
@@ -125,10 +126,14 @@ export function approvalAt(state: GameState, cell: number, shifts?: readonly Cau
   felt.push({ id: 'green', level: Math.min(1, parts.green / GREEN_CAP[zone]) });
   felt.push({ id: 'clean', level: cleanAt(state, x, y) });
   felt.push({ id: 'seating', level: seatingAt(state, x, y) });
-  // A dorm inside a stadium's reach hears every home game. Noise is part of Grounds, and only there.
+  // A dorm inside a stadium's reach hears every home game. Noise is part of Grounds, and only there. A chapter house
+  // is noisy too (DESIGN.md 51), to dorms and lecture halls alike: the louder of the two is what a dorm hears.
+  const chapters = chapterNoiseAt(state, x, y);
   if (zone === 'housing') {
-    const noise = noiseAt(state, x, y);
+    const noise = Math.max(noiseAt(state, x, y), chapters);
     if (noise > 0) felt.push({ id: 'noise', level: 1 - noise });
+  } else if (chapters > 0) {
+    felt.push({ id: 'noise', level: 1 - chapters });
   }
   // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
   const kinds = foodKindsAt(map, x, y);

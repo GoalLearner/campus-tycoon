@@ -306,6 +306,13 @@ sprites['lab.sciences'] = {'layers': [on_grid(PUBLIC + 'Industrial_WaterPlant.pn
 sprites['lab.engineering'] = {'layers': [on_grid(PUBLIC + 'Industrial_PowerPlant.png', 2, 2)]}
 sprites['lab.health'] = {'layers': [on_grid(PUBLIC + 'Doctor_Office.png', 2, 2, recolour='cross')]}
 
+# ------------------------------------------------------------- Greek Row --
+# Chapter houses (DESIGN.md section 51): the Medieval pack's two-storey half-timbered houses, as drawn, each on a cell of
+# grass as the town's houses are. Six looks, two roof colours; a chapter keeps its look.
+CHAPTER_LOOKS = [('Style15', 14), ('Style13', 4), ('Style15', 24), ('Style13', 14), ('Style15', 4), ('Style13', 24)]
+for n, (style, kind) in enumerate(CHAPTER_LOOKS):
+    sprites[f'chapter.{n}'] = {'layers': [GRASS, on_grid(f'{OLD}Houses/{style}/houses_{kind:02d}.png')]}
+
 # The pack's building site for a block of two cells, for a big build of that size while it goes up.
 sprites['build.site.wide'] = {'layers': [on_grid(PUBLIC + 'Construction_1x2.png', 2, 1)]}
 # Founders' Commons is a green of three cells by three, laid out from the packs' own pieces, each as drawn: the grass,

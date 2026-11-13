@@ -6,6 +6,7 @@ import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from 
 import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
 import { discoveryDue } from './systems/labs';
 import { tellTraditions, traditionDue, traditionsOnDayStart } from './systems/traditions';
+import { greekDue, stepGreek, tellGreek } from './systems/greek';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -109,6 +110,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellRhythm(state, log);
   tellBigBuilds(state, log);
   tellTraditions(state, log);
+  tellGreek(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -124,6 +126,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   stepIncidents(state, log);
   spawnIncidents(state);
   stepGrounds(state, log);
+  // Each chapter's standing, once an hour (DESIGN.md 51).
+  if (clock.tick % TICKS_PER_HOUR === 0) stepGreek(state, log);
 
   accrue(state);
 
@@ -177,6 +181,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
     case 'tradition':
       // A tradition's day (DESIGN.md 50): kept, or not this year.
       traditionDue(state, timer.ref, log);
+      break;
+    case 'greek':
+      // Rush week, or the spring's philanthropy (DESIGN.md 51).
+      greekDue(state, timer.ref, log);
       break;
     case 'craftDone':
       // The Workshop has finished something: the paper says so. It waits on its bench for ever.

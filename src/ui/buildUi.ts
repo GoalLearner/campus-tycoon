@@ -86,6 +86,8 @@ import {
 } from '../sim';
 import type { BuildEntry } from './buildMenu';
 import { labEntries, labSummary } from './labUi';
+import { chapterSummary, greekEntries } from './greekUi';
+import { CHAPTER_BEDS } from '../sim/config/greek';
 
 /**
  * Words and numbers for the Build menu, the panel of a placed building and the
@@ -195,6 +197,9 @@ export function buildEntries(scale = 1, state?: GameState): BuildEntry[] {
       if (entry.category === 'Academics') lastAcademic = n;
     });
     entries.splice(lastAcademic + 1, 0, ...labEntries(state, scale, card));
+    // Greek Row's chapter house, after the places to play and before the services (DESIGN.md 51).
+    const firstWater = entries.findIndex((entry) => entry.category === 'Water');
+    entries.splice(firstWater < 0 ? entries.length : firstWater, 0, ...greekEntries(state, scale, card));
   }
   const soon = (key: string, name: string, effect: string, locked: string): BuildEntry => ({
     key,
@@ -352,6 +357,8 @@ function baseSummary(state: GameState, placed: Placed): string {
       return bigBuildSummary(state, placed);
     case 'lab':
       return labSummary(state, placed);
+    case 'chapter':
+      return chapterSummary(state, placed);
   }
 }
 
@@ -432,6 +439,8 @@ function buildingCost(type: PlacedType, scale: number): number {
 
 /** A building's one line on what it does. A car park says how many it lets in on this campus. */
 function effectLine(type: PlacedType, scale: number): string {
+  // A chapter house's beds follow the campus scale, as a car park's cars do (DESIGN.md 51).
+  if (type === 'chapterHouse') return PLACED[type].effect.replace(`${CHAPTER_BEDS} beds`, `${(CHAPTER_BEDS * scale).toLocaleString('en-US')} beds`);
   const cars = placedCars(type, scale);
   return cars > 0 ? `Lets ${cars.toLocaleString('en-US')} locals drive in. Needs a road to a town street` : PLACED[type].effect;
 }
@@ -460,6 +469,7 @@ export function placedFacts(state: GameState, placed: Placed): string {
   if (spec.family === 'reward') parts.push('Clear it and it goes back to the Build menu, free');
   else if (spec.family === 'era') parts.push(bigBuildSpec(placed.type) ? `One of a kind. Clear it and it can be bought again` : 'The Clear tool removes it');
   else if (spec.family === 'lab') parts.push('One for each field. Clear it and it can be built again; its discoveries are kept');
+  else if (spec.family === 'chapter') parts.push('Clear it and the chapter closes; its members move back to the dorms');
   else if (spec.buildable) parts.push('The Clear tool removes it');
   return parts.join(' · ');
 }

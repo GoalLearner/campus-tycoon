@@ -88,7 +88,9 @@ export type PlacedType =
   // The research labs (DESIGN.md 42.6, as built in section 49): one for each field, bought from the Build menu.
   | 'labSciences'
   | 'labEngineering'
-  | 'labHealth';
+  | 'labHealth'
+  // Greek Row (DESIGN.md 14.1, as built in section 51): a chapter house, bought from the Build menu once the Growth era opens.
+  | 'chapterHouse';
 
 /** A hand-placed building. It is whole from the moment it is placed, but for a big build of an era, which goes up first. */
 export interface Placed {
@@ -301,7 +303,7 @@ export interface Money {
 }
 
 /** 'kickoff' and 'final' point at a slot of the season. 'decision' points at a decision's id. */
-export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild' | 'discovery' | 'tradition';
+export type TimerKind = 'buildDone' | 'kickoff' | 'final' | 'stadiumDone' | 'decision' | 'scrimmage' | 'craftDone' | 'moment' | 'bigBuild' | 'discovery' | 'tradition' | 'greek';
 
 export interface Timer {
   due: number;
@@ -625,6 +627,62 @@ export interface GameState {
   labs: Labs;
   /** Traditions (DESIGN.md 50): those chosen, and how often each has been kept. */
   traditions: Traditions;
+  /** Greek Row (DESIGN.md 51): a chapter for each chapter house on the map. */
+  greek: Greek;
+}
+
+/** How a chapter stands (DESIGN.md 51): Good, on Warning while something is wrong, on Probation if it stays wrong. */
+export type ChapterStatus = 'good' | 'warning' | 'probation';
+
+/** A chapter of Greek Row (DESIGN.md 51): one to each chapter house. */
+export interface Chapter {
+  /** The id of its house on the map. */
+  house: number;
+  name: string;
+  /** Which of the house drawings it is shown as. */
+  look: number;
+  /** The tick it was founded. */
+  founded: number;
+  /** Members now, on the campus's own count. Set at rush week; seniors leave at commencement. */
+  members: number;
+  /** Those who joined at the last rush, or at its founding. */
+  pledges: number;
+  /** The tick its trouble was first seen, while it has some. -1 when it has none. */
+  since: number;
+  /** Its standing when last checked, so a change is told once. */
+  status: ChapterStatus;
+  /** Philanthropy events since its last rush. */
+  giving: number;
+  /** Pranks since its last rush. */
+  pranks: number;
+  /**
+   * Kept for the next stop (the owner's content update, 2026-11-13): a chapter's hazing risk, 0 to 1. Nothing sets or
+   * reads it yet; every chapter has 0.
+   */
+  hazing: number;
+  /** What the chapter has done lately, newest last: its record on its panel, and the place a later stop adds to. */
+  events: ChapterEvent[];
+}
+
+/** One thing a chapter did (DESIGN.md 51). Later stops may add kinds. */
+export interface ChapterEvent {
+  tick: number;
+  kind: 'founded' | 'rush' | 'prank' | 'giving';
+  text: string;
+}
+
+/** Greek Row (DESIGN.md 51). */
+export interface Greek {
+  /** In the order founded. */
+  chapters: Chapter[];
+  /** Every name this campus has given a chapter, so none is given twice. */
+  used: string[];
+  /** The last rush week: its school year, those who joined, and those who moved from dorm beds into the houses. */
+  rush: { year: number; joined: number; moved: number } | null;
+  /** Counts kept for the record: rush weeks, pranks and philanthropy events. */
+  totals: { rushes: number; pranks: number; giving: number };
+  /** Lines waiting from an action or a choice, said on the next tick. */
+  news: string[];
 }
 
 /** A tradition a campus chose (DESIGN.md 50). */
@@ -902,7 +960,9 @@ export type InboxEffect =
   | { t: 'endow'; amount: number }
   | { t: 'tidy'; share: number }
   | { t: 'fix' }
-  | { t: 'mark'; key: 'donor' | 'boat' };
+  | { t: 'mark'; key: 'donor' | 'boat' }
+  /** A chapter holds a philanthropy event (DESIGN.md 51): `house` is its house's id. */
+  | { t: 'giving'; house: number };
 
 export interface InboxOption {
   id: string;
@@ -1050,6 +1110,7 @@ export type LogKind =
   | 'bigBuild'
   | 'lab'
   | 'tradition'
+  | 'greek'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

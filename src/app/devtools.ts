@@ -1,4 +1,5 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
+import { chapterBeds, chapters, coverFor, noiseAt, PROBATION_HOURS, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { shownHour } from './daylight';
@@ -634,6 +635,30 @@ function labDevSpot(state: GameState, type: PlacedType): Point | null {
   return best;
 }
 
+/** Where a dev page puts a chapter house: as near the stadium as can be, beside the houses already up, in Campus Safety's reach. */
+function chapterDevSpot(state: GameState): Point | null {
+  const map = state.map;
+  const plot = state.football.stadium.plot === null ? null : map.placed[state.football.stadium.plot];
+  const houses = chapters(state).map((chapter) => map.placed[chapter.house]).filter((house) => !!house);
+  const [cx, cy] = plot ? [plot.x + 1, plot.y + 1] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  let best: Point | null = null;
+  let score = -Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (previewPlace(state, 'chapterHouse', x, y).problem !== null) continue;
+      let here = -Math.hypot(x - cx, y - cy);
+      if (noiseAt(state, x, y) > 0) here += 100;
+      if (houses.some((house) => Math.max(Math.abs(house!.x - x), Math.abs(house!.y - y)) === 1)) here += 60;
+      if (coverFor(map, 'safety', x, y)) here += 40;
+      if (here > score) {
+        score = here;
+        best = [x, y];
+      }
+    }
+  }
+  return best;
+}
+
 export function installDevTools(): void {
   (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
   const params = new URLSearchParams(window.location.search);
@@ -919,6 +944,43 @@ export function installDevTools(): void {
       set.traditions.slots = set.traditions.chosen.length;
       // The goals' eras give the places: a dev page that wants one more open says so.
       if (params.has('tradplaces')) set.goals!.reached.push({ ladder: 'era', n: set.goals!.reached.filter((one) => one.ladder === 'era').length + 1, year });
+      store.adopt(set, { ephemeral: true });
+    }
+    // Greek Row (DESIGN.md 51): &greek=4 builds that many chapter houses near the stadium and each other (with &rank=120
+    // or better, so the Growth era has opened it). &overfull=1 fills the first past its beds, and &probation=1 has it
+    // there long enough to be on Probation. &rushsoon=2 and &givesoon=2 bring rush week or the spring's philanthropy to
+    // that many hours from now, so &away shows it in the paper. &prank=3 puts the fourth prank on the desk.
+    if (params.has('greek') && store.hasGame) {
+      // The houses are paid for out of the dev page's pocket: the bank shows what it showed before.
+      const cash = store.state.money.cash;
+      const rich = structuredClone(store.state);
+      rich.money.cash = Math.max(cash, 1e10);
+      store.adopt(rich, { ephemeral: true });
+      for (let n = 0; n < Number(params.get('greek') || 4); n++) {
+        const at = chapterDevSpot(store.state);
+        if (at) store.dispatch({ type: 'place', building: 'chapterHouse', x: at[0], y: at[1] });
+      }
+      const set = structuredClone(store.state);
+      set.money.cash = cash;
+      const first = chapters(set)[0];
+      if (first && params.has('overfull')) {
+        first.members = chapterBeds(set) + Math.round(chapterBeds(set) / 6);
+        first.since = params.has('probation') ? set.clock.tick - (PROBATION_HOURS + 1) * 60 : set.clock.tick;
+      }
+      for (const [key, ref] of [['rushsoon', 0], ['givesoon', 1]] as const) {
+        if (!params.has(key)) continue;
+        cancelTimers(set, 'greek', ref);
+        addTimer(set, set.clock.tick + Math.round((Number(params.get(key)) || 2) * 60), 'greek', ref);
+      }
+      const prank = Number(params.get('prank') ?? NaN);
+      const item = WRITTEN.find((one) => one.key === 'chapterPrank');
+      if (Number.isInteger(prank) && item && chapters(set).length > 0) {
+        const draft = item.when({ state: set, pick: (salt: number) => (salt >= 80 ? prank : 0) } as never);
+        if (draft) {
+          set.inbox.open.push({ id: set.inbox.nextId, key: item.key, kind: item.kind, advisor: item.advisor, title: draft.title, body: draft.body, opens: set.clock.tick, closes: draft.closes ?? set.clock.tick + 36 * 60, options: draft.options, fallback: draft.fallback, advised: draft.advised });
+          set.inbox.nextId += 1;
+        }
+      }
       store.adopt(set, { ephemeral: true });
     }
     if (params.has('away')) {

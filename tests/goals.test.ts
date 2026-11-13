@@ -1,3 +1,4 @@
+import { newGreek } from '../src/sim/systems/greek';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -208,7 +209,7 @@ describe('the academic rank on a game with goals', () => {
     state.field.rank = 120;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
-    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. They bring 25 Gold Seals. The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.");
+    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. They bring 25 Gold Seals. The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section; and Greek Row, with chapter houses in the Build menu.");
     state.field.rank = 190;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
@@ -439,6 +440,7 @@ describe('the main street', () => {
     expected.bigBuilds = loaded.state.bigBuilds;
     expected.labs = loaded.state.labs;
     expected.traditions = loaded.state.traditions;
+    expected.greek = newGreek();
     expected.rng.orders = loaded.state.rng.orders;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();

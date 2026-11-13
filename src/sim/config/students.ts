@@ -61,8 +61,9 @@ export const MAJORS: ReadonlyArray<{ name: string; group: MajorGroup }> = [
 
 /**
  * The archetypes whose campus stat exists today. Superfan and Varsity Athlete
- * came with football, and All-Nighter with finals week. Greek Loyalist and
- * Pledge wait for Greek Row.
+ * came with football, All-Nighter with finals week, and Pledge and Greek
+ * Loyalist with Greek Row (DESIGN.md 51): a chapter's members, a pledge in
+ * their first year.
  */
 export type ArchetypeId =
   | 'superfan'
@@ -81,7 +82,9 @@ export type ArchetypeId =
   | 'clown'
   | 'party'
   | 'charmer'
-  | 'attention';
+  | 'attention'
+  | 'pledge'
+  | 'greekLoyalist';
 
 export const ARCHETYPE_NAMES: Record<ArchetypeId, string> = {
   superfan: 'Superfan',
@@ -101,6 +104,8 @@ export const ARCHETYPE_NAMES: Record<ArchetypeId, string> = {
   party: 'Party Animal',
   charmer: 'Charmer',
   attention: 'Attention Seeker',
+  pledge: 'Pledge',
+  greekLoyalist: 'Greek Loyalist',
 };
 
 /**

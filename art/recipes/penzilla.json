@@ -3890,6 +3890,120 @@
     }
    ]
   },
+  "chapter.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style15/houses_14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "chapter.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style13/houses_04.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "chapter.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style15/houses_24.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "chapter.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style13/houses_14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "chapter.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style15/houses_04.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "chapter.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/Medieval/Houses/Style13/houses_24.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "build.site.wide": {
    "layers": [
     {

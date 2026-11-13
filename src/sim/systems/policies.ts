@@ -11,6 +11,8 @@ import { eraOf } from './goals';
 import { driversNow, offCampusNow } from './town';
 import { commonsLift } from './bigBuilds';
 import { traditionEffects } from './traditions';
+import { chapters, greekEffects, greekTouched } from './greek';
+import { calendarAt } from '../calendar';
 
 /**
  * Policies (DESIGN.md sections 12 and 41): the switches an era opens.
@@ -39,16 +41,21 @@ export function policySpec(id: string): PolicySpec | undefined {
   return POLICIES.find((spec) => spec.id === id);
 }
 
-/** The policies an era opens: 1 is Growth. */
+/** The policies an era opens: 1 is Growth. Greek Row's two open with the first chapter house instead (DESIGN.md 51). */
 export function policiesAt(era: number): PolicySpec[] {
-  return POLICIES.filter((spec) => spec.era === era);
+  return POLICIES.filter((spec) => spec.era === era && !spec.greek);
 }
 
-/** The switches this game has: every policy of the eras it has opened. None on a game with no eras. */
+/**
+ * The switches this game has: every policy of the eras it has opened. None on a game with no eras. Greek Row's two
+ * show once the campus has a chapter house, and stay while one is on.
+ */
 export function policiesOpen(state: GameState): PolicySpec[] {
   if (!state.goals) return [];
   const era = eraOf(state.goals);
-  return era <= 0 ? [] : POLICIES.filter((spec) => spec.era <= era);
+  if (era <= 0) return [];
+  const greek = chapters(state).length > 0;
+  return POLICIES.filter((spec) => spec.era <= era && (!spec.greek || greek || state.policies.on.includes(spec.id)));
 }
 
 export function policyOn(state: GameState, id: string): boolean {
@@ -79,6 +86,8 @@ function effects<K extends PolicyEffect['kind']>(state: GameState, kind: K): Arr
     for (const effect of [...spec.gains, ...spec.costs]) if (effect.kind === kind) out.push({ spec, effect: effect as EffectOf<K> });
   }
   for (const one of traditionEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
+  // Greek Row (DESIGN.md 51): its members' lift and its drag on the rating, named "Greek Row" on those lines.
+  for (const one of greekEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
   return out;
 }
 
@@ -126,6 +135,7 @@ export interface CauseShift {
 /** The share of the students read at a zone's lots that an effect touches. */
 function touched(state: GameState, zone: Zone, among: EffectOf<'cause'>['among']): number {
   if (among === 'everyone') return 1;
+  if (among === 'greek') return greekTouched(state, zone, housedByPolicy(state));
   if (among === 'drivers') {
     // Those who drive live in town, and a student who lives in town is read at the lecture halls.
     const off = offCampusNow(state);
@@ -142,15 +152,19 @@ function touched(state: GameState, zone: Zone, among: EffectOf<'cause'>['among']
  * cause's level and keeps its name beside it, so the campus number, every
  * student card and the share of students who stay all read the same thing.
  */
-export function causeShifts(state: GameState, zone: Zone): CauseShift[] {
+export function causeShifts(state: GameState, zone: Zone, member?: number): CauseShift[] {
   const found = effects(state, 'cause');
   // Founders' Commons (DESIGN.md 45) is read the same way: inside Grounds, for everyone, its name beside it.
   const commons = commonsLift(state);
   if (found.length === 0 && commons === 0) return [];
   const out: CauseShift[] = [];
   if (commons > 0) out.push({ id: 'foundersCommons', name: PLACED.foundersCommons.name, cause: 'grounds', delta: commons });
+  const fall = found.some(({ effect }) => effect.fall) && calendarAt(state.clock).phase === 'fall';
   for (const { spec, effect } of found) {
-    const delta = (effect.points / 100) * touched(state, zone, effect.among);
+    // A cost of the fall alone is felt only in the fall semester.
+    if (effect.fall && !fall) continue;
+    // A chapter's own member, on their card, feels its whole lift: `member` is its points (DESIGN.md 51).
+    const delta = effect.among === 'greek' && member !== undefined ? member / 100 : (effect.points / 100) * touched(state, zone, effect.among);
     if (delta !== 0) out.push({ id: spec.id, name: spec.name, cause: effect.cause, delta });
   }
   return out;

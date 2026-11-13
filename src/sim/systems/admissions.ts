@@ -11,6 +11,7 @@ import { earn } from './daily';
 import { ordersMark, ordersOnIntake } from './orders';
 import { rhythmOnGraduation } from './rhythm';
 import { traditionsOnGraduation } from './traditions';
+import { greekOnGraduation } from './greek';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -396,6 +397,8 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   // Commencement is a moment of the calendar, and the goals for the year are paid (DESIGN.md 44).
   rhythmOnGraduation(state, seniors, log);
   traditionsOnGraduation(state);
+  // The seniors among Greek Row's members graduate with the rest (DESIGN.md 51).
+  greekOnGraduation(state);
 }
 
 /** A new year begins: every class moves up one year. */

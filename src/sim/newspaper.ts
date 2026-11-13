@@ -259,6 +259,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         // A tradition kept on its day (DESIGN.md 50): "Larp Keeps Its 4th Homecoming Parade".
         if (entry.data?.keep === 1 && typeof entry.data.headline === 'string') out.push({ weight: 63, headline: entry.data.headline, deck: entry.text });
         break;
+      case 'greek':
+        // Rush week on Greek Row (DESIGN.md 51): its own headline, made the day it came.
+        if (entry.data?.rush === 1 && typeof entry.data.headline === 'string') out.push({ weight: 61, headline: entry.data.headline, deck: entry.text });
+        break;
       default:
         break;
     }
@@ -362,6 +366,13 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
     else if (entry.kind === 'tradition' && entry.text !== lead.deck) {
       const weight = entry.data?.keep === 1 ? TOP_WEIGHTS.goodNews : entry.data?.atRisk === 1 ? TOP_WEIGHTS.exams + 1 : entry.data?.slot !== undefined ? TOP_WEIGHTS.reward - 2 : TOP_WEIGHTS.built;
       offer(weight, entry.data?.atRisk === 1 ? 'problem' : 'news', entry.text, 'traditions');
+    }
+    // Greek Row (DESIGN.md 51): a chapter on Warning or Probation is a problem to put right; rush week, a philanthropy
+    // event and a chapter founded or closed are news.
+    else if (entry.kind === 'greek' && entry.text !== lead.deck) {
+      const status = Number(entry.data?.status ?? -1);
+      if (status > 0 || entry.data?.overfull === 1) offer(TOP_WEIGHTS.exams + 1, 'problem', entry.text);
+      else offer(entry.data?.rush === 1 ? TOP_WEIGHTS.goodNews - 1 : entry.data?.giving === 1 ? TOP_WEIGHTS.goodNews - 3 : TOP_WEIGHTS.built, 'news', entry.text);
     }
     // A discovery that is not the headline is good news at the top, just under a game's result: the first of the
     // edition's, with any others in the rest of the paper (DESIGN.md 49).

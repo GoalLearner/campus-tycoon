@@ -183,8 +183,9 @@ export function dailyOnPlaced(state: GameState, placed: number): void {
   if (!spot) return;
   const family = PLACED[spot.type].family;
   if (COLLECT[family]) state.daily.since[placed] = state.clock.tick;
-  // Furniture is not a building: a bin or a bench opens nothing.
-  if (family !== 'bin' && family !== 'seat') addOpening(state, 'placed', placed);
+  // Furniture is not a building: a bin or a bench opens nothing. Nor does a chapter house: its chapter's founding is
+  // its moment, and with the bonus the once-a-day player passed the level pace (DESIGN.md 51.2).
+  if (family !== 'bin' && family !== 'seat' && family !== 'chapter') addOpening(state, 'placed', placed);
 }
 
 /** A building was cleared: what it held goes with it. */

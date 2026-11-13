@@ -1,3 +1,4 @@
+import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -313,7 +314,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(24);
+    expect(SAVE_VERSION).toBe(25);
   });
 
   describe('from version 20', () => {
@@ -335,6 +336,7 @@ describe('saves', () => {
       expected.bigBuilds = state.bigBuilds;
       expected.labs = state.labs;
       expected.traditions = state.traditions;
+      expected.greek = newGreek();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
@@ -342,7 +344,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(4);
+      expect(notes).toHaveLength(5);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

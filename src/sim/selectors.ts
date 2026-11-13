@@ -4,6 +4,7 @@ import { stageSpec } from './config/buildings';
 import { TICKS_PER_YEAR } from './config/time';
 import { PLACED } from './config/placed';
 import { ROAD_UPKEEP_PER_YEAR } from './config/town';
+import { CHAPTER_BEDS } from './config/greek';
 import type { Building, Cell, CellKind, GameState, MapState, Zone } from './types';
 
 /** Read-only views of the state. The UI reads the game through these. */
@@ -38,14 +39,29 @@ export function buildings(map: MapState): Building[] {
   return out;
 }
 
-/** Beds or seats open right now. A building under rebuild still serves at its old stage. */
+/**
+ * Beds or seats open right now. A building under rebuild still serves at its old stage. The beds of Greek Row's
+ * houses count with the dorms' as far as their members fill them (DESIGN.md 51): a member who moved in left a dorm
+ * bed free.
+ */
 export function openCapacity(state: GameState, zone: Zone): number {
   const scale = scaleOf(state);
   let total = 0;
   for (const b of state.map.buildings) {
     if (b && b.zone === zone && b.stage > 0) total += stageSpec(zone, b.stage, scale).capacity;
   }
+  if (zone === 'housing') total += chapterBedsTaken(state);
   return total;
+}
+
+/** Beds taken in chapter houses: each house's members, up to its beds. Nothing on a campus with no chapter. */
+export function chapterBedsTaken(state: GameState): number {
+  const list = state.greek?.chapters;
+  if (!list || list.length === 0) return 0;
+  const beds = CHAPTER_BEDS * scaleOf(state);
+  let sum = 0;
+  for (const chapter of list) sum += Math.min(chapter.members, beds);
+  return sum;
 }
 
 /** Extra beds or seats that will open when current builds finish. */

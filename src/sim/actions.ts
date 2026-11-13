@@ -1,6 +1,7 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
+import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
 import { scaleOf } from './scale';
 import { placedCost } from './config/placed';
 import { PLACED } from './config/placed';
@@ -246,6 +247,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
     if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
     if (map.placed[cell.placedId]?.done !== undefined) bigBuildCleared(state, cell.placedId);
     if (state.labs?.since[cell.placedId] !== undefined) labCleared(state, cell.placedId);
+    if (chapterOf(state, cell.placedId)) chapterCleared(state, cell.placedId);
     dailyOnCleared(state, 'placed', cell.placedId);
     removePlaced(map, cell.placedId);
     return;
@@ -343,6 +345,11 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
     const why = cannotBuildLab(state, type);
     if (why) return { ok: false, state, error: why };
   }
+  // A chapter house: Greek Row, from the Growth era on a game with goals (DESIGN.md 51).
+  if (isChapterHouse(type)) {
+    const why = cannotBuildChapter(state);
+    if (why) return { ok: false, state, error: why };
+  }
   if (type === 'stadium' && state.football.stadium.plot !== null && state.map.placed[state.football.stadium.plot]) {
     return { ok: false, state, error: 'The campus already has a stadium plot. Clear it first to move it.' };
   }
@@ -359,6 +366,7 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   if (type === 'stadium') next.football.stadium.plot = built.id;
   if (isBigBuild(type)) startBigBuild(next, built);
   if (isLab(type)) labPlaced(next, built);
+  if (isChapterHouse(type)) chapterPlaced(next, built);
   // The daily layer: it begins to fill from now, and holds its opening bonus. A big build does so when it opens.
   if (!isBigBuild(type)) dailyOnPlaced(next, built.id);
   next.money.cash -= preview.cost;
@@ -509,6 +517,8 @@ function setPolicy(state: GameState, id: string, on: boolean): ActionResult {
   if (!state.goals || eraOf(state.goals) < spec.era) {
     return { ok: false, state, error: `${spec.name} opens with the ${ERAS[spec.era]} era, at the Top ${RANK_GOALS[ERA_AT_RANK[spec.era - 1]! - 1]}.` };
   }
+  // Greek Row's two open with the first chapter house (DESIGN.md 51); one already on can always be turned off.
+  if (spec.greek && on && !policyOn(state, id) && chapters(state).length === 0) return { ok: false, state, error: `${spec.name} opens with the first chapter house.` };
   if (policyOn(state, id) === on) return { ok: true, state, cost: 0, changed: 0 };
   if (policyLocked(state, id)) return { ok: false, state, error: `${spec.name} was just changed. It stays as it is until the next class moves in.` };
   const next = structuredClone(state);

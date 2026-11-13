@@ -1128,6 +1128,8 @@ From the owner's play, relayed on 2026-11-12: "I can't click on the people playi
 
 ### 14.1 Greek Row
 
+Built, adapted to the game as it is now: section 51, which records each change with this table as the alternative.
+
 | Decision | Why |
 |---|---|
 | A Housing brush variant, capped at medium density, with fewer beds than a dorm | Its value is happiness, retention and giving, not capacity |
@@ -1649,7 +1651,7 @@ Asked for by the owner on 2026-11-12, for the later roadmap. Nothing here is bui
 | Classes, and a size for each class | The simulation has seats in a hall and one teaching-quality number. It has no courses, no timetable and no size for a single class |
 | Choosing and changing a major | A major is a seeded label with no rules |
 | Clubs with something to do | A club is a name only |
-| Greek Row and rush | Designed in section 14 and not built |
+| Greek Row and rush | Designed in section 14 and built for the campus in section 51. A played student cannot rush yet |
 | Intramurals and jobs | Neither exists. Recreation buildings and food places are there to hang them on |
 | Exams with a result | Finals week exists in the calendar and in Stress. No one student sits an exam |
 | Relationships that are played | The status on a card is a seeded story. Other students would have to be characters who remember |
@@ -6513,3 +6515,87 @@ The long run's six test players on the model campus, 44 weeks each. Each chooses
 | The headline's second half is the same for every tradition | One line, written once. More would be a list to write |
 | A condition is read on the day, not over the year | A campus can meet it on the day and not before. The page shows At risk whenever it does not hold |
 | No record book of its own | The list on each card is enough for now |
+
+## 51. Greek Row, as built
+
+Greek Row of 14.1, adapted to the game as it is now and built on 2026-11-13 on the main session's brief, after the owner said "Keep building". Each change from 14.1 is in 51.2, with the original as the alternative. His rule governs it: "Make the game easy and rewarding so users stick around and play." Only a game with goals has Greek Row; the small campus's tables are the same, line for line.
+
+The owner's content change of 2026-11-13 (a real-life college: drinking with its consequences, light hazing as a system, setbacks that are felt) arrived while this was being built. Its rules are section 52's, which the main session writes; this stop builds none of it, and its words keep to the tone guide as it stood. Each chapter carries a hazing risk (0 for every chapter; nothing sets or reads it yet) and a record of what it has done, so the next stop can hang socials, hazing and their policies on the chapter without another save version.
+
+### 51.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| A chapter house | A building of one cell, placed from the Build menu under its own heading, Greek Row, on a game with goals once the Growth era has opened. $20,000 and $1,500 a year in upkeep on the small campus's count; on the model campus, 28 times that. Eight at most. Each house is one chapter | `chapterHouse` in `src/sim/config/placed.ts`, `cannotBuildChapter` in `src/sim/systems/greek.ts` |
+| Its name | One or two Greek letters and a plain English word, from the game's own lists: "Kappa Llama", "Omega Mu Biscuit". A real chapter's name is letters alone, so none can be one; the tone guide's list is checked as a second line. A name is never given twice on a campus, even after its house is cleared | `GREEK_LETTERS`, `CHAPTER_WORDS` in `src/sim/config/greek.ts`, `chapterName` |
+| Its beds | Ten on the small campus's count, 280 on the model campus: a third of a grown dorm. The beds its members fill are counted with the dorms' (a member who moved in left a dorm bed free), and the Capacity page's Beds line names them: "· 1,120 in chapter houses". No new bar | `chapterBedsTaken`, `openCapacity` in `src/sim/selectors.ts`; `capacity` in `src/sim/systems/capacity.ts` |
+| Founding | A chapter is founded the moment its house is placed. Members of an overfull chapter move in first, then students who wanted to join and found no room, and it opens with at least half its beds full | `chapterPlaced` |
+| Rush week | August 31 in the calendar, early in the fall. Six in a hundred of the students who live on campus want to join; they are shared among the chapters, each taking up to a quarter more than its beds. Members still here stay, pledges make up the rest, and the paper leads with it: "Rush Week: 448 Join Greek Row; Kappa Muffin Claims the Best Banner", with "Rush week: 448 students join Greek Row, and 448 move from dorm beds into the 7 chapter houses." under it. Commencement takes each chapter's seniors, a quarter of its members | `rush`, `greekOnGraduation`; `leads` in `src/sim/newspaper.ts` |
+| Its standing | Good, on Warning, or on Probation, from two things the player can see and fix: a house with more members than beds, and a house no Campus Safety office reaches. Checked once an hour. The first sight of either puts it on Warning, in the paper and as a toast, with what is wrong and what puts it right; left for 36 hours, it goes on Probation. Put right, it is in good standing again at once. On Probation its members lose what the house gives them | `chapterTrouble`, `chapterStatus`, `stepGreek` |
+| What its members feel | Inside Food & fun, named "Greek Row" on that cause's line: 12 points for a house of their own, 4 more with another house within two cells, 4 more inside the stadium's noise (game days next door), and 2 for each philanthropy event since rush, up to two. The campus feels it by the share of its residents in chapters; a member's own card feels the whole of their chapter's | `chapterLift`, `greekEffects`; `causeShifts` in `src/sim/systems/policies.ts` |
+| Its noise | Heard inside Grounds by every dorm and lecture hall within two cells: a third of full noise beside it, half that two cells off. A dorm hears the louder of a house and the stadium | `chapterNoiseAt`; `approvalAt` in `src/sim/systems/happiness.ts` |
+| The drag | The graduation rate the academic rating reads is lower by half a point for every point of the share of students in chapters, four at most, named on its line: "Greek Row: −1.5, 3% of students are in chapters" | `greekDrag` |
+| Pranks | A desk item from one chapter, friendly and put right by morning: "Members of Kappa Llama filled the fountain outside the library with bubbles. It smells of lemons." Left alone: "Leave it until morning", Happiness 1 point higher for two days. Or "Ask Kappa Llama to put it right, then help out in town": a philanthropy event. A chapter's chance in a school year: a quarter in good standing, 6 in 10 on Warning, every year on Probation; half that once it has given back since rush | `PRANKS`, `prankToday`; `chapterPrank` in `src/sim/systems/inbox.ts` |
+| Philanthropy | Each spring, every chapter not on Probation holds an event (a charity car wash, a canned-food drive, laps of the track, bulbs along the avenue), in one line of the paper; the campus is 1 point happier for two days | `philanthropy`, `PHILANTHROPY` |
+| The two policies | Behind the student count with the others, shown once the campus has a chapter house and kept while on. **Deferred rush**: the drag halved; Food & fun 2 points lower for everyone in the fall semester. **Chapter grade standard**: the drag halved; 30 in a hundred fewer join at rush. Both on, a quarter of the drag | `deferredRush`, `chapterGrades` in `src/sim/config/policies.ts` |
+| The chapter's panel | Tapping a house: its name and standing on the panel and its button; the button opens the chapter: its house's drawing, its standing with what is wrong, what puts it right and how long until Probation, its members and beds, what its members feel and why, which dorms and halls hear it, its pranks and philanthropy since rush, its last three doings, the next rush week and philanthropy day, and one line for Greek Row as a whole | `chapterPage` in `src/ui/greekUi.ts`, `openChapter` in `src/ui/ui.ts` |
+| Student cards | A chapter's members are Pledges in their first year and Greek Loyalists after (the Varsity Athletes and Superfans keep their own). "Lives in the Kappa Llama house" for a member with a bed there; "Lives in a dorm · Kappa Llama, its house full" for one without | `memberOf`; `studentCard` in `src/sim/systems/students.ts` |
+| Its record | Each chapter keeps its last twelve doings: founded, each rush, each prank, each philanthropy event. And a hazing risk of 0, for the next stop | `Chapter.events`, `Chapter.hazing` |
+| Clearing a house | The chapter closes and its members move back into the dorms. Its name is not given again | `chapterCleared` |
+| Saves | Version 25. A game opens with no chapter; one in the Growth era may build its first | `MIGRATIONS[24]`, `tests/fixtures/save-v24-model.json` |
+| The Growth era's line | "...the Policies page, with four switches: ...; and Greek Row, with chapter houses in the Build menu." | `eraOpens` in `src/sim/systems/goals.ts` |
+| The test players | A first house once the Growth era opens, and another while a chapter is overfull, when the campus can afford to build and run it: inside the stadium's noise, beside another house, in Campus Safety's reach, with as few dorms and halls beside it as can be. The once-a-day player defers rush once the drag passes 1.5 points; the player who works every cause sets the grade standard once it passes 1. Every player takes the advisor's pick on a prank | `placeChapters`, `setPolicies` in `scripts/bots.ts` |
+| The dev page | `&greek=5` builds five houses by the stadium (with `&rank=120`); `&overfull=1`, `&probation=1`; `&rushsoon=2` and `&givesoon=2` bring rush week or the spring's philanthropy that many hours near; `&prank=3` puts the fourth prank on the desk | `src/app/devtools.ts` |
+| Art | Six looks, each a two-storey half-timbered house from the Medieval pack (Styles 13 and 15, brown and red roofs), as drawn, on a cell of grass as the town's houses are. Nothing cut, recoloured or assembled | `chapter.0` to `chapter.5` in `tools/make_penzilla_recipe.py` |
+
+### 51.2 Changed from 14.1
+
+| Decision | Chosen | The original (14.1), now the alternative |
+|---|---|---|
+| What a house is | A building of one cell placed from the Build menu, one chapter to a house. The game's brushes grow lots by demand on their own; a chapter is a thing with a name, a standing and a panel, which needs one place to tap and a player who chose to build it. The eras' buildings and the labs are placed the same way | A Housing brush variant capped at medium density, which would grow chapters nobody chose and need a fourth rule for what grows where |
+| Its beds | Ten on the small campus's count, counted with Housing as far as its members fill them | Beds by stage, as a dorm |
+| What it likes | The stadium's noise (game days next door) and another house within two cells, each 4 points of Food & fun for its members | Reading emitters as Student Life does: there is no Student Life zone |
+| Noise | It likes the stadium's, and is heard by dorms and lecture halls within two cells, inside Grounds | It ignores noise and emits it, through a desirability map of emitters the game does not have |
+| Rush week | Inside the Housing numbers: the beds its members fill count as Housing's, and the Beds line names them | Shown inside the Housing bar |
+| Its standing | From an overfull house and Campus Safety's reach. Warning first, Probation after 36 hours left as it is, Good again at once when put right. Probation takes its members' lift | Prank risk shown first, from the same two things |
+| Pranks | Friendly desk items with a kind default, and a second answer that is a philanthropy event. They cost nothing: the downside of Greek Row is its noise and the drag | "Prank incidents in the inbox" as a downside |
+| Philanthropy | Each spring, and as the answer to a prank: members feel it until rush, and the campus for two days | "A reason to say yes to chapter petitions": there are no chapter petitions |
+| The two policies | Shown once a chapter house stands, not with the Growth era's four. Deferred rush costs Food & fun in the fall; the grade standard costs members at rush | As 12.3, opening with the era |
+| Alumni giving | Left out: the game has no giving | An upside of 14.1 |
+| The drag | Half a point of the graduation rate for every point of the Greek share, four at most | "Scaled by the Greek share of enrollment", unsized |
+| Eight at most | Eight houses on a campus | No limit |
+| Look inside a house | Next: a room is read from a dorm's lot, and a house has no lot | 14.1 does not ask for it; the brief asked if cheap |
+| The house's drawing | The Medieval pack's two-storey half-timbered houses, as drawn | "House_Type in eight colours, with a banner", from parts (section 23) |
+| Its opening bonus | None: the chapter's founding is its moment. With the 40 experience every other building opens with, the once-a-day player on the second seed made 7.03 levels a week after week 12, over the pace's 7 (42.2) | The 40 experience a placed building opens with |
+
+### 51.3 Measured
+
+The long run's six test players on the model campus, 44 weeks each, and the same three players on the first seed with no chapter house.
+
+| Measured | Result |
+|---|---|
+| Houses | Every player built its first in week 6, the week after the Growth era opened, and another each time rush week left a house overfull. At the end: 7 chapters for the casual and the once-a-day players, 5 for the striver, whose grade standard took fewer members |
+| Members | 1,351 for the casual and the once-a-day players (3.7% of students), 945 for the striver (2.6%): about 190 a chapter, in houses of 280 beds |
+| Rush week | 39 for each player, one every fall from week 6. On average 444 joined and 417 moved from dorm beds into the houses (315 and 301 for the striver) |
+| Standing over time | 15 times on Warning for the casual and the once-a-day players, 10 for the striver: each when rush week left a house overfull, put right by the next house. The once-a-day player had one chapter on Probation on each seed, seen at the week-10 reading. From week 14 on, every chapter was in good standing at every weekly reading |
+| Pranks and philanthropy | 0.5 to 0.8 pranks a week, each answered with the advisor's pick. 4.8 to 6.7 philanthropy events a week: every chapter each spring, and those the pranks' answers asked for |
+| The drag | At the end: 1.8 or 1.9 points off the graduation rate for the casual player, with no policy; 0.9 for the once-a-day player, who had deferred rush by week 10; 0.6 or 0.7 for the striver, who had set the grade standard by week 10 |
+| The two policies | On the once-a-day campus for six years against the same campus without: Deferred rush, the academic rating +0.2 and Happiness 0.2 lower. The grade standard, the rating +0.3 (published +0.1), Happiness 0.03 lower and one more student leaving a year. A campus with no chapter house cannot turn either on |
+| Happiness | Weeks 20 to 44, on average: 93.6, 94.1 and 93.3 against 93.2, 94.7 and 93.1 with no Greek Row. The once-a-day player's is lower: deferred rush costs Food & fun in every fall |
+| Retention | Weeks 20 to 44: 99.21%, 99.23% and 99.20% of each class stay, against 99.19%, 99.26% and 99.19% |
+| The pace of the rank goals | The Top 10 in weeks 31, 29 and 31 on the one seed, against 29, 31 and 31 with no Greek Row; over both seeds, weeks 25 to 31. Never before week 24 |
+| The money | Years 3 to 8 keep $13.9 to $15.7 of every $100 (casual), $13.3 to $15.6 (once a day) and $11.8 to $14.2 (striver). The later weeks: $12.3 to $15.7, $13.0 to $15.8 and $12.9 to $14.7. The run's very last moment, a single reading off the weekly point, is under $12 for every player with or without Greek Row: the casual player's is $9.45 against $10.94 |
+| Levels | The once-a-day player made 6.1 and 6.9 levels a week in weeks 4 to 12, and 5.9 and 7.0 after. The second seed's 7.00 is the pace's ceiling: with the house's opening bonus it was 7.03, so a house opens none |
+| The small campus | Every table the same, line for line |
+| Tests | 17 new, 886 in all. Two new long-run checks: Greek Row only with goals, eight at most, every name letters and a plain word and never twice; and rush week every fall, with Probation only after a Warning. The policy check now holds the two Greek switches to their words. 84 checks in all |
+| On a phone | The chapter's panel at 375 by 667 with an iPhone's insets: no target under 44 points, nothing off the screen, no text cut off |
+
+### 51.4 Rough
+
+| Rough | Why |
+|---|---|
+| A member is read at a dorm for everything but Greek Row's lift | A house is not a lot. Its members' lift is the house's; their walk and their meals are the dorm's they would have had |
+| The campus's Grounds line understates noise where only some lots hear any | The campus average of each part counts lots without the part as nothing. It was so for the stadium's noise before Greek Row; the campus number, every card and retention read each lot whole and are right. Left as it was so the small campus's tables do not move |
+| Rush is one share for every chapter | A chapter on the Row or by the stadium does not draw more pledges |
+| The panel is drawn when it opens | Close and open it again to see a change |
+| No hazing, no socials | The next stop's, on the owner's content change |
