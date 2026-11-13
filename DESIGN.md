@@ -5541,6 +5541,8 @@ The casual and the once-a-day player are inside his range in every year and ever
 
 ### 42.18 Stop 2, decisions made for the owner
 
+Two of these were marked for his word, and both were settled by the main session on 2026-11-12 under his rule ("I trust your decision making") and told to him the same day: the second order on some days is kept, because an order for one sitting every day is what "easy and rewarding" asks for; and the board bringing a regular player to the Top 10 in weeks 25 to 29 is kept, because his targets hold (the Top 100 in week 7, the Top 10 not before month five) and answering orders is what the layer is for. Either is undone by one number in `src/sim/config/orders.ts`.
+
 | Decision | Chosen | The alternative |
 |---|---|---|
 | Two lines of 42.3 that cannot both hold | "One new order each real day" and "at least one open order can always be finished in one sitting". A player who finishes their one-sitting order each day has none left the next morning, so that day's one order would have to be one for a sitting, every day, and the state's and the donors' season orders would never come. Kept the promise: on a day whose new order is a long one, with nothing else for a sitting on the board, a second order comes with it. That is three days in seven, so ten orders a week and not seven | One a day and no more, with the promise kept only on a full board: measured, the once-a-day player found something for a sitting on 58% to 64% of days. Or one a day, always for a sitting: no season orders. It is one line to turn off (`ORDER_SECOND_FOR_TODAY`) |
