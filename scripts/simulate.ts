@@ -51,6 +51,13 @@ import {
   rewardsEarned,
   rewardsWaiting,
   RANK_REWARDS,
+  academicInputs,
+  academicRating,
+  eraOf,
+  ERAS,
+  POLICIES,
+  policiesOpen,
+  policyWords,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -84,6 +91,8 @@ const YEARS = Number(option('years', '20'));
 // `-- --no-slider` runs the test players with the Instruction slider left where it opens: a comparison, to show
 // what the slider is worth to the margin. Its checks on the margin are then expected to fail.
 if (args.includes('--no-slider')) botOptions.slider = false;
+// `-- --no-policies` runs them with every switch an era opens left off, as a campus that never visits the page.
+if (args.includes('--no-policies')) botOptions.policies = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -170,6 +179,8 @@ interface Seen {
   /** The real week each size goal and each rank goal was reached, counting the first week as 1. 0 when not reached. */
   sizeWeeks: number[];
   rankWeeks: number[];
+  /** Policies: how many times a switch was turned on or off, and lines of the paper about them that broke the tone guide. */
+  switches: number;
   /** Goals whose headline was not in the paper of the visit after they were reached. */
   goalsUnsaid: number;
   /** The most students the campus ever held, whenever it was looked at. */
@@ -202,6 +213,7 @@ const newSeen = (): Seen => ({
   toneBroken: [],
   sizeWeeks: SIZE_GOALS.map(() => 0),
   rankWeeks: RANK_GOALS.map(() => 0),
+  switches: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
 });
@@ -221,6 +233,7 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'exam') seen.exams[String(entry.data?.id)] = (seen.exams[String(entry.data?.id)] ?? 0) + 1;
     if (entry.kind === 'inbox' && entry.data?.closes !== undefined) seen.desk.push({ opens: entry.tick, closes: Number(entry.data.closes), key: String(entry.data.key) });
     if (entry.kind === 'inbox' && entry.data?.byDefault === 1) seen.deskDefaults += 1;
+    if (entry.kind === 'policy') seen.switches += 1;
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -992,6 +1005,22 @@ function assertModelCampus(seed: number): void {
   console.log(`${'faculty funded'.padEnd(18)}${runs.map((run) => `1 to ${ratioTarget(run.final)}`.padStart(14)).join('')}`);
   console.log(`${'looks, of 100'.padEnd(18)}${runs.map((run) => averageDesirability(run.final).toFixed(1).padStart(14)).join('')}`);
   console.log(`${'buildings placed'.padEnd(18)}${runs.map((run) => `${rewardsEarned(run.final).length - rewardsWaiting(run.final).length} of ${rewardsEarned(run.final).length}`.padStart(14)).join('')}`);
+  console.log(`${'era at the end'.padEnd(18)}${runs.map((run) => ERAS[eraOf(run.final.goals)]!.padStart(14)).join('')}`);
+  console.log(`${'policies on'.padEnd(18)}${runs.map((run) => `${run.final.policies.on.length} of ${policiesOpen(run.final).length}`.padStart(14)).join('')}`);
+  console.log(`${'switches thrown'.padEnd(18)}${runs.map((run) => String(run.seen.switches).padStart(14)).join('')}`);
+  console.log('');
+  for (const run of runs) console.log(`${run.style} ${run.seed} ends with: ${run.final.policies.on.map((id) => POLICIES.find((spec) => spec.id === id)?.name ?? id).join(', ') || 'no policy on'}`);
+  console.log('');
+
+  // The same players with every switch left off (DESIGN.md section 41): the campus that never opens the page.
+  botOptions.policies = false;
+  const plain = seeds.flatMap((one) => styles.map((style) => play(style, one, PACE_WEEKS, 'model')));
+  botOptions.policies = !args.includes('--no-policies');
+  const plainOf = (style: Style): Run[] => plain.filter((run) => run.style === style);
+  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF');
+  console.log(`${'goal'.padEnd(18)}${head}`);
+  RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${plain.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
+  console.log(`${'rank at the end'.padEnd(18)}${plain.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
   console.log('');
 
   // The cap: nobody ever holds more students than it allows, and every campus is full within a few weeks.
@@ -1041,6 +1070,17 @@ function assertModelCampus(seed: number): void {
       low >= 12 && high <= 17 && opens >= 12 && opens <= 17 && payroll >= 0.5,
       `it opens keeping ${opens.toFixed(1)}%; years 3 to 8: ${styles.map((style) => `${style} ${range(style, 3, 8)}`).join(', ')} over ${seeds.length} seeds; payroll ${Math.round(payroll * 100)}% of the casual player's spending; state grants ${dollarsShort(Math.max(...runs.map((run) => run.final.money.grants)))} at most`,
     );
+    // The same with every switch left off: the range a campus keeps must not depend on the Policies page.
+    {
+      const offRange = (style: Style, from: number, to: number): { low: number; high: number } => ({ low: Math.min(...plainOf(style).map((run) => read(run, from, to).low)), high: Math.max(...plainOf(style).map((run) => read(run, from, to).high)) });
+      const says = (style: Style, from: number, to: number): string => `${offRange(style, from, to).low.toFixed(1)}% to ${offRange(style, from, to).high.toFixed(1)}%`;
+      const regular = (['casual', 'daily'] as const).flatMap((style) => [offRange(style, 3, 8), offRange(style, 9, PACE_WEEKS)]);
+      check(
+        'with every switch left off the same players keep $12 to $17 too, in years 3 to 8 and in the later weeks',
+        Math.min(...regular.map((one) => one.low)) >= 12 && Math.max(...regular.map((one) => one.high)) <= 17,
+        `switches off, years 3 to 8: ${styles.map((style) => `${style} ${says(style, 3, 8)}`).join(', ')}; weeks 9 to ${PACE_WEEKS}: ${styles.map((style) => `${style} ${says(style, 9, PACE_WEEKS)}`).join(', ')}. With the switches in use, years 3 to 8: ${styles.map((style) => `${style} ${range(style, 3, 8)}`).join(', ')}; weeks 9 to ${PACE_WEEKS}: ${styles.map((style) => `${style} ${range(style, 9, PACE_WEEKS)}`).join(', ')}`,
+      );
+    }
     check(
       'the later weeks stay in that range too, for the casual and the once-a-day player',
       laterLow >= 12 && laterHigh <= 17,
@@ -1065,6 +1105,168 @@ function assertModelCampus(seed: number): void {
       'the last rank goal can be reached: the player who works every cause gets to the Top 10, in months',
       strivers.every((run) => run.seen.rankWeeks[7]! >= 20),
       strivers.map((run) => `seed ${run.seed}: the Top 10 at ${weekOf(run.seen.rankWeeks[7]!)}, No. ${run.final.field.rank} at the end, looks ${averageDesirability(run.final).toFixed(0)} of 100, marketing at step ${run.final.money.marketing}, a tier ${run.final.football.stadium.tier} stadium, ${Math.round((100 * enrollment(run.final)) / Math.max(1, capacity(run.final).needs.find((need) => need.id === 'seats')!.have))}% of seats taken`).join('; '),
+    );
+  }
+
+  // What each era opens (DESIGN.md section 41): the switches are there for the player who reached the era, the
+  // pace of the goals is the same with them in use as with every one left off, and nobody is asked to use one.
+  {
+    const opened = runs.every((run) => policiesOpen(run.final).length === POLICIES.filter((spec) => spec.era <= eraOf(run.final.goals)).length && run.final.policies.on.every((id) => policiesOpen(run.final).some((spec) => spec.id === id)));
+    const used = runs.filter((run) => run.seen.switches > 0).length;
+    const unused = plain.every((run) => run.seen.switches === 0 && run.final.policies.on.length === 0);
+    // The week of each rank goal, with the switches in use against every one off: never more than a few weeks apart.
+    let widest = 0;
+    runs.forEach((run, n) => {
+      RANK_GOALS.forEach((_, goal) => {
+        const a = run.seen.rankWeeks[goal]!;
+        const b = plain[n]!.seen.rankWeeks[goal]!;
+        if (a > 0 && b > 0) widest = Math.max(widest, Math.abs(a - b));
+      });
+    });
+    const offOk =
+      plainOf('striver').every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 13) &&
+      [...plainOf('casual'), ...plainOf('daily')].every((run) => run.seen.rankWeeks[3]! >= 5 && run.seen.rankWeeks[3]! <= 18) &&
+      plain.every((run) => run.seen.rankWeeks[7]! === 0 || run.seen.rankWeeks[7]! >= 20);
+    check(
+      'an era opens its switches, the players who reach it use them, and the pace of the goals does not hang on them',
+      opened && used === runs.length && unused && offOk && widest <= 6,
+      `${runs.map((run) => `${run.style} ${run.seed}: ${ERAS[eraOf(run.final.goals)]}, ${policiesOpen(run.final).length} open, ${run.final.policies.on.length} on, ${run.seen.switches} thrown`).join('; ')}. With every switch off: ${plain.map((run) => `${run.style} ${run.seed} Top 100 at ${weekOf(run.seen.rankWeeks[3]!)}, Top 10 ${weekOf(run.seen.rankWeeks[7]!)}, No. ${run.final.field.rank} at the end`).join('; ')}. The same goal is never more than ${widest} ${widest === 1 ? 'week' : 'weeks'} apart with the switches in use`,
+    );
+  }
+
+  // What each policy is worth, in its own numbers (DESIGN.md section 41): on two campuses, each with every era
+  // open, the one policy turned on and left for six years against the same campus with it off. The first is the
+  // campus of the once-a-day player after its long run. The second is a campus nobody has tended.
+  {
+    const SIX = 6;
+    // Each campus is read a day and a half into a fall, when its dorms are as full as they get: every era open,
+    // every switch off.
+    const eras = (state: GameState): GameState => {
+      const next = advance(structuredClone(state), state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 1.5 * DAY_MS).state;
+      next.goals!.rank = RANK_GOALS.length;
+      next.policies = { on: [], locked: [], news: [] };
+      return next;
+    };
+    interface Read {
+      kept: number;
+      happy: number;
+      stress: number;
+      students: number;
+      left: number;
+      incidents: number;
+      rating: number;
+      published: number;
+      rank: number;
+      income: number;
+      spending: number;
+    }
+    /** Six years of a campus as it stands, read every day: what it keeps, its Happiness, who left, and where it ends. */
+    const sixYears = (start: GameState): Read => {
+      let state = start;
+      const from = state.clock.lastSimulatedAt;
+      let kept = 0;
+      let happy = 0;
+      let students = 0;
+      let income = 0;
+      let spending = 0;
+      let days = 0;
+      let left = 0;
+      let incidents = 0;
+      let stress = 0;
+      let semesters = 0;
+      for (let day = 1; day <= SIX * 7; day++) {
+        const result = advance(state, state.clock.lastSimulatedAt, from + day * DAY_MS);
+        state = result.state;
+        for (const entry of result.log) {
+          if (entry.kind === 'semester') {
+            left += Number(entry.data?.left ?? 0);
+            // The semester's own average, not the rounded figure the log carries.
+            stress += state.term.lastAverage;
+            semesters += 1;
+          }
+          if (entry.kind === 'incident' && entry.data?.handled === 0) incidents += 1;
+        }
+        const books = budget(state);
+        kept += books.kept;
+        income += books.incomeTotal;
+        spending += books.spending;
+        happy += campusHappiness(state).base;
+        students += enrollment(state);
+        days += 1;
+      }
+      return { kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
+    };
+    const campuses: Array<[string, GameState]> = [
+      ['the once-a-day campus', eras(of('daily')[0]!.final)],
+      ['a campus nobody tends', eras(alone.final)],
+      ['a campus with half its cover gone', eras(stripped(alone.final))],
+    ];
+    const signed = (n: number, digits = 2): string => `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(digits)}`;
+    let moved = true;
+    const told: string[] = [];
+    console.log('WHAT EACH POLICY IS WORTH: one switch on for six years, against the same campus with it off');
+    for (const [name, base] of campuses) {
+      const off = sixYears(base);
+      const inputs = academicInputs(base).map((input) => `${input.id} ${input.level === null ? '-' : input.level.toFixed(0)}`).join(', ');
+      console.log('');
+      console.log(`${name}: ${enrollment(base)} students, keeps $${off.kept.toFixed(2)}, Happiness ${off.happy.toFixed(1)}, semester Stress ${off.stress.toFixed(1)}, ${Math.round(off.left)} leave a year, ${Math.round(off.incidents)} incidents a year unanswered, rating ${off.rating.toFixed(1)} (published ${off.published.toFixed(1)}, No. ${off.rank}); ${inputs}`);
+      for (const spec of POLICIES) {
+        const result = applyAction(base, { type: 'policy', id: spec.id, on: true });
+        if (!result.ok) {
+          moved = false;
+          continue;
+        }
+        const words = policyWords(base, spec);
+        const on = sixYears(result.state);
+        const d = { kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
+        console.log(`  ${spec.name}`);
+        console.log(`      + ${spec.gives}: ${words.gain.join('; ')}`);
+        console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
+        console.log(`      over six years: keeps ${signed(d.kept)} of every $100 (income ${signed(d.income / 1e6)}M, spending ${signed(d.spending / 1e6)}M a year), Happiness ${signed(d.happy)}, semester Stress ${signed(d.stress)}, ${signed(d.left, 0)} leave a year, ${signed(d.incidents, 0)} incidents unanswered a year, rating ${signed(d.rating, 1)} (published ${signed(d.published, 1)}, ${d.rank === 0 ? 'same rank' : `${Math.abs(d.rank)} ${Math.abs(d.rank) === 1 ? 'place' : 'places'} ${d.rank < 0 ? 'better' : 'worse'}`})`);
+        // Each moves the number it names, the way it says.
+        const ok: Record<string, boolean> = {
+          readingDays: d.stress < 0,
+          toughGrading: d.left > 0,
+          freshmenOnCampus: d.income >= 0 && d.happy <= 0.01,
+          freeStudentSection: d.happy > 0 && d.income <= 0,
+          allNightLibrary: d.stress <= 0 && d.spending > 0,
+          parkingFees: d.income > 0 && d.happy < 0,
+          quietHours: d.happy < 0.5,
+          namingRights: d.income > 0 && d.happy < 0,
+        };
+        if (ok[spec.id] === false) {
+          moved = false;
+          told.push(`${spec.name} on ${name}`);
+        }
+      }
+    }
+    // Tough grading is the one whose two sides come at different times: the lift at once, the cost as the classes
+    // it thinned graduate. The same campus with it on, against itself with it off, six, fifteen and thirty years on.
+    {
+      const base = campuses[0]![1];
+      const tough = applyAction(base, { type: 'policy', id: 'toughGrading', on: true });
+      const read = (state: GameState): { rating: number; published: number; rank: number; graduation: number } => ({ rating: academicRating(state), published: state.field.academic, rank: state.field.rank, graduation: academicInputs(state).find((input) => input.id === 'graduation')?.level ?? 0 });
+      if (tough.ok) {
+        console.log('');
+        console.log('TOUGH GRADING OVER TIME, on the once-a-day campus: on against off');
+        let on = tough.state;
+        let off = base;
+        // A year at a time: a single catch-up never runs longer than a few weeks.
+        for (let year = 1; year <= 30; year++) {
+          on = advance(on, on.clock.lastSimulatedAt, base.clock.lastSimulatedAt + year * YEAR_MS).state;
+          off = advance(off, off.clock.lastSimulatedAt, base.clock.lastSimulatedAt + year * YEAR_MS).state;
+          if (![1, 3, 6, 10, 15, 20, 30].includes(year)) continue;
+          const a = read(on);
+          const b = read(off);
+          console.log(`  after ${String(year).padStart(2)} years: rating ${signed(a.rating - b.rating, 1)}, published ${signed(a.published - b.published, 1)}, rank No. ${a.rank} against No. ${b.rank}, graduation rate in the rating ${signed(a.graduation - b.graduation, 1)}`);
+        }
+      }
+    }
+    console.log('');
+    check(
+      'every policy moves the number it names, the way its switch says, on a tended campus and on an untended one',
+      moved,
+      told.length === 0 ? `${POLICIES.length} policies on ${campuses.length} campuses, six years each, against the same campus with the switch off: the table above` : `not as said: ${told.join('; ')}`,
     );
   }
 

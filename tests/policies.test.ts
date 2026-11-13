@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   academicInputs,
@@ -274,10 +275,10 @@ describe('a switch', () => {
     expect(row('parkingFees').gainLines).toEqual([`$${(driversNow(state) * 450).toLocaleString('en-US')} a year: ${driversNow(state).toLocaleString('en-US')} students who drive at $450`]);
     expect(row('parkingFees').costLines).toEqual([`Food & fun −18 for the ${driversNow(state).toLocaleString('en-US')} students who drive`]);
     expect(row('readingDays').gainLines).toEqual(['Stress −20 in finals week']);
-    expect(row('readingDays').costLines).toEqual(['Class size −1.5 in the academic rating: fewer teaching days']);
+    expect(row('readingDays').costLines).toEqual(['Class size −1 in the academic rating: fewer teaching days']);
     expect(row('toughGrading').gainLines).toEqual(['Reputation +6 in the academic rating: a degree here is harder to earn']);
-    expect(row('toughGrading').costLines[0]).toMatch(/^0\.4% more of each class leaves each semester: about \d+ students$/);
-    expect(row('quietHours').gainLines).toEqual(['60% less mischief in the dorms']);
+    expect(row('toughGrading').costLines[0]).toMatch(/^0\.4% more of each class leaves each semester: about \d+ students\. Fewer of each class graduate, and the rating remembers$/);
+    expect(row('quietHours').gainLines).toEqual(['75% less mischief in the dorms']);
     expect(row('namingRights').gainLines).toEqual([`$3,500,000 a year: from the ${donorName(state)} family, every year their name is up`]);
     expect(row('freeStudentSection').gainLines).toEqual(['20% more fans want a seat', 'Food & fun +3']);
   });
@@ -433,9 +434,9 @@ describe('each policy, in its own numbers', () => {
     const off = legacy();
     const on = turnOn(off, 'readingDays');
     const size = (state: GameState) => academicInputs(state).find((input) => input.id === 'classSize')!;
-    expect(size(on).level).toBeCloseTo(size(off).level! - 1.5, 9);
-    expect(size(on).detail).toBe(`${size(off).detail}. Reading days before finals: −1.5, fewer teaching days`);
-    expect(ratingShift(on, 'classSize')).toEqual({ points: -1.5, notes: ['Reading days before finals: −1.5, fewer teaching days'] });
+    expect(size(on).level).toBeCloseTo(size(off).level! - 1, 9);
+    expect(size(on).detail).toBe(`${size(off).detail}. Reading days before finals: −1, fewer teaching days`);
+    expect(ratingShift(on, 'classSize')).toEqual({ points: -1, notes: ['Reading days before finals: −1, fewer teaching days'] });
     expect(ratingShift(on, 'reputation').points).toBe(0);
     // Grades follow: the teaching a student card reads its marks from is a little lower.
     expect(teachingQuality(on)).toBeLessThan(teachingQuality(off));
@@ -455,11 +456,11 @@ describe('each policy, in its own numbers', () => {
     const share = libraryShare(off);
     expect(share).toBeGreaterThan(0.2);
     expect(share).toBeLessThan(1);
-    expect(examsOff(on, 1, () => share).points).toBeCloseTo(16 * share, 9);
+    expect(examsOff(on, 1, () => share).points).toBeCloseTo(20 * share, 9);
     expect(examsOff(on, 1, () => 0)).toEqual({ points: 0, by: [] });
     expect(examsOff(on, 0.3, () => share).points).toBe(0);
     const levels = campusLevels(off);
-    expect(stressRead(on, levels, 1).score).toBe(stressRead(off, levels, 1).score - Math.round(16 * share));
+    expect(stressRead(on, levels, 1).score).toBe(stressRead(off, levels, 1).score - Math.round(20 * share));
     // Both together never take more than the most.
     const both = turnOn(on, 'readingDays');
     expect(examsOff(both, 1, () => 1).points).toBe(EXAMS_MOST);
@@ -467,8 +468,8 @@ describe('each policy, in its own numbers', () => {
 
     const libraries = off.map.placed.filter((placed) => placed && (placed.type === 'library' || placed.type === 'computerLab')).length;
     expect(libraries).toBeGreaterThan(0);
-    expect(upkeepMore(on)).toEqual({ amount: libraries * 10_000 * 28, notes: [`All-night library: $${(libraries * 280_000).toLocaleString('en-US')} more`] });
-    expect(budget(on).spending).toBeCloseTo(budget(off).spending + libraries * 280_000, 2);
+    expect(upkeepMore(on)).toEqual({ amount: libraries * 4_000 * 28, notes: [`All-night library: $${(libraries * 112_000).toLocaleString('en-US')} more`] });
+    expect(budget(on).spending).toBeCloseTo(budget(off).spending + libraries * 112_000, 2);
     const line = budget(on).groups.flatMap((group) => group.lines).find((one) => one.id === 'upkeep')!;
     expect(line.detail).toContain('All-night library: $');
     expect(budget(on).incomeTotal).toBe(budget(off).incomeTotal);
@@ -578,16 +579,16 @@ describe('each policy, in its own numbers', () => {
   it('Quiet hours: less mischief in the dorms, and a little off Food & fun', () => {
     const off = legacy();
     const on = turnOn(off, 'quietHours');
-    expect(mischiefTimes(on)).toBe(0.4);
+    expect(mischiefTimes(on)).toBe(0.25);
     expect(mischiefTimes(off)).toBe(1);
-    expect(cause(on, 'life').level).toBeCloseTo(cause(off, 'life').level - 0.03, 3);
+    expect(cause(on, 'life').level).toBeCloseTo(cause(off, 'life').level - 0.01, 3);
     // Counted over two weeks of the same campus: far fewer.
     const count = (state: GameState): number => advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * WEEK).log.filter((entry) => entry.kind === 'incident' && /dorm/.test(entry.text)).length;
     const loud = count(off);
     const quiet = count(on);
     expect(loud).toBeGreaterThan(50);
-    expect(quiet).toBeLessThan(loud * 0.6);
-    expect(quiet).toBeGreaterThan(loud * 0.2);
+    expect(quiet).toBeLessThan(loud * 0.45);
+    expect(quiet).toBeGreaterThan(loud * 0.1);
   });
 
   it('Naming rights: a donor\'s gift every year, and a little off Grounds', () => {
@@ -631,6 +632,20 @@ describe('content is data', () => {
       list.pop();
     }
     expect(POLICIES).toHaveLength(8);
+  });
+
+  it('no rule, page or line of the game names a policy: only the list does', () => {
+    const SRC = join(__dirname, '..', 'src');
+    const filesUnder = (path: string): string[] => (statSync(path).isDirectory() ? readdirSync(path).flatMap((name) => filesUnder(join(path, name))) : [path]);
+    const found: string[] = [];
+    for (const file of filesUnder(SRC).filter((one) => one.endsWith('.ts'))) {
+      const where = relative(SRC, file).split('\\').join('/');
+      if (where === 'sim/config/policies.ts') continue;
+      // Comments may name one as an example. Code may not.
+      const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      for (const spec of POLICIES) if (code.includes(spec.id) || code.includes(spec.name)) found.push(`${where}: ${spec.id}`);
+    }
+    expect(found).toEqual([]);
   });
 
   it('a policy that is off, or was removed from the list, changes nothing', () => {

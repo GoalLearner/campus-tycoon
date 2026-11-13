@@ -100,6 +100,12 @@ export function housedByPolicy(state: GameState): number {
   return effects(state, 'spareBeds').length > 0 ? housedIfOn(state) : 0;
 }
 
+/** The same, with the name of the policy that houses them, for the lines that count beds. '' and 0 with none. */
+export function housedNote(state: GameState): { housed: number; by: string } {
+  const found = effects(state, 'spareBeds');
+  return found.length > 0 ? { housed: housedIfOn(state), by: found.map(({ spec }) => spec.name).join(' and ') } : { housed: 0, by: '' };
+}
+
 // ---------------------------------------------------- the four causes --
 
 export interface CauseShift {

@@ -13,6 +13,16 @@ import {
   enrollment,
   rewardLift,
   rewardsWaiting,
+  enrollmentCap,
+  footballBooks,
+  HOME_GAMES_PER_YEAR,
+  housedIfOn,
+  libraryShare,
+  policiesOpen,
+  policyLocked,
+  policyOn,
+  TICKET_PRICE,
+  type PolicySpec,
   applyAction,
   approvalAt,
   campusHappiness,
@@ -85,8 +95,11 @@ const KEEPS_PLENTY = 15.2;
 const KEEPS_AFTER_FACULTY: Record<string, number> = { casual: 14.5, daily: 14.5, striver: 14 };
 const KEEPS_LEAST = 13;
 
-/** Whether the test players touch the Instruction slider. Turned off for one comparison run. */
-export const botOptions = { slider: true };
+/**
+ * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
+ * Each is turned off for one comparison.
+ */
+export const botOptions = { slider: true, policies: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -335,6 +348,76 @@ function setInstruction(state: GameState, style: Style): GameState {
   if (next === step) return state;
   const result = applyAction(state, { type: 'instruction', step: next });
   return result.ok ? result.state : state;
+}
+
+/**
+ * The switches an era has opened (DESIGN.md section 41), each set as a player who has read it would set it.
+ * A switch changed stays put until the next class moves in, so each is looked at in term, and one that is
+ * held is left alone.
+ *
+ * - Easing exams is worth its cost where the semester's Stress costs students: an average over 20.
+ * - Tough grading sends a few more away each semester. On a campus that turns applicants away they are
+ *   replaced in the fall, and on one that does not they are simply gone. Only the once-a-day player takes it.
+ * - Freshmen take spare beds wherever there are any, and the student section is free while it costs next to
+ *   nothing.
+ * - Parking fees and naming rights are money for Happiness: on while the campus keeps too little, off once it
+ *   keeps enough. The player who works every cause guards Happiness and takes the money last.
+ * - Quiet hours where students are thinly covered, which is where mischief goes unanswered.
+ */
+function setPolicies(state: GameState, style: Style): GameState {
+  if (!botOptions.policies || !state.goals) return state;
+  const open = policiesOpen(state);
+  if (open.length === 0) return state;
+  const phase = calendarAt(state.clock).phase;
+  if (phase !== 'fall' && phase !== 'spring') return state;
+  const kept = keeps(state);
+  const income = budget(state).incomeTotal;
+  const stress = state.term.lastAverage;
+  const safety = campusHappiness(state).causes.find((cause) => cause.id === 'safety')?.level ?? 1;
+  // Full: within a few in a hundred of the cap, in term. A campus that full turns applicants away each fall.
+  const cap = enrollmentCap(state);
+  const full = cap !== null && enrollment(state) >= cap * 0.97;
+  // Money for Happiness, taken when the campus keeps too little and given back once it keeps enough. The casual
+  // player reaches for it a little sooner than the once-a-day player and gives it back sooner too. The player
+  // who works every cause takes it last.
+  const short = style === 'striver' ? KEEPS_LEAST - 1 : style === 'casual' ? KEEPS_ENOUGH + 0.3 : KEEPS_ENOUGH;
+  const flush = style === 'striver' ? KEEPS_ENOUGH : style === 'casual' ? KEEPS_ENOUGH + 1.3 : KEEPS_PLENTY + 1;
+  /** What the player would have a switch be, or null to leave it as it is. */
+  const want = (spec: PolicySpec): boolean | null => {
+    switch (spec.id) {
+      case 'readingDays':
+        return stress >= 21.5 ? true : stress < 19.5 ? false : null;
+      case 'allNightLibrary':
+        return stress >= 21.5 && libraryShare(state) >= 0.5 ? true : stress < 19.5 ? false : null;
+      case 'toughGrading':
+        // A lift to the rating now, paid for slowly in the graduation rate. The once-a-day player takes the
+        // lift. The casual player is not chasing the rating, and the player who works every cause has read
+        // that the rating remembers: both leave it alone.
+        return style === 'daily' ? full : null;
+      case 'freshmenOnCampus':
+        return housedIfOn(state) > 0 ? true : null;
+      case 'freeStudentSection': {
+        const free = spec.costs.find((effect) => effect.kind === 'freeSeats');
+        const lost = HOME_GAMES_PER_YEAR * footballBooks(state).crowd * (TICKET_PRICE[state.football.stadium.price] ?? 0) * (free && free.kind === 'freeSeats' ? free.share : 0);
+        return lost < income * 0.002 ? true : lost > income * 0.004 ? false : null;
+      }
+      case 'parkingFees':
+      case 'namingRights':
+        return kept < short ? true : kept > flush ? false : null;
+      case 'quietHours':
+        return safety < 0.55 ? true : safety > 0.7 ? false : null;
+      default:
+        return null;
+    }
+  };
+  let current = state;
+  for (const spec of open) {
+    const wanted = want(spec);
+    if (wanted === null || wanted === policyOn(current, spec.id) || policyLocked(current, spec.id)) continue;
+    const result = applyAction(current, { type: 'policy', id: spec.id, on: wanted });
+    if (result.ok) current = result.state;
+  }
+  return current;
 }
 
 /**
@@ -827,6 +910,7 @@ export function takeTurn(state: GameState, as: Style): TurnResult {
   }
   current = setMarketing(current, as);
   current = setInstruction(current, as);
+  current = setPolicies(current, as);
   if (!blockedByCash) current = payIntoEndowment(current, style);
   return { state: current, purchases, blockedByCash };
 }

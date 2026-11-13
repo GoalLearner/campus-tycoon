@@ -67,7 +67,7 @@ export const POLICIES: readonly PolicySpec[] = [
     gives: 'Lower Stress at exams',
     takes: 'Slightly lower grades',
     gains: [{ kind: 'exams', points: 20 }],
-    costs: [{ kind: 'rating', input: 'classSize', points: -1.5, why: 'fewer teaching days' }],
+    costs: [{ kind: 'rating', input: 'classSize', points: -1, why: 'fewer teaching days' }],
     begins: 'Reading days before finals begin: no classes in the days before exams.',
     ends: 'Reading days before finals end: classes run up to the last day.',
   },
@@ -113,8 +113,8 @@ export const POLICIES: readonly PolicySpec[] = [
     era: 2,
     gives: 'Softer finals',
     takes: 'The library costs more to run',
-    gains: [{ kind: 'exams', points: 16, library: true }],
-    costs: [{ kind: 'upkeep', family: 'library', perYear: 10_000, one: 'library or computer lab', many: 'libraries and computer labs' }],
+    gains: [{ kind: 'exams', points: 20, library: true }],
+    costs: [{ kind: 'upkeep', family: 'library', perYear: 4_000, one: 'library or computer lab', many: 'libraries and computer labs' }],
     begins: 'The library stays open all night.',
     ends: 'The library closes at night again.',
   },
@@ -135,8 +135,8 @@ export const POLICIES: readonly PolicySpec[] = [
     era: 3,
     gives: 'Fewer incidents',
     takes: 'A little Happiness',
-    gains: [{ kind: 'mischief', times: 0.4 }],
-    costs: [{ kind: 'cause', cause: 'life', points: -3, among: 'everyone' }],
+    gains: [{ kind: 'mischief', times: 0.25 }],
+    costs: [{ kind: 'cause', cause: 'life', points: -1, among: 'everyone' }],
     begins: 'Quiet hours begin in the dorms.',
     ends: 'Quiet hours end in the dorms.',
   },
@@ -157,4 +157,4 @@ export const POLICIES: readonly PolicySpec[] = [
 export const EXAMS_AT_MIDTERMS = 0.4;
 
 /** The most Stress all policies together may take off. */
-export const EXAMS_MOST = 24;
+export const EXAMS_MOST = 30;

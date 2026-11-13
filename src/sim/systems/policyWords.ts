@@ -18,7 +18,8 @@ import { driversNow } from './town';
  */
 
 const signed = (n: number): string => `${n > 0 ? '+' : '\u2212'}${Math.abs(n)}`;
-const percent = (share: number): string => `${Math.round(share * 1000) / 10}%`;
+/** A share as a percentage: whole from ten in a hundred up, to one decimal place below that. */
+const percent = (share: number): string => `${share >= 0.1 ? Math.round(share * 100) : Math.round(share * 1000) / 10}%`;
 const plural = (n: number, one: string, many: string): string => `${headCount(n)} ${n === 1 ? one : many}`;
 const lower = (text: string): string => `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 
@@ -38,7 +39,8 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
     case 'rating':
       return `${RATING_INPUT_NAME[effect.input]} ${signed(effect.points)} in the academic rating${effect.why ? `: ${effect.why}` : ''}`;
     case 'leaving':
-      return `${percent(effect.share)} more of each class leaves each semester: about ${plural(Math.round(enrollment(state) * effect.share), 'student', 'students')}`;
+      // Those who leave do not graduate, and the rating counts every class that ever finished here.
+      return `${percent(effect.share)} more of each class leaves each semester: about ${plural(Math.round(enrollment(state) * effect.share), 'student', 'students')}. Fewer of each class graduate, and the rating remembers`;
     case 'spareBeds': {
       const housed = housedIfOn(state);
       const waiting = state.offCampus[0] - housed;

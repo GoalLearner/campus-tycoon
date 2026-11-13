@@ -494,7 +494,7 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
       // &panel=policies opens the Policies page as a tap on its chip would. &panel=goals opens the Goals page.
-      if (panel === 'policies') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip')].find((b) => b.textContent?.startsWith('Policies'))?.click(), 1400);
+      if (panel === 'policies') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip')].find((b) => b.textContent?.startsWith('Policies'))?.click(), 2600);
       if (panel === 'goals') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
       // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
       if (panel === 'inbox') {
@@ -623,6 +623,15 @@ export function installDevTools(): void {
         freed.policies.locked = freed.policies.locked.filter((id) => !(params.get('unlock') ?? '').split(',').includes(id) && params.get('unlock') !== '1');
         store.adopt(freed, { ephemeral: true });
       }
+    }
+    // &standing=115 gives the campus the published rating of the school at that rank, so its next rankings day
+    // lands it about there. With &away, that is the paper of the day a goal and an era are reached.
+    const standing = Number(params.get('standing') ?? 0);
+    if (standing > 0 && store.hasGame) {
+      const set = structuredClone(store.state);
+      const ratings = set.field.schools.map((school) => school.ar).sort((a, b) => b - a);
+      set.field.academic = ratings[Math.min(ratings.length, standing) - 1] ?? set.field.academic;
+      store.adopt(set, { ephemeral: true });
     }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);

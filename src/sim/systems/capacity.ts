@@ -13,7 +13,7 @@ import type { GameState, Placed, Zone } from '../types';
 import { bedsWanted, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
 import { mealUse } from './food';
 import { roomUnderCap } from './goals';
-import { housedByPolicy } from './policies';
+import { housedNote } from './policies';
 import { workersAt, yardStatus } from './grounds';
 import { coverFor } from './incidents';
 import { playUse } from './play';
@@ -216,7 +216,7 @@ export function capacity(state: GameState): Capacity {
     const wanted = bedsWanted(state);
     const local = offCampusNow(state);
     // Freshmen from town a policy has put in the beds left over (DESIGN.md 41.7). They are named on this row.
-    const housed = housedByPolicy(state);
+    const { housed, by: housedBy } = housedNote(state);
     const noBed = Math.max(0, want - have);
     const status: NeedStatus = noBed > 0 || wanted > have ? 'short' : 'ok';
     let consequence = '';
@@ -228,7 +228,7 @@ export function capacity(state: GameState): Capacity {
       have,
       want,
       status,
-      line: `${headCount(want + housed)} of ${headCount(have)} in use · ${headCount(local - housed)} live in town${housed > 0 ? ` · Freshmen live on campus: ${headCount(housed)}` : ''}`,
+      line: `${headCount(want + housed)} of ${headCount(have)} in use · ${headCount(local - housed)} live in town${housed > 0 ? ` · ${housedBy}: ${headCount(housed)}` : ''}`,
       consequence,
       forecast: `Next fall's students need ${headCount(Math.max(want, wanted))}.`,
       fixLabel: 'See the Housing plan',

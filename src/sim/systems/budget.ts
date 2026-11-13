@@ -34,7 +34,7 @@ import { dayRead } from './season';
 import { footballBooks, homeGameNow } from './football';
 import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
 import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
-import { freeSeats, housedByPolicy, policyIncome, upkeepMore } from './policies';
+import { freeSeats, housedByPolicy, housedNote, policyIncome, upkeepMore } from './policies';
 import { offCampusNow } from './town';
 
 export { facultyCount, staffCount } from './staffing';
@@ -167,8 +167,9 @@ export function budget(state: GameState): Budget {
   const income: BudgetLine[] = [];
   const beds = occupiedBeds(state);
   income.push({ id: 'tuition', name: 'Tuition', amount: students * tuitionRate(state), detail: `${people(students, 'student', 'students')} at ${dollars(tuitionRate(state))}` });
-  const housed = housedByPolicy(state);
-  income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}${housed > 0 ? `. Freshmen live on campus: ${people(housed, 'of them is a freshman', 'of them are freshmen')} from town` : ''}` });
+  // Freshmen from town a policy has put in spare beds are in the count, and named with their policy.
+  const spare = housedNote(state);
+  income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}${spare.housed > 0 ? `. ${spare.by}: ${people(spare.housed, 'of them is a freshman', 'of them are freshmen')} from town` : ''}` });
   // Food and the stores earn by who is on campus: a quarter of students in a break, fewer in the summer term.
   const day = dayRead(state.clock);
   const away = day.presence < 1 ? ` ${day.name ?? 'This week'}: ${Math.round(day.presence * 100)}% of students are here` : '';
