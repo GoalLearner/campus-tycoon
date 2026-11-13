@@ -519,6 +519,27 @@ button:active {
   display: none;
 }
 
+/* Turn the view: low on the left, opposite Build (DESIGN.md section 43). */
+.turn-fab {
+  position: absolute;
+  left: calc(var(--safe-left) + 12px);
+  bottom: calc(var(--safe-bottom) + 78px);
+  padding: 11px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.turn-fab.hidden,
+.inspector.show ~ .turn-fab,
+.student.show ~ .turn-fab {
+  display: none;
+}
+
 /* Collect all: above Build, and only there while five or more buildings are ready. */
 .collect-fab {
   display: none;

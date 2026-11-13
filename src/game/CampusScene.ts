@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import { STAYING, type Stander } from '../app/activityPeople';
 import { planTraffic } from '../app/traffic';
 import { clock } from '../app/clock';
+import { twistMove, twistQuarters, twistStart, type Twist } from '../app/twist';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
 import { currentDaylight, type Daylight } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -16,7 +17,7 @@ import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
 import { GroundsWorkers } from './GroundsWorkers';
-import { Iso } from './iso';
+import { facingOf, Iso, type Turn } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
 import { townLook } from './townLook';
 import { Walkers } from './Walkers';
@@ -79,7 +80,15 @@ const WHEEL_STEP = 1.12;
 type Gesture =
   | { kind: 'pan'; lastX: number; lastY: number; travelled: number }
   | { kind: 'paint'; start: Point; last: Point }
-  | { kind: 'pinch'; distance: number; midX: number; midY: number };
+  | {
+      kind: 'pinch';
+      distance: number;
+      midX: number;
+      midY: number;
+      /** Whether two fingers are pinching or twisting (DESIGN.md section 43), and the camera as they found it. */
+      twist: Twist;
+      from: { zoom: number; scrollX: number; scrollY: number };
+    };
 
 interface Visual {
   ground: Phaser.GameObjects.Image;
@@ -245,6 +254,8 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
       this.placedDirty = true;
+      // The Turn button, or the twist (DESIGN.md section 43).
+      if (session.turn !== this.iso.turn && this.visuals.length > 0) this.applyTurn(session.turn);
       // The ring goes under whoever's card is open: a student, or anyone else out walking.
       this.walkers.setMarked(session.student ? studentKey(session.student) : session.person ? `p:${personKey(session.person)}` : null);
     });
@@ -377,14 +388,48 @@ export class CampusScene extends Phaser.Scene {
     const { width, height } = state.map;
     this.mapWidth = width;
     this.mapHeight = height;
+    // The map opens facing the way the player last left it.
+    this.iso.setMap(width, height);
+    this.iso.setTurn(session.turn);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const pos = this.iso.toWorld(x, y);
+        const pos = this.iso.cellTop(x, y);
         const ground = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(this.iso.depth(x, y, 0));
         this.visuals.push({ ground, object: null, works: null, signature: '' });
       }
     }
     this.frameCamera();
+  }
+
+  /**
+   * Turn the view (DESIGN.md section 43). The map is the same; it is laid down
+   * a quarter further round. Every tile is placed again and every drawing
+   * chosen again, once. The spot in the middle of the screen stays there.
+   */
+  private applyTurn(turn: Turn): void {
+    const cam = this.cameras.main;
+    const middle = this.iso.toMap(cam.scrollX + cam.width / 2, cam.scrollY + cam.height / 2);
+    this.iso.setTurn(turn);
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        const visual = this.visuals[y * this.mapWidth + x]!;
+        const pos = this.iso.cellTop(x, y);
+        visual.ground.setPosition(pos.x, pos.y).setDepth(this.iso.depth(x, y, 0));
+        visual.signature = '';
+      }
+    }
+    // Lamp glows and lit windows are placed again where their lamps and walls now stand.
+    for (const glow of this.glows.values()) glow.destroy();
+    this.glows.clear();
+    this.windows.clear();
+    this.dirty = true;
+    this.placedDirty = true;
+    this.overlayDirty = true;
+    this.nextBarsAt = 0;
+    this.glide = null;
+    const at = this.iso.toWorld(middle.x, middle.y);
+    cam.setScroll(at.x - cam.width / 2, at.y - cam.height / 2);
+    this.clampCamera();
   }
 
   private pathMask(state: GameState, x: number, y: number): number {
@@ -643,7 +688,7 @@ export class CampusScene extends Phaser.Scene {
     for (const cell of lampCells) {
       if (this.glows.has(cell)) continue;
       const x = cell % width;
-      const pos = this.iso.toWorld(x, (cell - x) / width);
+      const pos = this.iso.cellTop(x, (cell - x) / width);
       const glow = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(LIGHT_DEPTH + 1).setBlendMode(Phaser.BlendModes.ADD);
       this.art.apply(glow, 'lamp.glow');
       glow.setAlpha(this.light.lamps).setVisible(this.lampsLit);
@@ -709,7 +754,8 @@ export class CampusScene extends Phaser.Scene {
         let works = false;
 
         if (cell.kind === 'path') {
-          groundKey = `path.${this.pathMask(state, x, y)}`;
+          // The piece the turned grid joins up with (DESIGN.md section 43).
+          groundKey = `path.${this.iso.mask(this.pathMask(state, x, y))}`;
           // A street lamp every few cells along a walk. A broken one stays dark until a worker fixes it.
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
@@ -718,7 +764,8 @@ export class CampusScene extends Phaser.Scene {
           }
         } else if (cell.kind === 'road' || cell.kind === 'street') {
           // Beside a junction on the avenue the road is a marked crossing: where people from the town walk over.
-          groundKey = crossings.zebra[i] ? (this.roadMask(state, x, y) & 5 ? 'road.cross.5' : 'road.cross.10') : `road.${this.roadMask(state, x, y)}`;
+          const mask = this.iso.mask(this.roadMask(state, x, y));
+          groundKey = crossings.zebra[i] ? (mask & 5 ? 'road.cross.5' : 'road.cross.10') : `road.${mask}`;
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
             objectKey = out ? 'lamp.off' : lamp;
@@ -726,7 +773,7 @@ export class CampusScene extends Phaser.Scene {
           }
         } else if (cell.kind === 'crossing') {
           // The bars lie across the road, whichever way it runs.
-          groundKey = this.roadMask(state, x, y) & 5 ? 'road.cross.5' : 'road.cross.10';
+          groundKey = this.iso.mask(this.roadMask(state, x, y)) & 5 ? 'road.cross.5' : 'road.cross.10';
         } else if (cell.kind === 'house') {
           objectKey = `town.house.${cell.variant}`;
         } else if (cell.kind === 'town') {
@@ -765,28 +812,38 @@ export class CampusScene extends Phaser.Scene {
         let hidden = false;
         if (cell.kind === 'placed' && cell.placedId !== null) {
           const placed = state.map.placed[cell.placedId];
-          hidden = !!placed && PLACED[placed.type].flat && this.art.has(PLACED[placed.type].sprite) && !(placed.x === x && placed.y === y);
+          // The tile kept is the one at the drawing's top corner as the view is turned: the drawing lies over it,
+          // and any other would be drawn over the drawing (DESIGN.md section 43).
+          const top = placed ? this.iso.viewBox(placed.x, placed.y, placed.w, placed.h) : null;
+          const here = this.iso.viewCell(x, y);
+          hidden = !!placed && PLACED[placed.type].flat && this.art.has(PLACED[placed.type].sprite) && !(top!.x === here.x && top!.y === here.y);
         }
 
-        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}|${hidden ? 1 : 0}`;
+        // A driveway or a garden bed runs one way: on a quarter turn it is mirrored to run along the turned grid.
+        const groundFlip = this.iso.odd && (groundKey === 'town.driveway' || groundKey === 'town.garden');
+        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}|${hidden ? 1 : 0}|${groundFlip ? 1 : 0}`;
         const visual = this.visuals[i]!;
         if (visual.signature === signature) continue;
         visual.signature = signature;
 
         this.art.apply(visual.ground, groundKey);
+        if (groundFlip) visual.ground.setOrigin(1 - visual.ground.originX, visual.ground.originY);
+        visual.ground.setFlipX(groundFlip);
         visual.ground.setTint(tint);
         visual.ground.setVisible(!hidden);
 
-        const pos = this.iso.toWorld(x, y);
+        const pos = this.iso.cellTop(x, y);
         if (objectKey) {
           if (!visual.object) {
-            visual.object = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(this.iso.depth(x, y, 1));
+            visual.object = this.add.image(pos.x, pos.y, '__DEFAULT');
           }
           this.art.apply(visual.object, objectKey);
-          visual.object.setVisible(true).setPosition(pos.x, pos.y).setRotation(0);
+          visual.object.setVisible(true).setPosition(pos.x, pos.y).setRotation(0).setDepth(this.iso.depth(x, y, 1));
           if (objectKey.startsWith('tree.') || objectKey === 'quad.tree') {
-            // A tree turns about the foot of its trunk, so it can sway without its roots sliding.
-            const foot = this.iso.toWorld(x + 0.5, y + 0.56);
+            // A tree turns about the foot of its trunk, so it can sway without its roots sliding. The foot is a spot on
+            // the tree's own drawing, which faces the viewer at every turn.
+            const root = this.iso.onDrawing({ x, y, w: 1, h: 1 }, 0.5, 0.56);
+            const foot = this.iso.toWorld(root.x, root.y);
             const tree = visual.object;
             tree.setOrigin(tree.originX + (foot.x - pos.x) / tree.width, tree.originY + (foot.y - pos.y) / tree.height);
             tree.setPosition(foot.x, foot.y);
@@ -799,10 +856,10 @@ export class CampusScene extends Phaser.Scene {
 
         if (works) {
           if (!visual.works) {
-            visual.works = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(this.iso.depth(x, y, 2));
+            visual.works = this.add.image(pos.x, pos.y, '__DEFAULT');
             this.art.apply(visual.works, 'lot.works');
           }
-          visual.works.setVisible(true);
+          visual.works.setVisible(true).setPosition(pos.x, pos.y).setDepth(this.iso.depth(x, y, 2));
         } else if (visual.works) {
           visual.works.setVisible(false);
         }
@@ -892,6 +949,7 @@ export class CampusScene extends Phaser.Scene {
         if (!this.art.has(shown)) continue;
         const item: PlacedItem = { key: shown, x: placed.x, y: placed.y, w: 1, h: 1, layer: 'object', id: placed.id };
         if (placed.flip) item.flip = true;
+        if (decorSpec(placed.decor)?.turns) item.turns = true;
         if (session.moving === placed.id) item.alpha = 0.35;
         items.push(item);
         continue;
@@ -914,7 +972,7 @@ export class CampusScene extends Phaser.Scene {
       if (!placed || placed.type !== 'parking' || !hasRoadAccess(state.map, placed)) continue;
       const parked = Math.min(PARKED_AT.length, Math.ceil(fill * PARKED_AT.length));
       for (let k = 0; k < parked; k++) {
-        items.push({ key: `car.${(placed.id * 3 + k * 2) % 7}.ny`, x: placed.x + PARKED_AT[k]!, y: placed.y, forward: 2 });
+        items.push({ key: `car.${(placed.id * 3 + k * 2) % 7}.ny`, x: placed.x + PARKED_AT[k]!, y: placed.y, forward: 2, on: { x: placed.x, y: placed.y, w: placed.w, h: placed.h } });
       }
     }
     // A car park no road reaches holds no cars. A lowered barrier floats over it until one does.
@@ -947,6 +1005,7 @@ export class CampusScene extends Phaser.Scene {
       if (session.placing === 'decor' && session.decor) {
         ghost.key = decorSprite(state, session.decor);
         if (session.decorFlip) ghost.flip = true;
+        if (decorSpec(session.decor)?.turns) ghost.turns = true;
       }
       if (this.art.has(ghost.key)) items.push(ghost);
     }
@@ -1212,7 +1271,7 @@ export class CampusScene extends Phaser.Scene {
 
   private barTop(building: Building): number {
     const visual = this.visuals[building.y * this.mapWidth + building.x];
-    const pos = this.iso.toWorld(building.x, building.y);
+    const pos = this.iso.cellTop(building.x, building.y);
     if (visual?.object?.visible) return visual.object.getBounds().top - 14;
     return pos.y - 16;
   }
@@ -1227,7 +1286,7 @@ export class CampusScene extends Phaser.Scene {
       const total = stageSpec(building.zone, building.rebuild.toStage, 1).buildTicks * TICK_MS;
       const remaining = this.realTimeOfTick(state, building.rebuild.doneTick) - now;
       const done = Phaser.Math.Clamp(1 - remaining / total, 0, 1);
-      const pos = this.iso.toWorld(building.x, building.y);
+      const pos = this.iso.cellTop(building.x, building.y);
       const w = 64;
       const h = 9;
       const left = pos.x - w / 2;
@@ -1279,9 +1338,8 @@ export class CampusScene extends Phaser.Scene {
         const toY = over.y + over.h / 2;
         const x = fromX + (toX - fromX) * along;
         const y = fromY + (toY - fromY) * along;
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        const direction = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'se' : 'nw') : dy >= 0 ? 'sw' : 'ne';
+        const way = this.iso.dir(toX - fromX, toY - fromY);
+        const direction = facingOf(way.x, way.y);
         const facing = people.flip?.[direction] ?? direction;
         const look = (incident.kind === 'injury' ? people.roles?.medic : people.roles?.officer) ?? 0;
         const frame = along >= 1 ? 0 : Math.floor(timeMs / people.frameMs) % people.frames;
@@ -1293,7 +1351,7 @@ export class CampusScene extends Phaser.Scene {
         this.art.apply(sprite, `person.${look}.${facing}.${frame}`);
         sprite.setFlipX(people.flip?.[direction] !== undefined);
         const at = this.iso.toWorld(x, y);
-        sprite.setPosition(at.x, at.y).setDepth((x + y - 1) * 4 + 2.6);
+        sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(x, y) - 1) * 4 + 2.6);
         seen.add(incident.id);
       }
     }
@@ -1437,11 +1495,14 @@ export class CampusScene extends Phaser.Scene {
   private startPinch(): Gesture | null {
     const [a, b] = [...this.touches.values()];
     if (!a || !b) return null;
+    const cam = this.cameras.main;
     return {
       kind: 'pinch',
       distance: Math.hypot(a.x - b.x, a.y - b.y),
       midX: (a.x + b.x) / 2,
       midY: (a.y + b.y) / 2,
+      twist: twistStart(a, b),
+      from: { zoom: cam.zoom, scrollX: cam.scrollX, scrollY: cam.scrollY },
     };
   }
 
@@ -1462,6 +1523,21 @@ export class CampusScene extends Phaser.Scene {
     if (this.gesture.kind === 'pinch') {
       const next = this.startPinch();
       if (!next || next.kind !== 'pinch') return;
+      const [a, b] = [...this.touches.values()];
+      const was = this.gesture.twist.mode;
+      const twist = a && b ? twistMove(this.gesture.twist, a, b) : this.gesture.twist;
+      if (twist.mode === 'twist') {
+        // A twist never zooms: the map goes back to where the fingers found it, and leans a little their way
+        // until they lift and it snaps to the nearest quarter.
+        if (was !== 'twist') {
+          cam.setZoom(this.gesture.from.zoom);
+          cam.setScroll(this.gesture.from.scrollX, this.gesture.from.scrollY);
+        }
+        const lean = Phaser.Math.Clamp(twist.turned * 0.25, -22, 22);
+        cam.setRotation(Phaser.Math.DegToRad(lean));
+        this.gesture = { ...next, twist, from: this.gesture.from };
+        return;
+      }
       cam.setScroll(
         cam.scrollX - (next.midX - this.gesture.midX) / cam.zoom,
         cam.scrollY - (next.midY - this.gesture.midY) / cam.zoom,
@@ -1469,7 +1545,7 @@ export class CampusScene extends Phaser.Scene {
       if (this.gesture.distance > 0) {
         this.zoomAt(next.midX, next.midY, cam.zoom * (next.distance / this.gesture.distance));
       }
-      this.gesture = next;
+      this.gesture = { ...next, twist, from: this.gesture.from };
       return;
     }
 
@@ -1499,6 +1575,10 @@ export class CampusScene extends Phaser.Scene {
     if (!gesture) return;
 
     if (gesture.kind === 'pinch') {
+      // A twist turns the view the nearest number of quarters when its fingers lift.
+      this.cameras.main.setRotation(0);
+      const quarters = twistQuarters(gesture.twist);
+      if (quarters !== 0) session.turnView(quarters);
       // One finger may still be down. Carry on as a pan that can no longer count as a tap.
       const rest = [...this.touches.values()][0];
       this.gesture = rest ? { kind: 'pan', lastX: rest.x, lastY: rest.y, travelled: Infinity } : null;
@@ -1541,8 +1621,7 @@ export class CampusScene extends Phaser.Scene {
     const [gx, gy] = this.cellAt(screenX, screenY);
     for (let k = 4; k >= 1; k--) {
       for (const [dx, dy] of [[k, k], [k, k - 1], [k - 1, k]] as const) {
-        const x = gx + dx;
-        const y = gy + dy;
+        const { x, y } = this.iso.step(gx, gy, dx, dy);
         if (!this.inMap(x, y)) continue;
         if (store.state.map.cells[y * this.mapWidth + x]?.kind !== 'lot') continue;
         const object = this.visuals[y * this.mapWidth + x]?.object;

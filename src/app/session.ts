@@ -1,5 +1,19 @@
 import type { PaintPreview, PersonRef, PlacedType, StudentRef, Tool } from '../sim';
+import { nextTurn, type Turn } from '../game/iso';
 import { sound } from './sound';
+
+/** Which way the player last faced the map (DESIGN.md section 43). On this phone only, never in the save. */
+const TURN_KEY = 'campus-tycoon.turn';
+
+function storedTurn(): Turn {
+  try {
+    const stored = Number(localStorage.getItem(TURN_KEY));
+    return stored === 1 || stored === 2 || stored === 3 ? stored : 0;
+  } catch {
+    // Storage is blocked: the map faces the way it always has.
+    return 0;
+  }
+}
 
 /**
  * What the player is doing right now: the tool in hand, the lot they tapped,
@@ -55,6 +69,8 @@ class Session {
   /** An overlay the player has asked to see until they tap Done. Parking: which car parks and roads reach a street. Clean: litter, bins, broken things and where workers reach. */
   overlay: 'parking' | 'clean' | null = null;
   toast: Toast | null = null;
+  /** How far the view is turned, a quarter at a time (DESIGN.md section 43). For show only. */
+  turn: Turn = storedTurn();
 
   private listeners = new Set<Listener>();
   private toastId = 0;
@@ -222,6 +238,22 @@ class Session {
 
   setPreview(preview: PaintPreview | null): void {
     this.preview = preview;
+    this.emit();
+  }
+
+  /** Turn the view a quarter, clockwise on the screen. Four turns come home. The phone remembers the way it faces. */
+  turnView(by = 1): void {
+    this.setTurn(nextTurn(this.turn, by));
+  }
+
+  setTurn(turn: Turn): void {
+    if (turn === this.turn) return;
+    this.turn = turn;
+    try {
+      localStorage.setItem(TURN_KEY, String(turn));
+    } catch {
+      // Private browsing: it faces this way until the page closes.
+    }
     this.emit();
   }
 

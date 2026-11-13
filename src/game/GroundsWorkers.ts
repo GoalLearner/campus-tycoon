@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BIN_CAPACITY, isBrokenThing, isMessSpot, workersAt, type GameState, type Placed } from '../sim';
 import type { Art } from './art';
-import type { Iso } from './iso';
+import { facingOf, type Iso } from './iso';
 
 /**
  * Grounds workers, for show. One or two walk out from each staffed Facilities
@@ -118,20 +118,20 @@ export class GroundsWorkers {
       }
       const x = trip.fromX + dx * along;
       const y = trip.fromY + dy * along;
-      const vx = outbound ? dx : -dx;
-      const vy = outbound ? dy : -dy;
-      const direction = Math.abs(vx) >= Math.abs(vy) ? (vx >= 0 ? 'se' : 'nw') : vy >= 0 ? 'sw' : 'ne';
+      // The way they walk on the screen, as the view is turned.
+      const way = this.iso.dir(outbound ? dx : -dx, outbound ? dy : -dy);
+      const direction = facingOf(way.x, way.y);
       const facing = people.flip?.[direction] ?? direction;
       const frame = walking ? Math.floor(timeMs / people.frameMs) % people.frames : 0;
       this.art.apply(trip.body, `person.${people.roles!.worker}.${facing}.${frame}`);
       trip.body.setFlipX(people.flip?.[direction] !== undefined);
       const spot = this.iso.toWorld(x, y);
-      const depth = (x + y - 1) * 4 + 2.6;
+      const depth = (this.iso.sum(x, y) - 1) * 4 + 2.6;
       trip.body.setPosition(spot.x, spot.y).setDepth(depth);
       // The broom or cart goes beside them: no figure in the pack can hold anything.
       this.art.apply(trip.tool, trip.cart ? 'grounds.cart' : 'grounds.broom');
-      const beside = this.iso.toWorld(x - 0.75, y - 0.3);
-      trip.tool.setPosition(beside.x, beside.y).setDepth(depth - 0.1);
+      const off = this.iso.offset(-0.75, -0.3);
+      trip.tool.setPosition(spot.x + off.x, spot.y + off.y).setDepth(depth - 0.1);
       // At rest in the yard between trips, they are indoors.
       const indoors = at >= 2 * walkMs + WORK_MS;
       trip.body.setVisible(!indoors);

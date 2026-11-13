@@ -295,6 +295,7 @@ interface DevScene {
  *                     the second bench; &panel=workshop opens the Workshop
  *   &panel=build      open the Build menu; &shelf=Decor scrolls it to that heading
  *   &photo            photo mode
+ *   &turn=1           turn the view a quarter (2 a half, 3 three quarters); &view= then aims at the turned map
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -588,6 +589,9 @@ export function installDevTools(): void {
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);
   if (Number.isFinite(hour)) forceHour(hour);
+  // &turn=1 turns the view a quarter before the map is drawn (DESIGN.md section 43).
+  const turn = Number(params.get('turn') ?? NaN);
+  if (turn === 0 || turn === 1 || turn === 2 || turn === 3) session.setTurn(turn);
   if (params.get('demo') === 'look') {
     store.adopt(lookCampus(clock.now()), { ephemeral: true });
   } else if (params.get('demo') === 'stadium') {

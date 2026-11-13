@@ -506,6 +506,9 @@ export function mountUi(root: HTMLElement): void {
 
   // ---------------------------------------------------------------- build --
   const buildButton = button('Build', 'build-fab', () => openBuild());
+  // Turn the view a quarter, clockwise (DESIGN.md section 43). Four taps come home.
+  const turnButton = button('Turn', 'turn-fab', () => session.turnView());
+  turnButton.setAttribute('aria-label', 'Turn the view a quarter');
   // Collect all (DESIGN.md 42.4). The map shows the burst over each building as its marker goes.
   const collectButton = button('', 'collect-fab', () => collectAll());
   function collectAll(): void {
@@ -633,7 +636,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, turnButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1397,6 +1400,7 @@ export function mountUi(root: HTMLElement): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
     buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
+    turnButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     if (!type) return;
     setText(placeButton, 'Place');
@@ -1913,7 +1917,7 @@ export function mountUi(root: HTMLElement): void {
         photoShare.disabled = false;
       });
   });
-  photoButtons.append(photoShare, button('Done', '', () => session.setPhoto(false)));
+  photoButtons.append(photoShare, button('Turn', '', () => session.turnView()), button('Done', '', () => session.setPhoto(false)));
   photoBar.append(photoButtons, photoCaptionBox);
   root.append(photoBar);
   function renderPhoto(state: GameState): void {

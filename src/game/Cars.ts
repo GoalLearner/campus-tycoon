@@ -4,7 +4,7 @@ import type { DayPeriod } from '../app/daylight';
 import { newCar, placeCar, planTraffic, Traffic, type RouteNode, type TrafficCar } from '../app/traffic';
 import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars } from '../sim';
 import type { Art } from './art';
-import type { Iso } from './iso';
+import type { Heading, Iso } from './iso';
 import { driveways } from './townLook';
 
 /**
@@ -156,7 +156,7 @@ export class Cars {
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, key);
       const at = this.iso.toWorld(sign.x, sign.y);
-      sprite.setPosition(at.x, at.y).setDepth((sign.x + sign.y) * 4 + 2.45);
+      sprite.setPosition(at.x, at.y).setDepth(this.iso.sum(sign.x, sign.y) * 4 + 2.45);
       this.signs.push(sprite);
     }
     // Student cars have a cap of their own, so they follow the real number who drive in.
@@ -193,10 +193,12 @@ export class Cars {
           const ry = Math.floor(door / width);
           const bx = Math.max(placed.x, Math.min(placed.x + placed.w - 1, rx));
           const by = Math.max(placed.y, Math.min(placed.y + placed.h - 1, ry));
-          // On the road's kerb, outside the building's own ground. South or east of a building is in front
-          // of it, however wide it is, so there the driver is drawn over it.
-          const inFront = ry >= placed.y + placed.h || rx >= placed.x + placed.w;
-          const front = inFront ? (placed.x + placed.w - 1 + placed.y + placed.h - 1) * 4 + 3.1 : 0;
+          // On the road's kerb, outside the building's own ground. On the near sides of a building, as the view
+          // is turned, they are in front of it however wide it is, so there the driver is drawn over it.
+          const box = this.iso.viewBox(placed.x, placed.y, placed.w, placed.h);
+          const kerb = this.iso.viewCell(rx, ry);
+          const inFront = kerb.y >= box.y + box.h || kerb.x >= box.x + box.w;
+          const front = inFront ? this.iso.front(placed.x, placed.y, placed.w, placed.h) * 4 + 3.1 : 0;
           this.dropAt.set(door, { x: rx + 0.5 + (bx - rx) * 0.36, y: ry + 0.5 + (by - ry) * 0.36, front });
         }
       }
@@ -418,9 +420,10 @@ export class Cars {
   }
 
   private draw(vehicle: Vehicle): void {
-    this.art.apply(vehicle.sprite, `${vehicle.look}.${vehicle.heading}`);
+    // It drives the map. On a turned view its picture is the one for the way it goes on the screen.
+    this.art.apply(vehicle.sprite, `${vehicle.look}.${this.iso.heading(vehicle.heading as Heading)}`);
     const at = this.iso.toWorld(vehicle.x, vehicle.y);
-    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth((vehicle.x + vehicle.y) * 4 + 2.4);
+    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth(this.iso.sum(vehicle.x, vehicle.y) * 4 + 2.4);
   }
 
   private retire(index: number): void {
@@ -435,7 +438,7 @@ export class Cars {
 
   /** Cars standing in driveways: more at night, fewer by day. Redrawn only when the hour or the map changes. */
   private showParked(period: DayPeriod): void {
-    const key = `${period}:${this.drives.length}`;
+    const key = `${period}:${this.drives.length}:${this.iso.turn}`;
     if (key === this.parkedFor) return;
     this.parkedFor = key;
     for (const sprite of this.parked) sprite.destroy();
@@ -445,11 +448,11 @@ export class Cars {
       if (mix(cell, 7) >= HOME[period]) continue;
       const look = Math.floor(mix(cell, 3) * SMALL_CARS);
       // Nose to the street.
-      const heading = drive.y < drive.row ? 'py' : 'ny';
+      const heading = this.iso.heading(drive.y < drive.row ? 'py' : 'ny');
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, `car.${look}.${heading}`);
       const at = this.iso.toWorld(drive.x, drive.y);
-      sprite.setPosition(at.x, at.y).setDepth((drive.x + drive.y) * 4 + 2.3);
+      sprite.setPosition(at.x, at.y).setDepth(this.iso.sum(drive.x, drive.y) * 4 + 2.3);
       this.parked.push(sprite);
     }
   }
@@ -487,11 +490,11 @@ export class Cars {
         who.boxes.setVisible(out && this.art.has('people.boxes'));
         if (out) {
           const at = this.iso.toWorld(who.x, who.y);
-          const depth = Math.max((who.x + who.y - 1) * 4 + 2.6, who.front);
+          const depth = Math.max((this.iso.sum(who.x, who.y) - 1) * 4 + 2.6, who.front);
           who.body.setPosition(at.x, at.y).setDepth(depth);
           // The boxes go down on the kerb beside them.
-          const beside = this.iso.toWorld(who.x + 0.34, who.y + 0.08);
-          who.boxes.setPosition(beside.x, beside.y).setDepth(depth + 0.05);
+          const off = this.iso.offset(0.34, 0.08);
+          who.boxes.setPosition(at.x + off.x, at.y + off.y).setDepth(depth + 0.05);
         }
       }
       this.draw(vehicle);

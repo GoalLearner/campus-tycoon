@@ -90,7 +90,8 @@ export class Ambient {
     const drawn = this.art.has(spec.sprite) ? this.art.resolve(spec.sprite) : null;
     if (drawn && drawn.frame !== undefined) {
       const frame = this.scene.textures.getFrame(drawn.texture, drawn.frame);
-      const corner = this.iso.toWorld(0, 0);
+      // Measured on the drawing itself, which is the same at every turn of the view.
+      const corner = this.iso.project(0, 0);
       const wet = (px: number, py: number): boolean => {
         const colour = this.scene.textures.getPixel(Math.round(px), Math.round(py), drawn.texture, drawn.frame);
         return !!colour && colour.alpha > 200 && colour.blue > 150 && colour.blue > colour.red + 50;
@@ -99,7 +100,7 @@ export class Ambient {
         // The same places every time, spread over the pond.
         const x = mix(n, 5) * spec.w;
         const y = mix(n, 9) * spec.h;
-        const at = this.iso.toWorld(x, y);
+        const at = this.iso.project(x, y);
         const px = at.x - corner.x + drawn.originX * frame.width;
         const py = at.y - corner.y + drawn.originY * frame.height;
         if (wet(px, py) && wet(px - 9, py) && wet(px + 9, py) && wet(px, py - 5) && wet(px, py + 5)) spots.push({ x, y });
@@ -165,7 +166,11 @@ export class Ambient {
     this.water = [];
     for (const placed of state.map.placed) {
       if (!placed || PLACED[placed.type].family !== 'water') continue;
-      for (const spot of this.waterOn(placed.type)) this.water.push({ x: placed.x + spot.x, y: placed.y + spot.y, lift: 0, size: 1 });
+      // A spot of water on the pond's own drawing, wherever the turned view puts it.
+      for (const spot of this.waterOn(placed.type)) {
+        const at = this.iso.onDrawing({ x: placed.x, y: placed.y, w: placed.w, h: placed.h }, spot.x, spot.y);
+        this.water.push({ x: at.x, y: at.y, lift: 0, size: 1 });
+      }
     }
     const isQuad = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && cells[y * width + x]!.kind === 'quad';
     this.lawns = [];
@@ -174,8 +179,10 @@ export class Ambient {
         if (!isQuad(x, y)) continue;
         const links = Number(isQuad(x, y - 1)) + Number(isQuad(x + 1, y)) + Number(isQuad(x, y + 1)) + Number(isQuad(x - 1, y));
         // A quad of one cell is the fountain. Its basin is a small bowl, raised above the lawn.
-        if (links === 0) this.water.push({ x: x + 0.5, y: y + 0.62, lift: 17, size: 0.5 });
-        else this.lawns.push(y * width + x);
+        if (links === 0) {
+          const bowl = this.iso.onDrawing({ x, y, w: 1, h: 1 }, 0.5, 0.62);
+          this.water.push({ x: bowl.x, y: bowl.y, lift: 17, size: 0.5 });
+        } else this.lawns.push(y * width + x);
       }
     }
     // The same lawns have the sprinklers every morning.
@@ -215,7 +222,7 @@ export class Ambient {
         .setPosition(at.x, at.y - ripple.lift)
         .setScale((0.25 + age * 0.9) * ripple.size)
         .setAlpha(0.5 * (1 - age))
-        .setDepth((ripple.x + ripple.y - 1) * 4 + 2.3);
+        .setDepth((this.iso.sum(ripple.x, ripple.y) - 1) * 4 + 2.3);
     }
 
     // ---- sprinklers
@@ -245,7 +252,7 @@ export class Ambient {
         const px = x + 0.5 + Math.cos(angle) * far;
         const py = y + 0.5 + Math.sin(angle) * far;
         const at = this.iso.toWorld(px, py);
-        dot.setPosition(at.x, at.y - Math.sin(Math.PI * along) * 13 - 3).setDepth((px + py - 1) * 4 + 2.6).setAlpha(0.8 * (1 - along * 0.6));
+        dot.setPosition(at.x, at.y - Math.sin(Math.PI * along) * 13 - 3).setDepth((this.iso.sum(px, py) - 1) * 4 + 2.6).setAlpha(0.8 * (1 - along * 0.6));
       });
     });
   }

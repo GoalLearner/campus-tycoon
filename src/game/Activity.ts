@@ -4,7 +4,7 @@ import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
 import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
 import type { Art, PeopleSpec, WalkDirection } from './art';
-import type { Iso } from './iso';
+import { facingOf, type Box, type Iso } from './iso';
 
 /**
  * People using the campus, for show: a game on the courts, runners circling
@@ -63,6 +63,11 @@ type Role = ActivityRole;
 /** The order of the roles, for the seeded pick of who stands where. */
 const ROLES: readonly Role[] = ['court', 'field', 'runner', 'swimmer', 'door', 'line', 'seat', 'stall'];
 const SPORTY: readonly Role[] = ['court', 'field', 'runner'];
+/**
+ * Roles whose spot is on the building's own drawing: on its court, pitch, track or water, among its stalls, at its
+ * seat. When the view is turned they go where the turned view draws that drawing (DESIGN.md section 43).
+ */
+const ON_DRAWING: readonly Role[] = ['court', 'field', 'runner', 'swimmer', 'stall', 'seat'];
 
 interface Figure {
   sprite: Phaser.GameObjects.Image;
@@ -92,9 +97,9 @@ interface Site {
   foodNear: string[];
   /** A picnic table by a lecture hall, a library or a study center: a study group sits at it. */
   study: boolean;
-  /** Where its line stands: beside a path that touches it, or to its west. */
-  line: { x: number; y: number; dx: number; dy: number };
-  /** True when the line stands on the south or the east side: in front of the building, whatever its width. */
+  /** Where its line stands: beside a path that touches it, or to its west. On a court or a field, on its own lawn. */
+  line: { x: number; y: number; dx: number; dy: number; onDrawing?: boolean };
+  /** True when the line stands on a side nearer the viewer: in front of the building, whatever its width. */
   lineInFront: boolean;
   figures: Figure[];
   /** Things floating in a pool, and the ball on a field. */
@@ -177,18 +182,22 @@ export class Activity {
       // Where its line stands. A court and a field leave a strip of their own lawn down one side: the line
       // stands there, beside the game. Anything else has its line along one side, on open ground: in front
       // of it where it can be seen, on the south or the east side, and on a side with a path before one without.
-      let line = { x: placed.x - 0.35, y: placed.y + placed.h - 0.25, dx: 0, dy: -LINE_GAP };
+      let line: Site['line'] = { x: placed.x - 0.35, y: placed.y + placed.h - 0.25, dx: 0, dy: -LINE_GAP };
       let lineInFront = false;
       if (placed.type === 'courts' || placed.type === 'field') {
-        line = { x: placed.x + 0.44, y: placed.y + 0.3, dx: 0, dy: LINE_GAP };
+        line = { x: placed.x + 0.44, y: placed.y + 0.3, dx: 0, dy: LINE_GAP, onDrawing: true };
       } else {
         const kindAt = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
         const sides = [
-          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y + placed.h] as const), front: true, line: { x: placed.x + 0.25, y: placed.y + placed.h + 0.22, dx: LINE_GAP, dy: 0 } },
-          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x + placed.w, placed.y + n] as const), front: true, line: { x: placed.x + placed.w + 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
-          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x - 1, placed.y + n] as const), front: false, line: { x: placed.x - 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
-          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y - 1] as const), front: false, line: { x: placed.x + 0.25, y: placed.y - 0.22, dx: LINE_GAP, dy: 0 } },
-        ];
+          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y + placed.h] as const), out: [0, 1], line: { x: placed.x + 0.25, y: placed.y + placed.h + 0.22, dx: LINE_GAP, dy: 0 } },
+          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x + placed.w, placed.y + n] as const), out: [1, 0], line: { x: placed.x + placed.w + 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
+          { cells: Array.from({ length: placed.h }, (_, n) => [placed.x - 1, placed.y + n] as const), out: [-1, 0], line: { x: placed.x - 0.22, y: placed.y + 0.25, dx: 0, dy: LINE_GAP } },
+          { cells: Array.from({ length: placed.w }, (_, n) => [placed.x + n, placed.y - 1] as const), out: [0, -1], line: { x: placed.x + 0.25, y: placed.y - 0.22, dx: LINE_GAP, dy: 0 } },
+        ].map((side) => {
+          // A side is in front when it faces the viewer, as the view is turned.
+          const facing = this.iso.dir(side.out[0]!, side.out[1]!);
+          return { ...side, front: facing.x > 0 || facing.y > 0 };
+        });
         const open = sides.filter((side) => side.cells.every(([x, y]) => ['empty', 'path', 'quad', 'crossing'].includes(kindAt(x, y))));
         const paved = (side: (typeof sides)[number]): boolean => side.cells.some(([x, y]) => ['path', 'crossing'].includes(kindAt(x, y)));
         // In front first, so the line can be seen. Then a paved side before a bare one.
@@ -436,14 +445,24 @@ export class Activity {
       y = placed.y + around[1]!;
       figure.moving = false;
     }
-    const dx = x - figure.x;
-    const dy = y - figure.y;
-    if (figure.moving && (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4)) {
-      if (Math.abs(dx) >= Math.abs(dy)) figure.direction = dx >= 0 ? 'se' : 'nw';
-      else figure.direction = dy >= 0 ? 'sw' : 'ne';
+    // A spot on the building's own drawing goes where the turned view draws that drawing (DESIGN.md section 43).
+    if (ON_DRAWING.includes(figure.role) || (figure.role === 'line' && site.line.onDrawing)) {
+      const at = this.iso.onDrawing(this.boxOf(site), x - placed.x, y - placed.y);
+      x = at.x;
+      y = at.y;
     }
+    // Which way they face is which way they move on the screen. One standing still keeps facing the way they did.
+    const to = this.iso.view(x, y);
+    const from = this.iso.view(figure.x, figure.y);
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (figure.moving && (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4)) figure.direction = facingOf(dx, dy);
     figure.x = x;
     figure.y = y;
+  }
+
+  private boxOf(site: Site): Box {
+    return { x: site.placed.x, y: site.placed.y, w: site.placed.w, h: site.placed.h };
   }
 
   private ballAt(site: Site, seconds: number): { x: number; y: number } {
@@ -469,7 +488,7 @@ export class Activity {
       if (site.figures.length === 0 && site.props.length === 0) continue;
       // Buildings that stand up are drawn after the ground. People on them go in front of the whole footprint.
       const flat = PLACED[site.placed.type].flat;
-      const front = (site.placed.x + site.placed.w - 1 + site.placed.y + site.placed.h - 1) * 4 + 3;
+      const front = this.iso.front(site.placed.x, site.placed.y, site.placed.w, site.placed.h) * 4 + 3;
       for (let i = site.figures.length - 1; i >= 0; i--) {
         const figure = site.figures[i]!;
         figure.alpha = figure.leaving ? figure.alpha - dt / FADE_MS : Math.min(1, figure.alpha + dt / FADE_MS);
@@ -499,8 +518,8 @@ export class Activity {
         // The cut edge of a swimmer sits on the water.
         const sink = figure.role === 'swimmer' ? figure.sprite.displayHeight * 0.5 : 0;
         figure.sprite.setPosition(at.x, at.y + sink);
-        const own = (figure.x + figure.y - 1) * 4 + 2.5;
-        // A line on the south or east side stands in front of its building, however wide the building is.
+        const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
+        // A line on a side nearer the viewer stands in front of its building, however wide the building is.
         const beside = figure.role === 'line' || figure.role === 'door';
         figure.sprite.setDepth(flat || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front));
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
@@ -509,13 +528,15 @@ export class Activity {
         if (site.placed.type !== 'field') {
           // A study group's book lies open on the table.
           // The table's top is about 21 pixels of the map above where its picture stands.
-          const at = this.iso.toWorld(site.placed.x + 0.5, site.placed.y + 0.56);
-          prop.setPosition(at.x, at.y - 21).setDepth((site.placed.x + site.placed.y) * 4 + 2.7);
+          const book = this.iso.onDrawing(this.boxOf(site), 0.5, 0.56);
+          const at = this.iso.toWorld(book.x, book.y);
+          prop.setPosition(at.x, at.y - 21).setDepth(this.iso.depth(site.placed.x, site.placed.y, 2.7));
           continue;
         }
-        const spot = this.ballAt(site, seconds);
+        const ball = this.ballAt(site, seconds);
+        const spot = this.iso.onDrawing(this.boxOf(site), ball.x - site.placed.x, ball.y - site.placed.y);
         const at = this.iso.toWorld(spot.x, spot.y);
-        prop.setPosition(at.x, at.y).setDepth((spot.x + spot.y - 1) * 4 + 2.45);
+        prop.setPosition(at.x, at.y).setDepth((this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.45);
       }
     }
   }
