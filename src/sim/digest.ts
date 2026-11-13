@@ -145,6 +145,18 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   // The Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6): something finished is a line each, and so is a set opening.
   for (const entry of log) if (entry.kind === 'craft' || entry.kind === 'season') lines.push(entry.text);
 
+  // The calendar's moments and the year's goals (DESIGN.md 44). How a moment went and how the year went are near the
+  // top; a moment coming up is the calendar's own news; the rest is in the paper's back pages.
+  const saved = { weight: next.weight, kind: next.kind };
+  for (const entry of log) {
+    if (entry.kind !== 'rhythm') continue;
+    if (entry.data?.met !== undefined || entry.data?.yearDone === 1) as(TOP_WEIGHTS.goodNews, 'news');
+    else if (entry.data?.moment !== undefined) as(TOP_WEIGHTS.exams, 'news');
+    else as(saved.weight, saved.kind);
+    lines.push(entry.text);
+  }
+  as(saved.weight, saved.kind);
+
   // A policy turned on or off: one line each (DESIGN.md 41.7).
   for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
 

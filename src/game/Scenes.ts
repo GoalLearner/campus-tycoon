@@ -102,6 +102,16 @@ interface Scene {
  * art, as the courts and the pool were.
  */
 const STORM_FIELD = { x0: 1.15, x1: 1.95, y0: 0.75, y1: 1.85, lift: 4 };
+/**
+ * The pitch of the two biggest stadiums, two cells by three, measured from
+ * their own drawings the same way: the green of the pitch, in cells from the
+ * top corner. The pitch of the smaller ones is elsewhere in the picture.
+ */
+const STORM_FIELDS: Record<number, typeof STORM_FIELD> = {
+  4: { x0: 0.55, x1: 1.0, y0: 0.8, y1: 1.8, lift: 4 },
+  5: { x0: 0.5, x1: 0.82, y0: 0.7, y1: 1.55, lift: 4 },
+};
+const pitchOf = (tier: number): typeof STORM_FIELD => STORM_FIELDS[tier] ?? STORM_FIELD;
 
 /** A steady number from two whole numbers, so a scene's place and people do not flicker. */
 function mix(a: number, b: number): number {
@@ -430,9 +440,10 @@ export class Scenes {
         if (!this.scenes.has(key)) {
           // On the stadium's own pitch: two cells by two at tiers one to three, and by three at four and five.
           const scene = this.begin(key, 'storm', ground.x, ground.y, 2, 2, { x: ground.x, y: ground.y, w: 2, h: ground.tier >= 4 ? 3 : 2 });
+          const pitch = pitchOf(ground.tier);
           for (let k = 0; k < STORM_SIZE; k++) {
-            const x = ground.x + STORM_FIELD.x0 + mix(k, 3) * (STORM_FIELD.x1 - STORM_FIELD.x0);
-            const y = ground.y + STORM_FIELD.y0 + mix(k, 5) * (STORM_FIELD.y1 - STORM_FIELD.y0);
+            const x = ground.x + pitch.x0 + mix(k, 3) * (pitch.x1 - pitch.x0);
+            const y = ground.y + pitch.y0 + mix(k, 5) * (pitch.y1 - pitch.y0);
             this.actor(scene, 'storm', look(k * 17 + ground.x, 13), x, y, (['se', 'sw', 'nw', 'ne'] as const)[k % 4]!, false, true);
           }
         }
@@ -535,7 +546,7 @@ export class Scenes {
           scene.kind === 'storm' && host
             ? this.iso.front(host.x, host.y, host.w, host.h) * 4 + 1.2 + this.iso.sum(spot.x, spot.y) * 0.01
             : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
-        actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? STORM_FIELD.lift : 0)).setDepth(depth).setAlpha(alpha);
+        actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? pitchOf(this.stadium?.tier ?? 1).lift : 0)).setDepth(depth).setAlpha(alpha);
       }
     }
   }

@@ -3,6 +3,8 @@ import { session } from '../app/session';
 import { sound } from '../app/sound';
 import { store } from '../app/store';
 import { awayView, inboxView, welcomeView, type PaperView } from './deskUi';
+import { giftReady } from '../sim';
+import { giftCard } from './rhythmUi';
 
 /**
  * The Inbox and the away screen (DESIGN.md section 36). The Inbox has three
@@ -216,6 +218,21 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
       else if (report) store.awaySeen(report);
       close();
     };
+    // The day's gift opens the paper (DESIGN.md 44). One tap takes it; once taken, the card says what it gave.
+    const slot = el('div', 'gift-slot');
+    let took = '';
+    const drawGift = (): void => {
+      slot.textContent = '';
+      if (!giftReady(store.state) && !took) return;
+      const gift = giftCard(store.state, (words) => {
+        took = words;
+        drawGift();
+      });
+      if (gift) slot.append(gift);
+      if (took) slot.append(el('p', 'gift-took', took));
+    };
+    drawGift();
+    body.append(slot);
     if (welcome) {
       drawPaper(body, welcome, (where) => {
         leave();

@@ -24,6 +24,7 @@ import { newPolicies } from './systems/policies';
 import { newDaily } from './systems/daily';
 import { firstOrders, newOrders } from './systems/orders';
 import { newDecor } from './systems/decor';
+import { newRhythm } from './systems/rhythm';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
@@ -211,6 +212,7 @@ export function newGame(opts: NewGameOptions): GameState {
     orders: newOrders(),
     // Decorations in storage and the Workshop's one bench (DESIGN.md 42.5 and 42.6).
     decor: newDecor(),
+    rhythm: newRhythm(),
   };
   firstOrders(state);
   startFootball(state, 1);

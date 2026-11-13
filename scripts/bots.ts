@@ -1077,7 +1077,9 @@ function useDecor(state: GameState, as: Style): GameState {
   const special = decorOffers(current)
     .filter((offer) => offer.spec.home.kind === 'seals' && offer.way === 'seals' && current.daily.seals - offer.seals >= SEALS_KEPT)
     .sort((a, b) => a.placed - b.placed || a.seals - b.seals)[0];
-  if (special && (current.decor.tally.boughtSeals ?? 0) < current.clock.week.year) {
+  // A second one in a week when the Seals pile up, as a player with plenty would (DESIGN.md 44).
+  const plenty = special ? current.daily.seals - special.seals >= SEALS_KEPT + 15 : false;
+  if (special && ((current.decor.tally.boughtSeals ?? 0) < current.clock.week.year || plenty)) {
     const lots = lotsNow();
     let spot: Point | null = null;
     for (const lot of lots) {
@@ -1124,8 +1126,31 @@ function useDecor(state: GameState, as: Style): GameState {
   return current;
 }
 
+/**
+ * The daily rhythm (DESIGN.md 44), as a player who looks in would use it: today's gift taken from the paper, and a
+ * moment of the calendar that went well claimed from the board.
+ */
+function useRhythm(state: GameState): GameState {
+  if (!hasDaily(state)) return state;
+  let current = state;
+  if (botOptions.daily) {
+    const took = applyAction(current, { type: 'takeGift' });
+    if (took.ok) current = took.state;
+  }
+  if (botOptions.orders) {
+    for (const moment of [...current.rhythm.moments]) {
+      if (moment.met !== true) continue;
+      const claimed = applyAction(current, { type: 'claimMoment', id: moment.id });
+      if (claimed.ok) current = claimed.state;
+    }
+  }
+  return current;
+}
+
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
+  // The paper opens with today's gift.
+  state = useRhythm(state);
   // The visit opens with the button that says an order is new: the board is looked at, which starts its orders.
   if (botOptions.orders && hasDaily(state)) {
     const looked = applyAction(state, { type: 'seeOrders' });

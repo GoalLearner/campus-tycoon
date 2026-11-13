@@ -5169,7 +5169,7 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 
 ## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store
 
-Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15. Stop 2, the orders board, is built: 42.16 to 42.19. Stop 3, decorating, the Workshop and photo mode, is built: 42.20 to 42.23.
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design.** Asked "Start building, with the University Level and collecting first?", he answered on 2026-11-12: "Build it". It is built one stop at a time in the order of 42.11, each verified and reported to him before the next is begun. What is built is recorded from 42.12 on. Stop 1, the level and collecting, is built: 42.12 to 42.15. Stop 2, the orders board, is built: 42.16 to 42.19. Stop 3, decorating, the Workshop and photo mode, is built: 42.20 to 42.23. Stop 4, the daily gift, the goals for the year and the moments of the calendar, is built: section 44.
 
 Two things he said that govern all of it:
 
@@ -5324,8 +5324,8 @@ Built on 2026-11-12, on the owner's "Build it". Only a game with goals has the l
 | Experience | One number that only rises. Eleven sources, kept as data: each has a name, an amount and whether it happens by itself. A later stop adds its own (an order done, the daily gift) as one more entry, and the Level page lists it | `XP_SOURCES` in `src/sim/config/daily.ts`, `gainXp` and `earn` in `src/sim/systems/daily.ts` |
 | By itself | A class moves in 80, a home win 60, graduation 200, a rank goal 300, a full campus 300, an era 500, a dorm or lecture hall that grows 10. So a player who comes once a day levels, and so does a campus nobody visits | The same |
 | By hand | Collecting from a building (what it held), a building placed by hand that opens 40, a dorm or lecture hall that opens 15, a home game collected at the stadium 40 | The same |
-| The level | Worked out from experience. Level 2 asks 60, each level 40 more than the last, and none more than 800. It never falls | `levelAt`, `levelCost` |
-| What a level gives | One Gold Seal, three at every fifth level, and a line in the paper. Several levels reached at once are one line. The list of what a level opens besides its Seals is data, and is empty until the stops that have a decoration, a recipe or an order to open | `levelGifts`, `LEVEL_UNLOCKS` |
+| The level | Worked out from experience. Level 2 asks 60, each level 40 more than the last, and none more than 800. It never falls. Since stop 4, none more than 1,000 (44.3) | `levelAt`, `levelCost` |
+| What a level gives | One Gold Seal, three at every fifth level (two since stop 4, 44.3), and a line in the paper. Several levels reached at once are one line. The list of what a level opens besides its Seals is data, and is empty until the stops that have a decoration, a recipe or an order to open | `levelGifts`, `LEVEL_UNLOCKS` |
 | Gold Seals | One balance in the save. From levels, and 5 for a rank goal, 5 for a full campus and 10 for an era, on the day each is reached: the goal's own line says how many | `dailyOnGoals`, called from `land` in `src/sim/systems/goals.ts` |
 | Nothing is sold | No store, no purchase, no price in money anywhere | |
 | Collecting | Food places and the campus store fill by the hour. What one holds is worked out from the time since it was last collected, when somebody asks. Nothing runs on a tick, and no lot is walked | `collectables` |
@@ -5429,8 +5429,8 @@ Collecting itself is not in these numbers: its cash goes straight to the bank an
 | Decision | Chosen | The alternative |
 |---|---|---|
 | Where the level and the Seals show | One small button on the right of the row that holds Inbox | On the first row of the top bar, which is full. Or two buttons, which is one more to fit at 375 wide |
-| What a level asks | 60 for the first, 40 more for each, 800 at most | A cost that keeps rising for ever. The campus's experience a day stops rising once it is built, so levels would slow to a crawl |
-| What a level gives now | One Seal, three at every fifth | Two and five, as first built. It came to nineteen Seals a week, three waits' worth |
+| What a level asks | 60 for the first, 40 more for each, 800 at most. 1,000 at most since stop 4 (44.3) | A cost that keeps rising for ever. The campus's experience a day stops rising once it is built, so levels would slow to a crawl |
+| What a level gives now | One Seal, three at every fifth. Two at every fifth since stop 4 (44.3) | Two and five, as first built. It came to nineteen Seals a week, three waits' worth |
 | Experience for building | A building that opens holds a bonus to tap, a dozen a day at most. Growing pays by itself | Experience on the tap that builds. Clearing gives the money back within a minute, so tapping build and clear would be a way to level |
 | The 36 hours | Counted in time, so the store's faster filling after a win is never cut off | Counted in what is held. The once-a-day player then lost a little at the store after every home win |
 | When the marker shows | After six hours of filling | At once. The map would never be clear of markers |
@@ -5861,6 +5861,164 @@ Tests: 19 new (12 for the turn, 7 for the twist): 778 in all. The long run's 72 
 | Fronts that face away | Every drawing shows its front, so on some turns a door faces away from its path or street, as the sheet showed |
 | The far edge comes to the front | The road along the map's far edge becomes the near edge on a turn and shows its grey side |
 | A turn is about one frame | 10 to 16 ms on this PC, perhaps a short pause on a slower phone |
-| Fans after a big win at tiers four and five | They stand partly on the stands, at every turn: where they stand was measured on the smaller stadium, before this stop |
+| Fans after a big win at tiers four and five | They stand partly on the stands, at every turn: where they stand was measured on the smaller stadium, before this stop. Fixed in stop 4 (44.1) |
 | A line may stand behind its building | When only the far sides of a building are open on a turn, its line stands there |
 | Things in motion at the moment of a turn | A truck's driver at a door keeps the depth it had until the truck leaves, and a ripple finishes where it began |
+
+---
+
+## 44. The daily and seasonal rhythm, as built
+
+Stop 4 of the daily layer (42.11), built on 2026-11-13 from his choices in 42.8, on his overnight word relayed by the main session: "perfect handle all of that with my approval on all... if you finish these...keep going". Two things govern it, as they govern all of 42: "Make the game easy and rewarding so users stick around and play", and nothing is ever taken for being away. Everything here is a bonus. Only a game with goals has it: a game on the small campus has no gift, no goals for the year and no moments, and its long-run tables print the same numbers as before.
+
+### 44.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The player's day | Starts two hours before the anchor of 36.4, the hour the player said they look in. A player who looks in at 8 AM has a day that turns at 6 AM | `giftDayNow` in `src/sim/systems/rhythm.ts`, `GIFT_DAY_EARLY` |
+| The daily gift | The first look of each of the player's days has a gift waiting. It shows at the top of the paper's first screen, as a card of seven boxes with what each holds, and one tap, "Take today's gift", takes it and fills the box. It also shows at the top of the Level page, and the level chip carries a gold dot while it waits | `giftCard` in `src/ui/rhythmUi.ts`, `deskPanels.ts`, `ui.ts` |
+| The card | Day 1: 50 experience. Day 2: 30 and a grant of $1,500 on the small campus's count. Day 3: 60. Day 4: 30 and a decoration. Day 5: 30 and $2,500. Day 6: 80. Day 7, the better one: 120 experience, a Gold Seal and a decoration. Then a fresh card. The cash follows the campus scale ($42,000 and $70,000 on the model campus) and comes out of the same yearly allowance as the orders' grants, so money still holds | `GIFT_CARD` in `src/sim/config/rhythm.ts` |
+| A missed day | Does nothing. The card waits on the box it was on: there is no streak to lose, and a gift not taken is not lost, only not yet taken. One box a day at most | `giftReady`, `takeGift` |
+| The decoration | One the Decor shelf has opened, the kind the campus holds fewest of, put in storage to place free. Chosen, never drawn by chance | `giftDecor` |
+| Goals for the year | Three, set when the fall class moves in, one easy, one medium and one stretch, of three different kinds, chosen from the campus's seed and the year. They are read from the campus's own numbers: a count of what is done from the day they are set, a level, Happiness or the money kept. A goal is only asked of a campus that can meet it: collecting once it collects, decorations once the Decor shelf is open, making once the Workshop is. A game begun after move-in gets its three at the start of its next day, if commencement is a day and a half or more away | `setYearGoals`, `YEAR_KINDS` |
+| The eight kinds | Finish orders on the board (4, 7, 11 more). Collect from buildings (30, 60, 100). Reach a level (2, 4, 7 above it). Win home games (1, 2, 4). End the year with Happiness of (2 under, the same, 2 over where it stands). Keep $12, $13.50 or $15 of every $100 at commencement. Set out decorations (3, 6, 10). Make things at the Workshop (2, 4, 6) | `YEAR_KINDS` |
+| Paid | At commencement, for each goal met: easy 100 experience, medium 150, stretch 250 and a Gold Seal. Never rank points. A goal missed costs nothing, and the paper says three new ones come with the fall class | `payYear`, `YEAR_PAY` |
+| The Year row | At the top of the orders board, gold-edged: each goal with its bar, how far along, easy, medium or stretch, what it pays, and "Paid at commencement, in" the time left. It is not one of the board's places | `boardTop`, `yearView` |
+| Moments of the calendar | Homecoming, the rivalry, finals (the fall's and the spring's) and commencement, each a special order under the Year row with a dashed gold edge. Each opens at the first start of the player's day that is 60 hours or less before it, so a day and a half or more ahead, with a themed line in the paper. What it asks is fixed when it opens. It is measured when the moment comes. None takes an ordinary place on the board | `openMoments`, `momentViews` |
+| What each asks | Homecoming: fill the stadium (95% of the seats, the sell-out of section 34) once there is one, or win the game at the rented field. The rivalry: beat them, at home or away. Finals: keep Stress at or under what finals would bring a campus that changes nothing, plus 3, read an hour before the last exam. Commencement: see 95% of the seniors, as they stand when it opens, graduate | `openMoment`, `rhythmOnGame`, `rhythmOnTimer`, `rhythmOnGraduation` |
+| What each pays | Homecoming and the rivalry: 160 experience and a grant of $3,000 on the small campus's count. Finals: 120 and $2,000. Commencement: 200 and $4,000. No Seals. An ordinary order pays one or two of these: 60 to 160 experience (300 for the semester's Stress), a grant of $2,000 to $4,000, 1 or 2 Seals, or a decoration. The grants come out of the orders' yearly allowance | `MOMENTS` |
+| When it went well | The card turns green, says Done and has a Claim button, and the paper says "The order is done: claim it on the board." It waits to be claimed until it is claimed | `claimMoment` |
+| When it did not | The card says what happened and "There is always next year", and leaves the board a day later. Nothing is taken | `MOMENT_MISSED_HOURS` |
+| The paper | A moment opening is told at the weight of exams news, and one met or the year's goals paid at the weight of good news. The year's goals are told when set and when paid | `src/sim/digest.ts` |
+| Seasonal sets | The sets of stop 3, as built in 42.20: the paper's line "The fall set is on the Decor shelf until 30 November" | |
+| Phone notices | One a morning at most of what is ready, half an hour after the wake hour the notices already use (36.4): the day's gift, things the Workshop finished, orders done. It counts in the day's limit of notices, after a decision that is closing and before results, and keeps to the waking hours of 36.4 | `readyNotice` in `src/sim/notify.ts` |
+| The level | A school year is a real week, so the goals and the five moments come every week. To keep a level coming every day or two (42.2) and the Seals at about one special thing a week (42.7), the most a level asks is now 1,000 experience where it was 800, from level 20 on, and every fifth level gives 2 Seals where it gave 3. The seventh gift and the stretch goal carry those Seals instead | `LEVEL_MOST`, `SEALS_FIFTH_LEVEL` in `src/sim/config/daily.ts` |
+| Fans after a big win | At tiers four and five they now stand on the pitch of the stadium drawn there, measured from the two drawings, at every turn | `STORM_FIELDS` in `src/game/Scenes.ts` |
+| Saves | Version 21. One migration gives an older save an empty rhythm: its card at Day 1, its goals set at its next day start, its moments opening as they come. It also moves the save's experience onto the new costs, so its level, and how far into it, stay exactly as they were. A game under level 20 is untouched. A v20 fixture made from a model campus like his, named Larp University, upgrades in the tests. The upgrade note says what is new | `relevelXp`, `src/sim/save.ts`, `tests/fixtures/save-v20-model.json`, `src/app/upgradeNotes.ts` |
+| The dev page | `&giftbox=6` opens the card on its seventh box | `src/app/devtools.ts` |
+| Art | Nothing new. The gift card shows the decoration's own sprite, the Gold Seal and the level wreath already in the game | |
+
+### 44.2 Measured
+
+The test players take the gift each time they look in and claim each moment that went well, as well as all they did at stop 3. Two seeds each, 44 real weeks. A school year is a real week, so each of them saw 44 sets of goals and 220 moments.
+
+**The gift.** Every test player took 309 gifts in 308 days and filled 44 cards: one box a day, never two. A real week of it is 401 experience, a Gold Seal, 2 decorations and $73,000 to $89,000 of grants on the model campus.
+
+**Goals for the year.** Set in every one of the 44 years for every player, three each time.
+
+| Measured | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Goals met, of 132 | 70 and 74 | 69 and 73 | 66 and 71 |
+| Experience a week from them | 224 and 255 | 218 and 248 | 213 and 245 |
+| Seals a week from them | 0.2 and 0.4 | 0.2 and 0.3 | 0.2 and 0.4 |
+
+About half are met. A goal missed cost nothing, and three new ones came with the next fall class.
+
+**The moments.** Opened, and met, over 44 years.
+
+| Moment | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| Homecoming | 44, 43 and 44, 43 | 44, 43 and 44, 43 | 44, 43 and 44, 43 |
+| The rivalry | 44, 44 and 44, 39 | 44, 44 and 44, 39 | 44, 44 and 44, 39 |
+| Finals, twice a year | 88, 78 and 88, 69 | 88, 80 and 88, 74 | 88, 81 and 88, 80 |
+| Commencement | 44, 44 and 44, 44 | 44, 44 and 44, 44 | 44, 44 and 44, 44 |
+| Experience a week | 729 and 686 | 735 and 700 | 737 and 716 |
+| Grants a year | $205,000 and $207,000 | $204,000 and $209,000 | $207,000 and $209,000 |
+
+Every moment opened 47 hours or more before it came. Homecoming and commencement are almost always met, finals four times in five: it rewards a campus that holds steady.
+
+**The pace of the rank goals.** The real week each is reached.
+
+| Goal | Casual | Once a day | Works every cause | Stop 3 (42.21): the same three |
+|---|---|---|---|---|
+| Top 100 | 7 | 7 | 7 | 7, 7, 7 |
+| Top 75 | 11 to 12 | 11 to 12 | 11 to 12 | 11 to 12 for each |
+| Top 50 | 14 to 16 | 14 to 16 | 14 to 16 | 14 to 16 for each |
+| Top 25 | 20 to 21 | 20 to 21 | 20 to 21 | 20 to 21 for each |
+| Top 10 | 25 to 27 | 24 to 27 | 24 to 27 | 25 to 27, 25 to 27, 24 to 27 |
+| Rank at week 44 | 2nd to 3rd | 2nd to 3rd | 2nd to 3rd | 2nd to 3rd for each |
+
+Nothing in the rhythm pays rank points. The Top 10 still comes no sooner than week 24.
+
+**Levels.**
+
+| Measured | Casual | Once a day | Works every cause | Stop 3 |
+|---|---|---|---|---|
+| First sitting | 5 to 6 | 5 to 6 | 5 to 6 | 4 to 5 |
+| Week 1 | 8 to 10 | 7 to 9 | 7 to 9 | 7 to 9 |
+| Week 4 | 31 | 30 to 31 | 29 to 30 | 26 to 29 |
+| Week 12 | 76 | 75 to 82 | 74 to 76 | 70 to 79 |
+| Week 44 | 261 to 265 | 252 to 284 | 253 to 259 | 237 to 268 |
+| A week, weeks 4 to 12, once a day | | 5.6 and 6.4 | | 5.5 and 6.3 |
+| A week, weeks 12 to 44, once a day | | 5.5 and 6.3 | | 5.3 and 5.9 |
+
+As first built, with the rhythm paying 250 to 350 experience a moment and the old costs, the once-a-day player gained 8.1 to 8.8 levels a week, more than one a day, and the long run failed. With the pay of 44.1 and 1,000 at most for a level, a level comes every day or two as before. The level runs a little ahead in the first weeks, where a level costs less than 1,000 and the rhythm's experience counts for more.
+
+**Gold Seals.** A real week.
+
+| Measured | Casual | Once a day | Works every cause | Stop 3 |
+|---|---|---|---|---|
+| Earned a week | 12.7 and 12.8 | 12.6 and 13.5 | 12.5 and 12.6 | 11.4 to 13.1 |
+| Spent a week | 12.1 and 12.2 | 12.0 and 12.9 | 11.7 and 11.9 | 10.9 to 11.5 |
+| Special decorations bought | 47 and 47 | 48 and 52 | 47 and 48 | 44 each |
+| Held at week 44 | 32 and 33 | 33 and 34 | 28 and 39 | 16 to 78 |
+
+As first built the Seals came to 21 a week and failed the long run's check, and the once-a-day player held 234 and 247 by week 44. Now they buy about one special thing a week again, with a little to spare: 1 a week from the card, 0.2 to 0.4 from the goals, and about 1.2 fewer from the fifth levels.
+
+**Money.** Kept of every $100.
+
+| Measured | Casual | Once a day | Works every cause | Stop 3: the same three |
+|---|---|---|---|---|
+| Years 3 to 8 | $13.70 to $15.40 | $13.00 to $15.50 | $11.30 to $14.00 | $13.80 to $15.60, $13.00 to $15.50, $11.30 to $14.00 |
+| Weeks 9 to 44 | $13.90 to $15.90 | $14.20 to $16.30 | $11.70 to $15.60 | $13.90 to $16.00, $13.80 to $16.30, $11.60 to $15.60 |
+
+The gift's and the moments' grants come out of the orders' yearly allowance, so the orders' own grants fell to $38,000 to $58,000 a year (from $126,000 to $155,000 at stop 3). Gift, moments and orders together come to about $330,000 to $350,000 a year, under a tenth of a dollar in every $100. The casual and the once-a-day player stay inside $12 to $17. The keenest player dips under $12 in an early year and some later weeks on one seed, as at stop 3.
+
+**The orders board.** A real week: 11.4 to 11.9 offered, 8.8 to 9.9 claimed (8.9 to 10.2 at stop 3), and every day with an order for one sitting. The moments take none of its places.
+
+**Decorations.** The card gives 2 a week. Owned at week 44: 302 to 327 (221 to 244 at stop 3), 108 to 128 of them on the map and 197 to 209 in storage (103 to 128 at stop 3). How the campus looks is the same as at stop 3, 68.4 to 69.4: the test players set one out only where it lifts a lot, and each lot's lift has its cap. The long run's row "given by the town" now counts the card's too: the town's own are 18 or 19, as before.
+
+**Catch-up.** A week away on a model campus four days in, with the rhythm under way, catches up in 0.05 to 0.11 seconds on this PC. At stop 3 a tended campus with 115 decorations out took 0.08 to 0.13. Planning the phone's notices for three days takes 35 to 37 thousandths of a second, against 20 to 22 for the same days played in one step, because it stops each morning to see what is ready.
+
+**Tests and long runs.** 19 new tests: 797 in all. Four new long-run checks: 76 in all, every one passing. The small campus's tables are the same as before, line for line.
+
+### 44.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| What the card holds | The same seven boxes for everyone, every week, each shown before it is taken | A gift drawn by chance, which is a mystery box in all but name: 42.7 rules those out |
+| When the player's day turns | Two hours before the hour they look in, so a gift is never taken twice in one sitting that runs past midnight, and the morning look always finds it | Midnight, which gives two gifts to a player who looks in at 11 PM and again at 1 AM |
+| Gift cash | Out of the orders' yearly allowance, so the money holds | On top of it, which would push the money kept above $17 |
+| The decoration | The kind the campus holds fewest of, of those the Decor shelf has opened, counting what is in storage | One drawn by chance. Or one fixed decoration, which piles up |
+| Seals in the gift | One, on the seventh day | One a day, which would more than half again what a free player earns. Or 2 on the seventh, as first built: see the next rows |
+| Where the gift shows | At the top of the paper's first screen and the Level page, with a gold dot on the level chip | A window that must be closed before playing |
+| Choosing the year's goals | From the campus's seed and the year: the same campus gets the same three | The player picks from a list |
+| When they are set | When the fall class moves in, so a year's goals are read from the campus that will meet them | At commencement for the year after, which sets them a summer early |
+| What they pay | Experience, and a Seal for the stretch goal | Cash, which the money's yearly cap would mostly swallow. Or a Seal for the medium goal too, as first built |
+| The money goal | Kept of every $100 at commencement, as he set it: $12, $13.50 or $15 | A step above where it stands, which could ask a campus for more than $17 |
+| A game begun mid-year | Gets its three at its next day start, if commencement is a day and a half or more off | Waits until the next fall |
+| Moment pay | More experience than most orders and a grant besides, no Seals: 160, 160, 120 and 200 experience | As first built, 250 to 350 experience with Seals at homecoming and commencement. In the long run that took the level to 8 a week and the Seals to 21 a week, failing the pace of 42.2 and the Seals of 42.7. A school year is a real week, so five moments come every week |
+| What finals asks | What finals would bring a campus that changes nothing, plus 3. It rewards holding steady, on any campus | A fixed number, which a large campus can never meet and a small one always does |
+| What commencement asks | 95% of the seniors as they stand when it opens | 97%, which a campus that changed nothing missed by a few students |
+| Homecoming | Fill the stadium once there is one. Before that, win the game | Win the game always, which has nothing to do with the campus |
+| Homecoming in a new game's first year | Not offered: a new game begins within a day and a half of it | Opened with less notice, which would break the rule of 36 hours |
+| Finals | Twice a year, the fall's and the spring's, as the calendar has two | Once a year |
+| A moment missed | Leaves the board a day later. The next comes next year | Stays on the board until the next one |
+| The morning notice | Half an hour after the wake hour the notices use, after a decision that is closing and before results | A notice the moment anything is ready, which could be many a day |
+| Keeping the pace of the level | The most a level asks rises from 800 to 1,000, from level 20 on. The rhythm's own experience stays worth having, and a level still comes every day or two | Keep 800 and pay the rhythm a third as much experience, so a moment pays less than an ordinary order. Or less experience for collecting, which is half of all experience and the touch of the game |
+| Keeping the Seals | Every fifth level gives 2 Seals, not 3. That pays for the seventh gift's Seal and the stretch goal's | No Seals in the rhythm, which his choice of 42.7 lists. Or more Seals for everyone, which makes the store's packs worth less |
+| A saved game far along | Its experience is moved onto the new costs, so its level and how far into it stay as they were | Leave the experience as it is: a game past level 20 would then show a lower level, and a level never falls (42.2) |
+| The test players | Take the gift each time they look in and claim each moment that went well. They buy a second special decoration in a week when their Seals would still leave 15 over what they keep for a wait | Spend no more than before, which leaves the seventh gift's and the goals' Seals unspent |
+| Fans after a big win at tiers four and five | Measured from those two stadium drawings | Left as they were, partly on the stands (43.4) |
+
+### 44.4 Rough
+
+| Rough | Why |
+|---|---|
+| A new game has no homecoming in its first year | It begins within a day and a half of homecoming, and every moment gives at least that much notice |
+| A moment's grant can be smaller than the board said, or none | It comes out of the orders' yearly allowance, which the gift's cash now shares. The board shows what it would pay now. In a two-week run, the spring's commencement paid $28,000 where the board had said $112,000 when it opened |
+| The gift card sits above the paper's headline | The first screen of the paper shows less of the paper on a day with a gift waiting |
+| The level and the Seals of stop 1 moved | The most a level asks, 800 to 1,000, and the fifth level's Seals, 3 to 2. Levels come at the same pace as before; what he saw on the stop 1 page is a little different |
+| Planning the phone's notices takes longer | It plays forward a morning at a time to see what is ready: 35 to 37 thousandths of a second for three days on the model campus on this PC, against 20 to 22 before. It runs when the game is put away |
+| More decorations in storage | The test players hold 197 to 209 by week 44, where they held 103 to 128 at stop 3: the card's two a week, set out only where they lift a lot. A person will set them out where they look nice |
+| Never run on a phone | The morning notice in particular. Checked in pictures and tests on this PC, at 390 wide |

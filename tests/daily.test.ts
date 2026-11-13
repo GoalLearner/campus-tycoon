@@ -141,9 +141,9 @@ describe('the University Level', () => {
     expect(levelGifts(1000)).toEqual([{ kind: 'seals', count: SEALS_FIFTH_LEVEL }]);
     expect(SEALS_FIFTH_LEVEL).toBeGreaterThan(SEALS_PER_LEVEL);
     expect(giftWords(levelGifts(2))).toBe('1 Gold Seal and red flowers for the Decor shelf');
-    expect(giftWords(levelGifts(1000))).toBe('3 Gold Seals');
+    expect(giftWords(levelGifts(1000))).toBe('2 Gold Seals');
     expect(giftWords(levelGifts(999))).toBe('1 Gold Seal');
-    expect(giftWords(levelGifts(5))).toBe('3 Gold Seals and a fourth order on the board');
+    expect(giftWords(levelGifts(5))).toBe('2 Gold Seals and a fourth order on the board');
     // What a level opens besides its Seals is a list: a kind of order, one more order on the board, a decoration
     // for the Decor shelf or a Workshop recipe (tests/orders.test.ts, tests/decor.test.ts). One more is one entry.
     for (const gifts of Object.values(LEVEL_UNLOCKS)) {
@@ -179,13 +179,13 @@ describe('the University Level', () => {
     gainXp(state, -500, log);
     gainXp(state, 0, log);
     expect(state.daily.xp).toBe(LEVEL_FIRST);
-    // Three levels in one go are one line, with everything they gave: levels 3 and 4 a Seal each, level 5 three.
+    // Three levels in one go are one line, with everything they gave: levels 3 and 4 a Seal each, level 5 two.
     gainXp(state, levelCost(2) + levelCost(3) + levelCost(4), log);
     expect(state.daily.level).toBe(5);
     expect(state.daily.seals).toBe(SEALS_PER_LEVEL * 3 + SEALS_FIFTH_LEVEL);
     // With what levels 3 and 4 open on the orders board, in the same line.
     const opened = [3, 4, 5].flatMap((level) => levelGifts(level).filter((gift) => gift.kind === 'unlock'));
-    expect(log[1]!.text).toBe(`Test University reaches University Level 5, 3 levels at once: ${giftWords([{ kind: 'seals', count: 5 }, ...opened])}.`);
+    expect(log[1]!.text).toBe(`Test University reaches University Level 5, 3 levels at once: ${giftWords([{ kind: 'seals', count: 2 * SEALS_PER_LEVEL + SEALS_FIFTH_LEVEL }, ...opened])}.`);
     expect(log).toHaveLength(2);
     for (const entry of log) expect(toneProblem(entry.text), entry.text).toBeNull();
     expect(state.daily.level).toBe(levelAt(state.daily.xp).level);
@@ -673,6 +673,7 @@ describe('a save from version 17', () => {
     expected.orders = state.orders;
     // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
     expected.decor = state.decor;
+    expected.rhythm = state.rhythm;
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -742,7 +743,7 @@ describe('a save from version 17', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(3);
+    expect(notes).toHaveLength(4);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

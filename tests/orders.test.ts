@@ -807,7 +807,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(18);
-      expect(SAVE_VERSION).toBe(20);
+      expect(SAVE_VERSION).toBe(21);
       // A game already in play opens with its first three orders, none seen, and nothing said.
       expect(state.orders.open).toHaveLength(3);
       expect(state.orders.open.every((order) => order.seen === undefined && order.kind === undefined && order.offered === file.state.clock.tick)).toBe(true);
@@ -818,6 +818,7 @@ describe('saves', () => {
       expected.orders = state.orders;
       // Version 20 adds the decorations in storage and the Workshop (tests/decor.test.ts has those).
       expected.decor = state.decor;
+      expected.rhythm = state.rhythm;
       expected.rng.orders = state.rng.orders;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
@@ -841,7 +842,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
