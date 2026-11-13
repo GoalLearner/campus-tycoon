@@ -36,6 +36,7 @@ import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER
 import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
 import { freeSeats, housedByPolicy, housedNote, policyIncome, upkeepMore } from './policies';
 import { offCampusNow } from './town';
+import { welcomeMore } from './bigBuilds';
 
 export { facultyCount, staffCount } from './staffing';
 
@@ -226,7 +227,7 @@ export function budget(state: GameState): Budget {
   for (const cell of state.map.cells) if (cell.kind === 'road' || cell.kind === 'crossing') roads += 1;
   let placedCount = 0;
   for (const placed of state.map.placed) {
-    if (!placed) continue;
+    if (!placed || placed.done !== undefined) continue;
     const bill = utilitiesOf(placed.type, scale);
     utilities += bill;
     if (bill > 0 || placedUpkeep(placed.type, scale) > 0) placedCount += 1;
@@ -298,5 +299,7 @@ export function marketingCost(state: GameState, step: number): number {
 }
 
 export function marketingLift(state: GameState): number {
-  return MARKETING_LIFT[Math.max(0, Math.min(MARKETING_LIFT.length - 1, state.money.marketing))]!;
+  const lift = MARKETING_LIFT[Math.max(0, Math.min(MARKETING_LIFT.length - 1, state.money.marketing))]!;
+  // The Welcome Center (DESIGN.md 45): each step brings a share more. Nothing at step 0.
+  return lift * (1 + welcomeMore(state));
 }

@@ -1,6 +1,6 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, readyToCollect } from '../sim';
 import { collectShow } from '../game/CampusScene';
-import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
+import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -672,6 +672,42 @@ export function installDevTools(): void {
           }
         }
         if (best) store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
+      }
+      // &big=studentUnion,honorsCollege places those big builds of the eras (DESIGN.md 45), each on the free ground
+      // nearest &bigat=x,y, and opens them at once. &going=honorsCollege leaves that one going up, and &builders=2 hires
+      // the second builder first.
+      const bigs = (params.get('big') ?? '').split(',').filter((one) => one !== '') as PlacedType[];
+      if (bigs.length > 0) {
+        const rich = structuredClone(store.state);
+        rich.money.cash = Math.max(rich.money.cash, 2_000_000_000);
+        if (params.get('builders') === '2') rich.bigBuilds.slots = 2;
+        store.adopt(rich, { ephemeral: true });
+        const [bx, by] = (params.get('bigat') ?? params.get('at') ?? '16,16').split(',').map(Number) as [number, number];
+        const going = (params.get('going') ?? '').split(',');
+        for (const type of bigs) {
+          let best: [number, number] | null = null;
+          let near = Infinity;
+          const map = store.state.map;
+          for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+              const far = Math.abs(x - bx) + Math.abs(y - by);
+              if (far >= near || previewPlace(store.state, type, x, y).problem !== null) continue;
+              near = far;
+              best = [x, y];
+            }
+          }
+          if (!best) continue;
+          const placed = store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
+          if (!placed.ok || going.includes(type)) continue;
+          const open = structuredClone(store.state);
+          const it = open.map.placed.find((one) => one?.type === type);
+          if (it) {
+            delete it.done;
+            open.timers = open.timers.filter((timer) => !(timer.kind === 'bigBuild' && timer.ref === it.id));
+            open.bigBuilds.news = [];
+          }
+          store.adopt(open, { ephemeral: true });
+        }
       }
       // &policies=parkingFees,quietHours turns those on, as taps on their switches would (DESIGN.md section 41).
       // &unlock=1 then frees them, as the next class moving in does, so a picture can show both kinds of switch.

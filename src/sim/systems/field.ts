@@ -23,6 +23,7 @@ import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
 import { begunHere, yearAcceptance } from './admissions';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
+import { honorsRate } from './bigBuilds';
 import { classPressure, crowding } from './season';
 import { classSizeNow, facultyStretched, ratioTarget } from './staffing';
 
@@ -195,7 +196,10 @@ export function academicInputs(state: GameState): AcademicInput[] {
     entered += record.entered;
     finished += record.finishedOnTime + record.finishedLate;
   }
-  const graduation = entered > 0 ? finished / entered : null;
+  const finishing = entered > 0 ? finished / entered : null;
+  // The Honors College (DESIGN.md 45) lifts the rate a little, across the campus, never past all of a class.
+  const honors = finishing === null ? 0 : Math.min(1 - finishing, honorsRate(state));
+  const graduation = finishing === null ? null : finishing + honors;
   // Selectivity is the year's: its fall class and its spring class together.
   const accept = yearAcceptance(state);
   // Class size has two named causes, in equal parts: how full the seats are, and how many students there are
@@ -210,7 +214,7 @@ export function academicInputs(state: GameState): AcademicInput[] {
   const last = state.admissions.lastSemester;
   const retention = last ? Math.max(0, Math.min(1, last.happiness / 100)) : null;
   const inputs: AcademicInput[] = [
-    { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes` },
+    { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes${honors > 0 ? `, ${Math.round(honors * 100)} of them with the Honors College` : ''}` },
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : 100 * retention, detail: retention === null ? 'No semester has ended yet' : `${(100 * (RETENTION_FLOOR + RETENTION_SPAN * retention)).toFixed(1)}% return each semester` },

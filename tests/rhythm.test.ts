@@ -313,7 +313,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(21);
+    expect(SAVE_VERSION).toBe(22);
   });
 
   describe('from version 20', () => {
@@ -331,6 +331,8 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.rhythm = newRhythm();
+      // Version 22 adds the big builds of the eras (tests/bigBuilds.test.ts has those).
+      expected.bigBuilds = state.bigBuilds;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
@@ -338,7 +340,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

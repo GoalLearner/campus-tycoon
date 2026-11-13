@@ -926,6 +926,23 @@ export class CampusScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * A big build going up: the pack's own building site for its block, two by
+   * two or two by one, and a site on every cell of anything larger.
+   */
+  private showSite(placed: Placed, items: PlacedItem[]): void {
+    const block = placed.w === 2 && placed.h === 2 ? 'build.site' : placed.w * placed.h === 2 ? 'build.site.wide' : null;
+    if (block && this.art.has(block)) {
+      items.push({ key: block, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: 'object', id: placed.id });
+      return;
+    }
+    const cell = this.art.has('lot.site') ? 'lot.site' : null;
+    if (!cell) return;
+    for (let y = placed.y; y < placed.y + placed.h; y++) {
+      for (let x = placed.x; x < placed.x + placed.w; x++) items.push({ key: cell, x, y, layer: 'ground', id: placed.id });
+    }
+  }
+
   /** Draw the hand-placed buildings in the game state, and the one being placed. */
   private showPlaced(state: GameState): void {
     const items: PlacedItem[] = [...this.devItems];
@@ -952,6 +969,11 @@ export class CampusScene extends Phaser.Scene {
         if (decorSpec(placed.decor)?.turns) item.turns = true;
         if (session.moving === placed.id) item.alpha = 0.35;
         items.push(item);
+        continue;
+      }
+      // A big build of an era going up (DESIGN.md 45) is a building site until it opens.
+      if (placed.done !== undefined) {
+        this.showSite(placed, items);
         continue;
       }
       items.push({ key, x: placed.x, y: placed.y, w: placed.w, h: placed.h, layer: sprite.flat ? 'ground' : 'object', id: placed.id });

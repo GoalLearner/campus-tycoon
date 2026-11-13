@@ -66,7 +66,8 @@ export function upkeepPerYear(state: GameState): number {
   for (const b of state.map.buildings) {
     if (b && b.stage > 0) total += stageSpec(b.zone, b.stage, scale).upkeepPerYear;
   }
-  for (const placed of state.map.placed) if (placed) total += placedUpkeep(placed.type, scale);
+  // A big build going up (DESIGN.md 45) is paid for once it opens.
+  for (const placed of state.map.placed) if (placed && placed.done === undefined) total += placedUpkeep(placed.type, scale);
   for (const cell of state.map.cells) if (cell.kind === 'road' || cell.kind === 'crossing') total += ROAD_UPKEEP_PER_YEAR * scale;
   return total;
 }

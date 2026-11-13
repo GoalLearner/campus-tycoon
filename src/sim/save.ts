@@ -19,6 +19,7 @@ import { backPay, newDaily, relevelXp } from './systems/daily';
 import { firstOrders, newOrders } from './systems/orders';
 import { newDecor } from './systems/decor';
 import { newRhythm } from './systems/rhythm';
+import { newBigBuilds } from './systems/bigBuilds';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -27,7 +28,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 21;
+export const SAVE_VERSION = 22;
 
 export interface SaveFile {
   v: number;
@@ -307,6 +308,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (daily && typeof daily.xp === 'number') daily.xp = relevelXp(daily.xp);
     return state;
   },
+  // Version 22: the big builds of the eras (DESIGN.md 45). One builder, and nothing going up. What a game has
+  // already reached opens them at once.
+  21: (state) => {
+    if (typeof state.bigBuilds !== 'object' || state.bigBuilds === null) (state as unknown as GameState).bigBuilds = newBigBuilds();
+    return state;
+  },
 };
 
 /**
@@ -372,7 +379,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

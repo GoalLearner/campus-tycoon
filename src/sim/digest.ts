@@ -157,6 +157,14 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   }
   as(saved.weight, saved.kind);
 
+  // A big build of an era (DESIGN.md 45): one going up is the paper's news, one that opens is good news.
+  for (const entry of log) {
+    if (entry.kind !== 'bigBuild') continue;
+    as(entry.data?.started === 1 ? saved.weight : TOP_WEIGHTS.goodNews, entry.data?.started === 1 ? saved.kind : 'news');
+    lines.push(entry.text);
+  }
+  as(saved.weight, saved.kind);
+
   // A policy turned on or off: one line each (DESIGN.md 41.7).
   for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
 

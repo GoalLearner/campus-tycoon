@@ -673,12 +673,13 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(19);
-      expect(SAVE_VERSION).toBe(21);
+      expect(SAVE_VERSION).toBe(22);
       expect(state.decor).toEqual(newDecor());
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.decor = newDecor();
       expected.rhythm = state.rhythm;
+      expected.bigBuilds = state.bigBuilds;
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its money, its level, its Seals and its orders are what they were.
@@ -703,7 +704,7 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

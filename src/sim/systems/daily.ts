@@ -1,3 +1,4 @@
+import { goingUp, hurryBigBuild } from './bigBuilds';
 import { decorSpec, hurryCraft } from './decor';
 import { ticksToIntake } from '../calendar';
 import {
@@ -456,6 +457,8 @@ export function waits(state: GameState): Wait[] {
   state.decor.benches.forEach((bench, index) => {
     if (bench.making !== null && bench.done !== null && bench.done > tick) wait(`craft:${index}`, decorSpec(bench.making)?.name ?? 'The Workshop', 'It is ready', bench.done - tick);
   });
+  // A big build of an era going up (DESIGN.md 45).
+  for (const placed of goingUp(state)) wait(`build:${placed.id}`, PLACED[placed.type].name, 'It opens', placed.done! - tick);
   return out;
 }
 
@@ -478,6 +481,8 @@ export function finishNow(state: GameState, id: string): string | null {
     state.staffing.staff = Math.max(state.staffing.staff, next.staff);
   } else if (id.startsWith('craft:')) {
     hurryCraft(state, Number(id.slice('craft:'.length)));
+  } else if (id.startsWith('build:')) {
+    hurryBigBuild(state, Number(id.slice('build:'.length)));
   } else {
     const policy = id.slice('policy:'.length);
     state.policies.locked = state.policies.locked.filter((one) => one !== policy);

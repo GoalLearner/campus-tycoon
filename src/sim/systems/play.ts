@@ -3,6 +3,7 @@ import { placedRoom } from '../config/placed';
 import { CROWD_LIFT_FLOOR, CROWD_WORST_AT, PLACED, PLAY_SHARE, WAIT_MINUTES_AT_WORST } from '../config/placed';
 import { enrollment } from '../selectors';
 import type { GameState, MapState, Placed } from '../types';
+import { unionAt } from './bigBuilds';
 
 /**
  * How busy each recreation building is (the owner, 2026-11-11). A court, a
@@ -122,6 +123,8 @@ export function recreationAt(state: GameState, x: number, y: number): number {
       sum += PLACED[placed.type].strength * (playUse(state, placed)?.lift ?? 1);
     }
   }
+  // The Student Union (DESIGN.md 45): somewhere to meet over a wide circle. It has no line to wait in.
+  sum += unionAt(map, x, y);
   return Math.min(1, sum);
 }
 

@@ -1,3 +1,4 @@
+import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { scaleOf } from './scale';
 import { placedCost } from './config/placed';
 import { PLACED } from './config/placed';
@@ -89,7 +90,8 @@ export type Action =
   | { type: 'buyBench' }
   // The daily rhythm (DESIGN.md 44): today's gift, and a moment of the calendar that went well.
   | { type: 'takeGift' }
-  | { type: 'claimMoment'; id: number };
+  | { type: 'claimMoment'; id: number }
+  | { type: 'buySecondBuilder' };
 
 export interface PaintPreview {
   tool: Tool;
@@ -238,6 +240,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
     }
     // Clearing any cell of a hand-placed building takes the whole building.
     if (state.football.stadium.plot === cell.placedId) state.football.stadium.plot = null;
+    if (map.placed[cell.placedId]?.done !== undefined) bigBuildCleared(state, cell.placedId);
     dailyOnCleared(state, 'placed', cell.placedId);
     removePlaced(map, cell.placedId);
     return;
@@ -325,6 +328,11 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
     if (!rewardsEarned(state).includes(type)) return { ok: false, state, error: `${spec.name} comes with the Top ${RANK_GOALS[goal]}.` };
     if (!rewardsWaiting(state).includes(type)) return { ok: false, state, error: `${spec.name} is already on the campus. Clear it first to move it.` };
   }
+  // A big build of an era is one of a kind, opened by its era, and goes up while a builder is free (DESIGN.md 45).
+  if (isBigBuild(type)) {
+    const why = cannotStart(state, type);
+    if (why) return { ok: false, state, error: why };
+  }
   if (type === 'stadium' && state.football.stadium.plot !== null && state.map.placed[state.football.stadium.plot]) {
     return { ok: false, state, error: 'The campus already has a stadium plot. Clear it first to move it.' };
   }
@@ -339,8 +347,9 @@ function place(state: GameState, type: PlacedType, x: number, y: number): Action
   // A yard opens with a worker on its books.
   if (type === 'yard') next.grounds.workers[built.id] = YARD_START_WORKERS;
   if (type === 'stadium') next.football.stadium.plot = built.id;
-  // The daily layer: it begins to fill from now, and holds its opening bonus.
-  dailyOnPlaced(next, built.id);
+  if (isBigBuild(type)) startBigBuild(next, built);
+  // The daily layer: it begins to fill from now, and holds its opening bonus. A big build does so when it opens.
+  if (!isBigBuild(type)) dailyOnPlaced(next, built.id);
   next.money.cash -= preview.cost;
   next.money.yearSpent += preview.cost;
   recomputeDesirability(next.map);
@@ -662,6 +671,11 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'takeGift':
     case 'claimMoment':
       return rhythmAction(state, action);
+    case 'buySecondBuilder': {
+      const next = structuredClone(state);
+      const problem = buySecondBuilder(next);
+      return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
   }
 }
 

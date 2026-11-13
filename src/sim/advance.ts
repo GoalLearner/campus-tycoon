@@ -3,6 +3,7 @@ import { tellDaily } from './systems/daily';
 import { offerDaily, tellOrders } from './systems/orders';
 import { decorOnDayStart, onCraftDone } from './systems/decor';
 import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from './systems/rhythm';
+import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -104,6 +105,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   // And an order claimed gets its line (DESIGN.md 42.16).
   tellOrders(state, log);
   tellRhythm(state, log);
+  tellBigBuilds(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -160,6 +162,10 @@ function fireTimer(state: GameState, timer: Timer, log: LogEntry[]): void {
     case 'moment':
       // A moment of the calendar measured on the clock: finals week (DESIGN.md 44).
       rhythmOnTimer(state, timer.ref, log);
+      break;
+    case 'bigBuild':
+      // A big build of an era has gone up (DESIGN.md 45): it opens, and the paper says so.
+      bigBuildDone(state, timer.ref, log);
       break;
     case 'craftDone':
       // The Workshop has finished something: the paper says so. It waits on its bench for ever.

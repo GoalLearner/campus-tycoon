@@ -1,3 +1,4 @@
+import { newBigBuilds } from './systems/bigBuilds';
 import { newInbox } from './systems/inbox';
 import { stageSpec } from './config/buildings';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
@@ -213,6 +214,7 @@ export function newGame(opts: NewGameOptions): GameState {
     // Decorations in storage and the Workshop's one bench (DESIGN.md 42.5 and 42.6).
     decor: newDecor(),
     rhythm: newRhythm(),
+    bigBuilds: newBigBuilds(),
   };
   firstOrders(state);
   startFootball(state, 1);

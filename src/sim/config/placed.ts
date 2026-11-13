@@ -1,6 +1,7 @@
 import type { PlacedType } from '../types';
 import { DECOR_POINT, DECOR_REACH } from './decor';
 import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
+import { COMMONS_POINTS, HONORS_RATE, UNION_REACH, UNION_STRENGTH, WELCOME_MORE } from './bigBuilds';
 
 /**
  * Hand-placed buildings: what the Build menu offers. Each belongs to one
@@ -10,12 +11,12 @@ import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned' | 'Decor';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned' | 'Decor' | 'Flagship' | 'Legacy';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -232,6 +233,25 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   bellTower: {
     name: 'Bell Tower', category: 'Earned', family: 'reward', w: 1, h: 1, cost: 0, upkeepPerYear: 0,
     radius: REWARD_REACH, strength: 14, effect: `Lifts how the campus looks within ${REWARD_REACH} cells`, sprite: 'reward.bell', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  // What the eras open (DESIGN.md 41.3 and 41.4, as built in section 45). One of each, bought once its era has
+  // come, and built over real days. Each moves one number the game already has, named in config/bigBuilds.ts.
+  // Prices are on the small campus's count and follow the campus scale: on the model campus, 28 times these.
+  studentUnion: {
+    name: 'Student Union', category: 'Flagship', family: 'era', w: 2, h: 2, cost: 1_200_000, upkeepPerYear: 300_000,
+    radius: UNION_REACH, strength: UNION_STRENGTH, effect: `Things to do and somewhere to meet, for every lot within ${UNION_REACH} cells`, sprite: 'era.union', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  honorsCollege: {
+    name: 'Honors College', category: 'Flagship', family: 'era', w: 2, h: 1, cost: 1_000_000, upkeepPerYear: 250_000,
+    radius: 0, strength: 0, effect: `Lifts the graduation rate the academic rating reads by ${Math.round(HONORS_RATE * 100)} points, across the campus`, sprite: 'era.honors', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  welcomeCenter: {
+    name: 'Welcome Center', category: 'Flagship', family: 'era', w: 2, h: 1, cost: 800_000, upkeepPerYear: 220_000,
+    radius: 0, strength: 0, effect: `Each step of marketing brings ${Math.round(WELCOME_MORE * 100)} in a hundred more`, sprite: 'era.welcome', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
+  foundersCommons: {
+    name: "Founders' Commons", category: 'Legacy', family: 'era', w: 3, h: 3, cost: 9_000_000, upkeepPerYear: 40_000,
+    radius: 0, strength: 0, effect: `Grounds ${COMMONS_POINTS} points better for every student, wherever they live`, sprite: 'era.commons', flat: true, buildable: true, utilitiesPerYear: 0,
   },
 };
 

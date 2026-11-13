@@ -3816,6 +3816,283 @@
     }
    ]
   },
+  "era.union": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Shopping/Groceries_Mall.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "era.honors": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Hotel_TwoFloors.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "era.welcome": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Hotel_OneFloor.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "build.site.wide": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Construction_1x2.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "era.commons": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "shift": [
+      1,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "shift": [
+      2,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree1.png",
+     "stand": [
+      0.5,
+      0.5
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree13.png",
+     "stand": [
+      2.5,
+      0.45
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Tree13.png",
+     "stand": [
+      0.45,
+      2.5
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/StreetLight.png",
+     "stand": [
+      1.85,
+      0.95
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/StreetLight.png",
+     "stand": [
+      0.95,
+      1.85
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Statue.png",
+     "stand": [
+      1.5,
+      1.5
+     ],
+     "scale": 1.7
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Bench.png",
+     "stand": [
+      2.45,
+      1.75
+     ]
+    },
+    {
+     "file": "penzilla/Medieval/Decor/Bench.png",
+     "stand": [
+      1.75,
+      2.45
+     ],
+     "flip": true
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Plants/Plant1.png",
+     "stand": [
+      2.55,
+      2.55
+     ],
+     "scale": 1.2
+    }
+   ]
+  },
   "icon.injury": {
    "layers": [
     {
@@ -5226,6 +5503,26 @@
   "reward.alumni": [
    2,
    1
+  ],
+  "era.union": [
+   2,
+   2
+  ],
+  "era.honors": [
+   2,
+   1
+  ],
+  "era.welcome": [
+   2,
+   1
+  ],
+  "era.commons": [
+   3,
+   3
+  ],
+  "build.site.wide": [
+   2,
+   1
   ]
  },
  "menuCredit": "Graphics created by Penzilla Design.",
@@ -5236,7 +5533,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders' Commons is the packs' own grass, paving, statue, trees, street lamps, benches and flowers laid out together."
   },
   {
    "name": "Football stadium (3D model)",
