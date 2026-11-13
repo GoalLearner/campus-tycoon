@@ -1448,9 +1448,9 @@ Set up on 2026-11-11 at the owner's request, outside the layers.
 | Web | Cloudflare Pages. A push to `main` builds and deploys. `npm run deploy` does the same from the PC |
 | Offline and updates | The web build has a service worker written at build time. Its cache is named after a hash of the build, and each build is kept and served whole. A new build downloads in the background, then the HUD shows "A new version is ready" with an Update button. The player picks the moment. Closing the app also switches to the new build |
 | iOS | Capacitor. The app carries its own copy of the game and never loads it from the website. It has no service worker, because its files ship inside the app and a second cache could only serve stale ones. A new app version is a new TestFlight build |
-| iOS builds | Codemagic, with manual signing. A tag that starts with `v` builds, signs and uploads to TestFlight. The build number is one above the newest TestFlight build. The version comes from `package.json` |
+| iOS builds | A GitHub workflow on one of GitHub's Macs, with manual signing, the way the owner's other app is shipped. He chose it on 2026-11-12 in place of Codemagic: the certificate and the API key were already stored as secrets for that app, so the workflow lives in that app's repository for now and builds this one from there. Running it builds, signs and uploads to TestFlight. The build number is one above the newest TestFlight build. The version comes from `package.json`. The first trial build, signed and not uploaded, passed on 2026-11-12 |
 | App identity | Bundle id `com.goallearner.campustycoon`. iPhone only and portrait only for now. No extra capabilities |
-| Secrets | Only in Cloudflare and Codemagic settings. The list is in `CLAUDE.md` |
+| Secrets | Only in Cloudflare's settings and in GitHub's encrypted Actions secrets, never in a file of this repository. The list is in `CLAUDE.md` |
 
 ---
 
