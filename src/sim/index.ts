@@ -62,6 +62,7 @@ export {
   fedAt,
   inReach,
   libraryLift,
+  rewardLift,
   nearestSpot,
   placedAt,
   previewPlace,

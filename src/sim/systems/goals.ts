@@ -1,8 +1,9 @@
 import { ENROLLMENT_CAP, ERA_AT_RANK, ERAS, GOAL_SCALE, RANK_GOALS, SIZE_GOALS, SIZE_GOALS_ONCE } from '../config/goals';
+import { PLACED, RANK_REWARDS } from '../config/placed';
 import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment } from '../selectors';
-import type { GameState, Goals, LogEntry } from '../types';
+import type { GameState, Goals, LogEntry, PlacedType } from '../types';
 
 /**
  * The cap, the goals and the eras (DESIGN.md sections 37 and 38.4).
@@ -14,8 +15,11 @@ import type { GameState, Goals, LogEntry } from '../types';
  * goal is kept for good, whatever the campus does afterwards. The rank opens
  * the eras.
  *
- * A goal gives a headline and a place in the list. `rewards` counts the free
- * buildings taken for rank goals, and nothing gives one yet (37.7).
+ * A goal gives a headline and a place in the list. A rank goal also gives a
+ * building (section 40): it waits in the Build menu, free, until it is
+ * placed, and is there again if it is ever cleared. Which are waiting is
+ * worked out from the goals reached and the map, so nothing more is saved
+ * and a reward can never be lost.
  */
 
 export function newGoals(): Goals {
@@ -76,6 +80,41 @@ export function nextRankGoal(state: GameState): number | null {
 
 const list = (parts: string[]): string => (parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`);
 
+// ---------------------------------------------------- a building for a goal --
+
+/** The building a rank goal gives: 0 is the Top 175. undefined past the last. */
+export function rewardOf(n: number): PlacedType | undefined {
+  return RANK_REWARDS[n];
+}
+
+/** Which rank goal gives a building, counting from 0, or -1 for a building no goal gives. */
+export function rewardGoal(type: PlacedType): number {
+  return RANK_REWARDS.indexOf(type);
+}
+
+const capital = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** The buildings this game has earned, in the order of its goals. None on a game with no goals. */
+export function rewardsEarned(state: GameState): PlacedType[] {
+  const reached = state.goals ? Math.min(state.goals.rank, RANK_REWARDS.length) : 0;
+  return RANK_REWARDS.slice(0, reached);
+}
+
+/** Those of them not on the map: what the Build menu offers, free. A cleared one is here again. */
+export function rewardsWaiting(state: GameState): PlacedType[] {
+  const earned = rewardsEarned(state);
+  if (earned.length === 0) return earned;
+  const standing = new Set<PlacedType>();
+  for (const placed of state.map.placed) if (placed) standing.add(placed.type);
+  return earned.filter((type) => !standing.has(type));
+}
+
+/** A building as a sentence names it: "the Bell Tower". Two go by their own names with no "the". */
+export function rewardName(type: PlacedType): string {
+  const name = PLACED[type].name;
+  return type === 'fountain' || type === 'radio' ? name : `the ${name}`;
+}
+
 function land(state: GameState, log: LogEntry[], ladder: 'size' | 'rank', count: number): void {
   const goals = state.goals;
   if (!goals) return;
@@ -99,6 +138,9 @@ function land(state: GameState, log: LogEntry[], ladder: 'size' | 'rank', count:
     ladder === 'size'
       ? `${state.school.name} has ${headCount(enrollment(state))} students: the campus is full. The ${one ? 'goal' : 'goals'} of ${list(names)} students ${one ? 'is' : 'are'} reached. ${kept}`
       : `${state.school.name} is No. ${state.field.rank} of 200 for academics. The ${one ? 'goal' : 'goals'} of the ${list(names)} ${one ? 'is' : 'are'} reached. ${kept}`;
+  // A rank goal gives its building (section 40): free, in the Build menu, for as long as it is not on the map.
+  const given = ladder === 'rank' ? RANK_REWARDS.slice(was, count) : [];
+  if (given.length > 0) text += ` ${capital(list(given.map(rewardName)))} ${given.length === 1 ? 'is' : 'are'} yours to place, free, from the Build menu.`;
   if (era > eraWas) text += ` The ${ERAS[era]} era begins.`;
   log.push({ tick: state.clock.tick, kind: 'goal', text, data: { keep: 1, ladder, count, from: was, era: era > eraWas ? era : -1 } });
 }

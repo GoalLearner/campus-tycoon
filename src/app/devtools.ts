@@ -1,4 +1,4 @@
-import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool } from '../sim';
+import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -583,6 +583,33 @@ export function installDevTools(): void {
       grown.cohorts = grown.cohorts.map((n) => Math.round(n * share)) as typeof grown.cohorts;
       grown.offCampus = grown.offCampus.map((n) => Math.round(n * share)) as typeof grown.offCampus;
       store.adopt(grown, { ephemeral: true });
+    }
+    // &rank=90 puts the campus at that rank with every rank goal down to it reached, so their buildings are
+    // waiting in the Build menu (DESIGN.md section 40). &rewards=8 then places that many of them, each on the
+    // free ground nearest &at=x,y, for a picture of them on the campus.
+    const rank = Number(params.get('rank') ?? 0);
+    if (rank > 0 && store.hasGame && store.state.goals) {
+      const ranked = structuredClone(store.state);
+      ranked.field.rank = rank;
+      ranked.field.rankYear = Math.max(1, ranked.clock.week.year);
+      landRankGoals(ranked, []);
+      store.adopt(ranked, { ephemeral: true });
+      const [cx, cy] = (params.get('at') ?? '16,16').split(',').map(Number) as [number, number];
+      const wanted = Number(params.get('rewards') ?? 0);
+      for (const type of rewardsWaiting(store.state).slice(0, wanted)) {
+        let best: [number, number] | null = null;
+        let near = Infinity;
+        const map = store.state.map;
+        for (let y = 0; y < map.height; y++) {
+          for (let x = 0; x < map.width; x++) {
+            const far = Math.abs(x - cx) + Math.abs(y - cy);
+            if (far >= near || previewPlace(store.state, type, x, y).problem !== null) continue;
+            near = far;
+            best = [x, y];
+          }
+        }
+        if (best) store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
+      }
     }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);

@@ -11,6 +11,8 @@ import {
   instructionStep,
   nextSemesterStaff,
   enrollment,
+  rewardLift,
+  rewardsWaiting,
   applyAction,
   approvalAt,
   campusHappiness,
@@ -620,6 +622,46 @@ function buildFromMenu(state: GameState, reserve: number, most: number, extras =
   return { state: current, built, blocked: false };
 }
 
+/**
+ * A building a rank goal gave is placed on the visit it arrives, where it lifts the look of the most lots: on
+ * free ground, counting only what it adds to a lot beyond any other such building already in reach, and nothing
+ * past the top of the scale. It is free, and a player who has just read the headline would not leave it waiting.
+ */
+function placeRewards(state: GameState): { state: GameState; placed: number } {
+  let current = state;
+  let placed = 0;
+  for (const type of rewardsWaiting(current)) {
+    const spec = PLACED[type];
+    const map = current.map;
+    const lots = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0);
+    let best: Point | null = null;
+    let most = 0;
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        if (!freeAt(current, x, y) || previewPlace(current, type, x, y).problem !== null) continue;
+        let gain = 0;
+        for (const lot of lots) {
+          const far = Math.max(Math.max(x - lot.x, 0, lot.x - (x + spec.w - 1)), Math.max(y - lot.y, 0, lot.y - (y + spec.h - 1)));
+          if (far > spec.radius) continue;
+          const lift = (spec.strength * (spec.radius + 1 - far)) / (spec.radius + 1);
+          const room = 100 - map.score[lot.y * map.width + lot.x]!;
+          gain += Math.min(room, Math.max(0, lift - rewardLift(map, lot.x, lot.y)));
+        }
+        if (gain > most + 1e-9) {
+          most = gain;
+          best = [x, y];
+        }
+      }
+    }
+    if (!best) continue;
+    const result = applyAction(current, { type: 'place', building: type, x: best[0], y: best[1] });
+    if (!result.ok) continue;
+    current = result.state;
+    placed += 1;
+  }
+  return { state: current, placed };
+}
+
 export interface TurnResult {
   state: GameState;
   /** Purchases made this check-in. */
@@ -680,6 +722,13 @@ export function takeTurn(state: GameState, as: Style): TurnResult {
   let current = state;
   let purchases = 0;
   let blockedByCash = false;
+
+  // What a rank goal gave goes on the map first: it is free, and it is why the paper led with it.
+  if (current.goals) {
+    const rewards = placeRewards(current);
+    current = rewards.state;
+    purchases += rewards.placed;
+  }
 
   // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a
   // Medical Center, and by the time it stopped growing the ground for one would be gone. It buys what the

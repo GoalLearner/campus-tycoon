@@ -20,6 +20,8 @@ import { evaluateGrowth, cancelStrandedBuilds } from './systems/growth';
 import { markRatesDirty } from './systems/money';
 import { INSTRUCTION_RATIOS } from './config/staffing';
 import { instructionStep, planStaff } from './systems/staffing';
+import { RANK_GOALS } from './config/goals';
+import { rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
 
@@ -273,6 +275,12 @@ const PLACE_ERROR = {
 function place(state: GameState, type: PlacedType, x: number, y: number): ActionResult {
   const spec = PLACED[type];
   if (!spec.buildable) return { ok: false, state, error: 'That cannot be built.' };
+  // A rank goal's building is earned, never bought, and there is one of each (DESIGN.md section 40).
+  const goal = rewardGoal(type);
+  if (goal >= 0) {
+    if (!rewardsEarned(state).includes(type)) return { ok: false, state, error: `${spec.name} comes with the Top ${RANK_GOALS[goal]}.` };
+    if (!rewardsWaiting(state).includes(type)) return { ok: false, state, error: `${spec.name} is already on the campus. Clear it first to move it.` };
+  }
   if (type === 'stadium' && state.football.stadium.plot !== null && state.map.placed[state.football.stadium.plot]) {
     return { ok: false, state, error: 'The campus already has a stadium plot. Clear it first to move it.' };
   }

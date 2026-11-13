@@ -206,7 +206,7 @@ describe('the academic rank on a game with goals', () => {
     state.field.rank = 120;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
-    expect(log[0]!.text).toBe('Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. The Growth era begins.');
+    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. The Growth era begins.");
     state.field.rank = 190;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);

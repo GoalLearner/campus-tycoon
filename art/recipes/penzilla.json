@@ -3586,6 +3586,156 @@
     }
    ]
   },
+  "reward.fountain": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      0,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      0
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim",
+     "shift": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Park_Fountain.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "reward.post": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/PostOffice.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "reward.cinema": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Cinema.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Cinema_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "reward.radio": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/RadioStation.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "reward.museum": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Museum.png",
+     "footprint": [
+      2,
+      2
+     ]
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Leasure_Museum_Front.png",
+     "footprint": [
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  "reward.alumni": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/Hotel_ThreeFloors.png",
+     "footprint": [
+      2,
+      1
+     ]
+    }
+   ]
+  },
+  "reward.broadcast": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Public/TeleTower.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "reward.bell": {
+   "layers": [
+    {
+     "file": "penzilla/Medieval/Buildings/TowerStoneRoofed.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "icon.injury": {
    "layers": [
     {
@@ -4222,6 +4372,30 @@
   "pond.medium": [
    2,
    2
+  ],
+  "reward.fountain": [
+   2,
+   2
+  ],
+  "reward.post": [
+   2,
+   1
+  ],
+  "reward.cinema": [
+   2,
+   2
+  ],
+  "reward.radio": [
+   2,
+   1
+  ],
+  "reward.museum": [
+   2,
+   2
+  ],
+  "reward.alumni": [
+   2,
+   1
   ]
  },
  "menuCredit": "Graphics created by Penzilla Design.",

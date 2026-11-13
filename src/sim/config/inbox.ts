@@ -60,6 +60,7 @@ export const TOP_WEIGHTS = {
   goal: 98,
   paused: 96,
   annualDefault: 90,
+  reward: 88,
   bigGame: 84,
   intake: 78,
   waitlistLost: 74,

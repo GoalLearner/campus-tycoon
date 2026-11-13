@@ -135,7 +135,7 @@ function pollRow(line: PaperView['poll'][number]): HTMLElement {
   return row;
 }
 
-function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football') => void): void {
+function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football' | 'build') => void): void {
   const page = el('div', 'paper');
   const edition = paper.edition;
   page.append(el('div', 'paper-name', edition.paper), el('div', 'paper-date', `${edition.dateline} · ${paper.awayFor}`), el('h2', 'paper-headline', edition.headline), el('p', 'paper-deck', edition.deck));
@@ -204,7 +204,7 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
  * the app first loses nothing. `notes` are rules new to an older save, told
  * once. `go` opens the Inbox or the Football page from a line that leads there.
  */
-export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, notes: string[], go: (where: 'inbox' | 'football') => void): void {
+export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, notes: string[], go: (where: 'inbox' | 'football' | 'build') => void): void {
   // A game's first screen is the paper's first issue. An away list, if there is one too, waits for the next look.
   const welcome = store.welcome ? welcomeView(store.state) : null;
   const view = !welcome && report ? awayView(store.state, report) : null;

@@ -68,7 +68,16 @@ export type PlacedType =
   | 'foodcourt'
   | 'computerLab'
   | 'makerspace'
-  | 'studyCenter';
+  | 'studyCenter'
+  // A building for each rank goal (DESIGN.md section 40). Earned, never bought.
+  | 'fountain'
+  | 'postOffice'
+  | 'cinema'
+  | 'radio'
+  | 'museum'
+  | 'alumniHouse'
+  | 'broadcastTower'
+  | 'bellTower';
 
 /** A hand-placed building. It is whole from the moment it is placed. */
 export interface Placed {
@@ -374,7 +383,10 @@ export interface Goals {
   rank: number;
   /** Each goal and era as it was reached, oldest first. `n` counts from 0 on a ladder, and is the era's number for an era. */
   reached: Array<{ ladder: 'size' | 'rank' | 'era'; n: number; year: number }>;
-  /** Free buildings taken for rank goals so far. Nothing gives one yet (37.7 and 38.4). */
+  /**
+   * Kept from before the buildings were switched on, and not read. Which of a game's buildings are waiting is
+   * worked out from the rank goals it has reached and what stands on its map (DESIGN.md section 40).
+   */
   rewards: number;
 }
 

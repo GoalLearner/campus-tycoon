@@ -4728,7 +4728,7 @@ No difference that can be told from the spread between runs.
 
 ## 40. A building for each rank goal
 
-Asked of the owner on 2026-11-12, once the cap had made the rank goals the long climb (38.4): "Switch on the eight reward buildings from the sheet, one for each rank goal?" He answered: "Yes, as shown". The sheet is the one he was sent that morning with eight picks and four spares from the art he already owns (37.7). **Approved, and not built yet.**
+Asked of the owner on 2026-11-12, once the cap had made the rank goals the long climb (38.4): "Switch on the eight reward buildings from the sheet, one for each rank goal?" He answered: "Yes, as shown". The sheet is the one he was sent that morning with eight picks and four spares from the art he already owns (37.7). **Approved, and built the same day: 40.3 to 40.6 are the record.**
 
 ### 40.1 Which building for which goal
 
@@ -4763,3 +4763,102 @@ The four spares on the sheet (Transit Station, Clock Tower, Guest House, Old Mil
 To measure in the build, and to report to him: the pace of the rank goals with every building placed (the Top 100 in about month two, the Top 10 not before month five), that rank, applicants and selectivity still settle, and the money against his $12 to $17 kept of every $100.
 
 The art is from his paid packs: it goes in the private art repository and never in the public one. Each building is the pack's own drawing, used as drawn.
+
+### 40.3 As built
+
+Built on 2026-11-12, on the owner's "Yes, as shown".
+
+| Thing | As built | Where |
+|---|---|---|
+| The pairing | The eight of 40.1, in that order. The size goal gives a headline and no building | `RANK_REWARDS` in `src/sim/config/placed.ts` |
+| What is waiting | Worked out, never stored: the buildings of the rank goals a game has reached, less those standing on its map. So a goal reached puts its building in the Build menu, a building cleared is there again, and a reward cannot be lost | `rewardsEarned`, `rewardsWaiting` in `src/sim/systems/goals.ts` |
+| The save | Not changed. It stays version 16. A game that reached goals before this finds their buildings waiting the moment it loads | `tests/rewards.test.ts` |
+| In the Build menu | First, under the heading Earned: the building's own drawing, "Free", its size, "Costs nothing to run", what it does and which goal gave it. A building not yet earned is not shown | `buildEntries` in `src/ui/buildUi.ts` |
+| Placing one | As any building is placed. It costs nothing. There is one of each: a second is refused, and so is one not yet earned, each with a line that says why | `place` in `src/sim/actions.ts` |
+| What it does | One thing. It lifts how the campus looks: the desirability of every dorm and lecture hall within six cells of its wall, by its strength beside it and fading to nothing just past its reach. The best one in reach counts. How the campus looks is one of the four causes of applicants (37.3) | `rewardLift` in `src/sim/systems/placed.ts`, `scoreParts` |
+| Its strength [T] | 6, 7, 8, 9, 10, 11, 12 and 14 points of desirability, from the Top 175's to the Top 10's. The same reach for all, six cells | `PLACED` |
+| What it costs | Nothing to place, nothing to keep: no upkeep, no utilities, no staff | The same |
+| Clearing one | The Clear tool takes it, nothing comes back since nothing was paid, and it is in the Build menu again | `rewardsWaiting` |
+| A game begun on the small campus | Has no goals, so it earns none and its lots pay nothing for the rule. Its long-run tables print the same numbers | `rewardLift` |
+| The paper, the day of a goal | The headline names the building in place of the joke: "Larp Enters the Top 175; Founders' Fountain Is Yours to Build". The line under it says it is free, in the Build menu. When the goal also opens an era, the era leads and the building is still named | `rewardHeadline`, `land` |
+| The paper, after | One line at the top of every edition while any is waiting, naming them, which opens the Build menu on a tap. The edition that announces a goal does not say its building twice. This is what a save sees on its first edition after the upgrade | `edition` in `src/sim/newspaper.ts` |
+| Tapping a placed one | Its panel says which goal earned it, how many dorms and lecture halls it lifts, and that clearing it sends it back to the Build menu | `placedSummary`, `placedFacts` |
+| Eras | Still a name. Nothing hangs on them | |
+
+**The art.** Each is the pack's own drawing, as drawn, in the private atlas: nothing is cut, pasted, recoloured, mirrored or rendered, and a test holds that. Seven are from the city pack, on the block of cells the pack drew them for. The Bell Tower is from the same artist's older pack, stood on the same grid as drawn. The fountain is a park that lies flat, so it has the pack's grass tile under it, as the pond does. Nothing here is for section 26.
+
+| Building | Cells |
+|---|---|
+| Founders' Fountain, Campus Cinema, University Museum | 2 by 2 |
+| Campus Post Office, Campus Radio, Alumni House | 2 by 1 |
+| Broadcast Tower, Bell Tower | 1 by 1 |
+
+### 40.4 Measured
+
+The test players place each building on the visit it arrives, on free ground where it lifts the look of the most lots.
+
+**The pace, with every building placed.** The real week each goal is reached, over 44 weeks, on two seeds.
+
+| Goal | Casual | Once a day | Works every cause |
+|---|---|---|---|
+| A full campus, 50,000 students | 2 | 2 | 2 |
+| Top 175 | 1 | 1 | 1 |
+| Top 150 | 2 | 2 | 1 to 2 |
+| Top 125 | 5 | 5 | 5 |
+| Top 100 | 7 | 7 | 7 |
+| Top 75 | 11 to 12 | 12 | 12 |
+| Top 50 | 14 to 17 | 16 to 17 | 16 |
+| Top 25 | 22 to 24 | 22 to 23 | 19 to 21 |
+| Top 10 | 33 to 39 | 33 to 37 | 26 to 29 |
+| Rank at week 44 | 7th to 11th | 6th | 1st to 2nd |
+| Buildings placed | 8 of 8 | 8 of 8 | 8 of 8 |
+
+The targets stand: the Top 100 in week 7, and the Top 10 never before month five. Against 38.6 a goal comes a week sooner here and there, and no more: the published rating still moves a point a year at most.
+
+**What the buildings are worth.** All eight, placed well, lift how the campus looks by five and a half to six points of 100: from 57.4 to 62.8 or 63.1 for the regular players, and from 63 to 68.9 for the player who works every cause. That is about 500 more applicants a fall. A campus left alone looks 56.9, and after five years has three buildings waiting in its Build menu.
+
+**Rank, applicants and selectivity still settle.** The campus of the player who works every cause, with all eight placed and looks at 68.9, was left alone for thirty more years. In the last ten the published rating moves 0.7 points and applicants by 430 in 20,569, at 1st or 2nd. The check on a campus left alone from the start reads as it did (38.6).
+
+**Money.** Nothing was moved, and the buildings cost nothing.
+
+| Measured | Kept of every $100 |
+|---|---|
+| A new game, as it opens | $16.60 |
+| The casual player, years 3 to 8 | $12.90 to $14.90 |
+| The once-a-day player, years 3 to 8 | $12.70 to $14.20 |
+| The player who works every cause, years 3 to 8 | $13.10 to $14.50 |
+| The casual player, weeks 9 to 44 | $14.20 to $16.50 |
+| The once-a-day player, weeks 9 to 44 | $13.80 to $16.30 |
+| The player who works every cause, weeks 9 to 44 | $13.10 to $15.50 |
+
+**Speed.** Thirty days of catch-up take 175 ms on a new model campus and 236 ms on a tended one with all eight buildings. The work in one frame, on this PC, at the Normal crowd setting, looking at the same spot at the morning rush: 3.53 to 3.90 ms without the buildings and 3.66 to 3.73 ms with all eight in view. No difference that can be told from the spread between runs.
+
+**Tests and long runs.** 16 new tests in `tests/rewards.test.ts`: 632 in all. Two new long-run checks, and the catch-up check also times a campus with all eight: 50 in all.
+
+### 40.5 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| How a waiting building is kept | Worked out from the goals reached and the map | A list in the save, with a migration. It could go wrong, and this cannot |
+| Several buildings near each other | The best one in reach counts | Add them up. Eight in one corner would lift it out of all proportion, and nobody would spread them |
+| Reach | Six cells for all eight, and the strength rises | A wider reach for a later goal. Two numbers to read on each card |
+| Which lots it lifts | Dorms and lecture halls | Lecture halls only, as the library does |
+| Where it sits in the Build menu | First, under Earned | Last, under Landmarks, where it would have to be looked for |
+| The headline | The building takes the place of the joke after the semicolon | Keep the joke, and name the building only in the line beneath |
+| The line about what is waiting | In every edition until they are placed | Once. That needs a mark in the save, and a player who missed that edition would never be told |
+| Sizes | As the pack drew each | All eight on one size, with some shrunk or stretched |
+| The word shared with the reference map | "Alumni" is printed on the reference map as an ordinary word, and not as that building's name. It is added to the test's list of ordinary words | Rename the building he approved |
+| The counter kept for this in the save since 37.11 | Left where it is, unused | Remove it, with a migration |
+| Where the test players put them | Where each lifts the most, on the visit it arrives | Beside the Administration building, as a person might for the look of it |
+
+### 40.6 Rough
+
+| Rough | Why |
+|---|---|
+| The eight together are worth about 500 applicants a fall | A lift of five or six points of looks in 100. They are a reward to place more than a lever to pull |
+| The first two arrive almost at once | Every campus passes the Top 175 in week 1 and the Top 150 in week 2 |
+| The paper says what is waiting in every edition until it is placed | A player who means to leave one waiting reads the line each time |
+| A tower is one cell and tall | It can stand in front of a dorm and hide part of it, as any tall building does |
+| The test players set them down close together | They choose by the numbers, not by the look of it |
+| The drawings are in his private art repository only | A build without the token shows the labelled placeholder for all eight, as for the rest of his pack |
+| Never run on a phone | Checked in pictures and in tests on this PC |

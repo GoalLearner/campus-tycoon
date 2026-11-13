@@ -48,6 +48,9 @@ import {
   fallApplicants,
   openStaff,
   ratioTarget,
+  rewardsEarned,
+  rewardsWaiting,
+  RANK_REWARDS,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -987,6 +990,8 @@ function assertModelCampus(seed: number): void {
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${runs.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
   console.log(`${'rank at the end'.padEnd(18)}${runs.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
   console.log(`${'faculty funded'.padEnd(18)}${runs.map((run) => `1 to ${ratioTarget(run.final)}`.padStart(14)).join('')}`);
+  console.log(`${'looks, of 100'.padEnd(18)}${runs.map((run) => averageDesirability(run.final).toFixed(1).padStart(14)).join('')}`);
+  console.log(`${'buildings placed'.padEnd(18)}${runs.map((run) => `${rewardsEarned(run.final).length - rewardsWaiting(run.final).length} of ${rewardsEarned(run.final).length}`.padStart(14)).join('')}`);
   console.log('');
 
   // The cap: nobody ever holds more students than it allows, and every campus is full within a few weeks.
@@ -997,6 +1002,20 @@ function assertModelCampus(seed: number): void {
       'no model campus ever passes its cap, and every tended one is full within a month',
       cap > 0 && most <= cap && full.every((week) => week > 0 && week <= 4),
       `the cap is ${cap.toLocaleString('en-US')}; the most any campus held was ${most.toLocaleString('en-US')}; full at ${runs.map((run) => `${run.style} ${run.seed} ${weekOf(run.seen.sizeWeeks[0]!)}`).join(', ')}`,
+    );
+  }
+
+  // A building for each rank goal (DESIGN.md section 40): every one a player earned is on its campus, and the
+  // campus looks the better for them. A campus nobody tends earns them too, and they wait.
+  {
+    const kept = runs.every((run) => rewardsEarned(run.final).length === run.final.goals!.rank && rewardsWaiting(run.final).length === 0);
+    const plain = averageDesirability(alone.final);
+    const lifted = runs.map((run) => averageDesirability(run.final));
+    const waiting = rewardsWaiting(alone.final).length;
+    check(
+      'every building a rank goal gave is on the campus of the player who earned it, and lifts how it looks',
+      kept && Math.min(...lifted) >= plain + 3 && waiting === alone.final.goals!.rank && RANK_REWARDS.length === RANK_GOALS.length,
+      `${runs.map((run) => `${run.style} ${run.seed}: ${rewardsEarned(run.final).length} placed, looks ${averageDesirability(run.final).toFixed(1)}`).join('; ')}; a campus left alone looks ${plain.toFixed(1)} of 100, with ${waiting} waiting in its Build menu after five years`,
     );
   }
 
@@ -1084,6 +1103,29 @@ function assertModelCampus(seed: number): void {
     );
   }
 
+  // The same on a campus with all eight buildings placed, where looks bring the most applicants they can: the
+  // campus of the player who works every cause, left alone for thirty more years.
+  {
+    let state = of('striver')[0]!.final;
+    const from = state.clock.lastSimulatedAt;
+    const rows: Array<{ applicants: number; published: number; rank: number }> = [];
+    for (let year = 1; year <= 30; year++) {
+      const result = advance(state, state.clock.lastSimulatedAt, from + year * YEAR_MS);
+      state = result.state;
+      const day = result.log.filter((entry) => entry.kind === 'rankings').pop();
+      const fall = result.log.filter((entry) => entry.kind === 'intake' && entry.data?.season === 'fall').pop();
+      if (day && fall) rows.push({ applicants: Number(fall.data?.expected ?? 0), published: Number(day.data?.rating ?? 0), rank: Number(day.data?.rank ?? 0) });
+    }
+    const late = rows.slice(-10);
+    const span = (pick: (row: (typeof rows)[number]) => number): number => Math.max(...late.map(pick)) - Math.min(...late.map(pick));
+    const placed = rewardsEarned(state).length - rewardsWaiting(state).length;
+    check(
+      'they still settle with every building placed: thirty years on, the last ten barely move',
+      placed === RANK_REWARDS.length && late.length === 10 && span((row) => row.published) <= 2 && span((row) => row.applicants) <= 0.05 * late[0]!.applicants,
+      `${placed} buildings on the campus, looks ${averageDesirability(state).toFixed(1)} of 100; in the last ten years the published rating moves ${span((row) => row.published).toFixed(1)} points and applicants ${span((row) => row.applicants)} (${late[0]!.applicants} to start with); rank ${Math.min(...late.map((row) => row.rank))} to ${Math.max(...late.map((row) => row.rank))}`,
+    );
+  }
+
   // The owner's two checks (DESIGN.md 38.1, point 4).
   // A campus that grows fast without building ahead ends short and unhappy, and never spirals. It opens a third
   // full, with half of what feeds, entertains and looks after its students taken away and one worker at each yard.
@@ -1166,7 +1208,19 @@ function assertModelCampus(seed: number): void {
       advance(opening, opening.clock.lastSimulatedAt, opening.clock.lastSimulatedAt + 30 * DAY_MS);
       best = Math.min(best, performance.now() - t);
     }
-    check('30 days of catch-up on the model campus runs in under one second', best < 1000, `${best.toFixed(0)} ms with ${buildings(opening.map).length} lots and ${opening.map.placed.filter(Boolean).length} placed things`);
+    // And on the campus of the player who works every cause, with all eight of the rank goals' buildings on it.
+    const full = of('striver')[0]!.final;
+    let lifted = Infinity;
+    for (let n = 0; n < 3; n++) {
+      const t = performance.now();
+      advance(full, full.clock.lastSimulatedAt, full.clock.lastSimulatedAt + 30 * DAY_MS);
+      lifted = Math.min(lifted, performance.now() - t);
+    }
+    check(
+      '30 days of catch-up on the model campus runs in under one second',
+      best < 1000 && lifted < 1000,
+      `${best.toFixed(0)} ms with ${buildings(opening.map).length} lots and ${opening.map.placed.filter(Boolean).length} placed things; ${lifted.toFixed(0)} ms on a tended campus with ${buildings(full.map).length} lots, ${full.map.placed.filter(Boolean).length} placed things and all eight reward buildings`,
+    );
   }
 
   check('the model campus validates when it opens and after its longest run', validate(opening) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
