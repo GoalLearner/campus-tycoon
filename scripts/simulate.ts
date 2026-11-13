@@ -97,6 +97,13 @@ import {
   TRADITIONS,
   traditionShare,
   traditionSlots,
+  chapters,
+  chapterStatus,
+  chapterBeds,
+  greekDrag,
+  greekMembers,
+  greekShare,
+  retentionRate,
   CAUSE_NAMES,
   ORDER_CASH_YEAR,
   labOf,
@@ -140,6 +147,8 @@ if (args.includes('--no-big-builds')) botOptions.bigBuilds = false;
 if (args.includes('--no-labs')) botOptions.labs = false;
 // --no-traditions: no tradition is chosen (DESIGN.md 50).
 if (args.includes('--no-traditions')) botOptions.traditions = false;
+// --no-greek: no chapter house is built (DESIGN.md 51).
+if (args.includes('--no-greek')) botOptions.greek = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -272,6 +281,15 @@ interface Seen {
   /** By game year: what the research labs took of the yearly allowance, and what all of its takers did (DESIGN.md 49). */
   labPaid: Record<number, number>;
   allowancePaid: Record<number, number>;
+  /**
+   * Greek Row (DESIGN.md 51), read once a real week: chapters, members, how many stand Good, on Warning and on
+   * Probation, the drag on the rating and Happiness. Every rush week, and each chapter's moves onto Warning and
+   * Probation as the paper told them.
+   */
+  greekWeeks: Array<{ week: number; chapters: number; members: number; overfull: number; good: number; warning: number; probation: number; drag: number; happiness: number; retention: number }>;
+  greekRush: Array<{ week: number; joined: number; moved: number }>;
+  greekWarnings: number;
+  greekProbations: number;
 }
 
 const newSeen = (): Seen => ({
@@ -324,6 +342,10 @@ const newSeen = (): Seen => ({
   orderLines: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
+  greekWeeks: [],
+  greekRush: [],
+  greekWarnings: 0,
+  greekProbations: 0,
 });
 
 /** Check lines against the tone guide's banned and retired words. */
@@ -352,6 +374,9 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'policy') seen.switches += 1;
     if (entry.kind === 'level') seen.levelLines += 1;
     if (entry.kind === 'order') seen.orderLines += 1;
+    if (entry.kind === 'greek' && entry.data?.rush === 1) seen.greekRush.push({ week: Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1, joined: Number(entry.data.joined), moved: Number(entry.data.moved) });
+    if (entry.kind === 'greek' && entry.data?.status === 1) seen.greekWarnings += 1;
+    if (entry.kind === 'greek' && entry.data?.status === 2) seen.greekProbations += 1;
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -487,6 +512,23 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
       lostThisYear += lostToWaitlist(r.log);
       look(seen, state, r.log);
       if (rows.length < years) rows.push(yearRow(state, rows.length + 1, lostThisYear));
+      if (campus === 'model') {
+        const list = chapters(state);
+        const count = (status: string): number => list.filter((chapter) => chapterStatus(state, chapter) === status).length;
+        const mood = campusHappiness(state);
+        seen.greekWeeks.push({
+          week: rows.length,
+          chapters: list.length,
+          members: greekMembers(state),
+          overfull: list.filter((chapter) => chapter.members > chapterBeds(state)).length,
+          good: count('good'),
+          warning: count('warning'),
+          probation: count('probation'),
+          drag: greekDrag(state).points,
+          happiness: mood.base,
+          retention: mood.retention,
+        });
+      }
       lostThisYear = 0;
       nextRowAt += YEAR_MS;
     }
@@ -1199,9 +1241,11 @@ function assertModelCampus(seed: number): void {
   botOptions.decor = false;
   botOptions.labs = false;
   botOptions.traditions = false;
+  botOptions.greek = false;
   const bare = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
   botOptions.labs = !args.includes('--no-labs');
   botOptions.traditions = !args.includes('--no-traditions');
+  botOptions.greek = !args.includes('--no-greek');
   botOptions.policies = !args.includes('--no-policies');
   botOptions.daily = !args.includes('--no-daily');
   botOptions.orders = !args.includes('--no-orders');
@@ -1622,6 +1666,82 @@ function assertModelCampus(seed: number): void {
     );
   }
 
+  // Greek Row (DESIGN.md 51): chapters and members, rush weeks, standing over time, pranks and philanthropy, the drag on
+  // the rating, and Happiness and retention against the same players with no chapter house.
+  {
+    botOptions.greek = false;
+    const noGreek = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
+    botOptions.greek = !args.includes('--no-greek');
+    const mine = runs.filter((run) => run.seed === seed);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    const weekly = (run: Run) => run.seen.greekWeeks;
+    const at = (run: Run, week: number) => weekly(run).find((one) => one.week === week);
+    const first = (run: Run): number => weekly(run).find((one) => one.chapters > 0)?.week ?? 0;
+    const mean = (values: number[]): number => (values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length);
+    const later = (run: Run) => weekly(run).filter((one) => one.week >= 20);
+    console.log('GREEK ROW');
+    console.log(`${''.padEnd(34)}${head}`);
+    row('first chapter house, week', (run) => (first(run) > 0 ? String(first(run)) : 'none'));
+    row('chapters at the end', (run) => String(chapters(run.final).length));
+    row('members at the end', (run) => greekMembers(run.final).toLocaleString('en-US'));
+    row('  share of students', (run) => `${(greekShare(run.final) * 100).toFixed(1)}%`);
+    row('  members a chapter', (run) => (chapters(run.final).length > 0 ? Math.round(greekMembers(run.final) / chapters(run.final).length).toLocaleString('en-US') : '-'));
+    row('rush weeks', (run) => String(run.seen.greekRush.length));
+    row('joined at a rush, average', (run) => Math.round(mean(run.seen.greekRush.map((one) => one.joined))).toLocaleString('en-US'));
+    row('moved from dorm beds, average', (run) => Math.round(mean(run.seen.greekRush.map((one) => one.moved))).toLocaleString('en-US'));
+    row('pranks a week', (run) => (run.final.greek.totals.pranks / PACE_WEEKS).toFixed(2));
+    row('philanthropy events a week', (run) => (run.final.greek.totals.giving / PACE_WEEKS).toFixed(2));
+    row('times on Warning', (run) => String(run.seen.greekWarnings));
+    row('times on Probation', (run) => String(run.seen.greekProbations));
+    row('weeks with one overfull', (run) => String(weekly(run).filter((one) => one.overfull > 0).length));
+    row('weeks with one on Warning', (run) => String(weekly(run).filter((one) => one.warning > 0).length));
+    row('weeks with one on Probation', (run) => String(weekly(run).filter((one) => one.probation > 0).length));
+    row('drag on graduation, at the end', (run) => greekDrag(run.final).points.toFixed(1));
+    row('drag on graduation, most', (run) => Math.max(0, ...weekly(run).map((one) => one.drag)).toFixed(1));
+    row('policies on at the end', (run) => run.final.policies.on.filter((id) => id === 'deferredRush' || id === 'chapterGrades').map((id) => (id === 'deferredRush' ? 'defer' : 'grades')).join('+') || 'none');
+    console.log('');
+    console.log('GREEK ROW OVER TIME: chapters (good/warning/probation), then members and the drag');
+    for (const week of [6, 10, 14, 20, 28, 36, 44]) {
+      row(`week ${week}`, (run) => {
+        const one = at(run, week);
+        return one && one.chapters > 0 ? `${one.chapters} (${one.good}/${one.warning}/${one.probation})` : '-';
+      });
+      row('', (run) => {
+        const one = at(run, week);
+        return one && one.chapters > 0 ? `${one.members.toLocaleString('en-US')} ${one.drag.toFixed(1)}` : '';
+      });
+    }
+    console.log('');
+    console.log(`THE SAME PLAYERS, SEED ${seed}, WITH NO GREEK ROW`);
+    console.log(`${''.padEnd(34)}${mine.map((run) => `${run.style} greek`.padStart(14)).join('')}${noGreek.map((run) => `${run.style} none`.padStart(14)).join('')}`);
+    const both = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${[...mine, ...noGreek].map((run) => cell(run).padStart(14)).join('')}`);
+    RANK_GOALS.forEach((goal, n) => both(`Top ${goal}`, (run) => weekOf(run.seen.rankWeeks[n]!)));
+    both('rank at the end', (run) => `No. ${run.final.field.rank}`);
+    both('happiness at the end', (run) => campusHappiness(run.final).base.toFixed(1));
+    both('happiness, weeks 20 to 44', (run) => mean(later(run).map((one) => one.happiness)).toFixed(2));
+    both('retention, weeks 20 to 44', (run) => `${(mean(later(run).map((one) => one.retention)) * 100).toFixed(2)}%`);
+    both('retention at the end', (run) => `${(retentionRate(run.final) * 100).toFixed(2)}%`);
+    both('students at the end', (run) => enrollment(run.final).toLocaleString('en-US'));
+    both('kept of every $100 at the end', (run) => `$${budget(run.final).kept.toFixed(2)}`);
+    console.log('');
+
+    const named = /^[A-Z][a-z]+( [A-Z][a-z]+)? [A-Z][a-z]+$/;
+    check(
+      'Greek Row only on a game with goals, from the Growth era: eight chapters at most, each house one chapter, every name Greek letters and a plain word, none given twice',
+      runs.every((run) => {
+        const list = chapters(run.final);
+        const names = run.final.greek.used;
+        return list.length <= 8 && list.length > 0 && new Set(names).size === names.length && names.every((name) => named.test(name)) && list.every((chapter) => run.final.map.placed[chapter.house]?.type === 'chapterHouse');
+      }) && [...bare, ...noGreek].every((run) => chapters(run.final).length === 0 && run.final.map.placed.every((placed) => placed?.type !== 'chapterHouse')),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.final.greek.used.join(', ')}`).join('; '),
+    );
+    check(
+      'rush week comes each fall once a chapter stands, and a chapter goes on Probation only after a Warning',
+      runs.every((run) => first(run) === 0 || run.seen.greekRush.length >= PACE_WEEKS - first(run) - 1) && runs.every((run) => run.seen.greekProbations <= run.seen.greekWarnings),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.greekRush.length} rush weeks from week ${first(run)}, ${run.seen.greekWarnings} warnings, ${run.seen.greekProbations} probations`).join('; '),
+    );
+  }
+
   // The daily rhythm (DESIGN.md 42.8, as built in section 44): the gift, the goals for the year, the calendar's moments.
   {
     const tally = (run: Run, what: string): number => run.final.rhythm.tally[what] ?? 0;
@@ -1867,6 +1987,11 @@ function assertModelCampus(seed: number): void {
       console.log('');
       console.log(`${name}: ${enrollment(base)} students, keeps $${off.kept.toFixed(2)}, Happiness ${off.happy.toFixed(1)}, semester Stress ${off.stress.toFixed(1)}, ${Math.round(off.left)} leave a year, ${Math.round(off.incidents)} incidents a year unanswered, rating ${off.rating.toFixed(1)} (published ${off.published.toFixed(1)}, No. ${off.rank}); ${inputs}`);
       for (const spec of POLICIES) {
+        // Greek Row's two open with the first chapter house (DESIGN.md 51): a campus with none cannot turn them on.
+        if (spec.greek && chapters(base).length === 0) {
+          console.log(`  ${spec.name}: not open here, with no chapter house`);
+          continue;
+        }
         const result = applyAction(base, { type: 'policy', id: spec.id, on: true });
         if (!result.ok) {
           moved = false;
@@ -1889,6 +2014,8 @@ function assertModelCampus(seed: number): void {
           parkingFees: d.income > 0 && d.happy < 0,
           quietHours: d.happy < 0.5,
           namingRights: d.income > 0 && d.happy < 0,
+          deferredRush: d.rating > 0 && d.happy < 0,
+          chapterGrades: d.rating > 0,
         };
         if (ok[spec.id] === false) {
           moved = false;

@@ -224,3 +224,5 @@ export * from './config/labs';
 export * from './systems/labs';
 export * from './config/traditions';
 export * from './systems/traditions';
+export * from './config/greek';
+export * from './systems/greek';

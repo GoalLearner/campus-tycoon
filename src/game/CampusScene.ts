@@ -971,6 +971,12 @@ export class CampusScene extends Phaser.Scene {
         items.push(item);
         continue;
       }
+      // A chapter house is drawn as its chapter's own look among the houses (DESIGN.md 51).
+      if (placed.type === 'chapterHouse') {
+        const look = state.greek?.chapters.find((chapter) => chapter.house === placed.id)?.look ?? placed.id;
+        const shown = this.variantKey('chapter', look);
+        if (this.art.has(shown)) key = shown;
+      }
       // A big build of an era going up (DESIGN.md 45) is a building site until it opens.
       if (placed.done !== undefined) {
         this.showSite(placed, items);

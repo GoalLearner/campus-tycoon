@@ -1,3 +1,4 @@
+import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -269,7 +270,7 @@ describe('saves', () => {
     expect(loaded.state.timers.filter((timer) => timer.kind === 'discovery')).toEqual(state.timers.filter((timer) => timer.kind === 'discovery'));
     expect(findingsHeld(loaded.state, lab(loaded.state))).toBeCloseTo(findingsHeld(state, lab(state)), 5);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(24);
+    expect(SAVE_VERSION).toBe(25);
   });
 
   describe('from version 22', () => {
@@ -286,6 +287,7 @@ describe('saves', () => {
       expected.version = SAVE_VERSION;
       expected.labs = newLabs();
       expected.traditions = loaded.state.traditions;
+      expected.greek = newGreek();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on, and can build a lab.
@@ -294,7 +296,7 @@ describe('saves', () => {
       day.money.cash = 2_000_000_000;
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });

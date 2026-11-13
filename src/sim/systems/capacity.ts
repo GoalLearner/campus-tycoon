@@ -8,7 +8,7 @@ import { COVER_OK, COVER_SHORT, RATIO_SHORT, RATIO_TIGHT } from '../config/staff
 import { FIRST_INTAKE_TICK } from '../config/time';
 import { headCount } from '../format';
 import { scaleOf } from '../scale';
-import { enrollment, openCapacity } from '../selectors';
+import { chapterBedsTaken, enrollment, openCapacity } from '../selectors';
 import type { GameState, Placed, Zone } from '../types';
 import { bedsWanted, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
 import { mealUse } from './food';
@@ -217,6 +217,8 @@ export function capacity(state: GameState): Capacity {
     const local = offCampusNow(state);
     // Freshmen from town a policy has put in the beds left over (DESIGN.md 41.7). They are named on this row.
     const { housed, by: housedBy } = housedNote(state);
+    // Greek Row's members who moved into their chapter's house (DESIGN.md 51): counted with the beds, and named here.
+    const houses = chapterBedsTaken(state);
     const noBed = Math.max(0, want - have);
     const status: NeedStatus = noBed > 0 || wanted > have ? 'short' : 'ok';
     let consequence = '';
@@ -228,7 +230,7 @@ export function capacity(state: GameState): Capacity {
       have,
       want,
       status,
-      line: `${headCount(want + housed)} of ${headCount(have)} in use · ${headCount(local - housed)} live in town${housed > 0 ? ` · ${housedBy}: ${headCount(housed)}` : ''}`,
+      line: `${headCount(want + housed)} of ${headCount(have)} in use · ${headCount(local - housed)} live in town${housed > 0 ? ` · ${housedBy}: ${headCount(housed)}` : ''}${houses > 0 ? ` · ${headCount(houses)} in chapter houses` : ''}`,
       consequence,
       forecast: `Next fall's students need ${headCount(Math.max(want, wanted))}.`,
       fixLabel: 'See the Housing plan',

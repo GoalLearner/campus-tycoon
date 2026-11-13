@@ -90,5 +90,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 24) {
     notes.push('New: traditions. After the first commencement, and with each era, the Traditions page behind the student count has one to choose. Each is kept on its day and lifts a little more every year.');
   }
+  if (fromVersion < 25) {
+    notes.push('New: Greek Row. From the Growth era, the Build menu has chapter houses. Each is a chapter with its own name: students move in from the dorms at rush week, early each fall, and are happier for it. Houses like the stadium and each other, and are a little noisy.');
+  }
   return notes;
 }

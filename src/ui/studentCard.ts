@@ -220,7 +220,16 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     }
 
     setText(name, card.name);
-    const lives = card.residence === 'dorm' ? 'Lives in a dorm' : card.street ? `Lives off campus on ${card.street}` : 'Lives off campus';
+    const lives =
+      card.residence === 'chapter'
+        ? `Lives in the ${card.chapter} house`
+        : card.residence === 'dorm'
+          ? card.chapter
+            ? `Lives in a dorm · ${card.chapter}, its house full`
+            : 'Lives in a dorm'
+          : card.street
+            ? `Lives off campus on ${card.street}`
+            : 'Lives off campus';
     setText(about, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
 
     const people = atlas?.people;

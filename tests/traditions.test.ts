@@ -1,3 +1,4 @@
+import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -222,7 +223,7 @@ describe('saves', () => {
     expect(loaded.state.traditions).toEqual(state.traditions);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'tradition')).toEqual(state.timers.filter((timer) => timer.kind === 'tradition'));
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(24);
+    expect(SAVE_VERSION).toBe(25);
   });
 
   describe('from version 23', () => {
@@ -238,13 +239,14 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.traditions = newTraditions();
+      expected.greek = newGreek();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

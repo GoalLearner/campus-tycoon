@@ -9,6 +9,7 @@ import { footballBooks } from './football';
 import { housedIfOn, incomeOf, RATING_INPUT_NAME, upkeepOf } from './policies';
 import { libraryShare } from './season';
 import { driversNow } from './town';
+import { greekDrag, greekMembers } from './greek';
 
 /**
  * A policy in this campus's own numbers: what the switch says before it is
@@ -30,7 +31,8 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
       const what = `${CAUSE_NAMES[effect.cause]} ${signed(effect.points)}`;
       if (effect.among === 'drivers') return `${what} for the ${plural(driversNow(state), 'student who drives', 'students who drive')}`;
       if (effect.among === 'housed') return `${what} for the freshmen it houses`;
-      return what;
+      if (effect.among === 'greek') return `${what} for the ${plural(greekMembers(state), 'student in a chapter', 'students in chapters')}`;
+      return effect.fall ? `${what} in the fall semester` : what;
     }
     case 'exams': {
       const words = `Stress ${signed(-effect.points)} in finals week`;
@@ -63,6 +65,13 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
     }
     case 'mischief':
       return `${percent(1 - effect.times)} less mischief in the dorms`;
+    case 'greekDrag': {
+      const drag = greekDrag(state);
+      const now = Math.round(drag.before * 10) / 10;
+      return `Greek Row's drag on the graduation rate is ${percent(1 - effect.times)} smaller${now > 0 ? `: about ${Math.round(now * effect.times * 10) / 10} points instead of ${now}` : ''}`;
+    }
+    case 'greekMembers':
+      return `${percent(1 - effect.times)} fewer students join a chapter at rush`;
   }
 }
 

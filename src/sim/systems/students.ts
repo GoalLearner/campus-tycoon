@@ -65,7 +65,8 @@ import { townLiving } from './town';
 import { socialTables } from './grounds';
 import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
 import { classSizeNow, teaching } from './staffing';
-import { ratingShift } from './policies';
+import { causeShifts, ratingShift, type CauseShift } from './policies';
+import { chapterLift, memberOf } from './greek';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -93,7 +94,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26, greek: 27, chapter: 28 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -334,8 +335,10 @@ export interface StudentCard {
   quirk: string;
   /** The dorm's cell, or null for a commuter. */
   home: number | null;
-  /** Where they live, for the card's first line. */
-  residence: 'dorm' | 'offCampus';
+  /** Where they live, for the card's first line: a member of an overfull chapter may still have a dorm bed. */
+  residence: 'dorm' | 'offCampus' | 'chapter';
+  /** The chapter a member belongs to (DESIGN.md 51). null for everyone else. */
+  chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
   street: string | null;
   /** On a 4.0 scale, to one decimal. */
@@ -381,12 +384,14 @@ function clubOf(seed: number, ref: StudentRef, nature: ArchetypeId, group: strin
 }
 
 /** The phase a student is in this year, laid over their lasting nature. */
-function archetypeNow(state: GameState, ref: StudentRef, classYear: number, nature: ArchetypeId, resident: boolean): ArchetypeId {
+function archetypeNow(state: GameState, ref: StudentRef, classYear: number, nature: ArchetypeId, resident: boolean, member: boolean): ArchetypeId {
   // Football's two: the roster, and the fans, who swell on a home game day and after a big win.
   const sport = roll(state.seed, ref, SALT.sport);
   const roster = athleteShare(state);
   if (sport < roster) return 'athlete';
   if (sport < roster + superfanShare(state)) return 'superfan';
+  // A chapter's members (DESIGN.md 51): a pledge in their first year, a loyalist after.
+  if (member) return classYear === 0 ? 'pledge' : 'greekLoyalist';
   // In finals week some of everyone is up all night. It passes with the exams.
   if (dayRead(state.clock).kind === 'finals' && roll(state.seed, ref, SALT.finals) < ALL_NIGHTER_SHARE) return 'allNighter';
   const at = roll(state.seed, ref, SALT.phase);
@@ -410,8 +415,8 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
  * Approval over the places a student spends their days: each cause is the
  * average of its level at those places.
  */
-function approvalOver(state: GameState, spots: readonly number[]): Approval {
-  const each = spots.map((spot) => approvalAt(state, spot));
+function approvalOver(state: GameState, spots: readonly number[], shifts?: readonly CauseShift[]): Approval {
+  const each = spots.map((spot) => approvalAt(state, spot, shifts));
   const first = each[0];
   if (!first) return { score: 0, causes: [], walkMinutes: -1 };
   const causes = first.causes.map((cause, i) => ({
@@ -529,7 +534,9 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   const resident = home !== null;
   // Who lives on campus is part of who the student is. Someone whose dorm is not built yet still counts.
   const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
-  const archetype = archetypeNow(state, ref, classYear, nature, resident);
+  // Greek Row: a student who lives on campus may be in a chapter, and live in its house (DESIGN.md 51).
+  const member = resident ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
+  const archetype = archetypeNow(state, ref, classYear, nature, resident, member !== null);
 
   const relationship = relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state));
 
@@ -553,7 +560,8 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   let seasonal = 0;
   for (const part of week.parts) seasonal += part.id === 'exams' ? Math.max(-STRESS_HAPPINESS, part.points * tilt) : part.points;
   if (spots.length > 0) {
-    const approval = approvalOver(state, spots);
+    // A member feels their chapter's whole lift, where the campus feels it by their share.
+    const approval = approvalOver(state, spots, member ? causeShifts(state, 'housing', chapterLift(state, member.chapter).points) : undefined);
     const temperament = (roll(seed, ref, SALT.mood) * 2 - 1) * TEMPERAMENT_SPREAD;
     // The status nudges this one student. It is never offered as the reason: that stays something the player can change.
     happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + relationship.points + seasonal)));
@@ -584,7 +592,8 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     archetypeName: ARCHETYPE_NAMES[archetype],
     quirk,
     home,
-    residence: resident ? 'dorm' : 'offCampus',
+    residence: member?.housed ? 'chapter' : resident ? 'dorm' : 'offCampus',
+    chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,
     tutored: tutoring > 0,

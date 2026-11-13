@@ -22,6 +22,7 @@ import { newRhythm } from './systems/rhythm';
 import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
+import { newGreek } from './systems/greek';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -30,7 +31,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 24;
+export const SAVE_VERSION = 25;
 
 export interface SaveFile {
   v: number;
@@ -332,6 +333,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 25: Greek Row (DESIGN.md 51). No chapter yet: a game with goals in the Growth era may build its first.
+  24: (state) => {
+    if (typeof state.greek !== 'object' || state.greek === null) (state as unknown as GameState).greek = newGreek();
+    return state;
+  },
 };
 
 /**
@@ -397,7 +403,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

@@ -21,10 +21,11 @@ export type PolicyEffect =
    * Points of one of the four causes of Happiness, out of that cause's own
    * 100. It goes inside the cause and is named on its line: there is no
    * fifth cause. `among` says whose it is: everyone's, or only the students
-   * who drive, or only the freshmen the policy has housed, and then the
-   * campus feels it by their share.
+   * who drive, or only the freshmen the policy has housed, or only the
+   * members of Greek Row's chapters (DESIGN.md 51), and then the campus
+   * feels it by their share. With `fall`, only in the fall semester.
    */
-  | { kind: 'cause'; cause: CauseId; points: number; among: 'everyone' | 'drivers' | 'housed' }
+  | { kind: 'cause'; cause: CauseId; points: number; among: 'everyone' | 'drivers' | 'housed' | 'greek'; fall?: true }
   /** Points off Stress in finals week, and a share of them at midterms. With `library`, only for students with a library in reach. */
   | { kind: 'exams'; points: number; library?: true }
   /** Points on one input of the academic rating, out of its own 100. `why` is said beside it. */
@@ -42,13 +43,19 @@ export type PolicyEffect =
   /** Income: so much a year from each student who drives, or from a donor, on the small campus's count. */
   | { kind: 'income'; per: 'driver' | 'donor'; amount: number }
   /** Mischief in the dorms happens this many times as often. */
-  | { kind: 'mischief'; times: number };
+  | { kind: 'mischief'; times: number }
+  /** Greek Row's drag on the academic rating is this many times as large (DESIGN.md 51). */
+  | { kind: 'greekDrag'; times: number }
+  /** This many times as many students join a chapter at rush (DESIGN.md 51). */
+  | { kind: 'greekMembers'; times: number };
 
 export interface PolicySpec {
   id: string;
   name: string;
   /** The era that opens it: 1 is Growth, 2 Flagship, 3 Legacy. */
   era: 1 | 2 | 3;
+  /** Shown only once the campus has a chapter house, or while it is on (DESIGN.md 51). */
+  greek?: true;
   /** Its one gain and its one named cost, in plain words: what the switch says before it is turned on. */
   gives: string;
   takes: string;
@@ -150,6 +157,31 @@ export const POLICIES: readonly PolicySpec[] = [
     costs: [{ kind: 'cause', cause: 'grounds', points: -3, among: 'everyone' }],
     begins: 'Naming rights are sold: the {donor} name goes up around campus.',
     ends: 'Naming rights end: the {donor} name comes down.',
+  },
+  // The two of Greek Row (DESIGN.md 12.3, as built in section 51). Each shows once the campus has a chapter house.
+  {
+    id: 'deferredRush',
+    name: 'Deferred rush',
+    era: 1,
+    greek: true,
+    gives: 'Less drag on the academic rating from Greek Row',
+    takes: 'A quieter, less happy fall',
+    gains: [{ kind: 'greekDrag', times: 0.5 }],
+    costs: [{ kind: 'cause', cause: 'life', points: -2, among: 'everyone', fall: true }],
+    begins: 'Deferred rush begins: freshmen settle into classes before they may join a chapter.',
+    ends: 'Deferred rush ends: freshmen may join a chapter in their first fall again.',
+  },
+  {
+    id: 'chapterGrades',
+    name: 'Chapter grade standard',
+    era: 1,
+    greek: true,
+    gives: 'Less drag on the academic rating from Greek Row',
+    takes: 'Fewer students join the chapters',
+    gains: [{ kind: 'greekDrag', times: 0.5 }],
+    costs: [{ kind: 'greekMembers', times: 0.7 }],
+    begins: 'A chapter grade standard begins: a member keeps their grades up, or takes a semester off from the chapter.',
+    ends: 'The chapter grade standard ends.',
   },
 ];
 

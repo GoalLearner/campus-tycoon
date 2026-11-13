@@ -2830,3 +2830,47 @@ button.students {
 .policy.tradition.at-risk {
   border-color: var(--warn, #f0c36a);
 }
+
+/* A chapter of Greek Row (DESIGN.md 51): its house, its standing in the colour of how it stands, and its rows. */
+.chapter-picture {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 2px;
+}
+.chapter-standing {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 4px 0 8px;
+}
+.chapter-standing strong {
+  color: var(--good, #7be495);
+}
+.chapter-standing.warning {
+  border-color: var(--warn, #f0c36a);
+}
+.chapter-standing.warning strong,
+.chapter-standing.probation strong {
+  color: var(--warn, #f0c36a);
+}
+.chapter-standing.probation {
+  border-color: #e8847a;
+}
+.chapter-standing.probation strong {
+  color: #e8847a;
+}
+.chapter-standing p.fine {
+  margin: 2px 0 0;
+}
+.chapter-row {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+.chapter-label {
+  color: var(--muted);
+}

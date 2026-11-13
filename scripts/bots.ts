@@ -10,6 +10,13 @@ import {
   LAB_SEAT_REACH,
   TRADITIONS,
   conditionHolds,
+  cannotBuildChapter,
+  chapters,
+  chapterTrouble,
+  CHAPTER_NOISE_REACH,
+  greekDrag,
+  noiseAt,
+  ROW_REACH,
   traditionToChoose,
   labOf,
   stageSpec,
@@ -131,7 +138,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true, traditions: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true, traditions: true, greek: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -438,6 +445,13 @@ function setPolicies(state: GameState, style: Style): GameState {
         return kept < short ? true : kept > flush ? false : null;
       case 'quietHours':
         return safety < 0.55 ? true : safety > 0.7 ? false : null;
+      // Greek Row's two (DESIGN.md 51). The once-a-day player, chasing the rating, defers rush once the drag passes a
+      // point and a half. The player who works every cause sets a grade standard once it passes one point. The
+      // casual player leaves both alone.
+      case 'deferredRush':
+        return style === 'daily' ? (greekDrag(state).before >= 1.5 ? true : greekDrag(state).before < 1 ? false : null) : null;
+      case 'chapterGrades':
+        return style === 'striver' ? (greekDrag(state).before >= 1 ? true : greekDrag(state).before < 0.6 ? false : null) : null;
       default:
         return null;
     }
@@ -969,6 +983,66 @@ function placeLabs(state: GameState, reserve: number): { state: GameState; place
 }
 
 /**
+ * Greek Row (DESIGN.md 51): a first chapter house once the Growth era opens, and another while a chapter is overfull,
+ * when the campus can afford to build and run it. A house goes where it is happiest and quietest for others: inside
+ * the stadium's noise, beside another house, in Campus Safety's reach, with as few dorms and lecture halls near it as
+ * can be.
+ */
+function chaptersWanted(state: GameState): boolean {
+  if (!botOptions.greek || cannotBuildChapter(state) !== null) return false;
+  const list = chapters(state);
+  if (list.length > 0 && !list.some((chapter) => chapterTrouble(state, chapter).overfull)) return false;
+  const books = budget(state);
+  if (books.incomeTotal <= 0) return false;
+  const share = (100 * placedUpkeep('chapterHouse', scaleOf(state))) / books.incomeTotal;
+  return share < 0.5 || keeps(state) - share >= KEEPS_ENOUGH;
+}
+
+function chapterSpot(state: GameState): Point | null {
+  const map = state.map;
+  const houses = chapters(state)
+    .map((chapter) => map.placed[chapter.house])
+    .filter((house): house is Placed => !!house);
+  const plot = state.football.stadium.plot === null ? null : map.placed[state.football.stadium.plot];
+  const admin = map.placed.find((one) => one?.type === 'admin');
+  const [cx, cy] = plot ? [plot.x, plot.y] : admin ? [admin.x, admin.y] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
+  const lots = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot);
+  let best: Point | null = null;
+  let score = -Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      if (!freeAt(state, x, y) || previewPlace(state, 'chapterHouse', x, y).problem !== null) continue;
+      let here = 0;
+      if (noiseAt(state, x, y) > 0) here += 1000;
+      if (houses.some((house) => Math.max(Math.abs(house.x - x), Math.abs(house.y - y)) <= ROW_REACH)) here += 600;
+      if (coverFor(map, 'safety', x, y)) here += 400;
+      for (const lot of lots) if (Math.max(Math.abs(lot.x - x), Math.abs(lot.y - y)) <= CHAPTER_NOISE_REACH) here -= 60;
+      here -= Math.hypot(x - cx, y - cy);
+      if (here > score) {
+        score = here;
+        best = [x, y];
+      }
+    }
+  }
+  return best;
+}
+
+function placeChapters(state: GameState, reserve: number): { state: GameState; placed: number } {
+  let current = state;
+  let placed = 0;
+  // One a visit: a chapter founded takes in the overfull one's extra members at once.
+  if (!chaptersWanted(current) || current.money.cash - placedCost('chapterHouse', scaleOf(current)) < reserve) return { state: current, placed };
+  const spot = chapterSpot(current);
+  if (!spot) return { state: current, placed };
+  const result = applyAction(current, { type: 'place', building: 'chapterHouse', x: spot[0], y: spot[1] });
+  if (result.ok) {
+    current = result.state;
+    placed += 1;
+  }
+  return { state: current, placed };
+}
+
+/**
  * Traditions (DESIGN.md 50): as each place opens, the player chooses one whose condition the campus meets now; the
  * Rivalry Trophy, which always counts, when none does. Each kind of player reads the list its own way, so the long run
  * sees more of the eight: the casual player from the top, the once-a-day player from the bottom, the striver from the
@@ -1433,6 +1507,10 @@ function takeTurnAfter(state: GameState, as: Style): TurnResult {
     purchases += labs.placed;
     // And a tradition for each place open (DESIGN.md 50).
     current = chooseTraditions(current, as);
+    // And Greek Row's chapter houses, from the Growth era (DESIGN.md 51).
+    const houses = placeChapters(current, reserve);
+    current = houses.state;
+    purchases += houses.placed;
   }
 
   // The optimizer spends every dollar on lots the moment it has one, so it would never have the price of a

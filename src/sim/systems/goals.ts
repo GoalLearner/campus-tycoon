@@ -94,14 +94,16 @@ const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'
  * read from the list of policies, so it says whatever that list holds.
  */
 export function eraOpens(era: number): string {
-  const names = POLICIES.filter((spec) => spec.era === era).map((spec) => spec.name);
+  // Greek Row's two switches show with the first chapter house, not with the era (DESIGN.md 51): the era names the row.
+  const names = POLICIES.filter((spec) => spec.era === era && !spec.greek).map((spec) => spec.name);
   // The big builds it opens (DESIGN.md 45) come first: they are what the era is named for.
   const builds = bigBuildsOpening(era);
   if (names.length === 0) return builds;
   const count = COUNT_WORDS[names.length] ?? String(names.length);
   const first = !POLICIES.some((spec) => spec.era < era);
   const policies = first ? `the Policies page, with ${count} ${names.length === 1 ? 'switch' : 'switches'}: ${list(names)}` : `${count} more ${names.length === 1 ? 'policy' : 'policies'}: ${list(names)}`;
-  return builds ? `${builds}; and ${policies}` : policies;
+  const greek = era === 1 ? '; and Greek Row, with chapter houses in the Build menu' : '';
+  return `${builds ? `${builds}; and ${policies}` : policies}${greek}`;
 }
 
 /** The next era this game has not reached, with the rank that opens it and what it will open. null when there is none left, or on a game with no eras. */

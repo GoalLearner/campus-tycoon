@@ -27,6 +27,8 @@ import { markRatesDirty } from './money';
 import { hallName } from './people';
 import { playUse, waitMinutes } from './play';
 import { crowding, dayRead, type CampusDay } from './season';
+import { GIVING_BONUS, GIVING_MOST } from '../config/greek';
+import { greekGiving, greekPranked, greekPrankText, prankToday } from './greek';
 
 /**
  * The routine side of the inbox (DESIGN.md sections 12 and 36): petitions,
@@ -232,6 +234,9 @@ interface Draft {
   advised: string;
   /** When it closes, if not the usual window after it opens. */
   closes?: number;
+  /** A chapter house's id, for an item about a chapter (DESIGN.md 51), and the line for its record. */
+  house?: number;
+  note?: string;
 }
 
 interface Written {
@@ -614,6 +619,41 @@ export const WRITTEN: readonly Written[] = [
     },
   },
   {
+    // Greek Row (DESIGN.md 51): a chapter's prank, friendly and put right by morning. More often from a chapter on
+    // Warning or Probation, and half as often from one that has given back since rush. Either answer is kind.
+    key: 'chapterPrank',
+    kind: 'event',
+    advisor: 'dean',
+    rest: 0,
+    when: (f) => {
+      const prank = prankToday(f.state, f.pick);
+      if (!prank) return null;
+      const { chapter, text } = prank;
+      const more = chapter.giving < GIVING_MOST;
+      return {
+        title: `A prank from ${chapter.name}`,
+        body: `${text} Nobody minds, and the Dean is trying not to smile.`,
+        options: [
+          option('laugh', 'Leave it until morning', `Happiness is ${points(1)} higher for ${days(2)}. Students rather like it, and the chapter puts it right.`, 0, [happy(1, 2, 'A friendly prank')]),
+          option(
+            'service',
+            `Ask ${chapter.name} to put it right, then help out in town`,
+            more
+              ? `They hold a philanthropy event. Its members' Food & fun is ${GIVING_BONUS} points higher until rush week, and the chapter pranks half as often.`
+              : 'They hold a philanthropy event. The chapter has given back as much as its members feel this year.',
+            0,
+            [{ t: 'giving', house: chapter.house }],
+          ),
+        ],
+        fallback: 'laugh',
+        advised: more ? 'service' : 'laugh',
+        closes: f.state.clock.tick + EVENT_WINDOW_TICKS,
+        house: chapter.house,
+        note: text,
+      };
+    },
+  },
+  {
     key: 'profBand',
     kind: 'event',
     advisor: 'provost',
@@ -792,6 +832,10 @@ export function openRoutine(state: GameState, day: number, log: LogEntry[]): voi
     inbox.last[item.key] = year;
     if (item.key === 'nightWatch') inbox.marks.missed = state.incidents.missed;
     if (item.key === 'boat') inbox.marks.boat = year;
+    if (draft.house !== undefined) {
+      greekPranked(state, draft.house);
+      if (draft.note) greekPrankText(state, draft.house, draft.note);
+    }
     room -= 1;
     const fallback = opened.options.find((choice) => choice.id === opened.fallback);
     log.push({
@@ -854,6 +898,9 @@ function carryOut(state: GameState, item: InboxItem, picked: InboxOption): void 
       case 'mark':
         if (effect.key === 'donor') state.inbox.marks.donor = state.clock.week.year;
         else state.inbox.marks.boat = state.clock.week.year;
+        break;
+      case 'giving':
+        greekGiving(state, effect.house);
         break;
     }
   }

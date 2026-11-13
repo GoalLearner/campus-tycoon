@@ -3,6 +3,7 @@ import { DECOR_POINT, DECOR_REACH } from './decor';
 import { UTILITIES_PER_CELL, UTILITIES_PER_OPEN_CELL } from './money';
 import { COMMONS_POINTS, HONORS_RATE, UNION_REACH, UNION_STRENGTH, WELCOME_MORE } from './bigBuilds';
 import { LAB_REPUTATION, LAB_SEAT_REACH } from './labs';
+import { CHAPTER_BEDS, CHAPTER_COST, CHAPTER_NOISE_REACH, CHAPTER_UPKEEP } from './greek';
 
 /** What a research lab does, for its card in the Build menu. */
 const LAB_EFFECT = `Findings to collect, and discoveries of its own. Faster near lecture halls. Reputation ${LAB_REPUTATION} point higher`;
@@ -15,12 +16,12 @@ const LAB_EFFECT = `Findings to collect, and discoveries of its own. Faster near
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era' | 'lab';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era' | 'lab' | 'chapter';
 
 export interface PlacedSpec {
   name: string;
   /** The heading it sits under in the Build menu. */
-  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned' | 'Decor' | 'Flagship' | 'Legacy';
+  category: 'Academics' | 'Food' | 'Campus life' | 'Recreation' | 'Water' | 'Safety & health' | 'Roads and parking' | 'Grounds' | 'Landmarks' | 'Athletics' | 'Earned' | 'Decor' | 'Flagship' | 'Legacy' | 'Greek Row';
   family: PlacedFamily;
   w: number;
   h: number;
@@ -269,6 +270,12 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
   labHealth: {
     name: 'Health lab', category: 'Academics', family: 'lab', w: 2, h: 2, cost: 50_000, upkeepPerYear: 4_000,
     radius: LAB_SEAT_REACH, strength: 0, effect: LAB_EFFECT, sprite: 'lab.health', flat: false, buildable: true,
+  },
+  // Greek Row (DESIGN.md 51): a chapter house is a chapter. Its reach is how far its noise carries.
+  chapterHouse: {
+    name: 'Chapter house', category: 'Greek Row', family: 'chapter', w: 1, h: 1, cost: CHAPTER_COST, upkeepPerYear: CHAPTER_UPKEEP,
+    radius: CHAPTER_NOISE_REACH, strength: 0, sprite: 'chapter.0', flat: false, buildable: true,
+    effect: `A chapter: ${CHAPTER_BEDS} beds, and Food & fun for its members. Likes the stadium and another house beside it. Noisy within ${CHAPTER_NOISE_REACH} cells`,
   },
 };
 

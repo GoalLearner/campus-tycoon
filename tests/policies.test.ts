@@ -66,6 +66,7 @@ import {
 import { semesterEnd } from '../src/sim/systems/admissions';
 import { fanDemand, footballBooks } from '../src/sim/systems/football';
 import { upgradeNotes } from '../src/app/upgradeNotes';
+import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
@@ -108,7 +109,7 @@ const lotOf = (state: GameState, zone: 'housing' | 'academic'): number => {
 };
 
 describe('the list of policies', () => {
-  it('is eight, in the three eras, each with one gain and one named cost in plain words', () => {
+  it('is ten, in the three eras, each with one gain and one named cost in plain words', () => {
     expect(POLICIES.map((spec) => spec.name)).toEqual([
       'Reading days before finals',
       'Tough grading',
@@ -118,6 +119,8 @@ describe('the list of policies', () => {
       'Parking fees',
       'Quiet hours',
       'Naming rights',
+      'Deferred rush',
+      'Chapter grade standard',
     ]);
     expect(policiesAt(1)).toHaveLength(4);
     expect(policiesAt(2).map((spec) => spec.id)).toEqual(['allNightLibrary', 'parkingFees']);
@@ -154,7 +157,7 @@ describe('the list of policies', () => {
       }
     }
     // Every kind of effect there is has a policy that uses it.
-    expect([...kinds].sort()).toEqual(['cause', 'exams', 'fans', 'freeSeats', 'income', 'leaving', 'mischief', 'rating', 'spareBeds', 'upkeep']);
+    expect([...kinds].sort()).toEqual(['cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'income', 'leaving', 'mischief', 'rating', 'spareBeds', 'upkeep']);
   });
 });
 
@@ -219,7 +222,7 @@ describe('an era opens its switches', () => {
   it('says what it opens the day it begins, in the goal, the headline and a line that leads to the page', () => {
     const { state, log } = ranked(120);
     const goal = log.find((entry) => entry.kind === 'goal')!;
-    expect(goal.text.endsWith('The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.')).toBe(true);
+    expect(goal.text.endsWith('The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section; and Greek Row, with chapter houses in the Build menu.')).toBe(true);
     expect(goal.data?.era).toBe(1);
     const paper = edition(state, log, facts(state));
     expect(paper.headline.startsWith('The Growth Era Begins at Test')).toBe(true);
@@ -245,7 +248,7 @@ describe('an era opens its switches', () => {
     const start = opened();
     expect(nextEra(start)).toEqual({ era: 1, name: 'Growth', top: 125, opens: eraOpens(1) });
     expect(sizeView(start).era).toBe('Era: Arrival');
-    expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.');
+    expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section; and Greek Row, with chapter houses in the Build menu.');
     expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and two more policies: All-night library and Parking fees.');
     expect(sizeView(flagship()).eraNext).toBe("The Legacy era, at the Top 25, opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     expect(sizeView(legacy()).eraNext).toBe('');
@@ -617,7 +620,7 @@ describe('content is data', () => {
     list.push(ninth);
     try {
       const { state, log } = ranked(120);
-      expect(log.find((entry) => entry.kind === 'goal')!.text).toContain('with five switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section and Evening shuttle.');
+      expect(log.find((entry) => entry.kind === 'goal')!.text).toContain('with five switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section and Evening shuttle; and Greek Row');
       const row = policiesView(state)!.rows.find((one) => one.id === 'testNinth')!;
       expect(row).toMatchObject({ name: 'Evening shuttle', on: false, locked: false, gain: 'Income', cost: 'A little Happiness' });
       expect(row.costLines).toEqual(['Safety & health −2']);
@@ -631,7 +634,7 @@ describe('content is data', () => {
     } finally {
       list.pop();
     }
-    expect(POLICIES).toHaveLength(8);
+    expect(POLICIES).toHaveLength(10);
   });
 
   it('no rule, page or line of the game names a policy: only the list does', () => {
@@ -699,6 +702,7 @@ describe('a save from version 16', () => {
     expected.bigBuilds = state.bigBuilds;
     expected.labs = state.labs;
     expected.traditions = state.traditions;
+    expected.greek = newGreek();
     expected.rng.orders = state.rng.orders;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -744,7 +748,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(8);
+    expect(notes).toHaveLength(9);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
