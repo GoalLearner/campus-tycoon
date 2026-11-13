@@ -1,0 +1,25 @@
+# Campus Tycoon cloud saves (DESIGN.md 48). Switched off: nothing here has been deployed or created.
+# Before it can run on Cloudflare, the owner creates the D1 database and the R2 bucket and puts the
+# database's ID below (docs/handoff/cloud-saves.html has the steps). Run locally with
+# `node server/dev.mjs`, which needs none of it.
+name = "campus-tycoon-cloud"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Who Apple's identity tokens must be for: the app's bundle ID (capacitor.config.json).
+APPLE_AUDIENCE = "com.goallearner.campustycoon"
+# The Sign in with Apple key goes in as secrets, never here:
+#   npx wrangler secret put APPLE_TEAM_ID
+#   npx wrangler secret put APPLE_KEY_ID
+#   npx wrangler secret put APPLE_PRIVATE_KEY   (the whole .p8 file)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "campus-tycoon-cloud"
+database_id = "SET-WHEN-CREATED"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "SAVES"
+bucket_name = "campus-tycoon-saves"

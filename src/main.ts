@@ -15,6 +15,11 @@ async function boot(): Promise<void> {
   }
   await store.load();
   store.start();
+  // Cloud saves (DESIGN.md 48) are switched off: only the dev server loads them, and only with a server's address.
+  if (import.meta.env.DEV) {
+    const { startCloud } = await import('./app/cloudWire');
+    startCloud(store, window.location.search);
+  }
   // Notifications are planned when the iPhone app is put away. A browser tab has none.
   startNotices();
 
