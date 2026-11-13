@@ -7,6 +7,7 @@ import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
 import { diningAt, foodKindsAt } from './food';
 import { noiseAt } from './football';
+import { causeShifts, type CauseShift } from './policies';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
 import { recreationAt } from './play';
@@ -47,6 +48,12 @@ export interface Cause {
    * and never past full (DESIGN.md 30.2). Left out when nothing was added.
    */
   bonus?: number;
+  /**
+   * What each policy that is on adds to or takes from this cause, already
+   * inside `level` (DESIGN.md 41.7). A policy has no line of its own: it is
+   * named here, on the cause it belongs to. Left out when there is none.
+   */
+  policies?: Array<{ id: string; name: string; delta: number }>;
 }
 
 export interface Approval {
@@ -97,8 +104,12 @@ export function partLevel(causes: readonly Cause[], id: DriverId): number | unde
   return undefined;
 }
 
-/** Happiness at one lot, with its causes. */
-export function approvalAt(state: GameState, cell: number): Approval {
+/**
+ * Happiness at one lot, with its causes. `shifts` is what the policies add to
+ * or take from the causes at a lot of this zone: the campus average passes
+ * it in, having worked it out once, and a single lot asks for it here.
+ */
+export function approvalAt(state: GameState, cell: number, shifts?: readonly CauseShift[]): Approval {
   const map = state.map;
   const zone = map.cells[cell]?.zone ?? null;
   if (zone === null) return { score: 0, causes: [], walkMinutes: -1 };
@@ -137,6 +148,16 @@ export function approvalAt(state: GameState, cell: number): Approval {
       cause.level = lifted;
     }
   }
+  // A policy that is on: inside the cause it belongs to, never past full or below nothing, its name kept beside it.
+  for (const shift of shifts ?? causeShifts(state, zone)) {
+    for (const cause of causes) {
+      if (cause.id !== shift.cause) continue;
+      const moved = Math.max(0, Math.min(1, cause.level + shift.delta)) - cause.level;
+      if (moved === 0) continue;
+      cause.level += moved;
+      (cause.policies ??= []).push({ id: shift.id, name: shift.name, delta: moved });
+    }
+  }
   return { score: scoreOf(causes), causes, walkMinutes };
 }
 
@@ -158,19 +179,35 @@ export interface CampusHappiness {
 }
 
 /** The average of a zone's lots, each counted by how many students it holds. */
-function zoneAverage(state: GameState, zone: Zone): { people: number; score: number; levels: Map<DriverId, number>; bonus: Map<CauseId, number> } {
+interface PolicyNote {
+  id: string;
+  name: string;
+  cause: CauseId;
+  delta: number;
+}
+
+function zoneAverage(state: GameState, zone: Zone): { people: number; score: number; levels: Map<DriverId, number>; bonus: Map<CauseId, number>; policies: Map<string, PolicyNote> } {
   const levels = new Map<DriverId, number>();
   const bonus = new Map<CauseId, number>();
+  const policies = new Map<string, PolicyNote>();
+  // What the policies do at a lot of this zone is the same at every lot of it: worked out once.
+  const shifts = causeShifts(state, zone);
   let people = 0;
   let score = 0;
   for (const building of state.map.buildings) {
     if (!building || building.zone !== zone || building.stage < 1) continue;
     // Used as a weight, so the campus scale cancels.
     const size = stageSpec(zone, building.stage, 1).capacity;
-    const here = approvalAt(state, building.y * state.map.width + building.x);
+    const here = approvalAt(state, building.y * state.map.width + building.x, shifts);
     for (const cause of here.causes) {
       for (const part of cause.parts) levels.set(part.id, (levels.get(part.id) ?? 0) + part.level * size);
       if (cause.bonus) bonus.set(cause.id, (bonus.get(cause.id) ?? 0) + cause.bonus * size);
+      for (const note of cause.policies ?? []) {
+        const key = `${cause.id}:${note.id}`;
+        const kept = policies.get(key) ?? { id: note.id, name: note.name, cause: cause.id, delta: 0 };
+        kept.delta += note.delta * size;
+        policies.set(key, kept);
+      }
     }
     score += here.score * size;
     people += size;
@@ -178,8 +215,9 @@ function zoneAverage(state: GameState, zone: Zone): { people: number; score: num
   if (people > 0) {
     for (const [id, sum] of levels) levels.set(id, sum / people);
     for (const [id, sum] of bonus) bonus.set(id, sum / people);
+    for (const note of policies.values()) note.delta /= people;
   }
-  return { people, score: people > 0 ? score / people : 0, levels, bonus };
+  return { people, score: people > 0 ? score / people : 0, levels, bonus, policies };
 }
 
 export function campusHappiness(state: GameState): CampusHappiness {
@@ -213,8 +251,19 @@ export function campusHappiness(state: GameState): CampusHappiness {
     if (parts.length === 0) continue;
     // What variety added at each lot, averaged the same way, so the panel and the cards agree.
     const added = share > 0 ? ((dorms.bonus.get(id) ?? 0) * residents + (halls.bonus.get(id) ?? 0) * others) / share : 0;
-    const cause: Cause = { id, level: Math.min(1, weighed(parts) + added), weight: CAUSE_WEIGHTS[id] * share, parts };
+    // What each policy added or took at each lot, averaged the same way: it is named on this cause's line.
+    const notes: Array<{ id: string; name: string; delta: number }> = [];
+    for (const key of new Set([...dorms.policies.keys(), ...halls.policies.keys()])) {
+      const inDorms = dorms.policies.get(key);
+      const inHalls = halls.policies.get(key);
+      const note = inDorms ?? inHalls!;
+      if (note.cause !== id || share <= 0) continue;
+      notes.push({ id: note.id, name: note.name, delta: ((inDorms?.delta ?? 0) * residents + (inHalls?.delta ?? 0) * others) / share });
+    }
+    const moved = notes.reduce((sum, note) => sum + note.delta, 0);
+    const cause: Cause = { id, level: Math.max(0, Math.min(1, weighed(parts) + added + moved)), weight: CAUSE_WEIGHTS[id] * share, parts };
     if (added > 0) cause.bonus = added;
+    if (notes.length > 0) cause.policies = notes;
     causes.push(cause);
   }
   // The same as averaging every student's card.

@@ -1,4 +1,5 @@
 import { happyParts, stressOff } from './boosts';
+import { examsOff } from './policies';
 import { activeEntries, calendarAt, dateAt, marksAt, spanOf, type CalendarMark } from '../calendar';
 import { ACADEMIC_CALENDAR, type CalendarEntry } from '../config/academicCalendar';
 import { PLACED } from '../config/placed';
@@ -192,6 +193,9 @@ export interface StressRead {
   /** Points taken off by help from the desk, already out of the score, and what the help is called. 0 and '' with none. */
   eased: number;
   easedBy: string;
+  /** The part of that which a policy takes off in an exam week, and which policies. 0 and none outside one. */
+  policy: number;
+  policyBy: string[];
   /** 0 to 100. */
   score: number;
   /** The calendar's part, 0.1 to 1. */
@@ -261,8 +265,12 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
   }
   // Help from the desk, such as late library hours, comes straight off the top. It is the same help at any season.
   const help = stressOff(state);
+  // A policy that eases exams comes off the top too, in exam weeks only, and is named beside Stress (DESIGN.md 41.7).
+  const policy = examsOff(state, season, () => libraryShare(state));
   const raw = Math.round(100 * season * factor);
-  return { score: Math.max(0, raw - help.points), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, help.points), easedBy: help.label };
+  const off = help.points + Math.round(policy.points);
+  const by = [help.label, ...policy.by].filter((label) => label !== '').join(', ');
+  return { score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };
 }
 
 /** Faculty Stress, 0 to 100: their own calendar, and how large classes are. */
@@ -464,7 +472,9 @@ export function stepSeason(state: GameState, log: LogEntry[], levels: () => Camp
   if (pos.phase !== 'moveIn' && (pos.tickInDay % TICKS_PER_HOUR === 0 || marks.length > 0)) {
     integrate(state);
     if (pos.tickInDay === 0 && pos.phase !== 'founding') term.factor = stressRead(state, levels()).factor;
-    term.lastStress = 100 * seasonCurve(clock) * term.factor;
+    // A policy that eases exams is in the semester's average, so it is in how many students stay.
+    const curve = seasonCurve(clock);
+    term.lastStress = Math.max(0, 100 * curve * term.factor - examsOff(state, curve, () => libraryShare(state)).points);
   }
 
   // The first snow of each game year gets a line. Weather changes on the hour of a spell.

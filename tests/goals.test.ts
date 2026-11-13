@@ -206,7 +206,7 @@ describe('the academic rank on a game with goals', () => {
     state.field.rank = 120;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
-    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. The Growth era begins.");
+    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. The Growth era begins. It opens the Policies page, with four switches: Reading days before finals, Tough grading, Freshmen live on campus and Free student section.");
     state.field.rank = 190;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
@@ -425,6 +425,8 @@ describe('the main street', () => {
     expected.staffing = loaded.state.staffing;
     expected.admissions.year = loaded.state.admissions.year;
     expected.map.care.meals = loaded.state.map.care.meals!;
+    // Version 17 adds the policies, every one off (tests/policies.test.ts has those).
+    expected.policies = { on: [], locked: [], news: [] };
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

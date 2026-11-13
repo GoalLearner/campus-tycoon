@@ -21,7 +21,9 @@ import { markRatesDirty } from './systems/money';
 import { INSTRUCTION_RATIOS } from './config/staffing';
 import { instructionStep, planStaff } from './systems/staffing';
 import { RANK_GOALS } from './config/goals';
-import { rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
+import { eraOf, rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
+import { ERA_AT_RANK, ERAS } from './config/goals';
+import { policyLocked, policyOn, policySpec } from './systems/policies';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
 
@@ -57,7 +59,9 @@ export type Action =
   /** Set the ticket price step, 0 to 4. */
   | { type: 'ticketPrice'; step: number }
   /** Choose the school's colour. */
-  | { type: 'colour'; colour: string };
+  | { type: 'colour'; colour: string }
+  /** Turn a policy on or off. It then stays as it is until the next class moves in. */
+  | { type: 'policy'; id: string; on: boolean };
 
 export interface PaintPreview {
   tool: Tool;
@@ -432,6 +436,27 @@ function setTicketPrice(state: GameState, step: number): ActionResult {
   return { ok: true, state: next, cost: 0, changed: 1 };
 }
 
+/**
+ * Turn a policy on or off (DESIGN.md 41.7). Its era must have opened it, and
+ * a switch changed since the last class moved in stays as it is until the
+ * next one does. Nothing is paid to change one.
+ */
+function setPolicy(state: GameState, id: string, on: boolean): ActionResult {
+  const spec = policySpec(id);
+  if (!spec) return { ok: false, state, error: 'There is no such policy.' };
+  if (!state.goals || eraOf(state.goals) < spec.era) {
+    return { ok: false, state, error: `${spec.name} opens with the ${ERAS[spec.era]} era, at the Top ${RANK_GOALS[ERA_AT_RANK[spec.era - 1]! - 1]}.` };
+  }
+  if (policyOn(state, id) === on) return { ok: true, state, cost: 0, changed: 0 };
+  if (policyLocked(state, id)) return { ok: false, state, error: `${spec.name} was just changed. It stays as it is until the next class moves in.` };
+  const next = structuredClone(state);
+  next.policies.on = on ? [...next.policies.on, id] : next.policies.on.filter((one) => one !== id);
+  next.policies.locked.push(id);
+  next.policies.news.push({ id, on });
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1 };
+}
+
 function setColour(state: GameState, colour: string): ActionResult {
   if (!SCHOOL_COLOURS.some((one) => one.id === colour)) return { ok: false, state, error: 'That is not one of the colours.' };
   if (colour === state.football.colour) return { ok: true, state, cost: 0, changed: 0 };
@@ -466,6 +491,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return setTicketPrice(state, action.step);
     case 'colour':
       return setColour(state, action.colour);
+    case 'policy':
+      return setPolicy(state, action.id, action.on);
   }
 }
 

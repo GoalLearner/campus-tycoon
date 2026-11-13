@@ -214,6 +214,9 @@ export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
  */
 export type DriverId = 'walk' | 'green' | 'clean' | 'seating' | 'noise' | 'dining' | 'recreation' | 'safety';
 export type CauseId = 'walk' | 'grounds' | 'life' | 'safety';
+/** The four causes of Happiness, as the player reads them. */
+export const CAUSE_NAMES: Record<CauseId, string> = { walk: 'Walk to class', grounds: 'Grounds', life: 'Food & fun', safety: 'Safety & health' };
+
 /** Which cause each driver counts toward. Dining and things to do share one: "Food & fun". */
 export const CAUSE_OF: Record<DriverId, CauseId> = { walk: 'walk', green: 'grounds', clean: 'grounds', seating: 'grounds', noise: 'grounds', dining: 'life', recreation: 'life', safety: 'safety' };
 /**

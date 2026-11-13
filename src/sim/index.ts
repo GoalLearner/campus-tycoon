@@ -153,7 +153,7 @@ export {
   type StudentRef,
 } from './systems/students';
 export type { ArchetypeId, CauseId, DriverId, RelationshipId } from './config/students';
-export { PART_WEIGHTS } from './config/students';
+export { CAUSE_NAMES, PART_WEIGHTS, SURNAME_ENDS, SURNAME_STARTS } from './config/students';
 export { newGame, DEFAULT_SCHOOL_NAME, modelDistricts, MODEL_CASH_SHARE, MODEL_FULL, MODEL_STUDENTS, type NewGameOptions } from './newGame';
 export { MODEL_STAGE, type ModelDistrict } from './modelCampus';
 export { scaleOf, smallCount } from './scale';
@@ -190,6 +190,9 @@ export * from './systems/inbox';
 export * from './systems/boosts';
 export * from './systems/advisors';
 export * from './systems/goals';
+export * from './systems/policies';
+export * from './systems/policyWords';
+export * from './config/policies';
 export * from './config/goals';
 export * from './newspaper';
 export * from './notify';

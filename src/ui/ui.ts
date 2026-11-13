@@ -73,6 +73,7 @@ import {
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
+import { policiesView, policyChip } from './policyUi';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
@@ -301,7 +302,9 @@ export function mountUi(root: HTMLElement): void {
   const chips = el('div', 'hud-chips');
   const footballButton = button('', 'hud-chip', () => openFootball(openModal));
   const inboxButton = button('', 'hud-chip', () => openInbox(openModal));
-  chips.append(footballButton, inboxButton);
+  // Policies have a chip from the day the Growth era opens them, and none before (DESIGN.md section 41).
+  const policyButton = button('', 'hud-chip', () => openSize('policies'));
+  chips.append(footballButton, inboxButton, policyButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -609,6 +612,8 @@ export function mountUi(root: HTMLElement): void {
       if (where === 'inbox') openInbox(openModal);
       // A building a rank goal gave is waiting in the Build menu.
       else if (where === 'build') openBuild();
+      // An era opened switches: straight to them.
+      else if (where === 'policies') openSize('policies');
       else openFootball(openModal);
     });
   }
@@ -871,6 +876,9 @@ export function mountUi(root: HTMLElement): void {
     setText(inboxButton, desk.text);
     inboxButton.classList.toggle('urgent', desk.urgent);
     inboxButton.classList.add('show');
+    const policies = policyChip(state);
+    setText(policyButton, policies ?? '');
+    policyButton.classList.toggle('show', policies !== null);
     chips.classList.add('show');
 
     const tight = bottleneck(state);
@@ -1346,10 +1354,10 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
-  let campusPage: 'goals' | 'capacity' = 'goals';
+  let campusPage: 'goals' | 'capacity' | 'policies' = 'goals';
 
   /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
-  function openSize(page: 'goals' | 'capacity' = campusPage): void {
+  function openSize(page: 'goals' | 'capacity' | 'policies' = campusPage): void {
     campusPage = page;
     /** The row of the Capacity page that is open. One at a time. */
     let openRow: string | null = null;
@@ -1386,11 +1394,16 @@ export function mountUi(root: HTMLElement): void {
         const state = store.state;
         const size = sizeView(state);
         const needs = capacityView(state);
+        // The Policies page is there once an era has opened a switch, and not before.
+        const policies = policiesView(state);
+        if (campusPage === 'policies' && !policies) campusPage = 'goals';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        for (const [id, label] of [['goals', 'Goals'], ['capacity', needs.tab]] as const) {
+        const pages: Array<['goals' | 'capacity' | 'policies', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        if (policies) pages.push(['policies', 'Policies']);
+        for (const [id, label] of pages) {
           const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
             campusPage = id;
             body.scrollTop = 0;
@@ -1427,11 +1440,47 @@ export function mountUi(root: HTMLElement): void {
           }
           body.append(el('div', 'size-goal', size.rank));
           if (size.rankNext) body.append(el('p', 'fine', size.rankNext));
+          // The era, what the next one will open, and the way to what this one opened.
           if (size.era) body.append(el('div', 'size-goal', size.era));
+          if (size.eraNext) body.append(el('p', 'fine', size.eraNext));
+          if (policies) {
+            body.append(
+              button('Policies', 'wide', () => {
+                campusPage = 'policies';
+                body.scrollTop = 0;
+                draw();
+              }),
+            );
+          }
           if (size.reached.length > 0) {
             body.append(el('div', 'money-head', 'Goals reached'));
             for (const line of size.reached) body.append(el('p', 'fine', line));
           }
+        } else if (campusPage === 'policies' && policies) {
+          for (const row of policies.rows) {
+            const box = el('div', row.on ? 'policy on' : 'policy');
+            const top = el('div', 'policy-top');
+            const flip = button(row.on ? 'On' : 'Off', row.on ? 'policy-switch on' : 'policy-switch', () => {
+              const result = store.dispatch({ type: 'policy', id: row.id, on: !row.on });
+              if (!result.ok) session.notify(result.error, 'error');
+              draw();
+            });
+            // A switch changed since the last class moved in stays as it is until the next one does.
+            flip.disabled = row.locked;
+            top.append(el('span', 'policy-name', row.name), flip);
+            box.append(top);
+            for (const [mark, words, lines] of [['+', row.gain, row.gainLines], ['\u2212', row.cost, row.costLines]] as const) {
+              const side = el('div', mark === '+' ? 'policy-side gain' : 'policy-side cost');
+              const text = el('div', 'policy-text');
+              text.append(el('span', 'policy-words', words));
+              for (const line of lines) text.append(el('span', 'policy-line', line));
+              side.append(el('span', 'policy-mark', mark), text);
+              box.append(side);
+            }
+            if (row.locked) box.append(el('p', 'fine policy-locked', 'Set until the next class moves in.'));
+            body.append(box);
+          }
+          if (policies.next) body.append(el('p', 'fine', policies.next));
         } else {
           body.append(el('p', 'fine', needs.lead));
           for (const row of needs.rows) {
@@ -1475,6 +1524,8 @@ export function mountUi(root: HTMLElement): void {
         bar.append(fill);
         line.append(el('span', 'cause-name', cause.name), bar, el('span', 'cause-value', `${cause.percent}%`));
         list.append(line);
+        // A policy that is on is inside its cause, and is named here, on that cause's line.
+        for (const note of cause.notes) list.append(el('p', 'fine cause-note', note));
       }
       card.append(list);
       // The calendar's one line beside the four causes: exams, a break, the weather.

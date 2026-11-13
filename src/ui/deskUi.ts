@@ -106,7 +106,7 @@ export interface PaperView {
   /** How long the player was away, in words: "Away 1 day 2 hours". */
   awayFor: string;
   edition: Edition;
-  top: Array<{ tag: string; text: string; go?: 'inbox' | 'football' | 'build' }>;
+  top: Array<{ tag: string; text: string; go?: 'inbox' | 'football' | 'build' | 'policies' }>;
   /** The label on the button that opens the rest: "The rest of the paper · 23 lines". '' when there is no rest. */
   restLabel: string;
   /** The poll, as bars: a label, a share of 100 and the words beside it. */

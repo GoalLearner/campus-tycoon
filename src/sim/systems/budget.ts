@@ -34,6 +34,7 @@ import { dayRead } from './season';
 import { footballBooks, homeGameNow } from './football';
 import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
 import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
+import { freeSeats, housedByPolicy, policyIncome, upkeepMore } from './policies';
 import { offCampusNow } from './town';
 
 export { facultyCount, staffCount } from './staffing';
@@ -107,9 +108,13 @@ export function workerCount(state: GameState): number {
   return total * scaleOf(state);
 }
 
-/** Beds with a student in them: the students who do not live in town, as far as there are beds. */
+/**
+ * Beds with a student in them: the students who do not live in town, as far
+ * as there are beds, and any freshmen from town a policy has put in the beds
+ * left over (DESIGN.md 41.7).
+ */
 export function occupiedBeds(state: GameState): number {
-  return Math.max(0, Math.min(enrollment(state) - offCampusNow(state), openCapacity(state, 'housing')));
+  return Math.max(0, Math.min(enrollment(state) - offCampusNow(state), openCapacity(state, 'housing'))) + housedByPolicy(state);
 }
 
 export type BudgetGroupId = 'payroll' | 'buildings' | 'other';
@@ -162,7 +167,8 @@ export function budget(state: GameState): Budget {
   const income: BudgetLine[] = [];
   const beds = occupiedBeds(state);
   income.push({ id: 'tuition', name: 'Tuition', amount: students * tuitionRate(state), detail: `${people(students, 'student', 'students')} at ${dollars(tuitionRate(state))}` });
-  income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}` });
+  const housed = housedByPolicy(state);
+  income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}${housed > 0 ? `. Freshmen live on campus: ${people(housed, 'of them is a freshman', 'of them are freshmen')} from town` : ''}` });
   // Food and the stores earn by who is on campus: a quarter of students in a break, fewer in the summer term.
   const day = dayRead(state.clock);
   const away = day.presence < 1 ? ` ${day.name ?? 'This week'}: ${Math.round(day.presence * 100)}% of students are here` : '';
@@ -178,12 +184,15 @@ export function budget(state: GameState): Budget {
   // Football's income: tickets with what the crowd spends, and the TV deal.
   const ball = footballBooks(state);
   if (ball.tickets > 0) {
-    income.push({ id: 'tickets', name: 'Football tickets and stands', amount: ball.tickets, detail: `${HOME_GAMES_PER_YEAR} home games a year, ${people(Math.round(ball.crowd), 'fan', 'fans')} a game at ${dollars(TICKET_PRICE[state.football.stadium.price]!)} and ${dollars(CONCESSIONS_PER_FAN)} spent inside` });
+    const free = freeSeats(state);
+    income.push({ id: 'tickets', name: 'Football tickets and stands', amount: ball.tickets, detail: `${HOME_GAMES_PER_YEAR} home games a year, ${people(Math.round(ball.crowd), 'fan', 'fans')} a game at ${dollars(TICKET_PRICE[state.football.stadium.price]!)} and ${dollars(CONCESSIONS_PER_FAN)} spent inside${free.share > 0 ? `. ${free.by.join(' and ')}: ${Math.round(free.share * 100)}% of the seats are free` : ''}` });
   }
   if (ball.tv > 0) income.push({ id: 'tv', name: 'TV and conference deal', amount: ball.tv, detail: `To the end of year ${state.football.tv.until}` });
   if (m.endowment > 0) {
     income.push({ id: 'endowment', name: 'Endowment income', amount: m.endowment * ENDOWMENT_YIELD, detail: `${Math.round(ENDOWMENT_YIELD * 100)}% of ${dollars(m.endowment)}, every year` });
   }
+  // What a policy brings in has a line of its own, under the policy's name (DESIGN.md 41.7).
+  for (const line of policyIncome(state)) income.push(line);
   const incomeTotal = income.reduce((sum, line) => sum + line.amount, 0);
 
   // ---- payroll
@@ -221,12 +230,14 @@ export function budget(state: GameState): Budget {
     utilities += bill;
     if (bill > 0 || placedUpkeep(placed.type, scale) > 0) placedCount += 1;
   }
-  const upkeep = upkeepPerYear(state) + ball.upkeep;
+  // A policy that keeps a building open longer is in its upkeep, and named there.
+  const longer = upkeepMore(state);
+  const upkeep = upkeepPerYear(state) + ball.upkeep + longer.amount;
   utilities += ball.utilities;
   const count = standing + placedCount;
   const roadNote = roads > 0 ? ` and ${people(roads, 'cell', 'cells')} of road at ${dollars(ROAD_UPKEEP_PER_YEAR * scale)}` : '';
   const buildings: BudgetLine[] = [
-    { id: 'upkeep', name: 'Upkeep and repairs', amount: upkeep, detail: `${people(count, 'building', 'buildings')}${roadNote}` },
+    { id: 'upkeep', name: 'Upkeep and repairs', amount: upkeep, detail: `${people(count, 'building', 'buildings')}${roadNote}${longer.notes.length > 0 ? `. ${longer.notes.join('. ')}` : ''}` },
     { id: 'utilities', name: 'Utilities', amount: utilities, detail: `${people(count, 'building', 'buildings')}, by size. A pool uses more` },
   ];
 

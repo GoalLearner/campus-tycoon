@@ -276,6 +276,8 @@ interface DevScene {
  *   &place=gym,11,11  begin placing a building with its ghost at a cell
  *   &panel=happiness  open the Happiness panel
  *   &panel=money      open the Money panel; &group=payroll opens one of its groups
+ *   &panel=policies   open the Policies page (with &rank=120 or better, so an era has opened it)
+ *   &policies=a,b     turn those policies on; &unlock=1 then lets them be changed again, as a class moving in does
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -491,6 +493,9 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         const row = params.get('row');
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
+      // &panel=policies opens the Policies page as a tap on its chip would. &panel=goals opens the Goals page.
+      if (panel === 'policies') setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip')].find((b) => b.textContent?.startsWith('Policies'))?.click(), 1400);
+      if (panel === 'goals') setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
       // &panel=inbox opens the Inbox as a tap on its chip would, and &tab=Advisors turns to one of its pages.
       if (panel === 'inbox') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('.hud-chips .hud-chip:last-child')?.click(), 1400);
@@ -609,6 +614,14 @@ export function installDevTools(): void {
           }
         }
         if (best) store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
+      }
+      // &policies=parkingFees,quietHours turns those on, as taps on their switches would (DESIGN.md section 41).
+      // &unlock=1 then frees them, as the next class moving in does, so a picture can show both kinds of switch.
+      for (const id of (params.get('policies') ?? '').split(',').filter((one) => one !== '')) store.dispatch({ type: 'policy', id, on: true });
+      if (params.has('unlock')) {
+        const freed = structuredClone(store.state);
+        freed.policies.locked = freed.policies.locked.filter((id) => !(params.get('unlock') ?? '').split(',').includes(id) && params.get('unlock') !== '1');
+        store.adopt(freed, { ephemeral: true });
       }
     }
     if (params.has('away')) {

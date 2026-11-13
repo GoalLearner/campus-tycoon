@@ -1,5 +1,7 @@
 import {
   BUILD_ORDER,
+  CAUSE_NAMES,
+  leavingMore,
   campusHappiness,
   binState,
   fixText,
@@ -354,12 +356,7 @@ export function placingLine(type: PlacedType, scale: number): string {
 }
 
 /** The four causes of Happiness, as the player reads them. */
-export const CAUSE_NAME: Record<CauseId, string> = {
-  walk: 'Walk to class',
-  grounds: 'Grounds',
-  life: 'Food & fun',
-  safety: 'Safety & health',
-};
+export const CAUSE_NAME: Record<CauseId, string> = CAUSE_NAMES;
 
 /** What to do about the weakest part of a cause. */
 const PART_FIX: Record<DriverId, string> = {
@@ -381,7 +378,8 @@ export interface HappinessView {
   score: number;
   /** 4 is delighted, 0 is miserable. The same steps as a student card. */
   mood: number;
-  rows: Array<{ id: CauseId; name: string; percent: number; worst: boolean }>;
+  /** `notes` names each policy inside the cause, with what it adds or takes: "Parking fees \u22123". */
+  rows: Array<{ id: CauseId; name: string; percent: number; worst: boolean; notes: string[] }>;
   /** What would help most, or '' when nothing is holding happiness back. */
   advice: string;
   /** True when the advice is something the Build menu sells. */
@@ -389,6 +387,9 @@ export interface HappinessView {
   staying: string;
   lastSemester: string;
 }
+
+/** A small number to one decimal place, and to none when it is whole. */
+const tenths = (n: number): string => (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, '');
 
 export function happinessView(state: GameState): HappinessView {
   const mood = campusHappiness(state);
@@ -398,19 +399,25 @@ export function happinessView(state: GameState): HappinessView {
     name: CAUSE_NAME[cause.id],
     percent: Math.round(cause.level * 100),
     worst: cause.id === mood.worst,
+    // A policy is inside the cause it belongs to, and is named on that cause's line (DESIGN.md 41.7).
+    notes: (cause.policies ?? []).filter((note) => Math.abs(note.delta) >= 0.0005).map((note) => `${note.name} ${note.delta > 0 ? '+' : '\u2212'}${tenths(Math.abs(note.delta) * 100)}`),
   }));
   const last = state.admissions.lastSemester;
   const stress = mood.season.stress;
   const cause = STRESS_CAUSES[stress.cause];
+  const harder = leavingMore(state);
   return {
-    stress: { score: stress.score, note: stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}` },
+    stress: {
+      score: stress.score,
+      note: `${stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}`}${stress.policy > 0 ? ` ${stress.policyBy.join(' and ')}: ${stress.policy} off this week.` : ''}`,
+    },
     week: mood.season.parts.map((part) => ({ label: part.label, points: `${part.points > 0 ? '+' : '\u2212'}${Math.abs(Math.round(part.points))}` })),
     score,
     mood: score >= 80 ? 4 : score >= 62 ? 3 : score >= 45 ? 2 : score >= 28 ? 1 : 0,
     rows,
     advice: mood.worst && mood.worstPart ? `Biggest gap: ${CAUSE_NAME[mood.worst].toLowerCase()}. ${PART_FIX[mood.worstPart]}` : '',
     build: mood.worst === 'life' || mood.worst === 'safety' || mood.worstPart === 'clean' || mood.worstPart === 'seating',
-    staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.`,
+    staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.${harder.share > 0 ? ` ${harder.by.join(' and ')}: ${(harder.share * 100).toFixed(2).replace(/0$/, '')}% fewer.` : ''}`,
     lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${headCount(last.stayed)} stayed. Happiness was ${last.happiness}.` : '',
   };
 }

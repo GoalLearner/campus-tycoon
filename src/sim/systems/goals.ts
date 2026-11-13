@@ -1,5 +1,6 @@
 import { ENROLLMENT_CAP, ERA_AT_RANK, ERAS, GOAL_SCALE, RANK_GOALS, SIZE_GOALS, SIZE_GOALS_ONCE } from '../config/goals';
 import { PLACED, RANK_REWARDS } from '../config/placed';
+import { POLICIES } from '../config/policies';
 import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment } from '../selectors';
@@ -80,6 +81,33 @@ export function nextRankGoal(state: GameState): number | null {
 
 const list = (parts: string[]): string => (parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`);
 
+// ------------------------------------------------------ what an era opens --
+
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+
+/**
+ * What an era opens, in words (DESIGN.md section 41), or '' for one that
+ * opens nothing: "the Policies page, with four switches: ..." for the first
+ * era that has policies, and "two more policies: ..." for a later one. It is
+ * read from the list of policies, so it says whatever that list holds.
+ */
+export function eraOpens(era: number): string {
+  const names = POLICIES.filter((spec) => spec.era === era).map((spec) => spec.name);
+  if (names.length === 0) return '';
+  const count = COUNT_WORDS[names.length] ?? String(names.length);
+  const first = !POLICIES.some((spec) => spec.era < era);
+  return first ? `the Policies page, with ${count} ${names.length === 1 ? 'switch' : 'switches'}: ${list(names)}` : `${count} more ${names.length === 1 ? 'policy' : 'policies'}: ${list(names)}`;
+}
+
+/** The next era this game has not reached, with the rank that opens it and what it will open. null when there is none left, or on a game with no eras. */
+export function nextEra(state: GameState): { era: number; name: string; top: number; opens: string } | null {
+  if (!state.goals) return null;
+  const era = eraOf(state.goals) + 1;
+  const at = ERA_AT_RANK[era - 1];
+  if (at === undefined || ERAS[era] === undefined) return null;
+  return { era, name: ERAS[era]!, top: RANK_GOALS[at - 1]!, opens: eraOpens(era) };
+}
+
 // ---------------------------------------------------- a building for a goal --
 
 /** The building a rank goal gives: 0 is the Top 175. undefined past the last. */
@@ -141,7 +169,11 @@ function land(state: GameState, log: LogEntry[], ladder: 'size' | 'rank', count:
   // A rank goal gives its building (section 40): free, in the Build menu, for as long as it is not on the map.
   const given = ladder === 'rank' ? RANK_REWARDS.slice(was, count) : [];
   if (given.length > 0) text += ` ${capital(list(given.map(rewardName)))} ${given.length === 1 ? 'is' : 'are'} yours to place, free, from the Build menu.`;
-  if (era > eraWas) text += ` The ${ERAS[era]} era begins.`;
+  // An era says what it opens (section 41). A day that opens two says both.
+  for (let n = eraWas + 1; n <= era; n++) {
+    const opens = eraOpens(n);
+    text += ` The ${ERAS[n]} era begins.${opens ? ` It opens ${opens}.` : ''}`;
+  }
   log.push({ tick: state.clock.tick, kind: 'goal', text, data: { keep: 1, ladder, count, from: was, era: era > eraWas ? era : -1 } });
 }
 

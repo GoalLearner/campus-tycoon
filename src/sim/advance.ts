@@ -1,3 +1,4 @@
+import { tellPolicies } from './systems/policies';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -92,6 +93,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   // A new game year begins the moment the last one has run its length, stretched summer and all.
   rollWeek(clock);
   const said = log.length;
+  // A policy switched since the last tick gets its one line (DESIGN.md 41.7).
+  tellPolicies(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
