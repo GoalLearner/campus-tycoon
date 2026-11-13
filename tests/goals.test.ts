@@ -431,6 +431,9 @@ describe('the main street', () => {
     expected.policies = { on: [], locked: [], news: [] };
     // Version 18 adds the daily layer, which a game with no goals never uses (tests/daily.test.ts).
     expected.daily = loaded.state.daily;
+    // Version 19 adds the orders board, which a game with no goals never uses either (tests/orders.test.ts).
+    expected.orders = loaded.state.orders;
+    expected.rng.orders = loaded.state.rng.orders;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

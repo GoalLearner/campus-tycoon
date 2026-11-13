@@ -75,6 +75,8 @@ import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { policiesView, policyChip } from './policyUi';
 import { collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from './levelUi';
+import { footballStat, inboxStat, policyStat, type StatChip } from './chips';
+import { ordersChip, ordersView, paidWords } from './ordersUi';
 import { drawSprite, loadAtlas } from './atlas';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
@@ -302,10 +304,33 @@ export function mountUi(root: HTMLElement): void {
 
   // Football has a chip when there is a season behind it. The Inbox always has one, and says so when something waits.
   const chips = el('div', 'hud-chips');
-  const footballButton = button('', 'hud-chip', () => openFootball(openModal));
-  const inboxButton = button('', 'hud-chip', () => openInbox(openModal));
+  // Each is a number over a word, as the student count is, so that all of them hold one row on a phone 375 wide
+  // (DESIGN.md 42.16). The sentence each used to carry is still what a screen reader hears.
+  const statChip = (onClick: () => void): { node: HTMLButtonElement; set: (stat: StatChip | null, said: string) => void } => {
+    const node = button('', 'hud-chip stat', onClick);
+    const value = el('span', 'chip-value');
+    const label = el('span', 'chip-label');
+    node.append(value, label);
+    return {
+      node,
+      set: (stat, said) => {
+        node.classList.toggle('show', stat !== null);
+        if (!stat) return;
+        setText(value, stat.value);
+        setText(label, stat.label);
+        node.classList.toggle('alone', stat.value === '');
+        node.classList.toggle('urgent', stat.tone === 'urgent');
+        node.classList.toggle('good', stat.tone === 'good');
+        node.setAttribute('aria-label', said);
+      },
+    };
+  };
+  const footballButton = statChip(() => openFootball(openModal));
+  const inboxButton = statChip(() => openInbox(openModal));
+  // The orders board: things to do, beside the Inbox, which is things to decide (DESIGN.md 42.3).
+  const ordersButton = statChip(() => openOrders());
   // Policies have a chip from the day the Growth era opens them, and none before (DESIGN.md section 41).
-  const policyButton = button('', 'hud-chip', () => openSize('policies'));
+  const policyButton = statChip(() => openSize('policies'));
   // The University Level and the Gold Seals held (DESIGN.md section 42): one small button on the right of the row.
   // The badge and the Seal are the pack's drawings, from the atlas. The level's number is text set on the badge.
   const levelButton = button('', 'hud-chip level-chip', () => openLevel());
@@ -327,7 +352,7 @@ export function mountUi(root: HTMLElement): void {
     drawSprite(sealArt, atlas, 'ui.seal');
   });
   let shownLevel = -1;
-  chips.append(footballButton, inboxButton, policyButton, levelButton);
+  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, levelButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -550,7 +575,7 @@ export function mountUi(root: HTMLElement): void {
     if (!toastTimer) showNextToast();
   }
 
-  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level']);
+  const NEWSWORTHY: ReadonlySet<LogEntry['kind']> = new Set(['intake', 'waitlistClosed', 'graduation', 'yearEnd', 'grant', 'calendar', 'exam', 'weather', 'game', 'football', 'decision', 'rankings', 'goal', 'level', 'order']);
   /** An incident is only worth a line when nobody came: that is the one the player can do something about. */
   const worthSaying = (entry: LogEntry): boolean => NEWSWORTHY.has(entry.kind) || (entry.kind === 'incident' && entry.data?.handled === 0);
 
@@ -903,16 +928,11 @@ export function mountUi(root: HTMLElement): void {
     setText(when, day.kind === 'term' || day.name === null ? NOW_LABEL[pos.phase] : day.name);
     const sky = SKY_WORD[weatherAt(state.seed, state.clock)];
     setText(next, pos.year === 0 ? formatDate(dateAt(state.clock)) : `${formatDate(dateAt(state.clock))} · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
-    const ball = footballChip(state);
-    setText(footballButton, ball ?? '');
-    footballButton.classList.toggle('show', ball !== null);
-    const desk = inboxChip(state);
-    setText(inboxButton, desk.text);
-    inboxButton.classList.toggle('urgent', desk.urgent);
-    inboxButton.classList.add('show');
-    const policies = policyChip(state);
-    setText(policyButton, policies ?? '');
-    policyButton.classList.toggle('show', policies !== null);
+    footballButton.set(footballStat(state), footballChip(state) ?? 'Football');
+    inboxButton.set(inboxStat(state), inboxChip(state).text);
+    const board = ordersChip(state);
+    ordersButton.set(board, board ? `Orders${board.value ? `: ${board.value}` : ''}` : 'Orders');
+    policyButton.set(policyStat(state), policyChip(state) ?? 'Policies');
     const level = levelChip(state);
     levelButton.classList.toggle('show', level !== null);
     if (level) {
@@ -1595,6 +1615,90 @@ export function mountUi(root: HTMLElement): void {
     };
     ask();
     return box;
+  }
+
+  /**
+   * The orders board (DESIGN.md 42.3): things to do. Opening it is what starts a new order's clock, so it tells
+   * the game it has been looked at before it draws. A finished order is claimed with the medal's burst.
+   */
+  function openOrders(): void {
+    store.dispatch({ type: 'seeOrders' });
+    openModal((close, card) => {
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      card.append(head, body, button('Close', 'wide', close));
+      // What the page says about the last thing done on it. A toast would sit behind the page.
+      let told = '';
+      const draw = (): void => {
+        const view = ordersView(store.state);
+        if (!view) {
+          close();
+          return;
+        }
+        const scrolled = body.scrollTop;
+        head.textContent = '';
+        head.append(el('h1', '', 'Orders'), el('p', 'fine', view.count));
+        body.textContent = '';
+        if (view.note) body.append(el('p', 'order-note', view.note));
+        if (told) body.append(el('p', 'order-note', told));
+        for (const row of view.rows) {
+          const box = el('div', row.done ? 'order done' : 'order');
+          box.append(el('span', 'order-from', row.from), el('span', 'order-title', row.title));
+          if (row.ask) box.append(el('p', 'fine order-ask', row.ask));
+          if (!row.fresh) {
+            const bar = el('div', 'cause-bar size-bar');
+            const fill = el('div', 'cause-fill');
+            fill.style.width = `${Math.round(row.share * 100)}%`;
+            bar.append(fill);
+            const facts = el('div', 'order-facts');
+            facts.append(el('span', '', row.progress), el('span', '', row.left));
+            box.append(bar, facts, el('span', 'order-pays', `Pays ${row.reward}`));
+          }
+          if (row.done) {
+            const claim = button('Claim', 'primary wide', () => {
+              const result = store.dispatch({ type: 'claimOrder', id: row.id });
+              if (!result.ok) {
+                session.notify(result.error, 'error');
+                draw();
+                return;
+              }
+              sound.ui('collect');
+              // The medal rises from where the order was, with what it paid.
+              const from = box.getBoundingClientRect();
+              const within = card.getBoundingClientRect();
+              const burst = el('div', 'claim-burst');
+              const medal = document.createElement('canvas');
+              medal.width = 84;
+              medal.height = 98;
+              void loadAtlas().then((atlas) => drawSprite(medal, atlas, 'icon.collect'));
+              burst.append(el('span', 'claim-paid', result.paid ? paidWords(result.paid) : ''), medal);
+              burst.style.left = `${from.left - within.left + from.width / 2}px`;
+              burst.style.top = `${from.top - within.top + from.height / 2}px`;
+              card.append(burst);
+              burst.addEventListener('animationend', () => burst.remove());
+              told = '';
+              draw();
+            });
+            box.append(claim);
+          } else {
+            box.append(
+              button('Dismiss', 'order-dismiss', () => {
+                const result = store.dispatch({ type: 'dismissOrder', id: row.id });
+                if (!result.ok) session.notify(result.error, 'error');
+                else told = 'Dismissed. A new order comes tomorrow.';
+                draw();
+              }),
+            );
+          }
+          body.append(box);
+        }
+        if (view.rows.length === 0) body.append(el('p', '', 'Every order is done.'));
+        if (view.next && !told) body.append(el('p', 'fine', view.next));
+        body.scrollTop = scrolled;
+      };
+      draw();
+    });
   }
 
   /** The Level page: how far to the next level, what feeds it, what the next level gives, and what Seals can finish. */

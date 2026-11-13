@@ -282,6 +282,8 @@ interface DevScene {
  *   &policies=a,b     turn those policies on; &unlock=1 then lets them be changed again, as a class moving in does
  *   &panel=level      open the Level page; &xp=900 and &seals=20 give experience and Gold Seals first
  *   &collect=all      collect everything that is ready; &collect=3 collects that many; &slowburst slows the burst
+ *   &panel=orders     open the orders board; &ordersdone finishes the counting orders first, &claim=1 then taps
+ *                     Claim and &dismiss=1 taps Dismiss; &ordersclaim claims them at once, for the paper
  */
 let lookLabels: LookScene['labels'] = [];
 
@@ -497,6 +499,13 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         const row = params.get('row');
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
+      // &panel=orders opens the orders board as a tap on its button would. &claim=1 then taps the first Claim, and
+      // &dismiss=1 the first Dismiss.
+      if (panel === 'orders') {
+        setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.hud-chip.stat')].find((b) => b.querySelector('.chip-label')?.textContent === 'orders')?.click(), 2600);
+        if (params.has('claim')) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.order button')].find((b) => b.textContent === 'Claim')?.click(), 3400);
+        if (params.has('dismiss')) setTimeout(() => document.querySelector<HTMLButtonElement>('.order-dismiss')?.click(), 3400);
+      }
       // &panel=level opens the Level page as a tap on its button would. &finish=1 then taps the first Finish now.
       if (panel === 'level') {
         setTimeout(() => document.querySelector<HTMLButtonElement>('.level-chip')?.click(), 2600);
@@ -641,7 +650,25 @@ export function installDevTools(): void {
       if (params.has('seals')) given.daily.seals = Number(params.get('seals'));
       store.adopt(given, { ephemeral: true });
     }
-    if (params.has('slowburst')) collectShow.burstMs = 9000;
+    if (params.has('slowburst')) {
+      collectShow.burstMs = 9000;
+      document.documentElement.style.setProperty('--burst-ms', '9000ms');
+    }
+    // &ordersdone looks at the orders board and then finishes every order that counts something: a picture of a
+    // finished order waiting to be claimed.
+    if (params.has('ordersdone') && store.hasGame) {
+      store.dispatch({ type: 'seeOrders' });
+      const done = structuredClone(store.state);
+      for (const order of done.orders.open) {
+        if (order.kind && order.kind in { plantTrees: 1, layQuads: 1, benches: 1, collectRound: 1 }) {
+          const what = { plantTrees: 'trees', layQuads: 'quads', benches: 'furniture', collectRound: 'collects' }[order.kind as 'plantTrees'];
+          done.orders.tally[what] = (order.from ?? 0) + (order.target ?? 1);
+        }
+      }
+      store.adopt(done, { ephemeral: true });
+      // &ordersclaim then claims them, so that with &away the paper has its line for each.
+      if (params.has('ordersclaim')) for (const order of [...store.state.orders.open]) store.dispatch({ type: 'claimOrder', id: order.id });
+    }
     if (params.has('collect')) {
       const many = params.get('collect');
       setTimeout(() => {

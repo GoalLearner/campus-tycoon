@@ -14,6 +14,8 @@ import {
   rewardLift,
   rewardsWaiting,
   enrollmentCap,
+  orderStatus,
+  orderViews,
   hasDaily,
   readyToCollect,
   TICKS_PER_HOUR,
@@ -103,7 +105,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -785,6 +787,163 @@ function useDaily(state: GameState): { state: GameState; daily: NonNullable<Turn
   return { state: current, daily: { ...gained, lost, spent, finished } };
 }
 
+/** Bare ground the campus owns, off the street plan: where a tree or a bench can go. Beside a lot first, or beside a path for a bench. */
+function bareCells(state: GameState, most: number, byPath: boolean): Point[] {
+  const { width, height } = state.map;
+  const near: Point[] = [];
+  const far: Point[] = [];
+  for (let y = 0; y < height && near.length < most; y++) {
+    for (let x = 0; x < width && near.length < most; x++) {
+      if (!freeAt(state, x, y) || onStreetPlan(x, y) || keptForServices(x, y)) continue;
+      const beside = byPath ? besidePath(state, x, y) : DIRS.some(([dx, dy]) => kindAt(state, x + dx, y + dy) === 'lot');
+      if (beside) near.push([x, y]);
+      else if (!byPath && far.length < most) far.push([x, y]);
+    }
+  }
+  return [...near, ...far].slice(0, most);
+}
+
+/**
+ * What a player builds for an order that names a cause: something of that cause, in reach of the lot that
+ * lacks it most. Food or something to do for Food & fun; a Medical Center or Campus Safety for Safety & health.
+ */
+function buildFor(state: GameState, cause: 'life' | 'safety' | 'dining' | 'recreation', reserve: number, most: number): { state: GameState; built: number } {
+  let current = state;
+  let built = 0;
+  for (; built < most; built++) {
+    const parts: DriverId[] = cause === 'life' ? ['dining', 'recreation'] : [cause];
+    let pick: { part: DriverId; x: number; y: number; level: number } | null = null;
+    for (const part of parts) {
+      const lot = neediestLot(current, part);
+      if (lot && (!pick || lot.level < pick.level)) pick = { part, ...lot };
+    }
+    if (!pick) break;
+    const play = current.map.placed.filter((p) => p && PLACED[p.type].family === 'recreation').length;
+    const type: PlacedType = pick.part === 'dining' ? 'dining' : pick.part === 'recreation' ? PLAY[play % PLAY.length]! : coverFor(current.map, 'medical', pick.x, pick.y) ? 'safety' : 'medical';
+    if (current.money.cash - placedCost(type, scaleOf(current)) < reserve) break;
+    const spot = menuSpot(current, type, pick.x, pick.y);
+    if (!spot) break;
+    const result = applyAction(current, { type: 'place', building: type, x: spot[0], y: spot[1] });
+    if (!result.ok) break;
+    current = result.state;
+  }
+  return { state: current, built };
+}
+
+/**
+ * The Safety & health line of the Capacity page, as the page itself points to it: the first building outside a
+ * Medical Center's circle or Campus Safety's gets the one it lacks.
+ */
+function buildCare(state: GameState, reserve: number, most: number): { state: GameState; built: number } {
+  let current = state;
+  let built = 0;
+  for (; built < most; built++) {
+    const lot = current.map.buildings.find((b) => b && b.stage > 0 && (!coverFor(current.map, 'medical', b.x, b.y) || !coverFor(current.map, 'safety', b.x, b.y)));
+    if (!lot) break;
+    const type: PlacedType = coverFor(current.map, 'medical', lot.x, lot.y) ? 'safety' : 'medical';
+    if (current.money.cash - placedCost(type, scaleOf(current)) < reserve) break;
+    const spot = menuSpot(current, type, lot.x, lot.y);
+    if (!spot) break;
+    const result = applyAction(current, { type: 'place', building: type, x: spot[0], y: spot[1] });
+    if (!result.ok) break;
+    current = result.state;
+  }
+  return { state: current, built };
+}
+
+/**
+ * The orders board (DESIGN.md 42.3), as a player who visits would use it. Looking is what starts an order's
+ * clock, so the board is looked at first. Then the sensible ones are acted on, each the way its own words say:
+ *
+ * - trees are planted and benches set out where there is bare ground;
+ * - a lot is zoned for seats or beds, and a quad laid for looks, while the campus keeps enough;
+ * - Happiness, Safety & health, Food & fun and a line of the Capacity page are answered from the Build menu,
+ *   as the Happiness page advises, and litter with bins and workers.
+ *
+ * The rest are things the visit already does, or that come with the calendar. One the campus has no ground or
+ * no money for is dismissed, which is free. Then everything finished is claimed.
+ */
+function useOrders(state: GameState): GameState {
+  if (!botOptions.orders || !hasDaily(state)) return state;
+  let current = state;
+  const run = (action: Parameters<typeof applyAction>[1]): boolean => {
+    const result = applyAction(current, action);
+    if (result.ok) current = result.state;
+    return result.ok;
+  };
+  run({ type: 'seeOrders' });
+  const reserve = Math.max(20_000 * scaleOf(current), Math.round(current.money.spendingPerYear * 0.006));
+  // Anything with a yearly cost waits while the campus keeps too little (the owner's target, 37.10).
+  const flush = (): boolean => keeps(current) >= KEEPS_ENOUGH;
+  for (const view of orderViews(current)) {
+    if (view.done || view.fresh) continue;
+    const order = current.orders.open.find((one) => one.id === view.id);
+    if (!order) continue;
+    const status = orderStatus(current, order);
+    const left = Math.max(0, status.target - status.value);
+    switch (order.kind) {
+      case 'plantTrees':
+      case 'benches': {
+        const tool = order.kind === 'plantTrees' ? 'tree' : 'bench';
+        // A bench goes beside a path where there is one, and beside a building where there is not.
+        const byPath = tool === 'bench' ? bareCells(current, left, true) : [];
+        const cells = byPath.length >= left ? byPath : bareCells(current, left, false);
+        const next = cells.length >= left && left > 0 ? tryPaint(current, tool, cells, reserve) : null;
+        if (next) current = next;
+        else if (left > 0) run({ type: 'dismissOrder', id: order.id });
+        break;
+      }
+      case 'moreSeats': {
+        const spot = flush() ? (lotSpots(current)[0] ?? anyLotSpots(current)[0]) : undefined;
+        const next = spot ? tryPaint(current, 'academic', [spot], reserve) : null;
+        if (next) current = next;
+        else if (status.value <= (order.from ?? 0)) run({ type: 'dismissOrder', id: order.id });
+        break;
+      }
+      case 'layQuads': {
+        const cells = bareCells(current, left, false);
+        const next = cells.length >= left && left > 0 ? tryPaint(current, 'quad', cells, reserve) : null;
+        if (next) current = next;
+        else if (left > 0) run({ type: 'dismissOrder', id: order.id });
+        break;
+      }
+      case 'happier':
+      case 'safer':
+      case 'fedAndBusy': {
+        // What the order names is what gets built, and Happiness takes whatever its page calls the biggest gap.
+        const tried = !flush() ? null : order.kind === 'happier' ? buildFromMenu(current, reserve, 3) : buildFor(current, order.kind === 'safer' ? 'safety' : 'life', reserve, 3);
+        if (tried && tried.built > 0) current = tried.state;
+        else if (status.value <= (order.from ?? 0)) run({ type: 'dismissOrder', id: order.id });
+        break;
+      }
+      case 'fixRow': {
+        // Each line has its own fix, and the page names it: lots to zone, something to build, workers to hire.
+        const row = order.param;
+        if (row === 'seats' || row === 'beds') {
+          const spot = flush() ? (lotSpots(current)[0] ?? anyLotSpots(current)[0]) : undefined;
+          const next = spot ? tryPaint(current, row === 'seats' ? 'academic' : 'housing', [spot], reserve) : null;
+          if (next) current = next;
+          else if (status.value <= (order.from ?? 0)) run({ type: 'dismissOrder', id: order.id });
+        } else if (row === 'workers') current = tendGrounds(current, reserve, 3).state;
+        else if (row === 'care' || row === 'dining' || row === 'recreation') {
+          const tried = !flush() ? null : row === 'care' ? buildCare(current, reserve, 3) : buildFor(current, row, reserve, 2);
+          if (tried && tried.built > 0) current = tried.state;
+          else if (status.value <= (order.from ?? 0)) run({ type: 'dismissOrder', id: order.id });
+        } else run({ type: 'dismissOrder', id: order.id });
+        break;
+      }
+      case 'cleaner':
+        current = tendGrounds(current, reserve, 3).state;
+        break;
+      default:
+        break;
+    }
+  }
+  run({ type: 'seeOrders' });
+  for (const view of orderViews(current)) if (view.done) run({ type: 'claimOrder', id: view.id });
+  return current;
+}
+
 /** One check-in. The absent player does nothing. */
 /** A quad beside the least pleasant lot, a few a visit: how the campus looks is one of the four causes of applicants. */
 function plantGreen(state: GameState, reserve: number, most: number): { state: GameState; planted: number } {
@@ -822,13 +981,18 @@ function plantGreen(state: GameState, reserve: number, most: number): { state: G
 
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
-  // The visit opens with what is ready to collect, as a player's would.
+  // The visit opens with the button that says an order is new: the board is looked at, which starts its orders.
+  if (botOptions.orders && hasDaily(state)) {
+    const looked = applyAction(state, { type: 'seeOrders' });
+    if (looked.ok) state = looked.state;
+  }
+  // Then what is ready to collect, as a player's visit would.
   const collected = useDaily(state);
   if (collected) {
-    const rest = takeTurnAfter(collected.state, as);
+    const rest = takeTurnAfter(useOrders(collected.state), as);
     return { ...rest, daily: collected.daily };
   }
-  return takeTurnAfter(state, as);
+  return takeTurnAfter(useOrders(state), as);
 }
 
 function takeTurnAfter(state: GameState, as: Style): TurnResult {

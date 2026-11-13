@@ -8,6 +8,7 @@ import { classSize, dormStudents, localsAmong } from './demand';
 import { enrollmentCap, landSizeGoals, roomUnderCap } from './goals';
 import { leavingMore, unlockPolicies } from './policies';
 import { earn } from './daily';
+import { ordersMark, ordersOnIntake } from './orders';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -245,6 +246,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   unlockPolicies(state);
   // And it is experience toward the University Level (DESIGN.md 42.2).
   if (admitted > 0) earn(state, 'classIn', log);
+  // The orders board reads this point of the calendar: was anyone left waiting, and did a fall class fill the campus.
+  ordersOnIntake(state, season, turnedAway);
   // A size goal lands here, at an intake, and nowhere else (DESIGN.md 37.2).
   landSizeGoals(state, log);
 }
@@ -321,6 +324,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const mood = campusHappiness(state);
   // A semester of sustained high Stress costs a few more students: a hundredth at the very worst.
   const stress = closeSemester(state);
+  ordersMark(state, 'semesterStress', stress);
   // A policy may ask a few more to leave: tough grading does (DESIGN.md 41.7).
   const harder = leavingMore(state);
   const stays = mood.retention * (1 - stressLoss(stress)) * (1 - harder.share);
@@ -349,6 +353,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const stayed = enrollment(state);
   const left = before - stayed;
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
+  ordersMark(state, 'semesterLeft', left);
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
   // How many of those who left a policy sent: the share it asks, of those who would otherwise have stayed.
@@ -385,6 +390,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
     });
     earn(state, 'graduation', log);
   }
+  ordersMark(state, 'graduation', seniors);
 }
 
 /** A new year begins: every class moves up one year. */

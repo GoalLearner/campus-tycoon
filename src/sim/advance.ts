@@ -1,5 +1,6 @@
 import { tellPolicies } from './systems/policies';
 import { tellDaily } from './systems/daily';
+import { offerDaily, tellOrders } from './systems/orders';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -98,6 +99,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellPolicies(state, log);
   // And a level reached by collecting gets its line (DESIGN.md 42.2).
   tellDaily(state, log);
+  // And an order claimed gets its line (DESIGN.md 42.16).
+  tellOrders(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -171,6 +174,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       openAnnualDecisions(state, day, log);
       // The desk, after the year's own decisions: routine items wait while two of those are open.
       openRoutine(state, day, log);
+      // The orders board: one new order a real day, while it has room. A stub, with nothing read from the campus.
+      offerDaily(state, log);
       break;
     }
     case 'fallIntake':

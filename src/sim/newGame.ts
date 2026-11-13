@@ -22,6 +22,7 @@ import { newGoals } from './systems/goals';
 import { newStaffing } from './systems/staffing';
 import { newPolicies } from './systems/policies';
 import { newDaily } from './systems/daily';
+import { firstOrders, newOrders } from './systems/orders';
 import { newFootball, scheduleScrimmage } from './systems/football';
 import type { Cell, Football, GameState, MapState, Term, Zone } from './types';
 
@@ -205,7 +206,10 @@ export function newGame(opts: NewGameOptions): GameState {
     policies: newPolicies(),
     // The University Level, Gold Seals and collecting (DESIGN.md section 42). Used only on a game with goals.
     daily: newDaily(0),
+    // The orders board (DESIGN.md 42.3). A game with goals opens with its first three orders.
+    orders: newOrders(),
   };
+  firstOrders(state);
   startFootball(state, 1);
   // A model campus is a school already standing: it opens with a standing, near the foot of the ladder (DESIGN.md 37.4).
   if (model) state.field.academic = openingStanding(state.field);

@@ -224,7 +224,7 @@ export interface MapState {
 }
 
 /** 'football' was added last, so the streams before it are what they always were. */
-export type RngStream = 'growth' | 'intake' | 'names' | 'events' | 'football';
+export type RngStream = 'growth' | 'intake' | 'names' | 'events' | 'football' | 'orders';
 export type RngState = Record<RngStream, number>;
 
 /** Where the game year stands. See calendar.ts. */
@@ -380,6 +380,51 @@ export interface Daily {
   news: string[];
 }
 
+/**
+ * One order on the board (DESIGN.md 42.3). It is offered as a stub: who
+ * gives it, and a number from the seeded stream. What it asks for is fixed
+ * the first time the player sees it, which is when its clock starts.
+ */
+export interface Order {
+  id: number;
+  /** Who gives it: an id from `GIVERS`. */
+  giver: 'advisors' | 'state' | 'town' | 'donors';
+  /** A number drawn when it was offered. What it asks for is chosen from it when first seen. */
+  roll: number;
+  /** The tick it was offered. */
+  offered: number;
+  /** Set when first seen: the kind of order, an id from `ORDER_KINDS`. */
+  kind?: string;
+  /** The tick it was first seen, and the tick its time runs out. */
+  seen?: number;
+  until?: number;
+  /** Where its number stood when first seen, and what it must reach. */
+  from?: number;
+  target?: number;
+  /** The line of the Capacity page or the building it is about. */
+  param?: string;
+  /** The tick it was found done. It then waits to be claimed, for as long as it takes. */
+  done?: number;
+}
+
+export interface Orders {
+  open: Order[];
+  nextId: number;
+  /** Running counts, bumped where the thing happens: trees planted, home games won, orders claimed. */
+  tally: Record<string, number>;
+  /** What was measured at the last few points of the calendar: a graduation's seniors, a semester's Stress. */
+  marks: Array<{ at: number; what: string; value: number }>;
+  /** Lines not yet told: each becomes one line in the log on the next tick. */
+  news: string[];
+  /** What the board says once about an order whose time ran out. */
+  note: string;
+  /** Kinds of order the player dismissed, each with the tick it may be asked again: an unwanted one is not asked twice in a week. */
+  rest: Record<string, number>;
+  /** Cash paid by orders in one game year, for the money tables: the year, and the sum. */
+  paidYear: number;
+  paid: number;
+}
+
 export interface Staffing {
   /** Faculty and staff on the payroll now. */
   faculty: number;
@@ -478,6 +523,7 @@ export interface GameState {
   staffing: Staffing;
   policies: Policies;
   daily: Daily;
+  orders: Orders;
 }
 
 // ------------------------------------------------------------- football --
@@ -836,6 +882,7 @@ export type LogKind =
   | 'staff'
   | 'policy'
   | 'level'
+  | 'order'
   | 'grant'
   | 'paused'
   // The football and calendar layer.

@@ -25,6 +25,8 @@ import { eraOf, rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goal
 import { ERA_AT_RANK, ERAS } from './config/goals';
 import { policyLocked, policyOn, policySpec } from './systems/policies';
 import { collectOne, collectReady, dailyOnCleared, dailyOnPlaced, finishNow, hasDaily } from './systems/daily';
+import { claimOrder, dismissOrder, ordersCount, seeOrders } from './systems/orders';
+import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
 import type { CellKind, GameState, MapState, Zone } from './types';
 
@@ -67,7 +69,12 @@ export type Action =
   | { type: 'collect'; key: string }
   | { type: 'collectAll' }
   /** Finish a wait now, for its price in Gold Seals: 'stadium', 'faculty', or 'policy:' and a policy's id. */
-  | { type: 'finish'; wait: string };
+  | { type: 'finish'; wait: string }
+  /** Look at the orders board: new orders are given what they ask and their clocks start. */
+  | { type: 'seeOrders' }
+  /** Claim a finished order, or dismiss one that is not wanted. */
+  | { type: 'claimOrder'; id: number }
+  | { type: 'dismissOrder'; id: number };
 
 export interface PaintPreview {
   tool: Tool;
@@ -86,7 +93,7 @@ export interface PaintPreview {
 }
 
 export type ActionResult =
-  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number } }
+  | { ok: true; state: GameState; cost: number; changed: number; gained?: { xp: number; cash: number; count: number }; paid?: OrderReward[] }
   | { ok: false; state: GameState; error: string };
 
 /** What one cell of a tool costs on a campus of a given scale (DESIGN.md 35.7). */
@@ -250,14 +257,17 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
         cell.kind = cell.kind === 'path' ? 'crossing' : 'road';
         break;
       case 'quad':
+        ordersCount(next, 'quads');
         cell.kind = 'quad';
         break;
       case 'bin':
       case 'bench':
       case 'table':
         addPlaced(map, tool, x, y, next.clock.tick);
+        ordersCount(next, 'furniture');
         break;
       case 'tree':
+        ordersCount(next, 'trees');
         cell.kind = 'tree';
         cell.variant = Number.isInteger(variant) && variant >= 0 && variant < TREE_KINDS ? variant : 0;
         break;
@@ -479,11 +489,34 @@ function collect(state: GameState, key: string | null): ActionResult {
   if (key === null) {
     const all = collectReady(next);
     if (all.count === 0) return { ok: false, state, error: 'Nothing is ready to collect yet.' };
+    ordersCount(next, 'collects', all.count);
     return { ok: true, state: next, cost: 0, changed: all.count, gained: all };
   }
   const paid = collectOne(next, key);
   if (!paid) return { ok: false, state, error: 'There is nothing to collect there yet.' };
+  ordersCount(next, 'collects');
   return { ok: true, state: next, cost: 0, changed: 1, gained: { ...paid, count: 1 } };
+}
+
+/**
+ * The orders board (DESIGN.md 42.3). Looking at it is an action, because
+ * that is when a new order is given what it asks and its clock starts.
+ */
+function orders(state: GameState, action: { type: 'seeOrders' } | { type: 'claimOrder'; id: number } | { type: 'dismissOrder'; id: number }): ActionResult {
+  if (!hasDaily(state)) return { ok: false, state, error: 'This campus has no orders board.' };
+  const next = structuredClone(state);
+  if (action.type === 'seeOrders') {
+    seeOrders(next);
+    return { ok: true, state: next, cost: 0, changed: 0 };
+  }
+  if (action.type === 'dismissOrder') {
+    const problem = dismissOrder(next, action.id);
+    return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+  }
+  const paid = claimOrder(next, action.id);
+  if (typeof paid === 'string') return { ok: false, state, error: paid };
+  markRatesDirty(next);
+  return { ok: true, state: next, cost: 0, changed: 1, paid: paid.rewards };
 }
 
 /** Finish a wait now, for Gold Seals (DESIGN.md 42.7). The price is the one `waits` quotes. */
@@ -538,6 +571,10 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return collect(state, null);
     case 'finish':
       return finish(state, action.wait);
+    case 'seeOrders':
+    case 'claimOrder':
+    case 'dismissOrder':
+      return orders(state, action);
   }
 }
 

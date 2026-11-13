@@ -1374,11 +1374,163 @@ button.money {
   align-items: center;
 }
 
+/* A number over a word, like the student count above: five of them hold one row at 375 wide. */
+.hud-chips {
+  gap: 5px;
+}
+
+.hud-chip.stat.show {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 34px;
+  padding: 2px 8px;
+  line-height: 1.15;
+}
+
+.chip-value {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chip-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hud-chip.stat.alone .chip-value {
+  display: none;
+}
+
+.hud-chip.stat.alone .chip-label {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.hud-chip.stat.urgent .chip-value {
+  color: var(--accent);
+}
+
+.hud-chip.good {
+  border-color: var(--good);
+}
+
+.hud-chip.stat.good .chip-value {
+  color: var(--good);
+}
+
+/* The orders board. Its card is what a claimed order's medal is placed against. */
+.card-fixed {
+  position: relative;
+}
+
+.order {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.order.done {
+  border-color: var(--good);
+}
+
+.order-from {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.order-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.order-ask {
+  margin: 0;
+}
+
+.order-facts {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.order-pays {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.order-dismiss {
+  align-self: flex-end;
+  min-height: 30px;
+  padding: 3px 12px;
+  border-radius: 15px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.order-note {
+  margin: 6px 0 2px;
+  font-size: 13.5px;
+}
+
+/* A claimed order: the medal rises from where the order was, with what it paid. */
+.claim-burst {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: claim-rise var(--burst-ms, 800ms) ease-out forwards;
+}
+
+.claim-burst canvas {
+  width: 42px;
+  height: 49px;
+}
+
+.claim-paid {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+@keyframes claim-rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 70px));
+  }
+}
+
 /* The University Level and the Gold Seals held: pushed to the right of the row, and kept small. */
 .hud-chip.level-chip {
   margin-left: auto;
-  gap: 4px;
-  padding: 2px 9px 2px 4px;
+  gap: 3px;
+  min-height: 34px;
+  padding: 2px 8px 2px 4px;
 }
 
 .level-badge {

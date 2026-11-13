@@ -136,6 +136,12 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   if (levels.length === 1) lines.push(levels[0]!.text);
   else if (levels.length > 1) lines.push(`${levels.length} levels up. ${levels[levels.length - 1]!.text}`);
 
+  // The orders board (DESIGN.md 42.16): an order done is a line each. New ones are one line, however many came.
+  for (const entry of log) if (entry.kind === 'order' && entry.data?.done === 1) lines.push(entry.text);
+  const fresh = log.filter((entry) => entry.kind === 'order' && entry.data?.new === 1);
+  if (fresh.length === 1) lines.push(fresh[0]!.text);
+  else if (fresh.length > 1) lines.push(`${fresh.length} new orders are on the board.`);
+
   // A policy turned on or off: one line each (DESIGN.md 41.7).
   for (const entry of log) if (entry.kind === 'policy') lines.push(entry.text);
 

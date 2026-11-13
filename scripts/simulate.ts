@@ -64,6 +64,13 @@ import {
   levelAt,
   SEAL_HOURS,
   waits,
+  hasDaily,
+  orderCashCeiling,
+  orderSlots,
+  orderViews,
+  ORDER_KINDS,
+  ORDER_LEAST_HOURS,
+  GIVERS,
   edition,
   everyWrittenItem,
   HAPPY_CAP,
@@ -101,6 +108,8 @@ if (args.includes('--no-slider')) botOptions.slider = false;
 if (args.includes('--no-policies')) botOptions.policies = false;
 // `-- --no-daily` runs them without the daily layer: nothing collected and no Seal spent.
 if (args.includes('--no-daily')) botOptions.daily = false;
+// `-- --no-orders` runs them without the orders board: never looked at, so no order ever starts.
+if (args.includes('--no-orders')) botOptions.orders = false;
 const SEEDS = option('seeds', '1').split(',').map(Number);
 
 const T0 = Date.UTC(2026, 0, 5, 9, 0, 0);
@@ -206,6 +215,21 @@ interface Seen {
   finished: number;
   prices: number[];
   levelLines: number;
+  /**
+   * The orders board, read at the first look of each visit: visits, and those with an order that can be finished
+   * in one sitting; the same by real day; times the board held more than its places; orders whose window was
+   * under the least allowed; the level at which the fourth and fifth places were first seen; lines in the paper.
+   */
+  orderLooks: number;
+  orderLooksWith: number;
+  orderDay: number;
+  orderDays: number;
+  orderDaysWith: number;
+  orderDayHad: boolean;
+  orderOver: number;
+  orderShort: number;
+  orderMostOpen: number;
+  orderLines: number;
   /** Goals whose headline was not in the paper of the visit after they were reached. */
   goalsUnsaid: number;
   /** The most students the campus ever held, whenever it was looked at. */
@@ -248,6 +272,16 @@ const newSeen = (): Seen => ({
   finished: 0,
   prices: [],
   levelLines: 0,
+  orderLooks: 0,
+  orderLooksWith: 0,
+  orderDay: -1,
+  orderDays: 0,
+  orderDaysWith: 0,
+  orderDayHad: false,
+  orderOver: 0,
+  orderShort: 0,
+  orderMostOpen: 0,
+  orderLines: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
 });
@@ -269,6 +303,7 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'inbox' && entry.data?.byDefault === 1) seen.deskDefaults += 1;
     if (entry.kind === 'policy') seen.switches += 1;
     if (entry.kind === 'level') seen.levelLines += 1;
+    if (entry.kind === 'order') seen.orderLines += 1;
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -342,6 +377,33 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
   const seen = newSeen();
   let seasonCounted = 0;
 
+  // The orders board as each visit first finds it (DESIGN.md 42.3): looked at on a copy, which the turn then does for real.
+  const board = (at: number): void => {
+    if (!botOptions.orders || style === 'absent' || !hasDaily(state)) return;
+    const looked = applyAction(state, { type: 'seeOrders' });
+    if (!looked.ok) return;
+    const views = orderViews(looked.state);
+    const has = views.some((view) => view.sitting && !view.done);
+    // The last visit falls on the first hour of a day the run never finishes: it is looked at, and not counted as a day.
+    const day = at >= end ? seen.orderDay : Math.floor((at - T0) / DAY_MS);
+    if (day !== seen.orderDay) {
+      seen.orderDay = day;
+      seen.orderDays += 1;
+      seen.orderDayHad = false;
+    }
+    if (has && !seen.orderDayHad) {
+      seen.orderDayHad = true;
+      seen.orderDaysWith += 1;
+    }
+    seen.orderLooks += 1;
+    if (has) seen.orderLooksWith += 1;
+    seen.orderMostOpen = Math.max(seen.orderMostOpen, views.length);
+    if (views.length > orderSlots(looked.state)) seen.orderOver += 1;
+    for (const order of looked.state.orders.open) if (order.seen !== undefined && order.until !== undefined && order.until - order.seen < ORDER_LEAST_HOURS * TICKS_PER_HOUR) seen.orderShort += 1;
+    tone(seen, [looked.state.orders.note, ...views.flatMap((view) => [view.from, view.title, view.ask, view.progress, view.reward])].filter((line) => line !== ''));
+  };
+  board(T0);
+
   // The player acts once before move-in, as a person would in their first session.
   const first = takeTurn(state, style);
   state = first.state;
@@ -402,6 +464,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     if (style !== 'absent') {
       seen.visits.push(state.clock.tick);
       for (const wait of waits(state)) seen.prices.push(wait.price);
+      board(now);
       const turn = takeTurn(state, style);
       state = turn.state;
       daily(turn);
@@ -1063,18 +1126,30 @@ function assertModelCampus(seed: number): void {
   for (const run of runs) console.log(`${run.style} ${run.seed} ends with: ${run.final.policies.on.map((id) => POLICIES.find((spec) => spec.id === id)?.name ?? id).join(', ') || 'no policy on'}`);
   console.log('');
 
-  // The same players with every switch left off (DESIGN.md section 41) and the daily layer never touched
-  // (section 42): nothing collected, no Seal spent. The campus that never opens either page.
+  // The same players with every switch left off (DESIGN.md section 41), and nothing else changed: what the
+  // switches move, and nothing more.
   botOptions.policies = false;
-  botOptions.daily = false;
   const plain = seeds.flatMap((one) => styles.map((style) => play(style, one, PACE_WEEKS, 'model')));
-  botOptions.policies = !args.includes('--no-policies');
-  botOptions.daily = !args.includes('--no-daily');
   const plainOf = (style: Style): Run[] => plain.filter((run) => run.style === style);
-  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF AND NOTHING COLLECTED');
+  console.log('THE SAME, WITH EVERY SWITCH LEFT OFF');
   console.log(`${'goal'.padEnd(18)}${head}`);
   RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${plain.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
   console.log(`${'rank at the end'.padEnd(18)}${plain.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
+  console.log('');
+  // And one of each player who uses none of it (section 42): no switch, nothing collected, the orders board never
+  // looked at. What the campus does by the slow game alone.
+  botOptions.daily = false;
+  botOptions.orders = false;
+  const bare = styles.map((style) => play(style, seed, PACE_WEEKS, 'model'));
+  botOptions.policies = !args.includes('--no-policies');
+  botOptions.daily = !args.includes('--no-daily');
+  botOptions.orders = !args.includes('--no-orders');
+  console.log('AND WITH NONE OF IT: NO SWITCH, NOTHING COLLECTED, THE ORDERS BOARD NEVER LOOKED AT');
+  console.log(`${'goal'.padEnd(18)}${bare.map((run) => `${run.style} ${run.seed}`.padStart(14)).join('')}`);
+  RANK_GOALS.forEach((goal, n) => console.log(`${`Top ${goal}`.padEnd(18)}${bare.map((run) => weekOf(run.seen.rankWeeks[n]!).padStart(14)).join('')}`));
+  console.log(`${'rank at the end'.padEnd(18)}${bare.map((run) => `No. ${run.final.field.rank}`.padStart(14)).join('')}`);
+  console.log(`${'looks, of 100'.padEnd(18)}${bare.map((run) => averageDesirability(run.final).toFixed(1).padStart(14)).join('')}`);
+  console.log(`${'level at the end'.padEnd(18)}${bare.map((run) => String(run.final.daily.level).padStart(14)).join('')}`);
   console.log('');
 
   // The cap: nobody ever holds more students than it allows, and every campus is full within a few weeks.
@@ -1233,8 +1308,79 @@ function assertModelCampus(seed: number): void {
     const idle = alone.final;
     check(
       'the layer is a bonus: a campus nobody visits still levels from what happens by itself, and holds what it could not collect',
-      idle.daily.level > 1 && idle.daily.seals > 0 && collectables(idle).length > 0 && plain.every((run) => run.seen.collects === 0 && run.seen.sealsSpent === 0),
-      `left alone for five years it reaches level ${idle.daily.level} with ${idle.daily.seals} Seals and ${collectables(idle).length} buildings holding something; the players who never collect reach level ${plain.map((run) => run.final.daily.level).join(', ')}`,
+      idle.daily.level > 1 && idle.daily.seals > 0 && collectables(idle).length > 0 && bare.every((run) => run.seen.collects === 0 && run.seen.sealsSpent === 0),
+      `left alone for five years it reaches level ${idle.daily.level} with ${idle.daily.seals} Seals and ${collectables(idle).length} buildings holding something; the players who never collect reach level ${bare.map((run) => run.final.daily.level).join(', ')}`,
+    );
+  }
+
+  // The orders board (DESIGN.md 42.3, as built in 42.16): what was offered, finished, dismissed and missed, what
+  // it paid, and that the board always has something to do today.
+  {
+    const tally = (run: Run, what: string): number => run.final.orders.tally[what] ?? 0;
+    const perWeek = (run: Run, what: string): string => (tally(run, what) / PACE_WEEKS).toFixed(1);
+    const settled = (run: Run): number => tally(run, 'claimed') + tally(run, 'dismissed') + tally(run, 'missed');
+    const finished = (run: Run): number => (settled(run) > 0 ? tally(run, 'claimed') / settled(run) : 0);
+    const income = (run: Run): number => budget(run.final).incomeTotal;
+    const cashAYear = (run: Run): number => tally(run, 'cash') / PACE_WEEKS;
+    console.log('THE ORDERS BOARD');
+    console.log(`${''.padEnd(30)}${head}`);
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(30)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    row('offered a week', (run) => perWeek(run, 'offered'));
+    row('  of them a second for today', (run) => perWeek(run, 'second'));
+    row('finished and claimed a week', (run) => perWeek(run, 'claimed'));
+    row('dismissed a week', (run) => perWeek(run, 'dismissed'));
+    row('missed a week', (run) => perWeek(run, 'missed'));
+    row('share finished', (run) => `${Math.round(100 * finished(run))}%`);
+    row('open at the end', (run) => String(run.final.orders.open.length));
+    row('most open at once', (run) => String(run.seen.orderMostOpen));
+    row('days with one for a sitting', (run) => `${run.seen.orderDaysWith} of ${run.seen.orderDays}`);
+    row('experience from orders a week', (run) => perWeek(run, 'xp'));
+    row('Seals from orders a week', (run) => perWeek(run, 'seals'));
+    row('cash from orders a year', (run) => dollarsShort(cashAYear(run)));
+    row('of every $100 that comes in', (run) => `$${((100 * cashAYear(run)) / income(run)).toFixed(3)}`);
+    console.log('');
+    console.log('ORDERS BY KIND: seen / claimed / dismissed / missed, over the run');
+    console.log(`${''.padEnd(30)}${head}`);
+    for (const kind of ORDER_KINDS) row(`${kind.giver} ${kind.id}`, (run) => ['seen', 'claimed', 'dismissed', 'missed'].map((what) => tally(run, `${what}:${kind.id}`)).join('/'));
+    console.log('');
+
+    check(
+      'the orders board never holds more than its places, and no order runs for less than 36 hours from when it is first seen',
+      runs.every((run) => run.seen.orderLooks > 0 && run.seen.orderOver === 0 && run.seen.orderShort === 0 && run.seen.orderMostOpen <= 5),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLooks} looks, at most ${run.seen.orderMostOpen} open, ${run.seen.orderOver} over, ${run.seen.orderShort} too short`).join('; '),
+    );
+    check(
+      'on every real day a player looks in, the board has an order that can be finished in one sitting',
+      runs.every((run) => run.seen.orderDays > 0 && run.seen.orderDaysWith === run.seen.orderDays),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderDaysWith} of ${run.seen.orderDays} days, and ${run.seen.orderLooksWith} of ${run.seen.orderLooks} visits (a later visit the same day finds it already done)`).join('; '),
+    );
+    const dailies = of('daily');
+    check(
+      'a once-a-day player can finish most of what the board offers, and misses little',
+      dailies.every((run) => finished(run) >= 0.6 && tally(run, 'missed') <= 0.08 * tally(run, 'offered')) && runs.every((run) => finished(run) >= 0.5),
+      runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'offered')} offered, ${tally(run, 'claimed')} claimed (${Math.round(100 * finished(run))}%), ${tally(run, 'dismissed')} dismissed, ${tally(run, 'missed')} missed`).join('; '),
+    );
+    // Every giver is heard from, and every kind of order that this campus can be asked comes up for somebody.
+    const givers = Object.keys(GIVERS);
+    const heard = runs.every((run) => givers.every((giver) => ORDER_KINDS.some((kind) => kind.giver === giver && tally(run, `claimed:${kind.id}`) > 0)));
+    const unseen = ORDER_KINDS.filter((kind) => runs.every((run) => tally(run, `seen:${kind.id}`) === 0)).map((kind) => kind.id);
+    check(
+      'all four givers are heard from on every campus, and nearly every kind of order comes up',
+      heard && unseen.length <= 3,
+      `${ORDER_KINDS.length} kinds from ${givers.length} givers; never asked of these players: ${unseen.join(', ') || 'none'}`,
+    );
+    // The cash is capped by the school year: a small known sum, far inside the room the money target leaves.
+    const most = Math.max(...runs.map((run) => (100 * cashAYear(run)) / income(run)));
+    const ceiling = Math.max(...runs.map((run) => (100 * orderCashCeiling(run.final)) / income(run)));
+    check(
+      'orders pay a little cash and no more: under a tenth of a dollar in every $100 that comes in, at the very most',
+      most <= 0.1 && ceiling <= 0.1 && runs.every((run) => run.final.orders.paid <= orderCashCeiling(run.final)),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${dollarsShort(cashAYear(run))} a year, $${((100 * cashAYear(run)) / income(run)).toFixed(3)} of every $100`).join('; ')}. The most a campus could ever be paid in a year is $${ceiling.toFixed(3)} of every $100`,
+    );
+    check(
+      'the paper says each new order and each finished one, and the board is a bonus: a campus that never looks at it loses nothing',
+      runs.every((run) => run.seen.orderLines >= tally(run, 'claimed')) && bare.every((run) => tally(run, 'claimed') === 0 && tally(run, 'missed') === 0 && run.final.orders.open.every((order) => order.seen === undefined)) && alone.final.orders.open.length === orderSlots(alone.final),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLines} lines`).join('; ')}. Never looked at: ${bare.map((run) => `${run.final.orders.open.length} waiting unseen`).join(', ')}, none begun, none missed; the campus left alone holds ${alone.final.orders.open.length}, all unseen`,
     );
   }
 
@@ -1570,6 +1716,11 @@ for (const seed of SEEDS) {
 assertLayerZero(allRuns.filter((r) => r.seed === SEEDS[0]));
 assertLayerOne(allRuns.filter((r) => r.seed === SEEDS[0]));
 assertLayerFour(allRuns.filter((r) => r.seed === SEEDS[0]), SEEDS[0]!);
+check(
+  'a game with no goals has no orders board: nothing offered, nothing counted',
+  allRuns.every((run) => run.final.orders.open.length === 0 && Object.keys(run.final.orders.tally).length === 0 && run.final.orders.marks.length === 0),
+  `${allRuns.length} small campuses, ${allRuns.reduce((sum, run) => sum + run.final.orders.open.length, 0)} orders between them`,
+);
 assertModelCampus(SEEDS[0]!);
 console.log(`\n${failures.length === 0 ? 'All assertions passed' : `${failures.length} assertion(s) failed`} in ${((performance.now() - started) / 1000).toFixed(1)} s.`);
 process.exit(failures.length === 0 ? 0 : 1);
