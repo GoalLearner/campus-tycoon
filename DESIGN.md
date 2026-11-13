@@ -5978,7 +5978,7 @@ The gift's and the moments' grants come out of the orders' yearly allowance, so 
 
 **Decorations.** The card gives 2 a week. Owned at week 44: 302 to 327 (221 to 244 at stop 3), 108 to 128 of them on the map and 197 to 209 in storage (103 to 128 at stop 3). How the campus looks is the same as at stop 3, 68.4 to 69.4: the test players set one out only where it lifts a lot, and each lot's lift has its cap. The long run's row "given by the town" now counts the card's too: the town's own are 18 or 19, as before.
 
-**Catch-up.** A week away on a model campus four days in, with the rhythm under way, catches up in 0.05 to 0.11 seconds on this PC. At stop 3 a tended campus with 115 decorations out took 0.08 to 0.13. Planning the phone's notices for three days takes 35 to 37 thousandths of a second, against 20 to 22 for the same days played in one step, because it stops each morning to see what is ready.
+**Catch-up.** A week away on a model campus four days in, with the rhythm under way, catches up in 0.05 to 0.11 seconds on this PC. At stop 3 a tended campus with 115 decorations out took 0.08 to 0.13. Working out the phone's notices for three days takes 35 to 37 thousandths of a second, against 20 to 22 for the same days played in one step, because it stops each morning to see what is ready.
 
 **Tests and long runs.** 19 new tests: 797 in all. Four new long-run checks: 76 in all, every one passing. The small campus's tables are the same as before, line for line.
 
@@ -6019,6 +6019,6 @@ The gift's and the moments' grants come out of the orders' yearly allowance, so 
 | A moment's grant can be smaller than the board said, or none | It comes out of the orders' yearly allowance, which the gift's cash now shares. The board shows what it would pay now. In a two-week run, the spring's commencement paid $28,000 where the board had said $112,000 when it opened |
 | The gift card sits above the paper's headline | The first screen of the paper shows less of the paper on a day with a gift waiting |
 | The level and the Seals of stop 1 moved | The most a level asks, 800 to 1,000, and the fifth level's Seals, 3 to 2. Levels come at the same pace as before; what he saw on the stop 1 page is a little different |
-| Planning the phone's notices takes longer | It plays forward a morning at a time to see what is ready: 35 to 37 thousandths of a second for three days on the model campus on this PC, against 20 to 22 before. It runs when the game is put away |
+| Working out the phone's notices takes longer | It plays forward a morning at a time to see what is ready: 35 to 37 thousandths of a second for three days on the model campus on this PC, against 20 to 22 before. It runs when the game is put away |
 | More decorations in storage | The test players hold 197 to 209 by week 44, where they held 103 to 128 at stop 3: the card's two a week, set out only where they lift a lot. A person will set them out where they look nice |
 | Never run on a phone | The morning notice in particular. Checked in pictures and tests on this PC, at 390 wide |
