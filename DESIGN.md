@@ -5105,3 +5105,153 @@ Tough grading over time, on the once-a-day campus, on against off: the rating is
 | The model campus seldom needs the money | It keeps $13 to $17 of every $100 without it. Parking fees and Naming rights are for the player who wants more faculty sooner |
 | The lines on a switch run to three on a narrow phone | Each says its own numbers. Fewer words would mean fewer numbers |
 | Never run on a phone | Checked in pictures and in tests on this PC |
+
+---
+
+## 42. The daily layer: levels, orders, collecting, decorating, a workshop and a store (agreed, not built)
+
+Asked for by the owner on 2026-11-12, after research into how two well-known farming games earn and keep their players. His brief opened: "DISCUSSION MODE. No code until I say build." It was walked through one system at a time, each with options and a recommendation, and he answered each. **Everything here is agreed as a design. None of it is built, and none of it is to be built until he says build.**
+
+Two things he said that govern all of it:
+
+- "Make the game easy and rewarding so users stick around and play."
+- "I trust your decision making... I just want to make a fun game similar to farmville / hayday that will get people to play it." Where he did not rule, the recommended option stands and is marked so below.
+
+### 42.1 What the layer is, and the rules for all of it
+
+The game has a slow loop: seasons, classes and the rank. This adds a fast one on top, for every day: take an order, make something, collect, decorate, level up. The slow simulation's balance is left alone.
+
+| Rule | Why |
+|---|---|
+| Bonus only. Nothing in the layer can hurt the campus, and nothing in it needs a tap to keep | 2.2, and "keeping something never needs a tap" |
+| Every deadline is 36 hours or longer, and a clock starts when the player first sees the thing | Once a day is the slowest rhythm the game supports (2.3) |
+| Nothing a game can build or do today goes behind a level, an order or the store | The rule of section 41, kept |
+| Nothing is taken away for being absent: no streak resets, nothing spoils, nothing expires unseen | His "easy and rewarding" |
+| A free player can reach everything. Money buys time and looks, never power | His limits for the store (42.7) |
+| Not copied from those games: random prize boxes and wheels, sign-up offers, anything that withers, friend gates, adverts | The tone rule against anything like gambling, the idle rules, and no server at launch |
+
+### 42.2 One University Level (his choice)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| How many ladders | One University Level beside the rank. The level is what the player does, the rank is how good the school is. Rank goals and eras stay exactly as sections 37 to 41 have them | No level, with the rank goals as the levels: the rank moves once a real week, too slow to feel like progress. Or a level that replaces the eras: it undoes section 41 and lets a player reach landmarks without a good school |
+| What feeds it | Experience from almost everything: orders, building, collecting, graduations, wins, goals, the daily gift. Some of it comes from things that finish by themselves, so a once-a-day player levels too | Only things done by hand |
+| What a level gives | A small reward and one new small thing: a decoration, a workshop recipe, an order type | New buildings with effects |
+| Falling | It never falls | |
+| Pace [T] | Several levels in the first sitting, then about one every day or two | |
+
+### 42.3 The orders board (his choice, as recommended)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| What an order asks for | A number the game already has: seats, Safety & health coverage, the Grounds score, home wins, the homecoming crowd, and later a workshop item | Deliveries of made goods from the start, which needs production chains first |
+| What it pays | Experience, Gold Seals (42.7), decorations, and a small capped amount of cash [T]. No rank points: the rank stays earned from the school's own numbers | Reputation or rank as a reward, as his brief first listed |
+| Who gives them | The four advisors (the weakest row of the Capacity page, with its fix; pays experience), the state (seats, graduation, staying full; pays cash as a grant), the town (litter, parking, the avenue; pays decorations), donors (looks, football, landmarks; pays Seals) | One giver |
+| How many | Three open at once, growing to five with levels. One new order each real day. An unwanted one is dismissed free and replaced the next day | |
+| How long | Short ones of 36 to 48 hours for things done in one sitting, and season ones that run to the next point of the calendar. At least one open order can always be finished in one sitting | |
+| Missing one | Costs nothing | A penalty |
+| Where | Its own button beside Inbox. The Inbox is things to decide, the board is things to do | A tab inside the Inbox |
+| The Board goals of 15.4 | Replaced by this | |
+
+### 42.4 Collecting (his choice)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The bonus | Buildings that earn fill a small extra on top of their normal income. It holds up to 36 hours' worth. A tap collects it with a burst and a sound, and a Collect all button appears when five or more are ready | Use it or lose it, which punishes being away. Or no tap at all, which loses the touch |
+| Which buildings | Food places, the campus store, the stadium after a home game, and a building that has just opened. Not every lot | Every building, and a map covered in markers |
+| What it pays | Mostly experience, and a little cash, capped so the money target of section 37 holds [T] | |
+| Normal income | Stays automatic | |
+| The campus store after a win | Its bonus fills faster for a day after a home win, and the shirt design is a cosmetic choice (from 42.6) | A merchandise chain |
+
+### 42.5 Decorating and photo mode (his choice)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| What a decoration does | A small lift to how the campus looks near it, through one input with one cap. Free decorations alone can reach the cap, and a decoration bought with Seals does exactly what a free one of its size does | Purely cosmetic. Or real effects, which would break his rule against paid things that affect balance |
+| Where they come from | Levels (a Decor shelf, bought with cash), orders from the town, a shelf for Seals, the workshop, and sets for the real-world seasons | |
+| Seasonal sets | Four a year, each for a few weeks, and each comes back every year. Nothing is gone for good | Gone for ever once the weeks end |
+| Handling | Moving one is free. Putting one away sends it to storage: nothing is ever sold or lost. Banners and flags take the school's colour | |
+| How many at launch | About 40, all from art the owner has, shown to him on one sheet first. A banner in the school's colour means tinting a pack drawing: he sees that on the sheet | |
+| Photo mode | At launch. It hides the bars, frames the campus, adds the school's name and rank, and opens the share sheet | Later |
+| A collection album | Later | |
+
+### 42.6 The workshop and other making (his choice)
+
+The rule for any making: a standing choice, never a tap for each batch, and what is made waits for the player.
+
+| Idea from his brief | Decision | Why |
+|---|---|---|
+| The makerspace builds items for events | At launch, as the Workshop: one decoration crafted at a time, a day or two each, and a finished one waits for ever. Recipes come with levels. A second craft slot and "Finish now" cost Seals. An order can ask for a crafted item | It is the once-a-day loop exactly: collect yesterday's, start another |
+| The bookstore's merchandise sells more after wins | At launch, as a line of 42.4 and no chain | |
+| Labs turn research into grants and patents | Later, as the first true chain: a field picked once, findings that bank up, small capped grants, named discoveries to collect | It needs a new building and a pass over the money |
+| Dining kitchens turn supplies into meals | No | Dining works. Supplies would be a tax on it |
+
+### 42.7 The store (his choice, and his limits)
+
+His limits, in his words: "No energy limits, no paid-only buildings that affect balance, timers not stretched to push purchases, and the whole game completable free."
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The model | A free game with a store. There is no wall | Pay once to go on |
+| The currency | One, with the working name Gold Seals. The name is his to choose | |
+| Earned free | From levels, donors' orders, the seventh day of the daily gift, rank goals, eras and the goals for the year: about enough to finish one wait or buy one special decoration a week [T] | |
+| Spent on | "Finish now" on a wait (a stadium tier, new faculty, a locked policy, a workshop item, and the big builds of section 41); special decorations; a second slot for the big builds of section 41 and for the workshop | |
+| Not sold | Cash, rank, anything random, energy | |
+| Waits | Nothing that exists today gets a wait or a limit. Lots go up in two to ten real minutes and a placed building is instant | |
+| Sold as | Packs of Seals (US prices $1.99, $4.99, $9.99, $19.99, $39.99) and one Founder's Pack, bought once, at about $4.99: Seals, a Founder's statue and the second build slot | A monthly pass at launch. Later, when there are players every day |
+| Manners | The Founder's Pack is offered once, after the first rank goal, then waits in the store. A confirm before any spend. No pop-up offers | |
+| Where it is sold | In the iPhone app only, through Apple's in-app purchase. The web build stays a free demo with no store: its code is public and its saves can be edited | |
+| Before real money goes in | Cloud saves (42.9), because Apple does not give back spent currency on a new phone | |
+
+Apple, as checked on 2026-11-12 and to be checked again at submission: in-app purchase is required for digital goods; bought currency may not expire; a restore button for the pack; the age rating comes from a questionnaire (content, in-app controls, capabilities, wellness, violence) and nothing found says purchases raise it; the game is not to be listed in the Kids Category; an account, if there is one, must be deletable inside the app.
+
+### 42.8 The daily and seasonal rhythm (his choice)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The daily gift | Opening the paper each real day gives a small gift and fills one box of a seven-day card. The seventh is a better gift. A missed day does nothing: the card waits | A streak that resets |
+| Goals for the year | Three, set at move-in and paid at commencement, as a Year row on the orders board. A school year is one real week | A separate screen |
+| Moments of the calendar | Homecoming, finals, the rivalry and commencement are special orders. Each opens 36 hours or more ahead and is measured when the moment comes, with a themed line in the paper | A separate event system. The moment itself passes in a few real hours, too short for a once-a-day player to act in |
+| Real-world seasons | Bring the decoration sets of 42.5 | |
+| Notices on the phone | One a day at most, saying what is ready | |
+| Later | Bigger events, and the pass | |
+
+### 42.9 Accounts, cloud saves and other players (recommended; he left the choice)
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The backend | Cloudflare Workers with D1 for accounts and small records and R2 for the saves, which he already uses elsewhere. A save is about 250 KB, and 17 KB compressed | Apple's own cloud only: no server and no cost, and no way to add other players later |
+| Signing in | Sign in with Apple, and nothing else. It is optional: the game plays with no account, as today. An account can be deleted from inside the app | An email and a password to look after |
+| At launch | Accounts and cloud saves only | Everything at once |
+| First update after launch | Leaderboards, and visits: see a friend's campus by a code and leave one help a day (pick up litter, cheer at a game), a small banked gift for both. A help never changes the other campus | |
+| Later | Conferences of friends' schools with football results worked out on the server | |
+| Not planned | A marketplace or trading. It needs made goods, invites trading for real money, and needs policing | |
+| How a save syncs | The whole save, never a merge. Catch-up always runs on the phone from the save's own clock, as today, and the server never simulates a solo game. Each upload carries a revision number. If another phone has saved since, the player is asked which campus to keep, with each one's level, rank and time shown | Merging two saves |
+| Offline | Plays as today and uploads when it can | |
+| Clock cheating, alone | Not policed, as today. A player who moves the clock only spoils their own game | |
+| Clock cheating, once players compare | The server is the clock. It stamps each upload with its own time, and a save whose own clock runs ahead of the server's is left off every board until real time catches up with it. A save may not advance more between two uploads than real time passed between them. No bans: a save that breaks either rule is only left off the boards | Trusting the phone |
+| Results between players | Worked out on the server from what was uploaded. A phone never reports a result | |
+| Bought Seals | Recorded on the server against the account, so they can be given back if a save is lost | |
+| Names other players see | The school's name, which already passes the tone check of section 16. A Report button with visits | Free text |
+
+Cost, as checked on 2026-11-12 from third-party summaries and to be checked on Cloudflare's own pages before building: the free plan allows about 100,000 Worker requests a day, 100,000 rows written a day in D1, and 10 GB with a million writes a month in R2. That carries a few thousand daily players for nothing. Nothing is to be paid for without asking him.
+
+### 42.10 Against the eight tests of 2.1
+
+None fails. The layer adds interdependence (orders point across systems; the workshop feeds decorations, which feed looks, which feed applicants). An advisor's order names what holds the campus back and its fix, which is test 3. Everything says its own numbers, which is test 4. There is always a live order, which is test 5. Levels, sets and recipes serve the long arc of test 6. Decorating is the creative use of the map that test 7 asks for. Nothing in the layer can be lost, which is test 8.
+
+### 42.11 The order to build it in, when he says build
+
+One stop each, each verified and played before the next.
+
+1. The level and collecting.
+2. The orders board.
+3. Decorating, the workshop and photo mode. A sheet of art for him first.
+4. The daily gift, the goals for the year, the calendar orders and one seasonal set.
+5. The big builds of section 41: the three Flagship buildings and the three landmarks. A sheet of art for him first.
+6. Accounts and cloud saves.
+7. The store. It needs his Paid Apps Agreement with Apple first.
+
+Seals are earned and spent from the first stop, so the economy is tuned before any money is involved. After launch: leaderboards and visits, the research labs, the pass, conferences.
+
+To measure at every stop, and to report to him: the pace of the rank goals (the Top 100 in about month two, the Top 10 not before month five), the money against his $12 to $17 kept of every $100, how many levels and Seals each test player earns a week, and that rank, applicants and selectivity still settle.
