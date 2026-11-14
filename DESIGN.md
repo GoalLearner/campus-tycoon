@@ -7297,3 +7297,69 @@ Until now Close always ended the follow, and the open card covered most of the m
 | A long line is cut after two lines | The strip is kept short so the map shows |
 | Tapping a building while the strip shows ends the follow | As tapping a building with the card open always has |
 | Never run on a phone | Checked in pictures on this PC at four widths |
+
+## 62. A social campus, stop 1 (built on a branch, paused)
+
+Built on 2026-11-14 on the branch `social-1` (named regulars and the ties between them, the Main Character's people as real students, friends' faces on the card) and paused the same day at the owner's word, before it was merged: he asked for the whole student body to be simulated, with the design and its costs first. That design is section 63, approved. social-1 stays unmerged; its parts are taken by hand into the stops of section 63 (his decision 10, "Reuse").
+
+## 63. A whole-campus social simulation (approved)
+
+**Approved by the owner 2026-11-14: "Yes, all ten".** Designed with measured costs on the throwaway branch `social-sim-measure`, which is never merged: its code is taken into the stops by hand. Built in seven stops, each on its own branch off main and shipped to TestFlight before the next (63.4); each stop's as-built section follows as 63.5 onward.
+
+His words, after reading the social campus plan: "Make the whole student body a real social simulation: 46,000 students who meet, click or clash, form friendships and relationships, good and bad, so the campus feels like real life. Use levels of detail so it runs on a phone. DISCUSSION FIRST: post the design with measured costs, then build after my approval." And: "these npcs need to show emotion and life as it would be in the Sims". The design page for him is `docs/handoff/social-sim-design.html`.
+
+### 63.1 Measured
+
+A prototype on typed arrays (`scripts/social-sim-proto.ts`, `scripts/social-sim-measure.ts`), with the model campus's own students, dorms, majors, clubs and teams; this PC. A game week is 3 hours 14 minutes of real time, so the 30-day catch-up cap is 223 game weeks.
+
+| | 46,000 | 50,000 (the cap) | 100,000 |
+|---|---|---|---|
+| Memory | 10.6 MB, 231 bytes a student | 11.5 MB | 22.6 MB |
+| Ties a student | 10.8 | 10.8 | 10.8 |
+| One game week, everyone | 59 ms | 54 ms | 112 ms |
+| 30 days, regrow then the last 8 weeks in full | 0.41 s | 0.39 s | 0.88 s |
+| 30 days, every week in full | 11.8 s | 12.9 s | 25.8 s |
+| 30 days, 8-week batches | 1.9 s | 2.0 s | 3.7 s |
+| 30 days, the last 26 weeks only | 1.6 s | 1.6 s | 3.1 s |
+| Save, every tie kept (packed, as text) | +2.65 MB | +2.88 MB | +5.74 MB |
+
+Today's model campus save is 0.3 MB. Every week in full in a worker took 12.1 s with the main thread's longest pause 24 ms. Frames, as in 47.2 (an iPhone 14's screen, the page slowed four times, the crowd held at Normal): 13.2 to 13.9 ms of frame work today, 13.6 to 14.8 ms with half the students walking with friends and an emote over a third of heads; 60 frames a second both. A sample web of one dorm floor (31 students, 64 ties: friends, roommates, best friends, a couple, crushes, rivals and an enemy) is on the page.
+
+### 63.2 The proposal in brief
+
+| Part | Proposed |
+|---|---|
+| Levels of detail | Everyone: an identity and up to 12 ties, a weekly batch. Named regulars (13.5): needs, schedules, memory, talk, a feed. The followed student: promoted to a regular with their history kept; DeepSeek later. The Main Character: always a regular |
+| Identity | 4 bytes from the seed: gender, attraction (Gallup 2025 rates for Gen Z; women 58% of undergraduates), seven traits, nine interests, values. No label shown beyond who someone is dating |
+| Ties | Acquaintance, friend, best friend, group, crush (one-sided or mutual), dating, exclusive, long-term, on and off, jealousy, cheating, love triangles, breakups (mutual or messy), rivals, enemies, roommates who love or hate it |
+| Encounters | Dorm floor (about two dozen), class section (about 30), club table, team, chapter, and dining, rec and parties; 45% with someone known |
+| Effects | Light and capped: Happiness, Stress around exams, GPA at most 0.15, retention at most 0.3 points a semester across the campus; checked in the long run against money, level pace and rank pace |
+| Emotion | A current emotion with reasons (moodlets) on the card, over the head, and in faces from the pack's mouths and eyes; emote art drawn in the packs' style, look sheet first |
+| Visible life | The crowd from real ties; cards with tappable ties; a Campus social view; a gossip column |
+| MC-1 and MC-2 | Underneath them: their people are the web's, their arcs cast real people and change ties; the web never starts or ends the Main Character's romances |
+| Rating | 13+ when heavy drama is rationed on screen (one heavy item a week); shown freely, 16+ (52.2's "mature themes, frequent") |
+| Catch-up | Short absences week by week; long ones regrown and the last 8 weeks lived, in a worker |
+| Save | The ties as their own record, written once a game week |
+
+### 63.3 Decisions, the owner's
+
+All ten as recommended, his answer of 2026-11-14 ("Yes, all ten"):
+
+| # | Decision | His answer | The alternative |
+|---|---|---|---|
+| 1 | Where it fits | Under MC-1 and MC-2 | Before them, rebuilding them |
+| 2 | Long catch-up | Regrow | Full in a worker, or 8-week batches |
+| 3 | Saving ties | Separate record | Inline, or partial |
+| 4 | Roommates | Same gender, everywhere (a nonbinary student rooms with another nonbinary student on their floor, otherwise has a room of their own) | Any |
+| 5 | Attraction rates | Gallup | Simpler |
+| 6 | Heavy drama shown | Rationed (13+) | Open (16+) |
+| 7 | Effects | Light | None, or strong |
+| 8 | Emote art | Draw | Wait to buy |
+| 9 | A dog | Skip | Draw |
+| 10 | social-1 | Reuse: its parts are taken by hand into the stops | Drop |
+
+### 63.4 Build order, once approved
+
+Seven stops, each to TestFlight: the weekly web (identity, worker, save record, regrow); cards, the Campus social view and gossip; emotion; the crowd from real ties; regulars and the followed student's day; the effects, tuned in the long run; MC-1 and MC-2 on the web with scenes and fun beyond school.
+
+**From the main session's review of the prototype, built in from stop 1.** Roommates of one gender hold everywhere, and are tested. First names repeated too often (one floor of 31 had four Quinns and four Lanes), which reads as a bug once faces are tappable across the web: students who enter from now on draw from a wider list of first names that fit their gender, so a card or a story can say girlfriend or boyfriend. Nobody who already exists is renamed: not the main character, nobody followed, no regular, no saved story.
