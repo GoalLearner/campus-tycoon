@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { EMOTION_EMOTE, EMOTION_FACE, EMOTION_NAMES, feelingOf, moodletsOf, type Emotion } from '../src/app/emotion';
 import { viewOf } from '../src/app/socialView';
 import { advance, newGame, sampleStudents, studentCard, toneProblem, type GameState } from '../src/sim';
+import { DRINKING_YEAR } from '../src/sim/config/parties';
+import { PARTY_CARD } from '../src/sim/config/students';
 import { HEAVY_WORDS } from '../src/sim/config/tone';
 import { KIND, SLOTS } from '../src/sim/config/web';
 import { catchUp, idOf, newWeb, refAt, webWeekOf } from '../src/sim/systems/web';
@@ -92,6 +94,17 @@ describe('a feeling', () => {
     }
   });
 
+  it('gives the red cup of a party night only to a student of 21 or over; a younger one has a soda (DESIGN.md 63.9)', () => {
+    const ref = SAMPLE[0]!;
+    const card = studentCard(MODEL, ref)!;
+    for (let classYear = 0; classYear < 4; classYear++) {
+      const over = classYear >= DRINKING_YEAR;
+      const night = { ...card, classYear, party: over ? PARTY_CARD.over21 : PARTY_CARD.under21 };
+      const party = moodletsOf(VIEW, MODEL, ref, night, 21).find((one) => one.reason === 'Party tonight');
+      expect(party?.emote, `class year ${classYear}`).toBe(over ? 'partycup' : 'sodacup');
+    }
+  });
+
   it('is said plainly: every reason passes the tone guide and none uses a heavy word', () => {
     const reasons = new Set<string>();
     for (const ref of SAMPLE) for (const one of moodletsOf(VIEW, MODEL, ref, studentCard(MODEL, ref)!, 22)) reasons.add(one.reason.replace(/ [A-Z][a-z]+$/, ' X'));
@@ -109,7 +122,7 @@ describe('the art', () => {
 
   it('has every emote an emotion or a reason can show, in the built-in atlas', () => {
     const atlas = read('../public/assets/atlas.json');
-    const emotes = new Set([...Object.values(EMOTION_EMOTE).filter((one): one is string => one !== null), 'heart', 'heartbreak', 'partycup']);
+    const emotes = new Set([...Object.values(EMOTION_EMOTE).filter((one): one is string => one !== null), 'heart', 'heartbreak', 'partycup', 'sodacup', 'chat-partying']);
     for (const emote of emotes) expect(atlas.frames[`emote.${emote}`], emote).toBeDefined();
   });
 

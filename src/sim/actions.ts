@@ -1,5 +1,6 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { makeMain, setAsideMain } from './systems/mc';
+import { promoteRegular, rememberRegular } from './systems/regulars';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
@@ -77,6 +78,9 @@ export type Action =
   | { type: 'collectAll' }
   /** The Main Character (DESIGN.md 53.2): choose one from a student's card, or set the one there is aside. */
   | { type: 'makeMain'; ref: { entryYear: number; index: number } }
+  // Regulars (DESIGN.md 63.9): following a student makes them one; what the map shows happening to them is remembered.
+  | { type: 'promoteRegular'; ref: { entryYear: number; index: number } }
+  | { type: 'rememberRegular'; ref: { entryYear: number; index: number }; text: string }
   | { type: 'setAsideMain' }
   /** Choose a tradition for an open place (DESIGN.md 50). */
   | { type: 'chooseTradition'; id: string }
@@ -679,6 +683,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return collect(state, action.key);
     case 'collectAll':
       return collect(state, null);
+    case 'promoteRegular':
+    case 'rememberRegular': {
+      const next = structuredClone(state);
+      const error = action.type === 'promoteRegular' ? promoteRegular(next, action.ref) : rememberRegular(next, action.ref, action.text);
+      return error ? { ok: false, state, error } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
     case 'makeMain':
     case 'setAsideMain': {
       const next = structuredClone(state);

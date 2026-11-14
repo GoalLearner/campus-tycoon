@@ -286,6 +286,23 @@ export function gossip(view: WebView, state: GameState, sinceWeek: number, max =
   return [...out, ...lightSince(view, state, sinceWeek, null, max - out.length)];
 }
 
+/**
+ * What the web knows happened to one student (DESIGN.md 63.9), newest first, for a regular's card: light happenings,
+ * and a heavy one only when it is the week's one heavy item (63.3, decision 6).
+ */
+export function happenedTo(view: WebView, state: GameState, ref: StudentRef, max = 4): Told[] {
+  const heavy = heavyOfTheWeek(view, calendarAt(state.clock).year);
+  const out: Told[] = [];
+  for (const one of happeningsOf(view)) {
+    if (out.length >= max) break;
+    if (!one.people.some((p) => p.entryYear === ref.entryYear && p.index === ref.index)) continue;
+    if (isHeavy(one) && !(heavy && heavy.week === one.week && heavy.luck === one.luck)) continue;
+    const told = tell(state, one);
+    if (told) out.push(told);
+  }
+  return out;
+}
+
 /** The drama of the week: its one heavy item when there is one, otherwise the biggest light one. */
 export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
   const year = calendarAt(state.clock).year;
@@ -300,6 +317,18 @@ export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
     }
   }
   return null;
+}
+
+/**
+ * First names for a list of students said together, a repeated one with their surname's first letter, so a line
+ * never reads "Toni and Toni": "Toni K." and "Toni M."; and the whole surname when that letter is shared too.
+ */
+export function firstNamesOf(state: GameState, refs: StudentRef[]): string[] {
+  const firsts = refs.map((ref) => firstNameOf(state, ref));
+  const surnames = refs.map((ref) => studentName(state, ref).split(' ').slice(1).join(' '));
+  const twice = (list: string[], at: number): boolean => list.indexOf(list[at]!) !== list.lastIndexOf(list[at]!);
+  const lettered = firsts.map((name, i) => (twice(firsts, i) ? `${name} ${surnames[i]!.charAt(0)}.` : name));
+  return lettered.map((name, i) => (twice(lettered, i) && surnames[i] ? `${firsts[i]} ${surnames[i]}` : name));
 }
 
 // ------------------------------------------------------- campus social --

@@ -4,10 +4,12 @@ import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
+import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
+import { firstNamesOf, happenedTo } from '../app/socialView';
+import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
-import { firstNameOf, studentName } from '../sim/systems/students';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -19,6 +21,9 @@ import { drawSprite, loadAtlas, type Atlas } from './atlas';
  * identity and the campus numbers (src/sim/systems/students.ts). Nothing is
  * stored, and nothing here runs while the card is closed.
  */
+
+/** A line just remembered shows on the follow strip for this many minutes of the player's clock (DESIGN.md 63.9). */
+const FEED_FRESH_TICKS = 2;
 
 /** What the walker on the map is doing. */
 const DOING: Record<string, string> = {
@@ -111,6 +116,20 @@ function awayText(state: GameState, card: StudentCard): string {
   if (doing === 'asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (doing === 'ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
   return town ? 'At home in town' : `In ${home}`;
+}
+
+/**
+ * Where a regular is who is out of sight: what their day has them doing now (DESIGN.md 63.9), in place of a guess from
+ * the last thing the map saw, so Doing now and Today agree. At home, in the words the room uses.
+ */
+function plannedText(state: GameState, card: StudentCard, item: DayItem): string {
+  if (item.where !== 'home') return item.words;
+  const town = card.residence === 'offCampus';
+  const home = homeName(state, card);
+  if (item.words === 'Asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
+  if (item.words === 'Getting ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
+  if (item.words === 'In their room') return town ? 'At home in town' : `In ${home}`;
+  return item.words;
 }
 
 /** "the dorm" in a line of the card, as the hall's own name: "Heading back to Fernwick Hall". */
@@ -219,7 +238,11 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const doing = row('Doing now');
   const follow = el('button', 'student-follow', 'Follow');
   follow.type = 'button';
-  follow.addEventListener('click', () => session.setFollowing(!session.following));
+  follow.addEventListener('click', () => {
+    // Followed, they become a regular, kept from now on (DESIGN.md 63.9).
+    if (!session.following && session.student) store.dispatch({ type: 'promoteRegular', ref: session.student });
+    session.setFollowing(!session.following);
+  });
   // Home in their dorm: a look inside their room (DESIGN.md 46).
   const inside = el('button', 'student-follow student-inside', 'Look inside');
   inside.type = 'button';
@@ -253,6 +276,14 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const faces = el('div', 'student-friends');
   peopleRow.value.replaceWith(faces);
 
+  // A regular's day and what has happened to them lately (DESIGN.md 63.9). Following a student makes them one.
+  const todayRow = row('Today');
+  const todayList = el('div', 'student-day');
+  todayRow.value.replaceWith(todayList);
+  const latelyRow = row('Lately');
+  const latelyList = el('div', 'student-day');
+  latelyRow.value.replaceWith(latelyList);
+
   // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
@@ -278,7 +309,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -367,7 +398,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const outside = session.doing !== null;
     // "the dorm" in what the map says, as where they live: their hall, or their chapter's house.
     const homeWord = hall ?? (card.residence === 'chapter' ? `the ${card.chapter} house` : null);
-    setText(doing.value, named(outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : awayText(state, card), homeWord));
+    const today = regularToday(state, ref, card);
+    const unseen = today?.now ? plannedText(state, card, today.now) : lastDoing ? indoorsText(lastDoing) : awayText(state, card);
+    setText(doing.value, named(outside ? doingText(session.doing!) : unseen, homeWord));
     follow.disabled = !outside;
     // Someone staying put has nowhere to be followed to.
     follow.hidden = stayingWords(session.doing) !== null;
@@ -407,16 +440,62 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       : null;
     reason.disabled = target === null;
 
+    showDay(state, ref, today);
+
     // The strip: the same live line as the card's Doing now, and Following only while the camera is (DESIGN.md 61).
-    // Gone indoors or dragged away from, it is one tap back to the card, which says where they are.
+    // Gone indoors or dragged away from, it is one tap back to the card, which says where they are. Something that
+    // has just happened to them on the map shows there first, for a minute or two: the live feed (63.9).
     stripFirst.textContent = card.name.split(' ')[0]!;
     stripFollowing.hidden = !session.following;
-    setText(stripDoing, doing.value.textContent ?? '');
+    const latest = regularRecord(state, ref)?.memory.at(-1);
+    const fresh = latest && state.clock.tick - latest.tick <= FEED_FRESH_TICKS ? latest.text : null;
+    setText(stripDoing, fresh ?? doing.value.textContent ?? '');
     strip.classList.toggle('following', session.following);
 
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
     node.classList.toggle('show', session.room === null && !session.tucked);
     strip.classList.toggle('show', session.room === null && session.tucked);
+  }
+
+  // ------------------------------------------------------------ their day --
+
+  let dayKey = '';
+  /** A regular's Today (now and what is next, with times) and Lately (what the map saw, then what the web says). */
+  /** A regular's day and what it has them doing now; null for anyone else. The Main Character's day is their page's (57.1). */
+  function regularToday(state: GameState, ref: StudentRef, card: StudentCard): { day: DayItem[]; now: DayItem | null } | null {
+    const why = regularWhy(state, ref);
+    if (why !== 'followed' && why !== 'named') return null;
+    const day = regularDay(socialWeb.view, state, ref, card);
+    return { day, now: itemAt(day, shownHour()) };
+  }
+
+  function showDay(state: GameState, ref: StudentRef, today: { day: DayItem[]; now: DayItem | null } | null): void {
+    if (!today) {
+      todayRow.line.hidden = true;
+      latelyRow.line.hidden = true;
+      dayKey = '';
+      return;
+    }
+    const view = socialWeb.view;
+    const { day, now } = today;
+    const at = now ? day.indexOf(now) : -1;
+    const next = at >= 0 ? day.slice(at, at + 4) : day.slice(0, 4);
+    const memory = [...(regularRecord(state, ref)?.memory ?? [])].reverse().map((one) => one.text);
+    const told = view ? happenedTo(view, state, ref, 4).map((one) => one.line) : [];
+    const lately = [...memory, ...told].slice(0, 4);
+    todayRow.line.hidden = next.length === 0;
+    latelyRow.line.hidden = lately.length === 0;
+    const key = `${studentKey(ref)}|${next.map((one) => one.from + one.words).join(',')}|${lately.join(',')}`;
+    if (key === dayKey) return;
+    dayKey = key;
+    todayList.textContent = '';
+    next.forEach((item, i) => {
+      const line = el('div', i === 0 && item === now ? 'student-day-line now' : 'student-day-line');
+      line.append(el('span', 'student-day-time', i === 0 && item === now ? 'Now' : clockWords(item.from)), el('span', '', item.words));
+      todayList.append(line);
+    });
+    latelyList.textContent = '';
+    for (const text of lately) latelyList.append(el('div', 'student-day-line', text));
   }
 
   // ---------------------------------------------------------- their people --
@@ -434,10 +513,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     facesKey = key;
     faces.textContent = '';
     // Two of one first name on a card get their surname's first letter: "Sabrina M." and "Sabrina K.".
-    const firsts = list.map((one) => firstNameOf(state, one.ref));
+    const firsts = firstNamesOf(state, list.map((one) => one.ref));
     for (const [i, one] of list.entries()) {
-      const plain = firsts[i]!;
-      const first = firsts.filter((name) => name === plain).length > 1 ? `${plain} ${studentName(state, one.ref).split(' ')[1]?.charAt(0) ?? ''}.` : plain;
+      const first = firsts[i]!;
       const button = el('button', `student-friend ${one.role}`);
       button.type = 'button';
       button.setAttribute('aria-label', `${first}, ${one.label.toLowerCase()}: open their card`);

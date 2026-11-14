@@ -9,6 +9,7 @@ import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } fr
 import { sound } from '../app/sound';
 import { currentDaylight, shownHour, type Daylight } from '../app/daylight';
 import { feelingOf } from '../app/emotion';
+import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
@@ -327,6 +328,13 @@ export class CampusScene extends Phaser.Scene {
       // The ring goes under whoever's card is open: a student, or anyone else out walking.
       this.walkers.setMarked(session.student ? studentKey(session.student) : session.person ? `p:${personKey(session.person)}` : null);
     });
+    // What happens to a regular on the map is remembered for their card (DESIGN.md 63.9). The Main Character's day is
+    // their story's.
+    this.walkers.onMemory = (ref, text) => {
+      if (!store.hasGame || store.isEphemeral) return;
+      const why = regularWhy(store.state, ref);
+      if (why === 'followed' || why === 'named') store.dispatch({ type: 'rememberRegular', ref, text });
+    };
     // Students who get a place while the player is watching are shown walking in.
     const unsubscribeLive = store.onLive((entries) => {
       let movedIn = 0;

@@ -264,7 +264,8 @@ describe('the web', () => {
     expect(catchUp(decodeWeb(encodeWeb(WEB), MODEL)!, MODEL, week + 2)).toEqual({ lived: 2, regrown: false });
     // A brand-new web is grown, not stepped from nobody knowing anybody.
     expect(catchUp(newWeb(MODEL.seed, 1024), MODEL, week)).toEqual({ lived: REGROW_LIVED_WEEKS, regrown: true });
-  });
+    // Several whole-campus catch-ups: about 12 s on a quiet PC, more when the PC is busy.
+  }, 60_000);
 
   it('is kept as squeezed text, read back byte for byte, and a broken one is grown again', async () => {
     const record = encodeWeb(WEB);

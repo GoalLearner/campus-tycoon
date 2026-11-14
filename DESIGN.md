@@ -7482,7 +7482,7 @@ Built 2026-11-14 on the branch `social-sim-3`. The save is unchanged (version 30
 | Emotion | Its reasons, and their weight | Emote | Face |
 |---|---|---|---|
 | Happy | New couple with (name) 3, with a heart; Together with (name) 1.5, with a heart; Close with (best friend) 1.2; Has a group of friends 0.8; a break or summer 1.5; Loves it here 1.5 | Sparkle | Smile (Mouth1) |
-| Excited | Game day (a home game on now) 1.4, or 3 for a Superfan or an Athlete; Party tonight (a Party Animal, from 6 PM) 2.5, with a party cup | Exclamation | Laugh (MouthTalking and EyesBlink) |
+| Excited | Game day (a home game on now) 1.4, or 3 for a Superfan or an Athlete; Party tonight (a Party Animal, from 6 PM) 2.5, with a party cup at 21 and over and a soda cup under 21 (63.9) | Exclamation | Laugh (MouthTalking and EyesBlink) |
 | Flirty | Has a crush on (name) 2.5 | Heart | Smirk (Mouth5) |
 | Tense | It's complicated with (name) 2.5; Not speaking to (name) 2; A rivalry with (name) 1.2; Not getting on with (roommate) 1.8; exams, 1 and more as Stress rises; Exams ahead once Stress is 50 | Anger mark | Flat (Mouth3) |
 | Embarrassed | Dropped their books in front of (their crush) 3.5: a student with a crush, about one day in eight | Sweat drop | Small (Mouth4) |
@@ -7562,4 +7562,73 @@ Between builds the medians move by more than the social crowd costs: on one buil
 | A meeting or a party is often half hidden behind a building in front | The figures are; the icons are drawn as the figures are, so they do not float over roofs |
 | Nobody is shown being met by someone they do not know, nor a group forming on the spot | Those are scenes, stop 7 |
 | A party lingering together is never more than four | A pair or a small group reads on a phone; more is a crowd |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.9 Stop 5 as built: regulars and the followed student's day
+
+Built 2026-11-14 on the branch `social-sim-5`. The web and its record are unchanged; the save gains one optional list.
+
+**Regulars** (`src/sim/systems/regulars.ts`). Three kinds, as 13.5 and 63.2 have them:
+
+| Who | How many | Kept |
+|---|---|---|
+| Named | Two in every class, picked by the seed from its first 150 students, the same all four years | Nothing stored: worked out from the seed each time |
+| Followed | Anyone the player follows becomes a regular from that moment, and stays one | At most 30; the one followed longest ago gives way and is let go, memory and all |
+| The Main Character | Always one | Their day and people stay their story's page (57.1) until stop 7 |
+
+A regular has a short memory: what the map showed happening to them, newest last, at most 12 lines of at most 120 characters. A repeat of the last line is kept once. A regular who has left the campus is dropped the next time a line is kept.
+
+**Their day** (`src/app/regularDay.ts`). From waking to sleep on the player's own real day, worked out from their card, their people in the web and the calendar, the same every time for the same day, and stored nowhere:
+
+| When | What |
+|---|---|
+| Waking | Getting ready, at the hour Look inside has them waking (section 60's hours, now in this file and read by the room) |
+| A weekday morning | Coffee if they are up early, a lecture in their major at 9 AM, a seminar before noon |
+| Midday | Lunch with one or two friends; a class after for first and second years |
+| A weekend | Up an hour and a half later; brunch with friends |
+| The afternoon | Their club on its days (about two a week), the gym for those who like fitness or play a sport, studying for a scholar or a stressed student, or friends on a lawn |
+| Dinner | With their partner, or friends |
+| The evening | A party on Thursday to Saturday nights for a Party Animal (out of sight, "At a party"), a date, studying, a game night with their roommate, or out with a friend |
+| Night | In their room, then asleep at their hours |
+| Exams | Studying for midterms or finals, with a friend |
+| A break or summer | Home, away from campus, all day |
+
+Each thing runs until the next begins, with no gaps; every person named is someone in their web; nothing says anything heavy.
+
+**On the card.** A regular's card (named or followed) has two rows more:
+
+- **Today**: what they are doing now and the next three things, by the clock ("Now · Hanging out with Shiloh and River", "5:30 PM · Dinner with Shiloh and River").
+- **Lately**: up to four things, newest first: what the map showed happening to them ("Bumped fists with Shiloh and stopped to talk"), then what the web knows ("Rowan and Kai are dating."). A heavy item shows only when it is the week's one heavy item (63.6).
+
+Out of sight, a regular's **Doing now** is what their day has them doing ("Hiking Club meets", "Asleep in Herongate Hall"), so the two rows agree; before, the card guessed from the last thing the map saw, which on a Saturday could say "In class".
+
+**Followed.** Tapping Follow makes them a regular. On the map, where they go next is where their day says: a lecture hall for class, somewhere to eat for a meal, a court or the gym for a workout, a bench or a table for studying or their club, a lawn for friends, home for the evening. A student already on the way somewhere when followed turns back toward it. At a place where their day keeps them (a meal, a workout, a club), they go in rather than wander on. They meet people more often: when the map sends someone to meet a walker on a path, half the time it is the followed student, if they are free to stop.
+
+**The live feed.** What the map shows happening to a regular is kept as a line of their memory: a greeting ("High-fived Sam and talked about music"), passing a crush or an ex, walking out with friends ("Walked out with Kit and Sam"). The follow strip shows the newest line for up to two minutes, then goes back to what they are doing.
+
+**The Social tab** has a Regulars row under the best known: up to ten faces, the followed first, each tappable to their card.
+
+**Two small fixes found on the way.** The seed's pick of named regulars leaned on bits a student's look also reads, so on one campus five of the eight wore the same figure; the pick is mixed once more and they are as varied as anyone (60 seeds tested). A first name said twice in one line ("The sports crowd: … Toni and Toni") now gets the surname's first letter ("Toni K. and Toni M."), in the Social tab, a regular's day and walking out together, as the card's faces already did (63.6).
+
+**Parties, folded in at the owner's word.** The bubble for two students talking about parties drew a red cup over anyone, under-21s included. It is now a striped party hat with two bits of confetti. The red cup stays only where drinking already may (55; 13.7): the Party tonight reason of a junior or senior. A younger student's Party tonight has the soda cup. Both atlases were rebuilt (only `emote.chat-partying` changed) and the paid one published.
+
+**Decisions made here** (the alternative in brackets):
+
+| | Done | Instead |
+|---|---|---|
+| Needs | Not stored: the card's Happiness, Stress and feeling already are a regular's needs | A needs model of their own, a stop of work for little that shows |
+| Named regulars | Worked out from the seed, two a class | Stored, chosen at entry (a save change for the same eight) |
+| The save | `web.regulars`, optional: no new version, an older save simply has none | A version bump with an upgrade step |
+| The day | Worked out, never stored | Stored, so it could drift from the card and cost save space |
+| Talk | Lines of what happened, in plain words | DeepSeek talk, which waits for the backend (MC-3) |
+
+**Measured.** The save grows by about 36 KB with thirty followed and eight named regulars each holding twelve lines, and 70 KB at the very most, every line its longest (the model campus's save is 0.3 MB). Working out a regular's day and what happened to them takes 0.08 ms on this PC, once a second while their card is open. Catch-up is unchanged: nothing in the web or its worker changed. Frames, as in 63.8: taken while other work on this PC was rendering video, so every number is higher than 63.8's and they compare only with each other. The crowd at Normal with no card open: medians of 23.2 and 23.7 ms in two runs. Following a regular: 19.2 and 18.5 ms (the camera is closer in, so less is drawn). Following costs nothing that shows; stop 5 against main on a quiet machine is left for the main session's check.
+
+**Tested** (`tests/regulars.test.ts`, `tests/emotion.test.ts`): two named in every class, from its first 150, the same a day later; following makes a regular, at most thirty, the oldest giving way and let go, so the list never grows past thirty and the named; memory kept to twelve lines of 120 characters, a repeat once, strangers none; kept through a save and a load, and an older save without the list works; the day runs waking to asleep with no gaps, asleep at the room's hours, classes on weekdays only, only real people named, the same every time, plain and light; away on a break; what happened to them is light, and heavy only when it is the week's one; the named as varied in look as chance; a repeated first name with its surname's letter; the red cup only for 21 and over. The map's part was watched on the model campus in a headless browser: Follow promotes, Today shows, a meeting on the path is kept and shows on the strip and in Lately, and the followed student walks where their day says.
+
+| Rough | Why |
+|---|---|
+| A named regular who is not followed walks as anyone else does, so the map and their Today can differ until they are followed | Only the followed student's walk is planned, to keep the crowd's cost where it was |
+| Nothing is kept about a regular while the game is closed | The memory is what the map showed; the web's own weeks show in Lately |
+| The day has no part-time job, sport practice or office hours | Kept to what the card already knows; stop 7 adds scenes |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
