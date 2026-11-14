@@ -71,7 +71,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0 } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -722,6 +722,7 @@ describe('a save from version 16', () => {
     expected.alumni = state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.web = webMetaFor(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -767,7 +768,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(13);
+    expect(notes).toHaveLength(14);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

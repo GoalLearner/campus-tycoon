@@ -638,6 +638,16 @@ export interface GameState {
   alumni: Alumni;
   /** The Main Character and the hall of fame (DESIGN.md 53.2, as built in section 57). */
   story: Story;
+  /**
+   * The social web's part of the save (DESIGN.md 63). The web itself, every student's ties, is a record of its own
+   * beside the save (decision 3); this keeps only what the game reads in a tick.
+   */
+  web: WebMeta;
+}
+
+export interface WebMeta {
+  /** Students from here on are named from the wider lists that fit their gender. Everyone before keeps their name. */
+  namesFrom: { entryYear: number; index: number };
 }
 
 /** Someone in the Main Character's life (DESIGN.md 53.2): stored, never rebuilt from the seed. */

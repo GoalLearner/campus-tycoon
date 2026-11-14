@@ -7363,3 +7363,62 @@ All ten as recommended, his answer of 2026-11-14 ("Yes, all ten"):
 Seven stops, each to TestFlight: the weekly web (identity, worker, save record, regrow); cards, the Campus social view and gossip; emotion; the crowd from real ties; regulars and the followed student's day; the effects, tuned in the long run; MC-1 and MC-2 on the web with scenes and fun beyond school.
 
 **From the main session's review of the prototype, built in from stop 1.** Roommates of one gender hold everywhere, and are tested. First names repeated too often (one floor of 31 had four Quinns and four Lanes), which reads as a bug once faces are tappable across the web: students who enter from now on draw from a wider list of first names that fit their gender, so a card or a story can say girlfriend or boyfriend. Nobody who already exists is renamed: not the main character, nobody followed, no regular, no saved story.
+
+### 63.5 Stop 1 as built: the weekly web
+
+Built 2026-11-14 on the branch `social-sim-1`, save version 30. Every student now has an identity and up to twelve ties, stepped once a game week in a worker beside the game and kept in a record of its own. Nothing on screen reads the web yet except the roommate in Look inside; cards, the Campus social view and gossip are stop 2, and the web moves no campus number until stop 6.
+
+**Identity** (`src/sim/systems/identity.ts`). One 32-bit number a student, from the seed, never stored: gender, attraction, seven traits, nine interests and values, as 63.2. Gender is rolled first and on its own, so a first name can be chosen from it: 56% women, 42% men, 2% nonbinary (women 57% of those who are women or men, near the Clearinghouse's 58%). Attraction follows Gallup's February 2025 rates for Gen Z: women 79% to men, 18% to both, 3% to women; men 90% to women, 6% to both, 4% to men; nonbinary students 60% to anyone. Their nature leans their traits, interests and values: a Party Animal is outgoing and likes parties, a Scholar is ambitious and studies. Chemistry, -1 to 1, is shared interests, the same values, humour, kindness and calm, less a jealous partner against a flirt, and a little of the pair's own luck.
+
+**The web** (`src/sim/systems/web.ts`, numbers in `src/sim/config/web.ts`). Typed arrays, twelve slots a student, each tie held at both ends with the same strength and the same week last together; a crush is one end of a friendship. The four classes sit in four rings by entry year, and a class bigger than the web's room for it grows the room in steps of 512. Saved for each slot: the other student, the week, the kind, the strength and the feeling. Worked out again on loading: identities, places, the other end of each tie and each pair's chemistry.
+
+| Kind | How it comes and goes |
+|---|---|
+| Acquaintance | Any first meeting (strength 8); fades 3 a week apart; let go when a slot is needed |
+| Friend, best friend | Friend at 30, best friend at 85 (one each); back to acquaintance below 25 |
+| Crush | Between friends who are each other's type, on a rare spark (one pair in twelve); one-sided or mutual; fades as the friendship does |
+| Dating, exclusive, long-term | Both with a crush, at 45, on a good evening; exclusive at 70, long-term at 95; break up 2%, 1% and 0.4% a week, or below 30 |
+| Ex | After a breakup, mutual or messy; exes who keep meeting, both single, get back together 3% a week |
+| Cheating, love triangle | A partner who is not loyal and flirts may start something new: the old couple ends messily. Two crushes on one student is a triangle |
+| Rival, enemy | A pair who grate (chemistry below -0.2) grow sorer each meeting: rivals at 35, enemies at 80. They argue; nothing cruel |
+| Roommate | Below |
+
+**Places and encounters.** A hall has a floor for each two dozen beds (about 24 students a floor), a class section about 30 of one major and class year, a club table about 40, a team one of eight squads, a chapter its members, a district ten by ten cells. They are read from the campus when the semester or the housing changes, and otherwise only for students new since. Each week each student has three to six encounters by how outgoing they are; 45% are with someone they know (the stronger of two of their ties), the rest at a place: the floor 28%, a section 24%, a club 14%, the team 6%, the chapter 6%, around the district (dining, the rec center, a party) 22%.
+
+**Catch-up** (decision 2). A web up to twelve game weeks behind lives each week. Further behind, or a web never stepped, is grown again from the seed: each student tied to the floor-mates, section-mates and club-mates they get on with, closer the longer both have been here, a few pairs who are each other's type as couples, roommates paired; then its last eight weeks are lived. A web read back from its record carries on from its week.
+
+**The worker** (`src/app/webWorker.ts`, `src/app/socialWeb.ts`). The web runs in a worker, one job at a time; the main thread posts the campus once a game week, and a new campus starts a new web. Each answer carries the web's record, already squeezed to text in the worker (`src/app/webRecord.ts`), and a copy for the cards to read: the main thread only stores the text.
+
+**The record** (decision 3, `src/app/persistence.ts`). Its own key, `web`, squeezed with gzip where the browser can and kept as text, as the save is; written once a game week; never read for another campus (the seed is in its header); a broken one is grown again. A demo game writes none; clearing the saves clears it.
+
+**Roommates** (decision 4). In a hall whose rooms are shared (as the room view has it: the hall grown to its second stage and the dorms more than half full), the students of each floor are paired two of a gender in floor order. A nonbinary student rooms with another nonbinary student on their floor, or has a room of their own. Pairs are made again each calendar year; a pair who no longer share a floor, or whose rooms are no longer shared, become friends, or acquaintances if they never got close. Look inside shows the web's roommate; before the worker first answers, a roommate of the same gender chosen from the seed.
+
+**First names.** Two new lists of 200 (`src/sim/config/names.ts`), one for women and one for men, none on both; nonbinary students draw from the old list and ten more. Only students who arrive after this version are named from them: the save keeps where new names begin (`state.web.namesFrom`: an upgraded game's current first-year class from its size at upgrading, so the spring class and every later class; a new game, everyone). Everyone already enrolled keeps the name they had: the main character, anyone followed, every regular and every saved story. The new names' roll is mixed so it owes nothing to the roll that places a student in a dorm (the old one differed only in its last number, which put four Quinns on one floor). Two names on the lists were swapped for others, as both were on the reference map.
+
+**Save version 30.** Adds `web: { namesFrom }` and nothing else: the ties are not in the everyday save. An upgraded game gets one note: "New: a social campus. Every student now meets people, makes friends, dates, breaks up and clashes, week by week, all 46,000 of them if you have that many. Students who arrive from now on have a wider choice of first names. More of it comes to the cards and the map in the next updates."
+
+**Measured** (`npx tsx scripts/web-measure.ts`, the model campus of 46,000, this PC):
+
+| | This PC | A phone (about four times slower) |
+|---|---|---|
+| Thirty days away (223 game weeks), in the worker: grown again, the last 8 weeks lived | 0.58 s; the main thread's longest pause meanwhile 12 ms | About 2.3 s, in the worker |
+| The web's first answer for a campus, in the browser (dev build): grown from the seed | 1.0 s | About 4 s, in the worker |
+| Opening a saved campus: the record read back, in the browser | 0.44 s | About 1.8 s, in the worker |
+| One game week, everyone | 64 ms | About a quarter second, in the worker |
+| Squeezing the record to text, in the worker | 0.27 to 0.36 s | About 1.4 s, in the worker |
+| The main thread's part, once a game week: handing the campus to the worker | 2 to 3 ms | About 10 ms |
+| The record | 6.86 MB raw, 2.17 MB squeezed, 2.90 million characters stored | |
+| The everyday save | 250,588 characters: the web adds only where new names begin | |
+
+Ties after a first catch-up: 116,106 friendships, 13,952 best friends, 99,010 acquaintances, 1,791 crushes, 3,103 couples (1,439 dating, 793 exclusive, 871 long-term), 2,471 exes, 334 rivals, 2 enemies and 12,921 roommate pairs, none of two genders. Of 1,258 dorm floors, 557 have two students of one first name and none more than three. The thirty-day figure was taken beside a long run, so it is a little high; `npm run simulate` checks it on the largest model campus (375 ms for 36,347 students in its last run). Nothing on the map changed, so the frame time is as in 63.1.
+
+**Tested** (`tests/web.test.ts`): every one of the 46,000 names of a version 29 save is unchanged, against a fixture written by main's own code from that save (`tests/fixtures/names-v29-model.json`), and stays unchanged as the upgraded game plays on, the main character's too; students who arrive after the upgrade, and every student of a new game, have names that fit their gender, at most three of one name on a floor; roommates in the web are two of a gender on one floor, one each at most; a nonbinary student's roommate is nonbinary or nobody; the room view's roommate is of their gender before and after the web answers; every tie is held at both ends alike; the web comes out the same twice from the seed, stepped a week at a time, and read back from its record; the catch-up plan (a short absence lived, a long one regrown, a web read back carried on); the record is kept as squeezed text and read back byte for byte; a record is read back only for its own campus and whole, and lets go of students who have left; the upgrade from version 29 and its note. `npm run simulate` checks the thirty-day catch-up on the largest model campus under one second. The new name lists are in the reference-map word test. `?demo=upgrade` opens that version 29 save as an upgraded game, never saved, to see its note; with `&room=0&roommate=1` it opens a shared room instead.
+
+**Found while testing, and fixed.** A crush faded faster than the friendship at the other end, so a tie's two ends drifted apart by a point a week: a crush now fades as friendship does, and both ends fall back to acquaintance together. Getting back together could be undone at one end in the same week's settling: it is now decided at the end settled second. A web read back from its record was grown again every time, since what had happened was not kept: the record now keeps it, and only a web never stepped is grown.
+
+| Rough | Why |
+|---|---|
+| Nothing on a card or the map shows the web yet | Stop 2 is the cards, stop 4 the crowd |
+| The record is written once a game week, so up to three hours of ties can be lost if the app is closed | Those weeks are lived again on the next start |
+| A phone takes about four times this PC's time: about 2 s for thirty days away | In the worker, so the map never waits; the first answer comes a moment after the campus opens |
+| A room looked into in that first moment shows a roommate of their gender chosen from the seed, who can differ from the web's once it answers | The web's answer comes within a few seconds of opening; from then on the room shows the web's roommate |

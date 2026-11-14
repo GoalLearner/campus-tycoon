@@ -1,4 +1,6 @@
 import { storySpec } from '../src/sim/systems/storyteller';
+import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
+import { catchUp, census, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -2395,6 +2397,32 @@ function assertModelCampus(seed: number): void {
       '30 days of catch-up on the model campus runs in under one second',
       best < 1000 && lifted < 1000,
       `${best.toFixed(0)} ms with ${buildings(opening.map).length} lots and ${opening.map.placed.filter(Boolean).length} placed things; ${lifted.toFixed(0)} ms on a tended campus with ${buildings(full.map).length} lots, ${full.map.placed.filter(Boolean).length} placed things and all eight reward buildings`,
+    );
+  }
+
+  // The social web (DESIGN.md 63.5): every student's ties, caught up after thirty days away. It runs in a worker in
+  // the app, so the map never waits on it, but it still has to be quick: the same work, timed here.
+  {
+    const full = of('striver')[0]!.final;
+    const week = webWeekOf(full);
+    const away = Math.round((30 * DAY_MS) / TICK_MS / WEB_WEEK_TICKS);
+    let best = Infinity;
+    let done = { lived: 0, regrown: false };
+    for (let n = 0; n < 3; n++) {
+      const web = newWeb(full.seed, 1024);
+      catchUp(web, full, week);
+      const t = performance.now();
+      done = catchUp(web, full, week + away);
+      best = Math.min(best, performance.now() - t);
+    }
+    const web = newWeb(full.seed, 1024);
+    catchUp(web, full, week);
+    const kinds = census(web);
+    const enrolled = full.cohorts.reduce((sum, size) => sum + size, 0);
+    check(
+      '30 days away, the social web catches up every student in under one second',
+      best < 1000 && done.regrown && kinds[KIND.friend]! > enrolled / 2,
+      `${best.toFixed(0)} ms for ${enrolled} students, ${away} game weeks: grown again from the seed and its last ${done.lived} weeks lived; ${kinds[KIND.friend]} friendships, ${kinds[KIND.roommate]} roommate pairs`,
     );
   }
 

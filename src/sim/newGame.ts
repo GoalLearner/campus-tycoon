@@ -225,6 +225,8 @@ export function newGame(opts: NewGameOptions): GameState {
     greek: newGreek(),
     alumni: newAlumni(),
     story: newStory(),
+    // A new campus: every student is named from the wider lists (DESIGN.md 63).
+    web: { namesFrom: { entryYear: -1000, index: 0 } },
   };
   firstOrders(state);
   startFootball(state, 1);

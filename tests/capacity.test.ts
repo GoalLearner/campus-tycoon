@@ -78,7 +78,7 @@ import {
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, HOUR, T0 } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -684,6 +684,7 @@ describe('a save from version 15', () => {
     expected.alumni = state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.web = webMetaFor(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -713,7 +714,7 @@ describe('a save from version 15', () => {
   it('tells an upgraded save what is new, once', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(15);
+    expect(notes.length).toBe(16);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

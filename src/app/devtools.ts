@@ -3,9 +3,11 @@ import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS,
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
+import { socialWeb } from './socialWeb';
+import { upgradeNotes } from './upgradeNotes';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
-import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
+import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting, SAVE_VERSION } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -680,7 +682,7 @@ function chapterDevSpot(state: GameState): Point | null {
 }
 
 export function installDevTools(): void {
-  (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
+  (window as unknown as Record<string, unknown>).__campus = { store, session, clock, socialWeb };
   const params = new URLSearchParams(window.location.search);
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);
@@ -1042,6 +1044,17 @@ export function installDevTools(): void {
       .then((text) => {
         const loaded = parseSave(text);
         if (loaded.ok) store.adopt(loaded.state, { ephemeral: true });
+      });
+  } else if (params.get('demo') === 'upgrade') {
+    // The model campus saved at version 29, opened as an upgraded game is, never saved: its notes show (DESIGN.md 63.5).
+    void fetch('/tests/fixtures/save-v29-model.json')
+      .then((response) => response.text())
+      .then((text) => {
+        const loaded = parseSave(text);
+        if (!loaded.ok) return;
+        // With &room, the room shows on its own.
+        if (!params.has('room')) store.upgradeNotes = upgradeNotes(loaded.migratedFrom ?? SAVE_VERSION);
+        store.adopt(loaded.state, { ephemeral: true });
       });
   } else if (params.has('demo')) {
     store.adopt(demoCampus(), { ephemeral: true });

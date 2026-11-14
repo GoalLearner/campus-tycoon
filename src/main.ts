@@ -2,6 +2,7 @@ import './ui/ui.css';
 import { startNotices } from './app/notices';
 import { isNative } from './app/platform';
 import { store } from './app/store';
+import { startSocialWeb } from './app/socialWeb';
 import { installSound } from './app/sound';
 import { registerServiceWorker } from './app/updates';
 import { createGame } from './game/createGame';
@@ -15,6 +16,8 @@ async function boot(): Promise<void> {
   }
   await store.load();
   store.start();
+  // The social web runs in a worker beside the game (DESIGN.md 63.5).
+  startSocialWeb(store);
   // Cloud saves (DESIGN.md 48) are switched off: only the dev server loads them, and only with a server's address.
   if (import.meta.env.DEV) {
     const { startCloud } = await import('./app/cloudWire');

@@ -151,6 +151,32 @@ export async function writeSave(text: string): Promise<void> {
 export async function clearSaves(): Promise<void> {
   await backend.remove(SAVE_KEY);
   await backend.remove(BACKUP_KEY);
+  await backend.remove(WEB_KEY);
+}
+
+// ------------------------------------------------------------- the web --
+
+/**
+ * The social web's record (DESIGN.md 63.5): every student's ties, kept apart from the save (decision 3) and written
+ * once a game week. The worker squeezes it to text (src/app/webRecord.ts); here it is only stored and read.
+ */
+const WEB_KEY = 'web';
+
+export async function readWebRecord(): Promise<string | null> {
+  try {
+    return (await backend.get(WEB_KEY)) || null;
+  } catch {
+    // A record that cannot be read is grown again from the seed, as a long absence is.
+    return null;
+  }
+}
+
+export async function writeWebRecord(record: string): Promise<void> {
+  try {
+    await backend.set(WEB_KEY, record);
+  } catch {
+    // Storage can fail in private browsing: the web is grown again next time.
+  }
 }
 
 function exportFileName(schoolName: string): string {

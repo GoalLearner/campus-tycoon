@@ -84,6 +84,11 @@ export class Store {
     return this.current;
   }
 
+  /** True for a game shown from elsewhere, such as a dev demo, which is never saved. */
+  get isEphemeral(): boolean {
+    return this.ephemeral;
+  }
+
   get hasGame(): boolean {
     return this.current !== null;
   }

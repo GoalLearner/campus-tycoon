@@ -58,6 +58,8 @@ import {
   type RelationshipKind,
 } from '../config/students';
 import { hashInts } from '../rng';
+import { MEN_NAMES, NEUTRAL_EXTRA, WOMEN_NAMES } from '../config/names';
+import { genderOf } from './identity';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
@@ -272,6 +274,104 @@ export function socialLife(state: GameState): number {
   const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / smallCount(state, students)));
   // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
   return Math.round(level * 20) / 20;
+}
+
+// ---------------------------------------------------------------- names --
+
+const NEUTRAL_NAMES: readonly string[] = [...FIRST_NAMES, ...NEUTRAL_EXTRA];
+
+/**
+ * True for a student who entered after the social campus came (DESIGN.md 63): they are named from the wider lists
+ * that fit their gender. Everyone enrolled before keeps the name they always had.
+ */
+export function namedFresh(state: GameState, ref: StudentRef): boolean {
+  const from = state.web?.namesFrom;
+  if (!from) return false;
+  return ref.entryYear > from.entryYear || (ref.entryYear === from.entryYear && ref.index >= from.index);
+}
+
+/**
+ * A share for a new student's first name, mixed so it owes nothing to the rolls that place them: the old roll differs
+ * from the dorm's only in its last number, and students of one floor came out with one name (four Quinns on a floor).
+ */
+function nameRoll(seed: number, ref: StudentRef): number {
+  let h = hashInts(seed, 9988, ref.entryYear, ref.index);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/** A student's first name: the old list for those enrolled before, a list fitting their gender for those after. */
+export function firstNameOf(state: GameState, ref: StudentRef): string {
+  if (!namedFresh(state, ref)) return pickFrom(FIRST_NAMES, roll(state.seed, ref, SALT.first));
+  const g = genderOf(state.seed, ref);
+  return pickFrom(g === 0 ? WOMEN_NAMES : g === 1 ? MEN_NAMES : NEUTRAL_NAMES, nameRoll(state.seed, ref));
+}
+
+/** A student's full name, as their card has it. */
+export function studentName(state: GameState, ref: StudentRef): string {
+  return `${firstNameOf(state, ref)} ${pickFrom(SURNAME_STARTS, roll(state.seed, ref, SALT.start))}${pickFrom(SURNAME_ENDS, roll(state.seed, ref, SALT.end))}`;
+}
+
+// ------------------------------------------------------- social profile --
+
+/** What a student shares with others, read cheaply for the social campus (DESIGN.md 63): no happiness or grades. */
+export interface SocialProfile {
+  classYear: number;
+  /** Their dorm's cell, or null for a commuter. */
+  home: number | null;
+  chapter: string | null;
+  /** True for a chapter member who lives in the chapter's house. */
+  housed: boolean;
+  major: string;
+  field: string;
+  club: string | null;
+  team: boolean;
+  nature: ArchetypeId;
+}
+
+/** What never changes about a student, from the seed alone: kept, since the social campus reads it every week. */
+interface FixedTraits {
+  major: string;
+  field: string;
+  nature: ArchetypeId;
+  club: string | null;
+}
+const fixedTraits = new Map<string, FixedTraits>();
+
+function fixedOf(seed: number, ref: StudentRef): FixedTraits {
+  const key = `${seed}:${ref.entryYear}:${ref.index}`;
+  let fixed = fixedTraits.get(key);
+  if (!fixed) {
+    if (fixedTraits.size > 120_000) fixedTraits.clear();
+    const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+    const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
+    const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
+    fixed = { major: major.name, field: major.group, nature, club: clubOf(seed, ref, nature, major.group, quirk) };
+    fixedTraits.set(key, fixed);
+  }
+  return fixed;
+}
+
+/** `athletes` is `athleteShare(state)`, which a caller reading many students works out once. */
+export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), athletes: number = athleteShare(state)): SocialProfile | null {
+  const classYear = classYearOf(state, ref);
+  if (classYear === null) return null;
+  const seed = state.seed;
+  const fixed = fixedOf(seed, ref);
+  const home = studentHome(state, ref, housing);
+  const member = home !== null ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
+  return {
+    ...fixed,
+    classYear,
+    home,
+    chapter: member?.chapter.name ?? null,
+    housed: member?.housed ?? false,
+    team: roll(seed, ref, SALT.sport) < athletes,
+  };
 }
 
 /** Semesters since the game began: it steps at every fall and spring intake. */
@@ -541,7 +641,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   if (classYear === null) return null;
   const seed = state.seed;
 
-  const first = pickFrom(FIRST_NAMES, roll(seed, ref, SALT.first));
+  const first = firstNameOf(state, ref);
   const last = pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start)) + pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end));
   const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
   const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
