@@ -6735,12 +6735,13 @@ The owner, 2026-11-13, after accepting Greek Row: "Next, in order, one build thr
 
 1. Greek Row (built, section 51).
 2. **The content stop** (52.3): tone guide, policies, parties and drinking, each chapter's hazing risk switched on, archetypes, the Inbox, tests. The level pace is watched and tuned if this tips it over its ceiling.
-3. **Alumni giving** (section 54).
-4. **MC-1**: the Main Character and the phone's life system, fully offline.
-5. **MC-2**: the story system and the problem library of 53.6, with the 13+ boundary.
-6. Stop. **The backend switched on** waits for the owner's steps of 48.4 (Sign in with Apple, Cloudflare) and his DeepSeek key into the Worker.
-7. **MC-3**: DeepSeek, then the test run.
-8. Later: Student mode (20.3), where the player takes over.
+3. **The street and twist fixes**, from his play of build 10: "The cars aren't driving on the street...the people need a sidewalk because they're walking on the street" and "I wish instead of the turn you can rotate and turn with your fingers instead of a button".
+4. **MC-1**: the Main Character and the phone's life system, fully offline. Moved ahead of alumni giving by his "I want the main character built today too" (2026-11-13).
+5. **Alumni giving** (section 54).
+6. **MC-2**: the story system and the problem library of 53.6, with the 13+ boundary.
+7. Stop. **The backend switched on** waits for the owner's steps of 48.4 (Sign in with Apple, Cloudflare) and his DeepSeek key into the Worker.
+8. **MC-3**: DeepSeek, then the test run.
+9. Later: Student mode (20.3), where the player takes over.
 
 ---
 
