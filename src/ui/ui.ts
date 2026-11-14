@@ -98,6 +98,8 @@ import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, 
 import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
+import { drawSocialPage } from './socialUi';
+import { socialWeb } from '../app/socialWeb';
 import { mountRoomView } from './roomView';
 
 /**
@@ -1658,10 +1660,10 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
-  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard' = 'goals';
+  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard' = 'goals';
 
   /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
-  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard' = campusPage): void {
+  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard' = campusPage): void {
     campusPage = page;
     /** The row of the Capacity page that is open. One at a time. */
     let openRow: string | null = null;
@@ -1707,13 +1709,17 @@ export function mountUi(root: HTMLElement): void {
         // The Scorecard (DESIGN.md 54.3): on a game with a drive.
         const card7 = scorecard(state);
         if (campusPage === 'scorecard' && !card7) campusPage = 'goals';
+        // Campus social (DESIGN.md 63.6): once the social web has answered.
+        const web = socialWeb.view;
+        if (campusPage === 'social' && !web) campusPage = 'goals';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
         if (policies) pages.push(['policies', 'Policies']);
         if (traditions) pages.push(['traditions', 'Traditions']);
+        if (web) pages.push(['social', 'Social']);
         // The Scorecard last: on a phone the row scrolls sideways, and the open page is brought into view.
         if (card7) pages.push(['scorecard', 'Scorecard']);
         for (const [id, label] of pages) {
@@ -1824,6 +1830,11 @@ export function mountUi(root: HTMLElement): void {
             body.append(box);
           }
           if (policies.next) body.append(el('p', 'fine', policies.next));
+        } else if (campusPage === 'social' && web) {
+          drawSocialPage(body, state, web, (ref) => {
+            close();
+            session.openStudent(ref);
+          });
         } else if (campusPage === 'traditions' && traditions) {
           // Traditions (DESIGN.md 50): those kept, then, while a place is open, those to choose from.
           body.append(el('p', 'fine', traditions.places));

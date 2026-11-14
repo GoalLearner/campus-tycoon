@@ -7422,3 +7422,53 @@ Ties after a first catch-up: 116,106 friendships, 13,952 best friends, 99,010 ac
 | The record is written once a game week, so up to three hours of ties can be lost if the app is closed | Those weeks are lived again on the next start |
 | A phone takes about four times this PC's time: about 2 s for thirty days away | In the worker, so the map never waits; the first answer comes a moment after the campus opens |
 | A room looked into in that first moment shows a roommate of their gender chosen from the seed, who can differ from the web's once it answers | The web's answer comes within a few seconds of opening; from then on the room shows the web's roommate |
+
+### 63.6 Stop 2 as built: cards, Campus social, gossip
+
+Built 2026-11-14 on the branch `social-sim-2`. The save is unchanged (version 30); the web's own record is now version 2, and version 1 is still read.
+
+**Cards** (`src/ui/studentCard.ts`, `src/app/socialView.ts`). A People row under Relationship: a face for each of their people, in the order a friend would tell them: a partner, a best friend, a roommate, friends from the closest, then an ex and a rival, eight at most, friends cut first. Under each face, their first name and what they are: Dating, Exclusive, Long-term, Best friend, Roommate, Friend, Ex, Rival or Arch-rival. Tapping a face opens that student's card, so you can hop from person to person across the web. Two of one first name on a card get their surname's first letter. Acquaintances and crushes are not shown. Relationship now says whom they are dating on campus ("Dating Desmond", "Together with Desmond", "Together a long while with Desmond", with "Happy together" or "It's complicated"); with nobody on campus, the status they arrived with (single, or long-distance with someone back home), and a student the old status had in a couple on campus reads as single, happily or looking, as that status was happy or not. Until the web first answers, and always for the Main Character, the card reads as before: their people are their story's until stop 7.
+
+**Campus social** (`src/ui/socialUi.ts`). A Social tab on the screen behind the student count, once the web has answered, before the Scorecard: how many couples, how many friend groups and the share of students in one, and this campus week's new couples (with couples back together) and splits; the drama of the week; the five most popular, as faces (the most friends, then the closest); this week's news by name, a kind at a time, four at most; and the three biggest friend groups with their vibe ("The study crew: Everett, Fletcher, Samantha, Zoe, Arjun and Nathaniel"). Every line opens the card of the first student in it.
+
+**Gossip** (`src/ui/deskPanels.ts`). The paper after an absence has a Gossip section under its top stories: up to three lines about students from the time away, newest first, a kind at a time. The web catches up in its worker a moment after the campus opens, so the column fills in when it answers. Tapping a line closes the paper and opens that student's card.
+
+| Kind | The line |
+|---|---|
+| New couple | Sabrina Mossby and Desmond Birchbrook are dating. |
+| Back together | Idris Reedgrove and Sophia Hollowley are back together. |
+| Mutual split | Trinity Briarmore and Damian Quillworth have split up, and are still on good terms. |
+| Best friends | Wanda Quillmere and Felix Ashley are best friends now. |
+| Long-term | (A) and (B) are getting serious. |
+| Enemies | (A) and (B) are no longer speaking. |
+| Messy split (heavy) | (A) and (B) have split up, and not quietly. |
+| Cheating (heavy) | (A) and (B) are over: (A) was seeing (C). |
+| Love triangle (heavy) | (A) and (C) both have a crush on (B). |
+
+**The ration** (decision 6, 13+). The three heavy kinds are a messy split, cheating and a love triangle. The web picks the first heavy happening of each campus week and keeps that pick for the week, even when it is grown again after a long absence; that one is the only heavy line ever shown, in the paper (when it happened while the player was away) and as the drama of the week. With none yet, the drama of the week is the biggest light one. No light line uses a heavy word (the tone guide's list: breakup, broke up, cheating and the rest): they "split up". The Main Character's romances are never told: their story tells them.
+
+**What the web keeps for this** (`src/sim/systems/web.ts`). Happenings by name: of nine kinds, six a week each, chosen by the pair's own luck so no class or hall is favoured, for the last 64 weeks, with the campus year they happened in. Each kept week's counts by kind. Friend groups, worked out again after each catch-up: three to six friends, each a friend of at least half the group as it formed, each student in one group at most, formed in an order taken from the week's luck; a group's vibe is the interest most of them share (the sports crowd, the gamers, the music crowd, the gym crew, the party group, the study crew, the theatre kids, the faith group, the fashion crowd). Growing the web again after a long absence starts a new history, so what the screens tell matches the ties as they are now. The record (version 2) keeps the weeks, the happenings and the week's heavy pick; a version 1 record from stop 1 is read whole, with no weeks kept, and carries on.
+
+**Found while building, and fixed.** A couple formed only when both were free, but the check ran one at a time: a student ready to cheat ended their couple even when the other could not start one, so a couple ended for nothing and the gossip would have said they cheated. Both are now checked before anything changes. Couples grown again after a long absence could start weaker than a couple can last, and many ended in the first lived weeks: every long absence came back to a wave of splits. A couple grown again now starts at 50.
+
+**Measured** (the model campus of 46,000, this PC):
+
+| | This PC | A phone (about four times slower) |
+|---|---|---|
+| A game week's job in the worker: the week, the friend groups, the heavy pick | 82 ms, of it 16 ms for the friend groups | About a third of a second, in the worker |
+| Thirty days away, in the worker | 0.54 s | About 2.2 s, in the worker |
+| Opening the Social page | 10 ms | About 40 ms |
+| The gossip; a card's people | Under 1 ms each | |
+| The record | 7.00 MB raw (0.15 MB more than version 1), 2.18 MB squeezed, 2.91 million characters stored | |
+| The everyday save | Unchanged, 250,588 characters | |
+
+Nothing on the map changed, so the frame time is as in 63.1.
+
+**Tested** (`tests/socialView.test.ts`): a campus week lived a week at a time with the paper and the drama of the week read after every week, as a player who looks every three hours, shows one heavy line at most while the web had dozens; the heavy pick is the week's first, kept through growing the web again, and a new campus week starts with none; the Main Character is never in the gossip or the drama; happenings keep at most six of a kind a week, from every class, the same twice from the seed; every line passes the tone guide, and only the heavy kinds use heavy words; a card's people are its real ties, in order, still enrolled, one best friend and one roommate at most; the relationship line in each case; friend groups of three to six, each student in one; the Campus social counts match the web; the record keeps the weeks and the pick, and a version 1 record is read whole and carries on.
+
+| Rough | Why |
+|---|---|
+| The five most popular all show 12 friends | A student holds twelve ties; the most popular fill them all, and the closest come first |
+| After a long absence, "this week" counts only the weeks lived since | The web is grown again with a new history (63.5) |
+| The Main Character's card keeps their story's people and status | Stop 7 puts the story on the web |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

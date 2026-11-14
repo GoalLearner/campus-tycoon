@@ -3,7 +3,8 @@ import { KIND, SLOTS } from '../sim/config/web';
 import type { StudentRef } from '../sim/systems/students';
 import { webWeekOf } from '../sim/systems/web';
 import { readWebRecord, writeWebRecord } from './persistence';
-import type { WebReply, WebRequest, WebView } from './webWorker';
+import type { WebReply, WebRequest } from './webWorker';
+import { idIn, type WebView } from './socialView';
 
 /**
  * The social web on the main thread (DESIGN.md 63.5): it runs the worker, hands it the campus once a game week, keeps
@@ -86,13 +87,6 @@ export function startSocialWeb(host: Host): void {
   };
   host.subscribe(() => void follow());
   void follow();
-}
-
-/** A student's place in the web's copy, or -1. */
-function idIn(view: WebView, ref: StudentRef): number {
-  const r = ((ref.entryYear % 4) + 4) % 4;
-  if (view.ring[r] !== ref.entryYear || ref.index < 0 || ref.index >= view.classSlot) return -1;
-  return r * view.classSlot + ref.index;
 }
 
 /** Their roommate in the web, or undefined when the web has not answered yet (null: no roommate). */

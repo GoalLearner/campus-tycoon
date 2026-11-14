@@ -2,8 +2,11 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
+import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
-import { studentCard, studentFigure, studentKey, type GameState, type StudentCard } from '../sim';
+import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
+import { firstNameOf, studentName } from '../sim/systems/students';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -230,6 +233,12 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const relationshipNote = el('span', 'student-note');
   relationship.value.after(relationshipNote);
 
+  // Their people from the social web (DESIGN.md 63.6): a partner, a best friend, a roommate, friends, an ex and a
+  // rival, each a face that opens their card, so you can hop from person to person.
+  const peopleRow = row('People');
+  const faces = el('div', 'student-friends');
+  peopleRow.value.replaceWith(faces);
+
   // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
@@ -255,7 +264,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, grades.line, club.line, relationship.line, peopleRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -345,8 +354,10 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const classes = card.classSize > 0 ? ` · classes of ${card.classSize}` : '';
     setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${classes}`);
     setText(club.value, card.club ?? 'None');
-    setText(relationship.value, card.relationship.name);
-    setText(relationshipNote, card.relationship.note);
+    const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
+    setText(relationship.value, status.name);
+    setText(relationshipNote, status.note);
+    showPeople(state, ref);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
     weekends.line.hidden = card.party === null;
     const main = state.story?.mc;
@@ -375,6 +386,39 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
     node.classList.toggle('show', session.room === null && !session.tucked);
     strip.classList.toggle('show', session.room === null && session.tucked);
+  }
+
+  // ---------------------------------------------------------- their people --
+
+  let facesKey = '';
+  function showPeople(state: GameState, ref: StudentRef): void {
+    const view = socialWeb.view;
+    // The Main Character's people are their story's until the story reads the web (63.2, stop 7).
+    const list: Person[] = view && !isMain(state, ref) ? peopleOf(view, state, ref) : [];
+    peopleRow.line.hidden = !view || isMain(state, ref);
+    const pack = atlas?.people;
+    const looks = pack ? Math.min(pack.looks, pack.crowd ?? pack.looks) : 1;
+    const key = `${studentKey(ref)}|${list.map((one) => `${studentKey(one.ref)}${one.role}`).join(',')}${atlas ? '' : '-'}`;
+    if (key === facesKey) return;
+    facesKey = key;
+    faces.textContent = '';
+    // Two of one first name on a card get their surname's first letter: "Sabrina M." and "Sabrina K.".
+    const firsts = list.map((one) => firstNameOf(state, one.ref));
+    for (const [i, one] of list.entries()) {
+      const plain = firsts[i]!;
+      const first = firsts.filter((name) => name === plain).length > 1 ? `${plain} ${studentName(state, one.ref).split(' ')[1]?.charAt(0) ?? ''}.` : plain;
+      const button = el('button', `student-friend ${one.role}`);
+      button.type = 'button';
+      button.setAttribute('aria-label', `${first}, ${one.label.toLowerCase()}: open their card`);
+      const picture = el('canvas', 'student-friend-art');
+      picture.width = 96;
+      picture.height = 112;
+      if (atlas && pack) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      button.append(picture, el('span', 'student-friend-name', first), el('span', 'student-friend-role', one.label));
+      button.addEventListener('click', () => session.openStudent(one.ref));
+      faces.append(button);
+    }
+    if (list.length === 0) faces.append(el('span', 'student-value student-quiet', 'Getting to know people'));
   }
 
   return { node, strip, render };

@@ -4,6 +4,7 @@ import { roomFor } from '../src/app/room';
 import { socialWeb } from '../src/app/socialWeb';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { packRecord, unpackRecord } from '../src/app/webRecord';
+import { viewOf } from '../src/app/socialView';
 import { advance, newGame, parseSave, sampleStudents, SAVE_VERSION, serialize, studentCard, toneProblem, validate, type GameState, type StudentRef } from '../src/sim';
 import { calendarAt } from '../src/sim/calendar';
 import { MEN_NAMES, NEUTRAL_EXTRA, WOMEN_NAMES } from '../src/sim/config/names';
@@ -193,7 +194,7 @@ describe('roommates', () => {
       expect(genderOf(MODEL.seed, mate.ref)).toBe(genderOf(MODEL.seed, ref));
     }
     expect(seeded).toBeGreaterThan(20);
-    socialWeb.view = { seed: WEB.seed, classSlot: WEB.classSlot, ring: [...WEB.ring], week: WEB.week, other: WEB.other, kind: WEB.kind, strength: WEB.strength, feeling: WEB.feeling, identity: WEB.identity };
+    socialWeb.view = viewOf(WEB, false);
     try {
       let fromWeb = 0;
       for (const ref of residents) {
@@ -279,7 +280,7 @@ describe('the web', () => {
 
   it('reads back only its own campus’s record, whole, and lets go of students who have left', () => {
     const record = encodeWeb(WEB);
-    expect(record.byteLength).toBe(64 + EVENTS.length * 8 + WEB.n * SLOTS * 9);
+    expect(record.byteLength).toBe(64 + EVENTS.length * 8 + WEB.weekly.length * 8 + WEB.happenings.length * 4 + 64 * 8 + 40 + WEB.n * SLOTS * 9);
     expect(decodeWeb(record, { ...MODEL, seed: MODEL.seed + 1 })).toBeNull();
     expect(decodeWeb(record.subarray(0, record.byteLength - 1), MODEL)).toBeNull();
     expect(decodeWeb(new Uint8Array(40), MODEL)).toBeNull();
