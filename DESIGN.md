@@ -6599,3 +6599,184 @@ The long run's six test players on the model campus, 44 weeks each, and the same
 | Rush is one share for every chapter | A chapter on the Row or by the stadium does not draw more pledges |
 | The panel is drawn when it opens | Close and open it again to see a change |
 | No hazing, no socials | The next stop's, on the owner's content change |
+
+---
+
+## 52. Real-life college content: the tone change of 2026-11-13
+
+The owner, 2026-11-13: "I want a real-life college simulation. Update the tone guide and everything that follows from it." And later the same day: "Work on all of these things today". **This section replaces the parts of section 16 it names. Where the two disagree, this section stands.**
+
+### 52.1 What changes in the tone guide
+
+| Section 16 said | Now |
+|---|---|
+| 16.1.6: no alcohol, tobacco or drug references anywhere | **Alcohol is allowed.** Parties, tailgates, Greek Row socials and a student's choice to drink appear, with realistic consequences: hangovers, skipped classes, a lower GPA, higher Stress, and now and then a Campus Safety or Medical Center call. Shown plainly, never graphically, and heavy drinking is never without a cost. **Tobacco, vaping and drugs stay out.** Betting and gambling stay out |
+| 16.1.3: events harm buildings, budgets and pride, never people | Consequences reach students, in proportion: a hangover, a missed class, a bad grade, a broken heart. Still nothing serious and nobody dies |
+| 16.2: say "Quiet Hours", not "Dry campus" | The policy is **Dry campus** again |
+| 16.2: a tailgate has grills and tents, never a drink | A tailgate may have drinks |
+| 16.2: a Party Animal's parties are pizza and music | **A Party Animal can drink**, and lives with what follows |
+| 16.2: Homesick, Heartbroken and the rest stay comic | **Heartbreak, rejection, failure and setbacks are a normal part of life here** (a breakup, an unrequited crush, getting cut, no bid, a failed class). Characters feel them in Happiness, Stress and memory, and recover over time. Handled kindly |
+| (new) | **Light hazing exists in Greek Row**: embarrassing pledge tasks, early-morning chores, silly dares, initiation rituals. Nothing that hurts or injures anyone, so never forced drinking or eating, never anything dangerous. It is a system with costs (52.3), never a joke at a pledge's expense |
+| 16.3: target 4+ | **Target 13+** (52.2) |
+
+**Still out, whatever a story asks** (the owner's boundary for the story library, 53.6): sexual content, assault, self-harm, suicide, eating disorders, drug addiction, serious violence. Romance stays at crushes, dates and relationships. The DeepSeek prompt and a filter on its answers enforce this list (53.4).
+
+### 52.2 The age rating: 13+, and what would move it
+
+Read from Apple's "Age ratings values and definitions" page on 2026-11-13 (through a summary of the page; recheck the live questionnaire at submission). Apple places an app by how often each kind of content appears, and does not define "infrequent" or "frequent".
+
+| Content | Infrequent | Frequent |
+|---|---|---|
+| Alcohol, tobacco or drug use or references | 13+ | **18+** |
+| Mature or suggestive themes (complex or sensitive topics, moral dilemmas) | 9+ | **16+** |
+| Sexual content or nudity (mild romantic intimacy) | 13+ | 18+ |
+| Medical or treatment information | 13+ | 16+ |
+
+Guideline 1.4.3: an app may not encourage excessive drinking, and one that encourages minors to drink is rejected. Guideline 2.3.8: the icon and screenshots must suit 4+ whatever the rating.
+
+**What keeps it at 13+:**
+
+1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus. A long-run check counts the lines that mention drinking and holds them to a budget [T].
+2. **Mature themes stay infrequent.** The storyteller rations hazing, cheating, breakups and probation (53.5): never more than one heavy arc at a time, with quiet stretches between.
+3. **Drinking is never rewarded on balance.** Every choice to drink costs something the player can see.
+4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. [Recommended; the alternative is any age, which reads to a reviewer as encouraging minors.]
+5. **Romance at most a kiss, and seldom.** Relationships stay at status and story level.
+6. **The icon and screenshots show none of it.**
+
+**What would push it up:** drinking on most screens (18+); hazing, cheating and heartbreak most days (16+); anything from the "still out" list (unratable or rejected).
+
+The questionnaire answers this plans for: alcohol infrequent, mature themes infrequent, sexual content infrequent (or none, if no kiss is shown), medical infrequent, and none for profanity, horror, violence, gambling and social media. Result: 13+.
+
+### 52.3 What it adds to the game
+
+Built as one stop right after Greek Row (the content stop), with each chapter's hazing risk switched on (Greek Row built it at zero), except the story arcs, which go into MC-2 (53).
+
+| Piece | What |
+|---|---|
+| Parties and socials | Parties in dorms, in the town and on Greek Row, tailgates on game days, Greek Row socials. Some students drink; it shows the next day in Stress, skipped classes and grades, and now and then in a Campus Safety or Medical Center call |
+| Policies | **Dry campus** (fewer drinking incidents on campus; parties move to the town and Happiness falls), **Alcohol education** (a cost; fewer bad outcomes), **Party registration** (registered parties are safer and fewer are broken up; a little Happiness). Into the policy list of 41 as data |
+| Greek Row hazing | Each chapter has a hazing risk, from its standing, the oversight and the policy. Chapters can be caught or reported, and go on probation or are suspended. Three choices for the president: **an anti-hazing policy**, **Greek life oversight**, or **looking the other way**, each with tradeoffs in recruitment, Happiness, prestige and the paper |
+| Archetypes | The Party Animal drinks; the paper and cards say so plainly |
+| The paper | Covers parties broken up, chapters suspended, a dry-campus debate, at the same plain level |
+| Tests | The banned-word lists in the tests keep tobacco, drugs and gambling and drop alcohol; a new check holds alcohol and heavy themes to their budgets |
+
+### 52.4 DeepSeek and this content
+
+The prompt describes these situations plainly (a party with drinking, a pledge task, a breakup), so answers are not refused for being vague. Any refusal is logged with its reason and the phone's rules decide instead. The "still out" list of 52.1 is in the prompt and in the filter on every answer.
+
+---
+
+## 53. The Main Character and the story system (approved 2026-11-13)
+
+The owner pasted three briefs on 2026-11-13: the Main Character, a story system of arcs, and a library of real college problems. He accepted the plan: "MC plan accepted: MC-1, then MC-2, then the backend, then MC-3, after Greek Row. Yes to the $1-2 DeepSeek test run when MC-3 is ready. Thinking mode off." He asked for the problem library to be folded into MC-2, and for all of it to be worked on that day.
+
+### 53.1 Time, which shapes everything
+
+A school year is one real week, so a semester is about three and a half real days and a Main Character graduates in about four real weeks. A calendar date passes every 28 real minutes. So the Main Character's **daily plan is once per real day**, and story beats are paced in real time: at most two or three key moments a real day [T], about 80 across a college career.
+
+### 53.2 The Main Character (MC-1)
+
+- Picked from any student card ("Make main character"), or suggested from the incoming class. One at a time.
+- Stored in the save as a named regular (13.5) with needs (energy, social, fun, study, fitness), goals, a memory of what happened, money, and a small cast of named regulars around them: a roommate, friends, a crush or partner. **Roommates and partners have traits** (tidy, loud, night owl, clingy, jealous, generous and more), so problems come from who they are.
+- **The phone's life system** chooses what they do minute to minute from their needs, their plan and the campus's real numbers (food, recreation, safety, class sizes, Stress, the team's record, clubs). It runs offline and is the fallback for everything DeepSeek does.
+- A portrait button on the top bar opens their page (portrait, year, major, GPA, Happiness, Stress, needs, relationships, friends, clubs, job, goals, plans with reasons, a timeline) and offers Follow.
+- The away screen opens with "Your main character": what they did, decided and why. Their biggest moments use the two-a-day notices.
+- When they graduate, transfer or drop out they go to the hall of fame, their story stays readable, and the player picks the next.
+- They count toward the campus's numbers only as one student.
+
+### 53.3 The story system (MC-2)
+
+- **Arcs and events are data.** An arc has stages, a choice at each stage, outcomes rolled by the game from real numbers (the character's stats, relationships, effort put in beforehand, campus conditions), and effects on needs, GPA, Stress, Happiness, relationships and money. Arcs chain into other arcs. A smaller event is a one-stage problem. A new arc or event is an entry, not code.
+- **Honest odds**, shown afterwards with the campus's part named: "Made the team: 62%, helped by six weeks at the rec center"; "Roommate drama less likely: Maya's dorm has an RA".
+- **Failure leads to new stories**, never a dead end.
+- **The president shapes the odds**, never the choices: Housing stages, singles and RAs for roommates; class size, Instruction, tutoring, the library and labs for classes; alcohol policies, Campus Safety and Greek oversight for parties; clubs, recreation and social spaces for loneliness; campus jobs, scholarships and dining prices for money. Levers that do not exist yet (singles, campus jobs, scholarships, dining prices) are added in MC-2 if small, or listed for later.
+- The same library feeds the named regulars around the Main Character (phone rules decide for them) and the newspaper.
+- Presentation: a Story tab written as chapters, key moments as short scenes on the next visit with outcome and odds, cliffhanger notices before big moments, the paper for the biggest.
+
+### 53.4 DeepSeek (MC-3)
+
+- Decides for the Main Character only: the daily plan, life decisions at semester start and after big events, which arc opens next, and how they approach each stage. The game rolls whether it works.
+- Strict JSON, validated; anything invalid, refused or late falls back to the phone. Every answer is saved and replayed exactly in catch-up; time away is planned in one batch when the app opens, waiting a few seconds at most.
+- Model `deepseek-flash` (V4.1 Flash), thinking mode off, JSON mode, the shared instructions as a cached prefix, non-urgent calls in off-peak hours.
+- A Cloudflare Worker holds the key (the owner puts it in himself), with a daily cap per player, a global monthly cap, and a cost log per player. Only invented game data is sent.
+
+| Level | Calls a player a month | Cost a player a month (prices of 2026-11-13) |
+|---|---|---|
+| Big decisions only | about 40 | $0.02 to $0.04 |
+| Daily plan, events and story choices | about 160 | $0.07 to $0.14 |
+| Hourly choices | about 880 | $0.38 to $0.76 |
+
+The daily-plan level is built so it could become a perk of a paid tier. The test run (about $1 to $2 of his DeepSeek balance) is approved for when MC-3 is ready.
+
+### 53.5 The storyteller
+
+One main arc and one or two side arcs at a time. Tension rises toward key moments with quiet stretches between. No arc type back to back; cooldowns between heartbreaks. Good arcs mixed in (new friends, wins, falling in love, the Dean's list) so life is not nonstop crisis. Big moments land on calendar events where they can (bid day in rush week, tryouts before the season). Heavy themes rationed to keep the rating (52.2).
+
+### 53.6 The library to ship first
+
+**About 26 arcs and 60 smaller events**, every category of his list covered, the rest added later as data.
+
+| Category | Arcs first | Smaller events (examples) |
+|---|---|---|
+| Roommates | The roommate match (great or a nightmare); opposite schedules; the room swap | Messy, loud, borrows things, eats their food, passive-aggressive notes, silent treatment, partner moves in, becomes a best friend |
+| Classes | The weed-out class; the group project; failing a midterm, probation and recovery; the major crisis (undecided, parents pushing, an inspiring professor, switching) | Overloaded schedule, back-to-back exams, brutal professor, all-nighter, registration closed, retaking a class |
+| Dating | The crush (notice, courage, ask, date); long distance with a hometown partner; jealousy to breakup and moving on; running into the ex | Left on read, mixed signals, ghosting, a partner who dislikes their friends, dating a friend's ex, a relationship hurting grades, cheating at status level |
+| Partying | The party before the exam; the party scene (left out, or burning out); a party broken up | Hangover and missed class, embarrassing photos online, overspending |
+| Social | Finding their people; the friend group splits; homesickness | Left out of plans, a one-sided friendship, comparing themselves to others |
+| Money and life | Broke before month end to a campus job; job versus classes; a scholarship on the line | Textbook costs, parking tickets, a broken laptop, sick during finals |
+| Greek life and teams | Rush and bid day; pledging (go along, push back or report the hazing); tryouts to bench to starter; injury and comeback | Chapter drama, losing a spot to a freshman, practice versus classes |
+| Good arcs | The Dean's list run; running for student government | A new best friend, a big win, falling in love (also the crush arc's good end) |
+
+**Out of the library** (52.1): sexual content, assault, self-harm, suicide, eating disorders, drug addiction, serious violence.
+
+### 53.7 The order, and where each lands
+
+The owner, 2026-11-13, after accepting Greek Row: "Next, in order, one build thread ... Stop after MC-2. The backend and DeepSeek (MC-3) wait for my account steps."
+
+1. Greek Row (built, section 51).
+2. **The content stop** (52.3): tone guide, policies, parties and drinking, each chapter's hazing risk switched on, archetypes, the Inbox, tests. The level pace is watched and tuned if this tips it over its ceiling.
+3. **Alumni giving** (section 54).
+4. **MC-1**: the Main Character and the phone's life system, fully offline.
+5. **MC-2**: the story system and the problem library of 53.6, with the 13+ boundary.
+6. Stop. **The backend switched on** waits for the owner's steps of 48.4 (Sign in with Apple, Cloudflare) and his DeepSeek key into the Worker.
+7. **MC-3**: DeepSeek, then the test run.
+8. Later: Student mode (20.3), where the player takes over.
+
+---
+
+## 54. Alumni giving (approved 2026-11-13)
+
+The owner, 2026-11-13: "Alumni giving: graduates join an alumni pool that grows forever. Donations driven by alumni success, how happy they were as students, traditions, Greek membership, and winning teams. A yearly donation drive at commencement and an endowment link. Show it on the Money panel and the Scorecard. Keep money inside $12 to $17 of every $100." It is the last two stages of the spine of 24.1 (alumni success, donations), which were designed but never built. It is built as its own stop, after the content stop and before MC-1.
+
+### 54.1 The alumni pool
+
+- **Every graduate joins it, and nobody leaves it.** The pool is the sum of the graduating classes, so it only grows. `stats.graduates` already counts them; the pool keeps one small record per graduating class, not one per person.
+- **Each graduating class gets two numbers on the day it graduates, fixed for good:**
+  - **Success** (0 to 100): the school's academic score that year, the class's on-time share, and job placement folded in (24.9, decision 6) [T].
+  - **Affinity** (0 to 100): how happy the class was while enrolled (the average Happiness over its years), the traditions kept in its years, its share of Greek members, and the football record in its years [T].
+- **The model campus opens with a pool already**: the classes that graduated before the player arrived, at middling success and affinity, so the first drive is not empty [recommended; the alternative is a pool of zero, which makes the first drive a non-event on a 46,000-student school].
+- The class record of 24.8 gains these two numbers. A save version and a migration; older saves get the opening pool from their graduate count.
+
+### 54.2 The yearly drive, at commencement
+
+- **One drive a year, on commencement day** (a real week apart, longer than the once-a-day rule's floor of 36 hours, so a once-a-day player never misses it). It is a line in the paper and an Inbox report, never a task.
+- **What it raises:** for each class, its size times a participation rate (from affinity) times a gift size (from success), with older classes giving a little more than new graduates [T]. A winning season this year adds a little on top. Greek members give at a higher rate, as they do in life [T].
+- **The endowment link:** donors restrict most of a drive to the endowment (60% [T]), which earns its 2% a year for good (9.5); the rest arrives as cash. So alumni giving builds the legacy number and a permanent income, not a cash pile, and money stays in $12 to $17 of every $100 (tested).
+- **The campus's part is named:** the paper and the drive's report say what lifted it ("Happier classes give more: the Class of Year 3 gave at 18%, the Class of Year 1 at 11%"). The levers are the ones the player already pulls: Happiness, traditions, Greek Row, the team, and the academic score.
+- The Alumni House reward building lifts participation a little [optional, only if small].
+
+### 54.3 Where it shows
+
+- **Money panel:** an "Alumni giving" line under income (the cash share of the last drive), and the endowment row says how much of it alumni gave. One line for the pool: "{n} alumni. The last drive raised {x}; {y} went to the endowment."
+- **The Scorecard, first version** (24.5, never built until now): the seven stages of the spine as seven rows (applications, acceptance rate, yield, retention, graduation rate, alumni success, donations), each with its number, a trend arrow against last year, and its one biggest limiting factor in plain words. The faculty ratio sits in the graduation row's causes (section 38 left it for the Scorecard). It goes on the page behind the student count, beside Goals, Capacity, Policies and Traditions, or where the build finds it reads best. Year-End grades against the national field stay for later (24.7).
+- **The academic rating:** alumni success is its input of 15% (24.4), which has shared its weight among the others until now. It switches on with this stop, tuned so the rank's pace holds (the Top 10 never before week 24) [recommended; the alternative is to leave it out of the rating].
+- The booster's line, the drive in the paper at commencement, and the class's numbers on its record.
+
+### 54.4 Checks
+
+- The pool never falls; every graduate joins it; the opening pool on the model campus.
+- A drive every commencement, for every test player, and a once-a-day player sees each one.
+- Each driver moves giving the right way: happier, more traditions, more Greek members, more wins, more success each give more (unit tests).
+- Money stays in $12 to $17 of every $100 for the casual and once-a-day players, years 3 to 8 and weeks 9 to 44.
+- The rank's pace holds; the level pace stays under its ceiling of 7.
+- The small campus's tables do not change unless the pool reaches it.
