@@ -34,6 +34,8 @@ import {
   type CastTrait,
 } from '../config/mc';
 import { DRINKING_YEAR } from '../config/parties';
+import { RECENT_FADE, STORY_FADE, STORY_STEP } from '../config/stories';
+import { stepStory } from './storyteller';
 import { FIRST_NAMES, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
 import { ANCHOR_AFTER_WAKE_TICKS, DEFAULT_WAKE_HOUR, TICK_MS } from '../config/time';
 import { dollars } from '../format';
@@ -58,7 +60,7 @@ import { approvalAt } from './happiness';
  */
 
 export function newStory(): Story {
-  return { mc: null, fame: [], nextCast: 1, news: [] };
+  return { mc: null, fame: [], nextCast: 1, news: [], arcs: [], chapters: [], nextChapter: 1, cooldowns: {}, lastStart: -1 };
 }
 
 const clamp = (n: number, low = 0, high = 100): number => Math.max(low, Math.min(high, n));
@@ -100,7 +102,7 @@ function traitsFor(state: GameState, salt: number): CastTrait[] {
   return [first, second];
 }
 
-function castMember(state: GameState, role: CastMember['role'], closeness: number, avoid: readonly string[]): CastMember {
+export function castMember(state: GameState, role: CastMember['role'], closeness: number, avoid: readonly string[]): CastMember {
   const story = state.story;
   const id = story.nextCast;
   story.nextCast += 1;
@@ -118,7 +120,7 @@ export function cannotMakeMain(state: GameState, ref: StudentRef): string | null
   return null;
 }
 
-function remember(state: GameState, mc: MainCharacter, text: string, big = false, log?: LogEntry[]): void {
+export function remember(state: GameState, mc: MainCharacter, text: string, big = false, log?: LogEntry[]): void {
   const entry: MemoryEntry = { tick: state.clock.tick, text };
   // Key moments are kept to two or three a real day (53.1): past that, a moment is remembered, not announced.
   if (big) {
@@ -189,6 +191,12 @@ export function makeMain(state: GameState, ref: StudentRef): string | null {
     club: card.club,
     hangover: false,
     big: { day: mcDay(state).day, count: 0 },
+    recent: {},
+    mood: 0,
+    stress: 0,
+    gpaBonus: 0,
+    member: null,
+    team: false,
   };
   state.story.mc = mc;
   remember(state, mc, `${mc.name} is your main character: a ${card.classYearName.toLowerCase()} in ${mc.major}, ${articled(card.archetypeName)}. Their goals: ${goals.map((goal) => GOALS[goal].name.toLowerCase()).join(' and ')}.`);
@@ -234,7 +242,7 @@ export function suggestMain(state: GameState): StudentRef | null {
 
 // ------------------------------------------------------------ the plan --
 
-interface Places {
+export interface Places {
   recreation: number;
   dining: number;
   library: number;
@@ -248,7 +256,7 @@ interface Places {
 let placesMemo: { state: GameState; day: number; places: Places } | null = null;
 
 /** What the campus offers the Main Character today: read once a day from the real numbers at their home. */
-function placesFor(state: GameState, mc: MainCharacter): Places {
+export function placesFor(state: GameState, mc: MainCharacter): Places {
   const day = mcDay(state).day;
   if (placesMemo && placesMemo.state === state && placesMemo.day === day) return placesMemo.places;
   const card = studentCard(state, mc.ref);
@@ -421,6 +429,9 @@ export function stepMain(state: GameState, log: LogEntry[]): void {
   if (weekday < 5 && placesFor(state, mc).term && hour >= DAY_HOURS.classFrom && hour < DAY_HOURS.classTo) mc.term.classes += 1;
   // A hangover lasts the morning after, and is over by the afternoon: never cleared on the night it began.
   if (mc.hangover && hour >= DAY_HOURS.classTo && hour < DAY_HOURS.partyFrom) mc.hangover = false;
+  // The story, once a real hour (DESIGN.md 53.3).
+  if (state.clock.tick % STORY_STEP === 0) stepStory(state, log);
+  if (!state.story.mc) return;
   for (const one of company(mc, mc.doing.activity)) {
     const before = one.closeness;
     const lift = one.traits.reduce((sum, trait) => sum + (CAST_TRAITS[trait].closer ?? 0), 0);
@@ -438,6 +449,11 @@ function newDay(state: GameState, mc: MainCharacter, log: LogEntry[]): void {
     if (parts.length > 0) remember(state, mc, `Yesterday ${mc.name} spent most of the day ${parts.join(', ')}, and kept ${kept} of ${mc.plan.items.length} plans.`, false, log);
     for (const one of mc.cast) if (!company(mc, 'friends').includes(one) || (mc.today.friends ?? 0) < 1) one.closeness = clamp(one.closeness - APART_PER_DAY);
   }
+  // What they did lately is the effort the story's odds read; what the story did to their mood and Stress fades.
+  for (const [activity, hours] of Object.entries(mc.today)) mc.recent[activity as ActivityId] = (mc.recent[activity as ActivityId] ?? 0) + (hours ?? 0);
+  for (const activity of Object.keys(mc.recent) as ActivityId[]) mc.recent[activity] = Math.round((mc.recent[activity] ?? 0) * RECENT_FADE * 100) / 100;
+  mc.mood = Math.round(mc.mood * (1 - STORY_FADE) * 100) / 100;
+  mc.stress = Math.round(mc.stress * (1 - STORY_FADE) * 100) / 100;
   mc.today = {};
   // A night of drinking costs the morning after (52.2): less energy, and a class is likely missed.
   if (mc.hangover) {
@@ -460,7 +476,9 @@ export function mcOnSemester(state: GameState, log?: LogEntry[]): void {
   if (!card) return;
   const study = mc.term.study / mc.term.steps;
   const attended = mc.term.classes > 0 ? mc.term.attended / mc.term.classes : 1;
-  const grade = Math.round(clamp(card.gpa + GPA_FROM_STUDY * (study - GPA_STUDY_MIDDLE) + GPA_FROM_CLASSES * (attended - 0.9), 1.5, 4) * 100) / 100;
+  // The story's part this semester (DESIGN.md 58): a passed midterm, a failed final.
+  const grade = Math.round(clamp(card.gpa + GPA_FROM_STUDY * (study - GPA_STUDY_MIDDLE) + GPA_FROM_CLASSES * (attended - 0.9) + (mc.gpaBonus ?? 0), 1.5, 4) * 100) / 100;
+  mc.gpaBonus = 0;
   mc.gpa = mc.gpa === null ? grade : Math.round(((mc.gpa * mc.semesters + grade) / (mc.semesters + 1)) * 100) / 100;
   mc.semesters += 1;
   mc.term = { study: 0, steps: 0, attended: 0, classes: 0 };
@@ -476,13 +494,13 @@ export function mcHappiness(state: GameState, mc: MainCharacter): number {
   const card = studentCard(state, mc.ref);
   const base = card?.happiness ?? 50;
   const needs = NEEDS.reduce((sum, need) => sum + mc.needs[need], 0) / NEEDS.length;
-  return Math.round(clamp(base + (needs - 50) * 0.2));
+  return Math.round(clamp(base + (needs - 50) * 0.2 + (mc.mood ?? 0)));
 }
 
 /** Their Stress, 0 to 100: the campus's as they take it, and more with their studies behind. */
 export function mcStress(state: GameState, mc: MainCharacter): number {
   const card = studentCard(state, mc.ref);
-  return Math.round(clamp((card?.stress ?? 20) + Math.max(0, NEED_LOW - mc.needs.study) * 0.5));
+  return Math.round(clamp((card?.stress ?? 20) + Math.max(0, NEED_LOW - mc.needs.study) * 0.5 + (mc.stress ?? 0)));
 }
 
 /** Their goals, each with how it stands now, in a few words. */

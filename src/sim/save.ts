@@ -33,7 +33,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 28;
+export const SAVE_VERSION = 29;
 
 export interface SaveFile {
   v: number;
@@ -371,6 +371,26 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 28: the Main Character (DESIGN.md 53.2, as built in section 57). None chosen, and an empty hall of fame.
   27: (state) => {
     if (typeof state.story !== 'object' || state.story === null) (state as unknown as GameState).story = newStory();
+    return state;
+  },
+  // Version 29: the story system (DESIGN.md 53.3, as built in section 58). No story under way and no chapter yet; a
+  // Main Character gains what the story reads and changes, at nothing.
+  28: (state) => {
+    const story = state.story as Record<string, unknown> | undefined;
+    if (typeof story === 'object' && story !== null) {
+      if (!Array.isArray(story.arcs)) story.arcs = [];
+      if (!Array.isArray(story.chapters)) story.chapters = [];
+      if (typeof story.nextChapter !== 'number') story.nextChapter = 1;
+      if (typeof story.cooldowns !== 'object' || story.cooldowns === null) story.cooldowns = {};
+      if (typeof story.lastStart !== 'number') story.lastStart = -1;
+      const mc = story.mc as Record<string, unknown> | null;
+      if (mc) {
+        if (typeof mc.recent !== 'object' || mc.recent === null) mc.recent = {};
+        for (const key of ['mood', 'stress', 'gpaBonus'] as const) if (typeof mc[key] !== 'number') mc[key] = 0;
+        if (mc.member === undefined) mc.member = null;
+        if (typeof mc.team !== 'boolean') mc.team = false;
+      }
+    }
     return state;
   },
 };

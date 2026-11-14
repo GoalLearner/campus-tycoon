@@ -701,6 +701,50 @@ export interface MainCharacter {
   hangover: boolean;
   /** Key moments on one real day, to keep them to two or three (53.1). */
   big: { day: number; count: number };
+  /** Hours of each activity lately: today's added each day, the rest fading. The effort the story's odds read (DESIGN.md 58). */
+  recent: Partial<Record<ActivityId, number>>;
+  /** What the story has done to their mood and their Stress lately, in points, fading each day; and to this semester's grades. */
+  mood: number;
+  stress: number;
+  gpaBonus: number;
+  /** The chapter they joined, by name, or null; and true while on a team. */
+  member: string | null;
+  team: boolean;
+}
+
+/** An arc or an event under way (DESIGN.md 53.3): which, the stage it is at, and when that stage comes. */
+export interface ActiveArc {
+  id: string;
+  stage: number;
+  /** The tick the stage comes. */
+  due: number;
+  /** True for the main arc; the others are side arcs. */
+  main: boolean;
+  /** Its chapter in the story. */
+  chapter: number;
+  /** True once the cliffhanger before its stage has been said. */
+  cliffTold: boolean;
+}
+
+/** A scene: one stage told, with what they chose, why, what happened, and the odds with the campus's part. */
+export interface Scene {
+  tick: number;
+  text: string;
+  chose: string;
+  outcome: string;
+  odds: string;
+  good: boolean;
+}
+
+/** One chapter of the Main Character's story: an arc, told scene by scene. */
+export interface StoryChapter {
+  id: number;
+  arc: string;
+  title: string;
+  name: string;
+  scenes: Scene[];
+  /** The tick it ended, or -1 while it goes on. */
+  ended: number;
 }
 
 /** A Main Character who graduated, left or was set aside, with their story (DESIGN.md 53.2). */
@@ -722,6 +766,14 @@ export interface Story {
   nextCast: number;
   /** Lines from an action (choosing one, setting one aside), said on the next tick. */
   news: string[];
+  /** The story system (DESIGN.md 53.3, as built in section 58): what is under way, the chapters told, and when each kind may come again. */
+  arcs: ActiveArc[];
+  chapters: StoryChapter[];
+  nextChapter: number;
+  /** An arc's id or a category, to the tick it may come again. */
+  cooldowns: Record<string, number>;
+  /** The tick the last arc or event began, for the quiet stretches between. */
+  lastStart: number;
 }
 
 /** One school year's part in its classes' affinity (DESIGN.md 56). */

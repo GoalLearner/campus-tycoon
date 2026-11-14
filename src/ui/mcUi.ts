@@ -32,6 +32,8 @@ export interface McView {
     goals: Array<[string, string]>;
     people: Array<[string, string]>;
     timeline: string[];
+    /** The Story tab (DESIGN.md 53.3): chapters, newest first, each told as scenes. */
+    chapters: Array<{ title: string; open: boolean; scenes: Array<{ text: string; chose: string; outcome: string; odds: string; good: boolean }> }>;
   } | null;
   suggestion: { ref: { entryYear: number; index: number }; name: string; about: string } | null;
   fame: Array<{ name: string; line: string; story: string[] }>;
@@ -74,6 +76,11 @@ export function mcView(state: GameState): McView {
       goals: goalStatus(mc).map((goal) => [goal.name, goal.status]),
       people: mc.cast.map((one) => [`${ROLE[one.role] ?? one.role}`, `${one.name} · ${one.traits.map((trait) => CAST_TRAITS[trait].name.toLowerCase()).join(', ')} · ${Math.round(one.closeness)} of 100`]),
       timeline: mc.memory.slice(-10).reverse().map((entry) => entry.text),
+      chapters: (story?.chapters ?? [])
+        .filter((chapter) => chapter.name === mc.name && chapter.scenes.length > 0)
+        .slice()
+        .reverse()
+        .map((chapter) => ({ title: chapter.title, open: chapter.ended < 0, scenes: chapter.scenes.map((scene) => ({ text: scene.text, chose: scene.chose, outcome: scene.outcome, odds: scene.odds, good: scene.good })) })),
     },
     suggestion: null,
     fame,

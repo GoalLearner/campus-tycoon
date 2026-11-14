@@ -34,7 +34,7 @@ import { dayRead } from './season';
 import { footballBooks, homeGameNow } from './football';
 import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
 import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
-import { freeSeats, housedByPolicy, housedNote, policyIncome, upkeepMore } from './policies';
+import { freeSeats, housedByPolicy, housedNote, policyIncome, policySpending, upkeepMore } from './policies';
 import { alumniOn, alumniPool, driveLine } from './alumni';
 import { offCampusNow } from './town';
 import { welcomeMore } from './bigBuilds';
@@ -260,6 +260,8 @@ export function budget(state: GameState): Budget {
     { id: 'marketing', name: 'Recruiting and marketing', amount: marketing, detail: step === 0 ? 'Off' : state.goals ? `Step ${step} of ${MARKETING_LIFT.length - 1}: priced by the school's reach` : `Step ${step} of ${MARKETING_LIFT.length - 1}: ${dollars(MARKETING_COST_PER_STUDENT[step]!)} a student` },
     { id: 'insurance', name: 'Insurance and legal', amount: students * INSURANCE_PER_STUDENT, detail: `${dollars(INSURANCE_PER_STUDENT)} a student` },
     { id: 'athletics', name: 'Athletics operations', amount: ball.operations, detail: state.football.stadium.tier === 0 ? 'Travel, kit, game days and the rent of a field in town' : 'Travel, kit and game days' },
+    // What a policy costs for each student has a line of its own, under the policy's name (DESIGN.md 58).
+    ...policySpending(state),
   ];
 
   const groups: BudgetGroup[] = [

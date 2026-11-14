@@ -2977,3 +2977,19 @@ button.students {
   display: flex;
   align-items: center;
 }
+
+/* The Story tab (DESIGN.md 53.3): each scene a small card, the odds in small print under it. */
+.main-scene {
+  border-left: 3px solid rgba(232, 132, 122, 0.7);
+  padding: 2px 0 2px 10px;
+  margin: 8px 0;
+}
+.main-scene.good {
+  border-left-color: rgba(123, 228, 149, 0.8);
+}
+.main-scene p {
+  margin: 3px 0;
+}
+.main-odds {
+  opacity: 0.8;
+}
