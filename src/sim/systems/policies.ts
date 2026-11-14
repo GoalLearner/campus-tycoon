@@ -12,6 +12,7 @@ import { driversNow, offCampusNow } from './town';
 import { commonsLift } from './bigBuilds';
 import { traditionEffects } from './traditions';
 import { chapters, greekEffects, greekTouched } from './greek';
+import { partyEffects } from './parties';
 import { calendarAt } from '../calendar';
 
 /**
@@ -88,6 +89,8 @@ function effects<K extends PolicyEffect['kind']>(state: GameState, kind: K): Arr
   for (const one of traditionEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
   // Greek Row (DESIGN.md 51): its members' lift and its drag on the rating, named "Greek Row" on those lines.
   for (const one of greekEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
+  // Parties (DESIGN.md 55): "Parties" inside Food & fun, and "Late nights" on the graduation rate.
+  for (const one of partyEffects(state)) if (one.effect.kind === kind) out.push({ spec: one.spec, effect: one.effect as EffectOf<K> });
   return out;
 }
 
@@ -163,8 +166,10 @@ export function causeShifts(state: GameState, zone: Zone, member?: number): Caus
   for (const { spec, effect } of found) {
     // A cost of the fall alone is felt only in the fall semester.
     if (effect.fall && !fall) continue;
-    // A chapter's own member, on their card, feels its whole lift: `member` is its points (DESIGN.md 51).
-    const delta = effect.among === 'greek' && member !== undefined ? member / 100 : (effect.points / 100) * touched(state, zone, effect.among);
+    // A chapter's own member, on their card, feels its whole lift: `member` is its points (DESIGN.md 51). A policy's
+    // effect on chapter members (DESIGN.md 55) they feel whole too.
+    const whole = spec.id === 'greekRow' ? (member ?? 0) : effect.points;
+    const delta = effect.among === 'greek' && member !== undefined ? whole / 100 : (effect.points / 100) * touched(state, zone, effect.among);
     if (delta !== 0) out.push({ id: spec.id, name: spec.name, cause: effect.cause, delta });
   }
   return out;

@@ -632,7 +632,8 @@ export interface GameState {
 }
 
 /** How a chapter stands (DESIGN.md 51): Good, on Warning while something is wrong, on Probation if it stays wrong. */
-export type ChapterStatus = 'good' | 'warning' | 'probation';
+/** Suspended (DESIGN.md 55): closed for hazing until the next rush week, its house empty. */
+export type ChapterStatus = 'good' | 'warning' | 'probation' | 'suspended';
 
 /** A chapter of Greek Row (DESIGN.md 51): one to each chapter house. */
 export interface Chapter {
@@ -656,10 +657,18 @@ export interface Chapter {
   /** Pranks since its last rush. */
   pranks: number;
   /**
-   * Kept for the next stop (the owner's content update, 2026-11-13): a chapter's hazing risk, 0 to 1. Nothing sets or
-   * reads it yet; every chapter has 0.
+   * Its hazing risk, 0 to 1 (DESIGN.md 55): the chance of a report in pledge season, worked out each hour from its
+   * standing, the policies and what the president did about a report since rush.
    */
   hazing: number;
+  /** The tick its probation for hazing ends, or -1 (DESIGN.md 55). Rush week ends it. */
+  probationUntil: number;
+  /** The tick its suspension ends, or -1: the next rush week. */
+  suspendedUntil: number;
+  /** True when the president looked the other way on a report since rush: the risk is higher, and a second report suspends it. */
+  looked: boolean;
+  /** Hazing reports since its last rush. */
+  reports: number;
   /** What the chapter has done lately, newest last: its record on its panel, and the place a later stop adds to. */
   events: ChapterEvent[];
 }
@@ -667,7 +676,7 @@ export interface Chapter {
 /** One thing a chapter did (DESIGN.md 51). Later stops may add kinds. */
 export interface ChapterEvent {
   tick: number;
-  kind: 'founded' | 'rush' | 'prank' | 'giving';
+  kind: 'founded' | 'rush' | 'prank' | 'giving' | 'hazing' | 'social';
   text: string;
 }
 
@@ -679,8 +688,10 @@ export interface Greek {
   used: string[];
   /** The last rush week: its school year, those who joined, and those who moved from dorm beds into the houses. */
   rush: { year: number; joined: number; moved: number } | null;
-  /** Counts kept for the record: rush weeks, pranks and philanthropy events. */
-  totals: { rushes: number; pranks: number; giving: number };
+  /** Counts kept for the record: rush weeks, pranks, philanthropy events, hazing reports and suspensions. */
+  totals: { rushes: number; pranks: number; giving: number; reports: number; suspensions: number };
+  /** The tick a hazing case the president looked away from stops costing the rating, or -1 (DESIGN.md 55). */
+  scandalUntil: number;
   /** Lines waiting from an action or a choice, said on the next tick. */
   news: string[];
 }
@@ -944,7 +955,7 @@ export type AdvisorId = 'provost' | 'cfo' | 'athletics' | 'dean';
  * off, or a share added to the crowd at a game or to a class's applicants.
  */
 export interface Boost {
-  kind: 'happy' | 'stress' | 'fans' | 'applicants';
+  kind: 'happy' | 'stress' | 'fans' | 'applicants' | 'calls';
   amount: number;
   /** The tick it begins, when that is later than the moment it was chosen. */
   from?: number;
@@ -962,7 +973,9 @@ export type InboxEffect =
   | { t: 'fix' }
   | { t: 'mark'; key: 'donor' | 'boat' }
   /** A chapter holds a philanthropy event (DESIGN.md 51): `house` is its house's id. */
-  | { t: 'giving'; house: number };
+  | { t: 'giving'; house: number }
+  /** What the president does about a hazing report (DESIGN.md 55). */
+  | { t: 'hazing'; house: number; act: 'probation' | 'suspend' | 'look' };
 
 export interface InboxOption {
   id: string;
@@ -1051,6 +1064,8 @@ export interface Incident {
   responder: number | null;
   /** The tick the responder arrives, or the tick it passes with nobody coming. */
   endTick: number;
+  /** A call from a party (DESIGN.md 55): its line is from the party lines. */
+  party?: true;
 }
 
 export interface Incidents {

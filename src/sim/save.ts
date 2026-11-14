@@ -31,7 +31,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 25;
+export const SAVE_VERSION = 26;
 
 export interface SaveFile {
   v: number;
@@ -336,6 +336,24 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 25: Greek Row (DESIGN.md 51). No chapter yet: a game with goals in the Growth era may build its first.
   24: (state) => {
     if (typeof state.greek !== 'object' || state.greek === null) (state as unknown as GameState).greek = newGreek();
+    return state;
+  },
+  // Version 26: real-life college content (DESIGN.md 55). Each chapter gains what hazing needs, at nothing: no
+  // probation, no suspension, no report. Greek Row gains its counts of reports and suspensions, and no scandal.
+  25: (state) => {
+    const greek = state.greek as Record<string, unknown> | undefined;
+    if (typeof greek === 'object' && greek !== null) {
+      const totals = greek.totals as Record<string, number>;
+      if (typeof totals.reports !== 'number') totals.reports = 0;
+      if (typeof totals.suspensions !== 'number') totals.suspensions = 0;
+      if (typeof greek.scandalUntil !== 'number') greek.scandalUntil = -1;
+      for (const chapter of (greek.chapters ?? []) as Array<Record<string, unknown>>) {
+        if (typeof chapter.probationUntil !== 'number') chapter.probationUntil = -1;
+        if (typeof chapter.suspendedUntil !== 'number') chapter.suspendedUntil = -1;
+        if (typeof chapter.looked !== 'boolean') chapter.looked = false;
+        if (typeof chapter.reports !== 'number') chapter.reports = 0;
+      }
+    }
     return state;
   },
 };

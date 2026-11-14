@@ -9,6 +9,7 @@ import {
   LINGER_TICKS,
   MAX_ACTIVE_INCIDENTS,
   MISCHIEF_RATE,
+  PARTY_LINES,
   RESPONSE_BASE_TICKS,
   RESPONSE_TICKS_PER_CELL,
   SAFETY_LEVELS,
@@ -17,6 +18,10 @@ import { PLACED } from '../config/placed';
 import { nextFloat, nextInt } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Incident, IncidentKind, LogEntry, MapState, Placed } from '../types';
+import { callsLift } from './boosts';
+import { chapterCallShare, partiesOn, partyCallChance } from './parties';
+import { chapterStatus, chapters, greekMembers, greekSocial } from './greek';
+import { seasonCurve } from './season';
 
 /**
  * Incidents: small comic injuries where students play, and mischief where
@@ -65,7 +70,7 @@ export function coverFor(map: MapState, family: 'medical' | 'safety', x: number,
 
 /** One line for the icon on the map. */
 export function incidentText(incident: Incident): string {
-  const pool = INCIDENT_LINES[incident.kind];
+  const pool = (incident.party ? PARTY_LINES : INCIDENT_LINES)[incident.kind];
   return pool[incident.line % pool.length]!.replace('{place}', incident.place);
 }
 
@@ -84,23 +89,54 @@ export function safetyAt(state: GameState, x: number, y: number): number {
   return Math.max(0, Math.min(1, level));
 }
 
-function begin(state: GameState, kind: IncidentKind, x: number, y: number, place: string): void {
+function begin(state: GameState, kind: IncidentKind, x: number, y: number, place: string, party = false): Incident {
   const book = state.incidents;
   const cover = coverFor(state.map, NEEDS[kind], x, y);
   const tick = state.clock.tick;
-  book.active.push({
+  const incident: Incident = {
     id: book.nextId,
     kind,
     x,
     y,
     place,
-    line: nextInt(state.rng, 'events', INCIDENT_LINES[kind].length),
+    line: nextInt(state.rng, 'events', (party ? PARTY_LINES : INCIDENT_LINES)[kind].length),
     startTick: tick,
     responder: cover ? cover.placed.id : null,
     // A responder is quicker the closer the building. Nobody coming means it lingers.
     endTick: tick + (cover ? RESPONSE_BASE_TICKS + Math.ceil(cover.cells * RESPONSE_TICKS_PER_CELL) : LINGER_TICKS),
-  });
+  };
+  if (party) incident.party = true;
+  book.active.push(incident);
   book.nextId += 1;
+  return incident;
+}
+
+/**
+ * A call from a party (DESIGN.md 55), on a game with goals only, so the small campus's stream of draws is as it was.
+ * The same draws are made whatever happens. It comes from a chapter house as often as its members party, else a dorm.
+ */
+function partyCall(state: GameState, scale: number, students: number): void {
+  const roll = nextFloat(state.rng, 'events');
+  const which = nextFloat(state.rng, 'events');
+  const pick = nextFloat(state.rng, 'events');
+  if (state.incidents.active.length >= MAX_ACTIVE_INCIDENTS) return;
+  const call = partyCallChance(state, scale, seasonCurve(state.clock), callsLift(state));
+  if (roll >= call.chance) return;
+  const kind: IncidentKind = which < call.medical ? 'injury' : 'mischief';
+  const open = chapters(state).filter((chapter) => chapterStatus(state, chapter) !== 'suspended' && chapter.members > 0 && state.map.placed[chapter.house]);
+  const residents = Math.max(0, students - offCampusNow(state));
+  const fromHouse = open.length > 0 && pick < chapterCallShare(state, residents, greekMembers(state));
+  if (fromHouse) {
+    const chapter = open[Math.min(open.length - 1, Math.floor((pick / chapterCallShare(state, residents, greekMembers(state))) * open.length))]!;
+    const house = state.map.placed[chapter.house]!;
+    const incident = begin(state, kind, house.x, house.y, `the ${chapter.name} house`, true);
+    greekSocial(state, chapter, incidentText(incident));
+    return;
+  }
+  const dorms = state.map.buildings.filter((b) => b && b.zone === 'housing' && b.stage > 0);
+  if (dorms.length === 0) return;
+  const where = dorms[Math.min(dorms.length - 1, Math.floor(pick * dorms.length))]!;
+  begin(state, kind, where.x, where.y, 'a dorm', true);
 }
 
 /** Every so often, see whether something has happened. More students, more incidents. */
@@ -129,6 +165,8 @@ export function spawnIncidents(state: GameState): void {
     const where = dorms[Math.min(dorms.length - 1, Math.floor(mischiefPick * dorms.length))]!;
     begin(state, 'mischief', where.x, where.y, 'a dorm');
   }
+
+  if (partiesOn(state)) partyCall(state, scale, students);
 }
 
 /** End the incidents whose time has come: a responder arrived, or nobody did. */
@@ -152,15 +190,15 @@ export function stepIncidents(state: GameState, log: LogEntry[]): void {
         tick,
         kind: 'incident',
         text: `${PLACED[responder.type].name} handled it: ${what}`,
-        data: { handled: 1, need, place: incident.place },
+        data: incident.party ? { handled: 1, need, place: incident.place, party: 1 } : { handled: 1, need, place: incident.place },
       });
     } else {
       book.missed += 1;
       log.push({
         tick,
         kind: 'incident',
-        text: `Nobody came: ${what} ${need === 'medical' ? 'A Medical Center' : 'Campus Safety'} in reach of ${incident.place === 'a dorm' ? 'that dorm' : `the ${incident.place}`} would have handled it.`,
-        data: { handled: 0, need, place: incident.place },
+        text: `Nobody came: ${what} ${need === 'medical' ? 'A Medical Center' : 'Campus Safety'} in reach of ${incident.place === 'a dorm' ? 'that dorm' : incident.place.startsWith('the ') ? incident.place : `the ${incident.place}`} would have handled it.`,
+        data: incident.party ? { handled: 0, need, place: incident.place, party: 1 } : { handled: 0, need, place: incident.place },
       });
     }
   }

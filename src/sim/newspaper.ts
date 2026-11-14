@@ -262,6 +262,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'greek':
         // Rush week on Greek Row (DESIGN.md 51): its own headline, made the day it came.
         if (entry.data?.rush === 1 && typeof entry.data.headline === 'string') out.push({ weight: 61, headline: entry.data.headline, deck: entry.text });
+        // A chapter suspended for hazing (DESIGN.md 55), and the bigger story when the school had looked away.
+        else if (entry.data?.hazing === 1 && entry.data.status === 3) {
+          out.push(entry.data.scandal === 1 ? { weight: 90, headline: 'Hazing Scandal on Greek Row; The School Knew', deck: entry.text } : { weight: 65, headline: 'A Chapter Is Suspended for Hazing; Its Banner Comes Down', deck: entry.text });
+        }
         break;
       default:
         break;

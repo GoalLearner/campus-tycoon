@@ -204,11 +204,14 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   const lostToWaitlist = log.filter((e) => e.kind === 'waitlistClosed' && Number(e.data?.lost ?? 0) > 0);
   if (lostToWaitlist.length > 0) lines.push(lostToWaitlist[lostToWaitlist.length - 1]!.text);
 
-  // Incidents: how many were handled, and for the rest, the building that would have handled them.
+  // Incidents: how many were handled, and for the rest, the building that would have handled them. Calls from parties
+  // (DESIGN.md 55) are said apart, plainly: one by its own line, more as a count.
   let handled = 0;
   const missed = new Map<string, number>();
+  const parties = log.filter((entry) => entry.kind === 'incident' && entry.data?.party === 1 && entry.data.handled === 1);
   for (const entry of log) {
     if (entry.kind !== 'incident') continue;
+    if (entry.data?.party === 1 && entry.data.handled === 1) continue;
     if (entry.data?.handled === 1) handled += 1;
     else {
       const need = entry.data?.need === 'medical' ? 'A Medical Center' : 'Campus Safety';
@@ -219,6 +222,17 @@ export function awayLines(log: readonly LogEntry[], facts: AwayFacts): AwayLine[
   }
   as(TOP_WEIGHTS.handled, 'news');
   if (handled > 0) lines.push(handled === 1 ? '1 incident was handled.' : `${handled} incidents were handled.`);
+  if (parties.length === 1) lines.push(parties[0]!.text);
+  else if (parties.length > 1) {
+    const broken = parties.filter((entry) => entry.data?.need === 'safety').length;
+    const cared = parties.length - broken;
+    const said = [
+      broken > 0 ? `Campus Safety broke up ${broken === 1 ? 'a party' : `${broken} parties`}` : '',
+      cared > 0 ? `the Medical Center looked after ${cared === 1 ? 'a student who drank too much' : `${cared} students who drank too much`}` : '',
+    ].filter((part) => part !== '');
+    const line = said.join(', and ');
+    lines.push(`${line.charAt(0).toUpperCase()}${line.slice(1)}.`);
+  }
   as(TOP_WEIGHTS.missed, 'problem');
   for (const [fix, count] of [...missed].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
     lines.push(`${count} ${count === 1 ? 'incident' : 'incidents'} had nobody come. ${fix} would have handled ${count === 1 ? 'it' : 'them'}.`);

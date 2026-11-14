@@ -47,7 +47,13 @@ export type PolicyEffect =
   /** Greek Row's drag on the academic rating is this many times as large (DESIGN.md 51). */
   | { kind: 'greekDrag'; times: number }
   /** This many times as many students join a chapter at rush (DESIGN.md 51). */
-  | { kind: 'greekMembers'; times: number };
+  | { kind: 'greekMembers'; times: number }
+  /** Each chapter's hazing risk is this many times as large (DESIGN.md 55). */
+  | { kind: 'hazing'; times: number }
+  /** Calls from parties come this many times as often: Campus Safety's, the Medical Center's, or both (DESIGN.md 55). */
+  | { kind: 'partyCalls'; times: number; calls: 'safety' | 'medical' | 'both' }
+  /** What late nights cost, in Stress and in the graduation rate, is this many times as large (DESIGN.md 55). */
+  | { kind: 'lateNights'; times: number };
 
 export interface PolicySpec {
   id: string;
@@ -182,6 +188,73 @@ export const POLICIES: readonly PolicySpec[] = [
     costs: [{ kind: 'greekMembers', times: 0.7 }],
     begins: 'A chapter grade standard begins: a member keeps their grades up, or takes a semester off from the chapter.',
     ends: 'The chapter grade standard ends.',
+  },
+  // Parties and drinking (DESIGN.md 52.3, as built in section 55). A dry campus is the one policy whose name says
+  // anything about it (52.2, point 1).
+  {
+    id: 'dryCampus',
+    name: 'Dry campus',
+    era: 1,
+    gives: 'Fewer calls from parties on campus',
+    takes: 'Parties move to the town, and Happiness falls',
+    gains: [{ kind: 'partyCalls', times: 0.4, calls: 'both' }],
+    costs: [{ kind: 'cause', cause: 'life', points: -3, among: 'everyone' }],
+    begins: 'A dry campus begins: no drinking anywhere on campus, whatever a student’s age. The student paper calls it the end of fun; the Medical Center calls it a good start.',
+    ends: 'The dry campus ends. Students of 21 and over may drink at parties on campus again, and the student paper says so in its biggest type.',
+  },
+  {
+    id: 'partyRegistration',
+    name: 'Party registration',
+    era: 1,
+    gives: 'Safer parties: fewer broken up, and a little Happiness',
+    takes: 'Campus Safety costs more to run',
+    gains: [
+      { kind: 'partyCalls', times: 0.5, calls: 'safety' },
+      { kind: 'cause', cause: 'life', points: 1, among: 'everyone' },
+    ],
+    costs: [{ kind: 'upkeep', family: 'safety', perYear: 2_000, one: 'Campus Safety office', many: 'Campus Safety offices' }],
+    begins: 'Party registration begins: a party on campus is registered with Campus Safety, with a host who stays sober and a time it ends.',
+    ends: 'Party registration ends: parties go back to telling nobody.',
+  },
+  {
+    id: 'alcoholEducation',
+    name: 'Alcohol education',
+    era: 2,
+    gives: 'Fewer bad nights: fewer Medical Center calls, and late nights cost less',
+    takes: 'The Medical Centers cost more to run',
+    gains: [
+      { kind: 'partyCalls', times: 0.5, calls: 'medical' },
+      { kind: 'lateNights', times: 0.5 },
+    ],
+    costs: [{ kind: 'upkeep', family: 'medical', perYear: 3_000, one: 'Medical Center', many: 'Medical Centers' }],
+    begins: 'Alcohol education begins: every freshman takes a short course, and the Medical Center runs a talk before every big weekend.',
+    ends: 'Alcohol education ends.',
+  },
+  // Greek Row's hazing (DESIGN.md 52.3 and 55): the president's three choices are these two switches, or neither,
+  // which is looking the other way. Each shows once the campus has a chapter house.
+  {
+    id: 'antiHazing',
+    name: 'Anti-hazing policy',
+    era: 1,
+    greek: true,
+    gives: 'Much less hazing on Greek Row',
+    takes: 'Fewer students join the chapters',
+    gains: [{ kind: 'hazing', times: 0.4 }],
+    costs: [{ kind: 'greekMembers', times: 0.85 }],
+    begins: 'An anti-hazing policy begins: every pledge task is written down and signed off, and any pledge may report one in confidence.',
+    ends: 'The anti-hazing policy ends.',
+  },
+  {
+    id: 'greekOversight',
+    name: 'Greek life oversight',
+    era: 1,
+    greek: true,
+    gives: 'Less hazing on Greek Row',
+    takes: 'Chapter members are a little less happy',
+    gains: [{ kind: 'hazing', times: 0.5 }],
+    costs: [{ kind: 'cause', cause: 'life', points: -3, among: 'greek' }],
+    begins: 'Greek life oversight begins: an advisor for every chapter, at its meetings and its socials.',
+    ends: 'Greek life oversight ends: the chapters run themselves again.',
   },
 ];
 

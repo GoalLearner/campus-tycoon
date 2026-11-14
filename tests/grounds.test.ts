@@ -544,7 +544,7 @@ describe('breakage', () => {
   });
 
   it('keeps every line inside the tone guide', () => {
-    const banned = /\b(beer|wine|drunk|alcohol|pub|vodka|smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|rat|rats|roach\w*)\b/i;
+    const banned = /\b(smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|rat|rats|roach\w*)\b/i;
     for (const lines of Object.values(BREAK_LINES)) for (const line of lines) expect(line).not.toMatch(banned);
     // A broken thing's panel tells the same stories as the news of it breaking.
     for (const kind of ['bin', 'bench', 'table', 'lamp'] as const) {

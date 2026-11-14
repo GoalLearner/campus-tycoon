@@ -29,6 +29,7 @@ import { dollars, duration, headCount } from '../format';
 import { nextU32 } from '../rng';
 import { scaleOf } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
+import { lateNights } from './parties';
 import type { GameState, LogEntry, Order, Orders, PlacedType } from '../types';
 import { capacity, type NeedId } from './capacity';
 import { growthShortage } from './demand';
@@ -446,8 +447,9 @@ function begin(state: GameState, order: Order, seen: Look, today = false): void 
     order.target = Math.max(10, Math.ceil((last * 1.05) / 10) * 10);
   } else if (kind.metric === 'calmSemester') {
     order.from = 0;
-    // No calmer than the semester before, and never asked under a middling one.
-    order.target = Math.max(20, Math.round(state.term.lastAverage) + (t.add ?? 0));
+    // No calmer than the semester before, and never asked under a middling one: late nights after parties are part of
+    // a middling semester on a campus that has them (DESIGN.md 55).
+    order.target = Math.max(20 + Math.round(lateNights(state).stress), Math.round(state.term.lastAverage) + (t.add ?? 0));
   } else if (MARKED.has(kind.metric)) {
     order.from = 0;
     order.target = t.n ?? 1;

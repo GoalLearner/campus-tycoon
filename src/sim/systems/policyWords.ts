@@ -10,6 +10,7 @@ import { housedIfOn, incomeOf, RATING_INPUT_NAME, upkeepOf } from './policies';
 import { libraryShare } from './season';
 import { driversNow } from './town';
 import { greekDrag, greekMembers } from './greek';
+import { lateNights } from './parties';
 
 /**
  * A policy in this campus's own numbers: what the switch says before it is
@@ -72,6 +73,15 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
     }
     case 'greekMembers':
       return `${percent(1 - effect.times)} fewer students join a chapter at rush`;
+    case 'hazing':
+      return `Each chapter's hazing risk is ${percent(1 - effect.times)} lower`;
+    case 'partyCalls':
+      return `${percent(1 - effect.times)} fewer ${effect.calls === 'safety' ? 'parties broken up by Campus Safety' : effect.calls === 'medical' ? 'Medical Center calls from parties' : 'calls from parties on campus'}`;
+    case 'lateNights': {
+      const late = lateNights(state);
+      const after = Math.round(late.stress * effect.times * 10) / 10;
+      return `Late nights cost ${percent(1 - effect.times)} less${late.stress > 0 ? `: about ${after} ${after === 1 ? 'point' : 'points'} of Stress instead of ${late.stress}` : ''}`;
+    }
   }
 }
 

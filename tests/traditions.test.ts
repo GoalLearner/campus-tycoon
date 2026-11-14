@@ -223,7 +223,7 @@ describe('saves', () => {
     expect(loaded.state.traditions).toEqual(state.traditions);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'tradition')).toEqual(state.timers.filter((timer) => timer.kind === 'tradition'));
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(25);
+    expect(SAVE_VERSION).toBe(26);
   });
 
   describe('from version 23', () => {
@@ -246,7 +246,7 @@ describe('saves', () => {
       expect(validate(week)).toBeNull();
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

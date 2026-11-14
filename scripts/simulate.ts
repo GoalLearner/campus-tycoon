@@ -88,6 +88,12 @@ import {
   ROUTINE_CAP,
   TOP_ITEMS,
   toneProblem,
+  DRINK_WORDS,
+  DRINK_BUDGET,
+  HEAVY_WORDS,
+  HEAVY_BUDGET,
+  lateNights,
+  partyScene,
   type GameState,
   type LogEntry,
   BIG_BUILDS,
@@ -290,6 +296,16 @@ interface Seen {
   greekRush: Array<{ week: number; joined: number; moved: number }>;
   greekWarnings: number;
   greekProbations: number;
+  /** Real-life content (DESIGN.md 55): lines read about drinking and heavy themes, calls from parties, hazing. */
+  drinkLines: number;
+  heavyLines: number;
+  partyCalls: number;
+  partyMedical: number;
+  partyUnder21: number;
+  partyMissed: number;
+  hazingProbations: number;
+  hazingSuspensions: number;
+  scandals: number;
 }
 
 const newSeen = (): Seen => ({
@@ -346,13 +362,29 @@ const newSeen = (): Seen => ({
   greekRush: [],
   greekWarnings: 0,
   greekProbations: 0,
+  drinkLines: 0,
+  heavyLines: 0,
+  partyCalls: 0,
+  partyMedical: 0,
+  partyUnder21: 0,
+  partyMissed: 0,
+  hazingProbations: 0,
+  hazingSuspensions: 0,
+  scandals: 0,
 });
+
+/** Short names for the switches of Greek Row and of parties, for the tables. */
+const GREEK_SHORT: Record<string, string> = { deferredRush: 'defer', chapterGrades: 'grades', antiHazing: 'anti', greekOversight: 'watch' };
+const PARTY_SHORT: Record<string, string> = { dryCampus: 'dry', partyRegistration: 'register', alcoholEducation: 'educate' };
 
 /** Check lines against the tone guide's banned and retired words. */
 function tone(seen: Seen, lines: readonly string[]): void {
   for (const line of lines) {
     seen.lines += 1;
     if (toneProblem(line) !== null && seen.toneBroken.length < 20) seen.toneBroken.push(line);
+    // Alcohol and heavy themes, held to their budgets (DESIGN.md 52.2).
+    if (DRINK_WORDS.test(line)) seen.drinkLines += 1;
+    if (HEAVY_WORDS.test(line)) seen.heavyLines += 1;
   }
 }
 
@@ -376,7 +408,17 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'order') seen.orderLines += 1;
     if (entry.kind === 'greek' && entry.data?.rush === 1) seen.greekRush.push({ week: Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1, joined: Number(entry.data.joined), moved: Number(entry.data.moved) });
     if (entry.kind === 'greek' && entry.data?.status === 1) seen.greekWarnings += 1;
-    if (entry.kind === 'greek' && entry.data?.status === 2) seen.greekProbations += 1;
+    if (entry.kind === 'greek' && entry.data?.status === 2 && entry.data?.hazing !== 1) seen.greekProbations += 1;
+    // Real-life content (DESIGN.md 55): calls from parties, and hazing.
+    if (entry.kind === 'incident' && entry.data?.party === 1) {
+      seen.partyCalls += 1;
+      if (entry.data.need === 'medical') seen.partyMedical += 1;
+      if (/under 21/.test(entry.text)) seen.partyUnder21 += 1;
+      if (entry.data.handled === 0) seen.partyMissed += 1;
+    }
+    if (entry.kind === 'greek' && entry.data?.hazing === 1 && entry.data.status === 2) seen.hazingProbations += 1;
+    if (entry.kind === 'greek' && entry.data?.hazing === 1 && entry.data.status === 3) seen.hazingSuspensions += 1;
+    if (entry.kind === 'greek' && entry.data?.scandal === 1) seen.scandals += 1;
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -1698,7 +1740,7 @@ function assertModelCampus(seed: number): void {
     row('weeks with one on Probation', (run) => String(weekly(run).filter((one) => one.probation > 0).length));
     row('drag on graduation, at the end', (run) => greekDrag(run.final).points.toFixed(1));
     row('drag on graduation, most', (run) => Math.max(0, ...weekly(run).map((one) => one.drag)).toFixed(1));
-    row('policies on at the end', (run) => run.final.policies.on.filter((id) => id === 'deferredRush' || id === 'chapterGrades').map((id) => (id === 'deferredRush' ? 'defer' : 'grades')).join('+') || 'none');
+    row('policies on at the end', (run) => run.final.policies.on.filter((id) => GREEK_SHORT[id] !== undefined).map((id) => GREEK_SHORT[id]).join('+') || 'none');
     console.log('');
     console.log('GREEK ROW OVER TIME: chapters (good/warning/probation), then members and the drag');
     for (const week of [6, 10, 14, 20, 28, 36, 44]) {
@@ -1739,6 +1781,40 @@ function assertModelCampus(seed: number): void {
       'rush week comes each fall once a chapter stands, and a chapter goes on Probation only after a Warning',
       runs.every((run) => first(run) === 0 || run.seen.greekRush.length >= PACE_WEEKS - first(run) - 1) && runs.every((run) => run.seen.greekProbations <= run.seen.greekWarnings),
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.greekRush.length} rush weeks from week ${first(run)}, ${run.seen.greekWarnings} warnings, ${run.seen.greekProbations} probations`).join('; '),
+    );
+  }
+
+  // Real-life college content (DESIGN.md 52, as built in section 55): parties and their calls, hazing on Greek Row,
+  // and how often a player reads about drinking or a heavy theme, against the budgets that keep the rating 13+.
+  {
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    const per100 = (n: number, of: number): string => (of > 0 ? ((100 * n) / of).toFixed(2) : '-');
+    console.log('REAL COLLEGE LIFE: PARTIES, HAZING, AND WHAT A PLAYER READS');
+    console.log(`${''.padEnd(34)}${head}`);
+    row('calls from parties a week', (run) => (run.seen.partyCalls / PACE_WEEKS).toFixed(1));
+    row('  the Medical Center\'s', (run) => (run.seen.partyMedical / PACE_WEEKS).toFixed(1));
+    row('  someone under 21 caught', (run) => (run.seen.partyUnder21 / PACE_WEEKS).toFixed(1));
+    row('  nobody came', (run) => (run.seen.partyMissed / PACE_WEEKS).toFixed(1));
+    row('party scene at the end', (run) => partyScene(run.final).toFixed(2));
+    row('late nights: Stress, rating', (run) => `${lateNights(run.final).stress} ${lateNights(run.final).rating}`);
+    row('hazing reports', (run) => String(run.final.greek.totals.reports));
+    row('  probations for hazing', (run) => String(run.seen.hazingProbations));
+    row('  suspensions', (run) => String(run.final.greek.totals.suspensions));
+    row('  scandals', (run) => String(run.seen.scandals));
+    row('lines read', (run) => run.seen.lines.toLocaleString('en-US'));
+    row('  about drinking, in 100', (run) => per100(run.seen.drinkLines, run.seen.lines));
+    row('  a heavy theme, in 100', (run) => per100(run.seen.heavyLines, run.seen.lines));
+    row('party policies on at the end', (run) => run.final.policies.on.filter((id) => PARTY_SHORT[id] !== undefined).map((id) => PARTY_SHORT[id]).join('+') || 'none');
+    console.log('');
+    check(
+      `alcohol and heavy themes stay infrequent: at most ${Math.round(DRINK_BUDGET * 100)} in 100 of the lines a player reads are about drinking, and ${Math.round(HEAVY_BUDGET * 100)} in 100 about a heavy theme`,
+      runs.every((run) => run.seen.lines > 0 && run.seen.drinkLines <= DRINK_BUDGET * run.seen.lines && run.seen.heavyLines <= HEAVY_BUDGET * run.seen.lines),
+      runs.map((run) => `${run.style} ${run.seed}: ${per100(run.seen.drinkLines, run.seen.lines)} and ${per100(run.seen.heavyLines, run.seen.lines)} in 100 of ${run.seen.lines.toLocaleString('en-US')}`).join('; '),
+    );
+    check(
+      'calls from parties on every campus with goals, hazing only where there is a chapter, and a suspension only after a report',
+      runs.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.suspensions <= run.final.greek.totals.reports) && bare.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.reports === 0),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports, ${run.final.greek.totals.suspensions} suspensions`).join('; ')}; with no chapter house: ${bare.map((run) => `${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports`).join('; ')}`,
     );
   }
 
@@ -1927,6 +2003,9 @@ function assertModelCampus(seed: number): void {
       kept: number;
       happy: number;
       stress: number;
+      /** Calls from parties a year, and hazing reports in all (DESIGN.md 55). */
+      calls: number;
+      reports: number;
       students: number;
       left: number;
       incidents: number;
@@ -1950,6 +2029,7 @@ function assertModelCampus(seed: number): void {
       let incidents = 0;
       let stress = 0;
       let semesters = 0;
+      let calls = 0;
       for (let day = 1; day <= SIX * 7; day++) {
         const result = advance(state, state.clock.lastSimulatedAt, from + day * DAY_MS);
         state = result.state;
@@ -1961,6 +2041,7 @@ function assertModelCampus(seed: number): void {
             semesters += 1;
           }
           if (entry.kind === 'incident' && entry.data?.handled === 0) incidents += 1;
+          if (entry.kind === 'incident' && entry.data?.party === 1) calls += 1;
         }
         const books = budget(state);
         kept += books.kept;
@@ -1970,7 +2051,7 @@ function assertModelCampus(seed: number): void {
         students += enrollment(state);
         days += 1;
       }
-      return { kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
+      return { calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
     };
     const campuses: Array<[string, GameState]> = [
       ['the once-a-day campus', eras(of('daily')[0]!.final)],
@@ -1999,11 +2080,11 @@ function assertModelCampus(seed: number): void {
         }
         const words = policyWords(base, spec);
         const on = sixYears(result.state);
-        const d = { kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
+        const d = { calls: on.calls - off.calls, reports: on.reports - off.reports, kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
         console.log(`  ${spec.name}`);
         console.log(`      + ${spec.gives}: ${words.gain.join('; ')}`);
         console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
-        console.log(`      over six years: keeps ${signed(d.kept)} of every $100 (income ${signed(d.income / 1e6)}M, spending ${signed(d.spending / 1e6)}M a year), Happiness ${signed(d.happy)}, semester Stress ${signed(d.stress)}, ${signed(d.left, 0)} leave a year, ${signed(d.incidents, 0)} incidents unanswered a year, rating ${signed(d.rating, 1)} (published ${signed(d.published, 1)}, ${d.rank === 0 ? 'same rank' : `${Math.abs(d.rank)} ${Math.abs(d.rank) === 1 ? 'place' : 'places'} ${d.rank < 0 ? 'better' : 'worse'}`})`);
+        console.log(`      over six years: ${signed(d.calls, 0)} calls from parties a year, ${signed(d.reports, 0)} hazing reports, keeps ${signed(d.kept)} of every $100 (income ${signed(d.income / 1e6)}M, spending ${signed(d.spending / 1e6)}M a year), Happiness ${signed(d.happy)}, semester Stress ${signed(d.stress)}, ${signed(d.left, 0)} leave a year, ${signed(d.incidents, 0)} incidents unanswered a year, rating ${signed(d.rating, 1)} (published ${signed(d.published, 1)}, ${d.rank === 0 ? 'same rank' : `${Math.abs(d.rank)} ${Math.abs(d.rank) === 1 ? 'place' : 'places'} ${d.rank < 0 ? 'better' : 'worse'}`})`);
         // Each moves the number it names, the way it says.
         const ok: Record<string, boolean> = {
           readingDays: d.stress < 0,
@@ -2016,6 +2097,11 @@ function assertModelCampus(seed: number): void {
           namingRights: d.income > 0 && d.happy < 0,
           deferredRush: d.rating > 0 && d.happy < 0,
           chapterGrades: d.rating > 0,
+          dryCampus: d.calls < 0 && d.happy < 0,
+          partyRegistration: d.calls < 0 && d.spending > 0,
+          alcoholEducation: d.stress <= 0 && d.spending > 0,
+          antiHazing: d.reports <= 0,
+          greekOversight: d.reports <= 0 && d.happy <= 0.01,
         };
         if (ok[spec.id] === false) {
           moved = false;

@@ -534,7 +534,7 @@ export function happinessView(state: GameState): HappinessView {
   return {
     stress: {
       score: stress.score,
-      note: `${stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}`}${stress.policy > 0 ? ` ${stress.policyBy.join(' and ')}: ${stress.policy} off this week.` : ''}`,
+      note: `${stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}`}${stress.policy > 0 ? ` ${stress.policyBy.join(' and ')}: ${stress.policy} off this week.` : ''}${stress.late > 0 ? ` Late nights after parties: +${stress.late}.` : ''}`,
     },
     week: mood.season.parts.map((part) => ({ label: part.label, points: `${part.points > 0 ? '+' : '\u2212'}${Math.abs(Math.round(part.points))}` })),
     score,

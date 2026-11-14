@@ -84,7 +84,8 @@ export type ArchetypeId =
   | 'charmer'
   | 'attention'
   | 'pledge'
-  | 'greekLoyalist';
+  | 'greekLoyalist'
+  | 'heartbroken';
 
 export const ARCHETYPE_NAMES: Record<ArchetypeId, string> = {
   superfan: 'Superfan',
@@ -106,6 +107,7 @@ export const ARCHETYPE_NAMES: Record<ArchetypeId, string> = {
   attention: 'Attention Seeker',
   pledge: 'Pledge',
   greekLoyalist: 'Greek Loyalist',
+  heartbroken: 'Heartbroken',
 };
 
 /**
@@ -313,6 +315,23 @@ export const RELATIONSHIP_NOTES = {
   happier: 'a little happier',
   lessHappy: 'a little less happy',
   thin: 'nowhere to meet people',
+} as const;
+
+/**
+ * A breakup (DESIGN.md 52.1, as built in 55): someone who was with someone last semester and is single now. It is a
+ * normal part of life here, felt for a semester and got over. The status keeps its own side and its own points, so
+ * the campus's balance holds; only the words change, and the student reads as Heartbroken while it lasts.
+ */
+export const BREAKUP_NAME = 'Single, after a breakup';
+export const BREAKUP_NOTES = { happier: 'doing better than expected', lessHappy: 'getting over it, slowly' } as const;
+
+/**
+ * A Party Animal's weekends on a campus with parties (DESIGN.md 52.3), said plainly on the card. Drinking belongs to
+ * students of 21 and over: juniors and seniors.
+ */
+export const PARTY_CARD = {
+  over21: 'Parties, and a drink or two. Mondays are harder',
+  under21: 'Parties, but under 21, so no drinks',
 } as const;
 
 /**
