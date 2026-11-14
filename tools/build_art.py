@@ -359,6 +359,18 @@ class Builder:
                 anchor = ((fx - left) * factor, (fy - top) * factor)
                 box = piece.getbbox()
                 sprites[f'person.{look}.sleep'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
+            # Moods (DESIGN.md 63.7): their first south-west step with another face, cut the same as that step.
+            for mood, files in spec.get('moods', {}).items():
+                if look >= len(files):
+                    continue
+                fx, fy = cells[(next(iter(rows)), 0)][1:]
+                cell = self.open(files[look])
+                left, top = int(fx - side) - 1, int(fy - up) - 1
+                right, bottom = int(fx + side) + 2, int(fy + down) + 2
+                piece = resized(cell.crop((left, top, right, bottom)), factor)
+                anchor = ((fx - left) * factor, (fy - top) * factor)
+                box = piece.getbbox()
+                sprites[f'person.{look}.mood.{mood}'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
         return sprites
 
 
@@ -419,6 +431,14 @@ def write_credits():
         '- **From:** https://kenney.nl/assets',
         '- **Changes made:** Six files are used, each made mono, trimmed of its opening silence and saved as WAV: the tap (UI Audio, click3), something built (Interface Sounds, drop_002), something that could not be done (Interface Sounds, error_008), and the tunes for a win, a loss and a reward (Music Jingles, Pizzicato 02, 01 and 10).',
         '- **Where:** Built into this repository, in `public/assets/sound`. Every build.',
+        '',
+        '## The emotes and bubbles',
+        '',
+        '- **By:** Made for this game.',
+        '- **Licence:** None needed.',
+        '- **From:** `tools/make_emotes.py`, drawn in code in the people pack' + "'" + 's way: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop.',
+        '- **Changes made:** None. Each is one file named in the art recipes, so it can be swapped for a drawn one.',
+        '- **Where:** Every build.',
         '',
         '## The soundscape and the music',
         '',

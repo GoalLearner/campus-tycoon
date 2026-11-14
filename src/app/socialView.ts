@@ -313,7 +313,11 @@ export interface CampusSocial {
   inGroups: number;
   /** This campus week: new couples (and couples back together), splits and new best friends. */
   week: { couples: number; splits: number; best: number };
-  popular: Array<{ ref: StudentRef; friends: number }>;
+  /**
+   * The five most popular (DESIGN.md 63.7): by how many students they reach, their friends and their friends'
+   * friends, each counted once. A student holds twelve ties at most, so a count of friends alone stops at twelve.
+   */
+  popular: Array<{ ref: StudentRef; friends: number; known: number }>;
   /** The three biggest friend groups: their vibe and their members. */
   groups3: Array<{ vibe: string; members: StudentRef[] }>;
   drama: Told | null;
@@ -328,31 +332,60 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
   const n = view.other.length / SLOTS;
   let couples = 0;
   let students = 0;
-  const top: Array<{ id: number; friends: number; sum: number }> = [];
+  const here = new Uint8Array(n);
+  const friendsOf = new Uint8Array(n);
+  const closeness = new Uint16Array(n);
+  const isFriendSlot = (s: number): boolean => view.other[s]! >= 0 && isFriendKind(view.kind[s]!) && view.strength[s]! >= FRIEND_AT;
   for (let a = 0; a < n; a++) {
     const ref = refIn(view, a);
     if (view.identity[a] === 0 || !enrolled(state, ref)) continue;
+    here[a] = 1;
     students += 1;
-    let friends = 0;
-    let sum = 0;
     for (let k = 0; k < SLOTS; k++) {
       const s = a * SLOTS + k;
       const b = view.other[s]!;
       if (b < 0) continue;
-      const kind = view.kind[s]!;
-      if (b > a && PARTNER_LABEL[kind]) couples += 1;
-      if (isFriendKind(kind) && view.strength[s]! >= FRIEND_AT) {
-        friends += 1;
-        sum += view.strength[s]!;
+      if (b > a && PARTNER_LABEL[view.kind[s]!]) couples += 1;
+      if (isFriendSlot(s)) {
+        friendsOf[a] = friendsOf[a]! + 1;
+        closeness[a] = closeness[a]! + view.strength[s]!;
       }
     }
-    // The five with the most friends, then the closest.
-    if (top.length < 5 || friends > top[4]!.friends || (friends === top[4]!.friends && sum > top[4]!.sum)) {
-      top.push({ id: a, friends, sum });
-      top.sort((x, y) => y.friends - x.friends || y.sum - x.sum);
-      if (top.length > 5) top.pop();
+  }
+  // How far each reaches: their friends and their friends' friends. Summed first, which counts a shared friend twice,
+  // to find the forty likeliest; then counted exactly, each student once, for those forty.
+  const rough: Array<{ id: number; reach: number }> = [];
+  for (let a = 0; a < n; a++) {
+    if (!here[a] || isMain(state, refIn(view, a))) continue;
+    let reach = friendsOf[a]!;
+    for (let k = 0; k < SLOTS; k++) {
+      const s = a * SLOTS + k;
+      if (isFriendSlot(s)) reach += friendsOf[view.other[s]!]!;
+    }
+    if (rough.length < 40 || reach > rough[rough.length - 1]!.reach) {
+      rough.push({ id: a, reach });
+      rough.sort((x, y) => y.reach - x.reach || x.id - y.id);
+      if (rough.length > 40) rough.pop();
     }
   }
+  const top = rough
+    .map(({ id }) => {
+      const known = new Set<number>();
+      for (let k = 0; k < SLOTS; k++) {
+        const s = id * SLOTS + k;
+        if (!isFriendSlot(s)) continue;
+        const b = view.other[s]!;
+        if (here[b]) known.add(b);
+        for (let j = 0; j < SLOTS; j++) {
+          const t = b * SLOTS + j;
+          const c = view.other[t]!;
+          if (c !== id && here[c] && isFriendSlot(t)) known.add(c);
+        }
+      }
+      return { id, friends: friendsOf[id]!, known: known.size, close: closeness[id]! };
+    })
+    .sort((x, y) => y.known - x.known || y.close - x.close || x.id - y.id)
+    .slice(0, 5);
   const week = { couples: 0, splits: 0, best: 0 };
   for (let row = 0; row < view.weeklyWeek.length; row++) {
     if (view.weeklyWeek[row]! < 0 || view.weeklyYear[row] !== year) continue;
@@ -379,7 +412,7 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     groups,
     inGroups: students > 0 ? view.groupMembers.length / students : 0,
     week,
-    popular: top.map((one) => ({ ref: refIn(view, one.id), friends: one.friends })),
+    popular: top.map((one) => ({ ref: refIn(view, one.id), friends: one.friends, known: one.known })),
     groups3,
     drama: dramaOfTheWeek(view, state),
     lines: lightSince(view, state, -1, year, 4),

@@ -236,7 +236,11 @@ describe('the Campus social page', () => {
 
   it('names the most popular, the week’s news and the biggest groups: students still here, nothing heavy but the drama', () => {
     expect(social.popular).toHaveLength(5);
-    for (let i = 1; i < 5; i++) expect(social.popular[i - 1]!.friends).toBeGreaterThanOrEqual(social.popular[i]!.friends);
+    // Ranked by reach, friends and friends' friends, which spreads out: a count of friends stops at twelve.
+    for (let i = 1; i < 5; i++) expect(social.popular[i - 1]!.known).toBeGreaterThanOrEqual(social.popular[i]!.known);
+    expect(social.popular[0]!.known).toBeGreaterThan(40);
+    expect(new Set(social.popular.map((one) => one.known)).size).toBeGreaterThan(1);
+    for (const one of social.popular) expect(one.known).toBeGreaterThan(one.friends);
     expect(social.lines.length).toBeGreaterThan(0);
     for (const told of social.lines) {
       expect(told.heavy).toBe(false);

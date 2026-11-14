@@ -7472,3 +7472,38 @@ Nothing on the map changed, so the frame time is as in 63.1.
 | After a long absence, "this week" counts only the weeks lived since | The web is grown again with a new history (63.5) |
 | The Main Character's card keeps their story's people and status | Stop 7 puts the story on the web |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.7 Stop 3 as built: emotion
+
+Built 2026-11-14 on the branch `social-sim-3`. The save is unchanged (version 30), and so is the web's record.
+
+**A feeling** (`src/app/emotion.ts`). Each student has a current emotion, as the Sims show one: small reasons (moodlets), each pulling towards an emotion with a weight, and the emotion with the most behind it wins; below 1.2 they are Fine. Worked out from the web, the card and the hour, never stored, the same every time.
+
+| Emotion | Its reasons, and their weight | Emote | Face |
+|---|---|---|---|
+| Happy | New couple with (name) 3, with a heart; Together with (name) 1.5, with a heart; Close with (best friend) 1.2; Has a group of friends 0.8; a break or summer 1.5; Loves it here 1.5 | Sparkle | Smile (Mouth1) |
+| Excited | Game day (a home game on now) 1.4, or 3 for a Superfan or an Athlete; Party tonight (a Party Animal, from 6 PM) 2.5, with a party cup | Exclamation | Laugh (MouthTalking and EyesBlink) |
+| Flirty | Has a crush on (name) 2.5 | Heart | Smirk (Mouth5) |
+| Tense | It's complicated with (name) 2.5; Not speaking to (name) 2; A rivalry with (name) 1.2; Not getting on with (roommate) 1.8; exams, 1 and more as Stress rises; Exams ahead once Stress is 50 | Anger mark | Flat (Mouth3) |
+| Embarrassed | Dropped their books in front of (their crush) 3.5: a student with a crush, about one day in eight | Sweat drop | Small (Mouth4) |
+| Sad | Split up with (name) 4 for the first weeks, then 2, with a broken heart; Unhappy here 2; Not happy here 1; Misses home 1.5 (the Homesick) | Sad cloud | Frown (Mouth2) |
+| Lonely | Nobody close yet 3 | Thought cloud | Frown (Mouth2) |
+
+The Main Character's people are their story's until stop 7, so their feeling reads only the week and the campus. On a model campus while a home game is on, about 55% are Happy, a third Excited and the rest Flirty, Tense, Sad, Lonely or Embarrassed.
+
+**Where it shows.** On the card, a Feeling row under Doing now: the emote, the emotion and its top two reasons ("Happy · Loves it here · Has a group of friends"). Over their head on the map while their card is open or they are followed: the emote at half its card size, bobbing a little, above the night light as the other floating icons are (`src/game/CampusScene.ts`). In the card's portrait: the face of the emotion, where the art has it (the paid pack; the built-in figures keep their own).
+
+**The art** (look sheet on the page). Thirteen emotes and bubbles drawn for this game in the people pack's way, by `tools/make_emotes.py`: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop. Flat colours, the pack's own dark plum outline (52, 1, 41), a darker rim and a white highlight, drawn four times larger and shrunk as the pack's art is, about 28 pixels in the atlas. Each is one file named in both recipes (`emote.<name>`), so each can be swapped for a drawn one; CREDITS.md credits them as made for this game. The speech bubble, music note and soda cup wait for stop 4's chats. The faces are the people pack's own parts, put together by `tools/make_faces.py` as the sleepers are (section 60): the figure's own mouth painted over in the colour of the face round it and one of the pack's mouths drawn in, and for a laugh its eyes shut with the pack's own. Six faces for each of the sixteen crowd looks, in the paid pack only; `tools/build_art.py` cuts them as `person.<look>.mood.<face>`. At a portrait's size the faces are a small change; the emote says the most.
+
+**The Most popular, fixed** (from the main session's check of stop 2: all five said "12 friends"). A student holds twelve ties at most, so a count of friends stops at twelve, and so does how many count them as a friend, since both ends hold a tie. They are now ranked, and labelled, by how many students they reach: their friends and their friends' friends, each counted once ("Known to 97"); then by how close those friendships are. Worked out exactly for the forty with the most friends of friends. The alternative was the sum of their friendships' strength, which spreads too but has no plain words.
+
+**Measured.** A feeling, under a millisecond. Frames, as in 63.1 (an iPhone 14's screen, the page slowed four times): 15 to 23 ms with a student followed and their emote over their head, 14 to 23 ms without, on the same run; the map's own work is unchanged. The Social page takes 34 ms to open (10 before), for the reach. The atlases: the built-in one gains the thirteen emotes in the same 1024 by 1024, and nothing else in it changed, pixel for pixel; the paid one gains the emotes and 96 faces in the same 4096 by 2048, published to the private art repository.
+
+**Tested** (`tests/emotion.test.ts`, and the Social page's test): a feeling is one of eight with at most two reasons, an emote and a face, and Fine has none; feelings vary across the campus and most feel something; a new couple is Happy with a heart and a split is Sad with a broken heart, from the web's own ties; the same student and hour always feel the same; the Main Character's feeling leaves out their people; a feeling works before the web answers; every reason passes the tone guide and none uses a heavy word; every emote a feeling can show is in the built-in atlas, credited, and named in both recipes. The five most popular are ranked by reach, which spreads out.
+
+| Rough | Why |
+|---|---|
+| The faces are a small change at a portrait's size | The pack draws a mouth two pixels wide at the map's scale; the emote carries the feeling |
+| The emote floats above buildings a student walks behind | So you can see where they are, as the other floating icons do |
+| The anger mark is four short strokes | The usual mark at 14 pixels; it can be swapped |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

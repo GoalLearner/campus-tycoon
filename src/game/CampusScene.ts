@@ -7,10 +7,12 @@ import { SETTLE_MS, settleDegrees, settling, twistMove, twistStart, type Twist }
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
-import { currentDaylight, type Daylight } from '../app/daylight';
+import { currentDaylight, shownHour, type Daylight } from '../app/daylight';
+import { feelingOf } from '../app/emotion';
+import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -31,6 +33,8 @@ const NO_TINT = 0xffffff;
 const FOR_SALE_TINT = 0x9cb39a;
 /** The light of the hour is laid over the map here: above everything on the ground, below the icons that float. */
 const LIGHT_DEPTH = 800_000;
+/** Over the night light, as the floating icons are: the emote over a student whose card is open (DESIGN.md 63.7). */
+const EMOTE_DEPTH = 900_001;
 /** Fans stay on the field this many minutes after a big home win. */
 const STORM_TICKS = 5;
 
@@ -166,6 +170,11 @@ export class CampusScene extends Phaser.Scene {
   private readonly staying = new Set<string>();
   /** The ring under such a student while their card is open. */
   private stayRing: Phaser.GameObjects.Ellipse | null = null;
+  /** The emote over the head of the student whose card is open (DESIGN.md 63.7), and what it was worked out for. */
+  private emoteIcon: Phaser.GameObjects.Image | null = null;
+  private emoteShown = '';
+  private emoteStamp = '';
+  private emoteKey: string | null = null;
   /** Ripples and sprinklers. */
   private ambient!: Ambient;
   /** Lit windows on dorms and lecture halls after dark. */
@@ -1514,6 +1523,7 @@ export class CampusScene extends Phaser.Scene {
       ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
       ring.setPosition(there.x, there.y).setDepth(there.depth - 0.2).setVisible(true);
     } else this.stayRing?.setVisible(false);
+    this.drawEmote(student, key, walking ? this.walkers.spot(key!) : there ? { x: there.x, y: there.y } : null);
     const at = key && session.following ? this.walkers.spot(key) : null;
     // They went indoors: there is nobody left to follow.
     if (session.following && !at) session.setFollowing(false);
@@ -1534,6 +1544,36 @@ export class CampusScene extends Phaser.Scene {
   }
 
   /** A ring round the hall named on a card, pulsing three times over a few seconds, then gone (DESIGN.md 60). */
+  /**
+   * The emote of what the student whose card is open feels (DESIGN.md 63.7), over their head, bobbing a little. Worked
+   * out again when the hour, the web or the student changes, never each frame.
+   */
+  private drawEmote(student: StudentRef | null, key: string | null, at: { x: number; y: number } | null): void {
+    if (student && key && at && store.hasGame) {
+      const hour = shownHour();
+      const stamp = `${key}|${hour}|${socialWeb.view?.week ?? -1}|${Math.floor(store.state.clock.tick / 60)}`;
+      if (stamp !== this.emoteStamp) {
+        this.emoteStamp = stamp;
+        const card = studentCard(store.state, student);
+        const feeling = card ? feelingOf(socialWeb.view, store.state, student, card, hour) : null;
+        this.emoteKey = feeling?.emote ? `emote.${feeling.emote}` : null;
+      }
+    }
+    const emote = student && at ? this.emoteKey : null;
+    if (!emote || !at || !this.art.has(emote)) {
+      this.emoteIcon?.setVisible(false);
+      return;
+    }
+    const icon = this.emoteIcon ?? this.add.image(0, 0, '__DEFAULT');
+    this.emoteIcon = icon;
+    if (emote !== this.emoteShown) {
+      this.emoteShown = emote;
+      this.art.apply(icon, emote);
+    }
+    const bob = Math.sin(this.time.now / 380) * 1.5;
+    icon.setScale(0.55).setPosition(at.x, at.y - 42 + bob).setDepth(EMOTE_DEPTH).setVisible(true);
+  }
+
   private ringHall(): void {
     const mark = session.mark;
     if (mark && mark.seq !== this.hallRingSeq) {
