@@ -21,6 +21,11 @@
   box-sizing: border-box;
 }
 
+/* Hidden means hidden, whatever a class says about display: a card row such as Weekends was left showing (DESIGN.md 60). */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -796,6 +801,19 @@ button.student-row {
 
 .student-follow[hidden] {
   display: none;
+}
+
+/* The hall's name on a card: a link that glides the map to the hall (DESIGN.md 60). */
+.student-hall {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 .student-follow.active {
   background: var(--accent);

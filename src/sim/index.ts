@@ -37,7 +37,7 @@ export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
 export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
-export { hallName, peopleCounts, personCard, personKey, personName, type PersonCard, type PersonRef } from './systems/people';
+export { dormName, hallName, peopleCounts, personCard, personKey, personName, type PersonCard, type PersonRef } from './systems/people';
 export * from './config/people';
 export { besideRecreation, diningAt, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, mealLoads, mealUse, tutoredAt, tutoringLift, varietyAt, type FoodTrade, type MealUse } from './systems/food';
 export {

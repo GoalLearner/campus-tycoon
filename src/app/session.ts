@@ -63,8 +63,13 @@ class Session {
   room: StudentRef | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
   doing: string | null = null;
-  /** A cell the map should glide to. A new `seq` means a new request. */
-  focus: { x: number; y: number; seq: number } | null = null;
+  /**
+   * A cell the map should glide to. A new `seq` means a new request. `aim` is how far down the screen it should come
+   * to rest, as a share of its height: a little above the middle unless a card asks for higher.
+   */
+  focus: { x: number; y: number; seq: number; aim?: number } | null = null;
+  /** A hall the map rings for a moment, from its name on a card (DESIGN.md 60). A new `seq` means a new ring. */
+  mark: { x: number; y: number; seq: number } | null = null;
   preview: PaintPreview | null = null;
   /** A clear the player has dragged out and not yet confirmed. */
   clearing: PaintPreview | null = null;
@@ -155,6 +160,19 @@ class Session {
   cancelClear(): void {
     if (!this.clearing) return;
     this.clearing = null;
+    this.emit();
+  }
+
+  /**
+   * Glide the map to a student's hall and ring it for a moment, leaving their card open (DESIGN.md 60). `above` and
+   * `below` are the bottom of the top bar and the top of the card on the screen, so the hall comes to rest in the open
+   * map between them.
+   */
+  showHall(x: number, y: number, above: number, below: number): void {
+    const height = typeof window === 'undefined' ? 0 : window.innerHeight;
+    const aim = height > 0 && below > above ? Math.max(0.12, Math.min(0.45, (above + below) / 2 / height + 0.03)) : 0.4;
+    this.focus = { x, y, seq: (this.focus?.seq ?? 0) + 1, aim };
+    this.mark = { x, y, seq: (this.mark?.seq ?? 0) + 1 };
     this.emit();
   }
 

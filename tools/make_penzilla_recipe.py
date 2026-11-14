@@ -363,15 +363,15 @@ ROOM_PIECES = {
     'notes': (DECOR + 'Notes1.png', 0.9),
     'notes2': (DECOR + 'Notes2.png', 0.9),
     'plant': (PLANTS + 'Plant13.png', 0.8),
-    'rug': (OLD_DECOR + 'Rug.png', 1),
+    'rug': (OLD_DECOR + 'Rug.png', 1.6),
     'drapes': (OLD_DECOR + 'Drapes.png', 0.9),
     'book': (OLD_DECOR + 'Book.png', 0.8),
     'papers': (OLD_DECOR + 'Papers.png', 0.8),
     'scroll': (OLD_DECOR + 'Scroll.png', 0.7),
     'stool': (OLD_DECOR + 'Stool.png', 1),
     'lute': (OLD_DECOR + 'MusicLute.png', 0.8),
-    'cup': (OLD_DECOR + 'Cup.png', 0.6),
-    'apple': (OLD_DECOR + 'Apple.png', 0.5),
+    'cup': (OLD_DECOR + 'Cup.png', 0.9),
+    'apple': (OLD_DECOR + 'Apple.png', 1.0),
     'bread': (OLD_DECOR + 'Bread.png', 0.6),
     'basket': (OLD_DECOR + 'Basket.png', 0.8),
     'box': (OLD_DECOR + 'Box.png', 0.8),
@@ -386,6 +386,14 @@ ROOM_PIECES = {
 }
 for name, (file, scale) in ROOM_PIECES.items():
     sprites[f'room.{name}'] = {'layers': [standing(file, 0.5, 0.5, scale=scale)]}
+# The bed (DESIGN.md section 60): the packs have none, so tools/make_bed.py puts one together from their pieces, each
+# as drawn: two benches for the frame, the laundry line's sheet laid flat for the mattress, the cream sack for the
+# pillow, and the rug, turned a quarter and drawn longer, for the blanket. The blanket is a picture of its own, drawn
+# over the sleeper. The roommate's is the same rug in blue. Each sits on the grid by the bed's back corner.
+BED = '_rendered/fallback/bed/'
+sprites['room.bed'] = {'layers': [on_grid(BED + 'bed.png')]}
+sprites['room.blanket'] = {'layers': [on_grid(BED + 'blanket.png')]}
+sprites['room.blanket.2'] = {'layers': [on_grid(BED + 'blanket.png', recolour='blanket.blue')]}
 
 # ------------------------------------------------------------------ icons --
 # First aid: the cross sign that stands outside the pack's pharmacy.
@@ -590,6 +598,9 @@ people = {
     'height': 36,
     'cell': [220, 220],
     'rows': {'sw': 1, 'nw': 3},
+    # A student asleep (DESIGN.md section 60): their own figure facing out with the pack's shut eyes, made by
+    # tools/make_bed.py, cut at the same size and feet as their walking figure.
+    'sleep': [f'_rendered/fallback/bed/sleep-{name}.png' for name in students],
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
     'roles': roles,
@@ -613,6 +624,8 @@ recipe = {
         'comment': 'A mown lawn: the same grass, a little greener and brighter.',
         'lawn': {'from': [45, 95], 'to': 76, 'saturation': 1.0, 'value': 1.13},
         'cross': {'from': [0, 30], 'to': 135, 'saturation': 0.9, 'value': 0.82, 'minSaturation': 0.5},
+        # The roommate's blanket: the rug's orange turned a calm blue.
+        'blanket.blue': {'from': [20, 55], 'to': 212, 'saturation': 0.62, 'value': 0.82, 'minSaturation': 0.35},
         **banner_rules,
     },
     'glass': {
@@ -645,7 +658,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk. Its bed is two of the Medieval benches, the sheet off its laundry line laid flat, its cream sack and its rug turned and drawn longer, with the outlines of the enlarged pieces trimmed to the pack\'s width; a roommate\'s blanket is the rug recoloured blue. A sleeping student is their own figure with its open eyes painted over in the colour of the face round them and the people pack\'s shut eyes drawn in.',
         },
         {
             'name': 'Football stadium (3D model)',
