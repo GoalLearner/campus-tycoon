@@ -314,7 +314,7 @@ export function mountUi(root: HTMLElement): void {
   mainButton.append(mainArt);
   mainButton.setAttribute('aria-label', 'Your main character');
   let mainShown = '';
-  top.append(money, students, happy, mainButton, menuButton);
+  top.append(money, students, happy, menuButton);
 
   const calendar = el('div', 'calendar');
   const when = el('span', 'when');
@@ -371,7 +371,8 @@ export function mountUi(root: HTMLElement): void {
     drawSprite(sealArt, atlas, 'ui.seal');
   });
   let shownLevel = -1;
-  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, levelButton);
+  // The Main Character's portrait sits beside the level, where the row has room whatever the cash reads (DESIGN.md 57).
+  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, mainButton, levelButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;

@@ -2911,6 +2911,8 @@ button.students {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 .main-button .main-art {
   width: 32px;
@@ -2992,4 +2994,7 @@ button.students {
 }
 .main-odds {
   opacity: 0.8;
+/* Beside the portrait, the level keeps close. */
+.main-button + .hud-chip.level-chip {
+  margin-left: 4px;
 }
