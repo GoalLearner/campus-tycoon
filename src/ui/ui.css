@@ -2911,6 +2911,8 @@ button.students {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 .main-button .main-art {
   width: 32px;
@@ -2976,4 +2978,9 @@ button.students {
   min-height: 44px;
   display: flex;
   align-items: center;
+}
+
+/* Beside the portrait, the level keeps close. */
+.main-button + .hud-chip.level-chip {
+  margin-left: 4px;
 }
