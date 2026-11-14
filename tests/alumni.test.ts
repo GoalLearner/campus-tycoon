@@ -23,6 +23,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { academicInputs } from '../src/sim/systems/field';
 import { edition } from '../src/sim/newspaper';
 import { moneyView } from '../src/ui/buildUi';
@@ -199,7 +200,7 @@ describe('saves', () => {
     expect(loaded.state.alumni).toEqual(THREE.state.alumni);
     expect(loaded.state.classes).toEqual(THREE.state.classes);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(27);
+    expect(SAVE_VERSION).toBe(28);
   });
 
   describe('from version 26', () => {
@@ -219,13 +220,15 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.alumni = loaded.state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY);
       expect(validate(week.state)).toBeNull();
       expect(week.log.filter((entry) => entry.kind === 'alumni')).toHaveLength(1);
       const notes = upgradeNotes(26);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toMatch(/alumni/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

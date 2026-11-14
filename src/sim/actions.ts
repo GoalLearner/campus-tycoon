@@ -1,4 +1,5 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
+import { makeMain, setAsideMain } from './systems/mc';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
@@ -74,6 +75,9 @@ export type Action =
   /** Collect what one building holds, by its key, or everything whose marker shows. */
   | { type: 'collect'; key: string }
   | { type: 'collectAll' }
+  /** The Main Character (DESIGN.md 53.2): choose one from a student's card, or set the one there is aside. */
+  | { type: 'makeMain'; ref: { entryYear: number; index: number } }
+  | { type: 'setAsideMain' }
   /** Choose a tradition for an open place (DESIGN.md 50). */
   | { type: 'chooseTradition'; id: string }
   /** Finish a wait now, for its price in Gold Seals: 'stadium', 'faculty', or 'policy:' and a policy's id. */
@@ -675,6 +679,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return collect(state, action.key);
     case 'collectAll':
       return collect(state, null);
+    case 'makeMain':
+    case 'setAsideMain': {
+      const next = structuredClone(state);
+      const error = action.type === 'makeMain' ? makeMain(next, action.ref) : setAsideMain(next);
+      return error ? { ok: false, state, error } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
     case 'finish':
       return finish(state, action.wait);
     case 'seeOrders':

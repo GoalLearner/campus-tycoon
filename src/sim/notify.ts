@@ -118,6 +118,9 @@ function results(log: readonly LogEntry[]): Result[] {
       out.push({ tick: entry.tick, weight: TOP_WEIGHTS.goodNews, title: 'Rankings day', body: short(entry.text) });
     } else if (entry.kind === 'graduation') {
       out.push({ tick: entry.tick, weight: TOP_WEIGHTS.graduation, title: 'Commencement', body: short(entry.text) });
+    } else if (entry.kind === 'mc' && entry.data?.big === 1) {
+      // The Main Character's key moments (DESIGN.md 53.2): two or three a real day at most, by the shared limit.
+      out.push({ tick: entry.tick, weight: TOP_WEIGHTS.goal - 1, title: String(entry.data.name || 'Your main character'), body: short(entry.text) });
     }
   }
   return out;

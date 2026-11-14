@@ -7,6 +7,7 @@ import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
 import { discoveryDue } from './systems/labs';
 import { tellTraditions, traditionDue, traditionsOnDayStart } from './systems/traditions';
 import { greekDue, stepGreek, tellGreek } from './systems/greek';
+import { stepMain, tellMain } from './systems/mc';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -111,6 +112,7 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellBigBuilds(state, log);
   tellTraditions(state, log);
   tellGreek(state, log);
+  tellMain(state, log);
 
   for (const timer of popDue(state, clock.tick)) fireTimer(state, timer, log);
   for (const event of eventsAt(clock)) onCalendarEvent(state, event, log);
@@ -128,6 +130,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   stepGrounds(state, log);
   // Each chapter's standing, once an hour (DESIGN.md 51).
   if (clock.tick % TICKS_PER_HOUR === 0) stepGreek(state, log);
+  // The Main Character's life, every quarter of a real hour (DESIGN.md 53.2).
+  stepMain(state, log);
 
   accrue(state);
 

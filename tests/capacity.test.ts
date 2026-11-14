@@ -75,6 +75,7 @@ import {
   type Need,
   type NeedId,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
 import { DAY, freshGame, HOUR, T0 } from './helpers';
@@ -681,6 +682,8 @@ describe('a save from version 15', () => {
     expected.rng.orders = state.rng.orders;
     // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
     expected.alumni = state.alumni;
+    // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+    expected.story = newStory();
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -710,7 +713,7 @@ describe('a save from version 15', () => {
   it('tells an upgraded save what is new, once', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(13);
+    expect(notes.length).toBe(14);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

@@ -24,6 +24,7 @@ import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
 import { newGreek } from './systems/greek';
 import { newAlumni, openingPool } from './systems/alumni';
+import { newStory } from './systems/mc';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -32,7 +33,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 27;
+export const SAVE_VERSION = 28;
 
 export interface SaveFile {
   v: number;
@@ -367,6 +368,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 28: the Main Character (DESIGN.md 53.2, as built in section 57). None chosen, and an empty hall of fame.
+  27: (state) => {
+    if (typeof state.story !== 'object' || state.story === null) (state as unknown as GameState).story = newStory();
+    return state;
+  },
 };
 
 /**
@@ -432,7 +438,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek', 'alumni'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek', 'alumni', 'story'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

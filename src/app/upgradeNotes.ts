@@ -99,5 +99,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 27) {
     notes.push('New: alumni giving. Every graduate joins the alumni pool, and each commencement holds a drive: happier classes, traditions, Greek Row and wins give more. Most of it goes to the endowment. The Scorecard, behind the student count, shows all seven stages from applications to donations.');
   }
+  if (fromVersion < 28) {
+    notes.push('New: a main character. Tap any student and choose them on their card, or take the one suggested from the portrait on the top bar. They live their own days, with needs, friends and a plan, and the paper opens with what they did.');
+  }
   return notes;
 }

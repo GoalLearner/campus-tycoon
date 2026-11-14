@@ -301,6 +301,12 @@ interface Seen {
   /** Alumni giving (DESIGN.md 56): each drive, with the pool it asked and the commencements seen. */
   drives: Array<{ week: number; raised: number; cash: number; pool: number }>;
   commencements: number;
+  /** The Main Character (DESIGN.md 57): plans made, key moments by their real day, nights out. */
+  mcPlans: number;
+  mcBig: Record<number, number>;
+  mcDrinks: number;
+  mcHangovers: number;
+  mcLines: number;
   greekWarnings: number;
   greekProbations: number;
   /** Real-life content (DESIGN.md 55): lines read about drinking and heavy themes, calls from parties, hazing. */
@@ -369,6 +375,11 @@ const newSeen = (): Seen => ({
   greekRush: [],
   drives: [],
   commencements: 0,
+  mcPlans: 0,
+  mcBig: {},
+  mcDrinks: 0,
+  mcHangovers: 0,
+  mcLines: 0,
   greekWarnings: 0,
   greekProbations: 0,
   drinkLines: 0,
@@ -430,6 +441,14 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'greek' && entry.data?.scandal === 1) seen.scandals += 1;
     // Alumni giving (DESIGN.md 56): a drive at each commencement.
     if (entry.kind === 'graduation') seen.commencements += 1;
+    // The Main Character (DESIGN.md 57).
+    if (entry.kind === 'mc') {
+      seen.mcLines += 1;
+      if (/^Today's plan for /.test(entry.text)) seen.mcPlans += 1;
+      if (entry.data?.big === 1) seen.mcBig[Number(entry.data.day)] = (seen.mcBig[Number(entry.data.day)] ?? 0) + 1;
+      if (/had a few drinks/.test(entry.text)) seen.mcDrinks += 1;
+      if (/woke up with a hangover/.test(entry.text)) seen.mcHangovers += 1;
+    }
     if (entry.kind === 'alumni') seen.drives.push({ week: Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1, raised: Number(entry.data?.raised ?? 0), cash: Number(entry.data?.cash ?? 0), pool: Number(entry.data?.pool ?? 0) });
   }
   for (const entry of log) {
@@ -1857,6 +1876,35 @@ function assertModelCampus(seed: number): void {
       'a drive at every commencement on a game with goals, whoever plays it, and the pool never falls',
       [...runs, ...bare].every((run) => run.seen.drives.length === run.seen.commencements && run.seen.drives.length > 0 && run.seen.drives.every((one, n) => n === 0 || one.pool >= run.seen.drives[n - 1]!.pool)),
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.drives.length} drives at ${run.seen.commencements} commencements, ${(run.seen.drives[0]?.pool ?? 0).toLocaleString('en-US')} to ${alumniPool(run.final).toLocaleString('en-US')} alumni`).join('; '),
+    );
+  }
+
+  // The Main Character (DESIGN.md 53.2, as built in section 57): the once-a-day player follows one, and the next when
+  // one graduates. They change nothing on the campus (tests/mc.test.ts proves it), so every table above holds.
+  {
+    const mains = runs.filter((run) => run.style === 'daily');
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${mains.map((run) => cell(run).padStart(14)).join('')}`);
+    const most = (run: Run): number => Math.max(0, ...Object.values(run.seen.mcBig));
+    const all = (run: Run) => [...run.final.story.fame, ...(run.final.story.mc ? [run.final.story.mc] : [])];
+    console.log('THE MAIN CHARACTER: THE ONCE-A-DAY PLAYER FOLLOWS ONE');
+    console.log(`${''.padEnd(34)}${mains.map((run) => `${run.style} ${run.seed}`.padStart(14)).join('')}`);
+    row('main characters followed', (run) => String(all(run).length));
+    row('  graduated', (run) => String(run.final.story.fame.filter((one) => one.status === 'graduated').length));
+    row('plans made, a real week', (run) => (run.seen.mcPlans / PACE_WEEKS).toFixed(1));
+    row('key moments, a real week', (run) => (Object.values(run.seen.mcBig).reduce((a, b) => a + b, 0) / PACE_WEEKS).toFixed(1));
+    row('  most on one real day', (run) => String(most(run)));
+    row('lines in the paper, a real week', (run) => (run.seen.mcLines / PACE_WEEKS).toFixed(1));
+    row('nights with drinks, a real week', (run) => (run.seen.mcDrinks / PACE_WEEKS).toFixed(1));
+    row('  hangovers', (run) => (run.seen.mcHangovers / PACE_WEEKS).toFixed(1));
+    row('GPA of those who graduated', (run) => {
+      const done = run.final.story.fame.filter((one) => one.status === 'graduated' && one.gpa !== null);
+      return done.length > 0 ? (done.reduce((sum, one) => sum + (one.gpa ?? 0), 0) / done.length).toFixed(2) : '-';
+    });
+    console.log('');
+    check(
+      'a main character plans each real day, and has at most three key moments on any real day (53.1)',
+      mains.every((run) => run.seen.mcPlans >= PACE_WEEKS * 6 && most(run) <= 3),
+      mains.map((run) => `${run.style} ${run.seed}: ${run.seen.mcPlans} plans in ${PACE_WEEKS} real weeks, at most ${most(run)} key moments a day, ${all(run).length} followed`).join('; '),
     );
   }
 
