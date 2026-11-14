@@ -249,6 +249,12 @@ export class CampusScene extends Phaser.Scene {
   /** A point of the world the camera is gliding to, after a tap on a card's reason. */
   private glide: { x: number; y: number } | null = null;
   private focusSeq = 0;
+  /** Where the glide should come to rest, as a share of the screen's height. */
+  private glideAim = 0.4;
+  /** The ring round a hall named on a card, while it shows (DESIGN.md 60). */
+  private hallRing: Phaser.GameObjects.Graphics | null = null;
+  private hallRingSeq = 0;
+  private hallRingAt: { x: number; y: number; since: number } | null = null;
 
   constructor() {
     super('campus');
@@ -1491,7 +1497,9 @@ export class CampusScene extends Phaser.Scene {
     if (focus && focus.seq !== this.focusSeq) {
       this.focusSeq = focus.seq;
       this.glide = this.iso.toWorld(focus.x + 0.5, focus.y + 0.5);
+      this.glideAim = focus.aim ?? 0.4;
     }
+    this.ringHall();
 
     const student = session.student;
     const key = student ? studentKey(student) : null;
@@ -1512,15 +1520,38 @@ export class CampusScene extends Phaser.Scene {
 
     const target = at ?? this.glide;
     if (!target) return;
-    // The card covers the bottom of the screen, so aim a little above the middle.
+    // The card covers the bottom of the screen, so aim a little above the middle, or higher when a card asks.
+    const aim = at ? 0.4 : this.glideAim;
     const wantX = target.x - cam.width / 2;
-    const wantY = target.y - cam.height / 2 + (cam.height * 0.1) / cam.zoom;
+    const wantY = target.y - cam.height / 2 + (cam.height * (0.5 - aim)) / cam.zoom;
     const fromX = cam.scrollX;
     const fromY = cam.scrollY;
     cam.setScroll(fromX + (wantX - fromX) * ease, fromY + (wantY - fromY) * ease);
     this.clampCamera();
     // A glide ends when it arrives, or when the edge of the map stops it.
     if (!at && Math.abs(cam.scrollX - fromX) + Math.abs(cam.scrollY - fromY) < 0.3) this.glide = null;
+  }
+
+  /** A ring round the hall named on a card, pulsing three times over a few seconds, then gone (DESIGN.md 60). */
+  private ringHall(): void {
+    const mark = session.mark;
+    if (mark && mark.seq !== this.hallRingSeq) {
+      this.hallRingSeq = mark.seq;
+      this.hallRingAt = { x: mark.x, y: mark.y, since: this.time.now };
+    }
+    const ring = this.hallRingAt;
+    if (!ring) return;
+    const age = (this.time.now - ring.since) / 1000;
+    const g = this.hallRing ?? this.add.graphics().setDepth(900_000);
+    this.hallRing = g;
+    g.clear();
+    if (age > 3) {
+      this.hallRingAt = null;
+      return;
+    }
+    const pulse = 0.55 + 0.45 * Math.cos(age * Math.PI * 2);
+    g.lineStyle(5, 0xffd24a, pulse * Math.min(1, (3 - age) * 2));
+    g.strokePoints(this.iso.diamond(ring.x, ring.y), true);
   }
 
   // --------------------------------------------------------------- camera --

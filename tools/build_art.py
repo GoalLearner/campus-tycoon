@@ -348,6 +348,17 @@ class Builder:
                     piece = canvas
                 box = piece.getbbox()
                 sprites[f'person.{look}.{direction}.{f}'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
+            # Asleep: one more picture of this person, a single cell drawn where their first cell is, cut the same.
+            sleep = spec.get('sleep', [])
+            if look < len(sleep):
+                fx, fy = cells[(next(iter(rows)), 0)][1:]
+                cell = self.open(sleep[look])
+                left, top = int(fx - side) - 1, int(fy - up) - 1
+                right, bottom = int(fx + side) + 2, int(fy + down) + 2
+                piece = resized(cell.crop((left, top, right, bottom)), factor)
+                anchor = ((fx - left) * factor, (fy - top) * factor)
+                box = piece.getbbox()
+                sprites[f'person.{look}.sleep'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
         return sprites
 
 

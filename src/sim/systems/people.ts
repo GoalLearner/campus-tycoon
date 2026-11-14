@@ -65,7 +65,7 @@ export interface PersonCard {
 }
 
 /** A different number for each trait, so one person's name, department and words do not move together. */
-const SALT = { first: 101, start: 102, end: 103, subject: 104, hall: 105, doing: 106, line: 107, hallName: 108, hallEnd: 109, stop: 110 } as const;
+const SALT = { first: 101, start: 102, end: 103, subject: 104, hall: 105, doing: 106, line: 107, hallName: 108, hallEnd: 109, stop: 110, dormName: 111, dormEnd: 112 } as const;
 /** What they are doing changes this often, in ticks. It follows the game's own time, never the hour of the day. */
 const DOING_EVERY_TICKS = 20;
 
@@ -95,6 +95,35 @@ export function hallName(state: GameState, cell: number): string {
   const start = SURNAME_STARTS[hashInts(state.seed, cell, SALT.hallName) % SURNAME_STARTS.length]!;
   const end = SURNAME_ENDS[hashInts(state.seed, cell, SALT.hallEnd) % SURNAME_ENDS.length]!;
   return `${start}${end} Hall`;
+}
+
+/**
+ * The name of a dorm, made up as a lecture hall's is: "Pippinwick Hall" (DESIGN.md 60). The same dorm always has the
+ * same name. Buildings are named in the order they were put down, and a dorm whose name is already taken by a hall or
+ * a dorm put down before it is named again, so no later building can change it. For the cards only: nothing in the
+ * game reads it.
+ */
+export function dormName(state: GameState, cell: number): string {
+  const id = state.map.cells[cell]?.buildingId ?? -1;
+  const taken = new Set<string>();
+  for (const building of state.map.buildings) {
+    if (!building) continue;
+    const at = building.y * state.map.width + building.x;
+    if (building.zone === 'academic') {
+      taken.add(hallName(state, at));
+      continue;
+    }
+    if (building.zone !== 'housing') continue;
+    let name = '';
+    for (let again = 0; again < 8 && (name === '' || taken.has(name)); again++) {
+      const start = SURNAME_STARTS[hashInts(state.seed, at, SALT.dormName, again) % SURNAME_STARTS.length]!;
+      const end = SURNAME_ENDS[hashInts(state.seed, at, SALT.dormEnd, again) % SURNAME_ENDS.length]!;
+      name = `${start}${end} Hall`;
+    }
+    if (building.id === id) return name;
+    taken.add(name);
+  }
+  return `${SURNAME_STARTS[hashInts(state.seed, cell, SALT.dormName) % SURNAME_STARTS.length]!}${SURNAME_ENDS[hashInts(state.seed, cell, SALT.dormEnd) % SURNAME_ENDS.length]!} Hall`;
 }
 
 /** The cells of the lecture halls that are open, in map order. */

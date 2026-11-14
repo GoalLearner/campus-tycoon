@@ -1,6 +1,6 @@
 import { stayingWords } from '../app/activityPeople';
-import { canLookInside } from '../app/room';
-import { currentDaylight, type DayPeriod } from '../app/daylight';
+import { canLookInside, homeActivity, homeName } from '../app/room';
+import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard } from '../sim';
@@ -94,15 +94,22 @@ function indoorsText(doing: string): string {
 }
 
 /**
- * Where a student is who has not been seen on the map since the card opened: from where they live and the part of
- * the player's day, in place of "Out of sight".
+ * Where a student is who has not been seen on the map since the card opened, in place of "Out of sight": at home,
+ * asleep, getting ready or in for the evening, by their own hours (DESIGN.md 60), and otherwise in class.
  */
-function awayText(card: StudentCard): string {
-  const period = currentDaylight().period;
-  const home = card.residence === 'chapter' ? `the ${card.chapter} house` : card.residence === 'dorm' ? 'the dorm' : null;
-  if (period === 'night') return home ? `Asleep in ${home}` : 'At home in town';
-  if (period === 'evening') return home ? `In ${home}` : 'At home in town';
-  return 'In class';
+function awayText(state: GameState, card: StudentCard): string {
+  const doing = homeActivity(state, card, shownHour());
+  if (doing === null) return 'In class';
+  const town = card.residence === 'offCampus';
+  const home = homeName(state, card);
+  if (doing === 'asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
+  if (doing === 'ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
+  return town ? 'At home in town' : `In ${home}`;
+}
+
+/** "the dorm" in a line of the card, as the hall's own name: "Heading back to Fernwick Hall". */
+function named(text: string, hall: string | null): string {
+  return hall ? text.replace('the dorm', hall) : text;
 }
 
 const MOOD_NAMES = ['Miserable', 'Unhappy', 'Fine', 'Happy', 'Delighted'];
@@ -158,7 +165,18 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
   portrait.height = 112;
   const who = el('div', 'student-who');
   const name = el('div', 'student-name');
+  // Who they are, then where they live. The hall's name is a link: it glides the map to the hall and marks it.
   const about = el('div', 'student-about');
+  const aboutText = el('span', '');
+  const hallLink = el('button', 'student-hall');
+  hallLink.type = 'button';
+  const aboutAfter = el('span', '');
+  about.append(aboutText, hallLink, aboutAfter);
+  let hallAt: { x: number; y: number } | null = null;
+  hallLink.addEventListener('click', () => {
+    const bar = document.querySelector('.hud')?.getBoundingClientRect().bottom ?? 0;
+    if (hallAt) session.showHall(hallAt.x, hallAt.y, bar, node.getBoundingClientRect().top);
+  });
   who.append(name, about);
   const close = el('button', 'student-close', 'Close');
   close.type = 'button';
@@ -245,17 +263,21 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     }
 
     setText(name, card.name);
+    // Their hall by its name (DESIGN.md 60), which can be tapped.
+    const hall = card.residence === 'dorm' && card.home !== null ? homeName(state, card) : null;
+    hallAt = hall !== null ? { x: card.home! % state.map.width, y: Math.floor(card.home! / state.map.width) } : null;
     const lives =
       card.residence === 'chapter'
         ? `Lives in the ${card.chapter} house`
         : card.residence === 'dorm'
-          ? card.chapter
-            ? `Lives in a dorm · ${card.chapter}, its house full`
-            : 'Lives in a dorm'
+          ? 'Lives in '
           : card.street
             ? `Lives off campus on ${card.street}`
             : 'Lives off campus';
-    setText(about, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
+    setText(aboutText, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
+    hallLink.hidden = hall === null;
+    setText(hallLink, hall ?? '');
+    setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');
 
     const people = atlas?.people;
     if (atlas && people) {
@@ -270,14 +292,17 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
 
     if (session.doing) lastDoing = session.doing;
     const outside = session.doing !== null;
-    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : awayText(card));
+    // "the dorm" in what the map says, as where they live: their hall, or their chapter's house.
+    const homeWord = hall ?? (card.residence === 'chapter' ? `the ${card.chapter} house` : null);
+    setText(doing.value, named(outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : awayText(state, card), homeWord));
     follow.disabled = !outside;
     // Someone staying put has nowhere to be followed to.
     follow.hidden = stayingWords(session.doing) !== null;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
-    // Followed home, or simply gone indoors at their hall: the room can be looked into.
-    const home = canLookInside(state, ref, lastDoing, outside);
+    // Followed home, gone indoors at their hall, or at home by their hours, asleep or in for the evening: the room can
+    // be looked into (DESIGN.md 60). Look inside then stands where Follow was.
+    const home = canLookInside(state, ref, lastDoing, outside, shownHour());
     inside.hidden = !home;
     if (home) follow.hidden = true;
 

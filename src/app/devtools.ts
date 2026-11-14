@@ -2,6 +2,7 @@ import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyTo
 import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, suggestMain, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
+import { setRoomClock } from '../ui/roomView';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
@@ -329,10 +330,12 @@ function applyViewParams(params: URLSearchParams): void {
   if (Number.isInteger(roomAt) && roomAt >= 0) {
     setTimeout(() => {
       const state = store.state;
+      // &roomin=town or &roomin=chapter picks students who live in town or in a chapter house instead (DESIGN.md 60).
+      const kind = params.get('roomin') === 'town' ? 'offCampus' : params.get('roomin') === 'chapter' ? 'chapter' : 'dorm';
       const residents = sampleStudents(state, 60).filter((ref) => {
         const one = studentCard(state, ref);
-        if (!one || one.residence !== 'dorm' || one.home === null) return false;
-        if (params.has('roommate') && !roomShared(state, one.home)) return false;
+        if (!one || one.residence !== kind || (kind === 'dorm' && one.home === null)) return false;
+        if (params.has('roommate') && (one.home === null || !roomShared(state, one.home))) return false;
         // &roomdo=music picks only students doing that in their room at the hour shown.
         const doing = params.get('roomdo');
         return !doing || roomFor(state, ref, shownHour(), { crowd: 16, look: () => 0 })?.activity === doing;
@@ -346,6 +349,9 @@ function applyViewParams(params: URLSearchParams): void {
         return;
       }
       session.openRoom();
+      // &roomt=20 shows the room that many seconds into its round, for pictures mid-round (DESIGN.md 60).
+      const into = Number(params.get('roomt') ?? NaN);
+      if (Number.isFinite(into)) setRoomClock(into);
     }, 2800);
   }
   const placing = params.get('place');
