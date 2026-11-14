@@ -1686,9 +1686,10 @@ export function mountUi(root: HTMLElement): void {
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
         const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
-        if (card7) pages.push(['scorecard', 'Scorecard']);
         if (policies) pages.push(['policies', 'Policies']);
         if (traditions) pages.push(['traditions', 'Traditions']);
+        // The Scorecard last: on a phone the row scrolls sideways, and the open page is brought into view.
+        if (card7) pages.push(['scorecard', 'Scorecard']);
         for (const [id, label] of pages) {
           const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
             campusPage = id;
@@ -1698,6 +1699,8 @@ export function mountUi(root: HTMLElement): void {
           tabs.append(tab);
         }
         head.append(tabs);
+        const open = tabs.querySelector<HTMLElement>('.fb-tab.active');
+        if (open && typeof open.scrollIntoView === 'function') open.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
         body.textContent = '';
         if (campusPage === 'goals') {
