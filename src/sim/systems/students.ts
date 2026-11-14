@@ -629,6 +629,11 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)).replace('{w}', wait).replace('{place}', place), cell: spot };
 }
 
+/** The biggest of the week's parts, by its size either way, or null with none. */
+function weekLabel(parts: SeasonLine['parts']): string | null {
+  return parts.length > 0 ? parts.reduce((most, part) => (Math.abs(part.points) > Math.abs(most.points) ? part : most)).label : null;
+}
+
 /** The street a student living off campus lives on: one of the neighbourhoods with students in it, more often a fuller one. */
 function streetOf(state: GameState, ref: StudentRef): string | null {
   const hoods = townLiving(state).filter((hood) => hood.living > 0);
@@ -746,7 +751,8 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     mood: moodOf(happiness),
     reason,
     stress,
-    week: week.parts.length > 0 ? week.parts.reduce((most, part) => (Math.abs(part.points) > Math.abs(most.points) ? part : most)).label : null,
+    // What the week is doing to them: the calendar and the sky. Their ties have a row of their own (DESIGN.md 63.10).
+    week: weekLabel(week.parts.filter((part) => part.id !== 'friends')),
     party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
     friends: friends ? { happiness: ownHappiness, stress: ownStress, gpa: ownGpa } : null,
   };

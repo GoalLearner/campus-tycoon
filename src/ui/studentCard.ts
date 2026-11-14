@@ -315,7 +315,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -519,7 +519,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     friendsRow.line.hidden = !card.friends || !ties;
     if (!card.friends || !ties) return;
     const web = socialWeb.view!;
-    const name = (id: number): string => (id >= 0 ? firstNamesOf(state, [refIn(web, id)])[0]! : '');
+    // Told apart from the student themself too: "studies with Phoenix W." on Phoenix's card.
+    const name = (id: number): string => (id >= 0 ? firstNamesOf(state, [card.ref, refIn(web, id)])[1]! : '');
     const words: Record<string, (who: number) => string> = {
       close: () => 'close friends',
       partner: (who) => `${name(who)}, their partner`,

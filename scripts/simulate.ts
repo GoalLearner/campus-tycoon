@@ -1,6 +1,9 @@
 import { storySpec } from '../src/sim/systems/storyteller';
 import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { catchUp, census, newWeb, webWeekOf } from '../src/sim/systems/web';
+import { effectsSound, friendsEffectsOf } from '../src/sim/systems/friends';
+import { FRIENDS_CAMPUS_HAPPY } from '../src/sim/config/social';
+import type { SocialEffects } from '../src/sim/types';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -169,6 +172,39 @@ const DAY_MS = TICKS_PER_DAY * TICK_MS;
 const YEAR_MS = TICKS_PER_YEAR * TICK_MS;
 
 /** How often each kind of player opens the game. */
+/**
+ * What ties change (DESIGN.md 63.10). The app reads the web each game week the game is open and keeps the reading in
+ * the save. A run reads it at a visit once its last reading is this many game weeks old, about a real day: a web grown
+ * and its last eight weeks lived, as the app does after a long absence. Living every week of every run would take the
+ * long run an hour more. Players of one seed share a reading, as what ties do is about people, not buildings.
+ */
+const FRIENDS_EVERY = 8;
+const friendsRead = new Map<string, SocialEffects | null>();
+let friendsReads = 0;
+let friendsMs = 0;
+/** What ties added to the share who stayed, each semester of every run that read them. */
+const friendsStays: number[] = [];
+
+function readFriends(state: GameState, campus: 'small' | 'model', seed: number): GameState {
+  const week = webWeekOf(state);
+  const kept = state.web.effects;
+  if (kept && week - kept.week < FRIENDS_EVERY) return state;
+  const key = `${campus}:${seed}:${Math.floor(week / FRIENDS_EVERY)}`;
+  let effects = friendsRead.get(key);
+  if (effects === undefined) {
+    const started = performance.now();
+    const web = newWeb(state.seed, 1024);
+    catchUp(web, state, week);
+    effects = friendsEffectsOf(web);
+    friendsRead.set(key, effects);
+    friendsReads += 1;
+    friendsMs += performance.now() - started;
+  }
+  if (!effects) return state;
+  const done = applyAction(state, { type: 'socialEffects', effects: { ...effects, week } });
+  return done.ok ? done.state : state;
+}
+
 const CHECK_IN_MS: Record<Style, number> = {
   absent: 30 * DAY_MS,
   casual: 12 * 60 * TICK_MS,
@@ -558,7 +594,8 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
   };
   board(T0);
 
-  // The player acts once before move-in, as a person would in their first session.
+  // The player acts once before move-in, as a person would in their first session. The game is open: the web answers.
+  if (style !== 'absent') state = readFriends(state, campus, seed);
   const first = takeTurn(state, style);
   state = first.state;
   const daily = (turn: ReturnType<typeof takeTurn>): void => {
@@ -583,7 +620,10 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     // Stop at each row mark on the way, so the numbers are read at the same point every year.
     while (nextRowAt <= now) {
       const r = advance(state, state.clock.lastSimulatedAt, nextRowAt);
+      const semesterWas = state.admissions.lastSemester?.tick;
       state = r.state;
+      const semester = state.admissions.lastSemester;
+      if (semester && semester.tick !== semesterWas && state.web.effects) friendsStays.push(semester.friends ?? 0);
       gap.push(...r.log);
       lostThisYear += lostToWaitlist(r.log);
       look(seen, state, r.log);
@@ -609,7 +649,10 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
       nextRowAt += YEAR_MS;
     }
     const result = advance(state, state.clock.lastSimulatedAt, now);
+    const semesterWas = state.admissions.lastSemester?.tick;
     state = result.state;
+    const semester = state.admissions.lastSemester;
+    if (semester && semester.tick !== semesterWas && state.web.effects) friendsStays.push(semester.friends ?? 0);
     lostThisYear += lostToWaitlist(result.log);
     look(seen, state, result.log);
     gap.push(...result.log);
@@ -635,6 +678,8 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     if (style !== 'absent') {
       seen.visits.push(state.clock.tick);
       for (const wait of waits(state)) seen.prices.push(wait.price);
+      // The game is open: the web reads what ties do, and the save keeps it until the next reading (DESIGN.md 63.10).
+      state = readFriends(state, campus, seed);
       board(now);
       const turn = takeTurn(state, style);
       state = turn.state;
@@ -1112,12 +1157,13 @@ function assertLayerOne(runs: Run[]): void {
     const top = runs.reduce((most, run) => Math.max(most, run.seen.stressMax), 0);
     const low = runs.reduce((least, run) => Math.min(least, run.seen.deltaMin), 0);
     const high = runs.reduce((most, run) => Math.max(most, run.seen.deltaMax), 0);
-    // The desk can add or take three points on top of the calendar's and the sky's (DESIGN.md 36.4).
-    const ok = Math.max(...breaks) <= 15 && Math.max(...outside) <= 62 && top <= 100 && low >= -(STRESS_HAPPINESS + 4 + HAPPY_CAP) && high <= BREAK_LIFT + 1.5 + HAPPY_CAP;
+    // The desk can add or take three points on top of the calendar's and the sky's (DESIGN.md 36.4), and since stop 6
+    // the students' ties two more either way: their Friends line sits beside the season's (63.10).
+    const ok = Math.max(...breaks) <= 15 && Math.max(...outside) <= 62 && top <= 100 && low >= -(STRESS_HAPPINESS + 4 + HAPPY_CAP + FRIENDS_CAMPUS_HAPPY) && high <= BREAK_LIFT + 1.5 + HAPPY_CAP + FRIENDS_CAMPUS_HAPPY;
     check(
       'Stress and weather never spiral and stay inside their caps',
       ok,
-      `Stress at most ${Math.max(...breaks)} on a break and ${Math.max(...outside)} outside exam weeks at any visit, ${top} at its highest; the season's line on Happiness between ${low.toFixed(1)} and +${high.toFixed(1)} points`,
+      `Stress at most ${Math.max(...breaks)} on a break and ${Math.max(...outside)} outside exam weeks at any visit, ${top} at its highest; the season's line on Happiness, with Friends, between ${low.toFixed(1)} and +${high.toFixed(1)} points`,
     );
   }
 
@@ -2102,6 +2148,8 @@ function assertModelCampus(seed: number): void {
       return next;
     };
     interface Read {
+      /** Chapter-days with their lift: chapters neither on probation nor suspended, counted each day, a day's average. */
+      lifted: number;
       kept: number;
       happy: number;
       stress: number;
@@ -2132,6 +2180,7 @@ function assertModelCampus(seed: number): void {
       let stress = 0;
       let semesters = 0;
       let calls = 0;
+      let lifted = 0;
       for (let day = 1; day <= SIX * 7; day++) {
         const result = advance(state, state.clock.lastSimulatedAt, from + day * DAY_MS);
         state = result.state;
@@ -2151,9 +2200,10 @@ function assertModelCampus(seed: number): void {
         spending += books.spending;
         happy += campusHappiness(state).base;
         students += enrollment(state);
+        lifted += chapters(state).filter((chapter) => { const status = chapterStatus(state, chapter); return status !== 'probation' && status !== 'suspended'; }).length;
         days += 1;
       }
-      return { calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
+      return { lifted: lifted / Math.max(1, days), calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
     };
     const campuses: Array<[string, GameState]> = [
       ['the once-a-day campus', eras(of('daily')[0]!.final)],
@@ -2186,6 +2236,9 @@ function assertModelCampus(seed: number): void {
         console.log(`  ${spec.name}`);
         console.log(`      + ${spec.gives}: ${words.gain.join('; ')}`);
         console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
+        // What the switch does to Happiness the moment it is thrown, before anything it sets going (DESIGN.md 63.10).
+        const atOnce = campusHappiness(result.state).base - campusHappiness(base).base;
+        if (spec.greek) console.log(`      at once: Happiness ${signed(atOnce, 3)}; chapters keeping their lift (not on probation or suspended), a day's average over six years: ${on.lifted.toFixed(2)} with it on, ${off.lifted.toFixed(2)} with it off`);
         console.log(`      over six years: ${signed(d.calls, 0)} calls from parties a year, ${signed(d.reports, 0)} hazing reports, keeps ${signed(d.kept)} of every $100 (income ${signed(d.income / 1e6)}M, spending ${signed(d.spending / 1e6)}M a year), Happiness ${signed(d.happy)}, semester Stress ${signed(d.stress)}, ${signed(d.left, 0)} leave a year, ${signed(d.incidents, 0)} incidents unanswered a year, rating ${signed(d.rating, 1)} (published ${signed(d.published, 1)}, ${d.rank === 0 ? 'same rank' : `${Math.abs(d.rank)} ${Math.abs(d.rank) === 1 ? 'place' : 'places'} ${d.rank < 0 ? 'better' : 'worse'}`})`);
         // Each moves the number it names, the way it says.
         const ok: Record<string, boolean> = {
@@ -2203,7 +2256,10 @@ function assertModelCampus(seed: number): void {
           partyRegistration: d.calls < 0 && d.spending > 0,
           alcoholEducation: d.stress <= 0 && d.spending > 0,
           antiHazing: d.reports <= 0,
-          greekOversight: d.reports <= 0 && d.happy <= 0.01,
+          // Its cost is to members' Happiness at once; over six years the hazing it cuts can spare a chapter probation
+          // or a suspension, and so keep its lift, which may outweigh that cost: then chapters must have kept their lift
+          // on more days with it on (DESIGN.md 63.10).
+          greekOversight: d.reports <= 0 && atOnce < 0 && (d.happy <= 0.01 || on.lifted > off.lifted),
           // The Main Character's levers (DESIGN.md 58): their gain is in the story's odds; their cost is money.
           campusJobs: d.spending > 0,
           needScholarships: d.spending > 0,
@@ -2423,6 +2479,17 @@ function assertModelCampus(seed: number): void {
       '30 days away, the social web catches up every student in under one second',
       best < 1000 && done.regrown && kinds[KIND.friend]! > enrolled / 2,
       `${best.toFixed(0)} ms for ${enrolled} students, ${away} game weeks: grown again from the seed and its last ${done.lived} weeks lived; ${kinds[KIND.friend]} friendships, ${kinds[KIND.roommate]} roommate pairs`,
+    );
+  }
+
+  // What ties change (DESIGN.md 63.10): every reading the runs took, small campus and model, stays inside its caps.
+  {
+    const readings = [...friendsRead.values()].filter((one): one is SocialEffects => one !== null);
+    const span = (values: number[], places: number): string => `${Math.min(...values).toFixed(places)} to ${Math.max(...values).toFixed(places)}`;
+    check(
+      'what ties change stays light: Happiness within 2 points, exam Stress within 4, a semester within 0.3 points of students',
+      readings.length > 0 && readings.every(effectsSound) && friendsStays.length > 0 && friendsStays.every((one) => Math.abs(one) <= 0.003 + 1e-12),
+      `${friendsReads} readings of the web in ${(friendsMs / 1000).toFixed(0)} s: the Friends line ${span(readings.map((one) => one.happiness), 2)} points of Happiness, exam Stress ${span(readings.map((one) => one.examStress), 1)}, students ${span(readings.map((one) => one.leave), 3)} times as likely to leave; ${friendsStays.length} semesters kept ${span(friendsStays.map((one) => one * 100), 2)} points more`,
     );
   }
 
