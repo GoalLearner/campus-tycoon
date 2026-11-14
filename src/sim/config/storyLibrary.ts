@@ -665,7 +665,7 @@ export const ARCS: readonly StorySpec[] = [
         hours: 40,
         cliff: 'Election day for {name} is tomorrow.',
         choices: [
-          choice('waits for the count', odds(0.45, MEETING, OUT, GRADES), O('Elected', '{name} won a seat in the student senate by forty votes.', [mood(14), need('social', 10)], { big: true }), O('Lost', '{name} lost by forty votes. They are already planning next year’s run.', [mood(-6)], { big: true })),
+          choice('waits for the count', odds(0.45, MEETING, OUT, GRADES), O('Elected', '{name} won a seat in the student senate by forty votes.', [mood(14), need('social', 10)], { big: true }), O('Lost', '{name} lost by forty votes. They are already thinking about next year’s run.', [mood(-6)], { big: true })),
         ],
       },
     ],
