@@ -259,6 +259,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         // A tradition kept on its day (DESIGN.md 50): "Larp Keeps Its 4th Homecoming Parade".
         if (entry.data?.keep === 1 && typeof entry.data.headline === 'string') out.push({ weight: 63, headline: entry.data.headline, deck: entry.text });
         break;
+      case 'alumni':
+        // The yearly drive at commencement (DESIGN.md 54.2): its own headline.
+        if (typeof entry.data?.headline === 'string') out.push({ weight: 63, headline: entry.data.headline, deck: entry.text });
+        break;
       case 'greek':
         // Rush week on Greek Row (DESIGN.md 51): its own headline, made the day it came.
         if (entry.data?.rush === 1 && typeof entry.data.headline === 'string') out.push({ weight: 61, headline: entry.data.headline, deck: entry.text });
@@ -378,6 +382,8 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
       if (status > 0 || entry.data?.overfull === 1) offer(TOP_WEIGHTS.exams + 1, 'problem', entry.text);
       else offer(entry.data?.rush === 1 ? TOP_WEIGHTS.goodNews - 1 : entry.data?.giving === 1 ? TOP_WEIGHTS.goodNews - 3 : TOP_WEIGHTS.built, 'news', entry.text);
     }
+    // The alumni drive (DESIGN.md 54.2), when it is not the headline: good news at the top.
+    else if (entry.kind === 'alumni' && entry.text !== lead.deck) offer(TOP_WEIGHTS.goodNews - 2, 'news', entry.text);
     // A discovery that is not the headline is good news at the top, just under a game's result: the first of the
     // edition's, with any others in the rest of the paper (DESIGN.md 49).
     else if (entry.kind === 'lab' && entry.data?.discovery === 1 && entry.text !== lead.deck) {

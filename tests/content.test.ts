@@ -443,12 +443,14 @@ describe('saves', () => {
     for (const chapter of expected.greek.chapters) Object.assign(chapter, { probationUntil: -1, suspendedUntil: -1, looked: false, reports: 0 });
     Object.assign(expected.greek.totals, { reports: 0, suspensions: 0 });
     expected.greek.scandalUntil = -1;
+    // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+    expected.alumni = loaded.state.alumni;
     expect(loaded.state).toEqual(expected);
     expect(validate(loaded.state)).toBeNull();
     const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
-    expect(notes).toHaveLength(1);
+    expect(notes).toHaveLength(2);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

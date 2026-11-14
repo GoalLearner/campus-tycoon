@@ -12,6 +12,7 @@ import { ordersMark, ordersOnIntake } from './orders';
 import { rhythmOnGraduation } from './rhythm';
 import { traditionsOnGraduation } from './traditions';
 import { greekOnGraduation } from './greek';
+import { alumniOnGraduation, alumniOnSemester } from './alumni';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -356,6 +357,8 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   const stayed = enrollment(state);
   const left = before - stayed;
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
+  // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
+  alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
   ordersMark(state, 'semesterLeft', left);
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
@@ -397,6 +400,8 @@ export function graduate(state: GameState, log: LogEntry[]): void {
   // Commencement is a moment of the calendar, and the goals for the year are paid (DESIGN.md 44).
   rhythmOnGraduation(state, seniors, log);
   traditionsOnGraduation(state);
+  // The class's numbers are fixed and the yearly drive is held, before its chapter members leave (DESIGN.md 54).
+  alumniOnGraduation(state, calendarAt(state.clock).year, seniors, log);
   // The seniors among Greek Row's members graduate with the rest (DESIGN.md 51).
   greekOnGraduation(state);
 }

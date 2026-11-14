@@ -311,6 +311,7 @@ export const RATING_INPUT_NAME: Record<RatingInputId, string> = {
   reputation: 'Reputation',
   retention: 'Retention',
   selectivity: 'Selectivity',
+  alumni: 'Alumni success',
 };
 
 // ------------------------------------------------------- lock and paper --

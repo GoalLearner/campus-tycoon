@@ -23,6 +23,7 @@ import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
 import { newGreek } from './systems/greek';
+import { newAlumni, openingPool } from './systems/alumni';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -31,7 +32,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 26;
+export const SAVE_VERSION = 27;
 
 export interface SaveFile {
   v: number;
@@ -356,6 +357,16 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 27: alumni giving (DESIGN.md 54, as built in section 56). No drive yet. A game with goals gets the
+  // opening pool, the classes before the player arrived, with every graduate it has had since in it.
+  26: (state) => {
+    if (typeof state.alumni !== 'object' || state.alumni === null) {
+      const game = state as unknown as GameState;
+      game.alumni = newAlumni();
+      game.alumni.opening = openingPool(game, game.stats?.graduates ?? 0);
+    }
+    return state;
+  },
 };
 
 /**
@@ -421,7 +432,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek', 'alumni'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {

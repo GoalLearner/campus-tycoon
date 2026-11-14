@@ -2,6 +2,7 @@ import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
 import { newGreek } from './systems/greek';
+import { newAlumni, openingPool } from './systems/alumni';
 import { newInbox } from './systems/inbox';
 import { stageSpec } from './config/buildings';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
@@ -221,6 +222,7 @@ export function newGame(opts: NewGameOptions): GameState {
     labs: newLabs(),
     traditions: newTraditions(),
     greek: newGreek(),
+    alumni: newAlumni(),
   };
   firstOrders(state);
   startFootball(state, 1);
@@ -244,6 +246,8 @@ function openModelCampus(state: GameState, fullSize: boolean): void {
   const map = state.map;
   const own = modelScale({ ...map, scale: 1 });
   openWithStudents(state, fullSize ? MODEL_STUDENTS : Math.round((MODEL_STUDENTS * map.scale) / own));
+  // The classes that graduated before the player arrived (DESIGN.md 54.1): the first drive is not empty.
+  state.alumni.opening = openingPool(state);
   // Each yard is given the workers it needs to keep up with what it looks after, and never fewer than one.
   for (const yard of state.map.placed) {
     if (!yard || yard.type !== 'yard') continue;

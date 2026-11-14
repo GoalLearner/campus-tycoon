@@ -679,6 +679,8 @@ describe('a save from version 15', () => {
     expected.traditions = state.traditions;
     expected.greek = newGreek();
     expected.rng.orders = state.rng.orders;
+    // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+    expected.alumni = state.alumni;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -708,7 +710,7 @@ describe('a save from version 15', () => {
   it('tells an upgraded save what is new, once', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(12);
+    expect(notes.length).toBe(13);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

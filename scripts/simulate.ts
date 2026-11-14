@@ -88,6 +88,10 @@ import {
   ROUTINE_CAP,
   TOP_ITEMS,
   toneProblem,
+  alumniClasses,
+  alumniPool,
+  alumniSuccess,
+  ENDOWMENT_YIELD,
   DRINK_WORDS,
   DRINK_BUDGET,
   HEAVY_WORDS,
@@ -294,6 +298,9 @@ interface Seen {
    */
   greekWeeks: Array<{ week: number; chapters: number; members: number; overfull: number; good: number; warning: number; probation: number; drag: number; happiness: number; retention: number }>;
   greekRush: Array<{ week: number; joined: number; moved: number }>;
+  /** Alumni giving (DESIGN.md 56): each drive, with the pool it asked and the commencements seen. */
+  drives: Array<{ week: number; raised: number; cash: number; pool: number }>;
+  commencements: number;
   greekWarnings: number;
   greekProbations: number;
   /** Real-life content (DESIGN.md 55): lines read about drinking and heavy themes, calls from parties, hazing. */
@@ -360,6 +367,8 @@ const newSeen = (): Seen => ({
   mostStudents: 0,
   greekWeeks: [],
   greekRush: [],
+  drives: [],
+  commencements: 0,
   greekWarnings: 0,
   greekProbations: 0,
   drinkLines: 0,
@@ -419,6 +428,9 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'greek' && entry.data?.hazing === 1 && entry.data.status === 2) seen.hazingProbations += 1;
     if (entry.kind === 'greek' && entry.data?.hazing === 1 && entry.data.status === 3) seen.hazingSuspensions += 1;
     if (entry.kind === 'greek' && entry.data?.scandal === 1) seen.scandals += 1;
+    // Alumni giving (DESIGN.md 56): a drive at each commencement.
+    if (entry.kind === 'graduation') seen.commencements += 1;
+    if (entry.kind === 'alumni') seen.drives.push({ week: Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1, raised: Number(entry.data?.raised ?? 0), cash: Number(entry.data?.cash ?? 0), pool: Number(entry.data?.pool ?? 0) });
   }
   for (const entry of log) {
     if (entry.kind !== 'goal') continue;
@@ -1815,6 +1827,36 @@ function assertModelCampus(seed: number): void {
       'calls from parties on every campus with goals, hazing only where there is a chapter, and a suspension only after a report',
       runs.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.suspensions <= run.final.greek.totals.reports) && bare.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.reports === 0),
       `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports, ${run.final.greek.totals.suspensions} suspensions`).join('; ')}; with no chapter house: ${bare.map((run) => `${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports`).join('; ')}`,
+    );
+  }
+
+  // Alumni giving (DESIGN.md 54, as built in section 56): the pool, the drives, the endowment, alumni success.
+  {
+    const row = (name: string, cell: (run: Run) => string): void => console.log(`${name.padEnd(34)}${runs.map((run) => cell(run).padStart(14)).join('')}`);
+    const drive = (run: Run, at: number) => run.seen.drives.find((one) => one.week >= at) ?? run.seen.drives[run.seen.drives.length - 1];
+    const money = (n: number): string => `$${(n / 1e6).toFixed(1)}M`;
+    const classes = (run: Run) => alumniClasses(run.final);
+    const mean = (values: number[]): number => (values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length);
+    console.log('ALUMNI GIVING: THE POOL, THE DRIVES AND THE ENDOWMENT');
+    console.log(`${''.padEnd(34)}${head}`);
+    row('drives', (run) => `${run.seen.drives.length} of ${run.seen.commencements}`);
+    row('alumni at the start', (run) => (run.seen.drives[0]?.pool ?? 0).toLocaleString('en-US'));
+    row('alumni at the end', (run) => alumniPool(run.final).toLocaleString('en-US'));
+    for (const week of [1, 10, 20, 30, 44]) row(`drive, week ${week}`, (run) => money(drive(run, week)?.raised ?? 0));
+    row('  as cash, week 44', (run) => money(drive(run, 44)?.cash ?? 0));
+    row('  share of income, week 44', (run) => `${((100 * (drive(run, 44)?.cash ?? 0)) / Math.max(1, budget(run.final).incomeTotal)).toFixed(2)}%`);
+    row('raised in all', (run) => money(run.final.alumni.totals.raised));
+    row('to the endowment in all', (run) => money(run.final.alumni.totals.endowed));
+    row('  its yield a year', (run) => money(run.final.alumni.totals.endowed * ENDOWMENT_YIELD));
+    row('class success, average', (run) => mean(classes(run).map((one) => one.success ?? 0)).toFixed(1));
+    row('class affinity, average', (run) => mean(classes(run).map((one) => one.affinity ?? 0)).toFixed(1));
+    row('  the last class', (run) => (classes(run).slice(-1)[0]?.affinity ?? 0).toFixed(1));
+    row('alumni success input at the end', (run) => (alumniSuccess(run.final) ?? 0).toFixed(1));
+    console.log('');
+    check(
+      'a drive at every commencement on a game with goals, whoever plays it, and the pool never falls',
+      [...runs, ...bare].every((run) => run.seen.drives.length === run.seen.commencements && run.seen.drives.length > 0 && run.seen.drives.every((one, n) => n === 0 || one.pool >= run.seen.drives[n - 1]!.pool)),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.drives.length} drives at ${run.seen.commencements} commencements, ${(run.seen.drives[0]?.pool ?? 0).toLocaleString('en-US')} to ${alumniPool(run.final).toLocaleString('en-US')} alumni`).join('; '),
     );
   }
 

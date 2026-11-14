@@ -70,7 +70,7 @@ import {
   enrollmentCap,
   nextApplicants,
 } from '../sim';
-import { craftsReady, decorSpec, giftReady, hasMakerspace, previewDecor, waits as waitsNow } from '../sim';
+import { craftsReady, decorSpec, giftReady, hasMakerspace, previewDecor, scorecard, waits as waitsNow } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
@@ -1590,8 +1590,9 @@ export function mountUi(root: HTMLElement): void {
         steps.append(down, el('span', 'staff-count', view.marketing.line), up);
         body.append(steps);
 
-        // The endowment: cash paid in for good.
+        // The endowment: cash paid in for good. Alumni giving builds it too (DESIGN.md 54.3).
         body.append(el('div', 'money-head', 'Endowment'), el('p', '', view.endowment.line));
+        if (view.alumni) body.append(el('p', 'fine', view.alumni));
         if (view.endowment.payIn.length > 0) {
           const pay = el('div', 'money-pay');
           for (const amount of view.endowment.payIn) {
@@ -1631,10 +1632,10 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
-  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' = 'goals';
+  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard' = 'goals';
 
   /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
-  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' = campusPage): void {
+  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard' = campusPage): void {
     campusPage = page;
     /** The row of the Capacity page that is open. One at a time. */
     let openRow: string | null = null;
@@ -1677,13 +1678,18 @@ export function mountUi(root: HTMLElement): void {
         // The Traditions page is there once the first commencement has opened a place (DESIGN.md 50).
         const traditions = traditionsView(state);
         if (campusPage === 'traditions' && !traditions) campusPage = 'goals';
+        // The Scorecard (DESIGN.md 54.3): on a game with a drive.
+        const card7 = scorecard(state);
+        if (campusPage === 'scorecard' && !card7) campusPage = 'goals';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
         if (policies) pages.push(['policies', 'Policies']);
         if (traditions) pages.push(['traditions', 'Traditions']);
+        // The Scorecard last: on a phone the row scrolls sideways, and the open page is brought into view.
+        if (card7) pages.push(['scorecard', 'Scorecard']);
         for (const [id, label] of pages) {
           const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
             campusPage = id;
@@ -1693,6 +1699,8 @@ export function mountUi(root: HTMLElement): void {
           tabs.append(tab);
         }
         head.append(tabs);
+        const open = tabs.querySelector<HTMLElement>('.fb-tab.active');
+        if (open && typeof open.scrollIntoView === 'function') open.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
         body.textContent = '';
         if (campusPage === 'goals') {
@@ -1746,6 +1754,19 @@ export function mountUi(root: HTMLElement): void {
           if (size.reached.length > 0) {
             body.append(el('div', 'money-head', 'Goals reached'));
             for (const line of size.reached) body.append(el('p', 'fine', line));
+          }
+        } else if (campusPage === 'scorecard' && card7) {
+          // Seven rows, one for each stage of the spine: its number, an arrow against last year, and what limits it most.
+          for (const row of card7) {
+            const box = el('div', 'score-row');
+            const top = el('div', 'size-row');
+            const arrow = row.trend ? (row.trend.way === 'up' ? '▲' : row.trend.way === 'down' ? '▼' : '▬') : '';
+            const mark = el('span', `score-arrow${row.trend?.good === true ? ' good' : row.trend?.good === false ? ' bad' : ''}`, arrow);
+            const value = el('span', 'size-value', row.value);
+            value.prepend(mark);
+            top.append(el('span', 'score-name', row.name), value);
+            box.append(top, el('p', 'fine', row.limit));
+            body.append(box);
           }
         } else if (campusPage === 'policies' && policies) {
           for (const row of policies.rows) {

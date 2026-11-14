@@ -680,6 +680,8 @@ describe('a save from version 17', () => {
     expected.traditions = state.traditions;
     expected.greek = newGreek();
     expected.rng.orders = state.rng.orders;
+    // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+    expected.alumni = state.alumni;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // Its money is what it was the moment before.
@@ -748,7 +750,7 @@ describe('a save from version 17', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(9);
+    expect(notes).toHaveLength(10);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

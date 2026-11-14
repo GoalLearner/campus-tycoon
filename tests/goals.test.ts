@@ -442,6 +442,8 @@ describe('the main street', () => {
     expected.traditions = loaded.state.traditions;
     expected.greek = newGreek();
     expected.rng.orders = loaded.state.rng.orders;
+    // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+    expected.alumni = loaded.state.alumni;
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

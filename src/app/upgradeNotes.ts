@@ -96,5 +96,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 26) {
     notes.push('New: real college life. Parties lift Food & fun, and late nights cost a little Stress and grades. Students of 21 and over may drink, and now and then Campus Safety or the Medical Center gets a call. Three new policies are about parties. On Greek Row, pledges may be hazed: a report comes to your desk, and two more policies lower the risk.');
   }
+  if (fromVersion < 27) {
+    notes.push('New: alumni giving. Every graduate joins the alumni pool, and each commencement holds a drive: happier classes, traditions, Greek Row and wins give more. Most of it goes to the endowment. The Scorecard, behind the student count, shows all seven stages from applications to donations.');
+  }
   return notes;
 }

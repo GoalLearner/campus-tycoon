@@ -23,6 +23,8 @@ import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
 import { begunHere, yearAcceptance } from './admissions';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
+import { alumniDetail, alumniSuccess } from './alumni';
+import { ALUMNI_WEIGHT } from '../config/alumni';
 import { honorsRate } from './bigBuilds';
 import { labReputation } from './labs';
 import { classPressure, crowding } from './season';
@@ -169,7 +171,7 @@ function academicOrder(field: Field): number[] {
 // ------------------------------------------------------------ academics --
 
 export interface AcademicInput {
-  id: 'graduation' | 'classSize' | 'retention' | 'selectivity' | 'reputation';
+  id: 'graduation' | 'classSize' | 'retention' | 'selectivity' | 'reputation' | 'alumni';
   name: string;
   /** Its share of the rating when every input exists, out of 100. */
   weight: number;
@@ -221,6 +223,10 @@ export function academicInputs(state: GameState): AcademicInput[] {
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : 100 * retention, detail: retention === null ? 'No semester has ended yet' : `${(100 * (RETENTION_FLOOR + RETENTION_SPAN * retention)).toFixed(1)}% return each semester` },
     { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
   ];
+  // Alumni success (DESIGN.md 24.4, switched on with alumni giving in section 56): the latest classes' success, on a
+  // game with goals. Elsewhere it has nothing to read, and its weight is shared among the others as before.
+  const alumni = alumniSuccess(state);
+  if (alumni !== null) inputs.push({ id: 'alumni', name: 'Alumni success', weight: ALUMNI_WEIGHT, level: alumni, detail: alumniDetail(state) });
   // A policy that is on moves the input it belongs to, and is named on that input's line (DESIGN.md 41.7).
   for (const input of inputs) {
     if (input.level === null) continue;

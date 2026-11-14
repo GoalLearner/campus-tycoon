@@ -543,6 +543,10 @@ export interface ClassRecord {
   finishedOnTime: number;
   finishedLate: number;
   left: number;
+  /** Fixed the day it graduates, on a game with goals (DESIGN.md 54.1): its success and its affinity, 0 to 100, and its share in chapters. */
+  success?: number;
+  affinity?: number;
+  greek?: number;
 }
 
 export interface Stats {
@@ -629,6 +633,44 @@ export interface GameState {
   traditions: Traditions;
   /** Greek Row (DESIGN.md 51): a chapter for each chapter house on the map. */
   greek: Greek;
+  /** Alumni giving (DESIGN.md 54, as built in section 56): the pool's records, the drives, the Scorecard's last year. */
+  alumni: Alumni;
+}
+
+/** One school year's part in its classes' affinity (DESIGN.md 56). */
+export interface AlumniYear {
+  year: number;
+  /** Happiness as each semester closed, summed, and the semesters. */
+  happy: number;
+  semesters: number;
+  /** Traditions kept this school year, and the football season's wins and games. */
+  kept: number;
+  wins: number;
+  games: number;
+}
+
+/** A yearly drive, at commencement (DESIGN.md 56). */
+export interface AlumniDrive {
+  year: number;
+  raised: number;
+  endowed: number;
+  /** The cash share, paid over the school year that follows: the Money panel's "Alumni giving" line. */
+  cash: number;
+  donors: number;
+  /** The class that gave at the highest rate and the one at the lowest, by the year they graduated (0 for the opening pool). */
+  best: { year: number; rate: number } | null;
+  worst: { year: number; rate: number } | null;
+}
+
+export interface Alumni {
+  /** The classes that graduated before the player arrived, as one: a model campus opens with them. null on a small campus. */
+  opening: { size: number; success: number; affinity: number } | null;
+  /** The school years still part of a class's affinity: the last few. */
+  years: AlumniYear[];
+  last: AlumniDrive | null;
+  totals: { raised: number; endowed: number; drives: number };
+  /** The Scorecard's seven numbers at the last year's end, for its arrows. */
+  scorecard: { year: number; values: Array<number | null> } | null;
 }
 
 /** How a chapter stands (DESIGN.md 51): Good, on Warning while something is wrong, on Probation if it stays wrong. */
@@ -1102,6 +1144,7 @@ export interface Term {
 }
 
 export type LogKind =
+  | 'alumni'
   | 'inbox'
   | 'goal'
   | 'built'
