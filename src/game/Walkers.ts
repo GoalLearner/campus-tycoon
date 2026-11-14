@@ -131,7 +131,15 @@ interface Extra {
   pace?: number;
   /** A sprite drawn beside them, because no figure can hold anything: the guide's pennant. */
   prop?: string;
+  /** PROTOTYPE (social-sim-measure): a friend walking with someone, side by side on the same route. */
+  companion?: { leg: number; offset: number };
 }
+
+/**
+ * PROTOTYPE for measuring the social crowd's frame cost (social-sim-measure branch, never merged): friends walk
+ * together, couples close, and an emote floats over some heads. Switched on by the dev page's `&socialfx=1`.
+ */
+export const socialFx = { on: false };
 
 interface Walker {
   sprite: Phaser.GameObjects.Image;
@@ -163,6 +171,9 @@ interface Walker {
   shownKey: string;
   /** True while the figure is drawn in the school's colour. */
   tinted: boolean;
+  /** PROTOTYPE: an emote over their head, and how far to the side of the route they walk. */
+  emote: Phaser.GameObjects.Image | null;
+  offset: number;
 }
 
 interface Banner {
@@ -734,7 +745,13 @@ export class Walkers {
       prop.setOrigin(0.5, 1).setAlpha(0);
     }
     // Someone already part of the way along, so a view fills with people mid-stride.
-    const leg = partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1;
+    const leg = extra.companion ? extra.companion.leg : partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1;
+    let emote: Phaser.GameObjects.Image | null = null;
+    if (socialFx.on && kind === 'student' && Math.random() < 0.3 && this.art.has('icon.collect')) {
+      emote = this.scene.add.image(0, 0, '__DEFAULT');
+      this.art.apply(emote, 'icon.collect');
+      emote.setOrigin(0.5, 1).setAlpha(0).setScale(0.8);
+    }
     const begin = route[leg - 1]!;
     this.walkers.push({
       sprite,
@@ -760,8 +777,20 @@ export class Walkers {
       offscreenMs: 0,
       shownKey: '',
       tinted: false,
+      emote,
+      offset: extra.companion?.offset ?? 0,
     });
     sprite.clearTint();
+    // PROTOTYPE: about half of students walk with one or two friends, a couple close, a group a little apart.
+    if (socialFx.on && kind === 'student' && !extra.companion && Math.random() < 0.5) {
+      const leader = this.walkers[this.walkers.length - 1]!;
+      const friends = Math.random() < 0.35 ? 1 : 2;
+      const couple = friends === 1 && Math.random() < 0.4;
+      for (let n = 0; n < friends; n++) {
+        const side = n === 0 ? (couple ? 0.12 : 0.2) : -0.2;
+        this.start(from, to, partWay, null, 'student', { route, pace: leader.pace, companion: { leg, offset: side } });
+      }
+    }
     return true;
   }
 
@@ -771,6 +800,7 @@ export class Walkers {
     if (walker.key !== null && walker.key === this.marked) this.ring?.setVisible(false);
     walker.sprite.setVisible(false);
     walker.prop?.destroy();
+    walker.emote?.destroy();
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
   }
@@ -787,7 +817,9 @@ export class Walkers {
       walker.shownKey = key;
     }
     walker.sprite.setFlipX(flipFrom !== undefined);
-    const at = this.iso.toWorld(walker.x, walker.y);
+    // PROTOTYPE: a friend walks a little to the side of the route, across the way they go.
+    const across = walker.offset === 0 ? null : walker.direction === 'se' || walker.direction === 'nw' ? { dx: 0, dy: walker.offset } : { dx: walker.offset, dy: 0 };
+    const at = this.iso.toWorld(walker.x + (across?.dx ?? 0), walker.y + (across?.dy ?? 0));
     walker.sprite.setPosition(at.x, at.y);
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
@@ -805,6 +837,10 @@ export class Walkers {
       const beside = { x: at.x + off.x, y: at.y + off.y };
       const sway = walker.kind === 'guide' ? Math.sin(this.scene.time.now / 420 + walker.stride / 400) * 0.1 * this.wind : 0;
       walker.prop.setPosition(beside.x, beside.y).setRotation(sway).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
+    }
+    if (walker.emote) {
+      const bob = Math.sin(this.scene.time.now / 380 + walker.stride / 300) * 1.5;
+      walker.emote.setPosition(at.x, at.y - 40 + bob).setDepth(walker.sprite.depth + 0.06).setAlpha(walker.alpha);
     }
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.

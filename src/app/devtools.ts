@@ -3,6 +3,7 @@ import { chapterBeds, chapters, coverFor, greekHazing, groupOf, noiseAt, peopleO
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
+import { socialFx } from '../game/Walkers';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting } from '../sim';
@@ -698,6 +699,8 @@ function chapterDevSpot(state: GameState): Point | null {
 export function installDevTools(): void {
   (window as unknown as Record<string, unknown>).__campus = { store, session, clock };
   const params = new URLSearchParams(window.location.search);
+  // PROTOTYPE (social-sim-measure): &socialfx=1 draws the crowd in friend groups and couples with emotes over heads.
+  if (params.has('socialfx')) socialFx.on = true;
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);
   if (Number.isFinite(hour)) forceHour(hour);
