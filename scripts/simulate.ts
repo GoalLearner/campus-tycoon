@@ -1,3 +1,4 @@
+import { storySpec } from '../src/sim/systems/storyteller';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -619,7 +620,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
       seen.goalsUnsaid += reached.filter((entry) => paper.deck !== entry.text && !paper.top.some((item) => item.text === entry.text)).length;
       if (paper.top.length === 0 || paper.headline === '') seen.editionsEmpty += 1;
       if (paper.top.length > TOP_ITEMS) seen.editionsOver += 1;
-      tone(seen, [paper.headline, paper.deck, ...paper.top.map((item) => item.text), ...paper.more, ...paper.scores, ...(paper.admissions ? [paper.admissions] : []), ...paper.poll.map((line) => line.label)]);
+      tone(seen, [paper.headline, paper.deck, ...paper.top.map((item) => item.text), ...paper.more, ...paper.scores, ...(paper.admissions ? [paper.admissions] : []), ...paper.poll.map((line) => line.label), ...(paper.main?.lines ?? [])]);
     }
     // A football season that has just finished is checked once, while its table is still there.
     const season = state.football.season;
@@ -1896,11 +1897,20 @@ function assertModelCampus(seed: number): void {
     row('lines in the paper, a real week', (run) => (run.seen.mcLines / PACE_WEEKS).toFixed(1));
     row('nights with drinks, a real week', (run) => (run.seen.mcDrinks / PACE_WEEKS).toFixed(1));
     row('  hangovers', (run) => (run.seen.mcHangovers / PACE_WEEKS).toFixed(1));
+    // The story (DESIGN.md 58): chapters begun, and how many of them were heavy.
+    row('stories begun, a real week', (run) => ((run.final.story.nextChapter - 1) / PACE_WEEKS).toFixed(1));
+    row('  heavy, of the last 40', (run) => String(run.final.story.chapters.filter((one) => storySpec(one.arc)?.heavy).length));
+    row('  kinds of story, of the last 40', (run) => String(new Set(run.final.story.chapters.map((one) => storySpec(one.arc)?.category)).size));
     row('GPA of those who graduated', (run) => {
       const done = run.final.story.fame.filter((one) => one.status === 'graduated' && one.gpa !== null);
       return done.length > 0 ? (done.reduce((sum, one) => sum + (one.gpa ?? 0), 0) / done.length).toFixed(2) : '-';
     });
     console.log('');
+    check(
+      'a main character’s story goes on all the while: several stories a real week, of many kinds, few of them heavy (53.5)',
+      mains.every((run) => (run.final.story.nextChapter - 1) / PACE_WEEKS >= 5 && new Set(run.final.story.chapters.map((one) => storySpec(one.arc)?.category)).size >= 6 && run.final.story.chapters.filter((one) => storySpec(one.arc)?.heavy).length <= run.final.story.chapters.length / 4),
+      mains.map((run) => `${run.style} ${run.seed}: ${run.final.story.nextChapter - 1} stories in ${PACE_WEEKS} real weeks, ${run.final.story.chapters.filter((one) => storySpec(one.arc)?.heavy).length} heavy of the last ${run.final.story.chapters.length}`).join('; '),
+    );
     check(
       'a main character plans each real day, and has at most three key moments on any real day (53.1)',
       mains.every((run) => run.seen.mcPlans >= PACE_WEEKS * 6 && most(run) <= 3),
@@ -2192,6 +2202,10 @@ function assertModelCampus(seed: number): void {
           alcoholEducation: d.stress <= 0 && d.spending > 0,
           antiHazing: d.reports <= 0,
           greekOversight: d.reports <= 0 && d.happy <= 0.01,
+          // The Main Character's levers (DESIGN.md 58): their gain is in the story's odds; their cost is money.
+          campusJobs: d.spending > 0,
+          needScholarships: d.spending > 0,
+          cheaperDining: d.spending > 0,
         };
         if (ok[spec.id] === false) {
           moved = false;

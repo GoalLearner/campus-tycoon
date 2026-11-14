@@ -315,7 +315,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
   });
 
   describe('from version 20', () => {
@@ -349,7 +349,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(8);
+      expect(notes).toHaveLength(9);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

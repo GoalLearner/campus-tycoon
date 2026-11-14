@@ -142,7 +142,7 @@ export const ARCS: readonly StorySpec[] = [
   ARC({
     id: 'weedOut',
     category: 'classes',
-    title: 'The weed-out class',
+    title: 'The make-or-break class',
     weight: 3,
     needs: ['term'],
     calendar: 'exams',
@@ -156,9 +156,9 @@ export const ARCS: readonly StorySpec[] = [
         ],
       },
       {
-        text: 'The midterm for the weed-out class is tomorrow.',
+        text: 'The midterm for the make-or-break class is tomorrow.',
         hours: 30,
-        cliff: '{name} has the weed-out midterm tomorrow. Has the studying been enough?',
+        cliff: '{name} has the make-or-break midterm tomorrow. Has the studying been enough?',
         choices: [
           choice('studies late, then sleeps', odds(0.5, STUDY, STEADY, NEAR_LIBRARY, CLASSES), O('Passed', '{name} passed the midterm with a B. The class is staying.', [gpa(0.15), mood(6), stress(-6)], { big: true }), O('Failed the midterm', 'A 41. The class is not lost yet, but it is close.', [gpa(-0.15), stress(8), mood(-5)], { next: 'failingMidterm', big: true })),
         ],

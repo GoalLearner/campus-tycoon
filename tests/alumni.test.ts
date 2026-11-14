@@ -200,7 +200,7 @@ describe('saves', () => {
     expect(loaded.state.alumni).toEqual(THREE.state.alumni);
     expect(loaded.state.classes).toEqual(THREE.state.classes);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
   });
 
   describe('from version 26', () => {
@@ -228,7 +228,7 @@ describe('saves', () => {
       expect(validate(week.state)).toBeNull();
       expect(week.log.filter((entry) => entry.kind === 'alumni')).toHaveLength(1);
       const notes = upgradeNotes(26);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/alumni/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

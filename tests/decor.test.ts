@@ -675,7 +675,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(19);
-      expect(SAVE_VERSION).toBe(28);
+      expect(SAVE_VERSION).toBe(29);
       expect(state.decor).toEqual(newDecor());
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
@@ -713,7 +713,7 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

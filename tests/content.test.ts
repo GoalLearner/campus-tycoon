@@ -453,7 +453,7 @@ describe('saves', () => {
     const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
-    expect(notes).toHaveLength(3);
+    expect(notes).toHaveLength(4);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

@@ -110,7 +110,7 @@ const lotOf = (state: GameState, zone: 'housing' | 'academic'): number => {
 };
 
 describe('the list of policies', () => {
-  it('is fifteen, in the three eras, each with one gain and one named cost in plain words', () => {
+  it('is eighteen, in the three eras, each with one gain and one named cost in plain words', () => {
     expect(POLICIES.map((spec) => spec.name)).toEqual([
       'Reading days before finals',
       'Tough grading',
@@ -127,9 +127,12 @@ describe('the list of policies', () => {
       'Alcohol education',
       'Anti-hazing policy',
       'Greek life oversight',
+      'Campus jobs program',
+      'Need-based scholarships',
+      'Cheaper dining plans',
     ]);
     expect(policiesAt(1)).toHaveLength(6);
-    expect(policiesAt(2).map((spec) => spec.id)).toEqual(['allNightLibrary', 'parkingFees', 'alcoholEducation']);
+    expect(policiesAt(2).map((spec) => spec.id)).toEqual(['allNightLibrary', 'parkingFees', 'alcoholEducation', 'campusJobs', 'needScholarships', 'cheaperDining']);
     expect(policiesAt(3).map((spec) => spec.id)).toEqual(['quietHours', 'namingRights']);
     expect(new Set(POLICIES.map((spec) => spec.id)).size).toBe(POLICIES.length);
     for (const spec of POLICIES) {
@@ -163,7 +166,7 @@ describe('the list of policies', () => {
       }
     }
     // Every kind of effect there is has a policy that uses it.
-    expect([...kinds].sort()).toEqual(['cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'rating', 'spareBeds', 'upkeep']);
+    expect([...kinds].sort()).toEqual(['cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
   });
 });
 
@@ -189,11 +192,11 @@ describe('an era opens its switches', () => {
     expect(applyAction(small, { type: 'policy', id: 'nothing', on: true }).ok).toBe(false);
   });
 
-  it('opens six at Growth, three more at Flagship and two more at Legacy, every one off', () => {
+  it('opens six at Growth, six more at Flagship and two more at Legacy, every one off', () => {
     expect(policiesOpen(ranked(126).state)).toHaveLength(0);
     expect(policiesOpen(growth()).map((spec) => spec.id)).toEqual(['readingDays', 'toughGrading', 'freshmenOnCampus', 'freeStudentSection', 'dryCampus', 'partyRegistration']);
-    expect(policiesOpen(flagship())).toHaveLength(9);
-    expect(policiesOpen(legacy())).toHaveLength(11);
+    expect(policiesOpen(flagship())).toHaveLength(12);
+    expect(policiesOpen(legacy())).toHaveLength(14);
     for (const state of [growth(), flagship(), legacy()]) {
       expect(state.policies.on).toEqual([]);
       expect(policiesView(state)!.rows.every((row) => !row.on && !row.locked)).toBe(true);
@@ -239,12 +242,12 @@ describe('an era opens its switches', () => {
 
     // The later eras say theirs too.
     const second = ranked(70, state).log.find((entry) => entry.kind === 'goal')!;
-    expect(second.text.endsWith("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and three more policies: All-night library, Parking fees and Alcohol education.")).toBe(true);
+    expect(second.text.endsWith("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and six more policies: All-night library, Parking fees, Alcohol education, Campus jobs program, Need-based scholarships and Cheaper dining plans.")).toBe(true);
     const third = ranked(20, ranked(70, state).state).log.find((entry) => entry.kind === 'goal')!;
     expect(third.text.endsWith("The Legacy era begins. It opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.")).toBe(true);
     // A day that opens two eras at once says both.
     const both = ranked(20, state).log.find((entry) => entry.kind === 'goal')!;
-    expect(both.text).toContain("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and three more policies: All-night library, Parking fees and Alcohol education.");
+    expect(both.text).toContain("The Flagship era begins. It opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and six more policies: All-night library, Parking fees, Alcohol education, Campus jobs program, Need-based scholarships and Cheaper dining plans.");
     expect(both.text).toContain("The Legacy era begins. It opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     // An edition with no era in it has no such line.
     expect(edition(state, [], facts(state)).top.some((item) => item.go === 'policies')).toBe(false);
@@ -255,7 +258,7 @@ describe('an era opens its switches', () => {
     expect(nextEra(start)).toEqual({ era: 1, name: 'Growth', top: 125, opens: eraOpens(1) });
     expect(sizeView(start).era).toBe('Era: Arrival');
     expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with six switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus and Party registration; and Greek Row, with chapter houses in the Build menu.');
-    expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and three more policies: All-night library, Parking fees and Alcohol education.');
+    expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and six more policies: All-night library, Parking fees, Alcohol education, Campus jobs program, Need-based scholarships and Cheaper dining plans.');
     expect(sizeView(flagship()).eraNext).toBe("The Legacy era, at the Top 25, opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     expect(sizeView(legacy()).eraNext).toBe('');
     expect(nextEra(legacy())).toBeNull();
@@ -270,7 +273,7 @@ describe('an era opens its switches', () => {
 describe('a switch', () => {
   it('says its gain and its cost before it is turned on, in words and in this campus\'s numbers', () => {
     const view = policiesView(legacy())!;
-    expect(view.rows).toHaveLength(11);
+    expect(view.rows).toHaveLength(14);
     for (const row of view.rows) {
       const spec = policySpec(row.id)!;
       expect(row.gain).toBe(spec.gives);
@@ -643,7 +646,7 @@ describe('content is data', () => {
     } finally {
       list.pop();
     }
-    expect(POLICIES).toHaveLength(15);
+    expect(POLICIES).toHaveLength(18);
   });
 
   it('no rule, page or line of the game names a policy: only the list does', () => {
@@ -737,7 +740,7 @@ describe('a save from version 16', () => {
   });
 
   it('already in Growth or later opens with every switch off', () => {
-    for (const [rank, open] of [[3, 6], [5, 9], [7, 11]] as const) {
+    for (const [rank, open] of [[3, 6], [5, 12], [7, 14]] as const) {
       const file = JSON.parse(text) as { v: number; savedAt: number; state: GameState };
       file.state.goals = { size: 1, rank, reached: [], rewards: 0 };
       const loaded = parseSave(JSON.stringify(file));
@@ -764,7 +767,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(12);
+    expect(notes).toHaveLength(13);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
