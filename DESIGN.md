@@ -1067,7 +1067,7 @@ On 2026-11-11 the owner asked for more of these, each with a card. Section 32 ha
 
 ### 13.7 Tone for personalities
 
-Jokes aim at types and institutions and never demean a student. The Party Animal carries no alcohol reference: they are always coming from a party and sleep through morning class. The Charmer stays at harmless flirting. Homesick, Stressed-Out, Heartbroken and Broke Student stay comic and never imply a crisis.
+Jokes aim at types and institutions and never demean a student. The Party Animal drinks at 21 and over and lives with what follows, and a younger one does not (changed on 2026-11-13 by section 52.1; built in section 55). The Charmer stays at harmless flirting. Homesick, Stressed-Out, Heartbroken and Broke Student are normal setbacks, handled kindly, and never imply a crisis.
 
 ### 13.8 The student card, simple version
 
@@ -6781,3 +6781,71 @@ The owner, 2026-11-13: "Alumni giving: graduates join an alumni pool that grows 
 - Money stays in $12 to $17 of every $100 for the casual and once-a-day players, years 3 to 8 and weeks 9 to 44.
 - The rank's pace holds; the level pace stays under its ceiling of 7.
 - The small campus's tables do not change unless the pool reaches it.
+
+## 55. Real-life college content, as built
+
+The owner's content change of 2026-11-13 (section 52), built as the content stop on the main session's brief: "apply my real-life content change. Alcohol and Dry campus, light hazing as a chapter system with risk, getting caught, probation and suspension, and my anti-hazing and oversight policies; heartbreak and setbacks as normal; target 13+". Section 16 is rewritten to match 52.1. The story arcs are MC-2's (53.6). Only a game with goals has parties and hazing, so the small campus's tables are the same, line for line.
+
+### 55.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The tone guide | Section 16 rewritten to 52.1: alcohol allowed, plainly and with a cost; light hazing as a system; setbacks normal; the "still out" list; target 13+. The banned words drop alcohol and keep smoking, vaping, drugs and gambling | `BANNED_WORDS` in `src/sim/config/tone.ts` and the tests' own lists |
+| The budgets | Two more word lists: lines about drinking (`DRINK_WORDS`) and about a heavy theme: hazing, a suspension, a breakup, cheating (`HEAVY_WORDS`). The long run counts every line a test player reads (the paper, the desk, the orders, the advisors) and fails if more than 4 in 100 are about either | `DRINK_BUDGET`, `HEAVY_BUDGET`; `scripts/simulate.ts` |
+| Parties | A campus with goals has a party scene: 1, and 5 more for each point of the share of students in chapters. Food & fun 3 points higher for everyone, named "Parties" on that cause's line. Late nights cost Stress in every week of term (2 points at a scene of 1), named beside Stress, and the graduation rate the academic rating reads (1 point), named "Late nights" on its line | `src/sim/config/parties.ts`, `partyEffects`, `lateNights` in `src/sim/systems/parties.ts`; `stressRead` in `src/sim/systems/season.ts` |
+| Calls from parties | In term, now and then a party ends in a call: Campus Safety breaks one up or catches someone under 21 drinking, or the Medical Center looks after someone who drank too much (3 in 10). A call comes from a chapter house three times as often as its members' share, as one of its socials, on its record; else from a dorm. Answered or not, it is an incident like any other, with its own lines. The paper says one call by its line, and more as one line: "Campus Safety broke up 3 parties, and the Medical Center looked after a student who drank too much." | `partyCall` in `src/sim/systems/incidents.ts`, `PARTY_LINES` in `src/sim/config/incidents.ts`; `awayLines` in `src/sim/digest.ts` |
+| The drinking age | Juniors and seniors are taken to be 21. A Party Animal of 21 or over says on their card "Parties, and a drink or two. Mondays are harder"; a younger one "Parties, but under 21, so no drinks". Those caught drinking under 21 in a call are freshmen and sophomores, and meet the Dean of Students | `DRINKING_YEAR`, `PARTY_CARD`; `studentCard` |
+| Three party policies | **Dry campus** (Growth): 60 in 100 fewer calls on campus; Food & fun 3 lower for everyone. **Party registration** (Growth): half the Campus Safety calls, Food & fun 1 higher; $2,000 a year more for each Campus Safety office. **Alcohol education** (Flagship): half the Medical Center calls and half what late nights cost; $3,000 a year more for each Medical Center | `dryCampus`, `partyRegistration`, `alcoholEducation` in `src/sim/config/policies.ts`; new effect kinds `partyCalls`, `lateNights` |
+| A tailgate with drinks | Before a home game, once a school year, the boosters ask. "Keep the tailgate dry" is the default and the advisor's pick, always. Drinks for fans of 21 and over, with ID checks, cost a little cash: a tenth more fans want a ticket for three days, and calls from parties come twice as often for those days | `tailgate` in `src/sim/systems/inbox.ts`; boost kind `calls` |
+| A chapter's hazing risk | 0 to 1, worked out each hour: 0.3, 0.2 more for a house on Warning or Probation, 1.6 times once the president looked the other way, half while on probation for hazing (watched), and the policies. Low under 0.15, Some under 0.35, High above. On the chapter's panel with why | `hazingRisk` in `src/sim/systems/greek.ts`; `chapterPage` in `src/ui/greekUi.ts` |
+| Reports | Only in pledge season, the 48 real hours after rush week. Each day, a chapter is reported with a chance of its risk times 0.3. The first report since rush comes to the desk from the Dean of Students: what the pledges were made to do (a rubber chicken to every class, cars washed at five in the morning, a recital on the quad at sunrise in bathrobes), and three answers | `hazingToday`, `HAZING_TASKS`, `PLEDGE_SEASON_HOURS`; `hazingReport` in `src/sim/systems/inbox.ts` |
+| The president's three answers | **Put it on probation until rush week** (the default and the advisor's pick): its members lose what the house gives them, and a second report suspends it. **Suspend it until rush week**: its members move back into the dorms and the house stands empty. **Look the other way**: nothing now; its risk is 1.6 times until rush, and a second report suspends it with the story in every paper, the academic rating's Reputation 3 points lower for a year | `greekHazing`, `suspend` |
+| Suspended | A fourth standing beside Good, Warning and Probation. Members 0, no lift, no philanthropy, no pranks, upkeep still paid. Rush week ends it, and the chapter recruits again. The paper leads with it: "A Chapter Is Suspended for Hazing; Its Banner Comes Down", or, after looking away, "Hazing Scandal on Greek Row; The School Knew" | `ChapterStatus`, `chapterStatus`; `leads` in `src/sim/newspaper.ts` |
+| Two hazing policies | **Anti-hazing policy**: each chapter's risk 60 in 100 lower; 15 in 100 fewer join at rush. **Greek life oversight**: risk half; chapter members' Food & fun 3 lower. Shown once a chapter house stands. Neither on is looking the other way | `antiHazing`, `greekOversight`; effect kind `hazing` |
+| Rush week | Starts every chapter's school year clean: no probation, no suspension, no report, the president's last answer forgotten. Its line never says "0 move": with the houses full it says the new members keep their dorm beds | `rush` |
+| Heartbreak | A student who was with someone last semester and is single now reads "Single, after a breakup", "getting over it, slowly" or "doing better than expected", and is Heartbroken for the semester. The status keeps its own side and points, so no nature is happier than another | `relationshipOf`, `BREAKUP_NAME`, archetype `heartbroken` |
+| The card's first line | A student not yet seen on the map since the card opened is "In class" by day, in their dorm or chapter house in the evening and asleep there at night, or at home in town: no more "Out of sight" | `awayText` in `src/ui/studentCard.ts` |
+| Orders | The calm-semester order is never asked under a middling semester, and late nights are part of one on a campus that has them | `begin` in `src/sim/systems/orders.ts` |
+| Saves | Version 26. Each chapter gains its hazing fields at nothing; Greek Row its counts of reports and suspensions, and no scandal | `MIGRATIONS[25]`, `tests/fixtures/save-v25-model.json` |
+| The test players | The once-a-day player and the player who works every cause register parties; the once-a-day player keeps an anti-hazing policy; the player who works every cause also teaches about alcohol and puts an advisor in every chapter; the casual player leaves all five off and looks the other way. Nobody keeps a dry campus. Every player takes the advisor's pick at the desk | `setPolicies` in `scripts/bots.ts` |
+| The dev page | `&hazing=probation`, `suspend` or `look` answers a report about the first chapter (with `&greek=5`); `&hazingreport=0` puts one on the desk once `&away` has reached pledge season; `&partycard=over` or `under` opens a Party Animal's card | `src/app/devtools.ts` |
+
+### 55.2 Decisions
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Who may drink | Juniors and seniors, as 52.2 point 4 recommends: a younger student who drinks is caught | Any age |
+| Calls | Incidents with lines of their own, through Campus Safety and the Medical Center, so coverage answers them as it answers everything | A party system of its own |
+| A party's cost | Stress and the graduation rate, in every week of term, and the calls. Parties lift Food & fun for everyone: the lift is the parties', never the drinking's | A cost only on the night |
+| The three answers to hazing | As two policies and a question on the desk: the policies set the risk, the desk decides each first report, and a second report suspends with no question | The policies alone |
+| Alcohol education | Kept by that name, as 52.3 names it. 52.2 point 1 says no policy's name other than Dry campus mentions drinking: the two disagree, and the owner may want it renamed | "Safer nights" |
+| Probation and suspension | Until the next rush week, a real week at most | A fixed number of hours |
+| Scandal | Only when the president looked away and a second report came | Any suspension |
+| Heartbreak | Words on the card for a semester, with no new points, so the campus's balance holds. MC-2's arcs make it felt | Points of Happiness |
+
+### 55.3 Measured
+
+The long run's six test players on the model campus, 44 weeks each (a week is a school year and a real week), against the same code before this stop where it says so.
+
+| Measured | Result |
+|---|---|
+| Calls from parties | 3.3 to 7.6 a week: about one a real day. Of them 1.0 to 2.4 the Medical Center's, 0.5 to 1.0 someone under 21 caught, and 0 to 0.4 with nobody in reach. Fewer for the players who register parties (4.3 to 5.4) and fewest for the one who also teaches about alcohol (3.3 to 4.7) |
+| The party scene | 1.13 to 1.19 at the end, from the share of students in chapters. Late nights cost 2.3 to 2.4 points of Stress and 1.2 points off the graduation rate, half that with alcohol education |
+| Hazing | 7 to 22 reports in 44 weeks, each put on probation by the advisor's pick. None suspended and no scandal: a second report on a watched chapter is rare. The casual player, who looks the other way with no policy, had the most (16 and 22) |
+| What a player reads | 14,000 to 19,700 lines each: 1.27 to 1.62 in 100 about drinking and 0.39 to 0.65 in 100 about a heavy theme, against budgets of 4 each |
+| Happiness and retention | Weeks 20 to 44: 94.4 to 95.5, and 99.25% to 99.30% of each class stay |
+| The five policies, on the once-a-day campus for six years against the same campus without | Dry campus: 5 fewer calls a year, Happiness 0.43 lower, the rating 0.2 lower. Party registration: 5 fewer calls, Happiness 0.19 higher, $392,000 a year more. Alcohol education: semester Stress 0.81 lower, the rating 0.2 higher, $756,000 a year more. Anti-hazing policy: one report fewer. Greek life oversight: one report fewer, its members a little less happy |
+| The pace of the rank goals | The Top 10 in weeks 29 to 31. Never before week 24 |
+| The money | Years 3 to 8: $13.5 to $15.6 kept of every $100 (casual), $12.8 to $14.8 (once a day). The later weeks: $12.3 to $15.6 and $12.4 to $15.9 |
+| Levels | The once-a-day player made 6.2 and 6.5 levels a week after week 12, down from 6.9 and 7.0: under the ceiling of 7.00 |
+| The small campus | Every table the same, line for line |
+| Tests | 20 new (`tests/content.test.ts`), 906 in all. Two new long-run checks (the budgets; calls on every campus with goals and a suspension only after a report); the policy check holds the five new switches to their words. 86 checks in all |
+
+### 55.4 Rough
+
+| Rough | Why |
+|---|---|
+| A party in the town is not drawn or counted | A dry campus moves parties to the town in words and in Food & fun; the town has no calls of its own |
+| A tailgate is asked once a school year | Asked before every home game, it would be on most weeks' desks, and drinking would not be infrequent |
+| Hazing has no arc yet | The pledge's side of it (go along, push back, report) is MC-2's arc |
+| A heartbroken student feels nothing more | Felt in Happiness, Stress and memory is the Main Character's, in MC-1 and MC-2 |
