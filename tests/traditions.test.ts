@@ -223,7 +223,7 @@ describe('saves', () => {
     expect(loaded.state.traditions).toEqual(state.traditions);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'tradition')).toEqual(state.timers.filter((timer) => timer.kind === 'tradition'));
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(26);
+    expect(SAVE_VERSION).toBe(27);
   });
 
   describe('from version 23', () => {
@@ -240,13 +240,15 @@ describe('saves', () => {
       expected.version = SAVE_VERSION;
       expected.traditions = newTraditions();
       expected.greek = newGreek();
+      // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+      expected.alumni = loaded.state.alumni;
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
-      expect(notes).toHaveLength(3);
+      expect(notes).toHaveLength(4);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

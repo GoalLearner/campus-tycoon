@@ -79,7 +79,8 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
       return `${percent(1 - effect.times)} fewer ${effect.calls === 'safety' ? 'parties broken up by Campus Safety' : effect.calls === 'medical' ? 'Medical Center calls from parties' : 'calls from parties on campus'}`;
     case 'lateNights': {
       const late = lateNights(state);
-      return `Late nights cost ${percent(1 - effect.times)} less${late.stress > 0 ? `: about ${Math.round(late.stress * effect.times * 10) / 10} points of Stress instead of ${late.stress}` : ''}`;
+      const after = Math.round(late.stress * effect.times * 10) / 10;
+      return `Late nights cost ${percent(1 - effect.times)} less${late.stress > 0 ? `: about ${after} ${after === 1 ? 'point' : 'points'} of Stress instead of ${late.stress}` : ''}`;
     }
   }
 }

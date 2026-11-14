@@ -14,7 +14,7 @@ import type { CauseId } from './students';
  */
 
 /** The inputs of the academic rating a policy may move. */
-export type RatingInputId = 'graduation' | 'classSize' | 'retention' | 'selectivity' | 'reputation';
+export type RatingInputId = 'graduation' | 'classSize' | 'retention' | 'selectivity' | 'reputation' | 'alumni';
 
 export type PolicyEffect =
   /**

@@ -328,7 +328,7 @@ describe('saves', () => {
     expect(loaded.state.greek).toEqual(state.greek);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'greek')).toHaveLength(2);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(26);
+    expect(SAVE_VERSION).toBe(27);
   });
 
   describe('from version 24', () => {
@@ -344,12 +344,14 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.greek = newGreek();
+      // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+      expected.alumni = loaded.state.alumni;
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

@@ -35,6 +35,7 @@ import { footballBooks, homeGameNow } from './football';
 import { ATHLETICS_STAFF_PAY, CONCESSIONS_PER_FAN, GAME_DAY_FOOD, HOME_GAMES_PER_YEAR, TICKET_PRICE } from '../config/football';
 import { facultyCount, facultyWorking, ratioTarget, staffCount, staffWorking } from './staffing';
 import { freeSeats, housedByPolicy, housedNote, policyIncome, upkeepMore } from './policies';
+import { alumniOn, alumniPool, driveLine } from './alumni';
 import { offCampusNow } from './town';
 import { welcomeMore } from './bigBuilds';
 
@@ -191,7 +192,14 @@ export function budget(state: GameState): Budget {
   }
   if (ball.tv > 0) income.push({ id: 'tv', name: 'TV and conference deal', amount: ball.tv, detail: `To the end of year ${state.football.tv.until}` });
   if (m.endowment > 0) {
-    income.push({ id: 'endowment', name: 'Endowment income', amount: m.endowment * ENDOWMENT_YIELD, detail: `${Math.round(ENDOWMENT_YIELD * 100)}% of ${dollars(m.endowment)}, every year` });
+    // How much of it alumni gave (DESIGN.md 54.3).
+    const gave = state.alumni?.totals.endowed ?? 0;
+    income.push({ id: 'endowment', name: 'Endowment income', amount: m.endowment * ENDOWMENT_YIELD, detail: `${Math.round(ENDOWMENT_YIELD * 100)}% of ${dollars(m.endowment)}, every year${gave > 0 ? `. Alumni gave ${dollars(gave)} of it` : ''}` });
+  }
+  // Alumni giving (DESIGN.md 54.3): the cash share of the last drive, paid over the school year that follows.
+  const drive = state.alumni?.last;
+  if (drive && drive.cash > 0 && alumniOn(state)) {
+    income.push({ id: 'alumni', name: 'Alumni giving', amount: drive.cash, detail: `${driveLine(drive, alumniPool(state))}`.replace(/^The alumni drive/, `The drive of Year ${drive.year}`) });
   }
   // What a policy brings in has a line of its own, under the policy's name (DESIGN.md 41.7).
   for (const line of policyIncome(state)) income.push(line);

@@ -714,6 +714,8 @@ describe('a save from version 16', () => {
     expected.traditions = state.traditions;
     expected.greek = newGreek();
     expected.rng.orders = state.rng.orders;
+    // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
+    expected.alumni = state.alumni;
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -759,7 +761,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(10);
+    expect(notes).toHaveLength(11);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

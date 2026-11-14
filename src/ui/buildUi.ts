@@ -44,6 +44,8 @@ import {
   type Parcel,
   dollars,
   headCount,
+  alumniOn,
+  alumniPool,
   driversNow,
   hasRoadAccess,
   townPlaces,
@@ -624,6 +626,8 @@ export interface MoneyView {
   groups: Array<{ id: BudgetGroupId; name: string; amount: string; share: string; lines: MoneyRow[] }>;
   marketing: { step: number; max: number; line: string };
   endowment: { line: string; payIn: number[] };
+  /** The alumni pool in one line (DESIGN.md 54.3): how many, and what the last drive raised. null on a game with no drive. */
+  alumni: string | null;
 }
 
 /** A round sum to offer: two figures, rounded down. */
@@ -680,5 +684,14 @@ export function moneyView(state: GameState): MoneyView {
     })),
     marketing: { step, max, line: marketingLine },
     endowment: { line: endowmentLine, payIn },
+    alumni: alumniLine(state),
   };
+}
+
+/** "{n} alumni. The last drive raised {x}; {y} went to the endowment." */
+function alumniLine(state: GameState): string | null {
+  if (!alumniOn(state)) return null;
+  const pool = `${headCount(alumniPool(state))} alumni.`;
+  const drive = state.alumni.last;
+  return drive ? `${pool} The last drive raised ${dollarsShort(drive.raised)}; ${dollarsShort(drive.endowed)} went to the endowment.` : `${pool} The first drive is at commencement.`;
 }

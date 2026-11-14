@@ -228,3 +228,6 @@ export * from './config/greek';
 export * from './systems/greek';
 export * from './config/parties';
 export * from './systems/parties';
+export * from './config/alumni';
+export * from './systems/alumni';
+export * from './systems/scorecard';
