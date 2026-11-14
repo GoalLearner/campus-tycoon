@@ -23,6 +23,19 @@ export const MEMORY_LINE_MOST = 120;
 const same = (a: StudentRef, b: StudentRef): boolean => a.entryYear === b.entryYear && a.index === b.index;
 const enrolled = (state: GameState, ref: StudentRef): boolean => classYearOf(state, ref) !== null;
 
+/**
+ * A hash mixed once more (murmur3's finish). Taking the lowest of `hashInts` alone leans on bits that the look of a
+ * student also reads, so the named came out mostly in one look; mixed, they are as varied as anyone.
+ */
+function mixed(h: number): number {
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
 /** The named regulars of every class enrolled: the same students for their four years. */
 export function namedRegulars(state: GameState): StudentRef[] {
   const year = calendarAt(state.clock).year;
@@ -31,7 +44,7 @@ export function namedRegulars(state: GameState): StudentRef[] {
     const entryYear = year - c;
     const size = Math.min(NAMED_FROM, state.cohorts[c] ?? 0);
     const picks: Array<{ index: number; luck: number }> = [];
-    for (let index = 0; index < size; index++) picks.push({ index, luck: hashInts(state.seed, 9300, entryYear, index) >>> 0 });
+    for (let index = 0; index < size; index++) picks.push({ index, luck: mixed(hashInts(state.seed, 9300, entryYear, index)) });
     picks.sort((a, b) => a.luck - b.luck);
     for (const one of picks.slice(0, NAMED_PER_CLASS)) out.push({ entryYear, index: one.index });
   }

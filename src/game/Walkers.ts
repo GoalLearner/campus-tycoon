@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction } from '../app/crowdTies';
 import { effectsSetting } from '../app/life';
 import { socialWeb } from '../app/socialWeb';
-import { idIn, refIn, type WebView } from '../app/socialView';
+import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
 import { itemAt, regularDay } from '../app/regularDay';
 import { shownHour } from '../app/daylight';
 import { KIND, SLOTS } from '../sim/config/web';
@@ -1448,7 +1448,7 @@ export class Walkers {
     leader.place = PARTY_PLACES[0]!;
     const all3 = [leader.student, ...take];
     for (const ref of all3) {
-      const rest = all3.filter((one) => one !== ref).map((one) => firstNameOf(this.state!, one));
+      const rest = firstNamesOf(this.state!, all3.filter((one) => one !== ref));
       if (this.onMemory) this.onMemory(ref, `Walked out with ${rest.length <= 1 ? rest[0] : `${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`}`);
     }
     take.forEach((ref, i) => {

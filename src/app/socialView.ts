@@ -319,6 +319,15 @@ export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
   return null;
 }
 
+/**
+ * First names for a list of students said together, a repeated one with their surname's first letter, so a line
+ * never reads "Toni and Toni": "Toni K." and "Toni M.".
+ */
+export function firstNamesOf(state: GameState, refs: StudentRef[]): string[] {
+  const firsts = refs.map((ref) => firstNameOf(state, ref));
+  return firsts.map((name, i) => (firsts.indexOf(name) !== firsts.lastIndexOf(name) ? `${name} ${studentName(state, refs[i]!).split(' ')[1]?.charAt(0) ?? ''}.` : name));
+}
+
 // ------------------------------------------------------- campus social --
 
 const VIBES = ['the sports crowd', 'the gamers', 'the music crowd', 'the gym crew', 'the party group', 'the study crew', 'the theatre kids', 'the faith group', 'the fashion crowd'];

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { itemAt, regularDay, sleepHours } from '../src/app/regularDay';
-import { happenedTo, heavyOfTheWeek, peopleOf, viewOf } from '../src/app/socialView';
-import { advance, applyAction, newGame, parseSave, sampleStudents, serialize, studentCard, toneProblem, type GameState, type StudentRef } from '../src/sim';
+import { firstNamesOf, happenedTo, heavyOfTheWeek, peopleOf, viewOf } from '../src/app/socialView';
+import { advance, applyAction, newGame, parseSave, sampleStudents, serialize, studentCard, studentFigure, toneProblem, type GameState, type StudentRef } from '../src/sim';
 import { calendarAt, dateAt } from '../src/sim/calendar';
 import { HEAVY_WORDS } from '../src/sim/config/tone';
 import { HEAVY_EVENTS } from '../src/sim/config/web';
 import { FOLLOWED_KEPT, MEMORY_KEPT, NAMED_FROM, NAMED_PER_CLASS, namedRegulars, promoteRegular, regularRecord, regularsNow, regularWhy, rememberRegular } from '../src/sim/systems/regulars';
 import { dayRead } from '../src/sim/systems/season';
+import { firstNameOf } from '../src/sim/systems/students';
 import { catchUp, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { DAY, T0 } from './helpers';
 
@@ -33,6 +34,22 @@ describe('regulars', () => {
     const later = advance(MODEL, MODEL.clock.lastSimulatedAt, MODEL.clock.lastSimulatedAt + DAY / 2).state;
     expect(namedRegulars(later)).toEqual(named);
     expect(named.every((ref) => regularWhy(MODEL, ref) === 'named')).toBe(true);
+  });
+
+  it('look as varied as anyone: the seed’s pick does not lean on one look', () => {
+    let most = 0;
+    const seeds = 60;
+    for (let seed = 1; seed <= seeds; seed++) {
+      const game = advance(newGame({ seed, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + DAY / 24).state;
+      const counts = new Map<number, number>();
+      for (const ref of namedRegulars(game)) {
+        const look = studentFigure(game, ref, 16, 12);
+        counts.set(look, (counts.get(look) ?? 0) + 1);
+      }
+      most += Math.max(...counts.values());
+    }
+    // Eight drawn at random from twelve looks share one about twice at most; leaning on one look made it five.
+    expect(most / seeds).toBeLessThan(3);
   });
 
   it('take in anyone followed, kept from then on, at most thirty, the oldest giving way', () => {
@@ -170,6 +187,19 @@ describe('a regular’s day', () => {
     const day = regularDay(null, state, ref, studentCard(state, ref)!);
     expect(day).toHaveLength(1);
     expect(day[0]!.where).toBe('away');
+  });
+});
+
+describe('first names said together', () => {
+  it('give a repeated first name its surname’s first letter, and leave the rest alone', () => {
+    const refs = sampleStudents(MODEL, 2000);
+    const byName = new Map<string, StudentRef[]>();
+    for (const ref of refs) byName.set(firstNameOf(MODEL, ref), [...(byName.get(firstNameOf(MODEL, ref)) ?? []), ref]);
+    const twins = [...byName.values()].find((list) => list.length >= 2)!;
+    const other = refs.find((ref) => firstNameOf(MODEL, ref) !== firstNameOf(MODEL, twins[0]!))!;
+    const said = firstNamesOf(MODEL, [twins[0]!, other, twins[1]!]);
+    expect(said[1]).toBe(firstNameOf(MODEL, other));
+    for (const i of [0, 2]) expect(said[i]).toMatch(new RegExp(`^${firstNameOf(MODEL, twins[0]!)} [A-Z]\.$`));
   });
 });
 

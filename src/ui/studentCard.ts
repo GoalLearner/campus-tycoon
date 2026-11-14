@@ -5,12 +5,11 @@ import { session } from '../app/session';
 import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
 import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
-import { happenedTo } from '../app/socialView';
+import { firstNamesOf, happenedTo } from '../app/socialView';
 import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
-import { firstNameOf, studentName } from '../sim/systems/students';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -514,10 +513,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     facesKey = key;
     faces.textContent = '';
     // Two of one first name on a card get their surname's first letter: "Sabrina M." and "Sabrina K.".
-    const firsts = list.map((one) => firstNameOf(state, one.ref));
+    const firsts = firstNamesOf(state, list.map((one) => one.ref));
     for (const [i, one] of list.entries()) {
-      const plain = firsts[i]!;
-      const first = firsts.filter((name) => name === plain).length > 1 ? `${plain} ${studentName(state, one.ref).split(' ')[1]?.charAt(0) ?? ''}.` : plain;
+      const first = firsts[i]!;
       const button = el('button', `student-friend ${one.role}`);
       button.type = 'button';
       button.setAttribute('aria-label', `${first}, ${one.label.toLowerCase()}: open their card`);

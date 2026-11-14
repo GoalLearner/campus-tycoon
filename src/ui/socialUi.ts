@@ -1,6 +1,5 @@
-import { campusSocial, type Told, type WebView } from '../app/socialView';
+import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
-import { firstNameOf } from '../sim/systems/students';
 import { regularsNow } from '../sim/systems/regulars';
 import { drawSprite, loadAtlas } from './atlas';
 
@@ -35,7 +34,7 @@ function toldLine(told: Told, open: (ref: StudentRef) => void): HTMLElement {
 }
 
 function names(state: GameState, refs: StudentRef[]): string {
-  const first = refs.map((ref) => firstNameOf(state, ref));
+  const first = firstNamesOf(state, refs);
   return first.length <= 1 ? (first[0] ?? '') : `${first.slice(0, -1).join(', ')} and ${first[first.length - 1]}`;
 }
 
@@ -54,10 +53,11 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     body.append(el('div', 'money-head', 'Most popular'));
     const faces = el('div', 'student-friends social-faces');
     const canvases: Array<{ canvas: HTMLCanvasElement; ref: StudentRef }> = [];
-    for (const one of social.popular) {
+    const popularNames = firstNamesOf(state, social.popular.map((one) => one.ref));
+    for (const [i, one] of social.popular.entries()) {
       const face = el('button', 'student-friend');
       face.type = 'button';
-      const first = firstNameOf(state, one.ref);
+      const first = popularNames[i]!;
       face.setAttribute('aria-label', `${first}: open their card`);
       const canvas = el('canvas', 'student-friend-art');
       canvas.width = 96;
@@ -82,10 +82,11 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     body.append(el('div', 'money-head', 'Regulars'));
     const row = el('div', 'student-friends social-faces');
     const canvases: Array<{ canvas: HTMLCanvasElement; ref: StudentRef }> = [];
-    for (const one of regulars) {
+    const regularNames = firstNamesOf(state, regulars.map((one) => one.ref));
+    for (const [i, one] of regulars.entries()) {
       const face = el('button', 'student-friend');
       face.type = 'button';
-      const first = firstNameOf(state, one.ref);
+      const first = regularNames[i]!;
       face.setAttribute('aria-label', `${first}: open their card`);
       const canvas = el('canvas', 'student-friend-art');
       canvas.width = 96;

@@ -1,9 +1,8 @@
 import { dateAt, type GameState, type StudentCard, type StudentRef } from '../sim';
 import { hashInts } from '../sim/rng';
 import { dayRead } from '../sim/systems/season';
-import { firstNameOf } from '../sim/systems/students';
 import { INTEREST } from '../sim/systems/identity';
-import { idIn, peopleOf, type Person, type WebView } from './socialView';
+import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socialView';
 
 /**
  * A regular's day (DESIGN.md 63.9): what they do from waking to sleep on the player's own real day, and with whom,
@@ -33,7 +32,7 @@ export interface DayItem {
   with: StudentRef[];
 }
 
-const first = (state: GameState, people: Person[]): string[] => people.map((one) => firstNameOf(state, one.ref));
+const first = (state: GameState, people: Person[]): string[] => firstNamesOf(state, people.map((one) => one.ref));
 
 function names(list: string[]): string {
   return list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
