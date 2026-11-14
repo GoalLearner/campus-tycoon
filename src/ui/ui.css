@@ -803,6 +803,98 @@ button.student-row {
   display: none;
 }
 
+/*
+ * The card put away while following (DESIGN.md 61): a strip just above the toolbar, left of Build, so the map above
+ * it is open. Tapping it brings the card back; its cross stops following.
+ */
+.follow-strip {
+  display: none;
+  position: absolute;
+  /* In line with the toolbar's left end, which stops widening at 460 points. */
+  left: max(calc(var(--safe-left) + 8px), calc(50% - 230px));
+  right: calc(var(--safe-right) + 108px);
+  bottom: calc(var(--safe-bottom) + 76px);
+  max-width: 340px;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 3px 3px 5px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.follow-strip.show {
+  display: flex;
+}
+
+.follow-strip-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 2px;
+  background: none;
+  text-align: left;
+}
+
+.follow-strip-face {
+  flex: none;
+  width: 32px;
+  height: 37px;
+  border-radius: 8px;
+  background: #a6ad36;
+}
+
+.follow-strip-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.follow-strip-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* What they are doing runs to two lines before it is cut, so a hall's name is seldom lost. */
+.follow-strip-doing {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.follow-strip-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.follow-strip-following {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.follow-strip-doing {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.follow-strip-stop {
+  flex: none;
+  width: 44px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
 /* The hall's name on a card: a link that glides the map to the hall (DESIGN.md 60). */
 .student-hall {
   display: inline;

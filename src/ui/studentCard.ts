@@ -155,7 +155,7 @@ function row(label: string): { line: HTMLElement; value: HTMLElement } {
   return { line, value };
 }
 
-export function mountStudentCard(): { node: HTMLElement; render: (state: GameState | null) => void } {
+export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; render: (state: GameState | null) => void } {
   const node = el('div', 'student');
 
   // 1. Who.
@@ -178,10 +178,36 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     if (hallAt) session.showHall(hallAt.x, hallAt.y, bar, node.getBoundingClientRect().top);
   });
   who.append(name, about);
+  // Close, or while following, Hide: the card goes down to its strip and the camera goes on following (DESIGN.md 61).
   const close = el('button', 'student-close', 'Close');
   close.type = 'button';
-  close.addEventListener('click', () => session.closeStudent());
+  close.addEventListener('click', () => (session.following ? session.tuckStudent() : session.closeStudent()));
   head.append(portrait, who, close);
+
+  // The strip the card goes down to (DESIGN.md 61): their face, their first name and what they are doing now, live.
+  // Tapping it brings the card back; its cross stops following and puts it away.
+  const strip = el('div', 'follow-strip');
+  const stripOpen = el('button', 'follow-strip-open');
+  stripOpen.type = 'button';
+  stripOpen.setAttribute('aria-label', 'Show their card');
+  const stripFace = el('canvas', 'follow-strip-face');
+  stripFace.width = 96;
+  stripFace.height = 112;
+  const stripText = el('span', 'follow-strip-text');
+  const stripName = el('span', 'follow-strip-name');
+  const stripFollowing = el('span', 'follow-strip-following', 'Following');
+  const stripDoing = el('span', 'follow-strip-doing');
+  stripName.append(stripFollowing);
+  stripText.append(stripName, stripDoing);
+  stripOpen.append(stripFace, stripText, el('span', 'student-go', '›'));
+  stripOpen.addEventListener('click', () => session.untuckStudent());
+  const stripStop = el('button', 'follow-strip-stop', '×');
+  stripStop.type = 'button';
+  stripStop.setAttribute('aria-label', 'Stop following');
+  stripStop.addEventListener('click', () => session.closeStudent());
+  strip.append(stripOpen, stripStop);
+  const stripFirst = document.createTextNode('');
+  stripName.prepend(stripFirst);
 
   // 2. Doing now, with the one Follow button.
   const doing = row('Doing now');
@@ -234,17 +260,20 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
   let atlas: Atlas | null = null;
   let shownKey = '';
   let shownLook = '';
+  let stripLook = '';
   let shownMood = -1;
   let lastDoing: string | null = null;
   void loadAtlas().then((loaded) => {
     atlas = loaded;
     shownLook = '';
+    stripLook = '';
   });
 
   function render(state: GameState | null): void {
     const ref = session.student;
     if (!state || !ref) {
       node.classList.remove('show');
+      strip.classList.remove('show');
       shownKey = '';
       return;
     }
@@ -288,6 +317,10 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
         shownLook = sprite;
         portrait.classList.toggle('missing', !drawSprite(portrait, atlas, sprite));
       }
+      if (session.tucked && sprite !== stripLook) {
+        stripLook = sprite;
+        stripFace.classList.toggle('missing', !drawSprite(stripFace, atlas, sprite));
+      }
     }
 
     if (session.doing) lastDoing = session.doing;
@@ -300,6 +333,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     follow.hidden = stayingWords(session.doing) !== null;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
+    setText(close, session.following ? 'Hide' : 'Close');
     // Followed home, gone indoors at their hall, or at home by their hours, asleep or in for the evening: the room can
     // be looked into (DESIGN.md 60). Look inside then stands where Follow was.
     const home = canLookInside(state, ref, lastDoing, outside, shownHour());
@@ -331,9 +365,17 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
       : null;
     reason.disabled = target === null;
 
-    // Looking inside their room, the card waits behind it (DESIGN.md 46).
-    node.classList.toggle('show', session.room === null);
+    // The strip: the same live line as the card's Doing now, and Following only while the camera is (DESIGN.md 61).
+    // Gone indoors or dragged away from, it is one tap back to the card, which says where they are.
+    stripFirst.textContent = card.name.split(' ')[0]!;
+    stripFollowing.hidden = !session.following;
+    setText(stripDoing, doing.value.textContent ?? '');
+    strip.classList.toggle('following', session.following);
+
+    // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
+    node.classList.toggle('show', session.room === null && !session.tucked);
+    strip.classList.toggle('show', session.room === null && session.tucked);
   }
 
-  return { node, render };
+  return { node, strip, render };
 }

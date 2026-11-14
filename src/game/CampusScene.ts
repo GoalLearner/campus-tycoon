@@ -1520,8 +1520,9 @@ export class CampusScene extends Phaser.Scene {
 
     const target = at ?? this.glide;
     if (!target) return;
-    // The card covers the bottom of the screen, so aim a little above the middle, or higher when a card asks.
-    const aim = at ? 0.4 : this.glideAim;
+    // The card covers the bottom of the screen, so aim a little above the middle, or higher when a card asks. With the
+    // card put away to its strip (DESIGN.md 61), the student is kept nearer the middle of the open map.
+    const aim = at ? (session.tucked ? 0.52 : 0.4) : this.glideAim;
     const wantX = target.x - cam.width / 2;
     const wantY = target.y - cam.height / 2 + (cam.height * (0.5 - aim)) / cam.zoom;
     const fromX = cam.scrollX;
