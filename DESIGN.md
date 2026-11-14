@@ -7251,3 +7251,49 @@ An enlarged piece would have a thicker outline than everything round it, so its 
 | The front of the floor is bare | The room is open there so people can walk |
 | Chapter houses not seen | The dev campus has none; the rooms are the same as a house in town's, checked in tests |
 | Never run on a phone | Checked in pictures on this PC at three phone sizes |
+
+## 61. The card put away while following, as built
+
+Asked for after build 16, relayed by the main session with a picture of a card reading "Following" in his play copy on his PC, about 530 wide. His words: "I want to be able to follow and minimize this screen or be able to close it but still be able to follow"
+
+Until now Close always ended the follow, and the open card covered most of the map he wanted to watch. Nothing in the simulation or the save changed: the strip is the card's own state on this screen, like the follow itself.
+
+### 61.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| Hide | While the card is following, its Close reads Hide. Tapped, the card goes down to a strip and the camera goes on following. Not following, it reads Close and closes, as before. One control, whose word says what it does | `studentCard.ts`, `session.tuckStudent` |
+| The strip | Their face, their first name with Following beside it while the camera follows, and the card's own Doing now line, live, running to two lines before it is cut ("Heading back to Mossley Hall", "Asleep in Fernfield Hall"). It sits just above the toolbar, in line with its left end, and stops short of Build, which shows again while the card is away. 375 to 530 wide it covers one strip of the map's bottom | `.follow-strip` in `src/ui/ui.css` |
+| The camera | Keeps the student a little lower than with the card open, near the middle of the open map | `watchStudent` in `src/game/CampusScene.ts` |
+| Tapping the strip | Brings the card back, still following if the camera is | `session.untuckStudent` |
+| The cross on the strip | Stops following and puts the card away altogether | `session.closeStudent` |
+| When the follow ends | As before: when the student goes indoors or out of sight, or the map is dragged. The strip stays, drops Following, and its line turns to what the card now says ("In Mossley Hall"), so the card, and Look inside on it, is one tap away. It never keeps an old line | `render` in `studentCard.ts` |
+| Zooming | Does not end a follow, as before | |
+| Anything else opened | Another student's card, a building, a tool or the room: the strip goes, as the card would. Photo mode hides it with the other panels until it is left | `session.ts` |
+| The main character | The same card, so the same strip | |
+| The dev page | `&card=0,tuck` follows a student in sight with the card put away | `src/app/devtools.ts` |
+
+### 61.2 Measured
+
+| Measured | Result |
+|---|---|
+| Tests | `tests/followStrip.test.ts`, 7: put away while following and the follow goes on; brought back still following; stays when the follow ends; its cross stops following; another card, a building, a tool or the room puts it away; no card, no strip; the card's Hide and the strip's place |
+| Played on the dev page | Followed with the card put away: the strip read "Nico · Following / Heading back to Mossley Hall"; when Nico went in it read "Nico / In Mossley Hall"; tapped, the card came back with "In Mossley Hall" and Look inside |
+| Widths | 375 by 667, 390 by 844, 430 by 932 and 530 by 940 (his PC window): the strip clears Build and the toolbar at each |
+
+### 61.3 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The control | Close reads Hide while following, and puts the card away | A separate Minimize button beside Close, with Close still ending the follow: two buttons for one wish |
+| Where the strip sits | Just above the toolbar, left of Build | Under the top bar, which is already tall on a phone and where the student would walk under it |
+| A drag | Ends the follow, as before; the strip says so by dropping Following | Keep following through a drag, which would fight the player's finger |
+| The strip once the follow ends | Stays, as one tap to the card | Goes by itself, which loses the student when they step indoors |
+
+### 61.4 Rough
+
+| Rough | Why |
+|---|---|
+| A long line is cut after two lines | The strip is kept short so the map shows |
+| Tapping a building while the strip shows ends the follow | As tapping a building with the card open always has |
+| Never run on a phone | Checked in pictures on this PC at four widths |

@@ -673,7 +673,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;

@@ -628,7 +628,9 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
           const student = nth === 'unhappy' ? saddest : nth === 'home' ? homeward : near[Math.min(near.length - 1, Number(nth) || 0)];
           if (!student) return;
           session.openStudent(student);
-          if (mode === 'follow') session.setFollowing(true);
+          if (mode === 'follow' || mode === 'tuck') session.setFollowing(true);
+          // &card=0,tuck follows them with the card put away to its strip (DESIGN.md 61).
+          if (mode === 'tuck') session.tuckStudent();
         }, 1500);
       }
     }, 600);

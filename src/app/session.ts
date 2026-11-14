@@ -59,6 +59,11 @@ class Session {
   person: PersonRef | null = null;
   /** True while the camera keeps that student in view. */
   following = false;
+  /**
+   * True while the open student card is put away to a small strip, so the map can be watched (DESIGN.md 61). The
+   * camera goes on following; tapping the strip brings the card back.
+   */
+  tucked = false;
   /** The student whose room is open (DESIGN.md 46). Only ever the student whose card is open. */
   room: StudentRef | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
@@ -106,6 +111,7 @@ class Session {
       this.student = null;
       this.person = null;
       this.following = false;
+      this.tucked = false;
     }
     this.emit();
   }
@@ -140,6 +146,7 @@ class Session {
     this.student = null;
     this.person = null;
     this.following = false;
+    this.tucked = false;
     this.emit();
   }
 
@@ -203,6 +210,7 @@ class Session {
     this.student = null;
     this.person = null;
     this.following = false;
+    this.tucked = false;
     this.emit();
   }
 
@@ -212,6 +220,7 @@ class Session {
     this.studentLook = look;
     this.person = null;
     this.following = false;
+    this.tucked = false;
     this.doing = null;
     this.selected = null;
     this.emit();
@@ -222,18 +231,37 @@ class Session {
     this.person = ref;
     this.student = null;
     this.following = false;
+    this.tucked = false;
     this.doing = null;
     this.selected = null;
     this.emit();
   }
 
-  /** Put away whichever card is open: a student's, or anyone else's. */
+  /** Put away whichever card is open, or its strip: a student's, or anyone else's. The follow ends with it. */
   closeStudent(): void {
     if (!this.student && !this.person) return;
     this.student = null;
     this.person = null;
     this.following = false;
+    this.tucked = false;
     this.room = null;
+    this.emit();
+  }
+
+  /**
+   * Put the open student card away to a small strip and go on following them (DESIGN.md 61). The card's Close reads
+   * Hide while following, and does this.
+   */
+  tuckStudent(): void {
+    if (!this.student || this.tucked) return;
+    this.tucked = true;
+    this.emit();
+  }
+
+  /** The strip tapped: the full card again. */
+  untuckStudent(): void {
+    if (!this.tucked) return;
+    this.tucked = false;
     this.emit();
   }
 
@@ -242,6 +270,7 @@ class Session {
     if (!this.student) return;
     this.room = this.student;
     this.following = false;
+    this.tucked = false;
     this.emit();
   }
 
