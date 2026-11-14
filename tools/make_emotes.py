@@ -394,10 +394,19 @@ def in_dumbbell(c):
     body(c, m, GREY, GREY_RIM, None, INNER, INNER_RIM)
 
 
-def in_cup(c):
-    cup = polygon([(390, 290), (634, 290), (596, 600), (428, 600)])
-    body(c, cup, CUP, CUP_RIM, (420, 330, 460, 430), INNER, INNER_RIM)
-    paint(c, ImageChops.multiply(cup, polygon([(0, 290), (BIG, 290), (BIG, 340), (0, 340)])), PAPER)
+def in_hat(c):
+    """A party hat: a striped cone with a pompom, and two bits of confetti. Parties, with no drink in it, since
+    students of every age talk about them (the red cup is a 21+ student's own emote, DESIGN.md 63.9)."""
+    cone = union(polygon([(512, 290), (690, 590), (334, 590)]), ellipse((334, 548, 690, 632)))
+    body(c, cone, BLUE, BLUE_RIM, None, INNER, INNER_RIM)
+    inside = shrink(cone, INNER_RIM)
+    for y in (420, 540):
+        band = polygon([(0, y + 160), (BIG, y - 160), (BIG, y - 90), (0, y + 230)])
+        paint(c, ImageChops.multiply(inside, band), GOLD)
+    body(c, ellipse((448, 206, 576, 334)), RED, RED_RIM, (474, 230, 510, 266), INNER, INNER_RIM)
+    for box, colour, rim_colour, turn in (((268, 300, 360, 352), GREEN, GREEN_RIM, 30), ((664, 280, 756, 332), PINK, PINK_RIM, -35)):
+        bit = rotated(rounded(box, 12), turn, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2))
+        body(c, bit, colour, rim_colour, None, INNER, INNER_RIM)
 
 
 def in_book(c):
@@ -432,7 +441,7 @@ CHATS = {
     'chat-gaming': in_pad,
     'chat-music': in_note,
     'chat-fitness': in_dumbbell,
-    'chat-partying': in_cup,
+    'chat-partying': in_hat,
     'chat-studying': in_book,
     'chat-art': in_palette,
     'chat-fashion': in_shirt,

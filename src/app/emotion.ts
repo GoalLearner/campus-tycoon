@@ -1,4 +1,5 @@
 import type { GameState, StudentCard, StudentRef } from '../sim';
+import { DRINKING_YEAR } from '../sim/config/parties';
 import { FEEL, FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
 import { homeGameNow } from '../sim/systems/football';
@@ -122,7 +123,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   else if (card.stress >= 50) add('tense', 'Exams ahead', card.stress / 35);
   if (day.kind === 'break' || day.kind === 'summer') add('happy', day.kind === 'summer' ? 'Summer' : (day.name ?? 'A break'), 1.5);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
-  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, 'partycup');
+  // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
+  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup');
 
   // How they find the campus.
   if (card.mood >= 4) add('happy', 'Loves it here', 1.5);
