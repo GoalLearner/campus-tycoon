@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { STAYING, type Stander } from '../app/activityPeople';
-import { planTraffic } from '../app/traffic';
+import { kerbAt, planTraffic, type TrafficPlan } from '../app/traffic';
 import { clock } from '../app/clock';
-import { twistMove, twistQuarters, twistStart, type Twist } from '../app/twist';
+import { SETTLE_MS, settleDegrees, settling, twistMove, twistQuarters, twistStart, type Twist } from '../app/twist';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
@@ -75,6 +75,10 @@ interface CollectSpot {
 const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
 const MAX_ZOOM_FACTOR = 2.2;
+/** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
+const TWIST_FOLLOW_MS = 45;
+/** How long the picture of the map at the end of a twist takes to fade into the view drawn turned. */
+const TURN_FADE_MS = 240;
 const WHEEL_STEP = 1.12;
 
 type Gesture =
@@ -94,6 +98,8 @@ interface Visual {
   ground: Phaser.GameObjects.Image;
   object: Phaser.GameObjects.Image | null;
   works: Phaser.GameObjects.Image | null;
+  /** The sidewalk along a road's sides (DESIGN.md 59.1), drawn over its ground. */
+  kerb: Phaser.GameObjects.Image | null;
   signature: string;
 }
 
@@ -179,6 +185,11 @@ export class CampusScene extends Phaser.Scene {
   private nextBarsAt = 0;
   private touches = new Map<number, { x: number; y: number }>();
   private gesture: Gesture | null = null;
+  /** The map's turn while two fingers twist it, in degrees: where it is drawn, and where the fingers have it. */
+  private twistShown = 0;
+  private twistWanted = 0;
+  /** The map settling to the nearest quarter after a twist: from and to in degrees, the quarters, and when it began. */
+  private settle: { from: number; to: number; quarters: number; at: number; ending: boolean } | null = null;
   private dpr = 1;
   private pendingArrivals = 0;
   /** One walking responder for each incident that has help on the way. */
@@ -254,7 +265,7 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
       this.placedDirty = true;
-      // The Turn button, or the twist (DESIGN.md section 43).
+      // The twist (DESIGN.md section 43).
       if (session.turn !== this.iso.turn && this.visuals.length > 0) this.applyTurn(session.turn);
       // The ring goes under whoever's card is open: a student, or anyone else out walking.
       this.walkers.setMarked(session.student ? studentKey(session.student) : session.person ? `p:${personKey(session.person)}` : null);
@@ -296,6 +307,7 @@ export class CampusScene extends Phaser.Scene {
       this.showLight();
     }
     this.watchFrames(time);
+    this.turnWithFingers(time, delta);
     if (this.dirty) {
       this.syncMap(state);
       this.walkers.setMap(state);
@@ -355,6 +367,7 @@ export class CampusScene extends Phaser.Scene {
       v.ground.destroy();
       v.object?.destroy();
       v.works?.destroy();
+      v.kerb?.destroy();
     }
     this.visuals = [];
     this.gameId = '';
@@ -395,7 +408,7 @@ export class CampusScene extends Phaser.Scene {
       for (let x = 0; x < width; x++) {
         const pos = this.iso.cellTop(x, y);
         const ground = this.add.image(pos.x, pos.y, '__DEFAULT').setDepth(this.iso.depth(x, y, 0));
-        this.visuals.push({ ground, object: null, works: null, signature: '' });
+        this.visuals.push({ ground, object: null, works: null, kerb: null, signature: '' });
       }
     }
     this.frameCamera();
@@ -439,6 +452,14 @@ export class CampusScene extends Phaser.Scene {
     return (
       (isPath(x, y - 1) ? 1 : 0) | (isPath(x + 1, y) ? 2 : 0) | (isPath(x, y + 1) ? 4 : 0) | (isPath(x - 1, y) ? 8 : 0)
     );
+  }
+
+  /** The sidewalk drawn over a road cell, as the view is turned (DESIGN.md 59.1), or '' for none. */
+  private kerbKey(plan: TrafficPlan, x: number, y: number): string {
+    const { sides, corners } = kerbAt(plan, x, y);
+    if (sides === 0 && corners === 0) return '';
+    const key = `kerb.${this.iso.mask(sides)}.${this.iso.mask(corners)}`;
+    return this.art.has(key) ? key : '';
   }
 
   /** Which sides of a road cell join more road: the player's roads, crossings and the town's streets. */
@@ -752,6 +773,7 @@ export class CampusScene extends Phaser.Scene {
         let tint = NO_TINT;
         let objectKey = '';
         let works = false;
+        let kerbKey = '';
 
         if (cell.kind === 'path') {
           // The piece the turned grid joins up with (DESIGN.md section 43).
@@ -766,6 +788,7 @@ export class CampusScene extends Phaser.Scene {
           // Beside a junction on the avenue the road is a marked crossing: where people from the town walk over.
           const mask = this.iso.mask(this.roadMask(state, x, y));
           groundKey = crossings.zebra[i] ? (mask & 5 ? 'road.cross.5' : 'road.cross.10') : `road.${mask}`;
+          kerbKey = this.kerbKey(crossings, x, y);
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
             objectKey = out ? 'lamp.off' : lamp;
@@ -774,6 +797,7 @@ export class CampusScene extends Phaser.Scene {
         } else if (cell.kind === 'crossing') {
           // The bars lie across the road, whichever way it runs.
           groundKey = this.iso.mask(this.roadMask(state, x, y)) & 5 ? 'road.cross.5' : 'road.cross.10';
+          kerbKey = this.kerbKey(crossings, x, y);
         } else if (cell.kind === 'house') {
           objectKey = `town.house.${cell.variant}`;
         } else if (cell.kind === 'town') {
@@ -821,7 +845,7 @@ export class CampusScene extends Phaser.Scene {
 
         // A driveway or a garden bed runs one way: on a quarter turn it is mirrored to run along the turned grid.
         const groundFlip = this.iso.odd && (groundKey === 'town.driveway' || groundKey === 'town.garden');
-        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}|${hidden ? 1 : 0}|${groundFlip ? 1 : 0}`;
+        const signature = `${groundKey}|${tint}|${objectKey}|${works ? 1 : 0}|${hidden ? 1 : 0}|${groundFlip ? 1 : 0}|${kerbKey}`;
         const visual = this.visuals[i]!;
         if (visual.signature === signature) continue;
         visual.signature = signature;
@@ -833,6 +857,13 @@ export class CampusScene extends Phaser.Scene {
         visual.ground.setVisible(!hidden);
 
         const pos = this.iso.cellTop(x, y);
+        if (kerbKey) {
+          if (!visual.kerb) visual.kerb = this.add.image(pos.x, pos.y, '__DEFAULT');
+          this.art.apply(visual.kerb, kerbKey);
+          visual.kerb.setVisible(true).setPosition(pos.x, pos.y).setDepth(this.iso.depth(x, y, 0.3));
+        } else if (visual.kerb) {
+          visual.kerb.setVisible(false);
+        }
         if (objectKey) {
           if (!visual.object) {
             visual.object = this.add.image(pos.x, pos.y, '__DEFAULT');
@@ -1499,6 +1530,8 @@ export class CampusScene extends Phaser.Scene {
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     this.touches.set(pointer.id, { x: pointer.x, y: pointer.y });
+    // A finger down while the map settles from a twist: it is turned at once, so the new gesture starts on it.
+    if (this.settle) this.endSettle(false);
     // Touching the map again drops a clear that was waiting for a yes.
     session.cancelClear();
     if (!store.hasGame) return;
@@ -1518,6 +1551,80 @@ export class CampusScene extends Phaser.Scene {
     const start = this.cellAt(pointer.x, pointer.y);
     this.gesture = { kind: 'paint', start, last: start };
     this.updatePaint(start);
+  }
+
+  /**
+   * The map turns with two twisting fingers the whole way round (DESIGN.md
+   * section 43). It catches up with them in a few frames, so the turn begins
+   * smoothly when a twist is first told from a pinch. When they lift it
+   * settles to the nearest quarter, and the view is drawn again turned so.
+   */
+  private turnWithFingers(time: number, delta: number): void {
+    const cam = this.cameras.main;
+    if (this.settle) {
+      if (this.settle.ending) return;
+      const t = (time - this.settle.at) / SETTLE_MS;
+      this.twistShown = settling(this.settle.from, this.settle.to, t);
+      cam.setRotation(Phaser.Math.DegToRad(this.twistShown));
+      if (t >= 1) {
+        // Drawn at the quarter once more, then the picture is kept to fade into the view drawn turned.
+        this.settle.ending = true;
+        this.game.events.once(Phaser.Core.Events.POST_RENDER, () => this.endSettle(true));
+      }
+      return;
+    }
+    if (this.gesture?.kind === 'pinch' && this.gesture.twist.mode === 'twist') {
+      this.twistShown += (this.twistWanted - this.twistShown) * (1 - Math.exp(-delta / TWIST_FOLLOW_MS));
+      cam.setRotation(Phaser.Math.DegToRad(this.twistShown));
+    }
+  }
+
+  /** The twist is over: the view is drawn turned the quarters it settled on, behind a fading picture of the map as it was. */
+  private endSettle(fade: boolean): void {
+    const settle = this.settle;
+    if (!settle) return;
+    this.settle = null;
+    this.twistShown = 0;
+    this.twistWanted = 0;
+    if (settle.quarters !== 0 && fade) this.coverTurn();
+    this.cameras.main.setRotation(0);
+    if (settle.quarters !== 0) session.turnView(settle.quarters);
+  }
+
+  /**
+   * A still of the map as it is drawn now, laid over it and faded out, so the
+   * view drawn again turned comes in softly. Taken just after a frame is drawn,
+   * while the frame can still be read.
+   */
+  private coverTurn(): void {
+    const source = this.game.canvas;
+    const parent = source.parentElement;
+    if (!parent) return;
+    const cover = document.createElement('canvas');
+    cover.width = source.width;
+    cover.height = source.height;
+    const context = cover.getContext('2d');
+    if (!context) return;
+    try {
+      context.drawImage(source, 0, 0);
+    } catch {
+      return;
+    }
+    const at = source.getBoundingClientRect();
+    const frame = parent.getBoundingClientRect();
+    Object.assign(cover.style, {
+      position: 'absolute',
+      left: `${at.left - frame.left}px`,
+      top: `${at.top - frame.top}px`,
+      width: `${at.width}px`,
+      height: `${at.height}px`,
+      pointerEvents: 'none',
+      transition: `opacity ${TURN_FADE_MS}ms ease-out`,
+    });
+    parent.appendChild(cover);
+    // Two frames on, once the turned view has been drawn under it, it fades.
+    requestAnimationFrame(() => requestAnimationFrame(() => (cover.style.opacity = '0')));
+    window.setTimeout(() => cover.remove(), TURN_FADE_MS + 200);
   }
 
   private startPinch(): Gesture | null {
@@ -1555,14 +1662,13 @@ export class CampusScene extends Phaser.Scene {
       const was = this.gesture.twist.mode;
       const twist = a && b ? twistMove(this.gesture.twist, a, b) : this.gesture.twist;
       if (twist.mode === 'twist') {
-        // A twist never zooms: the map goes back to where the fingers found it, and leans a little their way
-        // until they lift and it snaps to the nearest quarter.
+        // A twist never zooms: the map goes back to where the fingers found it, and turns with them the whole way
+        // until they lift and it settles to the nearest quarter (turnWithFingers).
         if (was !== 'twist') {
           cam.setZoom(this.gesture.from.zoom);
           cam.setScroll(this.gesture.from.scrollX, this.gesture.from.scrollY);
         }
-        const lean = Phaser.Math.Clamp(twist.turned * 0.25, -22, 22);
-        cam.setRotation(Phaser.Math.DegToRad(lean));
+        this.twistWanted = twist.turned;
         this.gesture = { ...next, twist, from: this.gesture.from };
         return;
       }
@@ -1603,10 +1709,10 @@ export class CampusScene extends Phaser.Scene {
     if (!gesture) return;
 
     if (gesture.kind === 'pinch') {
-      // A twist turns the view the nearest number of quarters when its fingers lift.
-      this.cameras.main.setRotation(0);
-      const quarters = twistQuarters(gesture.twist);
-      if (quarters !== 0) session.turnView(quarters);
+      // A twist settles to the nearest quarter when its fingers lift, and the view is drawn turned that far.
+      if (gesture.twist.mode === 'twist') {
+        this.settle = { from: this.twistShown, to: settleDegrees(gesture.twist), quarters: twistQuarters(gesture.twist), at: this.game.loop.time, ending: false };
+      } else this.cameras.main.setRotation(0);
       // One finger may still be down. Carry on as a pan that can no longer count as a tap.
       const rest = [...this.touches.values()][0];
       this.gesture = rest ? { kind: 'pan', lastX: rest.x, lastY: rest.y, travelled: Infinity } : null;

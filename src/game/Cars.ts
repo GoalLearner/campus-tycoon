@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { newCar, placeCar, planTraffic, Traffic, type RouteNode, type TrafficCar } from '../app/traffic';
-import { driversNow, hasRoadAccess, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState, placedCars } from '../sim';
+import { newCar, placeCar, planTraffic, roadRoute, Traffic, type RouteNode, type TrafficCar } from '../app/traffic';
+import { driversNow, isPathKind, isRoadKind, PLACED, TOWN_X, townLiving, type GameState } from '../sim';
+import { carParks, carSum, carTop, roadBeside, studentRoute, townRoute, type CarPark } from './carPlaces';
 import type { Art } from './art';
 import type { Heading, Iso } from './iso';
 import { driveways } from './townLook';
@@ -97,8 +98,8 @@ export class Cars {
   /** The rules of the road, and the signs that stand at its junctions and crossings. */
   private traffic = new Traffic(planTraffic(0, 0, [], TOWN_X));
   private signs: Phaser.GameObjects.Image[] = [];
-  /** Car parks a road reaches: the road cell beside each, and the car park's own cell. */
-  private parks: Array<{ door: number; x: number; y: number }> = [];
+  /** Car parks a road reaches: the road cell beside each, and the car park's footprint. */
+  private parks: CarPark[] = [];
   /** Driveways of the streets students drive from. */
   private studentHomes: Array<{ x: number; y: number; row: number }> = [];
   /** Every driveway in the town, and the ends of its streets where a car can come and go. */
@@ -155,37 +156,24 @@ export class Cars {
       if (!this.art.has(key)) continue;
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, key);
-      const at = this.iso.toWorld(sign.x, sign.y);
-      sprite.setPosition(at.x, at.y).setDepth(this.iso.sum(sign.x, sign.y) * 4 + 2.45);
+      // Its spot counts a cell's middle as the whole number (DESIGN.md 59.4).
+      const at = this.iso.standTop(sign.x + 0.5, sign.y + 0.5);
+      sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(sign.x + 0.5, sign.y + 0.5) - 1) * 4 + 2.45);
       this.signs.push(sprite);
     }
     // Student cars have a cap of their own, so they follow the real number who drive in.
     this.drivers = driversNow(state);
 
-    const roadBeside = (x0: number, y0: number, w: number, h: number): number => {
-      for (let y = y0 - 1; y <= y0 + h; y++) {
-        for (let x = x0 - 1; x <= x0 + w; x++) {
-          const beside = (x < x0 || x >= x0 + w) !== (y < y0 || y >= y0 + h);
-          if (!beside || x < 0 || y < 0 || x >= width || y >= height) continue;
-          if (this.drivable[y * width + x]) return y * width + x;
-        }
-      }
-      return -1;
-    };
-
-    this.parks = [];
+    // Car parks: a car leaves the road only into one of them or into a driveway (DESIGN.md 59.3).
+    this.parks = carParks(state.map, this.drivable);
     this.deliveries = [];
     this.dropAt.clear();
     for (const placed of state.map.placed) {
       if (!placed) continue;
       const spec = PLACED[placed.type];
-      if (placedCars(placed.type, 1) > 0 && hasRoadAccess(state.map, placed)) {
-        const door = roadBeside(placed.x, placed.y, placed.w, placed.h);
-        if (door >= 0) this.parks.push({ door, x: placed.x, y: placed.y });
-      }
       // A truck calls where there is food or a shop, and a road to pull up on.
       if (spec.family === 'dining' || spec.family === 'store') {
-        const door = roadBeside(placed.x, placed.y, placed.w, placed.h);
+        const door = roadBeside(state.map, this.drivable, placed.x, placed.y, placed.w, placed.h);
         if (door >= 0) {
           this.deliveries.push(door);
           // The driver stands between the truck and the building, at the building's edge.
@@ -272,30 +260,7 @@ export class Cars {
 
   /** The cells from one road cell to another, or null when no road joins them. */
   private cellsBetween(from: number, to: number): number[] | null {
-    if (from === to) return [from];
-    const came = new Int32Array(this.width * this.height).fill(-1);
-    came[from] = from;
-    const queue = [from];
-    for (let head = 0; head < queue.length; head++) {
-      const i = queue[head]!;
-      if (i === to) break;
-      const x = i % this.width;
-      const y = (i - x) / this.width;
-      for (const [dx, dy] of NEIGHBOURS) {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= this.width || ny >= this.height) continue;
-        const ni = ny * this.width + nx;
-        if (came[ni] === -1 && this.drivable[ni]) {
-          came[ni] = i;
-          queue.push(ni);
-        }
-      }
-    }
-    if (came[to] === -1) return null;
-    const route = [to];
-    while (route[0] !== from) route.unshift(came[route[0]!]!);
-    return route;
+    return roadRoute({ width: this.width, height: this.height, drivable: this.drivable }, from, to);
   }
 
   private nodes(cells: readonly number[]): Node[] {
@@ -348,7 +313,7 @@ export class Cars {
     const cells = this.cellsBetween(this.kerb(home), park.door);
     if (!cells) return;
     // Out of the driveway, along the roads, and into the car park.
-    const route: Node[] = [{ x: home.x, y: home.y, road: home.y === home.row }, ...this.nodes(cells), { x: park.x, y: park.y, road: false }];
+    const route = studentRoute(this.width, home, cells, park);
     if (Math.random() >= TRAFFIC[period].inbound) route.reverse();
     this.launch('student', `car.${Math.floor(Math.random() * SMALL_CARS)}`, route, partWay);
   }
@@ -365,9 +330,7 @@ export class Cars {
     if (to === from) to = spots[(spots.indexOf(from) + 1) % spots.length]!;
     const cells = this.cellsBetween(from.cell, to.cell);
     if (!cells || cells.length < 2) return;
-    const route = this.nodes(cells);
-    if (from.drive) route.unshift({ x: from.drive.x, y: from.drive.y, road: false });
-    if (to.drive) route.push({ x: to.drive.x, y: to.drive.y, road: false });
+    const route = townRoute(this.width, cells, from.drive, to.drive);
     // Now and then the town's yellow bus, which is the last of the car looks.
     const look = Math.random() < 0.08 && !from.drive && !to.drive ? CAR_LOOKS - 1 : Math.floor(Math.random() * SMALL_CARS);
     this.launch('town', `car.${look}`, route, partWay);
@@ -422,8 +385,8 @@ export class Cars {
   private draw(vehicle: Vehicle): void {
     // It drives the map. On a turned view its picture is the one for the way it goes on the screen.
     this.art.apply(vehicle.sprite, `${vehicle.look}.${this.iso.heading(vehicle.heading as Heading)}`);
-    const at = this.iso.toWorld(vehicle.x, vehicle.y);
-    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth(this.iso.sum(vehicle.x, vehicle.y) * 4 + 2.4);
+    const at = carTop(this.iso, vehicle.x, vehicle.y);
+    vehicle.sprite.setPosition(at.x, at.y).setAlpha(vehicle.alpha).setDepth(carSum(this.iso, vehicle.x, vehicle.y) * 4 + 2.4);
   }
 
   private retire(index: number): void {
@@ -451,8 +414,8 @@ export class Cars {
       const heading = this.iso.heading(drive.y < drive.row ? 'py' : 'ny');
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, `car.${look}.${heading}`);
-      const at = this.iso.toWorld(drive.x, drive.y);
-      sprite.setPosition(at.x, at.y).setDepth(this.iso.sum(drive.x, drive.y) * 4 + 2.3);
+      const at = carTop(this.iso, drive.x, drive.y);
+      sprite.setPosition(at.x, at.y).setDepth(carSum(this.iso, drive.x, drive.y) * 4 + 2.3);
       this.parked.push(sprite);
     }
   }

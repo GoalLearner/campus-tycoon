@@ -2,6 +2,7 @@ import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
 import { alwaysDaylight, setAlwaysDaylight } from '../app/daylight';
 import { HOME_SCREEN_TIP, markHomeScreenTipShown, shouldShowHomeScreenTip } from '../app/homeScreenTip';
+import { markTwistTipShown, TWIST_TIP, twistTipDue } from '../app/twistTip';
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
 import { hasTimeSkip, isNative } from '../app/platform';
 import { session, type ToolChoice } from '../app/session';
@@ -536,9 +537,6 @@ export function mountUi(root: HTMLElement): void {
 
   // ---------------------------------------------------------------- build --
   const buildButton = button('Build', 'build-fab', () => openBuild());
-  // Turn the view a quarter, clockwise (DESIGN.md section 43). Four taps come home.
-  const turnButton = button('Turn', 'turn-fab', () => session.turnView());
-  turnButton.setAttribute('aria-label', 'Turn the view a quarter');
   // Collect all (DESIGN.md 42.4). The map shows the burst over each building as its marker goes.
   const collectButton = button('', 'collect-fab', () => collectAll());
   function collectAll(): void {
@@ -675,7 +673,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, turnButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -712,6 +710,7 @@ export function mountUi(root: HTMLElement): void {
   let modalOpen = false;
   /** The Home Screen tip is looked at once a visit, after any away list. */
   let tipChecked = false;
+  let twistTipChecked = false;
 
   function openModal(build: (close: () => void, card: HTMLElement) => void, dismissable = true): void {
     modalRoot.textContent = '';
@@ -1492,7 +1491,6 @@ export function mountUi(root: HTMLElement): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
     buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
-    turnButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
     if (!type) return;
     setText(placeButton, 'Place');
@@ -2130,7 +2128,8 @@ export function mountUi(root: HTMLElement): void {
         photoShare.disabled = false;
       });
   });
-  photoButtons.append(photoShare, button('Turn', '', () => session.turnView()), button('Done', '', () => session.setPhoto(false)));
+  // Two fingers turn the map here too (DESIGN.md section 43).
+  photoButtons.append(photoShare, button('Done', '', () => session.setPhoto(false)));
   photoBar.append(photoButtons, photoCaptionBox);
   root.append(photoBar);
   function renderPhoto(state: GameState): void {
@@ -2592,6 +2591,15 @@ export function mountUi(root: HTMLElement): void {
         openModal((close, card) => {
           card.append(el('h1', '', 'A tip'), el('p', '', HOME_SCREEN_TIP), button('OK', 'primary', close));
         });
+      }
+    }
+
+    // Once, the first time the map is open after the Turn button went: two fingers turn it now (DESIGN.md 43).
+    if (store.hasGame && !modalOpen && !session.photo && !twistTipChecked) {
+      twistTipChecked = true;
+      if (twistTipDue()) {
+        markTwistTipShown();
+        pushToast(TWIST_TIP);
       }
     }
 

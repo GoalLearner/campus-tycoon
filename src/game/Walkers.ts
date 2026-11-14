@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { avenueCrossing, avenueCrossingBack, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
+import { avenueCrossing, avenueCrossingBack, KERB_MIDDLE, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
 import {
   enrollment,
   isPathKind,
@@ -76,8 +76,8 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 };
 /** Townspeople out on the streets in each part of the day. */
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
-/** How far from the middle of a street its sidewalk runs. */
-const SIDEWALK = 0.41;
+/** How far from the middle of a street the middle of its sidewalk runs (DESIGN.md 59.1). */
+const SIDEWALK = 0.5 - KERB_MIDDLE;
 /** Which sidewalk of its street a house is on: -1 above the street on the map, 1 below. */
 const sideOf = (house: Stop): number => (house.row !== undefined && house.cell.y < house.row ? -1 : 1);
 /** A tour ambles. */

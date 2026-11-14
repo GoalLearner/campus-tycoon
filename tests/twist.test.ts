@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { twistMove, twistQuarters, twistStart, TWIST_DEGREES, type Finger, type Twist } from '../src/app/twist';
+import { settleDegrees, settling, twistMove, twistQuarters, twistStart, TWIST_DEGREES, type Finger, type Twist } from '../src/app/twist';
 
 /**
  * The two-finger twist (DESIGN.md section 43): it must stay out of a pinch's
@@ -79,5 +79,36 @@ describe('a twist turns the view', () => {
     const twist = play([200, 0], [200, 60]);
     const after = play([200, 60], [320, 70], 30, twist);
     expect(after.mode).toBe('twist');
+  });
+});
+
+describe('the map turns with the fingers (DESIGN.md 43.5)', () => {
+  it('is a twist from 15 degrees, with the fingers as far apart', () => {
+    expect(TWIST_DEGREES).toBe(15);
+    expect(play([200, 0], [201, 20]).mode).toBe('twist');
+    expect(play([200, 0], [201, 12]).mode).toBe('open');
+  });
+
+  it('settles to the nearest quarter of the angle turned, either way round', () => {
+    expect(settleDegrees(play([200, 0], [200, 30]))).toBe(0);
+    expect(settleDegrees(play([200, 0], [200, 70]))).toBe(90);
+    expect(settleDegrees(play([200, 0], [200, -170], 60))).toBe(-180);
+    // A pinch settles nowhere.
+    expect(settleDegrees(play([160, 0], [320, 5]))).toBe(0);
+  });
+
+  it('settles quickly at first and gently at the end, and ends on the quarter', () => {
+    const from = 63;
+    const to = 90;
+    let last = from;
+    for (let n = 1; n <= 20; n++) {
+      const angle = settling(from, to, n / 20);
+      expect(angle).toBeGreaterThanOrEqual(last);
+      last = angle;
+    }
+    expect(settling(from, to, 0)).toBe(from);
+    expect(settling(from, to, 1)).toBe(to);
+    expect(settling(from, to, 1.4)).toBe(to);
+    expect(settling(from, to, 0.5) - from).toBeGreaterThan((to - from) * 0.8);
   });
 });

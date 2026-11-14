@@ -2058,6 +2058,512 @@
     }
    ]
   },
+  "kerb.0.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.3": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.6": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.7": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.9": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.11": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-11.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.12": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-12.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.13": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-13.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.14": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.0.15": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-0-15.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.1.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-1-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.1.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-1-2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.1.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-1-4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.1.6": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-1-6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.2.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-2-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.2.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-2-4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.2.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-2-8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.2.12": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-2-12.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.3.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-3-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.3.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-3-4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.4.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-4-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.4.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-4-1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.4.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-4-8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.4.9": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-4-9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.5.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-5-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.6.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-6-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.6.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-6-8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.7.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-7-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.8.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-8-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.8.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-8-1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.8.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-8-2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.8.3": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-8-3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.9.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-9-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.9.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-9-2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.10.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-10-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.11.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-11-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.12.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-12-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.12.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-12-1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.13.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-13-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.14.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-14-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "kerb.15.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/kerb/kerb-15-0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "sign.stop": {
    "layers": [
     {
@@ -2319,7 +2825,7 @@
      "swap": "rim"
     },
     {
-     "file": "penzilla/GiantCityBuilder/Houses/Garden_Driveway.png",
+     "file": "_rendered/fallback/kerb/drive.png",
      "footprint": [
       1,
       1

@@ -62,9 +62,18 @@ export const WALKERS_FIRST_MS = 2500;
 export const MERGE_ROOM = 1.05;
 /** A car that cannot move for this long gives up and leaves the road. It is a safety net, and the tests expect it never to be used. */
 export const GIVE_UP_MS = 60_000;
+/**
+ * The sidewalk (DESIGN.md section 59): a strip of slabs this deep, as a share of
+ * the cell, along each side of a road that meets no more road. It is drawn
+ * inside the road's own cell, because a house fills its whole lot. The art
+ * (tools/make_sidewalk.py) draws it the same depth.
+ */
+export const KERB_WIDTH = 0.16;
+/** Where people walk on it: its middle, as a share of the road cell from that side. */
+export const KERB_MIDDLE = KERB_WIDTH / 2;
 /** Where people stand on the avenue: its campus-side walk, and its far kerb, as shares of the cell from its campus edge. */
-export const KERB_NEAR = 0.09;
-export const KERB_FAR = 0.92;
+export const KERB_NEAR = KERB_MIDDLE;
+export const KERB_FAR = 1 - KERB_MIDDLE;
 
 const NO_LANE = { x: 0, y: 0 };
 const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
@@ -582,6 +591,67 @@ export class Traffic {
       placeCar(car);
     }
   }
+}
+
+/**
+ * Where the sidewalk runs on a road cell (DESIGN.md 59.1), in the bits of the
+ * road pieces: `sides` has 1 for the side toward y - 1, 2 toward x + 1, 4
+ * toward y + 1 and 8 toward x - 1, for each side that meets the map but no
+ * road; `corners` has 1 for the corner between the first two, and so on
+ * round, for an inside corner where two roads meet and the cell across the
+ * corner is no road: where a side street opens off, the sidewalk turns it.
+ * Nothing for a cell that is no road. The edge of the map has no sidewalk:
+ * the road runs on past it.
+ */
+export function kerbAt(plan: TrafficPlan, x: number, y: number): { sides: number; corners: number } {
+  const { width, height, drivable } = plan;
+  if (x < 0 || y < 0 || x >= width || y >= height || !drivable[y * width + x]) return { sides: 0, corners: 0 };
+  const inside = (cx: number, cy: number): boolean => cx >= 0 && cy >= 0 && cx < width && cy < height;
+  const road = (cx: number, cy: number): boolean => inside(cx, cy) && drivable[cy * width + cx]!;
+  const ways: ReadonlyArray<readonly [number, number, number]> = [
+    [1, 0, -1],
+    [2, 1, 0],
+    [4, 0, 1],
+    [8, -1, 0],
+  ];
+  let sides = 0;
+  for (const [bit, dx, dy] of ways) if (inside(x + dx, y + dy) && !road(x + dx, y + dy)) sides |= bit;
+  let corners = 0;
+  for (let n = 0; n < 4; n++) {
+    const [bit, ax, ay] = ways[n]!;
+    const [, bx, by] = ways[(n + 1) % 4]!;
+    if (road(x + ax, y + ay) && road(x + bx, y + by) && inside(x + ax + bx, y + ay + by) && !road(x + ax + bx, y + ay + by)) corners |= bit;
+  }
+  return { sides, corners };
+}
+
+/** The road cells from one road cell to another, the fewest there are, or null when no road joins them. */
+export function roadRoute(plan: Pick<TrafficPlan, 'width' | 'height' | 'drivable'>, from: number, to: number): number[] | null {
+  const { width, height, drivable } = plan;
+  if (from === to) return [from];
+  const came = new Int32Array(width * height).fill(-1);
+  came[from] = from;
+  const queue = [from];
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head]!;
+    if (i === to) break;
+    const x = i % width;
+    const y = (i - x) / width;
+    for (const [dx, dy] of NEIGHBOURS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const ni = ny * width + nx;
+      if (came[ni] === -1 && drivable[ni]) {
+        came[ni] = i;
+        queue.push(ni);
+      }
+    }
+  }
+  if (came[to] === -1) return null;
+  const route = [to];
+  while (route[0] !== from) route.unshift(came[route[0]!]!);
+  return route;
 }
 
 // ---------------------------------------------------------------- people --

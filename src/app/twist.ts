@@ -1,17 +1,21 @@
 /**
- * The two-finger twist that turns the view (DESIGN.md section 43).
+ * The two-finger twist that turns the view (DESIGN.md section 43). It is the
+ * only way to turn it: the Turn button is gone, by the owner's word.
  *
  * Two fingers on the map are a pinch: they pan and zoom, as they always have.
- * A gesture becomes a twist only when the fingers turn well past any angle a
- * pinch makes while they stay about as far apart. Once a gesture has zoomed it
- * can never turn, and once it has turned it never zooms. When the fingers
- * lift, the view snaps to the nearest quarter of the angle turned.
+ * A gesture becomes a twist when the fingers turn past the angle a pinch
+ * drifts while they stay about as far apart. Once a gesture has zoomed it can
+ * never turn, and once it has turned it never zooms. While they twist, the map
+ * turns with them, the whole way. When they lift, it settles to the nearest
+ * quarter in a short ease, and the view is drawn again turned that far.
  *
  * Plain numbers in, a decision out: no Phaser, so it is tested on its own.
  */
 
-/** How far the fingers must turn, in degrees, before a gesture is a twist. A pinch drifts well under this. */
-export const TWIST_DEGREES = 35;
+/** How far the fingers must turn, in degrees, before a gesture is a twist. A pinch drifts under this before it has zoomed. */
+export const TWIST_DEGREES = 15;
+/** How long the map takes to settle to the nearest quarter once the fingers lift. */
+export const SETTLE_MS = 220;
 /** How much the gap between the fingers may change, as a share, before a gesture is a zoom for good. */
 export const ZOOM_SHARE = 0.1;
 
@@ -58,4 +62,18 @@ export function twistMove(twist: Twist, a: Finger, b: Finger): Twist {
 export function twistQuarters(twist: Twist): number {
   if (twist.mode !== 'twist') return 0;
   return Math.round(twist.turned / 90) + 0;
+}
+
+/** The angle the map settles to when the fingers lift, in degrees: the nearest quarter of the angle turned. */
+export function settleDegrees(twist: Twist): number {
+  return twistQuarters(twist) * 90;
+}
+
+/**
+ * The map's angle part way through settling, `t` from 0 to 1: quick at first
+ * and gentle at the end, from where the fingers left it to the quarter.
+ */
+export function settling(from: number, to: number, t: number): number {
+  const done = Math.min(1, Math.max(0, t));
+  return from + (to - from) * (1 - (1 - done) ** 3);
 }
