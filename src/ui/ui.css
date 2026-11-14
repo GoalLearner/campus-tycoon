@@ -793,6 +793,91 @@ button.student-row {
   text-align: right;
 }
 
+/* Their people (DESIGN.md 63.6): faces in a row that scrolls sideways, each opening that student's card. */
+.student-friends {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.student-friend {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 58px;
+  min-height: 44px;
+  padding: 3px 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.student-friend-art {
+  width: 26px;
+  height: 30px;
+  border-radius: 7px;
+  background: #a6ad36;
+}
+
+.student-friend-name,
+.student-friend-role {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.student-friend-name {
+  font-size: 11px;
+}
+
+.student-friend-role {
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.student-friend.partner .student-friend-role {
+  color: #ff9db8;
+}
+
+.student-friend.best .student-friend-role {
+  color: #7be495;
+}
+
+.student-friend.rival .student-friend-role {
+  color: #ffb347;
+}
+
+/* A line of the Campus social page or the paper's gossip about someone: it opens their card (DESIGN.md 63.6). */
+.social-told {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin: 4px 0;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.social-told > span:first-child {
+  flex: 1;
+}
+
+.social-faces {
+  margin: 4px 0 6px;
+}
+
+.student-quiet {
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .student-follow {
   flex: none;
   padding: 5px 11px;

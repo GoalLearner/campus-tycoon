@@ -4,6 +4,10 @@ import { sound } from '../app/sound';
 import { store } from '../app/store';
 import { awayView, inboxView, welcomeView, type PaperView } from './deskUi';
 import { giftReady } from '../sim';
+import { WEB_WEEK_TICKS } from '../sim/config/web';
+import { webWeekOf } from '../sim/systems/web';
+import { gossip } from '../app/socialView';
+import { socialWeb } from '../app/socialWeb';
 import { giftCard } from './rhythmUi';
 
 /**
@@ -252,7 +256,9 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
   openModal((close, card) => {
     card.classList.add('card-fixed');
     const body = el('div', 'card-scroll');
+    let stopGossip = (): void => undefined;
     const leave = (): void => {
+      stopGossip();
       if (welcome) store.welcomeSeen();
       else if (report) store.awaySeen(report);
       close();
@@ -286,6 +292,32 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
         leave();
         go(where);
       });
+      // The gossip column (DESIGN.md 63.6): what happened between students while the player was away. The web is
+      // caught up in its worker a moment after the campus opens, so the column fills in when it answers.
+      const top = body.querySelector('.paper-top');
+      if (top && report) {
+        const column = el('div', 'paper-gossip');
+        top.after(column);
+        const fill = (): void => {
+          column.textContent = '';
+          const web = socialWeb.view;
+          if (!web) return;
+          const since = webWeekOf(store.state) - Math.ceil(report.minutes / WEB_WEEK_TICKS);
+          const told = gossip(web, store.state, since, 3);
+          if (told.length === 0) return;
+          column.append(el('div', 'paper-section', 'Gossip'));
+          for (const one of told) {
+            const row = button('', 'paper-item go', () => {
+              leave();
+              session.openStudent(one.people[0]!);
+            });
+            row.append(el('span', 'paper-text', one.line));
+            column.append(row);
+          }
+        };
+        fill();
+        stopGossip = socialWeb.onChange(fill);
+      }
     } else {
       body.append(el('h1', '', view ? view.summary.headline : 'New since your last visit'));
       const list = el('ul', 'away-list');

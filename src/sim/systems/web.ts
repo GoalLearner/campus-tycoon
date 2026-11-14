@@ -10,11 +10,18 @@ import {
   DATE_FROM,
   ENCOUNTERS,
   ENEMY_AT,
+  EVENT,
   EVENTS,
   FADE,
   FEEL,
   FLOOR_SIZE,
   FRIEND_AT,
+  GROUP_MAX,
+  GROUP_MIN,
+  HAPPENING_KINDS,
+  HAPPENING_WEEKS,
+  HAPPENINGS_KEPT,
+  HEAVY_EVENTS,
   KIND,
   KNOWN,
   MET_AT,
@@ -81,7 +88,34 @@ export interface Web {
   roomsFor: number;
   /** What happened, counted since it began, by EVENTS. */
   events: Float64Array;
+  /** The campus year the web is being stepped in, set by each catch-up: what the week's happenings are dated. */
+  calYear: number;
+  /**
+   * What happened by name (DESIGN.md 63.6): HAPPENING_WEEKS weeks of HAPPENING_KINDS, HAPPENINGS_KEPT of each, as
+   * HAPPENING_FIELDS numbers each (see `happeningAt`). A week no longer kept is written over.
+   */
+  happenings: Int32Array;
+  /** Each kept week's counts by EVENTS, its week and its campus year. */
+  weekly: Float64Array;
+  weeklyWeek: Int32Array;
+  weeklyYear: Int32Array;
+  /**
+   * The one heavy happening that may be shown this campus week (63.3, decision 6): the first of the week, kept even when
+   * the web is grown again, so a second is never picked in the same week. `rationFor` is the campus year it is for.
+   */
+  ration: Int32Array;
+  rationFor: number;
+  /** Friend groups, worked out again after each catch-up: each student's group or -1, and each group's members. */
+  groupOf: Int32Array;
+  friendGroups: Group;
+  /** Each group's vibe: the interest most of them share, by INTEREST. */
+  groupVibe: Uint8Array;
 }
+
+/** A happening's numbers: its week, its event, its campus year, its luck, then up to three students as entry year and index. */
+export const HAPPENING_FIELDS = 10;
+const PER_WEEK = HAPPENING_KINDS.length * HAPPENINGS_KEPT;
+const KIND_SLOT = new Map<number, number>(HAPPENING_KINDS.map((kind, i) => [kind, i]));
 
 const PLACES = 6;
 const share = (h: number): number => (h >>> 0) / 4294967296;
@@ -131,6 +165,16 @@ export function newWeb(seed: number, classSlot: number): Web {
     placedFor: '',
     roomsFor: -1,
     events: new Float64Array(EVENTS.length),
+    calYear: 0,
+    happenings: new Int32Array(HAPPENING_WEEKS * PER_WEEK * HAPPENING_FIELDS).fill(-1),
+    weekly: new Float64Array(HAPPENING_WEEKS * EVENTS.length),
+    weeklyWeek: new Int32Array(HAPPENING_WEEKS).fill(-1),
+    weeklyYear: new Int32Array(HAPPENING_WEEKS),
+    ration: new Int32Array(HAPPENING_FIELDS).fill(-1),
+    rationFor: -1,
+    groupOf: new Int32Array(n).fill(-1),
+    friendGroups: { start: new Int32Array(1), members: new Int32Array(0) },
+    groupVibe: new Uint8Array(0),
   };
 }
 
@@ -179,6 +223,13 @@ function grow(web: Web, classSlot: number): void {
   next.ring = [...old.ring];
   next.week = old.week;
   next.events = old.events;
+  next.calYear = old.calYear;
+  next.happenings = old.happenings;
+  next.weekly = old.weekly;
+  next.weeklyWeek = old.weeklyWeek;
+  next.weeklyYear = old.weeklyYear;
+  next.ration = old.ration;
+  next.rationFor = old.rationFor;
   const move = (id: number): number => (id < 0 ? -1 : Math.floor(id / old.classSlot) * classSlot + (id % old.classSlot));
   for (let id = 0; id < old.n; id++) {
     const to = move(id);
@@ -443,16 +494,66 @@ const count = (web: Web, what: number): void => {
   web.events[what]! += 1;
 };
 
-/** True when they are single, or taken and flirty enough to cheat: then the couple they were in ends messily. */
-function freeOrCheats(web: Web, who: number, h: number): boolean {
+/**
+ * Remember a happening by name, if it is of a kind the paper and the cards tell: of each kind, the week keeps the
+ * HAPPENINGS_KEPT with the least luck, so who is told about owes nothing to their place in the web.
+ */
+function note(web: Web, what: number, a: number, b: number, c = -1): void {
+  const kindSlot = KIND_SLOT.get(what);
+  if (kindSlot === undefined) return;
+  const lo = a < b ? a : b;
+  const hi = a < b ? b : a;
+  const luck = hash5(web.seed, 9990, lo, hi, web.week * 16 + what) | 0;
+  const base = ((((web.week % HAPPENING_WEEKS) + HAPPENING_WEEKS) % HAPPENING_WEEKS) * PER_WEEK + kindSlot * HAPPENINGS_KEPT) * HAPPENING_FIELDS;
+  let at = -1;
+  let worst = -2147483648;
+  for (let k = 0; k < HAPPENINGS_KEPT; k++) {
+    const f = base + k * HAPPENING_FIELDS;
+    if (web.happenings[f] !== web.week) {
+      at = f;
+      break;
+    }
+    const theirs = web.happenings[f + 3]!;
+    if (theirs > worst) {
+      worst = theirs;
+      at = f;
+    }
+  }
+  if (web.happenings[at] === web.week && luck >= worst) return;
+  const h = web.happenings;
+  h[at] = web.week;
+  h[at + 1] = what;
+  h[at + 2] = web.calYear;
+  h[at + 3] = luck;
+  const put = (field: number, id: number): void => {
+    if (id < 0) {
+      h[at + field] = -1;
+      h[at + field + 1] = -1;
+      return;
+    }
+    const ref = refAt(web, id);
+    h[at + field] = ref.entryYear;
+    h[at + field + 1] = ref.index;
+  };
+  put(4, a);
+  put(6, b);
+  put(8, c);
+}
+
+/** Free to start dating: single (1), taken and flirty enough to cheat (2), or not (0). Changes nothing. */
+function freeToDate(web: Web, who: number, h: number): number {
+  if (partnered(web, who) < 0) return 1;
+  return traitOf(web.identity[who]!, TRAIT.loyal) === 0 && share(h >>> 9) < 0.25 ? 2 : 0;
+}
+
+/** They cheat: the couple they were in ends messily, told once as the cheating, with whom it was for. */
+function cheat(web: Web, who: number, other: number): void {
   const held = partnered(web, who);
-  if (held < 0) return true;
-  if (traitOf(web.identity[who]!, TRAIT.loyal) !== 0 || share(h >>> 9) >= 0.25) return false;
-  const back = web.back[held]!;
-  setBoth(web, held, back, KIND.ex, FEEL.tense);
-  count(web, 10);
-  count(web, 9);
-  return true;
+  if (held < 0) return;
+  setBoth(web, held, web.back[held]!, KIND.ex, FEEL.tense);
+  count(web, EVENT.cheating);
+  count(web, EVENT.splitMessy);
+  note(web, EVENT.cheating, who, web.other[held]!, other);
 }
 
 /** How many have a crush on b: the other ends of b's ties that say crush. */
@@ -493,7 +594,8 @@ function meet(web: Web, a: number, b: number, h: number): void {
   if (ka === KIND.rival || ka === KIND.enemy || (chem < CLASH_BELOW && ka === KIND.met)) {
     st = Math.min(100, st + 3);
     const next = st >= ENEMY_AT ? KIND.enemy : st >= RIVAL_AT ? KIND.rival : KIND.met;
-    if (next !== ka) count(web, next === KIND.enemy ? 13 : 12);
+    if (next !== ka) count(web, next === KIND.enemy ? EVENT.enemies : EVENT.rivals);
+    if (next !== ka && next === KIND.enemy) note(web, EVENT.enemies, a, b);
     web.strength[sa] = web.strength[sb] = st;
     setBoth(web, sa, sb, next, next === KIND.met ? FEEL.warm : FEEL.tense);
     return;
@@ -505,7 +607,8 @@ function meet(web: Web, a: number, b: number, h: number): void {
     count(web, 1);
   } else if (ka === KIND.friend && st >= BEST_AT && has(web, a, KIND.best) < 0 && has(web, b, KIND.best) < 0) {
     setBoth(web, sa, sb, KIND.best, FEEL.warm);
-    count(web, 2);
+    count(web, EVENT.best);
+    note(web, EVENT.best, a, b);
   }
   // Romance, between friends: a rare spark, and each must be the other's type.
   if (st < CRUSH_FROM || ka === KIND.roommate || ka === KIND.ex || (ka >= KIND.dating && ka <= KIND.longterm)) return;
@@ -517,7 +620,18 @@ function meet(web: Web, a: number, b: number, h: number): void {
     web.kind[sa] = KIND.crush;
     web.feeling[sa] = partnered(web, a) >= 0 ? FEEL.complicated : FEEL.warm;
     count(web, kb === KIND.crush ? 4 : 3);
-    if (crushedBy(web, b) >= 2) count(web, 14);
+    if (crushedBy(web, b) >= 2) {
+      count(web, EVENT.triangle);
+      // a and another, both with a crush on b.
+      let rival = -1;
+      for (let k = 0; k < SLOTS && rival < 0; k++) {
+        const s = b * SLOTS + k;
+        const other = web.other[s]!;
+        const back = web.back[s]!;
+        if (other >= 0 && other !== a && back >= 0 && web.kind[back] === KIND.crush) rival = other;
+      }
+      note(web, EVENT.triangle, a, b, rival);
+    }
   }
   if (likes(ib, ia) && kb !== KIND.crush && spark > SPARK_BACK && has(web, b, KIND.crush) < 0) {
     web.kind[sb] = KIND.crush;
@@ -526,9 +640,15 @@ function meet(web: Web, a: number, b: number, h: number): void {
   }
   // Both with a crush, close enough, a good evening: they start dating, if both are free, or one cheats.
   if (web.kind[sa] === KIND.crush && web.kind[sb] === KIND.crush && st >= DATE_FROM && share(h >>> 5) < 0.35) {
-    if (!freeOrCheats(web, a, h) || !freeOrCheats(web, b, h >>> 2)) return;
+    // Both must be free, or ready to cheat; only then does anything end.
+    const fa = freeToDate(web, a, h);
+    const fb = freeToDate(web, b, h >>> 2);
+    if (fa === 0 || fb === 0) return;
+    if (fa === 2) cheat(web, a, b);
+    if (fb === 2) cheat(web, b, a);
     setBoth(web, sa, sb, KIND.dating, FEEL.warm);
-    count(web, 5);
+    count(web, EVENT.dating);
+    note(web, EVENT.dating, a, b);
   }
 }
 
@@ -559,13 +679,21 @@ function settle(web: Web): void {
         web.kind[s] = KIND.ex;
         web.feeling[s] = h < chance / 2 ? FEEL.complicated : FEEL.tense;
         web.strength[s] = 40;
-        if (a === lo) count(web, web.feeling[s] === FEEL.complicated ? 8 : 9);
+        if (a === lo) {
+          // A cheating partner's couple has ended already, and was told as the cheating.
+          const how = web.feeling[s] === FEEL.complicated ? EVENT.splitMutual : EVENT.splitMessy;
+          count(web, how);
+          note(web, how, lo, hi);
+        }
       } else if (kind === KIND.dating && st >= 70) {
         web.kind[s] = KIND.exclusive;
         if (a === lo) count(web, 6);
       } else if (kind === KIND.exclusive && st >= 95) {
         web.kind[s] = KIND.longterm;
-        if (a === lo) count(web, 7);
+        if (a === lo) {
+          count(web, EVENT.longterm);
+          note(web, EVENT.longterm, lo, hi);
+        }
       }
     } else if (kind === KIND.ex && web.seen[s] === week && a === hi && st > 0) {
       // On and off: exes who keep seeing each other, both free, may get back together. Decided at the end settled
@@ -576,7 +704,8 @@ function settle(web: Web): void {
         if (back >= 0) {
           setBoth(web, s, back, KIND.dating, FEEL.complicated);
           web.strength[s] = web.strength[back] = 50;
-          count(web, 11);
+          count(web, EVENT.backTogether);
+          note(web, EVENT.backTogether, lo, hi);
         }
       }
     } else if ((kind === KIND.friend || kind === KIND.best || kind === KIND.crush) && st < 25) web.kind[s] = KIND.met;
@@ -589,6 +718,12 @@ export function stepWeek(web: Web): void {
   web.week += 1;
   const { seed, n } = web;
   const week = web.week;
+  // This week's row of happenings and counts, written over the week HAPPENING_WEEKS ago.
+  const row = ((week % HAPPENING_WEEKS) + HAPPENING_WEEKS) % HAPPENING_WEEKS;
+  web.happenings.fill(-1, row * PER_WEEK * HAPPENING_FIELDS, (row + 1) * PER_WEEK * HAPPENING_FIELDS);
+  web.weeklyWeek[row] = week;
+  web.weeklyYear[row] = web.calYear;
+  const before = web.events.slice();
   for (let a = 0; a < n; a++) {
     if (web.year[a]! < 0) continue;
     const encounters = ENCOUNTERS + traitOf(web.identity[a]!, TRAIT.outgoing) - 1;
@@ -624,6 +759,7 @@ export function stepWeek(web: Web): void {
     }
   }
   settle(web);
+  for (let k = 0; k < EVENTS.length; k++) web.weekly[row * EVENTS.length + k] = web.events[k]! - before[k]!;
 }
 
 // ----------------------------------------------------------- regrowing --
@@ -634,6 +770,10 @@ export function stepWeek(web: Web): void {
  * older they both are; a few single pairs who are each other's type are couples. Roommates are paired again.
  */
 export function regrow(web: Web, state: GameState): void {
+  // What happened by name belongs to the ties as they were: a new history begins. The week's heavy pick is kept.
+  web.happenings.fill(-1);
+  web.weekly.fill(0);
+  web.weeklyWeek.fill(-1);
   web.other.fill(-1);
   web.kind.fill(0);
   web.strength.fill(0);
@@ -660,7 +800,8 @@ export function regrow(web: Web, state: GameState): void {
         const st = Math.min(95, Math.round(15 + 40 * chem + 8 * Math.min(years, web.year[b]!)));
         const spark = share(hash5(seed, 9930, a, b, 0));
         const couple = spark > SPARK + 0.01 && likes(web.identity[a]!, web.identity[b]!) && likes(web.identity[b]!, web.identity[a]!) && partnered(web, a) < 0 && partnered(web, b) < 0;
-        link(web, a, b, couple ? (st >= 70 ? KIND.longterm : KIND.dating) : st >= FRIEND_AT ? KIND.friend : KIND.met, st, chem);
+        // A couple grown again is a couple that has lasted: never so weak it ends the first week it is lived.
+        link(web, a, b, couple ? (st >= 70 ? KIND.longterm : KIND.dating) : st >= FRIEND_AT ? KIND.friend : KIND.met, couple ? Math.max(st, DATE_FROM + 5) : st, chem);
       }
     }
   }
@@ -673,6 +814,7 @@ export function regrow(web: Web, state: GameState): void {
 export function catchUp(web: Web, state: GameState, toWeek: number): { lived: number; regrown: boolean } {
   fitClasses(web, state);
   place(web, state);
+  web.calYear = calendarAt(state.clock).year;
   const fresh = web.week < 0;
   if (fresh) web.week = toWeek - 1;
   const gap = toWeek - web.week;
@@ -688,7 +830,90 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
     stepWeek(web);
     lived += 1;
   }
+  findGroups(web);
+  pickRation(web);
   return { lived, regrown };
+}
+
+/** The week's heavy happening, once there is one: the earliest of the campus year, then the least luck. Never changed after. */
+export function pickRation(web: Web): void {
+  if (web.rationFor !== web.calYear) {
+    web.rationFor = web.calYear;
+    web.ration.fill(-1);
+  }
+  if (web.ration[0] !== -1) return;
+  let pick = -1;
+  for (let f = 0; f < web.happenings.length; f += HAPPENING_FIELDS) {
+    const h = web.happenings;
+    if (h[f] === -1 || h[f + 2] !== web.calYear || !HEAVY_EVENTS.includes(h[f + 1]!)) continue;
+    if (pick < 0 || h[f]! < h[pick]! || (h[f] === h[pick] && h[f + 3]! < h[pick + 3]!)) pick = f;
+  }
+  if (pick >= 0) web.ration.set(web.happenings.subarray(pick, pick + HAPPENING_FIELDS));
+}
+
+// ------------------------------------------------------- friend groups --
+
+/** The interest most of a group share, or -1. */
+function vibeOf(web: Web, members: number[]): number {
+  let best = -1;
+  let most = 1;
+  for (let i = 0; i < 9; i++) {
+    let have = 0;
+    for (const m of members) if ((web.identity[m]! >>> (18 + i)) & 1) have += 1;
+    if (have > most) {
+      most = have;
+      best = i;
+    }
+  }
+  return best;
+}
+
+const isFriend = (kind: number): boolean => kind === KIND.friend || kind === KIND.best || kind === KIND.crush || kind === KIND.roommate;
+
+/**
+ * Friend groups (DESIGN.md 63.6): three to six friends, each a friend of at least half the group so far. Formed in an
+ * order taken from the week's luck, so no class or hall is first every time; each student in one group at most.
+ */
+export function findGroups(web: Web): void {
+  const { n } = web;
+  web.groupOf = new Int32Array(n).fill(-1);
+  const starts: number[] = [0];
+  const members: number[] = [];
+  const vibes: number[] = [];
+  const offset = hash5(web.seed, 9995, web.week, 0, 0) % Math.max(1, n);
+  const candidates: number[] = [];
+  for (let step = 0; step < n; step++) {
+    const a = (step + offset) % n;
+    if (web.year[a]! < 0 || web.groupOf[a] !== -1) continue;
+    candidates.length = 0;
+    for (let k = 0; k < SLOTS; k++) {
+      const s = a * SLOTS + k;
+      const b = web.other[s]!;
+      if (b >= 0 && web.groupOf[b] === -1 && isFriend(web.kind[s]!) && web.strength[s]! >= FRIEND_AT) candidates.push(s);
+    }
+    if (candidates.length < GROUP_MIN - 1) continue;
+    candidates.sort((x, y) => web.strength[y]! - web.strength[x]!);
+    const group = [a];
+    for (const s of candidates) {
+      if (group.length >= GROUP_MAX) break;
+      const b = web.other[s]!;
+      let ties = 0;
+      for (const m of group) {
+        const t = slotOf(web, b, m);
+        if (t >= 0 && isFriend(web.kind[t]!) && web.strength[t]! >= FRIEND_AT) ties += 1;
+      }
+      if (ties * 2 >= group.length) group.push(b);
+    }
+    if (group.length < GROUP_MIN) continue;
+    for (const m of group) {
+      web.groupOf[m] = vibes.length;
+      members.push(m);
+    }
+    starts.push(members.length);
+    vibes.push(vibeOf(web, group));
+  }
+  web.friendGroups = { start: Int32Array.from(starts), members: Int32Array.from(members) };
+  web.groupVibe = Uint8Array.from(vibes.map((v) => (v < 0 ? 255 : v)));
 }
 
 // ----------------------------------------------------------- the record --
@@ -697,17 +922,29 @@ const MAGIC = 0x43545731; // CTW1
 const HEADER = 16; // int32s
 
 /**
- * The web as its save record: a header, what has happened since it began, then each slot's other end, week together,
- * kind, strength and feeling.
+ * The web as its save record, version 2 (DESIGN.md 63.6): a header, what has happened since it began, the kept weeks'
+ * counts and happenings, then each slot's other end, week together, kind, strength and feeling. Version 1 (stop 1)
+ * had no weeks kept, and is still read.
  */
 export function encodeWeb(web: Web): Uint8Array {
   const slots = web.n * SLOTS;
-  const bytes = new Uint8Array(HEADER * 4 + EVENTS.length * 8 + slots * (4 + 2 + 1 + 1 + 1));
+  const kept = web.happenings.length;
+  const bytes = new Uint8Array(HEADER * 4 + EVENTS.length * 8 + web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 + slots * (4 + 2 + 1 + 1 + 1));
   const head = new Int32Array(bytes.buffer, 0, HEADER);
-  head.set([MAGIC, 1, web.seed | 0, web.week, web.classSlot, ...web.ring, web.roomsFor, EVENTS.length, 0, 0, 0, 0, 0]);
+  head.set([MAGIC, 2, web.seed | 0, web.week, web.classSlot, ...web.ring, web.roomsFor, EVENTS.length, kept, HAPPENING_WEEKS, web.rationFor, 0, 0]);
   let at = HEADER * 4;
   new Float64Array(bytes.buffer, at, EVENTS.length).set(web.events);
   at += EVENTS.length * 8;
+  new Float64Array(bytes.buffer, at, web.weekly.length).set(web.weekly);
+  at += web.weekly.length * 8;
+  new Int32Array(bytes.buffer, at, kept).set(web.happenings);
+  at += kept * 4;
+  new Int32Array(bytes.buffer, at, HAPPENING_WEEKS).set(web.weeklyWeek);
+  at += HAPPENING_WEEKS * 4;
+  new Int32Array(bytes.buffer, at, HAPPENING_WEEKS).set(web.weeklyYear);
+  at += HAPPENING_WEEKS * 4;
+  new Int32Array(bytes.buffer, at, HAPPENING_FIELDS).set(web.ration);
+  at += HAPPENING_FIELDS * 4;
   new Int32Array(bytes.buffer, at, slots).set(web.other);
   at += slots * 4;
   new Uint16Array(bytes.buffer, at, slots).set(web.seen);
@@ -725,18 +962,35 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   if (bytes.byteLength < HEADER * 4) return null;
   const copy = new Uint8Array(bytes);
   const head = new Int32Array(copy.buffer, 0, HEADER);
-  if (head[0] !== MAGIC || head[1] !== 1 || head[2] !== (state.seed | 0)) return null;
+  const version = head[1];
+  if (head[0] !== MAGIC || (version !== 1 && version !== 2) || head[2] !== (state.seed | 0)) return null;
   const classSlot = head[4]!;
   if (classSlot <= 0 || classSlot > 200_000) return null;
   const web = newWeb(state.seed, classSlot);
   const slots = web.n * SLOTS;
-  if (head[10] !== EVENTS.length || copy.byteLength !== HEADER * 4 + EVENTS.length * 8 + slots * 9) return null;
+  const kept = web.happenings.length;
+  const weeks = version === 2 ? web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
+  if (head[10] !== EVENTS.length || copy.byteLength !== HEADER * 4 + EVENTS.length * 8 + weeks + slots * 9) return null;
+  if (version === 2 && (head[11] !== kept || head[12] !== HAPPENING_WEEKS)) return null;
   web.week = head[3]!;
   web.ring = [head[5]!, head[6]!, head[7]!, head[8]!];
   web.roomsFor = head[9]!;
   let at = HEADER * 4;
   web.events.set(new Float64Array(copy.buffer, at, EVENTS.length));
   at += EVENTS.length * 8;
+  if (version === 2) {
+    web.weekly.set(new Float64Array(copy.buffer, at, web.weekly.length));
+    at += web.weekly.length * 8;
+    web.happenings.set(new Int32Array(copy.buffer, at, kept));
+    at += kept * 4;
+    web.weeklyWeek.set(new Int32Array(copy.buffer, at, HAPPENING_WEEKS));
+    at += HAPPENING_WEEKS * 4;
+    web.weeklyYear.set(new Int32Array(copy.buffer, at, HAPPENING_WEEKS));
+    at += HAPPENING_WEEKS * 4;
+    web.ration.set(new Int32Array(copy.buffer, at, HAPPENING_FIELDS));
+    at += HAPPENING_FIELDS * 4;
+    web.rationFor = head[13]!;
+  }
   web.other.set(new Int32Array(copy.buffer, at, slots));
   at += slots * 4;
   web.seen.set(new Uint16Array(copy.buffer, at, slots));

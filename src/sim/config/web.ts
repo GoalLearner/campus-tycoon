@@ -54,3 +54,37 @@ export const REGROW_LIVED_WEEKS = 8;
 
 /** What happened, counted for the cards and the paper later. */
 export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle'] as const;
+export const EVENT = {
+  met: 0,
+  friends: 1,
+  best: 2,
+  crush: 3,
+  mutualCrush: 4,
+  dating: 5,
+  exclusive: 6,
+  longterm: 7,
+  splitMutual: 8,
+  splitMessy: 9,
+  cheating: 10,
+  backTogether: 11,
+  rivals: 12,
+  enemies: 13,
+  triangle: 14,
+} as const;
+
+/**
+ * What the web remembers by name for the cards, the Campus social view and the paper (DESIGN.md 63.6): of each of
+ * these kinds, a few each week, chosen by the pair's own luck so no class or hall is favoured, for the last 64 weeks.
+ */
+export const HAPPENING_KINDS = [EVENT.best, EVENT.dating, EVENT.longterm, EVENT.splitMutual, EVENT.splitMessy, EVENT.cheating, EVENT.backTogether, EVENT.enemies, EVENT.triangle] as const;
+export const HAPPENINGS_KEPT = 6;
+export const HAPPENING_WEEKS = 64;
+/**
+ * The heavy ones (63.3, decision 6): a messy breakup, cheating, a love triangle. At most one of them is shown in a
+ * campus week, in the paper and the Campus social view together, so the game stays 13+.
+ */
+export const HEAVY_EVENTS: readonly number[] = [EVENT.splitMessy, EVENT.cheating, EVENT.triangle];
+
+/** A friend group: three to six friends who are friends with one another. */
+export const GROUP_MIN = 3;
+export const GROUP_MAX = 6;
