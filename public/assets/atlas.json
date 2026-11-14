@@ -120,6 +120,266 @@
     "h": 162
    }
   },
+  "emote.anger": {
+   "frame": {
+    "x": 826,
+    "y": 976,
+    "w": 22,
+    "h": 22
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 22
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 22
+   }
+  },
+  "emote.exclaim": {
+   "frame": {
+    "x": 555,
+    "y": 976,
+    "w": 10,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 10,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 10,
+    "h": 29
+   }
+  },
+  "emote.heart": {
+   "frame": {
+    "x": 714,
+    "y": 976,
+    "w": 28,
+    "h": 26
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 26
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 26
+   }
+  },
+  "emote.heartbreak": {
+   "frame": {
+    "x": 651,
+    "y": 976,
+    "w": 30,
+    "h": 27
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 30,
+    "h": 27
+   },
+   "sourceSize": {
+    "w": 30,
+    "h": 27
+   }
+  },
+  "emote.laugh": {
+   "frame": {
+    "x": 684,
+    "y": 976,
+    "w": 27,
+    "h": 27
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 27,
+    "h": 27
+   },
+   "sourceSize": {
+    "w": 27,
+    "h": 27
+   }
+  },
+  "emote.music": {
+   "frame": {
+    "x": 769,
+    "y": 976,
+    "w": 24,
+    "h": 25
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 25
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 25
+   }
+  },
+  "emote.partycup": {
+   "frame": {
+    "x": 745,
+    "y": 976,
+    "w": 21,
+    "h": 26
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 21,
+    "h": 26
+   },
+   "sourceSize": {
+    "w": 21,
+    "h": 26
+   }
+  },
+  "emote.sadcloud": {
+   "frame": {
+    "x": 568,
+    "y": 976,
+    "w": 28,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 28
+   }
+  },
+  "emote.sodacup": {
+   "frame": {
+    "x": 496,
+    "y": 976,
+    "w": 22,
+    "h": 30
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 30
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 30
+   }
+  },
+  "emote.sparkle": {
+   "frame": {
+    "x": 521,
+    "y": 976,
+    "w": 31,
+    "h": 30
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 31,
+    "h": 30
+   },
+   "sourceSize": {
+    "w": 31,
+    "h": 30
+   }
+  },
+  "emote.speech": {
+   "frame": {
+    "x": 796,
+    "y": 976,
+    "w": 27,
+    "h": 25
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 27,
+    "h": 25
+   },
+   "sourceSize": {
+    "w": 27,
+    "h": 25
+   }
+  },
+  "emote.sweat": {
+   "frame": {
+    "x": 599,
+    "y": 976,
+    "w": 18,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 18,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 18,
+    "h": 28
+   }
+  },
+  "emote.thought": {
+   "frame": {
+    "x": 620,
+    "y": 976,
+    "w": 28,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 28
+   }
+  },
   "ground.grass": {
    "frame": {
     "x": 679,

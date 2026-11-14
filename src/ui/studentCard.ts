@@ -3,6 +3,7 @@ import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { feelingOf } from '../app/emotion';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
@@ -224,6 +225,17 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   inside.addEventListener('click', () => session.openRoom());
   doing.line.append(follow, inside);
 
+  // What they feel right now (DESIGN.md 63.7): the emotion's emote, its name, and the top two reasons behind it.
+  const feelingRow = row('Feeling');
+  const emoteArt = el('canvas', 'student-emote');
+  emoteArt.width = 64;
+  emoteArt.height = 64;
+  const feelingName = el('span', 'student-feeling');
+  const feelingWhy = el('span', 'student-note');
+  feelingRow.value.replaceWith(feelingName);
+  feelingName.before(emoteArt);
+  feelingName.after(feelingWhy);
+
   // 3 and 4.
   const grades = row('GPA');
   const club = row('Club');
@@ -264,13 +276,15 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, grades.line, club.line, relationship.line, peopleRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
   let shownLook = '';
   let stripLook = '';
   let shownMood = -1;
+  let shownEmote = '-';
+  let emoteDrawn = false;
   let lastDoing: string | null = null;
   void loadAtlas().then((loaded) => {
     atlas = loaded;
@@ -317,11 +331,26 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     setText(hallLink, hall ?? '');
     setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');
 
+    const feeling = feelingOf(socialWeb.view, state, ref, card, shownHour());
+    setText(feelingName, feeling.name);
+    setText(feelingWhy, feeling.reasons.join(' · '));
+    const emoteKey = feeling.emote ? `emote.${feeling.emote}` : '';
+    if (emoteKey !== shownEmote || (atlas && !emoteDrawn)) {
+      shownEmote = emoteKey;
+      emoteDrawn = !!atlas;
+      const drawn = emoteKey !== '' && drawSprite(emoteArt, atlas, emoteKey);
+      emoteArt.hidden = !drawn;
+    }
+
     const people = atlas?.people;
     if (atlas && people) {
       const looks = Math.min(people.looks, people.crowd ?? people.looks);
-      // As they are drawn on the map now: a player on a court is in the kit.
-      const sprite = `person.${session.studentLook ?? studentFigure(state, ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`;
+      // As they are drawn on the map now: a player on a court is in the kit. Otherwise they wear the face of what
+      // they feel (DESIGN.md 63.7), where the art has it.
+      const look = session.studentLook ?? studentFigure(state, ref, looks, people.roles?.athlete);
+      const plain = `person.${look}.${people.flip?.sw ?? 'sw'}.0`;
+      const faced = session.studentLook === null && feeling.face ? `person.${look}.mood.${feeling.face}` : null;
+      const sprite = faced && atlas.frames[faced] ? faced : plain;
       if (sprite !== shownLook) {
         shownLook = sprite;
         portrait.classList.toggle('missing', !drawSprite(portrait, atlas, sprite));

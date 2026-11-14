@@ -76,6 +76,149 @@
     1
    ]
   },
+  "emote.anger": {
+   "frame": "emote.anger",
+   "anchor": [
+    11,
+    -11
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.exclaim": {
+   "frame": "emote.exclaim",
+   "anchor": [
+    5,
+    -4
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.heart": {
+   "frame": "emote.heart",
+   "anchor": [
+    14,
+    -7
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.heartbreak": {
+   "frame": "emote.heartbreak",
+   "anchor": [
+    15,
+    -6
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.laugh": {
+   "frame": "emote.laugh",
+   "anchor": [
+    14,
+    -6
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.music": {
+   "frame": "emote.music",
+   "anchor": [
+    12,
+    -8
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.partycup": {
+   "frame": "emote.partycup",
+   "anchor": [
+    10,
+    -7
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sadcloud": {
+   "frame": "emote.sadcloud",
+   "anchor": [
+    14,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sodacup": {
+   "frame": "emote.sodacup",
+   "anchor": [
+    11,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sparkle": {
+   "frame": "emote.sparkle",
+   "anchor": [
+    16,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.speech": {
+   "frame": "emote.speech",
+   "anchor": [
+    14,
+    -8
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sweat": {
+   "frame": "emote.sweat",
+   "anchor": [
+    9,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.thought": {
+   "frame": "emote.thought",
+   "anchor": [
+    14,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "ground.grass": {
    "frame": "ground.grass",
    "anchor": [

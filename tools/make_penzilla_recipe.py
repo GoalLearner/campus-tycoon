@@ -413,6 +413,13 @@ sprites['icon.collect'] = {'layers': [standing(ICONS + 'Medal_Gold.png', 0.5, 0.
 sprites['ui.seal'] = {'layers': [standing(ICONS + 'PinMedal_Gold.png', 0.5, 0.5, scale=0.6)]}
 sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5, scale=0.9)]}
 
+# ------------------------------------------------------------- the emotes --
+# The social campus's emotes and bubbles (DESIGN.md 63.7): drawn for this game in the pack's way by
+# tools/make_emotes.py, about 32 pixels here for a student's card; the map shows them at half that over a head.
+EMOTES = ('speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat')
+for emote in EMOTES:
+    sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
+
 # ----------------------------------------------------------- decorations --
 # The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
 # drawing, made smaller and stood on its cell: nothing is cut or assembled. One is recoloured, and it is on the
@@ -601,6 +608,9 @@ people = {
     # A student asleep (DESIGN.md section 60): their own figure facing out with the pack's shut eyes, made by
     # tools/make_bed.py, cut at the same size and feet as their walking figure.
     'sleep': [f'_rendered/fallback/bed/sleep-{name}.png' for name in students],
+    # A student's mood (DESIGN.md 63.7): their figure as the card shows it, with one of the pack's own mouths, and
+    # for a laugh its shut eyes, made by tools/make_faces.py and cut at the same size and feet.
+    'moods': {mood: [f'_rendered/fallback/faces/{mood}-{name}.png' for name in students] for mood in ('smile', 'frown', 'flat', 'small', 'smirk', 'laugh')},
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
     'roles': roles,
@@ -658,7 +668,7 @@ recipe = {
             'licence': 'Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared',
             'licenceUrl': 'https://penzilla.itch.io/',
             'source': 'https://penzilla.itch.io/',
-            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk. Its bed is two of the Medieval benches, the sheet off its laundry line laid flat, its cream sack and its rug turned and drawn longer, with the outlines of the enlarged pieces trimmed to the pack\'s width; a roommate\'s blanket is the rug recoloured blue. A sleeping student is their own figure with its open eyes painted over in the colour of the face round them and the people pack\'s shut eyes drawn in.',
+            'changes': 'Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs\' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders\' Commons is the packs\' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student\'s room is the Medieval stable\'s back corner taken apart into its two walls, on the city pack\'s concrete tile, with the packs\' furniture and things; the Sport and Games icons in it are shrunk. Its bed is two of the Medieval benches, the sheet off its laundry line laid flat, its cream sack and its rug turned and drawn longer, with the outlines of the enlarged pieces trimmed to the pack\'s width; a roommate\'s blanket is the rug recoloured blue. A sleeping student is their own figure with its open eyes painted over in the colour of the face round them and the people pack\'s shut eyes drawn in. A student\'s mood on their card is their own figure with its mouth painted over the same way and one of the people pack\'s own mouths drawn in, and for a laugh its shut eyes.',
         },
         {
             'name': 'Football stadium (3D model)',

@@ -62,7 +62,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       canvas.width = 96;
       canvas.height = 112;
       canvases.push({ canvas, ref: one.ref });
-      face.append(canvas, el('span', 'student-friend-name', first), el('span', 'student-friend-role', `${one.friends} friends`));
+      face.append(canvas, el('span', 'student-friend-name', first), el('span', 'student-friend-role', `Known to ${one.known}`));
       face.addEventListener('click', () => open(one.ref));
       faces.append(face);
     }
