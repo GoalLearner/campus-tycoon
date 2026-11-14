@@ -289,6 +289,14 @@ export function incomeOf(state: GameState, effect: EffectOf<'income'>): { amount
   return { amount: effect.amount * scaleOf(state), detail: `From the ${donorName(state)} family, every year their name is up` };
 }
 
+/** What the policies cost for each student, for a year: one line each, named for its policy (DESIGN.md 58). */
+export function policySpending(state: GameState): Array<{ id: string; name: string; amount: number; detail: string }> {
+  const found = effects(state, 'perStudent');
+  if (found.length === 0) return [];
+  const students = enrollment(state);
+  return found.map(({ spec, effect }) => ({ id: `policy.${spec.id}`, name: spec.name, amount: effect.amount * students, detail: `${dollars(effect.amount)} for each of ${headCount(students)} students` }));
+}
+
 /** The income the policies bring for a year: one line each, named for its policy. */
 export function policyIncome(state: GameState): Array<{ id: string; name: string; amount: number; detail: string }> {
   const found = effects(state, 'income');

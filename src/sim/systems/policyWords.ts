@@ -77,6 +77,12 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
       return `Each chapter's hazing risk is ${percent(1 - effect.times)} lower`;
     case 'partyCalls':
       return `${percent(1 - effect.times)} fewer ${effect.calls === 'safety' ? 'parties broken up by Campus Safety' : effect.calls === 'medical' ? 'Medical Center calls from parties' : 'calls from parties on campus'}`;
+    case 'storyOdds':
+      return effect.words;
+    case 'perStudent': {
+      const students = enrollment(state);
+      return `${dollars(effect.amount * students)} a year: ${dollars(effect.amount)} for each of the ${headCount(students)} students`;
+    }
     case 'lateNights': {
       const late = lateNights(state);
       const after = Math.round(late.stress * effect.times * 10) / 10;

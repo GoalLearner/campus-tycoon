@@ -254,7 +254,7 @@ describe('saves', () => {
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.story).toEqual(THREE.state.story);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
   });
 
   describe('from version 27', () => {
@@ -273,7 +273,7 @@ describe('saves', () => {
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

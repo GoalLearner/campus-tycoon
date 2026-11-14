@@ -329,7 +329,7 @@ describe('saves', () => {
     expect(loaded.state.greek).toEqual(state.greek);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'greek')).toHaveLength(2);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
   });
 
   describe('from version 24', () => {
@@ -354,7 +354,7 @@ describe('saves', () => {
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(4);
+      expect(notes).toHaveLength(5);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

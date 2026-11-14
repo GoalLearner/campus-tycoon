@@ -53,7 +53,11 @@ export type PolicyEffect =
   /** Calls from parties come this many times as often: Campus Safety's, the Medical Center's, or both (DESIGN.md 55). */
   | { kind: 'partyCalls'; times: number; calls: 'safety' | 'medical' | 'both' }
   /** What late nights cost, in Stress and in the graduation rate, is this many times as large (DESIGN.md 55). */
-  | { kind: 'lateNights'; times: number };
+  | { kind: 'lateNights'; times: number }
+  /** A lever the Main Character's stories read (DESIGN.md 53.3): better odds where it applies. `words` says it with its numbers. */
+  | { kind: 'storyOdds'; lever: 'jobs' | 'aid' | 'dining'; words: string }
+  /** So much a year for each student enrolled, named for the policy on the Money panel. */
+  | { kind: 'perStudent'; amount: number };
 
 export interface PolicySpec {
   id: string;
@@ -255,6 +259,41 @@ export const POLICIES: readonly PolicySpec[] = [
     costs: [{ kind: 'cause', cause: 'life', points: -3, among: 'greek' }],
     begins: 'Greek life oversight begins: an advisor for every chapter, at its meetings and its socials.',
     ends: 'Greek life oversight ends: the chapters run themselves again.',
+  },
+  // Levers for the Main Character's stories (DESIGN.md 53.3, as built in section 58). Each moves the odds of the
+  // stories it belongs to, named in the odds when it counts, and costs so much a student.
+  {
+    id: 'campusJobs',
+    name: 'Campus jobs program',
+    era: 2,
+    gives: 'Students who need work find it on campus',
+    takes: 'It costs a little for every student',
+    gains: [{ kind: 'storyOdds', lever: 'jobs', words: 'Your main character\u2019s odds of finding work when money is short, up to 18 in 100 better' }],
+    costs: [{ kind: 'perStudent', amount: 40 }],
+    begins: 'A campus jobs program begins: the library, the dining halls and the offices hire students first.',
+    ends: 'The campus jobs program ends.',
+  },
+  {
+    id: 'needScholarships',
+    name: 'Need-based scholarships',
+    era: 2,
+    gives: 'Help for students short of money',
+    takes: 'It costs more for every student',
+    gains: [{ kind: 'storyOdds', lever: 'aid', words: 'Your main character\u2019s odds when money or a scholarship is on the line, up to 20 in 100 better' }],
+    costs: [{ kind: 'perStudent', amount: 120 }],
+    begins: 'Need-based scholarships begin: students short of money may apply each semester.',
+    ends: 'The need-based scholarships end.',
+  },
+  {
+    id: 'cheaperDining',
+    name: 'Cheaper dining plans',
+    era: 2,
+    gives: 'Meals cost students less',
+    takes: 'It costs a little for every student',
+    gains: [{ kind: 'storyOdds', lever: 'dining', words: 'Your main character\u2019s odds in their money stories, up to 8 in 100 better' }],
+    costs: [{ kind: 'perStudent', amount: 30 }],
+    begins: 'Cheaper dining plans begin: the school pays part of every meal plan.',
+    ends: 'The cheaper dining plans end.',
   },
 ];
 

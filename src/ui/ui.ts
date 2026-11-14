@@ -2260,6 +2260,9 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The Level page: how far to the next level, what feeds it, what the next level gives, and what Seals can finish. */
+  /** Which page of the Main Character's screen is open: today, or the story so far (DESIGN.md 53.3). */
+  let mainPage: 'now' | 'story' = 'now';
+
   /** The Main Character's page (DESIGN.md 53.2), or with none chosen, a suggestion and the hall of fame. */
   function openMain(): void {
     openModal((close, card) => {
@@ -2300,6 +2303,31 @@ export function mountUi(root: HTMLElement): void {
         }
         const mc = view.chosen;
         head.append(el('h1', '', mc.name), el('p', 'fine', mc.about));
+        const tabs = el('div', 'fb-tabs');
+        for (const [id, label] of [['now', 'Now'], ['story', 'Story']] as const) {
+          tabs.append(
+            button(label, id === mainPage ? 'fb-tab active' : 'fb-tab', () => {
+              mainPage = id;
+              body.scrollTop = 0;
+              draw();
+            }),
+          );
+        }
+        head.append(tabs);
+        if (mainPage === 'story') {
+          // Chapters, newest first: each scene what happened, what they did, and how it went, with the odds.
+          if (mc.chapters.length === 0) body.append(el('p', 'fine', 'The first chapter is still to come.'));
+          for (const chapter of mc.chapters) {
+            body.append(el('div', 'money-head', chapter.open ? `${chapter.title} · going on` : chapter.title));
+            for (const scene of chapter.scenes) {
+              const box = el('div', scene.good ? 'main-scene good' : 'main-scene');
+              box.append(el('p', '', scene.text), el('p', 'fine', scene.chose), el('p', '', scene.outcome));
+              if (scene.odds) box.append(el('p', 'fine main-odds', scene.odds));
+              body.append(box);
+            }
+          }
+          return;
+        }
         body.append(el('div', 'size-goal', mc.doing));
         for (const [label, value] of mc.rows) {
           const line = el('div', 'size-row');

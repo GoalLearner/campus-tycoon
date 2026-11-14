@@ -115,7 +115,7 @@ describe('what the eras open', () => {
   });
 
   it('is said when the era begins, and on the Goals page ahead of it', () => {
-    expect(eraOpens(2)).toMatch(/^three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and three more policies/);
+    expect(eraOpens(2)).toMatch(/^three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and six more policies/);
     expect(eraOpens(3)).toMatch(/^one landmark to buy in the Build menu: the Founders' Commons; and two more policies/);
     for (const era of [2, 3]) expect(toneProblem(eraOpens(era)), eraOpens(era)).toBeNull();
   });
@@ -304,7 +304,7 @@ describe('saves', () => {
     expect(bigBuildOf(loaded.state, 'studentUnion')!.done).toBe(bigBuildOf(state, 'studentUnion')!.done);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'bigBuild')).toHaveLength(1);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
   });
 
   describe('from version 21', () => {
@@ -333,7 +333,7 @@ describe('saves', () => {
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
-      expect(notes).toHaveLength(7);
+      expect(notes).toHaveLength(8);
       expect(notes[0]).toMatch(/big builds/);
     });
   });
