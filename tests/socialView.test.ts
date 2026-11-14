@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { campusSocial, dramaOfTheWeek, gossip, happeningLine, happeningsOf, heavyOfTheWeek, partnerLine, peopleOf, relationshipWords, viewOf, type Happening } from '../src/app/socialView';
-import { advance, newGame, sampleStudents, toneProblem, type GameState, type StudentRef } from '../src/sim';
+import { advance, newGame, sampleStudents, TICK_MS, toneProblem, type GameState, type StudentRef } from '../src/sim';
+import { calendarAt } from '../src/sim/calendar';
 import { DRINK_WORDS, HEAVY_WORDS } from '../src/sim/config/tone';
-import { EVENT, EVENTS, FRIEND_AT, HAPPENING_KINDS, HAPPENINGS_KEPT, HEAVY_EVENTS, KIND, SLOTS } from '../src/sim/config/web';
+import { EVENT, EVENTS, FRIEND_AT, HAPPENING_KINDS, HAPPENINGS_KEPT, HEAVY_EVENTS, KIND, SLOTS, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { classYearOf } from '../src/sim/systems/students';
 import { catchUp, census, decodeWeb, encodeWeb, findGroups, HAPPENING_FIELDS, idOf, newWeb, pickRation, refAt, regrow, webWeekOf, type Web } from '../src/sim/systems/web';
 import { DAY, T0 } from './helpers';
@@ -280,4 +281,43 @@ describe('the record, version 2', () => {
     expect(refAt(old, 0)).toEqual(refAt(WEB, 0));
     expect(HAPPENING_FIELDS).toBe(10);
   });
+});
+
+describe('couples over the years', () => {
+  it('hold level from year to year, played every day, and a long absence comes back close to it', () => {
+    // The model campus, about two game years, a game week at a time, through commencements and move-ins.
+    const WEEK_MS = WEB_WEEK_TICKS * TICK_MS;
+    let state = newGame({ seed: 20261112, name: 'Test University', now: T0, campus: 'model' });
+    let at = T0;
+    const web = newWeb(state.seed, 1024);
+    const seen: Array<{ year: number; phase: string; per1000: number; regrown?: number }> = [];
+    for (let w = 0; w < 100; w++) {
+      state = advance(state, at, at + WEEK_MS).state;
+      at += WEEK_MS;
+      catchUp(web, state, webWeekOf(state));
+      const kinds = census(web);
+      const enrolled = state.cohorts.reduce((a, b) => a + b, 0);
+      const row: (typeof seen)[number] = { year: calendarAt(state.clock).year, phase: calendarAt(state.clock).phase, per1000: ((kinds[KIND.dating]! + kinds[KIND.exclusive]! + kinds[KIND.longterm]!) / enrolled) * 1000 };
+      // At year two's commencement: what half a year away would bring back, grown again and its last weeks lived.
+      if (w === 95) {
+        const copy = decodeWeb(encodeWeb(web), state)!;
+        copy.week = webWeekOf(state) - 26;
+        catchUp(copy, state, webWeekOf(state));
+        const back = census(copy);
+        row.regrown = ((back[KIND.dating]! + back[KIND.exclusive]! + back[KIND.longterm]!) / enrolled) * 1000;
+      }
+      seen.push(row);
+    }
+    const first = (year: number, phase: string): number => seen.find((one) => one.year === year && one.phase === phase)!.per1000;
+    for (const phase of ['fall', 'spring', 'graduation']) {
+      const one = first(1, phase);
+      const two = first(2, phase);
+      expect(Math.abs(two - one) / one, phase).toBeLessThan(0.12);
+    }
+    // Lower as the fall begins (the first-years know no one yet), higher by spring.
+    expect(first(2, 'spring')).toBeGreaterThan(first(2, 'fall') * 1.1);
+    const away = seen.find((one) => one.regrown !== undefined)!;
+    expect(Math.abs(away.regrown! - away.per1000) / away.per1000).toBeLessThan(0.15);
+    // Two game years of the campus itself take a while.
+  }, 90_000);
 });

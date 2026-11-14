@@ -51,6 +51,20 @@ export const FADE = [0, 3, 1, 1, 1, 1, 1, 1, 2, 2, 1, 0] as const;
 /** A short absence is lived week by week; a longer one is regrown and its last weeks lived. */
 export const CATCHUP_FULL_WEEKS = 12;
 export const REGROW_LIVED_WEEKS = 8;
+/**
+ * Couples grown again (DESIGN.md 63.7), set from game years lived a week at a time on the model campus: played every
+ * day, couples hold level from year to year, about 50 to a thousand students as the fall begins (the first-years have
+ * no one yet), 63 by spring and 60 at commencement. Of the pairs who would be a couple, the share kept grows with the
+ * years both have been here, up to the most; a couple's closeness starts higher the longer, so most that have lasted
+ * are long-term, as lived ones are. Set so a long absence comes back within a few couples a thousand of the campus
+ * played every day: grown pairs still meet new people for months after, and pair up more than settled ones do.
+ */
+export const REGROW_COUPLES_A_YEAR = 0.55;
+export const REGROW_COUPLES_KEPT = 0.46;
+export const REGROW_COUPLE_FROM = 60;
+export const REGROW_COUPLE_PER_YEAR = 25;
+/** A pair grown again who would be a couple and are not, after half a year here: exes of a while ago. */
+export const REGROW_EX_AT = 22;
 
 /** What happened, counted for the cards and the paper later. */
 export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle'] as const;

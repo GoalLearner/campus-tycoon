@@ -26,6 +26,11 @@ import {
   KNOWN,
   MET_AT,
   REGROW_LIVED_WEEKS,
+  REGROW_COUPLE_FROM,
+  REGROW_COUPLE_PER_YEAR,
+  REGROW_COUPLES_A_YEAR,
+  REGROW_COUPLES_KEPT,
+  REGROW_EX_AT,
   RIVAL_AT,
   SECTION_SIZE,
   SLOTS,
@@ -37,6 +42,7 @@ import {
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState } from '../types';
+import { TICKS_PER_YEAR } from '../config/time';
 import { athleteShare } from './football';
 import { chemistry, gender, identityOf, likes, TRAIT, traitOf } from './identity';
 import { placeIndex, socialProfile, studentHome, type PlaceIndex, type StudentRef } from './students';
@@ -782,6 +788,8 @@ export function regrow(web: Web, state: GameState): void {
   web.roomsFor = -1;
   placeRoommates(web, state, calendarAt(state.clock).year);
   const { seed, n } = web;
+  // How far into the campus year it is: a first-year in the fall has had no time to meet anyone (DESIGN.md 63.7).
+  const into = Math.min(1, calendarAt(state.clock).tickInYear / TICKS_PER_YEAR);
   for (let a = 0; a < n; a++) {
     const years = web.year[a]!;
     if (years < 0) continue;
@@ -799,9 +807,19 @@ export function regrow(web: Web, state: GameState): void {
         if (chem < 0) continue;
         const st = Math.min(95, Math.round(15 + 40 * chem + 8 * Math.min(years, web.year[b]!)));
         const spark = share(hash5(seed, 9930, a, b, 0));
-        const couple = spark > SPARK + 0.01 && likes(web.identity[a]!, web.identity[b]!) && likes(web.identity[b]!, web.identity[a]!) && partnered(web, a) < 0 && partnered(web, b) < 0;
-        // A couple grown again is a couple that has lasted: never so weak it ends the first week it is lived.
-        link(web, a, b, couple ? (st >= 70 ? KIND.longterm : KIND.dating) : st >= FRIEND_AT ? KIND.friend : KIND.met, couple ? Math.max(st, DATE_FROM + 5) : st, chem);
+        // A couple grown again stands as couples do on a lived campus (63.7): as many as the time both have been here
+        // has made, steadier the longer it is, and never so weak it ends the first week it is lived.
+        const together = Math.min(years, web.year[b]!) + into;
+        const kept = share(hash5(seed, 9975, a, b, 0)) < Math.min(REGROW_COUPLES_KEPT, REGROW_COUPLES_A_YEAR * together);
+        const pair = spark > SPARK + 0.01 && likes(web.identity[a]!, web.identity[b]!) && likes(web.identity[b]!, web.identity[a]!) && partnered(web, a) < 0 && partnered(web, b) < 0;
+        if (pair && kept) {
+          const close = Math.min(100, Math.round(REGROW_COUPLE_FROM + REGROW_COUPLE_PER_YEAR * together));
+          link(web, a, b, close >= 95 ? KIND.longterm : close >= 70 ? KIND.exclusive : KIND.dating, close, chem);
+        } else if (pair && together >= 0.5) {
+          // A pair who would be a couple, and are not: on a lived campus they mostly dated once and split, a while ago.
+          const made = link(web, a, b, KIND.ex, REGROW_EX_AT, chem);
+          if (made) web.feeling[made[0]] = web.feeling[made[1]] = FEEL.tense;
+        } else link(web, a, b, st >= FRIEND_AT ? KIND.friend : KIND.met, st, chem);
       }
     }
   }
