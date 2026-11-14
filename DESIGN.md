@@ -2305,6 +2305,8 @@ Asked for by the owner on 2026-11-11, when he approved the look "for now". These
 | Stadium tier four, `stadium.4` | A free CC-BY 3D bowl, rendered. The owner called it ugly | Penzilla commission, 2 x 3. Or a bought low-poly model, rendered properly |
 | Stadium tier five, `stadium.5` | Tier four stretched taller. It is not its own design | Penzilla commission, 2 x 3, drawn as a distinct stadium |
 | Stadium tiers two and three, `stadium.2` and `stadium.3` | The pack's stadium with its own stand copied, raised and mirrored | Penzilla commission, with tiers four and five, so the five read as one family |
+| Sidewalk, `kerb.<sides>.<corners>` (section 59) | Drawn here in the city pack's own sidewalk colours, outline and raised edge, as strips 0.16 of a cell deep inside the road's cell. The pack's own sidewalk pieces are half a cell deep, which would leave no road | Penzilla commission: narrow sidewalk pieces for the road's sides and corners. Or keep |
+| Driveway, `town.driveway` (section 59) | A flat pad drawn here in the colours of the pack's concrete tile, with grass either side, in place of the pack's garden driveway | Keep. Or a commissioned driveway tile |
 | Crossing, `road.cross.5` and `road.cross.10` | The straight road piece with its lane mark enlarged and repeated across it. Made bolder on 2026-11-11 so it reads at normal phone zoom | Penzilla commission: one tile |
 | The avenue's crossings (section 39) | The same crossing tile, laid on the avenue to each side of every junction. Nothing new was made for them | The same commission as the crossing |
 | Outdoor courts, `build.courts` | A tennis court cut from the tennis stadium. It is not a basketball court | Penzilla commission, 2 x 2 |
@@ -4754,6 +4756,7 @@ They are plain functions in `src/app/traffic.ts`, tested without the game engine
 | A crossing by itself | A path over a road the player laid. The pack's blue square sign (`sign.crossing`) stands at each way onto it |
 | Traffic lights | None. His packs hold no traffic light: `Light.png` is a warning lamp and `Lights.png` a string of bulbs. He said "street lights or stop signs", so stop signs it is |
 | Street lamps | Already along every street and road, every few cells. None was missing, so none was added |
+| The sidewalk | Added on 2026-11-13: section 59 |
 
 ### 39.4 The rush
 
@@ -5812,11 +5815,13 @@ The casual and the once-a-day player are inside $12 to $17 in every year and wee
 
 Asked by the owner on 2026-11-13, playing on his phone: "I would like to rotate the map around too on the phone, i can only go up and down". Asked whether he meant turning the whole view, he answered: "Turn the whole view". A sheet showed him three ways with his own art (`docs/handoff/turn-view-sheet.html`), and he picked: "turn and rotate all the way". That is way A, four quarter turns round the full circle, with the mirroring the sheet listed, a Turn button, and the two-finger twist he asked for with "rotate". A smooth turn to any angle is not possible with drawings made from one side: the view snaps by quarters. Built on 2026-11-13. Nothing in the simulation, the save or the long run changed.
 
+**The Turn button is gone, by his word.** After build 10 he wrote: "I wish instead of the turn you can rotate and turn with your fingers instead of a button". So on 2026-11-13 the button went, on the map and in photo mode, and two fingers turn the view everywhere. The map now turns with the fingers the whole way round, and settles to the nearest quarter when they lift (43.5). The rows below say how it is now; 43.5 has what changed.
+
 ### 43.1 As built
 
 | Thing | As built | Where |
 |---|---|---|
-| The turn | Four quarter turns, clockwise on the screen. Each tap of Turn is a quarter, and four come home. The spot in the middle of the screen stays in the middle | `session.turnView`, `applyTurn` in `src/game/CampusScene.ts` |
+| The turn | Four quarter turns, made with two fingers (43.5). Turning clockwise on the screen counts up, and four quarters come home. The spot in the middle of the screen stays in the middle | `session.turnView`, `applyTurn` in `src/game/CampusScene.ts` |
 | How | The map keeps its own cells. The projection lays them down a quarter, a half or three quarters round, as the view's own cells, and draws those exactly as the map was drawn before. Every place that draws goes through it: a point (a walker, a car), a cell (a tile, a tree), a footprint (a building), or a spot on a drawing (a player on a court) | `Iso` in `src/game/iso.ts` |
 | The ground | Road and path pieces are chosen again for the turned grid, by turning which sides join. Crossings swap with the road. The town's driveway and garden tiles, which run one way, are mirrored on a quarter turn. The lake, the ponds, the courts, the field and the pool are each one drawing and stay as drawn | `iso.mask`, `syncMap` |
 | Buildings | Every drawing faces the viewer at every turn. A footprint that is not square (the 16 kinds of two-cell building, and the stadium at tiers four and five) is mirrored about its top corner on a quarter or three-quarter turn, so it lies along its turned footprint. The half turn mirrors nothing. Square buildings, dorms, lecture halls, houses, trees and every one-cell thing keep their drawing. The four decorations that run one way turn with the view | `Placed.ts`, `iso.mirrors` |
@@ -5826,9 +5831,9 @@ Asked by the owner on 2026-11-13, playing on his phone: "I would like to rotate 
 | Taps | The cell under a finger, the point of the map under it, and every person and building hit as drawn | `iso.toCell`, `iso.toMap` |
 | Placing | The ghost is drawn as the building will be, mirrored at a quarter turn, over its footprint in green or red and its reach in blue on the turned cells | `showPlaced`, `ghostTints` |
 | Markers | Medals, the hammer, incident icons, the car-park barrier and the edge signs float over the middle of what they are about, at every turn | |
-| The camera | Roams the turned map. Following a student works at every turn. Photo mode has a Turn button of its own, to frame the campus from any side | `clampCamera`, `photoBar` in `src/ui/ui.ts` |
-| The Turn button | The word Turn, low on the left, opposite Build. It hides when Build does | `turn-fab` in `src/ui/ui.css` |
-| The twist | Two fingers turned 35 degrees or more while their gap changes by less than a tenth. When they lift, the view turns the nearest number of quarters. A gesture that has zoomed can never turn, and one that turns never zooms: when a gesture becomes a twist, the camera goes back to where the fingers found it. While twisting, the map leans up to 22 degrees their way | `src/app/twist.ts`, `onMove` |
+| The camera | Roams the turned map. Following a student works at every turn. In photo mode two fingers turn it too, to frame the campus from any side | `clampCamera`, `photoBar` in `src/ui/ui.ts` |
+| The Turn button | Removed on 2026-11-13, by his word, on the map and in photo mode (43.5) | |
+| The twist | Two fingers turned 15 degrees or more while their gap changes by less than a tenth. The map turns with them the whole way. When they lift it settles to the nearest quarter in a fifth of a second, and the view is drawn turned that far behind a quick fade. A gesture that has zoomed can never turn, and one that turns never zooms: when a gesture becomes a twist, the camera goes back to where the fingers found it | `src/app/twist.ts`, `turnWithFingers` |
 | Remembered | The phone remembers which way the player last faced, as it remembers the crowd setting. It is not in the save | `campus-tycoon.turn` in `src/app/session.ts` |
 | The dev page | `&turn=1`, `2` or `3` opens the map turned | `src/app/devtools.ts` |
 | Art | Nothing new. The mirrored drawings are listed on section 26 | |
@@ -5858,12 +5863,12 @@ Tests: 19 new (12 for the turn, 7 for the twist): 778 in all. The long run's 72 
 |---|---|---|
 | The way | His pick: four quarter turns, with the two-cell buildings mirrored | A half turn only. Or no mirroring, which the sheet showed looks wrong |
 | Which way a tap turns | Clockwise on the screen | Anticlockwise. Or two buttons, one each way |
-| The button | The word Turn, as the word Photo is used with no camera drawn | An arrow drawing, which would be new art |
+| The button | The word Turn, as the word Photo is used with no camera drawn. Removed on 2026-11-13 by his word: two fingers turn the map (43.5) | An arrow drawing, which would be new art |
 | The twist | Built, because it held in testing: it acts only on a clear twist and never zooms in the same gesture | Left out, with the button alone |
-| When a gesture is a twist | 35 degrees of turn with the gap within a tenth | A smaller angle, which a pinch can make |
-| While twisting | The map leans up to 22 degrees, then snaps | Nothing moves until the fingers lift |
+| When a gesture is a twist | 15 degrees of turn with the gap within a tenth (35 until 43.5) | 35 degrees, which made the twist feel stiff once it was the only way to turn |
+| While twisting | The map turns with the fingers the whole way, then settles to the nearest quarter (until 43.5 it leaned up to 22 degrees and snapped) | Leaning a little, then snapping |
 | Where the turn is kept | On the phone, beside the crowd setting | In the save. Or forgotten each time the game opens |
-| Turn in photo mode | Yes, beside Share and Done | Only outside photo mode |
+| Turn in photo mode | Yes: two fingers, as on the map (until 43.5, a Turn button beside Share and Done) | Only outside photo mode |
 | Something on a drawing | Moves with the drawing | Moves with the grid, which would stand players off their court |
 | A line on the grass | Follows the grid, on the side chosen for it | Moves with the building's drawing |
 | The ground tile kept under a flat drawing | The one at its top corner as turned | The one at the map's own top corner, which then lies over the drawing |
@@ -5879,6 +5884,35 @@ Tests: 19 new (12 for the turn, 7 for the twist): 778 in all. The long run's 72 
 | Fans after a big win at tiers four and five | They stand partly on the stands, at every turn: where they stand was measured on the smaller stadium, before this stop. Fixed in stop 4 (44.1) |
 | A line may stand behind its building | When only the far sides of a building are open on a turn, its line stands there |
 | Things in motion at the moment of a turn | A truck's driver at a door keeps the depth it had until the truck leaves, and a ripple finishes where it began |
+
+### 43.5 Turning with the fingers (2026-11-13)
+
+His words, after build 10: "I wish instead of the turn you can rotate and turn with your fingers instead of a button". Built on branch `streets` with the street fixes of section 59. Nothing in the simulation, the save or the long run changed.
+
+| Thing | As built | Where |
+|---|---|---|
+| The button | Gone from the map and from photo mode, by his word. Nothing took its place on the screen | `src/ui/ui.ts`, `src/ui/ui.css` |
+| When it starts | Two fingers turned 15 degrees (was 35) with their gap within a tenth of where it began. A pinch still zooms: it changes the gap by a tenth well before it drifts 15 degrees | `TWIST_DEGREES` in `src/app/twist.ts` |
+| While twisting | The map turns with the fingers, as far as they go, about the middle of the screen. It catches up with them within a few frames, so it does not jump the first 15 degrees | `turnWithFingers` in `src/game/CampusScene.ts` |
+| When they lift | It settles to the nearest quarter of the angle turned in 220 ms, quick at first and gentle at the end. Under 45 degrees it settles back where it was | `settleDegrees`, `settling`, `SETTLE_MS` |
+| The redraw | At the quarter, a still of the map is laid over it, the view is drawn turned (as 43.1), and the still fades in 240 ms. The drawings face the viewer at every turn, so the still shows them on their side and the view drawn turned shows them upright: the fade carries the one into the other | `coverTurn` |
+| A new finger while it settles | The view is turned at once, so the new gesture starts on it | `onDown` |
+| Safari's own gestures | Stopped: `gesturestart`, `gesturechange` and `gestureend` are cancelled on the page, and the canvas takes no touch action of its own | `src/game/createGame.ts`, `#game canvas` in `ui.css` |
+| The tip | Once, the first time the map is open after this build: "Twist two fingers to turn the map." Its flag is a setting of the phone, beside the crowd setting, never in the save | `campus-tycoon.twistTip` in `src/app/twistTip.ts` |
+
+**Played with real two-finger touches** in Edge on this PC (its touch events, at 390 by 844): 70 degrees clockwise turned the map with the fingers (34 degrees at half way) and settled a quarter on; 40 degrees settled back with no turn; 170 degrees anticlockwise turned with the fingers (82 degrees at half way) and settled a half turn on; a pinch out from 160 to 320 points, drifting 10 degrees, only zoomed; 10 degrees did nothing. The zoom after every twist was where it began. Never run on a phone.
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Where it turns about | The middle of the screen, which the view drawn turned keeps in the middle | The point between the fingers, which would then jump to the middle at the redraw |
+| The redraw | A still that fades into the view drawn turned | A plain cut, which shows every drawing stand up at once |
+| The start angle | 15 degrees, as the brief for this stop asked | 10 degrees, which a drifting pinch can reach before it has zoomed |
+| The tip | A short note under the top bar, once | A card to dismiss |
+
+| Rough | Why |
+|---|---|
+| Turning shows the drawings on their side | They are drawn from one side. Turned past a few degrees, buildings lean with the map until it is drawn again at the quarter |
+| Never run on a phone | Real touch events in a desktop browser, not Safari on an iPhone |
 
 ---
 
@@ -7021,3 +7055,70 @@ The long run's once-a-day player on both seeds, following a Main Character for 4
 | A story about the team uses the track team whatever the campus has | The campus has no track; a sport per campus is a later stop |
 | Singles | Later: a Housing switch with fewer beds |
 | DeepSeek | MC-3, after the owner's account steps |
+
+---
+
+## 59. The streets: sidewalks, driveways and cars on the road, as built
+
+His words after build 10, looking at the town's streets: "The cars aren't driving on the street...the people need a sidewalk because they're walking on the street". Built on 2026-11-13 on branch `streets`, with the finger twist of 43.5. Nothing in the simulation or the save changed, and the long run's tables are the same.
+
+### 59.1 What was wrong
+
+| Seen | Cause |
+|---|---|
+| People walking on the street | They already kept to the side of each street cell, 0.09 of a cell from its edge, but that side was road: nothing was drawn for them to walk on |
+| A parked car on the lawn | A parked car stood in the middle of its driveway's cell, and the pack's garden driveway paves only part of the cell, with a bed and a fence across the rest |
+| Cars, parked cars and stop signs off the road on a turned view | A car's spot counts the middle of a cell as the whole number, and its drawing was stood on that spot as if it were the cell's top corner. Unturned the two agree. At the other three turns every car, every parked car and every stop sign stood a cell out: on the lawns and among the houses |
+
+### 59.2 The sidewalk
+
+| Thing | As built | Where |
+|---|---|---|
+| Where | Inside the road's own cell: a strip 0.16 of a cell deep along each side of a road that meets no more road. A house fills its whole lot, so a sidewalk laid on the lots would be hidden under the houses | `kerbAt` in `src/app/traffic.ts`, `kerbKey` in `src/game/CampusScene.ts` |
+| Corners | Where a side street opens off, a small square slab turns the corner on each side. Across a road's dead end it runs straight over | |
+| The edge of the map | None across a road where it runs off the map | |
+| Which roads | The town's avenue and side streets, and every road the player lays, crossings included. It reads the same on both | |
+| The art | Slabs in the city pack's own sidewalk colours, outline and raised edge, drawn as narrow strips: the pack's own pieces are a quarter of a cell, half a cell deep. 46 pieces, one for each way the sides and corners fall. They turn with the view as the road pieces do, so they line up at every turn. On the list of section 26 | `tools/make_sidewalk.py`, `kerb.<sides>.<corners>` |
+| People | Walk along its middle: on a side street 0.42 of a cell from the middle of the street (was 0.41), on the avenue at 0.08 of a cell from its campus side and 0.92 at its far kerb (was 0.09 and 0.92). They cross only at junctions and at the avenue's marked crossings, as section 39 built | `KERB_WIDTH` in `traffic.ts`, `SIDEWALK` in `src/game/Walkers.ts` |
+| Cars | Keep their lanes, 0.2 of a cell from the middle. A car is a little wider than half its road, so its outer side reaches over the inside edge of the sidewalk by about 0.05 of a cell | |
+
+### 59.3 Driveways and car parks
+
+| Thing | As built | Where |
+|---|---|---|
+| A driveway | A flat pad in the colour of the pack's concrete tile, from the street to the back of the lot, with grass either side. Mirrored on a quarter turn, as the old drawing was | `town.driveway`, drawn by `tools/make_sidewalk.py` |
+| A parked car | In the middle of its pad, nose to the street | `showParked` in `src/game/Cars.ts` |
+| Where a car leaves the road | Only into a driveway or a car park (a parking lot or a parking structure). Every route starts and ends in one of them, at the kerb of a street with no driveway, or at the edge of the map | `src/game/carPlaces.ts` |
+
+### 59.4 Cars on the road at every turn
+
+| Thing | As built | Where |
+|---|---|---|
+| A car's drawing | Stood so that the middle of its cell is on the car's spot, at every turn. Drawn in the order of the cell it is in | `iso.standTop`, `carTop`, `carSum` |
+| Parked cars and stop signs | The same | `Cars.ts` |
+
+### 59.5 Tests and measures
+
+**Tests,** in `tests/streets.test.ts`. The sidewalk along a straight road, at a junction and a dead end, and none at the edge of the map; every side of a town street that meets a lot has it. Every car drawn where a car can be: on the model campus, 794 routes (students from all 18 driveways and the kerb of each street to all 8 car parks and back, and neighbours between driveways and to the edges of the map), each car placed five times along each of 33,936 legs at all four turns, both the middle of its drawing and the spot its wheels stand on, 678,720 places in all, each on a road, a driveway or a car park. Parked cars on their pads at every turn. The test fails on the old drawing, with cars on the lawns from the first quarter turn.
+
+**The twist,** played with real touches: 43.5.
+
+**Frame time,** on this PC's software renderer, the model campus at the Normal crowd at the morning rush, five readings at each turn: 3.2 to 4.4 ms unturned, 3.7 to 4.3 a quarter, 3.5 to 4.3 a half, 3.4 to 4.2 three quarters. Section 43.2 measured 3.0 to 7.2 before the sidewalk: no difference that can be told from the spread.
+
+### 59.6 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Where the sidewalk is | Inside the road's cell, at its sides | On the lots beside the street, with every house set back and drawn smaller so it shows |
+| How deep | 0.16 of a cell, so people walk on it and cars keep their lanes | The pack's half-cell pieces, which would cover the road |
+| The player's roads | A sidewalk too, as the brief allowed if it read well | The town's streets only |
+| The driveway | A plain concrete pad from the street to the back of the lot | The pack's garden driveway, half bed and fence; or the path's slabs, which read as a path |
+| The lanes | Left where they are (he said "Leave them" of cars brushing in opposite lanes, 39.6) | Lanes closer to the middle, so cars clear the sidewalk and brush each other more |
+
+### 59.7 Rough
+
+| Rough | Why |
+|---|---|
+| A car's outer side reaches over the sidewalk's inside edge | The pack's cars are wider than half its road (39.6) |
+| The far sidewalk of a street is often hidden | Behind the houses in front of it, as the street itself is |
+| Never run on a phone | Checked in pictures and tests on this PC |

@@ -213,6 +213,17 @@ export class Iso {
     return this.project(at.x, at.y);
   }
 
+  /**
+   * World position of the top corner of a one-cell drawing whose cell is
+   * centred on a point of the map: where a car or a sign stands so that it is
+   * on that point at every turn. Its drawing faces the viewer, so the spot it
+   * stands on inside its cell is the same at every turn.
+   */
+  standTop(x: number, y: number): { x: number; y: number } {
+    const at = this.toWorld(x, y);
+    return { x: at.x, y: at.y - this.halfHeight };
+  }
+
   /** World position of the top corner of a footprint, as drawn: where its drawing stands. */
   boxTop(x: number, y: number, w: number, h: number): { x: number; y: number } {
     const box = this.viewBox(x, y, w, h);

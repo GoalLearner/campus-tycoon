@@ -30,6 +30,12 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     scene: [BootScene, CampusScene],
   });
 
+  // Safari on an iPhone has two-finger gestures of its own for the page. The map has its own pinch and twist
+  // (DESIGN.md section 43), so Safari's are stopped; the canvas also takes no touch action of its own (ui.css).
+  for (const name of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(name, (event) => event.preventDefault(), { passive: false });
+  }
+
   const resize = (): void => {
     const { width, height } = size();
     game.scale.resize(width, height);

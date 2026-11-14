@@ -11,6 +11,7 @@ public repository. The pack files themselves live in art/source/penzilla, which
 is git-ignored.
 """
 import json
+import importlib.util
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -169,6 +170,14 @@ for mask, (piece, mirrored) in ROAD_PIECES.items():
 # (tools/make_crosswalk.py).
 sprites['road.cross.5'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png')]}
 sprites['road.cross.10'] = {'layers': [on_grid('_rendered/fallback/crosswalk.png', flip=True)]}
+# The sidewalk: a strip of slabs along each side of a road that meets no more road, and a small slab in an inside
+# corner where another road opens off (DESIGN.md 59.1). Drawn over the road by tools/make_sidewalk.py in the pack's
+# sidewalk colours: kerb.<sides>.<corners>, with the bits of the road pieces.
+_spec = importlib.util.spec_from_file_location('make_sidewalk', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'make_sidewalk.py'))
+_sidewalk = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_sidewalk)
+for _edges, _corners in _sidewalk.combinations():
+    sprites[f'kerb.{_edges}.{_corners}'] = {'layers': [on_grid(f'_rendered/fallback/kerb/kerb-{_edges}-{_corners}.png')]}
 # Order on the streets: the pack's round red sign stands at every way into a junction, as a stop sign, and its
 # blue square sign marks a crossing that stands by itself. Both as drawn.
 sprites['sign.stop'] = {'layers': [standing(DECOR + 'TraficSign3.png', 0.5, 0.5)]}
@@ -179,7 +188,9 @@ TOWN_HOUSES = [('Blue', 1), ('Red', 5), ('Yellow', 9), ('Green', 13), ('Pink', 1
                ('Yellow', 2), ('Blue', 11), ('Red', 15), ('Green', 6)]
 for n, (colour, kind) in enumerate(TOWN_HOUSES):
     sprites[f'town.house.{n}'] = {'layers': [GRASS, on_grid(f'{HOUSES}{colour}/House_Type{kind}.png')]}
-sprites['town.driveway'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Driveway.png')]}
+# A driveway is a paved pad from the street to the back of the lot, where a car parks (DESIGN.md 59.3). Drawn by
+# tools/make_sidewalk.py in the pack's concrete colours.
+sprites['town.driveway'] = {'layers': [GRASS, on_grid('_rendered/fallback/kerb/drive.png')]}
 sprites['town.pool'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Pool.png')]}
 sprites['town.garden'] = {'layers': [GRASS, on_grid(HOUSES + 'Garden_Rustic.png')]}
 
