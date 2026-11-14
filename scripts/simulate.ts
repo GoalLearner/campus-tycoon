@@ -1812,9 +1812,9 @@ function assertModelCampus(seed: number): void {
       runs.map((run) => `${run.style} ${run.seed}: ${per100(run.seen.drinkLines, run.seen.lines)} and ${per100(run.seen.heavyLines, run.seen.lines)} in 100 of ${run.seen.lines.toLocaleString('en-US')}`).join('; '),
     );
     check(
-      'parties and hazing only on a game with goals: calls on every such campus, none on the small campus, and a suspension only after a report',
-      runs.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.suspensions <= run.final.greek.totals.reports) && bare.every((run) => run.seen.partyCalls === 0 && run.final.greek.totals.reports === 0),
-      `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports, ${run.final.greek.totals.suspensions} suspensions`).join('; ')}; the small campus: ${bare.map((run) => run.seen.partyCalls).join(', ')} calls`,
+      'calls from parties on every campus with goals, hazing only where there is a chapter, and a suspension only after a report',
+      runs.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.suspensions <= run.final.greek.totals.reports) && bare.every((run) => run.seen.partyCalls > 0 && run.final.greek.totals.reports === 0),
+      `${runs.map((run) => `${run.style} ${run.seed}: ${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports, ${run.final.greek.totals.suspensions} suspensions`).join('; ')}; with no chapter house: ${bare.map((run) => `${run.seen.partyCalls} calls, ${run.final.greek.totals.reports} reports`).join('; ')}`,
     );
   }
 
