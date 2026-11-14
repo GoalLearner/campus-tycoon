@@ -105,5 +105,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 29) {
     notes.push('New: your main character has a story. Roommates, classes, crushes, parties, money and teams: each story comes in scenes, with the odds of how it went and what on campus helped. Read it on the Story tab of their page. Three new policies (campus jobs, scholarships and cheaper dining) help their odds.');
   }
+  if (fromVersion < 30) {
+    notes.push('New: a social campus. Every student now meets people, makes friends, dates, breaks up and clashes, week by week, all 46,000 of them if you have that many. Students who arrive from now on have a wider choice of first names. More of it comes to the cards and the map in the next updates.');
+  }
   return notes;
 }

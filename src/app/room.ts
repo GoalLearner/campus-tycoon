@@ -1,10 +1,10 @@
+import { roommateInWeb } from './socialWeb';
+import { roomsShared } from '../sim/systems/web';
+import { genderOf } from '../sim/systems/identity';
 import {
   dayRead,
   dormName,
-  enrollment,
   hashInts,
-  offCampusNow,
-  openCapacity,
   placeIndex,
   sampleStudents,
   studentCard,
@@ -290,18 +290,22 @@ function housed(card: StudentCard): boolean {
  * stage, and the campus's dorms are more than half full.
  */
 export function roomShared(state: GameState, home: number): boolean {
-  const hall = state.map.buildings[state.map.cells[home]?.buildingId ?? -1];
-  if (!hall || hall.stage < 2) return false;
-  const beds = openCapacity(state, 'housing');
-  const residents = Math.max(0, enrollment(state) - offCampusNow(state));
-  return beds > 0 && residents / beds > 0.5;
+  // The social web pairs roommates by the same rule (DESIGN.md 63.5).
+  return roomsShared(state, home);
 }
 
-/** Someone else who lives in the same hall, chosen from the seed: the roommate. null when nobody is found. */
+/**
+ * The roommate: the web's when it has answered (DESIGN.md 63.5), and otherwise someone else in the same hall chosen
+ * from the seed. Always of their gender (decision 4): a nonbinary student rooms with another nonbinary student, or
+ * alone. null when nobody is found.
+ */
 function roommateOf(state: GameState, ref: StudentRef, home: number): StudentRef | null {
+  const fromWeb = roommateInWeb(ref);
+  if (fromWeb !== undefined) return fromWeb;
   const housing = placeIndex(state, 'housing');
   const own = studentKey(ref);
-  const halls = sampleStudents(state, 120).filter((one) => studentKey(one) !== own && studentHome(state, one, housing) === home);
+  const theirs = genderOf(state.seed, ref);
+  const halls = sampleStudents(state, 120).filter((one) => studentKey(one) !== own && genderOf(state.seed, one) === theirs && studentHome(state, one, housing) === home);
   if (halls.length === 0) return null;
   return halls[Math.floor(roll(state, ref, 1) * halls.length)]!;
 }

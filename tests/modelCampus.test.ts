@@ -36,6 +36,7 @@ import { calendarAt, dateAt } from '../src/sim/calendar';
 import { STREET_NAMES, TOWN_X } from '../src/sim/config/town';
 import { BOWLS, CONFERENCE_NAMES, NICKNAMES, PLACE_ENDS, PLACE_STARTS } from '../src/sim/config/football';
 import { CLUBS, FIRST_NAMES, MAJORS, SURNAME_ENDS, SURNAME_STARTS } from '../src/sim/config/students';
+import { MEN_NAMES, NEUTRAL_EXTRA, WOMEN_NAMES } from '../src/sim/config/names';
 import { T0 } from './helpers';
 
 /**
@@ -289,6 +290,9 @@ describe('no name from the reference is anywhere in the game', () => {
     const state = model();
     const pools: string[] = [
       ...FIRST_NAMES,
+      ...WOMEN_NAMES,
+      ...MEN_NAMES,
+      ...NEUTRAL_EXTRA,
       ...SURNAME_STARTS,
       ...SURNAME_ENDS,
       ...PLACE_STARTS,

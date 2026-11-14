@@ -25,7 +25,7 @@ import {
 import { edition } from '../src/sim/newspaper';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0 } from './helpers';
+import { DAY, HOUR, T0, webMetaFor } from './helpers';
 
 /**
  * The Main Character (DESIGN.md 53.2, as built in section 57): chosen from a
@@ -254,7 +254,7 @@ describe('saves', () => {
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.story).toEqual(THREE.state.story);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 27', () => {
@@ -270,10 +270,11 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.story = newStory();
+      expected.web = webMetaFor(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

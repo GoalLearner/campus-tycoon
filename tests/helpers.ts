@@ -1,4 +1,5 @@
 import { advance, newGame, TICK_MS, type GameState, type LogEntry } from '../src/sim';
+import { calendarAt } from '../src/sim/calendar';
 
 /** A fixed moment to start every test from: 2026-11-11 12:00 UTC. */
 export const T0 = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -55,4 +56,12 @@ export function badNumbers(value: unknown, path = 'state'): string[] {
     return Object.entries(value).flatMap(([k, v]) => badNumbers(v, `${path}.${k}`));
   }
   return [];
+}
+
+/**
+ * What an older save gains at version 30 (DESIGN.md 63.5): the web's note of where the new names begin, after the
+ * freshmen enrolled when it was opened. For the tests that check an upgrade moved nothing else.
+ */
+export function webMetaFor(state: GameState): GameState['web'] {
+  return { namesFrom: { entryYear: calendarAt(state.clock).year, index: state.cohorts[0] ?? 0 } };
 }

@@ -49,7 +49,7 @@ import { marketingLift } from '../src/sim/systems/budget';
 import { athleticLift } from '../src/sim/systems/football';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, T0 } from './helpers';
+import { DAY, freshGame, T0, webMetaFor } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -447,6 +447,7 @@ describe('the main street', () => {
     expected.alumni = loaded.state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.web = webMetaFor(expected);
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

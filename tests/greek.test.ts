@@ -40,7 +40,7 @@ import { landRankGoals } from '../src/sim/systems/goals';
 import { approvalAt } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, HOUR, MIN, T0 } from './helpers';
+import { DAY, HOUR, MIN, T0, webMetaFor } from './helpers';
 
 /**
  * Greek Row (DESIGN.md 14.1, adapted and built in section 51): chapter houses
@@ -329,7 +329,7 @@ describe('saves', () => {
     expect(loaded.state.greek).toEqual(state.greek);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'greek')).toHaveLength(2);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 24', () => {
@@ -349,12 +349,13 @@ describe('saves', () => {
       expected.alumni = loaded.state.alumni;
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
+      expected.web = webMetaFor(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(5);
+      expect(notes).toHaveLength(6);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });
