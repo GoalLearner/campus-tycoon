@@ -22,11 +22,16 @@ export function toneProblem(line: string): string | null {
 
 /**
  * A line about drinking (DESIGN.md 52.2, point 1): the long run counts them and holds them to a budget, so alcohol
- * stays infrequent and the rating stays 13+. Every line the game writes about it uses one of these words.
+ * stays infrequent: frequent would make the game 18+ (the target is 16+ since 2026-11-14, 16.3). Every line the game
+ * writes about it uses one of these words.
  */
 export const DRINK_WORDS = /\b(alcohol|beer|wine|drunk|drinking|drank|drinks|a drink|dry campus|hangover|hungover)\b/i;
 
-/** A line about a heavy theme (52.2, point 2): hazing, a suspension, a breakup, cheating. Held to a budget too. */
+/**
+ * A line about a heavy theme (52.2, point 2): hazing, a suspension, a breakup, cheating. Held to a budget too. At 16+
+ * mature themes may be frequent, so the rating no longer needs it; it is kept so the paper's own pages stay mostly
+ * news, while the social web's drama shows as it happens (63.9).
+ */
 export const HEAVY_WORDS = /\b(hazing|hazed|suspended|suspension|breakup|broke up|heartbr\w*|cheat\w*)\b/i;
 
 /** The share of the lines the player reads that may be about each, at most: infrequent, not on most screens. */

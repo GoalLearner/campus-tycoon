@@ -1307,7 +1307,7 @@ Apple's current tiers are 4+, 9+, 13+, 16+ and 18+, set by a content questionnai
 | Crude or insult-based humour | 9+ |
 | None of the above | 4+ |
 
-**Target: 13+** (the owner, 2026-11-13; 52.2 has what keeps it there and what would move it). It was 4+ until then. The icon and screenshots still suit 4+ (Guideline 2.3.8). The table was read through a summary of Apple's page on 2026-11-11, and 52.2 has the fuller one read on 2026-11-13, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
+**Target: 16+** (the owner, 2026-11-14: "16+, show it all"; 52.2 has the plan and what would move it). It was 13+ from 2026-11-13 and 4+ before that. The icon and screenshots still suit 4+ (Guideline 2.3.8). The table was read through a summary of Apple's page on 2026-11-11, and 52.2 has the fuller one read on 2026-11-13, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
 
 The relationship line on the student card (13.8) was checked against this table on 2026-11-11. It is a status and nothing more, with no detail, no partner and no storyline, and none of the rows above describes it. Since 2026-11-13 it may also say a student is single after a breakup (section 55). It goes on the list to recheck against Apple's questionnaire at submission.
 
@@ -6696,11 +6696,11 @@ The owner, 2026-11-13: "I want a real-life college simulation. Update the tone g
 | 16.2: a Party Animal's parties are pizza and music | **A Party Animal can drink**, and lives with what follows |
 | 16.2: Homesick, Heartbroken and the rest stay comic | **Heartbreak, rejection, failure and setbacks are a normal part of life here** (a breakup, an unrequited crush, getting cut, no bid, a failed class). Characters feel them in Happiness, Stress and memory, and recover over time. Handled kindly |
 | (new) | **Light hazing exists in Greek Row**: embarrassing pledge tasks, early-morning chores, silly dares, initiation rituals. Nothing that hurts or injures anyone, so never forced drinking or eating, never anything dangerous. It is a system with costs (52.3), never a joke at a pledge's expense |
-| 16.3: target 4+ | **Target 13+** (52.2) |
+| 16.3: target 4+ | **Target 13+** (52.2); 16+ since 2026-11-14 |
 
 **Still out, whatever a story asks** (the owner's boundary for the story library, 53.6): sexual content, assault, self-harm, suicide, eating disorders, drug addiction, serious violence. Romance stays at crushes, dates and relationships. The DeepSeek prompt and a filter on its answers enforce this list (53.4).
 
-### 52.2 The age rating: 13+, and what would move it
+### 52.2 The age rating: 16+, and what would move it
 
 Read from Apple's "Age ratings values and definitions" page on 2026-11-13 (through a summary of the page; recheck the live questionnaire at submission). Apple places an app by how often each kind of content appears, and does not define "infrequent" or "frequent".
 
@@ -6713,18 +6713,24 @@ Read from Apple's "Age ratings values and definitions" page on 2026-11-13 (throu
 
 Guideline 1.4.3: an app may not encourage excessive drinking, and one that encourages minors to drink is rejected. Guideline 2.3.8: the icon and screenshots must suit 4+ whatever the rating.
 
-**What keeps it at 13+:**
+**Changed to 16+ on 2026-11-14**, the owner's words: "16+, show it all", after "allow bullying and drama -- I want real simulations when you mix 42,000 personalities". Until then the target was 13+, held by keeping mature themes infrequent; the social web's one heavy item a campus week (63.6) was part of that and is lifted (63.9).
 
-1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus and Alcohol education (52.3 names both; kept by main on 2026-11-13, since a policy's name is read only on the Policies page). A long-run check counts the lines that mention drinking and holds them to a budget [T].
-2. **Mature themes stay infrequent.** The storyteller rations hazing, cheating, breakups and probation (53.5): never more than one heavy arc at a time, with quiet stretches between.
+**What 16+ allows and what holds it there:**
+
+1. **Alcohol stays infrequent, exactly as before.** Frequent would be 18+. It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus and Alcohol education (52.3 names both; kept by main on 2026-11-13, since a policy's name is read only on the Policies page). A long-run check counts the lines that mention drinking and holds them to the same budget [T].
+2. **Mature themes may be frequent.** Breakups, cheating, love triangles and feuds show as they happen: in the paper's gossip, the drama of the week and a card's Lately (63.9). From social stop 7, **bullying and drama come from the personalities** (the owner, 2026-11-14): selfish and jealous students start it, kind and loyal ones defend, bystanders join in or step away; mean comments, naming and shaming, cliques shutting someone out, rumours, pile-ons, name-calling ("try-hard", "teacher's pet", "fake"), roommate pettiness and feuds, with real costs both ways (targets' Stress, Happiness, grades and retention; friends rally; bullies lose friends and can be reported to a conduct office; viral bullying hurts the school's reputation) and levers (an anti-bullying policy, counselling, RAs, the official account speaking up). The storyteller's pacing of the Main Character's arcs (53.5) stays: it is pacing, not the rating.
 3. **Drinking is never rewarded on balance.** Every choice to drink costs something the player can see.
-4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. [Recommended; the alternative is any age, which reads to a reviewer as encouraging minors.]
+4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. The red cup shows only over a student of 21 or over (63.9).
 5. **Romance at most a kiss, and seldom.** Relationships stay at status and story level.
-6. **The icon and screenshots show none of it.**
+6. **Violence:** cartoon violence as the chaos sandbox plans it; realistic violence none.
+7. **The icon and screenshots show none of it** (Guideline 2.3.8: they must suit 4+ whatever the rating).
+8. **The paper's own voice never mocks a student** (16.1). Students may be mean to each other in the simulation; the game's narrator is not.
 
-**What would push it up:** drinking on most screens (18+); hazing, cheating and heartbreak most days (16+); anything from the "still out" list (unratable or rejected).
+**Hard lines, whatever the rating** (Guideline 1.1.1 and the "still out" list of 16.1): no slurs; never about race, religion, ethnicity, sexuality, gender identity, disability, or body and weight; nothing sexual, so no harassment of that kind; no threats; nothing about self-harm or suicide. They are built into the templates, and a test scans every bullying and post template for them (from stop 7).
 
-The questionnaire answers this plans for: alcohol infrequent, mature themes infrequent, sexual content infrequent (or none, if no kiss is shown), medical infrequent, and none for profanity, horror, violence, gambling and social media. Result: 13+.
+**What would push it up:** drinking on most screens (18+); sexual content beyond a kiss, or frequent (18+); realistic violence; anything from the "still out" list (unratable or rejected).
+
+The questionnaire answers this plans for: alcohol infrequent, mature or suggestive themes frequent, sexual content infrequent (at most a kiss, seldom; none if no kiss is shown), medical infrequent, cartoon violence as planned, realistic violence none, and none for profanity, horror, gambling and unrestricted web access. Result: 16+.
 
 ### 52.3 What it adds to the game
 
@@ -7358,6 +7364,8 @@ All ten as recommended, his answer of 2026-11-14 ("Yes, all ten"):
 | 9 | A dog | Skip | Draw |
 | 10 | social-1 | Reuse: its parts are taken by hand into the stops | Drop |
 
+**Decision 6 changed on 2026-11-14** by the owner, to the alternative: "16+, show it all". Heavy drama shows as it happens (63.9; 52.2).
+
 ### 63.4 Build order, once approved
 
 Seven stops, each to TestFlight: the weekly web (identity, worker, save record, regrow); cards, the Campus social view and gossip; emotion; the crowd from real ties; regulars and the followed student's day; the effects, tuned in the long run; MC-1 and MC-2 on the web with scenes and fun beyond school.
@@ -7445,7 +7453,7 @@ Built 2026-11-14 on the branch `social-sim-2`. The save is unchanged (version 30
 | Cheating (heavy) | (A) and (B) are over: (A) was seeing (C). |
 | Love triangle (heavy) | (A) and (C) both have a crush on (B). |
 
-**The ration** (decision 6, 13+). The three heavy kinds are a messy split, cheating and a love triangle. The web picks the first heavy happening of each campus week and keeps that pick for the week, even when it is grown again after a long absence; that one is the only heavy line ever shown, in the paper (when it happened while the player was away) and as the drama of the week. With none yet, the drama of the week is the biggest light one. No light line uses a heavy word (the tone guide's list: breakup, broke up, cheating and the rest): they "split up". The Main Character's romances are never told: their story tells them.
+**The ration** (decision 6, 13+). The three heavy kinds are a messy split, cheating and a love triangle. The web picks the first heavy happening of each campus week and keeps that pick for the week, even when it is grown again after a long absence; that one is the only heavy line ever shown, in the paper (when it happened while the player was away) and as the drama of the week. With none yet, the drama of the week is the biggest light one. No light line uses a heavy word (the tone guide's list: breakup, broke up, cheating and the rest): they "split up". The Main Character's romances are never told: their story tells them. *(The ration was lifted on 2026-11-14 for 16+: 63.9.)*
 
 **What the web keeps for this** (`src/sim/systems/web.ts`). Happenings by name: of nine kinds, six a week each, chosen by the pair's own luck so no class or hall is favoured, for the last 64 weeks, with the campus year they happened in. Each kept week's counts by kind. Friend groups, worked out again after each catch-up: three to six friends, each a friend of at least half the group as it formed, each student in one group at most, formed in an order taken from the week's luck; a group's vibe is the interest most of them share (the sports crowd, the gamers, the music crowd, the gym crew, the party group, the study crew, the theatre kids, the faith group, the fashion crowd). Growing the web again after a long absence starts a new history, so what the screens tell matches the ties as they are now. The record (version 2) keeps the weeks, the happenings and the week's heavy pick; a version 1 record from stop 1 is read whole, with no weeks kept, and carries on.
 
@@ -7464,7 +7472,7 @@ Built 2026-11-14 on the branch `social-sim-2`. The save is unchanged (version 30
 
 Nothing on the map changed, so the frame time is as in 63.1.
 
-**Tested** (`tests/socialView.test.ts`): a campus week lived a week at a time with the paper and the drama of the week read after every week, as a player who looks every three hours, shows one heavy line at most while the web had dozens; the heavy pick is the week's first, kept through growing the web again, and a new campus week starts with none; the Main Character is never in the gossip or the drama; happenings keep at most six of a kind a week, from every class, the same twice from the seed; every line passes the tone guide, and only the heavy kinds use heavy words; a card's people are its real ties, in order, still enrolled, one best friend and one roommate at most; the relationship line in each case; friend groups of three to six, each student in one; the Campus social counts match the web; the record keeps the weeks and the pick, and a version 1 record is read whole and carries on.
+**Tested** (`tests/socialView.test.ts`): a campus week lived a week at a time with the paper and the drama of the week read after every week, as a player who looks every three hours, shows one heavy line at most while the web had dozens (since 63.9: several, as they happen); the heavy pick is the week's first, kept through growing the web again, and a new campus week starts with none; the Main Character is never in the gossip or the drama; happenings keep at most six of a kind a week, from every class, the same twice from the seed; every line passes the tone guide, and only the heavy kinds use heavy words; a card's people are its real ties, in order, still enrolled, one best friend and one roommate at most; the relationship line in each case; friend groups of three to six, each student in one; the Campus social counts match the web; the record keeps the weeks and the pick, and a version 1 record is read whole and carries on.
 
 | Rough | Why |
 |---|---|
@@ -7598,7 +7606,7 @@ Each thing runs until the next begins, with no gaps; every person named is someo
 **On the card.** A regular's card (named or followed) has two rows more:
 
 - **Today**: what they are doing now and the next three things, by the clock ("Now · Hanging out with Shiloh and River", "5:30 PM · Dinner with Shiloh and River").
-- **Lately**: up to four things, newest first: what the map showed happening to them ("Bumped fists with Shiloh and stopped to talk"), then what the web knows ("Rowan and Kai are dating."). A heavy item shows only when it is the week's one heavy item (63.6).
+- **Lately**: up to four things, newest first: what the map showed happening to them ("Bumped fists with Shiloh and stopped to talk"), then what the web knows ("Rowan and Kai are dating."). Heavy items show too, as they happen (16+, below).
 
 Out of sight, a regular's **Doing now** is what their day has them doing ("Hiking Club meets", "Asleep in Herongate Hall"), so the two rows agree; before, the card guessed from the last thing the map saw, which on a Saturday could say "In class".
 
@@ -7612,6 +7620,16 @@ Out of sight, a regular's **Doing now** is what their day has them doing ("Hikin
 
 **Parties, folded in at the owner's word.** The bubble for two students talking about parties drew a red cup over anyone, under-21s included. It is now a striped party hat with two bits of confetti. The red cup stays only where drinking already may (55; 13.7): the Party tonight reason of a junior or senior. A younger student's Party tonight has the soda cup. Both atlases were rebuilt (only `emote.chat-partying` changed) and the paid one published.
 
+**16+, folded in at the owner's word (2026-11-14).** The target rating is now 16+ (16.3, 52.2), so stop 2's one heavy item a campus week (63.6) is lifted. Messy splits, cheating and love triangles show as they happen:
+
+| Where | Before | Now |
+|---|---|---|
+| The paper's gossip | The week's one heavy item, if it happened while the player was away | Every heavy item since the player last looked leads the column, up to half of it, so lighter news still has room; more when there is little else |
+| The drama of the week (Campus social) | One heavy item, or the biggest light one | Up to three of this campus week's heavy items, newest first, one each a person; with none, the biggest light one |
+| A regular's Lately | Heavy only if it was the week's one | Everything that happened to them |
+
+The web and its record are unchanged: the old pick is still kept in the record, so nothing about a save changes, and nothing reads it. Drinking keeps its budget exactly (frequent would be 18+). The long run's heavy-word budget for the game's own lines stays as a guard that the paper's pages stay mostly news; the social web's drama is not in it. Bullying, with its hard lines and the test that scans every template for them, comes with stop 7's drama in the web.
+
 **Decisions made here** (the alternative in brackets):
 
 | | Done | Instead |
@@ -7624,7 +7642,7 @@ Out of sight, a regular's **Doing now** is what their day has them doing ("Hikin
 
 **Measured.** The save grows by about 36 KB with thirty followed and eight named regulars each holding twelve lines, and 70 KB at the very most, every line its longest (the model campus's save is 0.3 MB). Working out a regular's day and what happened to them takes 0.08 ms on this PC, once a second while their card is open. Catch-up is unchanged: nothing in the web or its worker changed. Frames, as in 63.8: taken while other work on this PC was rendering video, so every number is higher than 63.8's and they compare only with each other. The crowd at Normal with no card open: medians of 23.2 and 23.7 ms in two runs. Following a regular: 19.2 and 18.5 ms (the camera is closer in, so less is drawn). Following costs nothing that shows; stop 5 against main on a quiet machine is left for the main session's check.
 
-**Tested** (`tests/regulars.test.ts`, `tests/emotion.test.ts`): two named in every class, from its first 150, the same a day later; following makes a regular, at most thirty, the oldest giving way and let go, so the list never grows past thirty and the named; memory kept to twelve lines of 120 characters, a repeat once, strangers none; kept through a save and a load, and an older save without the list works; the day runs waking to asleep with no gaps, asleep at the room's hours, classes on weekdays only, only real people named, the same every time, plain and light; away on a break; what happened to them is light, and heavy only when it is the week's one; the named as varied in look as chance; a repeated first name with its surname's letter; the red cup only for 21 and over. The map's part was watched on the model campus in a headless browser: Follow promotes, Today shows, a meeting on the path is kept and shows on the strip and in Lately, and the followed student walks where their day says.
+**Tested** (`tests/regulars.test.ts`, `tests/emotion.test.ts`): two named in every class, from its first 150, the same a day later; following makes a regular, at most thirty, the oldest giving way and let go, so the list never grows past thirty and the named; memory kept to twelve lines of 120 characters, a repeat once, strangers none; kept through a save and a load, and an older save without the list works; the day runs waking to asleep with no gaps, asleep at the room's hours, classes on weekdays only, only real people named, the same every time, plain and light; away on a break; what happened to them includes heavy items, all said plainly; the paper leads with the heavy items since the player last looked, never more than half the column while there is lighter news; the drama of the week holds up to three heavy items, newest first, one each a person; the Main Character's romances are in neither; the named as varied in look as chance; a repeated first name with its surname's letter; the red cup only for 21 and over. The map's part was watched on the model campus in a headless browser: Follow promotes, Today shows, a meeting on the path is kept and shows on the strip and in Lately, and the followed student walks where their day says.
 
 | Rough | Why |
 |---|---|

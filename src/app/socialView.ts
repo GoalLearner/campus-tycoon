@@ -32,7 +32,7 @@ export interface WebView {
   weekly: Float64Array;
   weeklyWeek: Int32Array;
   weeklyYear: Int32Array;
-  /** The one heavy happening that may be shown in the campus year `rationFor`, or all -1. */
+  /** The record's old heavy pick for the campus year `rationFor` (stop 2's ration). Nothing reads it since 16+ (63.9). */
   ration: Int32Array;
   rationFor: number;
   /** Friend groups: each student's group or -1, each group's members, each group's vibe. */
@@ -198,12 +198,6 @@ export function happeningsOf(view: WebView): Happening[] {
   return out.sort((a, b) => b.week - a.week || a.luck - b.luck);
 }
 
-/** The one heavy happening that may be shown in this campus year, or null. */
-export function heavyOfTheWeek(view: WebView, year: number): Happening | null {
-  if (view.rationFor !== year) return null;
-  return happeningAt(view.ration, 0);
-}
-
 const isHeavy = (one: Happening): boolean => HEAVY_EVENTS.includes(one.event);
 
 /** A happening in a line of the paper: plain, light, never dwelling. null when someone in it has left the school. */
@@ -252,6 +246,30 @@ function tell(state: GameState, one: Happening): Told | null {
 }
 
 /**
+ * Heavy happenings after `sinceWeek` (a messy breakup, cheating, a love triangle), newest first, at most `max`, one a
+ * person. Shown as they happen since the owner's 16+ of 2026-11-14 (DESIGN.md 16.3, 52.2): before it, one a campus
+ * week.
+ */
+function heavySince(view: WebView, state: GameState, sinceWeek: number, year: number | null, max: number): Told[] {
+  const out: Told[] = [];
+  const used = new Set<string>();
+  for (const one of happeningsOf(view)) {
+    if (out.length >= max) break;
+    if (!isHeavy(one) || one.week <= sinceWeek || (year !== null && one.year !== year)) continue;
+    const keys = one.people.map((ref) => `${ref.entryYear}:${ref.index}`);
+    if (keys.some((k) => used.has(k))) continue;
+    const told = tell(state, one);
+    if (!told) continue;
+    for (const k of keys) used.add(k);
+    out.push(told);
+  }
+  return out;
+}
+
+/** The most heavy items the drama of the week carries. */
+export const DRAMA_MOST = 3;
+
+/**
  * Light happenings after `sinceWeek`, a kind at a time so the lines vary, newest first: at most `max`. Never heavy.
  */
 function lightSince(view: WebView, state: GameState, sinceWeek: number, year: number | null, max: number): Told[] {
@@ -276,47 +294,46 @@ function lightSince(view: WebView, state: GameState, sinceWeek: number, year: nu
 
 /**
  * The paper's gossip after an absence (DESIGN.md 63.6): what happened on campus since `sinceWeek`, at most `max`
- * lines. The week's one heavy item leads, when it happened in that time.
+ * lines. The heavy ones lead, up to half the column, so the lighter news still has room; more when there is little.
  */
 export function gossip(view: WebView, state: GameState, sinceWeek: number, max = 4): Told[] {
-  const out: Told[] = [];
-  const heavy = heavyOfTheWeek(view, calendarAt(state.clock).year);
-  const told = heavy && heavy.week > sinceWeek ? tell(state, heavy) : null;
-  if (told) out.push(told);
-  return [...out, ...lightSince(view, state, sinceWeek, null, max - out.length)];
+  const heavy = heavySince(view, state, sinceWeek, null, max);
+  const lead = heavy.slice(0, Math.ceil(max / 2));
+  const light = lightSince(view, state, sinceWeek, null, max - lead.length);
+  return [...lead, ...light, ...heavy.slice(lead.length, lead.length + Math.max(0, max - lead.length - light.length))];
 }
 
 /**
- * What the web knows happened to one student (DESIGN.md 63.9), newest first, for a regular's card: light happenings,
- * and a heavy one only when it is the week's one heavy item (63.3, decision 6).
+ * What the web knows happened to one student (DESIGN.md 63.9), newest first, for a regular's card: everything, heavy
+ * or light, since the owner's 16+ (16.3).
  */
 export function happenedTo(view: WebView, state: GameState, ref: StudentRef, max = 4): Told[] {
-  const heavy = heavyOfTheWeek(view, calendarAt(state.clock).year);
   const out: Told[] = [];
   for (const one of happeningsOf(view)) {
     if (out.length >= max) break;
     if (!one.people.some((p) => p.entryYear === ref.entryYear && p.index === ref.index)) continue;
-    if (isHeavy(one) && !(heavy && heavy.week === one.week && heavy.luck === one.luck)) continue;
     const told = tell(state, one);
     if (told) out.push(told);
   }
   return out;
 }
 
-/** The drama of the week: its one heavy item when there is one, otherwise the biggest light one. */
-export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
+/**
+ * The drama of the week: this campus week's heavy items as they happened, newest first, up to `DRAMA_MOST`; with none,
+ * the biggest light one. Several since the owner's 16+ (16.3); one before it.
+ */
+export function dramaOfTheWeek(view: WebView, state: GameState): Told[] {
   const year = calendarAt(state.clock).year;
-  const heavy = heavyOfTheWeek(view, year);
-  const told = heavy ? tell(state, heavy) : null;
-  if (told) return told;
+  const heavy = heavySince(view, state, -Infinity, year, DRAMA_MOST);
+  if (heavy.length > 0) return heavy;
   for (const event of [EVENT.backTogether, EVENT.enemies, EVENT.longterm, EVENT.splitMutual, EVENT.dating, EVENT.best]) {
     for (const one of happeningsOf(view)) {
       if (one.event !== event || one.year !== year) continue;
       const light = tell(state, one);
-      if (light) return light;
+      if (light) return [light];
     }
   }
-  return null;
+  return [];
 }
 
 /**
@@ -349,7 +366,8 @@ export interface CampusSocial {
   popular: Array<{ ref: StudentRef; friends: number; known: number }>;
   /** The three biggest friend groups: their vibe and their members. */
   groups3: Array<{ vibe: string; members: StudentRef[] }>;
-  drama: Told | null;
+  /** The drama of the week: up to `DRAMA_MOST` heavy items, or one light one, or none. */
+  drama: Told[];
   /** This week's light happenings, a kind at a time. */
   lines: Told[];
 }

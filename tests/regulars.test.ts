@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { itemAt, regularDay, sleepHours } from '../src/app/regularDay';
-import { firstNamesOf, happenedTo, heavyOfTheWeek, peopleOf, viewOf } from '../src/app/socialView';
+import { firstNamesOf, happenedTo, peopleOf, viewOf } from '../src/app/socialView';
 import { advance, applyAction, newGame, parseSave, sampleStudents, serialize, studentCard, studentFigure, toneProblem, type GameState, type StudentRef } from '../src/sim';
 import { calendarAt, dateAt } from '../src/sim/calendar';
 import { HEAVY_WORDS } from '../src/sim/config/tone';
@@ -210,17 +210,19 @@ describe('first names said together', () => {
 });
 
 describe('what happened to them', () => {
-  it('is what the web knows about them, light, and heavy only when it is the week’s one heavy item', () => {
+  it('is what the web knows about them, heavy as well as light since the owner’s 16+, said plainly', () => {
     let told = 0;
-    const heavy = heavyOfTheWeek(VIEW, calendarAt(MODEL.clock).year);
-    for (const ref of sampleStudents(MODEL, 400)) {
+    let heavy = 0;
+    for (const ref of sampleStudents(MODEL, 2000)) {
       for (const one of happenedTo(VIEW, MODEL, ref, 6)) {
         expect(one.people.some((p) => key(p) === key(ref))).toBe(true);
-        if (one.heavy) expect(heavy && heavy.people.some((p) => key(p) === key(ref))).toBe(true);
+        expect(toneProblem(one.line), one.line).toBeNull();
         told += 1;
+        if (one.heavy) heavy += 1;
       }
     }
     expect(told).toBeGreaterThan(0);
+    expect(heavy).toBeGreaterThan(0);
     expect(HEAVY_EVENTS.length).toBe(3);
   });
 });

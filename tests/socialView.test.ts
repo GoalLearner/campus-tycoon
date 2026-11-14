@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { campusSocial, dramaOfTheWeek, gossip, happeningLine, happeningsOf, heavyOfTheWeek, partnerLine, peopleOf, relationshipWords, viewOf, type Happening } from '../src/app/socialView';
+import { campusSocial, DRAMA_MOST, dramaOfTheWeek, gossip, happeningLine, happeningsOf, partnerLine, peopleOf, relationshipWords, viewOf, type Happening } from '../src/app/socialView';
 import { advance, newGame, sampleStudents, TICK_MS, toneProblem, type GameState, type StudentRef } from '../src/sim';
 import { calendarAt } from '../src/sim/calendar';
 import { DRINK_WORDS, HEAVY_WORDS } from '../src/sim/config/tone';
@@ -10,7 +10,7 @@ import { DAY, T0 } from './helpers';
 
 /**
  * The social campus, stop 2 (DESIGN.md 63.6): every card's people from the web, the Campus social page, the drama of
- * the week and the paper's gossip, with at most one heavy item shown in a campus week.
+ * the week and the paper's gossip. Heavy items show as they happen since the owner's 16+ of 2026-11-14 (16.3).
  */
 
 const MODEL = advance(newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + DAY).state;
@@ -25,8 +25,7 @@ for (let w = 1; w <= 52; w++) {
   catchUp(WEB, MODEL, WEEK0 + w);
   const view = viewOf(WEB, false);
   for (const told of gossip(view, MODEL, WEEK0 + w - 1)) SHOWN.push({ week: w, line: told.line, heavy: told.heavy, from: 'paper' });
-  const drama = dramaOfTheWeek(view, MODEL);
-  if (drama) SHOWN.push({ week: w, line: drama.line, heavy: drama.heavy, from: 'drama' });
+  for (const drama of dramaOfTheWeek(view, MODEL)) SHOWN.push({ week: w, line: drama.line, heavy: drama.heavy, from: 'drama' });
 }
 const VIEW = viewOf(WEB, false);
 
@@ -85,29 +84,46 @@ describe('happenings', () => {
   });
 });
 
-describe('the heavy ration', () => {
-  it('shows at most one heavy item in a campus week, in the paper and the drama of the week together', () => {
-    const heavy = new Set(SHOWN.filter((one) => one.heavy).map((one) => one.line));
-    expect(heavy.size).toBeLessThanOrEqual(1);
-    // Read every three hours for a whole campus week, the paper still had plenty to tell.
-    expect(SHOWN.filter((one) => !one.heavy && one.from === 'paper').length).toBeGreaterThan(100);
-    // And the web did have more heavy happenings than the one it may show.
-    expect(happeningsOf(VIEW).filter((one) => HEAVY_EVENTS.includes(one.event)).length).toBeGreaterThan(10);
-  });
+describe('heavy items, at 16+', () => {
+  const heavyOfYear = (): Happening[] => happeningsOf(VIEW).filter((one) => HEAVY_EVENTS.includes(one.event) && one.year === YEAR);
 
-  it('is the first heavy happening of the campus week, shown in the paper once and as the drama of the week', () => {
-    const pick = heavyOfTheWeek(VIEW, YEAR)!;
-    expect(pick).not.toBeNull();
-    const earliest = happeningsOf(VIEW).filter((one) => HEAVY_EVENTS.includes(one.event) && one.year === YEAR);
-    expect(pick.week).toBe(Math.min(...earliest.map((one) => one.week)));
-    const line = happeningLine(MODEL, pick);
-    if (line) {
-      expect(SHOWN.filter((one) => one.from === 'paper' && one.line === line).length).toBeLessThanOrEqual(1);
-      expect(dramaOfTheWeek(VIEW, MODEL)?.line).toBe(line);
+  it('show as they happen: several in a campus week, leading the paper, which still has room for lighter news', () => {
+    const heavy = new Set(SHOWN.filter((one) => one.heavy).map((one) => one.line));
+    expect(heavy.size).toBeGreaterThan(5);
+    // Read every three hours for a whole campus week, the paper still had plenty of lighter news to tell.
+    expect(SHOWN.filter((one) => !one.heavy && one.from === 'paper').length).toBeGreaterThan(100);
+    for (let w = 1; w <= 52; w++) {
+      const paper = SHOWN.filter((one) => one.week === w && one.from === 'paper');
+      const lead = paper.findIndex((one) => !one.heavy);
+      const heavyCount = paper.filter((one) => one.heavy).length;
+      // Heavy first, then light: at most half the column heavy while there is light news to fill it.
+      if (lead >= 0) expect(paper.slice(lead).every((one) => !one.heavy) || paper.filter((one) => !one.heavy).length < 2).toBe(true);
+      if (paper.filter((one) => !one.heavy).length >= 2) expect(heavyCount).toBeLessThanOrEqual(2);
     }
   });
 
-  it('is kept when the web is grown again, and a new campus week picks its own', () => {
+  it('make the drama of the week: the campus week’s heavy items, newest first, a few at most, one each a person', () => {
+    const drama = dramaOfTheWeek(VIEW, MODEL);
+    expect(drama.length).toBeGreaterThan(1);
+    expect(drama.length).toBeLessThanOrEqual(DRAMA_MOST);
+    const lines = heavyOfYear().map((one) => happeningLine(MODEL, one));
+    let last = -1;
+    const people = new Set<string>();
+    for (const told of drama) {
+      expect(told.heavy).toBe(true);
+      const at = lines.indexOf(told.line);
+      expect(at).toBeGreaterThan(last);
+      last = at;
+      for (const ref of told.people) {
+        expect(people.has(key(ref))).toBe(false);
+        people.add(key(ref));
+      }
+      expect(toneProblem(told.line), told.line).toBeNull();
+      expect(DRINK_WORDS.test(told.line), told.line).toBe(false);
+    }
+  });
+
+  it('leave the record’s old heavy pick in place: kept through a regrow, though nothing reads it now', () => {
     const copy = decodeWeb(encodeWeb(WEB), MODEL)!;
     copy.calYear = YEAR;
     regrow(copy, MODEL);
@@ -115,19 +131,17 @@ describe('the heavy ration', () => {
     expect([...copy.ration]).toEqual([...WEB.ration]);
     pickRation(copy);
     expect([...copy.ration]).toEqual([...WEB.ration]);
-    // A new campus week: nothing heavy has happened in it yet, so nothing heavy may be shown.
     copy.calYear = YEAR + 1;
     pickRation(copy);
     expect(copy.rationFor).toBe(YEAR + 1);
     expect(copy.ration.every((v) => v === -1)).toBe(true);
-    expect(heavyOfTheWeek(viewOf(copy, false), YEAR)).toBeNull();
   });
 
-  it('never tells the main character’s romances: their story does (stop 7)', () => {
-    const pick = heavyOfTheWeek(VIEW, YEAR)!;
+  it('never tell the main character’s romances: their story does (stop 7)', () => {
+    const pick = heavyOfYear()[0]!;
     const withMain = structuredClone(MODEL) as GameState;
     (withMain.story as { mc: unknown }).mc = { ...(MODEL.story.mc ?? {}), ref: pick.people[0] };
-    expect(dramaOfTheWeek(VIEW, withMain)?.people.some((ref) => key(ref) === key(pick.people[0]!)) ?? false).toBe(false);
+    for (const told of dramaOfTheWeek(VIEW, withMain)) expect(told.people.some((ref) => key(ref) === key(pick.people[0]!))).toBe(false);
     for (const told of gossip(VIEW, withMain, -1, 50)) expect(told.people.some((ref) => key(ref) === key(pick.people[0]!))).toBe(false);
   });
 });
@@ -252,7 +266,7 @@ describe('the Campus social page', () => {
       expect(group.members.length).toBeGreaterThanOrEqual(3);
       expect(group.vibe).toMatch(/^(the |a group)/);
     }
-    expect(social.drama).not.toBeNull();
+    expect(social.drama.length).toBeGreaterThan(0);
   });
 });
 

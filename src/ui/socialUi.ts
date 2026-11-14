@@ -47,7 +47,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     stat('This week', `${count(social.week.couples)} new couples · ${count(social.week.splits)} split up`),
   );
 
-  if (social.drama) body.append(el('div', 'money-head', 'Drama of the week'), toldLine(social.drama, open));
+  if (social.drama.length > 0) body.append(el('div', 'money-head', 'Drama of the week'), ...social.drama.map((told) => toldLine(told, open)));
 
   if (social.popular.length > 0) {
     body.append(el('div', 'money-head', 'Most popular'));
