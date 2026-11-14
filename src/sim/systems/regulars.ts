@@ -93,7 +93,9 @@ export function promoteRegular(state: GameState, ref: StudentRef): string | null
   // The oldest followed give way first, past the most kept.
   const followed = state.web.regulars!.filter((one) => one.followed).sort((a, b) => a.since - b.since);
   for (const one of followed.slice(0, Math.max(0, followed.length - FOLLOWED_KEPT))) one.followed = false;
-  state.web.regulars = state.web.regulars!.filter((one) => one.followed || one.memory.length > 0);
+  // One who gives way is let go with their memory, unless the seed names them, so the list stays its size (63.9).
+  const named = namedRegulars(state);
+  state.web.regulars = state.web.regulars!.filter((one) => one.followed || (one.memory.length > 0 && named.some((ref) => same(ref, one.ref))));
   return null;
 }
 

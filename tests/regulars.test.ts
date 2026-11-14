@@ -57,6 +57,29 @@ describe('regulars', () => {
     expect(regularWhy(many, refs[0]!)).not.toBe('followed');
   });
 
+  it('let go of one who gives way, memory and all, so the list never grows past thirty and the named', () => {
+    const state = structuredClone(MODEL) as GameState;
+    const named = namedRegulars(state);
+    const refs = sampleStudents(state, 400).filter((one) => regularWhy(state, one) === null).slice(0, FOLLOWED_KEPT * 3);
+    for (const ref of refs) {
+      state.clock.tick += 1;
+      expect(promoteRegular(state, ref)).toBeNull();
+      expect(rememberRegular(state, ref, 'High-fived Sam and talked about music')).toBeNull();
+    }
+    for (const ref of named) expect(rememberRegular(state, ref, 'Waved at Sam')).toBeNull();
+    // One more followed: the oldest gives way, and is gone.
+    const last = sampleStudents(state, 600).find((one) => regularWhy(state, one) === null && !refs.some((r) => key(r) === key(one)))!;
+    state.clock.tick += 1;
+    promoteRegular(state, last);
+    const list = state.web.regulars ?? [];
+    expect(list.length).toBeLessThanOrEqual(FOLLOWED_KEPT + named.length);
+    expect(list.filter((one) => one.followed)).toHaveLength(FOLLOWED_KEPT);
+    // The first followed gave way long since: no record left, and not a regular.
+    expect(regularRecord(state, refs[0]!)).toBeNull();
+    expect(regularWhy(state, refs[0]!)).toBeNull();
+    for (const ref of named) expect(regularRecord(state, ref)?.memory.length).toBe(1);
+  });
+
   it('remember what the map showed, a short memory, for regulars only, once for the same thing twice', () => {
     const state = structuredClone(MODEL) as GameState;
     const named = namedRegulars(state)[0]!;
