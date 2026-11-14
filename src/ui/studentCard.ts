@@ -4,7 +4,7 @@ import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
-import { clockWords, itemAt, regularDay } from '../app/regularDay';
+import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
 import { happenedTo } from '../app/socialView';
 import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
@@ -117,6 +117,20 @@ function awayText(state: GameState, card: StudentCard): string {
   if (doing === 'asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (doing === 'ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
   return town ? 'At home in town' : `In ${home}`;
+}
+
+/**
+ * Where a regular is who is out of sight: what their day has them doing now (DESIGN.md 63.9), in place of a guess from
+ * the last thing the map saw, so Doing now and Today agree. At home, in the words the room uses.
+ */
+function plannedText(state: GameState, card: StudentCard, item: DayItem): string {
+  if (item.where !== 'home') return item.words;
+  const town = card.residence === 'offCampus';
+  const home = homeName(state, card);
+  if (item.words === 'Asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
+  if (item.words === 'Getting ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
+  if (item.words === 'In their room') return town ? 'At home in town' : `In ${home}`;
+  return item.words;
 }
 
 /** "the dorm" in a line of the card, as the hall's own name: "Heading back to Fernwick Hall". */
@@ -385,7 +399,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const outside = session.doing !== null;
     // "the dorm" in what the map says, as where they live: their hall, or their chapter's house.
     const homeWord = hall ?? (card.residence === 'chapter' ? `the ${card.chapter} house` : null);
-    setText(doing.value, named(outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : awayText(state, card), homeWord));
+    const today = regularToday(state, ref, card);
+    const unseen = today?.now ? plannedText(state, card, today.now) : lastDoing ? indoorsText(lastDoing) : awayText(state, card);
+    setText(doing.value, named(outside ? doingText(session.doing!) : unseen, homeWord));
     follow.disabled = !outside;
     // Someone staying put has nowhere to be followed to.
     follow.hidden = stayingWords(session.doing) !== null;
@@ -425,7 +441,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       : null;
     reason.disabled = target === null;
 
-    showDay(state, ref, card);
+    showDay(state, ref, today);
 
     // The strip: the same live line as the card's Doing now, and Following only while the camera is (DESIGN.md 61).
     // Gone indoors or dragged away from, it is one tap back to the card, which says where they are. Something that
@@ -446,20 +462,23 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
 
   let dayKey = '';
   /** A regular's Today (now and what is next, with times) and Lately (what the map saw, then what the web says). */
-  function showDay(state: GameState, ref: StudentRef, card: StudentCard): void {
+  /** A regular's day and what it has them doing now; null for anyone else. The Main Character's day is their page's (57.1). */
+  function regularToday(state: GameState, ref: StudentRef, card: StudentCard): { day: DayItem[]; now: DayItem | null } | null {
     const why = regularWhy(state, ref);
-    // The Main Character's day is their page's (57.1); anyone not a regular has no day kept.
-    const shown = why === 'followed' || why === 'named';
-    if (!shown) {
+    if (why !== 'followed' && why !== 'named') return null;
+    const day = regularDay(socialWeb.view, state, ref, card);
+    return { day, now: itemAt(day, shownHour()) };
+  }
+
+  function showDay(state: GameState, ref: StudentRef, today: { day: DayItem[]; now: DayItem | null } | null): void {
+    if (!today) {
       todayRow.line.hidden = true;
       latelyRow.line.hidden = true;
       dayKey = '';
       return;
     }
-    const hour = shownHour();
     const view = socialWeb.view;
-    const day = regularDay(view, state, ref, card);
-    const now = itemAt(day, hour);
+    const { day, now } = today;
     const at = now ? day.indexOf(now) : -1;
     const next = at >= 0 ? day.slice(at, at + 4) : day.slice(0, 4);
     const memory = [...(regularRecord(state, ref)?.memory ?? [])].reverse().map((one) => one.text);
