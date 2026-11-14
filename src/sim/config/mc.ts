@@ -117,7 +117,7 @@ export type GoalId = 'deansList' | 'friends' | 'fit' | 'savings' | 'onTime' | 'f
 export const GOALS: Record<GoalId, { name: string; plan: string }> = {
   deansList: { name: 'Make the Dean’s list', plan: 'the Dean’s list needs a 3.5' },
   friends: { name: 'Find their people', plan: 'a good friend or two makes a place home' },
-  fit: { name: 'Get fit', plan: 'half an hour of exercise, most days' },
+  fit: { name: 'Get fit', plan: 'half an hour of working out, most days' },
   savings: { name: 'Keep some money in the bank', plan: 'a shift or two keeps the account above zero' },
   onTime: { name: 'Graduate on time', plan: 'every class counts toward finishing in four years' },
   fun: { name: 'Have the full college experience', plan: 'it only happens once' },
