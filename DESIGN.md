@@ -6637,7 +6637,7 @@ Guideline 1.4.3: an app may not encourage excessive drinking, and one that encou
 
 **What keeps it at 13+:**
 
-1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus. A long-run check counts the lines that mention drinking and holds them to a budget [T].
+1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus and Alcohol education (52.3 names both; kept by main on 2026-11-13, since a policy's name is read only on the Policies page). A long-run check counts the lines that mention drinking and holds them to a budget [T].
 2. **Mature themes stay infrequent.** The storyteller rations hazing, cheating, breakups and probation (53.5): never more than one heavy arc at a time, with quiet stretches between.
 3. **Drinking is never rewarded on balance.** Every choice to drink costs something the player can see.
 4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. [Recommended; the alternative is any age, which reads to a reviewer as encouraging minors.]
