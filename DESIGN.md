@@ -6683,6 +6683,7 @@ A school year is one real week, so a semester is about three and a half real day
 - A portrait button on the top bar opens their page (portrait, year, major, GPA, Happiness, Stress, needs, relationships, friends, clubs, job, goals, plans with reasons, a timeline) and offers Follow.
 - The away screen opens with "Your main character": what they did, decided and why. Their biggest moments use the two-a-day notices.
 - When they graduate, transfer or drop out they go to the hall of fame, their story stays readable, and the player picks the next.
+- **Built on 2026-11-13: section 57 has it as built.**
 - They count toward the campus's numbers only as one student.
 
 ### 53.3 The story system (MC-2)
@@ -6906,3 +6907,61 @@ The long run's six test players on the model campus, 44 weeks each, against the 
 | A finished class's years are read from the last six | Older years are dropped; a class always graduates within them |
 | The Scorecard's arrows wait for the first year's end | Nothing to compare before it |
 | Year-End grades against the national field | Left for later (24.7) |
+
+## 57. The Main Character (MC-1), as built
+
+53.1 and 53.2 built on 2026-11-13, the stop after alumni giving (section 56), on the main session's brief: "the Main Character and the phone's life system, fully offline." The story system is MC-2 (section 58). The Main Character changes nothing on the campus: the same game with and without one is the same game (a test holds it), so every long-run table is as it was.
+
+### 57.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| Choosing one | "Make main character" on any student's card, or the student the game suggests from the newest class, on the page the portrait opens. One at a time: choosing another sets the first aside, into the hall of fame. "Choose someone else" on their page does the same | `makeMain`, `setAsideMain`, `suggestMain` in `src/sim/systems/mc.ts`; actions `makeMain`, `setAsideMain` |
+| What is stored | A named regular (13.5): their student, name, major, nature and quirk from the card; five needs (energy, friends, fun, studies, fitness, 0 to 100); two goals by their nature (the Dean's list, finding their people, getting fit, money in the bank, graduating on time, the full college experience); money ($300 to start, $25 a real day from home); a club from the card; a job when money runs out; grades; a timeline of the last 80 things | `MainCharacter` in `src/sim/types.ts`; `src/sim/config/mc.ts` |
+| The people around them | A roommate (none for a student living in town), two friends, and a crush (single and looking) or a partner (with someone, near or far), each with a stored name and two traits: tidy, messy, loud, quiet, night owl, early bird, clingy, jealous, generous, funny, studious, sporty. Closeness, 0 to 100, grows an hour at a time together and fades a little each day apart; a friend at 70 is a close friend. A loud or night-owl roommate costs sleep, a quiet one gives a little | `CastMember`; `CAST_TRAITS` |
+| Their day | The player's own real day: they wake when it starts (two hours before the anchor) and plan it then, once a real day (53.1). Asleep from about 11 at night (later after a party); classes about 9 to 2 on a weekday in term; three meals; the rest of the day decided every quarter of a real hour | `mcDay`, `stepMain`; `DAY_HOURS`, `MC_STEP` |
+| The phone's life system | Picks what they do from their needs (the lower a need, the more an activity that meets it weighs), their plan, and the campus's real numbers at their home: recreation in reach makes a workout likelier, the library studying, the campus's social life time with friends; a dry campus moves parties to the town. Reads the campus and changes nothing in it, and draws nothing from the game's random streams | `choose`, `placesFor` |
+| The plan | Up to four things, each with why: study (exams this week, or the Dean's list), what a low need asks, a shift when money is short, the gym or friends for a goal, the club on its day, a party on Thursday, Friday or Saturday night for one who likes them. It lifts what it names; the timeline says how many were kept | `makePlan` |
+| Drinking | At a party a junior or senior (21) may have a few drinks (more often a Party Animal): the morning after costs 20 energy, and a morning class is likely slept through. A younger one never drinks. All said plainly in the timeline | `startActivity`, `newDay`; `HANGOVER_ENERGY`, `PARTY_NIGHTS` |
+| Grades | At each semester's end: the grade on their card, moved by how much they studied (their studies need against a middling 55) and the share of classes they went to. The Dean's list (3.5) and a hard semester (under 2.0) are key moments | `mcOnSemester`; `GPA_FROM_STUDY`, `GPA_FROM_CLASSES` |
+| Key moments | A close friend made, the Dean's list, a hard semester, money running out, graduating: at most two a real day (53.1); past that a moment is remembered, not announced. They use the two-a-day notices | `remember`, `BIG_PER_DAY`; `results` in `src/sim/notify.ts` |
+| The away screen | Opens with "Your main character": the last six things they did, decided and why, key moments first among them; tapping it opens their page | `Edition.main` in `src/sim/newspaper.ts`; `drawPaper` in `src/ui/deskPanels.ts` |
+| Their page | A portrait button on the top bar, drawn from the atlas (faded with none chosen). Name, year, major, nature; what they are doing and why; Happiness (their card's, moved by their needs), Stress, GPA, money, club, job; the five needs as bars; today's plan with what is done; goals and how each stands; the people around them; the last ten things; Follow (opens their card); Choose someone else; the hall of fame | `mcView` in `src/ui/mcUi.ts`; `openMain` in `src/ui/ui.ts` |
+| Graduating and leaving | When their class graduates, or if they leave, they go to the hall of fame with their story (their key moments and the last few things), and the page suggests the next | `retire`, `FameEntry` |
+| Saves | Version 28: no Main Character and an empty hall of fame | `MIGRATIONS[27]`, `tests/fixtures/save-v27-model.json` |
+| The test players | The once-a-day player follows the student the game suggests, and the next when one graduates | `takeTurn` in `scripts/bots.ts` |
+| The dev page | `&mc=1` makes the suggested student the Main Character, and `&mcdays=3` lives three real days of their life first | `src/app/devtools.ts` |
+
+### 57.2 Decisions
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Their clock | The player's real day, from the anchor: they sleep when the player sleeps | The game's calendar, where a day passes every 28 minutes |
+| A step | A quarter of a real hour | Every minute, which costs catch-up for nothing seen |
+| Who decides | The phone's rules alone, until MC-3 | |
+| Their effect on the campus | None: one student among 46,000 | Counting their choices in the campus's numbers |
+| Choosing again | Sets the first aside into the hall of fame | Refusing until they graduate |
+
+### 57.3 Measured
+
+The long run's once-a-day player on both seeds follows the student the game suggests, and the next when one graduates, for 44 real weeks.
+
+| Measured | Result |
+|---|---|
+| Main characters | 15 followed on each seed, 14 of them to graduation (each is suggested in their first year and has three left) |
+| Plans | 7.0 a real week: one every real day, 309 in 44 weeks |
+| Key moments | 1.8 a real week, never more than 2 on one real day |
+| The paper | About 19 of their lines a real week, the last six of an absence at the head of the paper |
+| Nights out | Drinks on 0.4 nights a real week, each followed by a hangover: only juniors and seniors |
+| Grades | Those who graduated averaged a 3.40 and a 3.42 |
+| The campus | Every number the same as the run without them: the money, the rank goals (Top 10 in weeks 27 to 29), the levels, Happiness. A test runs the same campus with and without one and finds nothing changed |
+| What a player reads | Their lines count toward the 13+ budgets: 1.48 and 1.65 in 100 about drinking for the once-a-day player, 0.45 and 0.64 about heavy themes |
+| Tests | 14 new (`tests/mc.test.ts`). One new long-run check: a plan every real day, at most three key moments on one. 88 checks in all |
+
+### 57.4 Rough
+
+| Rough | Why |
+|---|---|
+| Follow opens their card; on the map they are followed only while they are out walking | The crowd draws a sample of students, and they are one of 46,000 |
+| Their traits do little yet but sleep and closeness | MC-2's arcs are where traits make problems |
+| A real day with no visit still plans and lives | They live whether watched or not, as the campus does |
