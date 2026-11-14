@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { newSocial } from '../src/sim/systems/social';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -722,6 +723,7 @@ describe('a save from version 16', () => {
     expected.alumni = state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.social = newSocial();
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -767,7 +769,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(13);
+    expect(notes).toHaveLength(14);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

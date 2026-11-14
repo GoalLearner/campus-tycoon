@@ -4,6 +4,7 @@ import { newTraditions } from './systems/traditions';
 import { newGreek } from './systems/greek';
 import { newAlumni, openingPool } from './systems/alumni';
 import { newStory } from './systems/mc';
+import { newSocial } from './systems/social';
 import { newInbox } from './systems/inbox';
 import { stageSpec } from './config/buildings';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
@@ -225,6 +226,7 @@ export function newGame(opts: NewGameOptions): GameState {
     greek: newGreek(),
     alumni: newAlumni(),
     story: newStory(),
+    social: newSocial(),
   };
   firstOrders(state);
   startFootball(state, 1);

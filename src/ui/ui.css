@@ -703,6 +703,11 @@ button.happy {
   right: calc(var(--safe-right) + 8px);
   bottom: calc(var(--safe-bottom) + 76px);
   max-width: 460px;
+  /* Never over the top bar: a long card scrolls inside itself (DESIGN.md 62). */
+  max-height: calc(100% - var(--hud-bottom, calc(var(--safe-top) + 166px)) - var(--safe-bottom) - 84px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   margin: 0 auto;
   padding: 10px 12px 6px;
   background: var(--panel-solid);
@@ -801,6 +806,47 @@ button.student-row {
 
 .student-follow[hidden] {
   display: none;
+}
+
+/* Their friends' faces (DESIGN.md 62): each opens that friend's card. */
+.student-friends {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.student-friend {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 52px;
+  min-height: 44px;
+  padding: 3px 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.student-friend-art {
+  width: 26px;
+  height: 30px;
+  border-radius: 7px;
+  background: #a6ad36;
+}
+
+.student-friend-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.student-quiet {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 /*

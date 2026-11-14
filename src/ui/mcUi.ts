@@ -39,7 +39,7 @@ export interface McView {
   fame: Array<{ name: string; line: string; story: string[] }>;
 }
 
-const ROLE: Record<string, string> = { roommate: 'Roommate', friend: 'Friend', crush: 'Crush', partner: 'Partner' };
+const ROLE: Record<string, string> = { roommate: 'Roommate', friend: 'Friend', crush: 'Crush', partner: 'Partner', rival: 'Rival', ex: 'Ex' };
 const STATUS: Record<string, string> = { graduated: 'Graduated', transferred: 'Transferred', left: 'Left', setAside: 'Set aside' };
 
 export function mcView(state: GameState): McView {
@@ -74,7 +74,8 @@ export function mcView(state: GameState): McView {
       needs: NEEDS.map((need) => ({ name: NEED_NAMES[need], level: Math.round(mc.needs[need]), low: mc.needs[need] < NEED_LOW })),
       plan: (mc.plan?.items ?? []).map((item) => ({ text: `${ACTIVITIES[item.activity].name}: ${item.why}`, done: item.done })),
       goals: goalStatus(mc).map((goal) => [goal.name, goal.status]),
-      people: mc.cast.map((one) => [`${ROLE[one.role] ?? one.role}`, `${one.name} · ${one.traits.map((trait) => CAST_TRAITS[trait].name.toLowerCase()).join(', ')} · ${Math.round(one.closeness)} of 100`]),
+      // A rival's or an ex's number is how sore they are, which the page does not show (DESIGN.md 62).
+      people: mc.cast.map((one) => [`${ROLE[one.role] ?? one.role}`, `${one.name} · ${one.traits.map((trait) => CAST_TRAITS[trait].name.toLowerCase()).join(', ')}${one.role === 'rival' || one.role === 'ex' ? '' : ` · ${Math.round(one.closeness)} of 100`}`]),
       timeline: mc.memory.slice(-10).reverse().map((entry) => entry.text),
       chapters: (story?.chapters ?? [])
         .filter((chapter) => chapter.name === mc.name && chapter.scenes.length > 0)

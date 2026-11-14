@@ -24,7 +24,8 @@ import { hashInts } from '../rng';
 import type { ActiveArc, GameState, LogEntry, MainCharacter, Scene } from '../types';
 import { chapters, nextGreekDay, pledgeSeason } from './greek';
 import { approvalAt } from './happiness';
-import { castMember, placesFor, remember } from './mc';
+import { changeCast, placesFor, remember } from './mc';
+import { spentTime } from './social';
 import { callTimes } from './parties';
 import { classPressure, dayRead, seasonCurve } from './season';
 import { classYearOf, studentCard, teachingQuality } from './students';
@@ -241,7 +242,9 @@ function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
       return;
     case 'close': {
       const one = mc.cast.find((member) => member.role === effect.role);
-      if (one) one.closeness = clamp(one.closeness + effect.by, 0, 100);
+      if (!one) return;
+      const tie = one.ref ? spentTime(state, mc.ref, one.ref, effect.by, null, -1) : undefined;
+      one.closeness = tie ? tie.strength : clamp(one.closeness + effect.by, 0, 100);
       return;
     }
     case 'job':
@@ -254,22 +257,10 @@ function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
       mc.team = effect.join;
       return;
     case 'cast': {
-      const avoid = [mc.name, ...mc.cast.map((one) => one.name)];
-      if (effect.change === 'newFriend') mc.cast.push(castMember(state, 'friend', 55, avoid));
-      else if (effect.change === 'crushToPartner') {
-        const crush = mc.cast.find((one) => one.role === 'crush');
-        if (crush) {
-          crush.role = 'partner';
-          crush.closeness = Math.max(crush.closeness, 60);
-        }
-      } else if (effect.change === 'breakup') mc.cast = mc.cast.filter((one) => one.role !== 'partner');
-      else if (effect.change === 'newCrush') {
-        mc.cast = mc.cast.filter((one) => one.role !== 'crush');
-        if (!mc.cast.some((one) => one.role === 'partner')) mc.cast.push(castMember(state, 'crush', 15, avoid));
-      } else if (effect.change === 'newRoommate') {
-        mc.cast = mc.cast.filter((one) => one.role !== 'roommate');
-        mc.cast.push(castMember(state, 'roommate', 40, avoid));
-      }
+      // The people are real students in the graph (DESIGN.md 62). A partner far away, who is no regular, goes with a
+      // breakup as before.
+      if (effect.change === 'breakup') mc.cast = mc.cast.filter((one) => one.ref || one.role !== 'partner');
+      changeCast(state, mc, effect.change);
       return;
     }
   }

@@ -1046,7 +1046,7 @@ The list grew from fifteen to eighteen rather than swapping three out, so every 
 
 ### 13.5 Named regulars
 
-A handful of students in every entering class [T] are named and followable for four years. They are stored in the save with a name and the four attributes, follow the same transition rules, and are quoted in the newspaper. They graduate into the alumni pool and sometimes into the hall of fame.
+A handful of students in every entering class [T] are named and followable for four years. They are stored in the save with a name and the four attributes, follow the same transition rules, and are quoted in the newspaper. They graduate into the alumni pool and sometimes into the hall of fame. Built in section 62 (2026-11-14): eight a class, stored with their ties to each other.
 
 ### 13.6 Non-student characters
 
@@ -7297,3 +7297,95 @@ Until now Close always ended the follow, and the open card covered most of the m
 | A long line is cut after two lines | The strip is kept short so the map shows |
 | Tapping a building while the strip shows ends the follow | As tapping a building with the card open always has |
 | Never run on a phone | Checked in pictures on this PC at four widths |
+
+## 62. A social campus, stop 1: ties (as built)
+
+Asked for after build 16. His words, the start of a longer spec relayed word for word by the main session: "students' lives are boring. They walk alone and nothing happens between them. No friendships, no conversations, no meeting people, no dates. Make the campus social and fun to watch, especially when I follow someone. This builds on (or comes before) MC-1 and MC-2; tell me which and fold it in." The main session told him it builds on them, and set four stops: ties (this section), the crowd being social on the map, the followed student's day, and scenes and fun beyond school.
+
+This stop is the people and the ties between them: the named regulars of 13.5, designed and never built until now, their friendships, rooms, crushes, couples, rivals and exes, the campus shaping how much they meet, the student card showing it, and the Main Character's people becoming real students. Nothing in it moves a campus number: no money, no enrollment, no Happiness score. A regular's own card Happiness moves with their relationship status, as every card's does (13.8).
+
+### 62.1 The regulars and their ties
+
+| Thing | As built | Where |
+|---|---|---|
+| Named regulars | Eight in each enrolled class, at most 48 in all with the Main Character's people. Picked from the first 120 students of the class (they are the ones who stay), each sharing something with one picked before, so a class's regulars come in clusters | `fillClasses` in `src/sim/systems/social.ts`; `REGULARS_PER_CLASS`, `REGULAR_POOL`, `REGULARS_MOST` |
+| Stored | In the save: who they are, when they joined, and today's talks. Everything else about them (name, major, nature, club, dorm, chapter, team) is read from the seed and the campus as their card is | `Social` in `src/sim/types.ts` |
+| Ties | Between two regulars, both ways: just met, friends, roommates, one with a crush, a couple, rivals, exes. Each with a strength of 0 to 100 (for rivals and exes, how sore) and when they last spent time together | `Tie` |
+| Time together | Once a real hour each pair may spend it together. The chance grows with what they share (a class 0.5, a dorm 1.2, a major 0.7 or a field 0.25, a club 1.4, a team 1.4, a chapter 1.4), with their bond, and with the campus's social life (half as much on a campus with nowhere to go, half again on a lively one); it is busiest in the evening and nil while they sleep. Exes see each other a sixth as often as they would; rivals still run into each other | `stepSocial`, `SHARED`, `HOUR_PULL` |
+| What it does | Two who get on grow closer: met becomes friends at 30, close friends at 70. A pair whose natures grate (a Scholar and a Slacker, a Stressed-Out student and the Party Animal) grows sorer instead, and becomes rivals at 35. Roommates who grate argue about the dishes | `together` |
+| How they get on | Half their natures, half the seed of the pair, the same always | `compatibility` |
+| Romance | A rare spark between two single friends, never roommates, never someone with a partner far away, becomes a crush. In an evening together a crush close enough asks the other out: two times in three a yes, and they are a couple; otherwise a kind no, and still friends | `SPARK_ABOVE`, `ASK_OUT_AT`, `YES_SHARE` |
+| Fading | Each real day without time together a tie loses points: an acquaintance 6, friends 3, a crush 4, a couple 2, rivals 4, exes 5, roommates none. Friends who fade below 30 are acquaintances again; faint acquaintances, rivals and exes are forgotten | `newDay`, `FADE_PER_DAY` |
+| Breakups | A couple whose tie fades below 28 parts, and any couple has a 1.2% chance a real day. Sad, not cruel: "Jordan and Priya broke up." For two real days the card says they are just broken up | `newDay`; `graphRelationship` in `src/sim/systems/students.ts` |
+| Roommates | A regular in a shared room (13.8's rule: the hall at its second stage, the dorms more than half full) rooms with another regular of their hall, or a hallmate from the seed who joins the regulars. The room view shows the same roommate | `placeRoommates`; `roommateOf` in `src/app/room.ts` |
+| Who they begin with | A new regular knows those they share most with: friends with those they share a dorm or a club or more with, closer in the older classes; acquaintances with their class. Two arriving as a couple by the seed are a couple | `seedTies` |
+| The day's talks | Who they spent time with today and how: met, laughed, ate, studied, argued (about the dishes, a game, a seat, the thermostat, whose turn it was, a group project, the music), an awkward chat, a date, steered clear. Eight kept, for the player's real day | `Talk`, `talksToday` |
+| What happened | "Toni and Harper are friends now", "Jordan has a crush on Priya", "Jordan asked Priya out. They are a couple now.", "Sam and Lee rub each other the wrong way. Rivals now.". Forty kept, for the cards | `news`, `newsOf` |
+| Friend groups | Three to six regulars who are close (40 and more), gathered from the closest tie outward, each with the vibe of most of its members: the athletes, the study crew, the party group, the theatre kids, the gamers, the music crowd, the chapter crowd, the quiet ones, or a mixed crowd, and where such a group usually is. Worked out from the ties, never stored | `friendGroups`, `VIBES` |
+| A regular's status | Comes from the graph, not the seed: dating someone, just broken up, a crush, or single. A partner far away stays as the seed has it | `graphRelationship` |
+| Everyone else | A few friends from the seed when their card is open: the classmates, dorm-mates and club-mates they share most with and get on with, the same every time this semester, never a regular, never stored | `seededFriends` |
+| When it starts | A new campus has its first regulars on the tick its first class arrives; an upgraded save on its first tick | `socialWaiting` |
+
+### 62.2 The campus shapes it
+
+| Thing | As built | Where |
+|---|---|---|
+| Social life | Counts quad cells, recreation, picnic tables by dining and lecture halls as before, and now food places (3 each), benches (half each) and the places clubs meet: the Student Union, the radio station, the cinema and the makerspace (6 each), against enrollment | `socialLife` in `src/sim/systems/students.ts`; `SOCIAL_SPOTS_PER_FOOD`, `SOCIAL_SPOTS_PER_BENCH`, `CLUB_HOMES` |
+| What it moves | How often regulars meet (above); the side every student's relationship status falls on, as before (13.8); the Main Character's time with friends and the story's odds that read social life (58), by the same number | |
+| Thoughts | About one student in six, on a campus where social life is thin, says so: "Nowhere to just hang out with people around here. A food place or a few benches would change that." On a lively one, with a food place near: "Always run into Kit at the Dining hall. Easy to see people here.", naming their closest friend when they are a regular | `reasonFor`; `THOUGHTS.socialLow`, `socialGood` |
+
+### 62.3 The Main Character's people
+
+| Thing | As built | Where |
+|---|---|---|
+| They are a regular | Chosen, they join the regulars, with the people section 57 gave them made real: a roommate where rooms are shared, two friends at least, and a partner or a crush on campus as their seeded status says. A partner far away is not on campus and stays made up | `settleMain` |
+| Their cast | From the graph: their roommate, their three closest friends, a partner, their own crush, a rival and an ex, each a real student whose card opens from their face. Someone already in the cast keeps their place and traits; closeness is the tie's | `syncCast` in `src/sim/systems/mc.ts` |
+| Time with them | Time with friends, a partner or a roommate (57's company) brings the real ties closer, and goes on both their days. The social need is fed by who is there: alone at a friends' hour, six tenths of it; with two of them, all of it, up to 1.4 times | `spentTime`; `stepMain` |
+| Plans | Name them: "Friends: lunch at the Taco stand with Jordan and Priya", at the food place nearest their dorm, or on the quad where there is none | `makePlan` |
+| The story | Its people are real: a new friend, a new crush, a crush becoming a partner, a breakup, a new roommate happen in the graph, to regulars. Their romances are the story's to tell: the graph never starts or ends one of theirs, so the two never disagree | `mainCastChange`, `changeCast` |
+| An older save | A Main Character from before keeps their memories; on the first tick with regulars they join them, and their made-up friends and roommate give way to real students | `syncCast` |
+| Their page | Lists a rival and an ex too, without a number | `src/ui/mcUi.ts` |
+
+### 62.4 The student card
+
+| Row | Shows | Where |
+|---|---|---|
+| Friends | Up to four faces with first names, closest first, the best friend starred; tapping a face opens that friend's card. A regular's are from the graph (friends, roommate, partner, crush); anyone else's from the seed. "Nobody close yet" for a regular with nobody | `showPeople` in `src/ui/studentCard.ts` |
+| Group | A regular's friend group: "The study crew, with Jordan, Priya and Theo · usually somewhere to study". Hidden when they have none | |
+| People | "Dating Priya · Rival: Theo", "A crush on Maya", "Ex: Sam". Hidden when there is nobody to name | |
+| Today | Who they spent time with today, newest first, one line each person: "Studied with Kit, laughed with Amari, argued with Theo about the dishes"; or what last happened to them. Hidden when there is nothing | |
+| The card | Never goes over the top bar: a long card scrolls inside itself | `.student` in `src/ui/ui.css` |
+
+### 62.5 Measured
+
+| Measured | Result |
+|---|---|
+| Three real days on the model campus | 40 regulars, 231 ties: 84 acquaintances, 116 friends, 15 roommate pairs, 4 crushes, 3 couples, 2 rivals; seven friend groups |
+| Thirty more | 48 regulars (the cap), about 370 ties |
+| What it costs | A real hour's step about 0.5 ms on this PC. Thirty real days of catch-up on the model campus took 494 ms against 251 ms with no social campus, in one run of `scripts/social-peek.ts` (the second run has the warmer start); on the small campus 247 against 78 |
+| Deterministic | A day advanced in one call or in eighty pieces gives the same regulars and ties (test). Rolled from the seed, the pair and the hour; never from the game's random streams |
+| Tests | `tests/social.test.ts`, 18. Older save tests learn of the new field and the new note |
+
+### 62.6 Decisions made for the owner
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Builds on MC-1 and MC-2, or before | On: they are built, and their people become real students in this graph | Before, which would mean rebuilding them |
+| Who has deep lives | Eight regulars a class, at most 48, stored | Everyone, which the save and the catch-up cannot carry |
+| Everyone else's friends | From the seed when their card is open, never regulars | None, which leaves most cards the player taps empty |
+| A tie | One kind at a time, both ways, a crush one's own | Several layers per pair (friends and rivals at once), harder to read on a card |
+| Time base | The real hour and the real day, as the Main Character's | The game's calendar, where a school year is a real week and every friendship would come and go in hours |
+| Nights | Nobody meets anyone while asleep, which also spares a third of the work | A little meeting all night |
+| Romance | Rare, between single friends, never roommates; the Main Character's only through their story | Romance from the graph for them too, which could disagree with a chapter under way |
+| Rivals | From natures that grate, sore, arguing about small things | Rivals from the seed alone, with no reason the player can see |
+| Hall of a group | Words for the kind of place ("usually somewhere to study") | A named building, which the campus may not have |
+| Save | Version 30, with an empty social campus that fills on the first tick | No bump, rebuilding the regulars each load, which loses every friendship |
+
+### 62.7 Rough
+
+| Rough | Why |
+|---|---|
+| Regulars only show on cards | Seeing them together on the map is stop 2 |
+| A regular's day is only talks | Their own schedule and a feed are stop 3 |
+| Catch-up costs more | About a quarter of a second more for thirty days on the model campus, still under the one second the long run checks |
+| The seed's friends do not know each other | A student's seeded friends are worked out from them alone; their friends' cards may name others |

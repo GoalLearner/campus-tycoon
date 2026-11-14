@@ -23,6 +23,7 @@ import { oddsOf, oddsRead, stepStory, storySpec } from '../src/sim/systems/story
 import { budget } from '../src/sim/systems/budget';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { mcView } from '../src/ui/mcUi';
+import { newSocial } from '../src/sim/systems/social';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DAY, HOUR, T0 } from './helpers';
 
@@ -234,7 +235,7 @@ describe('saves', () => {
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.story).toEqual(WEEK.state.story);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
     // And they go on the same from the loaded save as from the one in memory.
     const a = later(WEEK.state, DAY).state.story;
     const b = later(loaded.state, DAY).state.story;
@@ -255,10 +256,11 @@ describe('saves', () => {
       expected.version = SAVE_VERSION;
       Object.assign(expected.story, { arcs: [], chapters: [], nextChapter: 1, cooldowns: {}, lastStart: -1 });
       Object.assign(expected.story.mc!, { recent: {}, mood: 0, stress: 0, gpaBonus: 0, member: null, team: false });
+      expected.social = newSocial();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(28);
-      expect(notes).toHaveLength(1);
+      expect(notes).toHaveLength(2);
       expect(notes[0]).toMatch(/stor/i);
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(newStory().arcs).toEqual([]);

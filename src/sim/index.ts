@@ -233,3 +233,20 @@ export * from './systems/alumni';
 export * from './systems/scorecard';
 export * from './config/mc';
 export * from './systems/mc';
+export {
+  friendGroups,
+  groupOf,
+  isRegular,
+  newsOf,
+  otherEnd,
+  peopleOf,
+  roomsShared,
+  sameStudent,
+  seededFriends,
+  talksToday,
+  tieBetween,
+  type Friend,
+  type FriendGroup,
+} from './systems/social';
+export { VIBES, type TalkTone, type VibeId } from './config/social';
+export { mcDay } from './systems/mc';

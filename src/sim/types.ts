@@ -1,4 +1,5 @@
 import type { ActivityId, GoalId, LifeNeed, CastTrait } from './config/mc';
+import type { TalkTone } from './config/social';
 /**
  * The whole game state. Plain JSON only: no classes, Maps, Sets or Dates,
  * so cloning and saving are exact. See DESIGN.md section 17.5.
@@ -638,12 +639,75 @@ export interface GameState {
   alumni: Alumni;
   /** The Main Character and the hall of fame (DESIGN.md 53.2, as built in section 57). */
   story: Story;
+  /** The social campus (DESIGN.md 62): the named regulars and the ties between them. */
+  social: Social;
+}
+
+/** A student, by their class and their place in it, as the social campus keeps them. */
+export interface SocialRef {
+  entryYear: number;
+  index: number;
+}
+
+/** How two regulars stand: just met, friends, roommates, one with a crush, a couple, rivals, or exes (DESIGN.md 62). */
+export type TieKind = 'met' | 'friend' | 'roommate' | 'crush' | 'partner' | 'rival' | 'ex';
+
+/** A tie between two named regulars. Both ways, except a crush, which is one's on the other. */
+export interface Tie {
+  a: SocialRef;
+  b: SocialRef;
+  kind: TieKind;
+  /** For a crush: true when it is a's on b. */
+  aFirst?: boolean;
+  /** 0 to 100: how close, or for rivals and exes how sore. */
+  strength: number;
+  /** The tick it became what it is, and the tick they last spent time together. */
+  since: number;
+  seen: number;
+}
+
+/** Someone a regular spent time with today, and how it went. */
+export interface Talk {
+  with: SocialRef;
+  tone: TalkTone;
+  /** What rivals argued about. */
+  about?: string;
+  tick: number;
+}
+
+/** A named regular (DESIGN.md 13.5, built in 62): stored, and their day's talks with them. */
+export interface Regular {
+  ref: SocialRef;
+  /** The tick they joined the regulars. */
+  since: number;
+  /** The player's real day their talks are from. */
+  day: number;
+  talks: Talk[];
+}
+
+/** Something that happened between regulars, for their cards: "Jordan and Priya are friends now". */
+export interface SocialNews {
+  tick: number;
+  who: SocialRef[];
+  text: string;
+}
+
+export interface Social {
+  regulars: Regular[];
+  ties: Tie[];
+  news: SocialNews[];
+  /** The player's real day of the last daily step: fading, breakups, a fresh day of talks. */
+  lastDay: number;
+  /** The campus's social life as that day began, 0 to 1 (`socialLife`): read once a day. */
+  level: number;
 }
 
 /** Someone in the Main Character's life (DESIGN.md 53.2): stored, never rebuilt from the seed. */
 export interface CastMember {
   id: number;
-  role: 'roommate' | 'friend' | 'crush' | 'partner';
+  role: 'roommate' | 'friend' | 'crush' | 'partner' | 'rival' | 'ex';
+  /** The real student they are, a named regular, since the social campus (DESIGN.md 62). Absent for a partner far away, and in older saves. */
+  ref?: SocialRef;
   name: string;
   traits: CastTrait[];
   /** 0 to 100. */

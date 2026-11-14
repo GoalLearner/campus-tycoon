@@ -1,5 +1,5 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
-import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, suggestMain, WRITTEN } from '../sim';
+import { chapterBeds, chapters, coverFor, greekHazing, groupOf, noiseAt, peopleOf, PROBATION_HOURS, suggestMain, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
@@ -324,6 +324,22 @@ function applyViewParams(params: URLSearchParams): void {
         return card !== null && card.archetype === 'party' && (party === 'over' ? card.classYear >= 2 : card.classYear < 2);
       });
       if (ref) session.openStudent(ref);
+    }, 2800);
+  }
+  // &regular=2 opens the card of the third named regular (DESIGN.md 62); &regular=best one with a best friend and a
+  // group, &regular=couple one with a partner.
+  const regularAt = params.get('regular');
+  if (regularAt !== null) {
+    setTimeout(() => {
+      const state = store.state;
+      const all = state.social?.regulars ?? [];
+      const pick =
+        regularAt === 'couple'
+          ? all.find((one) => peopleOf(state, one.ref).some((p) => p.kind === 'partner'))
+          : regularAt === 'best'
+            ? all.find((one) => peopleOf(state, one.ref).some((p) => p.best) && groupOf(state, one.ref) !== null)
+            : all[Number(regularAt) % Math.max(1, all.length)];
+      if (pick) session.openStudent(pick.ref);
     }, 2800);
   }
   const roomAt = Number(params.get('room') ?? NaN);

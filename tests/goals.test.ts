@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { newSocial } from '../src/sim/systems/social';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -447,6 +448,7 @@ describe('the main street', () => {
     expected.alumni = loaded.state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.social = newSocial();
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

@@ -370,6 +370,12 @@ export const WAIT_MINUTES_AT_WORST = 20;
 
 /** Places to meet: one recreation building is worth this many quad cells of social life. */
 export const SOCIAL_SPOTS_PER_RECREATION = 4;
+/** [T] Somewhere to meet people, in quad cells' worth (DESIGN.md 62): a food place, a bench, a place clubs meet. */
+export const SOCIAL_SPOTS_PER_FOOD = 3;
+export const SOCIAL_SPOTS_PER_BENCH = 0.5;
+export const SOCIAL_SPOTS_PER_CLUB_HOME = 6;
+/** Where clubs meet: the Student Union, the radio station, the cinema and the makerspace. */
+export const CLUB_HOMES: readonly string[] = ['studentUnion', 'radio', 'cinema', 'makerspace'];
 
 /**
  * Utilities for a hand-placed building, for a game year: by the cells it

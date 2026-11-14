@@ -43,7 +43,8 @@ import { hashInts } from '../rng';
 import type { CastMember, FameEntry, GameState, LogEntry, MainCharacter, MemoryEntry, PlanItem, Story } from '../types';
 import { partiesInTown, partiesOn } from './parties';
 import { dayRead, libraryShare } from './season';
-import { classYearOf, sampleStudents, socialLife, studentCard, type StudentRef } from './students';
+import { classYearOf, foodNear, sampleStudents, socialLife, studentCard, type StudentRef } from './students';
+import { isRegular, mainCastChange, peopleOf, sameStudent, settleMain, socialKey, spentTime } from './social';
 import { approvalAt } from './happiness';
 
 /**
@@ -157,18 +158,11 @@ export function makeMain(state: GameState, ref: StudentRef): string | null {
   if (state.story.mc) retire(state, state.story.mc, 'setAside', null);
   const nature = card.archetype;
   const goals = [...(GOALS_BY_NATURE[nature] ?? DEFAULT_GOALS)] as GoalId[];
-  const avoid = [card.name];
+  // Their people are real students, named regulars (DESIGN.md 62). A partner far away is not on campus, and is made
+  // up as section 57 made everyone.
+  settleMain(state, ref, card.relationship.id);
   const cast: CastMember[] = [];
-  const add = (role: CastMember['role'], closeness: number): void => {
-    const one = castMember(state, role, closeness, avoid);
-    avoid.push(one.name);
-    cast.push(one);
-  };
-  if (card.residence !== 'offCampus') add('roommate', 45);
-  add('friend', 40);
-  add('friend', 25);
-  if (card.relationship.id === 'togetherHappy' || card.relationship.id === 'togetherUnhappy' || card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling') add('partner', card.relationship.id.endsWith('Happy') ? 70 : 45);
-  else if (card.relationship.id === 'singleLooking') add('crush', 20);
+  if (card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling') cast.push(castMember(state, 'partner', card.relationship.id.endsWith('Happy') ? 70 : 45, [card.name]));
   const mc: MainCharacter = {
     ref: { entryYear: ref.entryYear, index: ref.index },
     name: card.name,
@@ -199,6 +193,7 @@ export function makeMain(state: GameState, ref: StudentRef): string | null {
     team: false,
   };
   state.story.mc = mc;
+  syncCast(state, mc);
   remember(state, mc, `${mc.name} is your main character: a ${card.classYearName.toLowerCase()} in ${mc.major}, ${articled(card.archetypeName)}. Their goals: ${goals.map((goal) => GOALS[goal].name.toLowerCase()).join(' and ')}.`);
   makePlan(state, mc, null);
   return null;
@@ -308,6 +303,17 @@ function makePlan(state: GameState, mc: MainCharacter, log: LogEntry[] | null): 
   if (mc.money < MONEY_LOW) add('job', 'money is short');
   if (mc.goals.includes('fit')) add('workout', GOALS.fit.plan);
   if (mc.goals.includes('friends')) add('friends', GOALS.friends.plan);
+  // Time with friends is with someone (DESIGN.md 62): lunch at a food place with the two closest.
+  const friends = mc.cast.filter((one) => one.ref && (one.role === 'friend' || one.role === 'partner')).slice(0, 2);
+  if (friends.length > 0) {
+    const home = studentCard(state, mc.ref)?.home ?? null;
+    const place = home !== null ? foodNear(state, home) : null;
+    const names = friends.map((one) => one.name.split(' ')[0]).join(' and ');
+    const plan = place ? `lunch at the ${place} with ${names}` : `time on the quad with ${names}`;
+    const item = items.find((one) => one.activity === 'friends');
+    if (item) item.why = plan;
+    else add('friends', plan);
+  }
   if (mc.club && CLUB_DAYS.includes(weekday)) add('club', `the ${mc.club} meets today`);
   if (PARTY_NIGHTS.includes(weekday) && places.parties && (mc.goals.includes('fun') || mc.nature === 'party')) add('party', weekday === 3 ? 'it is Thursday night' : 'it is the weekend');
   if (items.length === 0) add(NEED_ACTIVITY[lowest(mc)], 'a quiet day');
@@ -380,8 +386,57 @@ function company(mc: MainCharacter, activity: ActivityId): CastMember[] {
   return [];
 }
 
+const SOCIAL_ACTIVITIES: readonly ActivityId[] = ['friends', 'eat', 'party', 'club'];
+
+/**
+ * The Main Character's people, from the graph (DESIGN.md 62): their roommate, their three closest friends, a partner,
+ * their own crush, a rival and an ex, each a real student. Someone already in the cast keeps their place in it and the
+ * traits they had; closeness is the tie's. A partner far away, who is no regular, stays.
+ */
+export function syncCast(state: GameState, mc: MainCharacter): void {
+  if (!state.social) return;
+  // A Main Character from before the social campus joins the regulars as one chosen now does, once there are regulars.
+  if (!isRegular(state, mc.ref) && state.social.regulars.length > 0) settleMain(state, mc.ref, studentCard(state, mc.ref)?.relationship.id ?? 'singleHappy');
+  if (!isRegular(state, mc.ref)) return;
+  const people = peopleOf(state, mc.ref);
+  const wanted: Array<{ role: CastMember['role']; ref: { entryYear: number; index: number }; name: string; strength: number }> = [];
+  const take = (role: CastMember['role'], pick: (typeof people)[number] | undefined): void => {
+    if (pick) wanted.push({ role, ref: pick.ref, name: pick.name, strength: pick.strength });
+  };
+  take('roommate', people.find((one) => one.kind === 'roommate'));
+  take('partner', people.find((one) => one.kind === 'partner'));
+  const own = state.social.ties.filter((tie) => tie.kind === 'crush' && (sameStudent(tie.a, mc.ref) ? tie.aFirst === true : sameStudent(tie.b, mc.ref) && tie.aFirst === false));
+  take('crush', people.find((one) => one.kind === 'crush' && own.some((tie) => sameStudent(tie.a, one.ref) || sameStudent(tie.b, one.ref))));
+  for (const one of people.filter((p) => p.kind === 'friend').slice(0, 3)) take('friend', one);
+  take('rival', people.find((one) => one.kind === 'rival'));
+  take('ex', people.find((one) => one.kind === 'ex'));
+  const kept: CastMember[] = mc.cast.filter((one) => !one.ref && one.role === 'partner' && !wanted.some((w) => w.role === 'partner'));
+  for (const w of wanted) {
+    const before = mc.cast.find((one) => one.ref && sameStudent(one.ref, w.ref));
+    if (before) {
+      before.role = w.role;
+      before.closeness = Math.round(w.strength);
+      kept.push(before);
+    } else {
+      const id = state.story.nextCast;
+      state.story.nextCast += 1;
+      kept.push({ id, role: w.role, name: w.name, traits: traitsFor(state, socialKey(w.ref)), closeness: Math.round(w.strength), since: state.clock.tick, ref: { entryYear: w.ref.entryYear, index: w.ref.index } });
+    }
+  }
+  mc.cast = kept;
+}
+
+/** A change the story makes to who is in their life, made among real students (DESIGN.md 58 and 62). */
+export function changeCast(state: GameState, mc: MainCharacter, change: 'newFriend' | 'crushToPartner' | 'breakup' | 'newCrush' | 'newRoommate'): void {
+  mainCastChange(state, mc.ref, change);
+  syncCast(state, mc);
+}
+
 function startActivity(state: GameState, mc: MainCharacter, choice: Choice, classYear: number, log: LogEntry[]): void {
   mc.doing = { activity: choice.activity, since: state.clock.tick, why: choice.why };
+  // Who they are with goes on both their days (DESIGN.md 62).
+  const tone = choice.activity === 'eat' ? 'ate' : choice.activity === 'friends' || choice.activity === 'party' || choice.activity === 'club' ? 'laughed' : null;
+  if (tone) for (const one of company(mc, choice.activity)) if (one.ref) spentTime(state, mc.ref, one.ref, 0, one.role === 'partner' && choice.activity !== 'eat' ? 'date' : tone, mcDay(state).day);
   const item = mc.plan?.items.find((one) => one.activity === choice.activity && !one.done);
   if (item) item.done = true;
   if (choice.activity === 'party') {
@@ -411,8 +466,11 @@ export function stepMain(state: GameState, log: LogEntry[]): void {
   if (choice.activity !== mc.doing.activity) startActivity(state, mc, choice, classYear, log);
   const spec = ACTIVITIES[mc.doing.activity];
   const roommate = mc.cast.find((one) => one.role === 'roommate');
+  // Time with friends feeds the social need by who is there (DESIGN.md 62): alone, less; with a few of them, more.
+  const with_ = company(mc, mc.doing.activity).length;
+  const socialShare = SOCIAL_ACTIVITIES.includes(mc.doing.activity) ? Math.min(1.4, 0.6 + 0.25 * with_) : 1;
   for (const need of NEEDS) {
-    let delta = NEED_DRIFT[need] + (spec.gives[need] ?? 0);
+    let delta = NEED_DRIFT[need] + (spec.gives[need] ?? 0) * (need === 'social' ? socialShare : 1);
     // Who they live with changes how they sleep (53.2): a loud roommate costs rest, a quiet one gives a little.
     if (need === 'energy' && mc.doing.activity === 'sleep' && roommate) delta += roommate.traits.reduce((sum, trait) => sum + (CAST_TRAITS[trait].sleep ?? 0), 0);
     if (mc.doing.activity === 'sleep' && need !== 'energy') delta = NEED_DRIFT[need] * 0.3;
@@ -432,10 +490,14 @@ export function stepMain(state: GameState, log: LogEntry[]): void {
   // The story, once a real hour (DESIGN.md 53.3).
   if (state.clock.tick % STORY_STEP === 0) stepStory(state, log);
   if (!state.story.mc) return;
+  syncCast(state, mc);
+  // Time with their people brings them closer, in the graph when they are real students (DESIGN.md 62).
   for (const one of company(mc, mc.doing.activity)) {
     const before = one.closeness;
     const lift = one.traits.reduce((sum, trait) => sum + (CAST_TRAITS[trait].closer ?? 0), 0);
-    one.closeness = clamp(one.closeness + (CLOSER_PER_HOUR + lift) * hours * (mc.doing.activity === 'sleep' ? 0.2 : 1));
+    const by = (CLOSER_PER_HOUR + lift) * hours * (mc.doing.activity === 'sleep' ? 0.2 : 1);
+    const tie = one.ref ? spentTime(state, mc.ref, one.ref, by, null, mcDay(state).day) : undefined;
+    one.closeness = tie ? tie.strength : clamp(one.closeness + by);
     if (one.role === 'friend' && before < CLOSE_FRIEND && one.closeness >= CLOSE_FRIEND) remember(state, mc, `${one.name} is a close friend now.`, true, log);
   }
 }
@@ -447,7 +509,7 @@ function newDay(state: GameState, mc: MainCharacter, log: LogEntry[]): void {
     const kept = mc.plan.items.filter((one) => one.done).length;
     const parts = hours.map(([activity, h]) => `${ACTIVITIES[activity as ActivityId].doing.toLowerCase()} for ${Math.round(h ?? 0)} ${Math.round(h ?? 0) === 1 ? 'hour' : 'hours'}`);
     if (parts.length > 0) remember(state, mc, `Yesterday ${mc.name} spent most of the day ${parts.join(', ')}, and kept ${kept} of ${mc.plan.items.length} plans.`, false, log);
-    for (const one of mc.cast) if (!company(mc, 'friends').includes(one) || (mc.today.friends ?? 0) < 1) one.closeness = clamp(one.closeness - APART_PER_DAY);
+    for (const one of mc.cast) if (!one.ref && (!company(mc, 'friends').includes(one) || (mc.today.friends ?? 0) < 1)) one.closeness = clamp(one.closeness - APART_PER_DAY);
   }
   // What they did lately is the effort the story's odds read; what the story did to their mood and Stress fades.
   for (const [activity, hours] of Object.entries(mc.today)) mc.recent[activity as ActivityId] = (mc.recent[activity as ActivityId] ?? 0) + (hours ?? 0);

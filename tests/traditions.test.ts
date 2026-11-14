@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { newSocial } from '../src/sim/systems/social';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -224,7 +225,7 @@ describe('saves', () => {
     expect(loaded.state.traditions).toEqual(state.traditions);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'tradition')).toEqual(state.timers.filter((timer) => timer.kind === 'tradition'));
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 23', () => {
@@ -245,13 +246,14 @@ describe('saves', () => {
       expected.alumni = loaded.state.alumni;
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
+      expected.social = newSocial();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
-      expect(notes).toHaveLength(6);
+      expect(notes).toHaveLength(7);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

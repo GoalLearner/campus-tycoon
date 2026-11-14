@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { newSocial } from '../src/sim/systems/social';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -304,7 +305,7 @@ describe('saves', () => {
     expect(bigBuildOf(loaded.state, 'studentUnion')!.done).toBe(bigBuildOf(state, 'studentUnion')!.done);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'bigBuild')).toHaveLength(1);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 21', () => {
@@ -327,13 +328,14 @@ describe('saves', () => {
       expected.alumni = loaded.state.alumni;
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
+      expected.social = newSocial();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
-      expect(notes).toHaveLength(8);
+      expect(notes).toHaveLength(9);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

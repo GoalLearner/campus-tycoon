@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { newSocial } from '../src/sim/systems/social';
 import { describe, expect, it } from 'vitest';
 import {
   advance,
@@ -448,12 +449,13 @@ describe('saves', () => {
     expected.alumni = loaded.state.alumni;
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
+    expected.social = newSocial();
     expect(loaded.state).toEqual(expected);
     expect(validate(loaded.state)).toBeNull();
     const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
-    expect(notes).toHaveLength(4);
+    expect(notes).toHaveLength(5);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

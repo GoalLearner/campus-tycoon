@@ -105,5 +105,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 29) {
     notes.push('New: your main character has a story. Roommates, classes, crushes, parties, money and teams: each story comes in scenes, with the odds of how it went and what on campus helped. Read it on the Story tab of their page. Three new policies (campus jobs, scholarships and cheaper dining) help their odds.');
   }
+  if (fromVersion < 30) {
+    notes.push('New: friends. A few students in every class are regulars: they make friends, share rooms, fall for each other, argue and drift apart. Every card shows their friends, and a regular’s shows their friend group and who they talked to today. Your main character’s people are real students now. More places to eat, sit and meet mean more friends.');
+  }
   return notes;
 }

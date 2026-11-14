@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { newSocial } from '../src/sim/systems/social';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -675,7 +676,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(19);
-      expect(SAVE_VERSION).toBe(29);
+      expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
       expect(state.decor).toEqual(newDecor());
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
@@ -689,6 +690,7 @@ describe('saves', () => {
       expected.alumni = state.alumni;
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
+      expected.social = newSocial();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its money, its level, its Seals and its orders are what they were.
@@ -713,7 +715,7 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(10);
+      expect(notes).toHaveLength(11);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

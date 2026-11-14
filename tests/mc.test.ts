@@ -25,6 +25,7 @@ import {
 import { edition } from '../src/sim/newspaper';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
+import { newSocial } from '../src/sim/systems/social';
 import { DAY, HOUR, T0 } from './helpers';
 
 /**
@@ -77,7 +78,9 @@ describe('choosing a main character', () => {
     expect(mc.money).toBeGreaterThan(0);
     const roles = mc.cast.map((one) => one.role);
     expect(roles).toContain('roommate');
-    expect(roles.filter((role) => role === 'friend')).toHaveLength(2);
+    // Real students since the social campus (DESIGN.md 62): two friends at least, three at most.
+    expect(roles.filter((role) => role === 'friend').length).toBeGreaterThanOrEqual(2);
+    expect(roles.filter((role) => role === 'friend').length).toBeLessThanOrEqual(3);
     for (const one of mc.cast) {
       expect(one.traits).toHaveLength(2);
       expect(one.traits[0]).not.toBe(one.traits[1]);
@@ -254,7 +257,7 @@ describe('saves', () => {
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.story).toEqual(THREE.state.story);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 27', () => {
@@ -270,10 +273,11 @@ describe('saves', () => {
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
       expected.story = newStory();
+      expected.social = newSocial();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
-      expect(notes).toHaveLength(2);
+      expect(notes).toHaveLength(3);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

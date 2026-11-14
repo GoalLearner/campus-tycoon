@@ -7,7 +7,9 @@ import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
 import { discoveryDue } from './systems/labs';
 import { tellTraditions, traditionDue, traditionsOnDayStart } from './systems/traditions';
 import { greekDue, stepGreek, tellGreek } from './systems/greek';
-import { stepMain, tellMain } from './systems/mc';
+import { mcDay, stepMain, tellMain } from './systems/mc';
+import { socialWaiting, stepSocial } from './systems/social';
+import { SOCIAL_STEP } from './config/social';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
@@ -130,7 +132,13 @@ function tick(state: GameState, log: LogEntry[]): void {
   stepGrounds(state, log);
   // Each chapter's standing, once an hour (DESIGN.md 51).
   if (clock.tick % TICKS_PER_HOUR === 0) stepGreek(state, log);
-  // The Main Character's life, every quarter of a real hour (DESIGN.md 53.2).
+  // The named regulars and the ties between them, once a real hour (DESIGN.md 62); then the Main Character's life,
+  // every quarter of a real hour (DESIGN.md 53.2), whose people are regulars.
+  // A game or an upgraded save with students and no regulars yet has them picked on the next tick.
+  if (clock.tick % SOCIAL_STEP === 0 || socialWaiting(state)) {
+    const { day, hour } = mcDay(state);
+    stepSocial(state, day, hour);
+  }
   stepMain(state, log);
 
   accrue(state);

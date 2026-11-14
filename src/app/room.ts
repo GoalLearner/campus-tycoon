@@ -1,11 +1,11 @@
 import {
   dayRead,
   dormName,
-  enrollment,
   hashInts,
-  offCampusNow,
-  openCapacity,
+  isRegular,
+  otherEnd,
   placeIndex,
+  roomsShared,
   sampleStudents,
   studentCard,
   studentHome,
@@ -287,21 +287,25 @@ function housed(card: StudentCard): boolean {
 
 /**
  * True when a student's rooms are shared: the hall has grown to its second
- * stage, and the campus's dorms are more than half full.
+ * stage, and the campus's dorms are more than half full. The social campus
+ * reads the same rule (DESIGN.md 62).
  */
 export function roomShared(state: GameState, home: number): boolean {
-  const hall = state.map.buildings[state.map.cells[home]?.buildingId ?? -1];
-  if (!hall || hall.stage < 2) return false;
-  const beds = openCapacity(state, 'housing');
-  const residents = Math.max(0, enrollment(state) - offCampusNow(state));
-  return beds > 0 && residents / beds > 0.5;
+  return roomsShared(state, home);
 }
 
-/** Someone else who lives in the same hall, chosen from the seed: the roommate. null when nobody is found. */
+/**
+ * The roommate: a named regular's is their roommate in the social campus (DESIGN.md 62); anyone else's is someone
+ * else in the same hall, chosen from the seed, and never a regular. null when nobody is found.
+ */
 function roommateOf(state: GameState, ref: StudentRef, home: number): StudentRef | null {
+  if (isRegular(state, ref)) {
+    const tie = state.social.ties.find((one) => one.kind === 'roommate' && ((one.a.entryYear === ref.entryYear && one.a.index === ref.index) || (one.b.entryYear === ref.entryYear && one.b.index === ref.index)));
+    return tie ? otherEnd(tie, ref) : null;
+  }
   const housing = placeIndex(state, 'housing');
   const own = studentKey(ref);
-  const halls = sampleStudents(state, 120).filter((one) => studentKey(one) !== own && studentHome(state, one, housing) === home);
+  const halls = sampleStudents(state, 120).filter((one) => studentKey(one) !== own && !isRegular(state, one) && studentHome(state, one, housing) === home);
   if (halls.length === 0) return null;
   return halls[Math.floor(roll(state, ref, 1) * halls.length)]!;
 }

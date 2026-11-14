@@ -3,7 +3,24 @@ import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { studentCard, studentFigure, studentKey, type GameState, type StudentCard } from '../sim';
+import {
+  groupOf,
+  isRegular,
+  mcDay,
+  newsOf,
+  peopleOf,
+  sameStudent,
+  seededFriends,
+  studentCard,
+  studentFigure,
+  studentKey,
+  talksToday,
+  type Friend,
+  type GameState,
+  type StudentCard,
+  type StudentRef,
+  type TalkTone,
+} from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -230,6 +247,15 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const relationshipNote = el('span', 'student-note');
   relationship.value.after(relationshipNote);
 
+  // Their friends, faces that open each one's card; their friend group; who they are with; who they saw today
+  // (DESIGN.md 62).
+  const friends = row('Friends');
+  const faces = el('div', 'student-friends');
+  friends.value.replaceWith(faces);
+  const group = row('Group');
+  const love = row('People');
+  const today = row('Today');
+
   // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
@@ -255,7 +281,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, grades.line, club.line, relationship.line, friends.line, group.line, love.line, today.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -347,6 +373,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     setText(club.value, card.club ?? 'None');
     setText(relationship.value, card.relationship.name);
     setText(relationshipNote, card.relationship.note);
+    showPeople(state, ref);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
     weekends.line.hidden = card.party === null;
     const main = state.story?.mc;
@@ -377,5 +404,111 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     strip.classList.toggle('show', session.room === null && session.tucked);
   }
 
+  // ---------------------------------------------------------- their people --
+
+  let facesKey = '';
+  /** Who a regular has around them, from the graph; anyone else's friends from the seed, kept for the hour. */
+  let seeded: { key: string; hour: number; friends: Friend[] } | null = null;
+  function friendsOf(state: GameState, ref: StudentRef, regular: boolean): Friend[] {
+    if (regular) return peopleOf(state, ref).filter((one) => one.kind === 'friend' || one.kind === 'roommate' || one.kind === 'partner' || one.kind === 'crush').slice(0, 4);
+    const hour = Math.floor(state.clock.tick / 60);
+    const key = studentKey(ref);
+    if (!seeded || seeded.key !== key || seeded.hour !== hour) seeded = { key, hour, friends: seededFriends(state, ref) };
+    return seeded.friends;
+  }
+
+  function showPeople(state: GameState, ref: StudentRef): void {
+    const regular = isRegular(state, ref);
+    const list = friendsOf(state, ref, regular);
+    const people = atlas?.people;
+    const looks = people ? Math.min(people.looks, people.crowd ?? people.looks) : 1;
+    const key = list.map((one) => `${studentKey(one.ref)}${one.best ? '*' : ''}`).join(',') + (atlas ? '' : '-');
+    if (key !== facesKey) {
+      facesKey = key;
+      faces.textContent = '';
+      for (const one of list) {
+        const face = el('button', 'student-friend');
+        face.type = 'button';
+        face.setAttribute('aria-label', `${one.name}'s card`);
+        const picture = el('canvas', 'student-friend-art');
+        picture.width = 96;
+        picture.height = 112;
+        if (atlas && people) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, looks, people.roles?.athlete)}.${people.flip?.sw ?? 'sw'}.0`);
+        const first = one.name.split(' ')[0]!;
+        face.append(picture, el('span', 'student-friend-name', one.best ? `${first} \u2605` : first));
+        face.addEventListener('click', () => session.openStudent(one.ref));
+        faces.append(face);
+      }
+      if (list.length === 0) faces.append(el('span', 'student-value student-quiet', regular ? 'Nobody close yet' : 'Getting to know people'));
+    }
+    // The friend group and its vibe: a regular's from the graph; anyone else's from their friends.
+    const crowd = regular ? groupOf(state, ref) : null;
+    group.line.hidden = crowd === null;
+    if (crowd) {
+      const names = crowd.members.filter((one) => !sameStudent(one, ref)).map((one) => studentCard(state, one)?.name.split(' ')[0] ?? '').filter((one) => one !== '');
+      const listed = names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+      setText(group.value, `${capital(crowd.name)}, with ${listed} \u00b7 usually ${crowd.hangout}`);
+    }
+    // A partner, their own crush, a rival, an ex: by name.
+    const named: string[] = [];
+    if (regular) {
+      const all = peopleOf(state, ref);
+      const first = (one: Friend | undefined): string => one?.name.split(' ')[0] ?? '';
+      const partner = all.find((one) => one.kind === 'partner');
+      if (partner) named.push(`Dating ${first(partner)}`);
+      const crush = all.find((one) => one.kind === 'crush' && state.social.ties.some((tie) => tie.kind === 'crush' && ((sameStudent(tie.a, ref) && tie.aFirst === true && sameStudent(tie.b, one.ref)) || (sameStudent(tie.b, ref) && tie.aFirst === false && sameStudent(tie.a, one.ref)))));
+      if (crush) named.push(`A crush on ${first(crush)}`);
+      const rival = all.find((one) => one.kind === 'rival');
+      if (rival) named.push(`Rival: ${first(rival)}`);
+      const ex = all.find((one) => one.kind === 'ex');
+      if (ex && !partner) named.push(`Ex: ${first(ex)}`);
+    }
+    love.line.hidden = named.length === 0;
+    setText(love.value, named.join(' \u00b7 '));
+    // Who they spent time with today, newest first, one line each person.
+    const talks = regular ? talksToday(state, ref, mcDay(state).day) : [];
+    const seen: string[] = [];
+    const lines: string[] = [];
+    for (const one of talks) {
+      const key = studentKey(one.with);
+      if (seen.includes(key) || lines.length >= 3) continue;
+      seen.push(key);
+      const who = peopleOf(state, ref).find((p) => sameStudent(p.ref, one.with))?.name.split(' ')[0];
+      if (who) lines.push(talkWords(one.tone, who, one.about));
+    }
+    if (lines.length === 0 && regular) {
+      const news = newsOf(state, ref, 1)[0];
+      if (news) lines.push(news.replace(/\.$/, ''));
+    }
+    today.line.hidden = lines.length === 0;
+    setText(today.value, capital(lines.join(', ')));
+  }
+
   return { node, strip, render };
+}
+
+const capital = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** One time together, in a few words: "laughed with Jordan", "argued with Theo about the dishes". */
+function talkWords(tone: TalkTone, who: string, about?: string): string {
+  switch (tone) {
+    case 'met':
+      return `met ${who}`;
+    case 'laughed':
+      return `laughed with ${who}`;
+    case 'studied':
+      return `studied with ${who}`;
+    case 'ate':
+      return `ate with ${who}`;
+    case 'argued':
+      return about ? `argued with ${who} about ${about}` : `argued with ${who}`;
+    case 'awkward':
+      return `an awkward chat with ${who}`;
+    case 'date':
+      return `a date with ${who}`;
+    case 'avoided':
+      return `steered clear of ${who}`;
+    case 'roommate':
+      return `hung out with ${who} in their room`;
+  }
 }

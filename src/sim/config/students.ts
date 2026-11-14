@@ -428,4 +428,13 @@ export const THOUGHTS = {
   seatingLow: ['Nowhere to sit outside near my dorm. A few benches would do it.', 'I ate lunch standing up again. A picnic table nearby would help.'],
   commuterSeatingGood: ['There is always a bench free by my lecture hall.'],
   commuterSeatingLow: ['Nowhere to sit between classes. A bench or a picnic table by the lecture halls would help.'],
+  // Social life (DESIGN.md 62): somewhere to meet people, or nowhere. {friend} is a friend's first name, {place} a food place.
+  socialLow: ['Nowhere to just hang out with people around here. A food place or a few benches would change that.', 'I barely see anyone outside class. Somewhere to eat or sit together would help.'],
+  socialGood: ['Always run into {friend} at the {place}. Easy to see people here.', 'There is always someone I know at the {place}.'],
+  commuterSocialLow: ['I come in, go to class and go home. Nowhere to hang out with anyone.'],
 } as const;
+
+/** [T] The share of students whose thought is about social life when it is thin or lively (DESIGN.md 62). */
+export const SOCIAL_TALK_SHARE = 0.18;
+/** [T] Social life this high counts as lively for those thoughts. */
+export const SOCIAL_LIVELY = 0.75;

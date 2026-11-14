@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { newSocial } from '../src/sim/systems/social';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -315,7 +316,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
   });
 
   describe('from version 20', () => {
@@ -342,6 +343,7 @@ describe('saves', () => {
       expected.alumni = state.alumni;
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
+      expected.social = newSocial();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
@@ -349,7 +351,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

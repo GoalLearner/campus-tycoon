@@ -3,7 +3,7 @@ import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
 import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
-import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
+import { CLUB_HOMES, PLACED, SOCIAL_SPOTS_PER_BENCH, SOCIAL_SPOTS_PER_CLUB_HOME, SOCIAL_SPOTS_PER_FOOD, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
 import { foodTypesAt, tutoringLift } from './food';
 import { crowdedNear, waitMinutes } from './play';
 import {
@@ -42,7 +42,9 @@ import {
   RELATIONSHIP_POINTS,
   RELATIONSHIP_SIDES,
   SEATS_COMFORTABLE,
+  SOCIAL_LIVELY,
   SOCIAL_SWING,
+  SOCIAL_TALK_SHARE,
   SOCIAL_THIN,
   STUDENTS_PER_SOCIAL_SPOT,
   SUPER_SENIOR_SHARE,
@@ -99,7 +101,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26, greek: 27, chapter: 28 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26, greek: 27, chapter: 28, social: 29 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -255,8 +257,9 @@ export function teachingQuality(state: GameState): number {
 
 /**
  * How much there is to do with other people, 0 to 1, with 0.5 as middling.
- * It counts quad cells and recreation buildings against enrollment. Student
- * Life spots and events join the count when they are built.
+ * It counts quad cells, recreation buildings, food places, benches, picnic
+ * tables by the dining halls and lecture halls, and the places clubs meet,
+ * against enrollment (DESIGN.md 62): more places to meet, more meeting.
  */
 export function socialLife(state: GameState): number {
   const students = enrollment(state);
@@ -264,7 +267,12 @@ export function socialLife(state: GameState): number {
   let spots = 0;
   for (const cell of state.map.cells) if (cell.kind === 'quad') spots += 1;
   for (const placed of state.map.placed) {
-    if (placed && PLACED[placed.type].family === 'recreation') spots += SOCIAL_SPOTS_PER_RECREATION;
+    if (!placed) continue;
+    const family = PLACED[placed.type].family;
+    if (family === 'recreation') spots += SOCIAL_SPOTS_PER_RECREATION;
+    else if (family === 'dining') spots += SOCIAL_SPOTS_PER_FOOD;
+    else if (placed.type === 'bench') spots += SOCIAL_SPOTS_PER_BENCH;
+    else if (CLUB_HOMES.includes(placed.type)) spots += SOCIAL_SPOTS_PER_CLUB_HOME;
   }
   // A picnic table near dining or a lecture hall is somewhere to meet.
   spots += socialTables(state) * SOCIAL_SPOTS_PER_TABLE;
@@ -272,6 +280,149 @@ export function socialLife(state: GameState): number {
   const level = Math.max(0, Math.min(1, (0.5 * spots * STUDENTS_PER_SOCIAL_SPOT) / smallCount(state, students)));
   // In steps, so a handful of students arriving or leaving does not reshuffle anyone's status.
   return Math.round(level * 20) / 20;
+}
+
+/** What a student shares with others, read cheaply for the social campus (DESIGN.md 62): no happiness or grades. */
+export interface SocialProfile {
+  classYear: number;
+  /** Their dorm's cell, or null for a commuter. */
+  home: number | null;
+  chapter: string | null;
+  /** True for a chapter member who lives in the chapter's house. */
+  housed: boolean;
+  firstName: string;
+  name: string;
+  major: string;
+  field: string;
+  club: string | null;
+  team: boolean;
+  nature: ArchetypeId;
+  /** Their own seeded status: single, together, or with a partner far away. The social campus leaves a partner far away alone. */
+  kind: 'single' | 'together' | 'distance';
+}
+
+/** What never changes about a student, from the seed alone: kept, since the social campus reads it every hour. */
+interface FixedTraits {
+  firstName: string;
+  name: string;
+  major: string;
+  field: string;
+  nature: ArchetypeId;
+  club: string | null;
+}
+const fixedTraits = new Map<string, FixedTraits>();
+const seededKinds = new Map<string, SocialProfile['kind']>();
+
+function fixedOf(seed: number, ref: StudentRef): FixedTraits {
+  const key = `${seed}:${ref.entryYear}:${ref.index}`;
+  let fixed = fixedTraits.get(key);
+  if (!fixed) {
+    if (fixedTraits.size > 20_000) fixedTraits.clear();
+    const first = pickFrom(FIRST_NAMES, roll(seed, ref, SALT.first));
+    const last = pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start)) + pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end));
+    const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+    const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
+    const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
+    fixed = { firstName: first, name: `${first} ${last}`, major: major.name, field: major.group, nature, club: clubOf(seed, ref, nature, major.group, quirk) };
+    fixedTraits.set(key, fixed);
+  }
+  return fixed;
+}
+
+/** Their seeded status in a semester, from the seed alone: kept too. */
+function seededKind(seed: number, ref: StudentRef, semester: number, nature: ArchetypeId): SocialProfile['kind'] {
+  const key = `${seed}:${ref.entryYear}:${ref.index}:${semester}`;
+  let kind = seededKinds.get(key);
+  if (!kind) {
+    if (seededKinds.size > 20_000) seededKinds.clear();
+    const status = relationshipOf(seed, ref, semester, nature, 0.5).id;
+    kind = status.startsWith('together') ? 'together' : status.startsWith('distance') ? 'distance' : 'single';
+    seededKinds.set(key, kind);
+  }
+  return kind;
+}
+
+/** `athletes` is `athleteShare(state)`, which a caller reading many students works out once. */
+export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), athletes: number = athleteShare(state)): SocialProfile | null {
+  const classYear = classYearOf(state, ref);
+  if (classYear === null) return null;
+  const seed = state.seed;
+  const fixed = fixedOf(seed, ref);
+  const home = studentHome(state, ref, housing);
+  const member = home !== null ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
+  return {
+    ...fixed,
+    classYear,
+    home,
+    chapter: member?.chapter.name ?? null,
+    housed: member?.housed ?? false,
+    team: roll(seed, ref, SALT.sport) < athletes,
+    kind: seededKind(seed, ref, semesterOf(state), fixed.nature),
+  };
+}
+
+const sameRef = (a: StudentRef, b: StudentRef): boolean => a.entryYear === b.entryYear && a.index === b.index;
+
+/** A named regular's ties, read straight from the save (DESIGN.md 62). null for anyone who is not a regular. */
+function regularTies(state: GameState, ref: StudentRef): GameState['social']['ties'] | null {
+  const social = state.social;
+  if (!social || !social.regulars.some((one) => sameRef(one.ref, ref))) return null;
+  return social.ties.filter((tie) => sameRef(tie.a, ref) || sameRef(tie.b, ref));
+}
+
+/**
+ * A named regular's status comes from who they are with on campus, not from the seed (DESIGN.md 62): dating someone,
+ * just broken up, a crush, or single. A partner far away stays as the seed has it.
+ */
+function graphRelationship(state: GameState, ref: StudentRef, seeded: Relationship): Relationship {
+  if (seeded.id.startsWith('distance')) return seeded;
+  const ties = regularTies(state, ref);
+  if (!ties) return seeded;
+  const status = (id: RelationshipId, breakup = false): Relationship => {
+    const happy = id === 'togetherHappy' || id === 'singleHappy';
+    return {
+      id,
+      breakup,
+      name: breakup ? BREAKUP_NAME : RELATIONSHIP_NAMES[id],
+      note: breakup ? BREAKUP_NOTES.lessHappy : happy ? RELATIONSHIP_NOTES.happier : RELATIONSHIP_NOTES.lessHappy,
+      points: happy ? RELATIONSHIP_POINTS : -RELATIONSHIP_POINTS,
+    };
+  };
+  const partner = ties.find((tie) => tie.kind === 'partner');
+  if (partner) return status(partner.strength >= 50 ? 'togetherHappy' : 'togetherUnhappy');
+  // Broken up in the last two real days.
+  if (ties.some((tie) => tie.kind === 'ex' && state.clock.tick - tie.since < 2 * 24 * 60)) return status('singleLooking', true);
+  const crush = ties.some((tie) => tie.kind === 'crush' && (sameRef(tie.a, ref) ? tie.aFirst === true : tie.aFirst === false));
+  return status(crush ? 'singleLooking' : seeded.points > 0 ? 'singleHappy' : 'singleLooking');
+}
+
+/** The first name of a regular's closest friend, or null. */
+function closestFriend(state: GameState, ref: StudentRef): string | null {
+  const ties = regularTies(state, ref);
+  if (!ties) return null;
+  let best: (typeof ties)[number] | null = null;
+  for (const tie of ties) if ((tie.kind === 'friend' || tie.kind === 'roommate') && tie.strength >= 30 && (!best || tie.strength > best.strength)) best = tie;
+  if (!best) return null;
+  const other = sameRef(best.a, ref) ? best.b : best.a;
+  return pickFrom(FIRST_NAMES, roll(state.seed, other, SALT.first));
+}
+
+/** The food place nearest a cell, by name, within a walk: where friends run into each other. */
+export function foodNear(state: GameState, cell: number): string | null {
+  const width = state.map.width;
+  const x = cell % width;
+  const y = Math.floor(cell / width);
+  let best: string | null = null;
+  let gap = 14;
+  for (const placed of state.map.placed) {
+    if (!placed || PLACED[placed.type].family !== 'dining') continue;
+    const d = Math.abs(placed.x - x) + Math.abs(placed.y - y);
+    if (d < gap) {
+      gap = d;
+      best = PLACED[placed.type].name;
+    }
+  }
+  return best;
 }
 
 /** Semesters since the game began: it steps at every fall and spring intake. */
@@ -468,6 +619,21 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
       return { cause: 'life', part: 'recreation', positive: false, thought: line.replace('{w}', `${waitMinutes(crowded.use)} minutes`).replace('{place}', place), cell: at };
     }
   }
+  // Social life (DESIGN.md 62): on a campus with nowhere to meet, or a lively one, some students talk about that.
+  if (roll(state.seed, ref, SALT.social) < SOCIAL_TALK_SHARE) {
+    const social = socialLife(state);
+    const spot = spots[0]!;
+    if (social <= SOCIAL_THIN) {
+      const pool = resident ? THOUGHTS.socialLow : THOUGHTS.commuterSocialLow;
+      return { cause: 'life', part: 'recreation', positive: false, thought: pickFrom(pool, roll(state.seed, ref, SALT.line)), cell: spot };
+    }
+    const place = social >= SOCIAL_LIVELY ? foodNear(state, spot) : null;
+    if (place) {
+      const friend = closestFriend(state, ref);
+      const line = friend ? THOUGHTS.socialGood[0] : THOUGHTS.socialGood[1];
+      return { cause: 'life', part: 'recreation', positive: true, thought: line.replace('{friend}', friend ?? '').replace('{place}', place), cell: spot };
+    }
+  }
   // A content student names the biggest plus. Anyone else names what would help most.
   const size = (cause: Cause): number => cause.weight * (content ? cause.level : 1 - cause.level);
   let best = -1;
@@ -552,7 +718,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
   // Greek Row: a student who lives on campus may be in a chapter, and live in its house (DESIGN.md 51).
   const member = resident ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
-  const relationship = relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state));
+  const relationship = graphRelationship(state, ref, relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state)));
   const phase = archetypeNow(state, ref, classYear, nature, resident, member !== null);
   // A breakup is a phase laid over their nature for the semester, as homesickness is (DESIGN.md 55).
   const archetype = relationship.breakup && phase === nature ? 'heartbroken' : phase;
