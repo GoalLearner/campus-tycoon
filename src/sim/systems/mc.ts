@@ -293,13 +293,13 @@ function makePlan(state: GameState, mc: MainCharacter, log: LogEntry[] | null): 
     if (items.length < 4 && !items.some((one) => one.activity === activity)) items.push({ activity, why, done: false });
   };
   if (places.exams) add('study', 'exams are this week');
-  if (mc.goals.includes('deansList') && places.term) add('study', GOALS.deansList.plan.toLowerCase());
+  if (mc.goals.includes('deansList') && places.term) add('study', GOALS.deansList.plan);
   for (const need of NEEDS) {
     if (mc.needs[need] < NEED_LOW) add(NEED_ACTIVITY[need], `${NEED_NAMES[need].toLowerCase()} ${need === 'study' ? 'are' : 'is'} low`);
   }
   if (mc.money < MONEY_LOW) add('job', 'money is short');
-  if (mc.goals.includes('fit')) add('workout', GOALS.fit.plan.toLowerCase());
-  if (mc.goals.includes('friends')) add('friends', GOALS.friends.plan.toLowerCase());
+  if (mc.goals.includes('fit')) add('workout', GOALS.fit.plan);
+  if (mc.goals.includes('friends')) add('friends', GOALS.friends.plan);
   if (mc.club && CLUB_DAYS.includes(weekday)) add('club', `the ${mc.club} meets today`);
   if (PARTY_NIGHTS.includes(weekday) && places.parties && (mc.goals.includes('fun') || mc.nature === 'party')) add('party', weekday === 3 ? 'it is Thursday night' : 'it is the weekend');
   if (items.length === 0) add(NEED_ACTIVITY[lowest(mc)], 'a quiet day');

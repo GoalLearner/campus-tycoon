@@ -115,12 +115,12 @@ export const CAST_TRAIT_IDS = Object.keys(CAST_TRAITS) as CastTrait[];
 /** The goals a Main Character may hold: two, by their nature. */
 export type GoalId = 'deansList' | 'friends' | 'fit' | 'savings' | 'onTime' | 'fun';
 export const GOALS: Record<GoalId, { name: string; plan: string }> = {
-  deansList: { name: 'Make the Dean’s list', plan: 'The Dean’s list needs a 3.5' },
-  friends: { name: 'Find their people', plan: 'A good friend or two makes a place home' },
-  fit: { name: 'Get fit', plan: 'Half an hour of exercise, most days' },
-  savings: { name: 'Keep some money in the bank', plan: 'A shift or two keeps the account above zero' },
-  onTime: { name: 'Graduate on time', plan: 'Every class counts toward finishing in four years' },
-  fun: { name: 'Have the full college experience', plan: 'It only happens once' },
+  deansList: { name: 'Make the Dean’s list', plan: 'the Dean’s list needs a 3.5' },
+  friends: { name: 'Find their people', plan: 'a good friend or two makes a place home' },
+  fit: { name: 'Get fit', plan: 'half an hour of exercise, most days' },
+  savings: { name: 'Keep some money in the bank', plan: 'a shift or two keeps the account above zero' },
+  onTime: { name: 'Graduate on time', plan: 'every class counts toward finishing in four years' },
+  fun: { name: 'Have the full college experience', plan: 'it only happens once' },
 };
 /** Goals by nature, the first two that suit. */
 export const GOALS_BY_NATURE: Partial<Record<string, readonly GoalId[]>> = {
