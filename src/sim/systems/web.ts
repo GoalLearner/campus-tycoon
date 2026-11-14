@@ -427,6 +427,11 @@ function partnered(web: Web, a: number): number {
   return -1;
 }
 
+/** A pair's own luck in their chemistry, 0 to 1: `lo` and `hi` are their places in the web, the lower first. */
+export function pairLuck(seed: number, lo: number, hi: number): number {
+  return share(hash5(seed, 9920, lo, hi, 0));
+}
+
 const pairChem = (web: Web, a: number, b: number): number => {
   const lo = a < b ? a : b;
   const hi = a < b ? b : a;

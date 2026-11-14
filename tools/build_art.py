@@ -436,7 +436,7 @@ def write_credits():
         '',
         '- **By:** Made for this game.',
         '- **Licence:** None needed.',
-        '- **From:** `tools/make_emotes.py`, drawn in code in the people pack' + "'" + 's way: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop.',
+        '- **From:** `tools/make_emotes.py`, drawn in code in the people pack' + "'" + 's way: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop; four greetings (a wave, a high five, a fist bump, a hug); and chat bubbles with what students talk about inside (sports, gaming, music, fitness, parties, studying, art, fashion, and a heart).',
         '- **Changes made:** None. Each is one file named in the art recipes, so it can be swapped for a drawn one.',
         '- **Where:** Every build.',
         '',

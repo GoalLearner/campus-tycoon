@@ -69,6 +69,8 @@ function doingText(doing: string): string {
   // Standing in a game, a line or a small scene: the map has the words already.
   const staying = stayingWords(doing);
   if (staying) return staying;
+  // Stopped on a path to talk with someone they know (DESIGN.md 63.8).
+  if (doing.startsWith('chatting:')) return `Stopped to talk with ${doing.slice(9)}`;
   // A bench or a picnic table: what they are doing there depends on the time of day.
   const seat = SEATS[doing.slice(8)];
   if (seat && doing.startsWith('toPlace:')) return `Looking for ${seat.a}`;
