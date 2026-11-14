@@ -136,6 +136,7 @@ export type StoryNeed =
   | 'season'
   | 'over21'
   | 'freshman'
+  | 'notFreshman'
   | 'job'
   | 'noJob'
   | 'club'

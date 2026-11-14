@@ -196,6 +196,8 @@ function meets(state: GameState, mc: MainCharacter, need: StoryNeed): boolean {
       return year >= 2;
     case 'freshman':
       return year === 0;
+    case 'notFreshman':
+      return year > 0;
     case 'job':
       return mc.job !== null;
     case 'noJob':
