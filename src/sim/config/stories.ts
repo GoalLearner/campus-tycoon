@@ -81,7 +81,7 @@ export type StoryEffect =
   | { t: 'team'; join: boolean };
 
 export interface Outcome {
-  /** A few words for the odds line: "Made the team". */
+  /** A few words naming the outcome: "Made the team". The odds clause after the story's sentence does not repeat it. */
   title: string;
   text: string;
   effects: readonly StoryEffect[];

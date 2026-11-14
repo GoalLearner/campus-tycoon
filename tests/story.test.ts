@@ -149,7 +149,7 @@ describe('the storyteller', () => {
     expect(scenes.length).toBeGreaterThan(0);
     const rolled = scenes.filter((scene) => scene.odds !== '');
     expect(rolled.length).toBeGreaterThan(0);
-    for (const scene of rolled) expect(scene.odds).toMatch(/^.+: \d+%, (helped by|held back by|despite) .+\.$|: \d+%, an even chance\.$/);
+    for (const scene of rolled) expect(scene.odds).toMatch(/^\d+% likely, ((helped by|held back by|despite) .+|nothing tipped it either way)$/);
     for (const scene of scenes) for (const text of [scene.text, scene.chose, scene.outcome, scene.odds]) expect(toneProblem(text), text).toBeNull();
     // A good outcome never says it was held back, and a bad one never that it was helped.
     for (const scene of rolled) {

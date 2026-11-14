@@ -6838,7 +6838,7 @@ The long run's six test players on the model campus, 44 weeks each (a week is a 
 | What a player reads | 14,000 to 19,700 lines each: 1.27 to 1.62 in 100 about drinking and 0.39 to 0.65 in 100 about a heavy theme, against budgets of 4 each |
 | Happiness and retention | Weeks 20 to 44: 94.4 to 95.5, and 99.25% to 99.30% of each class stay |
 | The five policies, on the once-a-day campus for six years against the same campus without | Dry campus: 5 fewer calls a year, Happiness 0.43 lower, the rating 0.2 lower. Party registration: 5 fewer calls, Happiness 0.19 higher, $392,000 a year more. Alcohol education: semester Stress 0.81 lower, the rating 0.2 higher, $756,000 a year more. Anti-hazing policy: one report fewer. Greek life oversight: one report fewer, its members a little less happy |
-| The pace of the rank goals | The Top 10 in weeks 29 to 31. Never before week 24 |
+| The pace of the rank goals | The Top 10 in weeks 25 to 31 (25 for the once-a-day player and the player who works every cause on the second seed). Never before week 24 |
 | The money | Years 3 to 8: $13.5 to $15.6 kept of every $100 (casual), $12.8 to $14.8 (once a day). The later weeks: $12.3 to $15.6 and $12.4 to $15.9 |
 | Levels | The once-a-day player made 6.2 and 6.5 levels a week after week 12, down from 6.9 and 7.0: under the ceiling of 7.00 |
 | The small campus | Every table the same, line for line |
@@ -6894,7 +6894,7 @@ The long run's six test players on the model campus, 44 weeks each, against the 
 | Cash and the endowment | The cash share at week 44: $3.8 to $4.0 million a year, 0.80% to 0.86% of income. $145 to $150 million to the endowment in all, which earns $2.9 to $3.0 million a year |
 | A class's numbers | Success 76.5 to 79.2 on average (the rating, a little up for finishing on time and jobs); affinity 83.6 to 85.9, the last class 88.2 to 89.8 (happy campuses, traditions kept, Greek members, wins) |
 | Alumni success in the rating | 81.5 to 83.7 at the end |
-| The pace of the rank goals | The Top 10 in weeks 27 to 29, against 29 to 31 before: two weeks sooner, never before week 24 |
+| The pace of the rank goals | The Top 10 in weeks 24 to 29, against 25 to 31 before: one to two weeks sooner, and at week 24, the floor, for the once-a-day player and the player who works every cause on the second seed. Never before week 24, but with no room left: anything more that lifts the rating must be checked against it first |
 | The money | Years 3 to 8: $13.7 to $15.2 kept of every $100 (casual), $13.0 to $15.1 (once a day). The later weeks: $12.4 to $15.6 and $12.2 to $15.8 |
 | Levels | The once-a-day player made 6.3 and 6.9 levels a week after week 12: under the ceiling of 7.00 |
 | The small campus | Every table the same, line for line |
@@ -6955,7 +6955,7 @@ The long run's once-a-day player on both seeds follows the student the game sugg
 | The paper | About 19 of their lines a real week, the last six of an absence at the head of the paper |
 | Nights out | Drinks on 0.4 nights a real week, each followed by a hangover: only juniors and seniors |
 | Grades | Those who graduated averaged a 3.40 and a 3.42 |
-| The campus | Every number the same as the run without them: the money, the rank goals (Top 10 in weeks 27 to 29), the levels, Happiness. A test runs the same campus with and without one and finds nothing changed |
+| The campus | Every number the same as the run without them: the money, the rank goals (Top 10 in weeks 24 to 29), the levels, Happiness. A test runs the same campus with and without one and finds nothing changed |
 | What a player reads | Their lines count toward the 13+ budgets: 1.48 and 1.65 in 100 about drinking for the once-a-day player, 0.45 and 0.64 about heavy themes |
 | Tests | 14 new (`tests/mc.test.ts`). One new long-run check: a plan every real day, at most three key moments on one. 88 checks in all |
 
@@ -6978,7 +6978,7 @@ The long run's once-a-day player on both seeds follows the student the game sugg
 | Stories are data | An arc is stages; each stage a scene, one to three choices, and for each choice its odds and a good and a bad outcome. An outcome changes needs, Happiness and Stress (fading over days), this semester's grades, money, closeness, who is around them (a new friend, a crush who becomes a partner, a breakup, a new crush, a new roommate), a job, a chapter, a team; and says what comes next: the next stage, the end, or another arc. An event is one stage. A new story is an entry, never code | `src/sim/config/stories.ts`, `src/sim/config/storyLibrary.ts` |
 | The library | 26 arcs and 60 events, every category of 53.6: roommates (the match, opposite schedules, the swap), classes (the make-or-break class, the group project, probation and the way back, the major crisis), dating (the crush, long distance, jealousy, moving on), partying (the party before the exam, the scene, the party broken up), social (finding their people, the group splits, homesick), money (broke to a campus job, the job and the classes, a scholarship on the line), Greek life and teams (rush and bid day, pledging, tryouts to starter, the comeback), and two good arcs (the Dean's list run, student government); and the 60 smaller ones the table lists, good ones among them | `ARCS`, `EVENTS` |
 | Who chooses | The phone's rules: a choice leans toward natures, goals and low needs, and a little of the character's own mood (from the seed) settles a close call. The president never chooses: the same character on any campus makes the same choice | `pick` in `src/sim/systems/storyteller.ts` |
-| Honest odds | The game rolls each outcome from real numbers: the character's effort lately (hours of study, training, time with friends, at their club or job), their grades, closeness, needs, and the campus at their home (recreation, the library, places to meet people, class size, teaching, Safety and health, an RA on the floor from the dorm's stage, the rules against hazing, party registration and alcohol education, the three levers, the football program). Afterwards it says the odds of what happened and what moved them most, the campus's part first where it counted: "Made the team: 62%, helped by weeks of training"; a bad outcome names what held it back; "despite" when it went the other way. Between 8 and 92 in 100, never certain | `oddsOf`, `oddsRead` |
+| Honest odds | The game rolls each outcome from real numbers: the character's effort lately (hours of study, training, time with friends, at their club or job), their grades, closeness, needs, and the campus at their home (recreation, the library, places to meet people, class size, teaching, Safety and health, an RA on the floor from the dorm's stage, the rules against hazing, party registration and alcohol education, the three levers, the football program). Afterwards it says the odds of what happened and what moved them most, the campus's part first where it counted, as a short clause after what happened: "Sasha made the track team! (62% likely, helped by weeks of training)"; a bad outcome names what held it back; "despite" when it went the other way; "nothing tipped it either way" when nothing did. Between 8 and 92 in 100, never certain | `oddsOf`, `oddsRead` |
 | Failure leads somewhere | Every choice that can fail has an outcome for it, and many chain: a failed midterm to probation and the way back, no bid to finding their people, a lost scholarship to a campus job, a breakup to moving on | `Outcome.next` |
 | The storyteller | Once a real hour. One main arc and up to two side stories at a time; ten real hours between arcs and six between events; no kind of story twice in a row; a heavy story (hazing, a breakup, cheating, probation) one at a time with two real days of rest after; the same story not again for a week; a good story two and a half times likelier after bad luck; rush and bid day only in rush week, tryouts and game days in the football season, exams stories near exams. A cliffhanger six real hours before a big stage ("Tryouts for the track team are tomorrow"). Key moments use the two-a-day notices | `stepStory`; `STORY_STEP`, `QUIET_HOURS`, `HEAVY_COOLDOWN_HOURS` and the rest in `stories.ts` |
 | The Story tab | On the Main Character's page, beside Now: the story as chapters, newest first, each scene what happened, what they did, how it went, and the odds | `mcView` in `src/ui/mcUi.ts`; `openMain` in `src/ui/ui.ts` |
@@ -6991,7 +6991,7 @@ The long run's once-a-day player on both seeds follows the student the game sugg
 
 | Decision | Chosen | The alternative |
 |---|---|---|
-| The odds' words | What happened, and what moved it that way; "despite" when nothing did | The single biggest part, which could say "helped by" under a failure |
+| The odds' words | What happened in the story's own words, then the odds in a short clause, what moved it that way, and "despite" when nothing did (changed on the main session's note after build 12: the outcome's name is no longer repeated) | The single biggest part, which could say "helped by" under a failure; or "Made the team: 62%" after the sentence that said so |
 | The levers | Three small policies whose gain is the story's odds and whose cost is money | Systems of their own (a jobs market, an aid office) |
 | Singles | Listed for later | A Housing switch that halves a dorm's beds |
 | The team | One team, the track team, for every Main Character | A sport by their club or nature |
@@ -7010,7 +7010,7 @@ The long run's once-a-day player on both seeds, following a Main Character for 4
 | What a player reads | For the once-a-day player 1.67 and 1.81 in 100 lines about drinking and 0.46 and 0.63 about a heavy theme, against budgets of 4 |
 | Grades | Those who graduated averaged a 3.42 and a 3.44 |
 | The three levers, on the once-a-day campus for six years | Campus jobs program $1.86 million a year (0.33 less kept of every $100), Need-based scholarships $5.57 million (0.99 less), Cheaper dining plans $1.39 million (0.25 less); nothing else on the campus moves. Their gain is in the story's odds |
-| The campus | Every number as without a Main Character: the Top 10 in weeks 27 to 29, money in range, levels at most 6.9 a week |
+| The campus | Every number as without a Main Character: the Top 10 in weeks 24 to 29, money in range, levels at most 6.9 a week |
 | Tests | 11 new (`tests/story.test.ts`), 942 in all. One new long-run check: several stories a real week, of many kinds, few heavy. 89 checks in all |
 
 ### 58.4 Rough
