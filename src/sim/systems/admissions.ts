@@ -13,6 +13,7 @@ import { rhythmOnGraduation } from './rhythm';
 import { traditionsOnGraduation } from './traditions';
 import { greekOnGraduation } from './greek';
 import { alumniOnGraduation, alumniOnSemester } from './alumni';
+import { mcOnSemester } from './mc';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
 import { campusHappiness } from './happiness';
@@ -359,6 +360,8 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
   // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
   alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
+  // The Main Character's grades for the semester (DESIGN.md 53.2).
+  mcOnSemester(state, log);
   ordersMark(state, 'semesterLeft', left);
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);

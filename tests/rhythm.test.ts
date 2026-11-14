@@ -43,6 +43,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
 
@@ -314,7 +315,7 @@ describe('saves', () => {
     const loaded = parseSave(serialize(state, state.clock.lastSimulatedAt));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(loaded.state.rhythm).toEqual(state.rhythm);
-    expect(SAVE_VERSION).toBe(27);
+    expect(SAVE_VERSION).toBe(28);
   });
 
   describe('from version 20', () => {
@@ -339,6 +340,8 @@ describe('saves', () => {
       expected.greek = newGreek();
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
@@ -346,7 +349,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(7);
+      expect(notes).toHaveLength(8);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

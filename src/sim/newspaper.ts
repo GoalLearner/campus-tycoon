@@ -74,6 +74,11 @@ export interface Edition {
   earlier: number;
   /** How many lines are folded away under the top: scores, stories, the rest and the dated lines. */
   folded: number;
+  /**
+   * The Main Character while away (DESIGN.md 53.2): what they did, decided and why, newest last, the last few. null with
+   * none chosen, or nothing said.
+   */
+  main: { name: string; lines: string[] } | null;
 }
 
 const sum = (values: readonly number[]): number => values.reduce((a, b) => a + b, 0);
@@ -423,7 +428,22 @@ export function edition(state: GameState, log: readonly LogEntry[], facts: AwayF
     days: dated.days,
     earlier: dated.earlier,
     folded,
+    main: mainLines(state, log),
   };
+}
+
+/** How many of the Main Character's lines the paper keeps: the last few, the key moments first among them. */
+const MAIN_LINES = 6;
+
+/** The Main Character while away (DESIGN.md 53.2): what they did, decided and why. */
+function mainLines(state: GameState, log: readonly LogEntry[]): Edition['main'] {
+  const said = log.filter((entry) => entry.kind === 'mc');
+  if (said.length === 0) return null;
+  const name = state.story?.mc?.name ?? String(said[said.length - 1]!.data?.name ?? '');
+  const big = said.filter((entry) => entry.data?.big === 1);
+  const rest = said.filter((entry) => entry.data?.big !== 1);
+  const kept = [...big.slice(-MAIN_LINES), ...rest.slice(-Math.max(0, MAIN_LINES - Math.min(MAIN_LINES, big.length)))].sort((a, b) => a.tick - b.tick);
+  return { name, lines: kept.map((entry) => entry.text) };
 }
 
 // -------------------------------------------------------------- welcome --
@@ -492,6 +512,7 @@ export function welcomeEdition(state: GameState): Edition {
     days: [],
     earlier: 0,
     folded: 0,
+    main: null,
   };
 }
 

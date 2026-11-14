@@ -40,6 +40,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { FOUNDING_CLASS, POOL_CEILING, SPRING_SHARE, WORD_OF_MOUTH, DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from '../src/sim/config/demand';
 import { TUITION_ESTABLISHED_PER_YEAR, TUITION_PER_STUDENT_PER_YEAR } from '../src/sim/config/money';
 import { MAIN_STREET } from '../src/sim/config/town';
@@ -444,6 +445,8 @@ describe('the main street', () => {
     expected.rng.orders = loaded.state.rng.orders;
     // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
     expected.alumni = loaded.state.alumni;
+    // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+    expected.story = newStory();
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

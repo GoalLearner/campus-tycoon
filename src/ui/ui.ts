@@ -82,6 +82,8 @@ import { ordersChip, ordersView, paidWords } from './ordersUi';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from './decorUi';
 import { sharePhoto } from '../app/photo';
 import { drawSprite, loadAtlas } from './atlas';
+import { mcView } from './mcUi';
+import { studentFigure } from '../sim';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
@@ -303,6 +305,15 @@ export function mountUi(root: HTMLElement): void {
   happy.addEventListener('click', () => openHappiness());
   let shownMood = -1;
   const menuButton = button('Menu', 'menu-button', () => openMenu());
+  // The Main Character's portrait (DESIGN.md 53.2): their figure from the atlas, or a figure waiting to be chosen.
+  const mainButton = button('', 'main-button', () => openMain());
+  const mainArt = document.createElement('canvas');
+  mainArt.className = 'main-art';
+  mainArt.width = 64;
+  mainArt.height = 76;
+  mainButton.append(mainArt);
+  mainButton.setAttribute('aria-label', 'Your main character');
+  let mainShown = '';
   top.append(money, students, happy, menuButton);
 
   const calendar = el('div', 'calendar');
@@ -360,7 +371,8 @@ export function mountUi(root: HTMLElement): void {
     drawSprite(sealArt, atlas, 'ui.seal');
   });
   let shownLevel = -1;
-  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, levelButton);
+  // The Main Character's portrait sits beside the level, where the row has room whatever the cash reads (DESIGN.md 57).
+  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, mainButton, levelButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -801,6 +813,8 @@ export function mountUi(root: HTMLElement): void {
       else if (where === 'policies') openSize('policies');
       // A tradition's day, or one at risk, or a place to choose one (DESIGN.md 50).
       else if (where === 'traditions') openSize('traditions');
+      // The Main Character's page (DESIGN.md 53.2).
+      else if (where === 'main') openMain();
       else openFootball(openModal);
     });
   }
@@ -1057,6 +1071,20 @@ export function mountUi(root: HTMLElement): void {
     setText(rate, `${perHour >= 0 ? '+' : '-'}${dollarsShort(Math.abs(perHour))}/hr`);
     rate.className = perHour >= 0 ? 'rate up' : 'rate down';
     setText(studentCount, headCount(enrollment(state)));
+    // The Main Character's portrait: redrawn only when who it is changes.
+    const main = state.story?.mc ?? null;
+    const mainKey = main ? `${main.ref.entryYear}:${main.ref.index}` : 'none';
+    if (mainKey !== mainShown) {
+      mainShown = mainKey;
+      mainButton.classList.toggle('none', !main);
+      void loadAtlas().then((atlas) => {
+        const people = atlas?.people;
+        if (!atlas || !people) return;
+        const looks = Math.min(people.looks, people.crowd ?? people.looks);
+        const figure = main ? studentFigure(store.state, main.ref, looks, people.roles?.athlete) : 0;
+        drawSprite(mainArt, atlas, `person.${figure}.${people.flip?.sw ?? 'sw'}.0`);
+      });
+    }
     const mood = happinessView(state);
     setText(happyCount, String(mood.score));
     if (mood.mood !== shownMood) {
@@ -2232,6 +2260,97 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The Level page: how far to the next level, what feeds it, what the next level gives, and what Seals can finish. */
+  /** The Main Character's page (DESIGN.md 53.2), or with none chosen, a suggestion and the hall of fame. */
+  function openMain(): void {
+    openModal((close, card) => {
+      card.classList.add('card-fixed');
+      const head = el('div', 'money-top');
+      const body = el('div', 'card-scroll');
+      card.append(head, body, button('Close', 'wide', close));
+      const draw = (): void => {
+        const view = mcView(store.state);
+        head.textContent = '';
+        body.textContent = '';
+        const fame = (): void => {
+          if (view.fame.length === 0) return;
+          body.append(el('div', 'money-head', 'Hall of fame'));
+          for (const one of view.fame) {
+            const entry = el('details', 'main-fame');
+            entry.append(el('summary', '', `${one.name} · ${one.line}`));
+            for (const line of one.story) entry.append(el('p', 'fine', line));
+            body.append(entry);
+          }
+        };
+        if (!view.chosen) {
+          head.append(el('h1', '', 'Your main character'));
+          if (view.suggestion) {
+            const suggestion = view.suggestion;
+            body.append(el('p', '', `${suggestion.name} · ${suggestion.about}`));
+            body.append(
+              button(`Make ${suggestion.name.split(' ')[0]} your main character`, 'wide', () => {
+                const result = store.dispatch({ type: 'makeMain', ref: suggestion.ref });
+                if (!result.ok) session.notify(result.error, 'error');
+                draw();
+              }),
+            );
+          }
+          body.append(el('p', 'fine', 'Or tap any student and choose them on their card.'));
+          fame();
+          return;
+        }
+        const mc = view.chosen;
+        head.append(el('h1', '', mc.name), el('p', 'fine', mc.about));
+        body.append(el('div', 'size-goal', mc.doing));
+        for (const [label, value] of mc.rows) {
+          const line = el('div', 'size-row');
+          line.append(el('span', '', label), el('span', 'size-value', value));
+          body.append(line);
+        }
+        body.append(el('div', 'money-head', 'Needs'));
+        for (const need of mc.needs) {
+          const line = el('div', 'main-need');
+          const bar = el('div', 'cause-bar');
+          const fill = el('div', need.low ? 'cause-fill low' : 'cause-fill');
+          fill.style.width = `${need.level}%`;
+          bar.append(fill);
+          line.append(el('span', 'main-need-name', need.name), bar);
+          body.append(line);
+        }
+        body.append(el('div', 'money-head', "Today's plan"));
+        for (const item of mc.plan) body.append(el('p', item.done ? 'fine main-done' : 'fine', `${item.done ? '\u2713 ' : ''}${item.text}`));
+        body.append(el('div', 'money-head', 'Goals'));
+        for (const [name, status] of mc.goals) {
+          const line = el('div', 'size-row');
+          line.append(el('span', '', name), el('span', 'size-value', status));
+          body.append(line);
+        }
+        body.append(el('div', 'money-head', 'People'));
+        for (const [role, who] of mc.people) {
+          const line = el('div', 'size-row');
+          line.append(el('span', '', role), el('span', 'size-value', who));
+          body.append(line);
+        }
+        body.append(el('div', 'money-head', 'Lately'));
+        for (const line of mc.timeline) body.append(el('p', 'fine', line));
+        const actions = el('div', 'main-actions');
+        actions.append(
+          button('Follow', '', () => {
+            close();
+            session.openStudent(mc.ref);
+          }),
+          button('Choose someone else', '', () => {
+            const result = store.dispatch({ type: 'setAsideMain' });
+            if (!result.ok) session.notify(result.error, 'error');
+            draw();
+          }),
+        );
+        body.append(actions);
+        fame();
+      };
+      draw();
+    });
+  }
+
   function openLevel(): void {
     openModal((close, card) => {
       card.classList.add('card-fixed');

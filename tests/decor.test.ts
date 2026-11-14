@@ -51,6 +51,7 @@ import {
   type DecorSpec,
   type GameState,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { captionLayout, photoFileName } from '../src/app/photo';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from '../src/ui/decorUi';
@@ -674,7 +675,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(19);
-      expect(SAVE_VERSION).toBe(27);
+      expect(SAVE_VERSION).toBe(28);
       expect(state.decor).toEqual(newDecor());
       const expected = structuredClone(file.state);
       expected.version = SAVE_VERSION;
@@ -686,6 +687,8 @@ describe('saves', () => {
       expected.greek = newGreek();
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its money, its level, its Seals and its orders are what they were.
@@ -710,7 +713,7 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(8);
+      expect(notes).toHaveLength(9);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

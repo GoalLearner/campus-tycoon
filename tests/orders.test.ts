@@ -47,6 +47,7 @@ import {
   type Order,
   type OrderKind,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { footballStat, inboxStat, policyStat, shortLeft } from '../src/ui/chips';
 import { ordersChip, ordersView, paidWords } from '../src/ui/ordersUi';
@@ -809,7 +810,7 @@ describe('saves', () => {
       if (!loaded.ok) throw new Error(loaded.reason);
       const state = loaded.state;
       expect(loaded.migratedFrom).toBe(18);
-      expect(SAVE_VERSION).toBe(27);
+      expect(SAVE_VERSION).toBe(28);
       // A game already in play opens with its first three orders, none seen, and nothing said.
       expect(state.orders.open).toHaveLength(3);
       expect(state.orders.open.every((order) => order.seen === undefined && order.kind === undefined && order.offered === file.state.clock.tick)).toBe(true);
@@ -828,6 +829,8 @@ describe('saves', () => {
       expected.rng.orders = state.rng.orders;
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Money, students and Happiness are to the cent what they were.
@@ -850,7 +853,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

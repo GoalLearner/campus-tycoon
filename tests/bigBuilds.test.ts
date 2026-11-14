@@ -44,6 +44,7 @@ import {
   type LogEntry,
   type PlacedType,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DAY, freshGame, HOUR, T0 } from './helpers';
 
@@ -303,7 +304,7 @@ describe('saves', () => {
     expect(bigBuildOf(loaded.state, 'studentUnion')!.done).toBe(bigBuildOf(state, 'studentUnion')!.done);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'bigBuild')).toHaveLength(1);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(27);
+    expect(SAVE_VERSION).toBe(28);
   });
 
   describe('from version 21', () => {
@@ -324,13 +325,15 @@ describe('saves', () => {
       expected.greek = newGreek();
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = loaded.state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
-      expect(notes).toHaveLength(6);
+      expect(notes).toHaveLength(7);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

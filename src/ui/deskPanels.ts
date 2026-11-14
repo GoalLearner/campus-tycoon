@@ -165,9 +165,18 @@ function waitingToShow(paper: PaperView): Set<string> {
   return show;
 }
 
-function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football' | 'build' | 'policies' | 'traditions') => void): void {
+function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'football' | 'build' | 'policies' | 'traditions' | 'main') => void): void {
   const page = el('div', 'paper');
   const edition = paper.edition;
+  // The away screen opens with the Main Character (DESIGN.md 53.2): what they did, decided and why.
+  if (edition.main) {
+    const main = el('div', 'paper-main');
+    const head = button('', 'paper-main-head', () => go('main'));
+    head.append(el('span', 'paper-tag', 'Your main character'), el('span', 'paper-main-name', edition.main.name), el('span', 'student-go', '\u203A'));
+    main.append(head);
+    for (const line of edition.main.lines) main.append(el('p', 'paper-main-line', line));
+    body.append(main);
+  }
   page.append(el('div', 'paper-name', edition.paper), el('div', 'paper-date', `${edition.dateline} · ${paper.awayFor}`), el('h2', 'paper-headline', edition.headline), el('p', 'paper-deck', edition.deck));
 
   const top = el('div', 'paper-top');
@@ -236,7 +245,7 @@ function drawPaper(body: HTMLElement, paper: PaperView, go: (where: 'inbox' | 'f
  * the app first loses nothing. `notes` are rules new to an older save, told
  * once. `go` opens the Inbox or the Football page from a line that leads there.
  */
-export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, notes: string[], go: (where: 'inbox' | 'football' | 'build' | 'policies' | 'traditions') => void): void {
+export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, notes: string[], go: (where: 'inbox' | 'football' | 'build' | 'policies' | 'traditions' | 'main') => void): void {
   // A game's first screen is the paper's first issue. An away list, if there is one too, waits for the next look.
   const welcome = store.welcome ? welcomeView(store.state) : null;
   const view = !welcome && report ? awayView(store.state, report) : null;

@@ -1,3 +1,4 @@
+import { suggestMain } from '../src/sim/systems/mc';
 import {
   bigBuildOf,
   bigBuildsOffered,
@@ -138,7 +139,7 @@ const KEEPS_LEAST = 13;
  * Whether the test players touch the Instruction slider, and whether they touch the switches an era opens.
  * Each is turned off for one comparison.
  */
-export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true, traditions: true, greek: true };
+export const botOptions = { slider: true, policies: true, daily: true, orders: true, decor: true, bigBuilds: true, labs: true, traditions: true, greek: true, main: true };
 
 /**
  * What the campus keeps of every $100 once the faculty it has already hired have arrived. The Money panel
@@ -1470,6 +1471,15 @@ function useRhythm(state: GameState): GameState {
 
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
+  // The once-a-day player follows a main character, the one the game suggests, and the next when one graduates
+  // (DESIGN.md 53.2). They change nothing on the campus, so the campus's numbers are the same as without.
+  if (botOptions.main && as === 'daily' && state.goals && state.story && !state.story.mc) {
+    const ref = suggestMain(state);
+    if (ref) {
+      const chose = applyAction(state, { type: 'makeMain', ref });
+      if (chose.ok) state = chose.state;
+    }
+  }
   // The paper opens with today's gift.
   state = useRhythm(state);
   // The visit opens with the button that says an order is new: the board is looked at, which starts its orders.

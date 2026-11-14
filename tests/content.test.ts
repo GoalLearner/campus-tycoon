@@ -42,6 +42,7 @@ import {
   type InboxItem,
   type LogEntry,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { PARTY_CARD } from '../src/sim/config/students';
 import { ratingShift } from '../src/sim/systems/policies';
@@ -445,12 +446,14 @@ describe('saves', () => {
     expected.greek.scandalUntil = -1;
     // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
     expected.alumni = loaded.state.alumni;
+    // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+    expected.story = newStory();
     expect(loaded.state).toEqual(expected);
     expect(validate(loaded.state)).toBeNull();
     const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
-    expect(notes).toHaveLength(2);
+    expect(notes).toHaveLength(3);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

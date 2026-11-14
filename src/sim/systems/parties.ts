@@ -81,6 +81,13 @@ export function partyEffects(state: GameState): Array<{ spec: Pick<PolicySpec, '
   return out;
 }
 
+/** True when a policy that is on cuts every kind of call from parties on campus: the parties have moved to the town. */
+export function partiesInTown(state: GameState): boolean {
+  const on = state.policies?.on;
+  if (!on || on.length === 0) return false;
+  return POLICIES.some((spec) => on.includes(spec.id) && [...spec.gains, ...spec.costs].some((effect) => effect.kind === 'partyCalls' && effect.calls === 'both'));
+}
+
 /** How many times as often the calls come now: each kind's policies, and anything the desk set going (a tailgate's drinks). */
 export function callTimes(state: GameState, extra: number): { safety: number; medical: number } {
   const lift = 1 + Math.max(0, Math.min(CALLS_MOST, extra));

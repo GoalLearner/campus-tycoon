@@ -2,6 +2,7 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside } from '../app/room';
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
+import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
@@ -200,7 +201,17 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
   const stress = row('Stress');
   // A Party Animal's weekends, said plainly (DESIGN.md 55). Shown only for them.
   const weekends = row('Weekends');
-  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, weekends.line, reason);
+  // The Main Character (DESIGN.md 53.2): any student can be chosen from their card.
+  const makeMain = el('button', 'student-follow student-main', 'Make main character');
+  makeMain.type = 'button';
+  makeMain.addEventListener('click', () => {
+    const ref = session.student;
+    if (!ref) return;
+    const result = store.dispatch({ type: 'makeMain', ref });
+    if (!result.ok) session.notify(result.error, 'error');
+    else session.notify('Your main character is chosen. Their portrait is on the top bar.');
+  });
+  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -279,6 +290,10 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     setText(relationshipNote, card.relationship.note);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
     weekends.line.hidden = card.party === null;
+    const main = state.story?.mc;
+    const isMain = !!main && main.ref.entryYear === ref.entryYear && main.ref.index === ref.index;
+    makeMain.disabled = isMain;
+    setText(makeMain, isMain ? 'Your main character' : 'Make main character');
     setText(weekends.value, card.party ?? '');
 
     if (card.mood !== shownMood) {

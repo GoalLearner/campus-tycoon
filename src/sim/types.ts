@@ -1,3 +1,4 @@
+import type { ActivityId, GoalId, LifeNeed, CastTrait } from './config/mc';
 /**
  * The whole game state. Plain JSON only: no classes, Maps, Sets or Dates,
  * so cloning and saving are exact. See DESIGN.md section 17.5.
@@ -635,6 +636,92 @@ export interface GameState {
   greek: Greek;
   /** Alumni giving (DESIGN.md 54, as built in section 56): the pool's records, the drives, the Scorecard's last year. */
   alumni: Alumni;
+  /** The Main Character and the hall of fame (DESIGN.md 53.2, as built in section 57). */
+  story: Story;
+}
+
+/** Someone in the Main Character's life (DESIGN.md 53.2): stored, never rebuilt from the seed. */
+export interface CastMember {
+  id: number;
+  role: 'roommate' | 'friend' | 'crush' | 'partner';
+  name: string;
+  traits: CastTrait[];
+  /** 0 to 100. */
+  closeness: number;
+  /** The tick they came into the Main Character's life. */
+  since: number;
+}
+
+/** One thing the Main Character did, decided or went through, for their timeline. `big` ones are key moments. */
+export interface MemoryEntry {
+  tick: number;
+  text: string;
+  big?: true;
+}
+
+export interface PlanItem {
+  activity: ActivityId;
+  /** Why, in plain words. */
+  why: string;
+  done: boolean;
+}
+
+export interface MainCharacter {
+  /** Which student they are: their class and their place in it. */
+  ref: { entryYear: number; index: number };
+  name: string;
+  major: string;
+  /** Their lasting nature, an archetype id. */
+  nature: string;
+  quirk: string;
+  /** The tick they were chosen. */
+  chosen: number;
+  /** 0 to 100 each. */
+  needs: Record<LifeNeed, number>;
+  goals: GoalId[];
+  /** Today's plan, made when the player's day starts: its real day number and its items. */
+  plan: { day: number; items: PlanItem[] } | null;
+  /** What they are doing now, since when, and why. */
+  doing: { activity: ActivityId; since: number; why: string };
+  cast: CastMember[];
+  /** Their timeline, oldest first. */
+  memory: MemoryEntry[];
+  /** Dollars in the bank. */
+  money: number;
+  /** Grade point average over the semesters graded since they were chosen, and how many. null before the first. */
+  gpa: number | null;
+  semesters: number;
+  /** This semester so far: the study need summed at each step, the steps, classes attended and classes there were. */
+  term: { study: number; steps: number; attended: number; classes: number };
+  /** Hours of each activity in today, for the day's line. */
+  today: Partial<Record<ActivityId, number>>;
+  job: string | null;
+  club: string | null;
+  /** True the morning after drinking at a party. */
+  hangover: boolean;
+  /** Key moments on one real day, to keep them to two or three (53.1). */
+  big: { day: number; count: number };
+}
+
+/** A Main Character who graduated, left or was set aside, with their story (DESIGN.md 53.2). */
+export interface FameEntry {
+  name: string;
+  major: string;
+  /** "Year 2 to Year 6". */
+  years: string;
+  status: 'graduated' | 'transferred' | 'left' | 'setAside';
+  gpa: number | null;
+  story: MemoryEntry[];
+  tick: number;
+}
+
+export interface Story {
+  mc: MainCharacter | null;
+  fame: FameEntry[];
+  /** The next id for someone in the cast. */
+  nextCast: number;
+  /** Lines from an action (choosing one, setting one aside), said on the next tick. */
+  news: string[];
 }
 
 /** One school year's part in its classes' affinity (DESIGN.md 56). */
@@ -1144,6 +1231,7 @@ export interface Term {
 }
 
 export type LogKind =
+  | 'mc'
   | 'alumni'
   | 'inbox'
   | 'goal'

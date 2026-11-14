@@ -44,6 +44,7 @@ import {
   type Placed,
   type PlacedType,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DAY, freshGame, HOUR, T0 } from './helpers';
 
@@ -270,7 +271,7 @@ describe('saves', () => {
     expect(loaded.state.timers.filter((timer) => timer.kind === 'discovery')).toEqual(state.timers.filter((timer) => timer.kind === 'discovery'));
     expect(findingsHeld(loaded.state, lab(loaded.state))).toBeCloseTo(findingsHeld(state, lab(state)), 5);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(27);
+    expect(SAVE_VERSION).toBe(28);
   });
 
   describe('from version 22', () => {
@@ -290,6 +291,8 @@ describe('saves', () => {
       expected.greek = newGreek();
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = loaded.state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on, and can build a lab.
@@ -298,7 +301,7 @@ describe('saves', () => {
       day.money.cash = 2_000_000_000;
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
-      expect(notes).toHaveLength(5);
+      expect(notes).toHaveLength(6);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });

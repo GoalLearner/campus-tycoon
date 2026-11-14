@@ -1,5 +1,5 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
-import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, WRITTEN } from '../sim';
+import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, suggestMain, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { shownHour } from './daylight';
@@ -1001,6 +1001,17 @@ export function installDevTools(): void {
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);
       store.catchUp();
+    }
+    // &mc=1 makes the student the game suggests the main character (DESIGN.md 53.2), and &mcdays=3 lives three real days
+    // of their life before the page opens, so the paper and their page have something to say.
+    if (params.has('mc') && store.hasGame) {
+      const ref = suggestMain(store.state);
+      if (ref) store.dispatch({ type: 'makeMain', ref });
+      const lived = Number(params.get('mcdays') ?? 0);
+      if (lived > 0) {
+        clock.skip(lived * 24 * 3_600_000);
+        store.catchUp();
+      }
     }
     // &hazingreport=0 puts a report about the first chapter on the desk, once the time away has reached pledge season.
     const reportAt = Number(params.get('hazingreport') ?? NaN);

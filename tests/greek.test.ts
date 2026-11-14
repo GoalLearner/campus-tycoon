@@ -35,6 +35,7 @@ import {
   type GameState,
   type LogEntry,
 } from '../src/sim';
+import { newStory } from '../src/sim/systems/mc';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { approvalAt } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
@@ -328,7 +329,7 @@ describe('saves', () => {
     expect(loaded.state.greek).toEqual(state.greek);
     expect(loaded.state.timers.filter((timer) => timer.kind === 'greek')).toHaveLength(2);
     expect(validate(loaded.state)).toBeNull();
-    expect(SAVE_VERSION).toBe(27);
+    expect(SAVE_VERSION).toBe(28);
   });
 
   describe('from version 24', () => {
@@ -346,12 +347,14 @@ describe('saves', () => {
       expected.greek = newGreek();
       // Version 27 adds the alumni pool (tests/alumni.test.ts has it).
       expected.alumni = loaded.state.alumni;
+      // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
+      expected.story = newStory();
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(3);
+      expect(notes).toHaveLength(4);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

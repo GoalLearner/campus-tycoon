@@ -2901,3 +2901,86 @@ button.students {
 .score-arrow.bad {
   color: #e8847a;
 }
+
+/* The Main Character (DESIGN.md 53.2): a portrait on the top bar, a section at the head of the paper, their page. */
+.main-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 2px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.main-button .main-art {
+  width: 32px;
+  height: 38px;
+}
+.main-button.none .main-art {
+  opacity: 0.45;
+}
+.paper-main {
+  background: rgba(255, 210, 74, 0.1);
+  border: 1px solid rgba(255, 210, 74, 0.45);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0 0 10px;
+}
+.paper-main-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+}
+.paper-main-name {
+  font-weight: 700;
+  flex: 1;
+}
+.paper-main-line {
+  margin: 4px 0;
+  font-size: 0.92em;
+}
+.main-need {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+}
+.main-need-name {
+  min-width: 70px;
+}
+.main-need .cause-bar {
+  flex: 1;
+}
+.cause-fill.low {
+  background: #e8847a;
+}
+.main-done {
+  opacity: 0.7;
+}
+.main-actions {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.main-actions button {
+  flex: 1;
+  min-height: 44px;
+}
+.main-fame summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Beside the portrait, the level keeps close. */
+.main-button + .hud-chip.level-chip {
+  margin-left: 4px;
+}
