@@ -6694,6 +6694,7 @@ A school year is one real week, so a semester is about three and a half real day
 - **The president shapes the odds**, never the choices: Housing stages, singles and RAs for roommates; class size, Instruction, tutoring, the library and labs for classes; alcohol policies, Campus Safety and Greek oversight for parties; clubs, recreation and social spaces for loneliness; campus jobs, scholarships and dining prices for money. Levers that do not exist yet (singles, campus jobs, scholarships, dining prices) are added in MC-2 if small, or listed for later.
 - The same library feeds the named regulars around the Main Character (phone rules decide for them) and the newspaper.
 - Presentation: a Story tab written as chapters, key moments as short scenes on the next visit with outcome and odds, cliffhanger notices before big moments, the paper for the biggest.
+- **Built on 2026-11-13, with the storyteller of 53.5 and the library of 53.6: section 58 has it as built.**
 
 ### 53.4 DeepSeek (MC-3)
 
@@ -6965,3 +6966,58 @@ The long run's once-a-day player on both seeds follows the student the game sugg
 | Follow opens their card; on the map they are followed only while they are out walking | The crowd draws a sample of students, and they are one of 46,000 |
 | Their traits do little yet but sleep and closeness | MC-2's arcs are where traits make problems |
 | A real day with no visit still plans and lives | They live whether watched or not, as the campus does |
+
+## 58. The story system (MC-2), as built
+
+53.3 to 53.6 built on 2026-11-13, the stop after MC-1 (section 57), on the main session's brief: "arcs and events as data, the storyteller, honest odds, the Story tab, and the library (about 26 arcs and 60 events, including the party and hazing arcs), with the 13+ boundary of 52.1. Small missing levers are added here: singles, campus jobs, scholarships, dining prices. Anything bigger goes on a list for later." Like the Main Character, the story reads the campus and changes nothing in it.
+
+### 58.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| Stories are data | An arc is stages; each stage a scene, one to three choices, and for each choice its odds and a good and a bad outcome. An outcome changes needs, Happiness and Stress (fading over days), this semester's grades, money, closeness, who is around them (a new friend, a crush who becomes a partner, a breakup, a new crush, a new roommate), a job, a chapter, a team; and says what comes next: the next stage, the end, or another arc. An event is one stage. A new story is an entry, never code | `src/sim/config/stories.ts`, `src/sim/config/storyLibrary.ts` |
+| The library | 26 arcs and 60 events, every category of 53.6: roommates (the match, opposite schedules, the swap), classes (the make-or-break class, the group project, probation and the way back, the major crisis), dating (the crush, long distance, jealousy, moving on), partying (the party before the exam, the scene, the party broken up), social (finding their people, the group splits, homesick), money (broke to a campus job, the job and the classes, a scholarship on the line), Greek life and teams (rush and bid day, pledging, tryouts to starter, the comeback), and two good arcs (the Dean's list run, student government); and the 60 smaller ones the table lists, good ones among them | `ARCS`, `EVENTS` |
+| Who chooses | The phone's rules: a choice leans toward natures, goals and low needs, and a little of the character's own mood (from the seed) settles a close call. The president never chooses: the same character on any campus makes the same choice | `pick` in `src/sim/systems/storyteller.ts` |
+| Honest odds | The game rolls each outcome from real numbers: the character's effort lately (hours of study, training, time with friends, at their club or job), their grades, closeness, needs, and the campus at their home (recreation, the library, places to meet people, class size, teaching, Safety and health, an RA on the floor from the dorm's stage, the rules against hazing, party registration and alcohol education, the three levers, the football program). Afterwards it says the odds of what happened and what moved them most, the campus's part first where it counted: "Made the team: 62%, helped by weeks of training"; a bad outcome names what held it back; "despite" when it went the other way. Between 8 and 92 in 100, never certain | `oddsOf`, `oddsRead` |
+| Failure leads somewhere | Every choice that can fail has an outcome for it, and many chain: a failed midterm to probation and the way back, no bid to finding their people, a lost scholarship to a campus job, a breakup to moving on | `Outcome.next` |
+| The storyteller | Once a real hour. One main arc and up to two side stories at a time; ten real hours between arcs and six between events; no kind of story twice in a row; a heavy story (hazing, a breakup, cheating, probation) one at a time with two real days of rest after; the same story not again for a week; a good story two and a half times likelier after bad luck; rush and bid day only in rush week, tryouts and game days in the football season, exams stories near exams. A cliffhanger six real hours before a big stage ("Tryouts for the track team are tomorrow"). Key moments use the two-a-day notices | `stepStory`; `STORY_STEP`, `QUIET_HOURS`, `HEAVY_COOLDOWN_HOURS` and the rest in `stories.ts` |
+| The Story tab | On the Main Character's page, beside Now: the story as chapters, newest first, each scene what happened, what they did, how it went, and the odds | `mcView` in `src/ui/mcUi.ts`; `openMain` in `src/ui/ui.ts` |
+| The paper | Every scene is a line of the Main Character's section at the head of the paper, key moments first | section 57 |
+| The levers | Three policies of the Flagship era, data like the rest: **Campus jobs program** (the odds of finding work, $40 a student a year), **Need-based scholarships** (money and scholarship stories, $120), **Cheaper dining plans** (money stories, $30). Each cost is a line of its own under Other on the Money panel. Singles are left for later: they change how many beds a dorm holds | `campusJobs`, `needScholarships`, `cheaperDining` in `src/sim/config/policies.ts`; effect kinds `storyOdds`, `perStudent`; `policySpending` |
+| The 13+ boundary | Nothing on the "still out" list (a test reads every line of the library); hazing light and never drinking, eating or hurting; drinking for juniors and seniors only; romance at relationships and a kiss at most, none shown. The Main Character's lines count toward the long run's budgets for drinking and heavy themes | `tests/story.test.ts`; `scripts/simulate.ts` |
+| Saves | Version 29: no story under way; a Main Character gains what the story reads (effort lately, its mood and Stress, grades, a chapter, a team), at nothing | `MIGRATIONS[28]`, `tests/fixtures/save-v28-model.json` |
+
+### 58.2 Decisions
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| The odds' words | What happened, and what moved it that way; "despite" when nothing did | The single biggest part, which could say "helped by" under a failure |
+| The levers | Three small policies whose gain is the story's odds and whose cost is money | Systems of their own (a jobs market, an aid office) |
+| Singles | Listed for later | A Housing switch that halves a dorm's beds |
+| The team | One team, the track team, for every Main Character | A sport by their club or nature |
+| The named regulars around them | Their roommate, friends, crush and partner are in the stories; their own lives are not yet stories of their own | Stories for each of them |
+
+### 58.3 Measured
+
+The long run's once-a-day player on both seeds, following a Main Character for 44 real weeks (15 of them, 14 to graduation).
+
+| Measured | Result |
+|---|---|
+| Stories | 15.0 and 15.2 begun a real week (659 and 667 in all): about two a real day, arcs and the smaller events together |
+| Kinds | 7 and 9 categories among the last 40; 1 and 2 of those 40 heavy |
+| Key moments | 7.0 and 7.4 a real week, at most 3 on one real day (two moments and a graduation) |
+| The paper | About 40 of their lines a real week, scenes with their odds among them; the last six of an absence at the head of the paper |
+| What a player reads | For the once-a-day player 1.67 and 1.81 in 100 lines about drinking and 0.46 and 0.63 about a heavy theme, against budgets of 4 |
+| Grades | Those who graduated averaged a 3.42 and a 3.44 |
+| The three levers, on the once-a-day campus for six years | Campus jobs program $1.86 million a year (0.33 less kept of every $100), Need-based scholarships $5.57 million (0.99 less), Cheaper dining plans $1.39 million (0.25 less); nothing else on the campus moves. Their gain is in the story's odds |
+| The campus | Every number as without a Main Character: the Top 10 in weeks 27 to 29, money in range, levels at most 6.9 a week |
+| Tests | 11 new (`tests/story.test.ts`), 942 in all. One new long-run check: several stories a real week, of many kinds, few heavy. 89 checks in all |
+
+### 58.4 Rough
+
+| Rough | Why |
+|---|---|
+| The newspaper does not lead with a Main Character's story | Their section at the head of the paper carries it; a headline is for the campus |
+| A story about the team uses the track team whatever the campus has | The campus has no track; a sport per campus is a later stop |
+| Singles | Later: a Housing switch with fewer beds |
+| DeepSeek | MC-3, after the owner's account steps |
