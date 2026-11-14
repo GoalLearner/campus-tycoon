@@ -2082,7 +2082,7 @@ The player's academic rating is this sum, and the player can read it. All weight
 | Selectivity | 10% | The acceptance rate, stage 2 |
 | Money per student | 10% | Instruction spending and endowment per head |
 
-Every older rule that says "the academic rating takes a hit" now names its input. A bailout hits Reputation. A hiring freeze hits Class size. Tough grading raises Reputation and lowers Retention. Greek Row's drag and the Slacker and Scholar effects move Reputation a little. Sections 9, 12, 13 and 14 are reworded to match when layer 2 builds this. Before an input exists, its weight is shared among the ones that do. Reputation is slow on purpose: it stops the rank from jumping.
+Every older rule that says "the academic rating takes a hit" now names its input. A bailout hits Reputation. A hiring freeze hits Class size. Tough grading raises Reputation and lowers Retention. Greek Row's drag and the Slacker and Scholar effects move Reputation a little. Sections 9, 12, 13 and 14 are reworded to match when layer 2 builds this. Before an input exists, its weight is shared among the ones that do. Reputation is slow on purpose: it stops the rank from jumping. Alumni success switched on with alumni giving on a game with goals (section 56); money per student does not exist yet.
 
 ### 24.5 Three levels of display
 
@@ -6637,7 +6637,7 @@ Guideline 1.4.3: an app may not encourage excessive drinking, and one that encou
 
 **What keeps it at 13+:**
 
-1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus. A long-run check counts the lines that mention drinking and holds them to a budget [T].
+1. **Alcohol stays infrequent.** It is part of some parties and some tailgates, not of every screen. It never appears on the top bar, the Build menu or a policy's name other than Dry campus and Alcohol education (52.3 names both; kept by main on 2026-11-13, since a policy's name is read only on the Policies page). A long-run check counts the lines that mention drinking and holds them to a budget [T].
 2. **Mature themes stay infrequent.** The storyteller rations hazing, cheating, breakups and probation (53.5): never more than one heavy arc at a time, with quiet stretches between.
 3. **Drinking is never rewarded on balance.** Every choice to drink costs something the player can see.
 4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. [Recommended; the alternative is any age, which reads to a reviewer as encouraging minors.]
@@ -6748,7 +6748,7 @@ The owner, 2026-11-13, after accepting Greek Row: "Next, in order, one build thr
 
 ## 54. Alumni giving (approved 2026-11-13)
 
-The owner, 2026-11-13: "Alumni giving: graduates join an alumni pool that grows forever. Donations driven by alumni success, how happy they were as students, traditions, Greek membership, and winning teams. A yearly donation drive at commencement and an endowment link. Show it on the Money panel and the Scorecard. Keep money inside $12 to $17 of every $100." It is the last two stages of the spine of 24.1 (alumni success, donations), which were designed but never built. It is built as its own stop, after the content stop and before MC-1.
+The owner, 2026-11-13: "Alumni giving: graduates join an alumni pool that grows forever. Donations driven by alumni success, how happy they were as students, traditions, Greek membership, and winning teams. A yearly donation drive at commencement and an endowment link. Show it on the Money panel and the Scorecard. Keep money inside $12 to $17 of every $100." It is the last two stages of the spine of 24.1 (alumni success, donations), which were designed but never built. It is built as its own stop, after the content stop and before MC-1. **Built on 2026-11-13: section 56 has it as built.**
 
 ### 54.1 The alumni pool
 
@@ -6850,3 +6850,59 @@ The long run's six test players on the model campus, 44 weeks each (a week is a 
 | A tailgate is asked once a school year | Asked before every home game, it would be on most weeks' desks, and drinking would not be infrequent |
 | Hazing has no arc yet | The pledge's side of it (go along, push back, report) is MC-2's arc |
 | A heartbroken student feels nothing more | Felt in Happiness, Stress and memory is the Main Character's, in MC-1 and MC-2 |
+
+## 56. Alumni giving and the first Scorecard, as built
+
+Section 54 built on 2026-11-13, the stop after the content stop (section 55), on the main session's brief: "the pool, the yearly drive at commencement, the endowment link, the Money panel, and the first Scorecard page. Alumni success switches on as its 15% rating input, tuned so the rank pace holds. Money stays in $12 to $17 of every $100." Only a game with goals has a drive, so the small campus's tables are the same, line for line.
+
+### 56.1 As built
+
+| Thing | As built | Where |
+|---|---|---|
+| The pool | Every graduate joins it and nobody leaves: the opening pool and every class since. A model campus opens with the classes before the player arrived: 20 classes the size of a quarter of the school (230,000 alumni on the owner's campus), at success 65 and affinity 50. An older save gets that pool with every graduate it has had added | `alumniPool`, `openingPool` in `src/sim/systems/alumni.ts`; `OPENING_*` in `src/sim/config/alumni.ts` |
+| A class's two numbers | Fixed on its record (24.8) the day it graduates, with its share in chapters. **Success**, 0 to 100: the academic rating that year, 20 points up or down for each point its on-time share is from 0.85, and the same for its job placement from 0.75 (placement is 55 in 100 with a job, and 40 more at a rating of 100). Centred on the rating, so a class as good as its school neither lifts nor drags the input it feeds. **Affinity**, 0 to 100: Happiness over its four years (six tenths), traditions kept in them (three a year in full, 15 in 100), its share in chapters (a tenth in full, 10 in 100), and the football record in them (15 in 100) | `classNumbers`, `alumniOnGraduation`; `ClassRecord.success`, `affinity`, `greek` |
+| Its years | Each semester's Happiness as it closes, the traditions kept and the season's wins and games, kept for the last six school years | `alumniOnSemester`, `AlumniYear` |
+| The drive | At every commencement, as the class graduates. Each class gives: its size, times a rate from its affinity (4 in 100 at 0, 20 at 100; chapter members at one and a half times; 5 in 100 more with the Alumni House standing), times a gift from its success ($15 at 0, $75 at 100), a little more each year since it graduated (1 in 100 a year, 20 at most). A winning season this year adds up to a tenth. 60 in 100 goes to the endowment at once, which earns its 2% for good; the rest is cash, paid over the school year that follows | `driveNow`, `participation`, `giftSize`; `PARTICIPATION`, `GIFT`, `ENDOWED_SHARE` |
+| In the paper | One line, and the headline on a day with nothing bigger: "The alumni drive raised $1,804,523 from 28,801 of 239,787 alumni: $1,082,714 to the endowment, and $721,809 in cash over the year. Happier classes give more: the Class of Year 3 gave at 18%, the Class of Year 1 at 11%." The second sentence comes when the classes differ by half a point or more; a winning season says what it added | `driveLine`, `whyLine`; `leads` in `src/sim/newspaper.ts` |
+| The Money panel | "Alumni giving" under income: the cash share of the last drive, a year's worth. The endowment's line says how much of it alumni gave. Under the endowment, one line: "{n} alumni. The last drive raised {x}; {y} went to the endowment." | `budget` in `src/sim/systems/budget.ts`; `moneyView` in `src/ui/buildUi.ts` |
+| The academic rating | Alumni success is its input of 15 (24.4): the latest four classes' success, the opening pool filling in until four have graduated. Named on the Rankings page with its latest class. Elsewhere its weight is shared among the others as before | `alumniSuccess`, `alumniDetail`; `academicInputs` in `src/sim/systems/field.ts` |
+| The Scorecard | A page behind the student count, after Goals and Capacity: the seven stages as seven rows. Each has its number, an arrow against the end of last school year (green when it is better, red when worse, and acceptance is better lower), and the one thing that limits it most, in plain words: the cause of applicants that adds the least; room or the cap for acceptance; for retention, the weakest cause of Happiness; for graduation, the faculty ratio (section 38 left it here); the rating for alumni success; the weakest part of the latest class's affinity for donations. Yield says every student offered a place comes: nothing competes for them in this version | `scorecard`, `scorecardYearEnd` in `src/sim/systems/scorecard.ts`; the page in `src/ui/ui.ts` |
+| Saves | Version 27. A game with goals gets its opening pool, with every graduate since added; no drive yet | `MIGRATIONS[26]`, `tests/fixtures/save-v26-model.json` |
+
+### 56.2 Decisions
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| Who has a drive | A game with goals: the small campus's tables must not move | Every game |
+| The cash share | Paid over the school year, as an income line, so the Money panel and the money kept read it as they read everything else | A lump at commencement |
+| A class's success | Centred on the rating that year, so the rank's pace holds | A sum of its parts, which ran ten points above the rating and would have brought the Top 10 sooner |
+| The opening pool | 65, a middling class for a school of the model campus's standing | 50, which dragged the rating in the first weeks |
+| How much it raises | Small at first (about $1.8 million, a two-hundredth of a year's income), growing with the pool | Real alumni giving, which would have pushed the money kept over $17 |
+| The Alumni House | Lifts every class's rate by 5 in 100 while it stands | Nothing (54.2 marks it optional) |
+| Yield | Shown as it is: everyone offered a place comes | A made-up yield |
+
+### 56.3 Measured
+
+The long run's six test players on the model campus, 44 weeks each, against the content stop's run where it says so.
+
+| Measured | Result |
+|---|---|
+| The pool | 239,900 alumni at the first drive (the classes before his time and the first class), 750,000 to 760,000 by week 44. It never fell |
+| The drives | 44 of 44 commencements for every player, the players who touch none of it included. About $1.8 million at the first, $3.1 to $3.2 million by week 10, $5.0 to $5.2 million by week 20, $9.5 to $10.0 million by week 44 |
+| Cash and the endowment | The cash share at week 44: $3.8 to $4.0 million a year, 0.80% to 0.86% of income. $145 to $150 million to the endowment in all, which earns $2.9 to $3.0 million a year |
+| A class's numbers | Success 76.5 to 79.2 on average (the rating, a little up for finishing on time and jobs); affinity 83.6 to 85.9, the last class 88.2 to 89.8 (happy campuses, traditions kept, Greek members, wins) |
+| Alumni success in the rating | 81.5 to 83.7 at the end |
+| The pace of the rank goals | The Top 10 in weeks 27 to 29, against 29 to 31 before: two weeks sooner, never before week 24 |
+| The money | Years 3 to 8: $13.7 to $15.2 kept of every $100 (casual), $13.0 to $15.1 (once a day). The later weeks: $12.4 to $15.6 and $12.2 to $15.8 |
+| Levels | The once-a-day player made 6.3 and 6.9 levels a week after week 12: under the ceiling of 7.00 |
+| The small campus | Every table the same, line for line |
+| Tests | 11 new (`tests/alumni.test.ts`). One new long-run check: a drive at every commencement and a pool that never falls |
+
+### 56.4 Rough
+
+| Rough | Why |
+|---|---|
+| Yield is one line with nothing behind it | No other school competes for a student yet |
+| A finished class's years are read from the last six | Older years are dropped; a class always graduates within them |
+| The Scorecard's arrows wait for the first year's end | Nothing to compare before it |
+| Year-End grades against the national field | Left for later (24.7) |
