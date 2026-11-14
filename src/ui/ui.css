@@ -873,6 +873,13 @@ button.student-row {
   margin: 4px 0 6px;
 }
 
+/* "Known to 100" goes onto two lines under a face rather than being cut short. */
+.social-faces .student-friend-role {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
+}
+
 /* What they feel (DESIGN.md 63.7): the emote, the emotion, and why. */
 .student-emote {
   flex: none;
