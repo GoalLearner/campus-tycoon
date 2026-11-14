@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
-import type { GameState } from '../sim';
+import type { GameState, SocialEffects } from '../sim';
+import { friendsEffectsOf } from '../sim/systems/friends';
 import { catchUp, decodeWeb, encodeWeb, newWeb, type Web } from '../sim/systems/web';
 import { packRecord, unpackRecord } from './webRecord';
 import { viewBuffers, viewOf, type WebView } from './socialView';
@@ -21,6 +22,8 @@ export interface WebReply {
   /** The record as stored. */
   record: string;
   view: WebView;
+  /** What the ties do to the campus this week (DESIGN.md 63.10), for the save. null on an empty web. */
+  effects: SocialEffects | null;
   /** `ms` for the web's work, `packMs` for squeezing the record, `recordBytes` before it is squeezed. */
   stats: { ms: number; packMs: number; recordBytes: number; lived: number; regrown: boolean; fromRecord: boolean };
 }
@@ -44,7 +47,8 @@ self.onmessage = async (event: MessageEvent<WebRequest>) => {
   const packed = performance.now();
   const record = await packRecord(bytes);
   const view = viewOf(web, true);
+  const effects = friendsEffectsOf(web);
   const stats = { ms, packMs: Math.round(performance.now() - packed), recordBytes: bytes.byteLength, ...done, fromRecord };
-  const reply: WebReply = { type: 'web', record, view, stats };
+  const reply: WebReply = { type: 'web', record, view, effects, stats };
   (self as unknown as Worker).postMessage(reply, viewBuffers(view) as ArrayBuffer[]);
 };

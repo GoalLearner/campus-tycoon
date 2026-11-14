@@ -1,4 +1,4 @@
-import type { GameState } from '../sim';
+import type { Action, GameState } from '../sim';
 import { KIND, SLOTS } from '../sim/config/web';
 import type { StudentRef } from '../sim/systems/students';
 import { webWeekOf } from '../sim/systems/web';
@@ -17,6 +17,7 @@ interface Host {
   hasGame: boolean;
   isEphemeral: boolean;
   subscribe(listener: () => void): () => void;
+  dispatch(action: Action): unknown;
 }
 
 const listeners = new Set<() => void>();
@@ -61,6 +62,9 @@ export function startSocialWeb(host: Host): void {
     socialWeb.view = reply.view;
     socialWeb.stats = reply.stats;
     socialWeb.recordBytes = reply.record.length;
+    // What the ties do to the campus goes into the save, for the campus to use until the next week (DESIGN.md 63.10).
+    const kept = host.state.web.effects;
+    if (reply.effects && host.hasGame && reply.view.seed === host.state.seed && kept?.week !== reply.effects.week) host.dispatch({ type: 'socialEffects', effects: reply.effects });
     if (!host.isEphemeral) void writeWebRecord(reply.record);
     for (const listener of listeners) listener();
     const next = wanted;

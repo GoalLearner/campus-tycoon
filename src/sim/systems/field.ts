@@ -213,9 +213,10 @@ export function academicInputs(state: GameState): AcademicInput[] {
   const seats = crowd <= 0 ? 'classes have room' : `classes are ${Math.round(crowd * 100)}% of the way to full`;
   const first = facultyStretched(state) && classPressure(state) - crowd / 2 > crowd / 2 ? `there is ${taught}, where ${ratioTarget(state)} is funded, and ${seats}` : `${seats}, with ${taught}`;
   const classes = first.charAt(0).toUpperCase() + first.slice(1);
-  // Retention as the four causes of Happiness give it, between its floor and its ceiling.
+  // Retention as the four causes of Happiness give it, between its floor and its ceiling, and what the students'
+  // ties added to it (DESIGN.md 63.10), counted in the same steps.
   const last = state.admissions.lastSemester;
-  const retention = last ? Math.max(0, Math.min(1, last.happiness / 100)) : null;
+  const retention = last ? Math.max(0, Math.min(1, last.happiness / 100 + (last.friends ?? 0) / RETENTION_SPAN)) : null;
   const inputs: AcademicInput[] = [
     { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes${honors > 0 ? `, ${Math.round(honors * 100)} of them with the Honors College` : ''}` },
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },

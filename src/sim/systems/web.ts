@@ -1,3 +1,4 @@
+import { EX_START } from '../config/social';
 import { calendarAt } from '../calendar';
 import { CLUBS, MAJORS } from '../config/students';
 import {
@@ -562,6 +563,8 @@ function cheat(web: Web, who: number, other: number): void {
   const held = partnered(web, who);
   if (held < 0) return;
   setBoth(web, held, web.back[held]!, KIND.ex, FEEL.tense);
+  // Its ex starts where any split's does, so a fresh breakup reads the same however it ended (DESIGN.md 63.10).
+  web.strength[held] = web.strength[web.back[held]!] = EX_START;
   count(web, EVENT.cheating);
   count(web, EVENT.splitMessy);
   note(web, EVENT.cheating, who, web.other[held]!, other);
@@ -689,7 +692,7 @@ function settle(web: Web): void {
       if (st < 30 || h < chance) {
         web.kind[s] = KIND.ex;
         web.feeling[s] = h < chance / 2 ? FEEL.complicated : FEEL.tense;
-        web.strength[s] = 40;
+        web.strength[s] = EX_START;
         if (a === lo) {
           // A cheating partner's couple has ended already, and was told as the cheating.
           const how = web.feeling[s] === FEEL.complicated ? EVENT.splitMutual : EVENT.splitMessy;

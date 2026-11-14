@@ -26,6 +26,7 @@ import { newGreek } from './systems/greek';
 import { newAlumni, openingPool } from './systems/alumni';
 import { newStory } from './systems/mc';
 import { calendarAt } from './calendar';
+import { effectsSound } from './systems/friends';
 import type { Field, GameState, MapState, Placed } from './types';
 
 /**
@@ -528,6 +529,9 @@ export function parseSave(
 
   const problem = validate(state);
   if (problem) return { ok: false, reason: problem };
+  // What ties do to the campus (DESIGN.md 63.10) is read again each game week: a reading out of range is dropped.
+  const web = (state as unknown as GameState).web;
+  if (web?.effects && !effectsSound(web.effects)) delete web.effects;
   return {
     ok: true,
     state: state as unknown as GameState,

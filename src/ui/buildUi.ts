@@ -1,3 +1,4 @@
+import { friendsStay } from '../sim/systems/friends';
 import {
   BUILD_ORDER,
   CAUSE_NAMES,
@@ -533,10 +534,12 @@ export function happinessView(state: GameState): HappinessView {
   const stress = mood.season.stress;
   const cause = STRESS_CAUSES[stress.cause];
   const harder = leavingMore(state);
+  // What the students' ties add to the share who stay (DESIGN.md 63.10).
+  const friendsKeep = friendsStay(state, mood.retention);
   return {
     stress: {
       score: stress.score,
-      note: `${stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}`}${stress.policy > 0 ? ` ${stress.policyBy.join(' and ')}: ${stress.policy} off this week.` : ''}${stress.late > 0 ? ` Late nights after parties: +${stress.late}.` : ''}`,
+      note: `${stress.cause === 'season' ? 'The campus is doing all it can. It eases when exams end.' : `Mostly from ${cause.name}. ${cause.fix.replace('would have eased', 'would ease')}`}${stress.policy > 0 ? ` ${stress.policyBy.join(' and ')}: ${stress.policy} off this week.` : ''}${stress.late > 0 ? ` Late nights after parties: +${stress.late}.` : ''}${stress.friends !== 0 ? ` Friends: ${stress.friends > 0 ? '+' : '\u2212'}${Math.abs(stress.friends)} this week.` : ''}`,
     },
     week: mood.season.parts.map((part) => ({ label: part.label, points: `${part.points > 0 ? '+' : '\u2212'}${Math.abs(Math.round(part.points))}` })),
     score,
@@ -544,7 +547,7 @@ export function happinessView(state: GameState): HappinessView {
     rows,
     advice: mood.worst && mood.worstPart ? `Biggest gap: ${CAUSE_NAME[mood.worst].toLowerCase()}. ${PART_FIX[mood.worstPart]}` : '',
     build: mood.worst === 'life' || mood.worst === 'safety' || mood.worstPart === 'clean' || mood.worstPart === 'seating',
-    staying: `At this happiness ${(mood.retention * 100).toFixed(1)}% of students stay on each semester.${harder.share > 0 ? ` ${harder.by.join(' and ')}: ${(harder.share * 100).toFixed(2).replace(/0$/, '')}% fewer.` : ''}`,
+    staying: `At this happiness ${((mood.retention + friendsKeep) * 100).toFixed(1)}% of students stay on each semester.${Math.abs(friendsKeep) >= 0.0005 ? ` Friends ${friendsKeep > 0 ? 'keep' : 'lose'} ${(Math.abs(friendsKeep) * 100).toFixed(1)} points of it.` : ''}${harder.share > 0 ? ` ${harder.by.join(' and ')}: ${(harder.share * 100).toFixed(2).replace(/0$/, '')}% fewer.` : ''}`,
     lastSemester: last ? `Last semester ${plural(last.left, 'student', 'students')} left and ${headCount(last.stayed)} stayed. Happiness was ${last.happiness}.` : '',
   };
 }

@@ -178,7 +178,7 @@ export function causeShifts(state: GameState, zone: Zone, member?: number): Caus
 // --------------------------------------------------------------- stress --
 
 /** How much of an exams effect applies at a point on the calendar's curve: all of it in finals week, a share at midterms. */
-function examPart(curve: number): number {
+export function examPart(curve: number): number {
   if (curve >= SEASON_CURVE.finals) return 1;
   return curve >= SEASON_CURVE.midterms ? EXAMS_AT_MIDTERMS : 0;
 }

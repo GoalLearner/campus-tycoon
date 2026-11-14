@@ -70,7 +70,8 @@ import { townLiving } from './town';
 import { socialTables } from './grounds';
 import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
 import { classSizeNow, teaching } from './staffing';
-import { causeShifts, ratingShift, type CauseShift } from './policies';
+import { causeShifts, examPart, ratingShift, type CauseShift } from './policies';
+import type { StudentFriends } from './friends';
 import { chapterLift, memberOf } from './greek';
 import { partiesOn } from './parties';
 import { DRINKING_YEAR } from '../config/parties';
@@ -477,6 +478,12 @@ export interface StudentCard {
   reason: StudentReason | null;
   /** A Party Animal's weekends on a campus with parties, said plainly (DESIGN.md 55). null for everyone else. */
   party: string | null;
+  /**
+   * What their ties do (DESIGN.md 63.10), when the card was read with them: points of Happiness and of Stress, and
+   * GPA, each already in the numbers above. null when read without the web, which keeps the old nudge of their
+   * relationship instead.
+   */
+  friends: { happiness: number; stress: number; gpa: number } | null;
 }
 
 function natureOf(seed: number, ref: StudentRef, resident: boolean): ArchetypeId {
@@ -635,8 +642,11 @@ function streetOf(state: GameState, ref: StudentRef): string | null {
   return hoods[hoods.length - 1]!.name;
 }
 
-/** Everything the card shows, or null when no such student is enrolled now. */
-export function studentCard(state: GameState, ref: StudentRef): StudentCard | null {
+/**
+ * Everything the card shows, or null when no such student is enrolled now. `friends` is their ties as the web reads
+ * them (DESIGN.md 63.10): with it their own friends move their Happiness, Stress and GPA; without, the campus's.
+ */
+export function studentCard(state: GameState, ref: StudentRef, friends?: StudentFriends | null): StudentCard | null {
   const classYear = classYearOf(state, ref);
   if (classYear === null) return null;
   const seed = state.seed;
@@ -673,15 +683,28 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   // What the calendar and the sky are doing to everyone this week. Some kinds of student take exams harder.
   const week = seasonOnCards(state);
   const tilt = STRESS_TILT[phase] ?? 1;
-  const stress = Math.max(0, Math.min(100, Math.round(week.stress.score * tilt)));
+  // Their own ties, when the card has them (DESIGN.md 63.10), in place of the campus's average: in an exam week a
+  // breakup or a fight adds to Stress and friends take some off, and the campus's scale keeps it within its cap.
+  const effects = state.web.effects;
+  const exams = examPart(week.stress.season);
+  const ownStress = friends && exams > 0 ? Math.round(friends.examStress * (effects?.stressScale ?? 1) * exams) || 0 : 0;
+  const stressBase = friends ? Math.max(0, week.stress.score - week.stress.friends) : week.stress.score;
+  const stress = Math.max(0, Math.min(100, Math.round(stressBase * tilt) + ownStress));
+  const ownHappiness = friends ? Math.round(friends.happiness * (effects?.scale ?? 1)) : 0;
   let seasonal = 0;
-  for (const part of week.parts) seasonal += part.id === 'exams' ? Math.max(-STRESS_HAPPINESS, part.points * tilt) : part.points;
+  for (const part of week.parts) {
+    // The campus's Friends line is the average of every card's own: a card counts its own points instead.
+    if (part.id === 'friends') continue;
+    seasonal += part.id === 'exams' ? Math.max(-STRESS_HAPPINESS, part.points * tilt) : part.points;
+  }
+  // Their ties, when known, stand where the old guess at their relationship stood.
+  const nudge = friends ? ownHappiness : relationship.points;
   if (spots.length > 0) {
     // A member feels their chapter's whole lift, where the campus feels it by their share.
     const approval = approvalOver(state, spots, member ? causeShifts(state, 'housing', chapterLift(state, member.chapter).points) : undefined);
     const temperament = (roll(seed, ref, SALT.mood) * 2 - 1) * TEMPERAMENT_SPREAD;
     // The status nudges this one student. It is never offered as the reason: that stays something the player can change.
-    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + relationship.points + seasonal)));
+    happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + nudge + seasonal)));
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
@@ -697,7 +720,9 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     (GPA_BY_CLASS_YEAR[classYear] ?? 0) -
     // Exam Stress nudges grades down a little, and lifts when the exams end.
     STRESS_GPA * (stress / 100);
-  const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw)) * 10) / 10;
+  // A study partner lifts grades a little; a messy breakup in an exam week takes some off (DESIGN.md 63.10).
+  const ownGpa = friends ? (exams > 0 ? friends.gpaInExams : friends.gpa) : 0;
+  const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw + ownGpa)) * 10) / 10;
 
   return {
     ref,
@@ -723,6 +748,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     stress,
     week: week.parts.length > 0 ? week.parts.reduce((most, part) => (Math.abs(part.points) > Math.abs(most.points) ? part : most)).label : null,
     party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
+    friends: friends ? { happiness: ownHappiness, stress: ownStress, gpa: ownGpa } : null,
   };
 }
 
