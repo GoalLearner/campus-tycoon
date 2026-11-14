@@ -80,11 +80,12 @@ def paint(canvas, mask, colour):
     canvas.paste(layer, (0, 0), mask)
 
 
-def body(canvas, mask, fill, shade, light=None):
-    """A shape as the pack draws one: outlined, filled, a darker rim, and a highlight if one is given."""
-    paint(canvas, grow(mask, LINE), PLUM)
+def body(canvas, mask, fill, shade, light=None, line=LINE, edge=RIM):
+    """A shape as the pack draws one: outlined, filled, a darker rim, and a highlight if one is given. A smaller
+    picture inside a bubble takes a thinner `line` and `edge`, so it reads at the bubble's size."""
+    paint(canvas, grow(mask, line), PLUM)
     paint(canvas, mask, fill)
-    paint(canvas, rim(mask, RIM), shade)
+    paint(canvas, rim(mask, edge), shade)
     if light:
         spot = blank()
         ImageDraw.Draw(spot).ellipse(light, fill=255)
@@ -274,6 +275,171 @@ def sweat():
     return c
 
 
+SKIN = (255, 206, 160, 255)
+SKIN_RIM = (214, 148, 104, 255)
+ORANGE_BALL = (244, 128, 36, 255)
+GREY = (150, 150, 170, 255)
+GREY_RIM = (96, 96, 120, 255)
+GREEN = (96, 196, 104, 255)
+GREEN_RIM = (48, 136, 64, 255)
+PINK = (246, 150, 186, 255)
+PINK_RIM = (206, 92, 140, 255)
+BLUE = (110, 168, 240, 255)
+BLUE_RIM = (60, 110, 196, 255)
+INNER = 30      # the outline of a picture inside a bubble
+INNER_RIM = 22
+
+
+def rotated(mask, degrees, about):
+    return mask.rotate(degrees, resample=Image.BICUBIC, center=about)
+
+
+def hand(cx, cy, scale=1.0, turn=0.0, fist=False):
+    """An open hand, or a fist, as a mask: a palm, four fingers and a thumb."""
+    k = scale
+    parts = [rounded((cx - 120 * k, cy - 40 * k, cx + 120 * k, cy + 190 * k), 70 * k)]
+    if fist:
+        parts.append(rounded((cx - 130 * k, cy - 120 * k, cx + 130 * k, cy + 30 * k), 60 * k))
+    else:
+        for i, h in enumerate((150, 190, 180, 140)):
+            x0 = cx - 118 * k + i * 60 * k
+            parts.append(rounded((x0, cy - h * k - 30 * k, x0 + 52 * k, cy + 20 * k), 26 * k))
+    parts.append(rotated(rounded((cx - 210 * k, cy + 10 * k, cx - 80 * k, cy + 70 * k), 30 * k), -35, (cx - 90 * k, cy + 40 * k)))
+    m = union(*parts)
+    return rotated(m, turn, (cx, cy)) if turn else m
+
+
+def wave():
+    c = blank('RGBA')
+    body(c, hand(560, 560, 1.15, 12), SKIN, SKIN_RIM, (470, 300, 540, 380))
+    d = ImageDraw.Draw(c)
+    # The wave: two short arcs beside the hand.
+    for r in (330, 410):
+        d.arc((560 - r, 520 - r, 560 + r, 520 + r), 300, 340, fill=PLUM, width=40)
+    return c
+
+
+def highfive():
+    c = blank('RGBA')
+    body(c, hand(330, 620, 0.95, 28), SKIN, SKIN_RIM, (260, 420, 320, 480))
+    body(c, hand(330, 620, 0.95, 28).transpose(Image.FLIP_LEFT_RIGHT), SKIN, SKIN_RIM)
+    body(c, polygon(star_points(512, 210, 150, 60, n=6)), GOLD, GOLD_RIM)
+    return c
+
+
+def fistbump():
+    c = blank('RGBA')
+    left = rotated(hand(300, 560, 0.9, 0, fist=True), -90, (300, 560))
+    right = rotated(hand(724, 560, 0.9, 0, fist=True), 90, (724, 560))
+    body(c, left, SKIN, SKIN_RIM, (200, 470, 260, 530))
+    body(c, right, (196, 140, 98, 255), (150, 98, 64, 255))
+    body(c, polygon(star_points(512, 300, 120, 48, n=6)), GOLD, GOLD_RIM)
+    return c
+
+
+def hug():
+    c = blank('RGBA')
+    body(c, ellipse((150, 380, 530, 760)), PINK, PINK_RIM, (220, 440, 300, 500))
+    body(c, ellipse((494, 380, 874, 760)), BLUE, BLUE_RIM, (560, 440, 640, 500))
+    d = ImageDraw.Draw(c)
+    for x in (300, 400, 624, 724):
+        d.arc((x - 40, 520, x + 40, 600), 200, 340, fill=PLUM, width=30)
+    body(c, heart_mask(512, 170, 105), RED, RED_RIM)
+    return c
+
+
+# A speech bubble with what they are talking about inside: a shared interest, or a heart between a couple.
+
+def bubble_mask():
+    return union(rounded((110, 120, 914, 760), 170), polygon([(270, 700), (470, 700), (220, 930)]))
+
+
+def chat(draw_inside):
+    def make():
+        c = blank('RGBA')
+        body(c, bubble_mask(), PAPER, PAPER_RIM, (190, 180, 330, 270))
+        draw_inside(c)
+        return c
+    return make
+
+
+def in_ball(c):
+    body(c, ellipse((362, 290, 662, 590)), ORANGE_BALL, ORANGE_RIM, (420, 330, 470, 380), INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    d.line([(512, 290), (512, 590)], fill=PLUM, width=20)
+    d.line([(362, 440), (662, 440)], fill=PLUM, width=20)
+    d.arc((300, 300, 470, 580), 300, 60, fill=PLUM, width=20)
+    d.arc((554, 300, 724, 580), 120, 240, fill=PLUM, width=20)
+
+
+def in_pad(c):
+    m = union(rounded((300, 340, 724, 560), 100), ellipse((290, 420, 420, 610)), ellipse((604, 420, 734, 610)))
+    body(c, m, GREY, GREY_RIM, (360, 370, 420, 410), INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    d.rectangle((370, 430, 450, 456), fill=PLUM)
+    d.rectangle((397, 403, 423, 483), fill=PLUM)
+    for x, y, col in ((600, 420, RED), (650, 460, GOLD)):
+        d.ellipse((x - 22, y - 22, x + 22, y + 22), fill=col, outline=PLUM, width=8)
+
+
+def in_note(c):
+    heads = union(ellipse((350, 500, 470, 590)), ellipse((560, 470, 680, 560)))
+    stems = union(polygon([(440, 540), (470, 540), (470, 300), (440, 300)]), polygon([(650, 510), (680, 510), (680, 270), (650, 270)]))
+    beam = polygon([(440, 300), (680, 270), (680, 330), (440, 360)])
+    body(c, union(heads, stems, beam), VIOLET, VIOLET_RIM, None, INNER, INNER_RIM)
+
+
+def in_dumbbell(c):
+    m = union(rounded((330, 340, 400, 580), 20), rounded((624, 340, 694, 580), 20), rounded((300, 380, 340, 540), 14), rounded((684, 380, 724, 540), 14), rounded((390, 440, 634, 480), 10))
+    body(c, m, GREY, GREY_RIM, None, INNER, INNER_RIM)
+
+
+def in_cup(c):
+    cup = polygon([(390, 290), (634, 290), (596, 600), (428, 600)])
+    body(c, cup, CUP, CUP_RIM, (420, 330, 460, 430), INNER, INNER_RIM)
+    paint(c, ImageChops.multiply(cup, polygon([(0, 290), (BIG, 290), (BIG, 340), (0, 340)])), PAPER)
+
+
+def in_book(c):
+    left = polygon([(300, 340), (505, 380), (505, 600), (300, 560)])
+    right = polygon([(519, 380), (724, 340), (724, 560), (519, 600)])
+    body(c, union(left, right), PAPER, PAPER_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for k in range(3):
+        d.line([(340, 420 + k * 45), (470, 445 + k * 45)], fill=BLUE_RIM, width=14)
+        d.line([(554, 445 + k * 45), (684, 420 + k * 45)], fill=BLUE_RIM, width=14)
+
+
+def in_palette(c):
+    m = ImageChops.subtract(ellipse((310, 300, 714, 610)), ellipse((560, 480, 640, 560)))
+    body(c, m, (232, 196, 140, 255), (186, 140, 86, 255), None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for x, y, col in ((400, 400, RED), (490, 350, GOLD), (590, 380, BLUE), (420, 500, GREEN)):
+        d.ellipse((x - 34, y - 34, x + 34, y + 34), fill=col, outline=PLUM, width=8)
+
+
+def in_shirt(c):
+    m = polygon([(400, 300), (460, 300), (512, 340), (564, 300), (624, 300), (720, 380), (670, 440), (630, 410), (630, 600), (394, 600), (394, 410), (354, 440), (304, 380)])
+    body(c, m, PINK, PINK_RIM, None, INNER, INNER_RIM)
+
+
+def in_heart(c):
+    body(c, heart_mask(512, 380, 110), RED, RED_RIM, (420, 300, 470, 350), INNER, INNER_RIM)
+
+
+CHATS = {
+    'chat-sports': in_ball,
+    'chat-gaming': in_pad,
+    'chat-music': in_note,
+    'chat-fitness': in_dumbbell,
+    'chat-partying': in_cup,
+    'chat-studying': in_book,
+    'chat-art': in_palette,
+    'chat-fashion': in_shirt,
+    'chat-love': in_heart,
+}
+
+
 EMOTES = {
     'speech': speech,
     'thought': thought,
@@ -288,6 +454,11 @@ EMOTES = {
     'sodacup': sodacup,
     'exclaim': exclaim,
     'sweat': sweat,
+    'wave': wave,
+    'highfive': highfive,
+    'fistbump': fistbump,
+    'hug': hug,
+    **{name: chat(inside) for name, inside in CHATS.items()},
 }
 
 

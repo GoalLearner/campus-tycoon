@@ -416,7 +416,8 @@ sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5,
 # ------------------------------------------------------------- the emotes --
 # The social campus's emotes and bubbles (DESIGN.md 63.7): drawn for this game in the pack's way by
 # tools/make_emotes.py, about 32 pixels here for a student's card; the map shows them at half that over a head.
-EMOTES = ('speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat')
+# Stop 4 adds the greetings (a wave, a high five, a fist bump, a hug) and the chat bubbles, one for each topic (63.8).
+EMOTES = ('speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat', 'wave', 'highfive', 'fistbump', 'hug', 'chat-sports', 'chat-gaming', 'chat-music', 'chat-fitness', 'chat-partying', 'chat-studying', 'chat-art', 'chat-fashion', 'chat-love')
 for emote in EMOTES:
     sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
 

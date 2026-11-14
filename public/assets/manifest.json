@@ -87,11 +87,121 @@
     1
    ]
   },
+  "emote.chat-art": {
+   "frame": "emote.chat-art",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-fashion": {
+   "frame": "emote.chat-fashion",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-fitness": {
+   "frame": "emote.chat-fitness",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-gaming": {
+   "frame": "emote.chat-gaming",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-love": {
+   "frame": "emote.chat-love",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-music": {
+   "frame": "emote.chat-music",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-partying": {
+   "frame": "emote.chat-partying",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-sports": {
+   "frame": "emote.chat-sports",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.chat-studying": {
+   "frame": "emote.chat-studying",
+   "anchor": [
+    15,
+    -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.exclaim": {
    "frame": "emote.exclaim",
    "anchor": [
     5,
     -4
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.fistbump": {
+   "frame": "emote.fistbump",
+   "anchor": [
+    14,
+    -11
    ],
    "footprint": [
     1,
@@ -114,6 +224,28 @@
    "anchor": [
     15,
     -6
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.highfive": {
+   "frame": "emote.highfive",
+   "anchor": [
+    13,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.hug": {
+   "frame": "emote.hug",
+   "anchor": [
+    14,
+    -7
    ],
    "footprint": [
     1,
@@ -213,6 +345,17 @@
    "anchor": [
     14,
     -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.wave": {
+   "frame": "emote.wave",
+   "anchor": [
+    11,
+    -11
    ],
    "footprint": [
     1,

@@ -1559,7 +1559,8 @@ export class CampusScene extends Phaser.Scene {
         this.emoteKey = feeling?.emote ? `emote.${feeling.emote}` : null;
       }
     }
-    const emote = student && at ? this.emoteKey : null;
+    // A greeting or a chat bubble over them says more just now (DESIGN.md 63.8): the mood's emote waits.
+    const emote = student && at && !(key && this.walkers.hasIcon(key)) ? this.emoteKey : null;
     if (!emote || !at || !this.art.has(emote)) {
       this.emoteIcon?.setVisible(false);
       return;

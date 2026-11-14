@@ -7518,3 +7518,48 @@ Back after half a year away the campus has about a tenth fewer couples than if p
 | The emote floats above buildings a student walks behind | So you can see where they are, as the other floating icons do |
 | The anger mark is four short strokes | The usual mark at 14 pixels; it can be swapped |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.8 Stop 4 as built: the crowd from real ties
+
+Built 2026-11-14 on the branch `social-sim-4`. The save, the web and its record are unchanged; this stop is the map.
+
+**Walking together** (`src/game/Walkers.ts`, `src/app/crowdTies.ts`). A student setting out may bring their partner (half the time) or, now and then (three times in ten), one to three of their friend group: they walk the same way side by side, across the path from each other and a step behind, at one pace; they stay as long as each other where they stop, and go on together to where the first of them chooses. Only those free to come: not out walking already, not standing in a game or a line. About a third of the people on a busy path are walking with someone. The Main Character walks out alone: their people are their story's until stop 7.
+
+**Meeting on a path.** Of 46,000 students, two who pass on a path almost never know each other, so a quarter of those setting out are someone a walker on screen knows, coming the other way along the same path, a few steps ahead: a friend or a partner most often, now and then an acquaintance, a crush, an ex or a rival. A few times a second the map looks for students in view who pass within half a cell, and:
+
+| They are | What happens |
+|---|---|
+| Friends, best friends, a partner, a roommate | They stop, face each other and greet, then talk for a few seconds, with what they talk about in a bubble over one and then the other. The card says "Stopped to talk with Fiona" |
+| Acquaintances | A wave in passing |
+| A crush | A heart over the one with the crush |
+| An ex | A sweat drop |
+| Rivals, enemies | An anger mark |
+| Strangers who would click (chemistry above 0.6, about one pair in twenty) | A sparkle |
+| A party lingering together | Every few seconds one of them says something, in a bubble |
+
+The greeting is by how well they know each other: an acquaintance waves; friends high-five or bump fists; best friends, a partner and a close roommate hug. What they talk about is something both like, from their interests (sports, gaming, music, fitness, parties, studying, art, fashion), a heart now and then between a couple, and a plain bubble when they share nothing. Each then rests half a minute before greeting anyone again. Already standing somewhere, they greet and talk where they are.
+
+**The icons.** Thirteen more drawn for the game in the people pack's way (`tools/make_emotes.py`): a wave, a high five, a fist bump, a hug, and nine chat bubbles with what is talked about inside. Over the head at half the card's size, a moment's rise and fade, behind a building in front of them as the figure is. At most 3, 5, 8 or 12 at once by the crowd's step; the student whose card is open always shows theirs, and their mood's emote (63.7) waits while one does. **Reduce effects** turns every icon off; walking together and stopping to talk stay.
+
+**Measured** (frames as in 63.1: an iPhone 14's screen, the page slowed four times, GPU on, the crowd held; 16 frames, two runs of each):
+
+| | Median frame | Range | Walking |
+|---|---|---|---|
+| Main, crowd Normal | 12.9 ms | 12.4 to 20.5 | about 113 |
+| Stop 4, crowd Normal | 14.4 ms | 12.9 to 19.6 | about 111 |
+| Main, crowd High, the morning rush (its busiest) | 17.6 ms | 14.6 to 26.5 | about 192 |
+| Stop 4, crowd High, the morning rush | 16.0 ms | 14.3 to 22.1 | about 196 |
+| Stop 4, High, the morning rush, Reduce effects | 15.5 ms | 13.0 to 18.9 | about 197 |
+| Stop 4 with the social crowd off, Normal (same build) | 13.1 ms | 10.9 to 17.6 | about 112 |
+| Stop 4 with it on, Normal (same build) | 13.5 ms | 11.5 to 16.8 | about 112 |
+
+Between builds the medians move by more than the social crowd costs: on one build, on and off, it is under half a millisecond. Between runs the busiest crowd stays under 23 ms at worst, and at Normal under 20 ms. The built-in atlas grows from 1024 by 1024 to 2048 by 1024 for the twenty-six emotes (it was full); the paid atlas, which every shipped build uses, keeps its 4096 by 2048 and is published with them.
+
+**Tested** (`tests/crowdTies.test.ts`): a tie read from either end, strangers none; a partner first among those who walk out together, then the friend group, and never the Main Character; the greetings by tie; the passing faces, and about one pair of strangers in twenty sparkling; stopping only for friends, a partner or a roommate, and a topic both share; every greeting, reaction and bubble in the built-in atlas. The map's part was watched on the model campus in a headless browser: parties, meetings and every kind of icon. `?social=off` walks the crowd as before this stop, and `?effects=reduced|full` sets Reduce effects, for measuring.
+
+| Rough | Why |
+|---|---|
+| A meeting or a party is often half hidden behind a building in front | The figures are; the icons are drawn as the figures are, so they do not float over roofs |
+| Nobody is shown being met by someone they do not know, nor a group forming on the spot | Those are scenes, stop 7 |
+| A party lingering together is never more than four | A pair or a small group reads on a phone; more is a crowd |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

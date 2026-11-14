@@ -1,4 +1,10 @@
 import Phaser from 'phaser';
+import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor } from '../app/crowdTies';
+import { effectsSetting } from '../app/life';
+import { socialWeb } from '../app/socialWeb';
+import { idIn, refIn, type WebView } from '../app/socialView';
+import { KIND, SLOTS } from '../sim/config/web';
+import { firstNameOf } from '../sim/systems/students';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
 import { avenueCrossing, avenueCrossingBack, KERB_MIDDLE, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
@@ -51,7 +57,46 @@ import type { Iso } from './iso';
  */
 
 /** What a walker is doing, for the student card. */
-export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn' | 'walkingIn' | 'walkingHome' | `toPlace:${string}` | `atPlace:${string}`;
+export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn' | 'walkingIn' | 'walkingHome' | `toPlace:${string}` | `atPlace:${string}` | `chatting:${string}`;
+
+/**
+ * The crowd from real ties (DESIGN.md 63.8). A student setting out may bring their partner or some of their friend
+ * group, side by side; two who know each other stop when they meet on a path, greet and talk, with what they talk
+ * about in a bubble; passing a crush, an ex or a rival shows on their face; two strangers who would click, a sparkle.
+ */
+/** How often someone setting out brings their partner, and a few of their friend group. */
+const WITH_PARTNER = 0.5;
+const WITH_GROUP = 0.3;
+const PARTY_MAX = 4;
+/** Where each in a party walks, in cells: across the path, and behind the first. */
+const PARTY_PLACES: ReadonlyArray<readonly [number, number]> = [
+  [-0.12, 0],
+  [0.12, 0],
+  [-0.12, 0.3],
+  [0.12, 0.3],
+];
+/**
+ * Of 46,000 students, two who pass on a path almost never know each other. So a share of those setting out are someone
+ * a walker on screen knows, coming the other way along the same path: friends meet, an acquaintance waves, a crush or
+ * an ex or a rival shows on a face.
+ */
+const MEET_UP = 0.25;
+/** How many steps of the walker's path ahead of them the other one comes from. */
+const MEET_AHEAD = 4;
+/** How often the crowd looks for people meeting, and how close two must pass, in cells. */
+const SOCIAL_EVERY_MS = 300;
+const MEET_WITHIN = 0.55;
+/** How long two stop to talk, and how long before anyone greets or reacts again. */
+const TALK_MS = 3600;
+const SOCIAL_REST_MS = 30_000;
+/** How long an icon shows, and how often a party lingering together has something to say. */
+const ICON_MS = 1700;
+const PARTY_CHAT_MS = 3800;
+/** The most icons over heads at once, by crowd step; none with Reduce effects. */
+const ICONS_AT_STEP = [3, 5, 8, 12];
+/** Over the head, in world pixels above the feet, and the icon's size against the card's. */
+const ICON_LIFT = 40;
+const ICON_SCALE = 0.5;
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
@@ -131,6 +176,11 @@ interface Extra {
   pace?: number;
   /** A sprite drawn beside them, because no figure can hold anything: the guide's pennant. */
   prop?: string;
+  /** Walking with someone (DESIGN.md 63.8): which leg of the route, where on it, their party and their place in it. */
+  leg?: number;
+  at?: { x: number; y: number };
+  party?: number;
+  place?: readonly [number, number];
 }
 
 interface Walker {
@@ -163,6 +213,23 @@ interface Walker {
   shownKey: string;
   /** True while the figure is drawn in the school's colour. */
   tinted: boolean;
+  /** The party they walk with, or 0 for nobody, and their place in it: across the path and behind, in cells. */
+  party: number;
+  place: readonly [number, number];
+  /** Stopped to talk with someone met on a path, for this long, and with whom. */
+  talkMs: number;
+  talkWith: StudentRef | null;
+  /** When they may next greet, react or talk. */
+  socialAt: number;
+}
+
+/** An icon over someone's head: a greeting, a chat bubble or a reaction (DESIGN.md 63.8). */
+interface Icon {
+  walker: Walker;
+  key: string;
+  startAt: number;
+  endAt: number;
+  image: Phaser.GameObjects.Image | null;
 }
 
 interface Banner {
@@ -219,6 +286,16 @@ export class Walkers {
   private walkingIn = 0;
   private students = 0;
   private spawnClock = 0;
+  private socialClock = 0;
+  private partySeq = 0;
+  /** Where a party goes next, chosen by the first of them to leave, so the rest go too. */
+  private partyNext = new Map<number, { from: Stop; goal: Stop; route: Spot[] }>();
+  /** When each party lingering together next has something to say. */
+  private partyChatAt = new Map<number, number>();
+  private icons: Icon[] = [];
+  /** The social crowd (DESIGN.md 63.8), on unless the dev page turns it off to measure what it costs. */
+  private social = true;
+  private iconPool: Phaser.GameObjects.Image[] = [];
   private townClock = 0;
   /** Arrivals still to step onto the map: each is a route and a delay. */
   private queue: Array<{ from: Stop; to: Stop; inMs: number; student: StudentRef | null; kind?: Walker['kind']; extra?: Extra }> = [];
@@ -734,8 +811,8 @@ export class Walkers {
       prop.setOrigin(0.5, 1).setAlpha(0);
     }
     // Someone already part of the way along, so a view fills with people mid-stride.
-    const leg = partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1;
-    const begin = route[leg - 1]!;
+    const leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
+    const begin = extra.at ?? route[leg - 1]!;
     this.walkers.push({
       sprite,
       kind,
@@ -760,6 +837,11 @@ export class Walkers {
       offscreenMs: 0,
       shownKey: '',
       tinted: false,
+      party: extra.party ?? 0,
+      place: extra.place ?? [0, 0],
+      talkMs: 0,
+      talkWith: null,
+      socialAt: this.scene.time.now + SOCIAL_REST_MS * Math.random(),
     });
     sprite.clearTint();
     return true;
@@ -773,6 +855,7 @@ export class Walkers {
     walker.prop?.destroy();
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
+    for (const icon of this.icons) if (icon.walker === walker) icon.endAt = 0;
   }
 
   private draw(walker: Walker, people: PeopleSpec): void {
@@ -780,14 +863,15 @@ export class Walkers {
     const direction = this.iso.face(walker.direction);
     const flipFrom = people.flip?.[direction];
     const facing = flipFrom ?? direction;
-    const frame = walker.lingerMs > 0 ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
+    const frame = walker.lingerMs > 0 || walker.talkMs > 0 ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
     const key = `person.${walker.look}.${facing}.${frame}`;
     if (key !== walker.shownKey) {
       this.art.apply(walker.sprite, key);
       walker.shownKey = key;
     }
     walker.sprite.setFlipX(flipFrom !== undefined);
-    const at = this.iso.toWorld(walker.x, walker.y);
+    const spot = this.placeOf(walker);
+    const at = this.iso.toWorld(spot.x, spot.y);
     walker.sprite.setPosition(at.x, at.y);
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
@@ -844,6 +928,7 @@ export class Walkers {
   /** What that student is doing right now, or null when they are not out walking. */
   doing(key: string): Doing | null {
     const walker = this.walkerOf(key);
+    if (walker && walker.talkMs > 0 && walker.talkWith && this.state) return `chatting:${firstNameOf(this.state, walker.talkWith)}`;
     if (!walker || !walker.goal) return null;
     if (walker.goal.kind === 'house') return 'walkingHome';
     if (walker.from.kind === 'house') return 'walkingIn';
@@ -1095,12 +1180,19 @@ export class Walkers {
         }
       }
 
-      if (walker.lingerMs > 0) {
+      if (walker.talkMs > 0) {
+        // Stopped on the path to talk with someone they met (DESIGN.md 63.8).
+        walker.talkMs -= dt;
+        if (walker.talkMs <= 0) walker.talkWith = null;
+      } else if (walker.lingerMs > 0) {
         walker.lingerMs -= dt;
         if (walker.lingerMs <= 0 && walker.goal) {
-          // Rested on the lawn. Off to the next place.
-          const next = this.destinationFrom(walker.goal, walker.student);
-          const route = next ? this.routeBetween(walker.goal, next) : null;
+          // Rested on the lawn. Off to the next place: a party goes on together, where the first of them chose.
+          const known = walker.party ? this.partyNext.get(walker.party) : undefined;
+          const shared = known && known.from === walker.goal ? known : undefined;
+          const next = shared ? shared.goal : this.destinationFrom(walker.goal, walker.student);
+          const route = next ? (shared ? shared.route.map((one) => ({ ...one })) : this.routeBetween(walker.goal, next)) : null;
+          if (walker.party && next && route && !shared) this.partyNext.set(walker.party, { from: walker.goal, goal: next, route: route.map((one) => ({ ...one })) });
           if (next && route) {
             route[0] = { x: walker.x, y: walker.y };
             walker.route = route;
@@ -1148,7 +1240,8 @@ export class Walkers {
         if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           const stays = walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play');
-          if (stays && walker.kind === 'student') walker.lingerMs = 2500 + Math.random() * 5000;
+          // A party stays as long as each other: the same while for all of them, from who they are together.
+          if (stays && walker.kind === 'student') walker.lingerMs = walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000;
           else walker.fading = 'out';
         }
       }
@@ -1193,12 +1286,20 @@ export class Walkers {
           const student = from ? this.studentFor(from) : null;
           const to = from && (student || this.everyone.length === 0) ? this.destinationFrom(from, student) : undefined;
           // An emptier view is filled with people already on their way.
-          if (from && to) this.start(from, to, seen < wanted * 0.6, student);
+          // Now and then, someone a walker on screen knows, coming the other way (DESIGN.md 63.8).
+          if (this.social && student && Math.random() < MEET_UP && this.meetUp(view)) continue;
+          if (from && to && this.start(from, to, seen < wanted * 0.6, student) && student && this.social) this.bringCompanions(this.walkers[this.walkers.length - 1]!);
         }
       }
       // And among them, the people who work here or are visiting.
       this.topUpOthers(this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0)), seen, neighboursSeen);
     }
+    this.socialClock += dt;
+    if (this.socialClock >= SOCIAL_EVERY_MS) {
+      this.socialClock = 0;
+      if (this.social) this.socialTick(view);
+    }
+    this.drawIcons(dt);
     this.townClock += dt;
     if (this.townClock >= 450) {
       this.townClock = 0;
@@ -1219,6 +1320,239 @@ export class Walkers {
         this.banners.splice(i, 1);
       }
     }
+  }
+
+  // ------------------------------------------------------ the social crowd --
+
+  /** Where a walker is drawn: their own spot, or their place beside the first of their party, across the way they go. */
+  private placeOf(walker: Walker): { x: number; y: number } {
+    if (!walker.party) return walker;
+    const [across, behind] = walker.place;
+    // Walking along x (south-east or north-west) the party spreads along y, and the other way about.
+    const alongX = walker.direction === 'se' || walker.direction === 'nw';
+    const back = walker.direction === 'se' || walker.direction === 'sw' ? -behind : behind;
+    return alongX ? { x: walker.x + back, y: walker.y + across } : { x: walker.x + across, y: walker.y + back };
+  }
+
+  /**
+   * A student setting out may bring their partner, or two or three of their friend group: they walk the same way side
+   * by side (DESIGN.md 63.8). Only those free to come: not out walking already, not standing in a game or a line.
+   */
+  private bringCompanions(leader: Walker): void {
+    const view = socialWeb.view;
+    if (!view || !leader.student || !this.state || leader.kind !== 'student' || !leader.goal) return;
+    const all = companionsOf(view, this.state, leader.student);
+    if (all.length === 0) return;
+    const first = tieOf(view, leader.student, all[0]!);
+    const couple = first !== null && first.kind >= KIND.dating && first.kind <= KIND.longterm;
+    const roll = Math.random();
+    const want = couple ? (roll < WITH_PARTNER ? 1 : 0) : roll < WITH_GROUP ? 1 + Math.floor(Math.random() * 3) : 0;
+    const take = all.filter((ref) => this.free(ref)).slice(0, Math.min(want, PARTY_MAX - 1));
+    if (take.length === 0) return;
+    const party = ++this.partySeq;
+    leader.party = party;
+    leader.place = PARTY_PLACES[0]!;
+    take.forEach((ref, i) => {
+      this.start(leader.from, leader.goal!, false, ref, 'student', {
+        route: leader.route.map((one) => ({ ...one })),
+        leg: leader.leg,
+        at: { x: leader.x, y: leader.y },
+        pace: leader.pace,
+        party,
+        place: PARTY_PLACES[i + 1]!,
+      });
+    });
+  }
+
+  /**
+   * Send someone a walker on screen knows the other way along their path, so the two meet: a friend or a partner most
+   * often, now and then an acquaintance, a crush, an ex or a rival. False when nobody suits.
+   */
+  private meetUp(view: Phaser.Geom.Rectangle): boolean {
+    const web = socialWeb.view;
+    if (!web || !this.state) return false;
+    const walking = this.walkers.filter((one) => one.kind === 'student' && one.student && one.fading === null && one.lingerMs <= 0 && one.talkMs <= 0 && !one.party && one.goal && one.leg < one.route.length - 2 && this.inView(view, one.x, one.y, 0));
+    const walker = walking[Math.floor(Math.random() * walking.length)];
+    if (!walker || !walker.goal) return false;
+    const id = idIn(web, walker.student!);
+    if (id < 0) return false;
+    const close: StudentRef[] = [];
+    const other: StudentRef[] = [];
+    for (let k = 0; k < SLOTS; k++) {
+      const s = id * SLOTS + k;
+      const b = web.other[s]!;
+      if (b < 0) continue;
+      const ref = refIn(web, b);
+      if (!this.free(ref)) continue;
+      const kind = web.kind[s]!;
+      (kind === KIND.met || kind === KIND.ex || kind === KIND.rival || kind === KIND.enemy || kind === KIND.crush ? other : close).push(ref);
+    }
+    const pool = close.length > 0 && (other.length === 0 || Math.random() < 0.65) ? close : other;
+    const ref = pool[Math.floor(Math.random() * pool.length)];
+    if (!ref) return false;
+    // They come round the corner a few steps ahead on the walker's own path, going the other way.
+    const ahead = Math.min(walker.route.length - 1, walker.leg + MEET_AHEAD);
+    const route = walker.route.slice(0, ahead + 1).reverse().map((one) => ({ ...one }));
+    if (!this.start(walker.goal, walker.from, false, ref, 'student', { route, leg: 1 })) return false;
+    // Both are ready to meet: they were sent to.
+    this.walkers[this.walkers.length - 1]!.socialAt = 0;
+    walker.socialAt = 0;
+    return true;
+  }
+
+  /** Show an icon over a walker's head from `inMs` from now, if there is room for it. */
+  private showIcon(walker: Walker, emote: string, inMs = 0): void {
+    const key = `emote.${emote}`;
+    if (!this.art.has(key)) return;
+    const now = this.scene.time.now;
+    const room = effectsSetting() === 'reduced' ? 0 : (ICONS_AT_STEP[this.step] ?? 5);
+    const live = this.icons.filter((one) => one.endAt > now).length;
+    // The student whose card is open always shows theirs: it is who the player is watching.
+    if (live >= room && walker.key !== this.marked) return;
+    this.icons.push({ walker, key, startAt: now + inMs, endAt: now + inMs + ICON_MS, image: null });
+  }
+
+  /** Turn the social crowd on or off: off, the crowd walks as it did before stop 4. For the dev page. */
+  setSocial(on: boolean): void {
+    this.social = on;
+  }
+
+  /** True while an icon shows over this student: the map then leaves their mood's emote off (DESIGN.md 63.7). */
+  hasIcon(key: string): boolean {
+    const now = this.scene.time.now;
+    return this.icons.some((one) => one.walker.key === key && one.startAt <= now && one.endAt > now);
+  }
+
+  private drawIcons(dt: number): void {
+    const now = this.scene.time.now;
+    for (let i = this.icons.length - 1; i >= 0; i--) {
+      const icon = this.icons[i]!;
+      if (icon.endAt <= now || !this.walkers.includes(icon.walker)) {
+        if (icon.image) {
+          icon.image.setVisible(false);
+          this.iconPool.push(icon.image);
+        }
+        this.icons.splice(i, 1);
+        continue;
+      }
+      if (icon.startAt > now) continue;
+      if (!icon.image) {
+        icon.image = this.iconPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
+        this.art.apply(icon.image, icon.key);
+        icon.image.setScale(ICON_SCALE);
+      }
+      const walker = icon.walker;
+      const age = now - icon.startAt;
+      const left = icon.endAt - now;
+      const fade = Math.min(1, age / 150, left / 200);
+      const rise = Math.min(1, age / 200) * 4;
+      icon.image
+        .setPosition(walker.sprite.x, walker.sprite.y - ICON_LIFT - rise)
+        .setDepth(walker.sprite.depth + 0.2)
+        .setAlpha(fade * walker.alpha)
+        .setVisible(true);
+    }
+    void dt;
+  }
+
+  /**
+   * Who meets whom (DESIGN.md 63.8), a few times a second: students in view who pass within half a cell of each other.
+   * Two who know each other well enough stop, face each other, greet and talk about something they share; an
+   * acquaintance waves in passing; a crush, an ex or a rival shows on their face; two strangers who would click, a
+   * sparkle. Each then rests a while. A party lingering together talks among itself.
+   */
+  private socialTick(view: Phaser.Geom.Rectangle): void {
+    const web = socialWeb.view;
+    if (!web || !this.state) return;
+    const now = this.scene.time.now;
+    const byCell = new Map<number, Walker[]>();
+    const ready: Walker[] = [];
+    const lingering = new Map<number, Walker[]>();
+    for (const walker of this.walkers) {
+      if (walker.kind !== 'student' || !walker.student || walker.fading !== null) continue;
+      if (!this.inView(view, walker.x, walker.y, 0)) continue;
+      const cell = Math.floor(walker.y) * this.width + Math.floor(walker.x);
+      const list = byCell.get(cell);
+      if (list) list.push(walker);
+      else byCell.set(cell, [walker]);
+      if (walker.socialAt <= now && walker.talkMs <= 0) ready.push(walker);
+      if (walker.party && walker.lingerMs > 0) {
+        const party = lingering.get(walker.party);
+        if (party) party.push(walker);
+        else lingering.set(walker.party, [walker]);
+      }
+    }
+    for (const a of ready) {
+      if (a.socialAt > now || a.talkMs > 0) continue;
+      const cx = Math.floor(a.x);
+      const cy = Math.floor(a.y);
+      let met: Walker | null = null;
+      for (let dy = -1; dy <= 1 && !met; dy++) {
+        for (let dx = -1; dx <= 1 && !met; dx++) {
+          for (const b of byCell.get((cy + dy) * this.width + cx + dx) ?? []) {
+            if (b === a || (a.party && b.party === a.party) || b.socialAt > now || b.talkMs > 0) continue;
+            if (Math.hypot(b.x - a.x, b.y - a.y) <= MEET_WITHIN) {
+              met = b;
+              break;
+            }
+          }
+        }
+      }
+      if (met) this.meet(web, a, met, now);
+    }
+    for (const [party, members] of lingering) {
+      if (members.length < 2) continue;
+      const due = this.partyChatAt.get(party) ?? now;
+      if (due > now) continue;
+      this.partyChatAt.set(party, now + PARTY_CHAT_MS * (0.7 + Math.random() * 0.6));
+      const speaker = members[Math.floor(Math.random() * members.length)]!;
+      const listener = members.find((one) => one !== speaker)!;
+      this.showIcon(speaker, topicFor(web, speaker.student!, listener.student!, Math.random()));
+    }
+    // Parties that have gone: forget where they were going.
+    if (this.partyNext.size > 200) this.partyNext.clear();
+    if (this.partyChatAt.size > 200) this.partyChatAt.clear();
+  }
+
+  private meet(web: WebView, a: Walker, b: Walker, now: number): void {
+    const ta = tieOf(web, a.student!, b.student!);
+    const tb = tieOf(web, b.student!, a.student!);
+    a.socialAt = now + SOCIAL_REST_MS;
+    b.socialAt = now + SOCIAL_REST_MS;
+    // Friends, a partner, a roommate: they stop, face each other, greet, and talk about something they share.
+    if (stopsToTalk(ta) && stopsToTalk(tb) && !a.party && !b.party) {
+      const greeting = greetingFor(ta!, Math.random()) ?? 'wave';
+      for (const [one, other] of [[a, b], [b, a]] as const) {
+        // One on their way stops; one already standing somewhere stays a little longer.
+        if (one.lingerMs > 0) one.lingerMs = Math.max(one.lingerMs, TALK_MS);
+        else one.talkMs = TALK_MS;
+        one.talkWith = other.student;
+        const dx = other.x - one.x;
+        const dy = other.y - one.y;
+        one.direction = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'se' : 'nw') : dy >= 0 ? 'sw' : 'ne';
+        this.showIcon(one, greeting);
+      }
+      const topic = topicFor(web, a.student!, b.student!, Math.random());
+      this.showIcon(a, topic, 1100);
+      this.showIcon(b, topic === 'speech' ? 'laugh' : topic, 2400);
+      return;
+    }
+    // An acquaintance waves in passing.
+    if (ta && greetingFor(ta, 0) === 'wave') {
+      this.showIcon(a, 'wave');
+      if (tb && greetingFor(tb, 0) === 'wave') this.showIcon(b, 'wave', 250);
+      return;
+    }
+    // A crush, an ex, a rival, or a stranger they would click with: it shows on their face.
+    const chem = ta === null && tb === null ? chemistryOf(web, a.student!, b.student!) : 0;
+    const ra = reactionFor(ta, chem);
+    const rb = reactionFor(tb, chem);
+    if (ra === 'sparkle') {
+      this.showIcon(a, 'sparkle');
+      return;
+    }
+    if (ra) this.showIcon(a, ra);
+    if (rb) this.showIcon(b, rb, 200);
   }
 
   private wantedInView(view: Phaser.Geom.Rectangle): number {
@@ -1250,6 +1584,12 @@ export class Walkers {
   }
 
   clear(): void {
+    for (const icon of this.icons) icon.image?.destroy();
+    for (const image of this.iconPool) image.destroy();
+    this.icons = [];
+    this.iconPool = [];
+    this.partyNext.clear();
+    this.partyChatAt.clear();
     for (const walker of this.walkers) walker.prop?.destroy();
     for (const walker of this.walkers) walker.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();

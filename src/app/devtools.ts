@@ -4,6 +4,7 @@ import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
 import { socialWeb } from './socialWeb';
+import { setEffectsSetting } from './life';
 import { upgradeNotes } from './upgradeNotes';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
@@ -471,9 +472,15 @@ function applyViewParams(params: URLSearchParams): void {
       // &crowd=low|normal|high sets the crowd density for this visit, and &stats shows frames a second and
       // who is on screen in the corner, read once a second.
       const crowd = params.get('crowd');
+      // &effects=reduced or full sets Reduce effects for this visit and after, as the Menu's switch does.
+      const effects = params.get('effects');
+      if (effects === 'reduced' || effects === 'full') setEffectsSetting(effects);
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
+      // &social=off walks the crowd as before stop 4 (DESIGN.md 63.8): nobody walks together, meets or shows an icon.
+      // For measuring what the social crowd costs on one build.
+      if (params.get('social') === 'off') (scene as unknown as { walkers?: { setSocial?: (on: boolean) => void } }).walkers?.setSocial?.(false);
       // &weather=rain sets the sky, which the calendar layer will do by itself: rain is heard and empties the lawns.
       const sky = params.get('weather');
       if (sky === 'rain' || sky === 'snow' || sky === 'clear') (scene as unknown as { setWeather?: (weather: string) => void }).setWeather?.(sky);
