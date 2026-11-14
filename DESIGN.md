@@ -5815,7 +5815,7 @@ The casual and the once-a-day player are inside $12 to $17 in every year and wee
 
 Asked by the owner on 2026-11-13, playing on his phone: "I would like to rotate the map around too on the phone, i can only go up and down". Asked whether he meant turning the whole view, he answered: "Turn the whole view". A sheet showed him three ways with his own art (`docs/handoff/turn-view-sheet.html`), and he picked: "turn and rotate all the way". That is way A, four quarter turns round the full circle, with the mirroring the sheet listed, a Turn button, and the two-finger twist he asked for with "rotate". A smooth turn to any angle is not possible with drawings made from one side: the view snaps by quarters. Built on 2026-11-13. Nothing in the simulation, the save or the long run changed.
 
-**The Turn button is gone, by his word.** After build 10 he wrote: "I wish instead of the turn you can rotate and turn with your fingers instead of a button". So on 2026-11-13 the button went, on the map and in photo mode, and two fingers turn the view everywhere. The map now turns with the fingers the whole way round, and settles to the nearest quarter when they lift (43.5). The rows below say how it is now; 43.5 has what changed.
+**The Turn button is gone, by his word.** After build 10 he wrote: "I wish instead of the turn you can rotate and turn with your fingers instead of a button". So on 2026-11-13 the button went, on the map and in photo mode, and two fingers turn the view everywhere. The map now turns with the fingers the whole way round, and settles to the nearest quarter when they lift (43.5). After build 14 he asked for the turn to be a spin, as on a turntable, with nothing leaning: 43.6. The rows below say how it is now; 43.5 and 43.6 have what changed.
 
 ### 43.1 As built
 
@@ -5833,7 +5833,7 @@ Asked by the owner on 2026-11-13, playing on his phone: "I would like to rotate 
 | Markers | Medals, the hammer, incident icons, the car-park barrier and the edge signs float over the middle of what they are about, at every turn | |
 | The camera | Roams the turned map. Following a student works at every turn. In photo mode two fingers turn it too, to frame the campus from any side | `clampCamera`, `photoBar` in `src/ui/ui.ts` |
 | The Turn button | Removed on 2026-11-13, by his word, on the map and in photo mode (43.5) | |
-| The twist | Two fingers turned 15 degrees or more while their gap changes by less than a tenth. The map turns with them the whole way. When they lift it settles to the nearest quarter in a fifth of a second, and the view is drawn turned that far behind a quick fade. A gesture that has zoomed can never turn, and one that turns never zooms: when a gesture becomes a twist, the camera goes back to where the fingers found it | `src/app/twist.ts`, `turnWithFingers` |
+| The twist | Two fingers turned 15 degrees or more while their gap changes by less than a tenth. The campus spins with them the whole way, as on a turntable: the ground swings round and every drawing stays upright (43.6). When they lift it settles to the nearest quarter in a fifth of a second, and the view drawn turned takes over. A gesture that has zoomed can never turn, and one that turns never zooms: when a gesture becomes a twist, the camera goes back to where the fingers found it | `src/app/twist.ts`, `src/app/spin.ts`, `showSpin` |
 | Remembered | The phone remembers which way the player last faced, as it remembers the crowd setting. It is not in the save | `campus-tycoon.turn` in `src/app/session.ts` |
 | The dev page | `&turn=1`, `2` or `3` opens the map turned | `src/app/devtools.ts` |
 | Art | Nothing new. The mirrored drawings are listed on section 26 | |
@@ -5893,9 +5893,9 @@ His words, after build 10: "I wish instead of the turn you can rotate and turn w
 |---|---|---|
 | The button | Gone from the map and from photo mode, by his word. Nothing took its place on the screen | `src/ui/ui.ts`, `src/ui/ui.css` |
 | When it starts | Two fingers turned 15 degrees (was 35) with their gap within a tenth of where it began. A pinch still zooms: it changes the gap by a tenth well before it drifts 15 degrees | `TWIST_DEGREES` in `src/app/twist.ts` |
-| While twisting | The map turns with the fingers, as far as they go, about the middle of the screen. It catches up with them within a few frames, so it does not jump the first 15 degrees | `turnWithFingers` in `src/game/CampusScene.ts` |
+| While twisting | The map turned with the fingers, as far as they went, about the middle of the screen, like a photo turned in the hand. Replaced after build 14 by the turntable spin (43.6) | |
 | When they lift | It settles to the nearest quarter of the angle turned in 220 ms, quick at first and gentle at the end. Under 45 degrees it settles back where it was | `settleDegrees`, `settling`, `SETTLE_MS` |
-| The redraw | At the quarter, a still of the map is laid over it, the view is drawn turned (as 43.1), and the still fades in 240 ms. The drawings face the viewer at every turn, so the still shows them on their side and the view drawn turned shows them upright: the fade carries the one into the other | `coverTurn` |
+| The redraw | At the quarter, a still of the map was laid over it and faded into the view drawn turned. Replaced by the turntable spin (43.6), whose last frame is the view drawn turned | |
 | A new finger while it settles | The view is turned at once, so the new gesture starts on it | `onDown` |
 | Safari's own gestures | Stopped: `gesturestart`, `gesturechange` and `gestureend` are cancelled on the page, and the canvas takes no touch action of its own | `src/game/createGame.ts`, `#game canvas` in `ui.css` |
 | The tip | Once, the first time the map is open after this build: "Twist two fingers to turn the map." Its flag is a setting of the phone, beside the crowd setting, never in the save | `campus-tycoon.twistTip` in `src/app/twistTip.ts` |
@@ -5905,14 +5905,56 @@ His words, after build 10: "I wish instead of the turn you can rotate and turn w
 | Decision | Chosen | The alternative |
 |---|---|---|
 | Where it turns about | The middle of the screen, which the view drawn turned keeps in the middle | The point between the fingers, which would then jump to the middle at the redraw |
-| The redraw | A still that fades into the view drawn turned | A plain cut, which shows every drawing stand up at once |
+| The redraw | A still that fades into the view drawn turned (until 43.6) | A plain cut, which shows every drawing stand up at once |
 | The start angle | 15 degrees, as the brief for this stop asked | 10 degrees, which a drifting pinch can reach before it has zoomed |
 | The tip | A short note under the top bar, once | A card to dismiss |
 
 | Rough | Why |
 |---|---|
-| Turning shows the drawings on their side | They are drawn from one side. Turned past a few degrees, buildings lean with the map until it is drawn again at the quarter |
-| Never run on a phone | Real touch events in a desktop browser, not Safari on an iPhone |
+| Turning shows the drawings on their side | They are drawn from one side. Turned past a few degrees, buildings leaned with the map until it was drawn again at the quarter. He found it upside down at a half turn: fixed by the spin of 43.6 |
+| Never run on a phone | Real touch events in a desktop browser, not Safari on an iPhone. He played it in build 14: the twist works on his iPhone |
+
+### 43.6 The turntable spin (2026-11-13)
+
+His words, after playing build 14 on his iPhone: "so rotating it flips the map upside down...i think i met when i said rotate i mean like spin the map around not rotate?" He means a turntable: the buildings, trees, people and cars stay upright, and the campus swings round under the fingers, so he ends up looking at it from another side. The turn of 43.5 turned the picture like a photo: everything leaned, and by a half turn it was upside down. Built on branch `spin`. Nothing in the simulation, the save or the long run changed.
+
+| Thing | As built | Where |
+|---|---|---|
+| The spin | The ground plane turns under the fingers and is seen at the view's slant: on the screen that is squash, turn, unsquash, with the squash the ground cell's height over its width (37.6 over 66). A spot of ground goes round an ellipse about the middle of the screen. A quarter of it is exactly the view drawn a quarter round (a test checks this at every turn, both ways) | `turntable`, `spinAbout` in `src/app/spin.ts` |
+| The ground | Everything that lies flat (the tiles, roads, sidewalks, pads, water, the courts and car parks) is drawn once, when the twist begins, into one picture big enough to cover the screen at any angle, and shown through three containers: squash, turn, unsquash. The tiles themselves are put away until the end | `startSpin` in `src/game/CampusScene.ts` |
+| What stands up | Every building, house, tree, lamp, sign, decoration, parked car and medal keeps its own drawing, upright, and moves with the spot of ground it stands on. What is in front is worked out from where its ground's front corner has swung to | `takeUpSpin`, `showSpin`; `spinParts` in `src/game/Placed.ts` and `src/game/Cars.ts` |
+| People and moving cars | Put away for the length of the spin, with the lamps' light and the markers, and back as it ends, where they were | `takeUpSpin`, `endSpin` |
+| Facing | Past each 45-degree mark (3 degrees past, so it does not flicker on the mark) the drawings are laid again a quarter further round, so each shows the side of the nearest quarter; what is left of the angle is never much more than 45 degrees | `quarterFor`, `spinTurn` |
+| More than a quarter | One gesture may spin as far as the fingers go: two, three or four quarters | |
+| When the fingers lift | It settles to the nearest quarter in 220 ms, as before, and under 45 degrees settles back. The quarter stays on the screen for a frame, then the view drawn turned takes over in a plain cut: at the quarter the spun picture and the drawn view are the same, so the cut shows only the people and cars coming back | `stepSpin`, `endSpin` |
+| Houses | The town's houses and the chapter houses no longer carry a tile of grass of their own under the drawing: the grass of their cell is under them already, and the tile would stick out from under a house turned part way | `tools/make_penzilla_recipe.py` |
+| While it spins | Nothing else moves and nothing is laid again: a change to the campus waits for the end. The map does not pan or zoom under a spin | |
+
+**Played with real two-finger touches** in Edge on this PC (its touch events, with its graphics card, at 390 by 844, the model campus at the zoom of his pictures): held at 20, 45, 70 and 90 degrees the houses and trees stayed upright while the streets swung round; past 48 degrees the view was drawn a quarter round; let go at 90 it settled and the view drawn turned matched the spun one, apart from the people and cars coming back. 40 degrees settled back with no turn. 185 degrees anticlockwise spun two quarters. A pinch only zoomed.
+
+**Frame time,** headless Edge with its graphics card on an iPhone 14's screen (390 by 844 at three pixels to the point), the model campus at 11 AM, every frame taken as a screen takes it, as in 47.2. Frame work is the map's own work in a frame, the mean of each second.
+
+| Run | Spinning | Laying the drawings a quarter round, at a mark | The frame that ends a turned spin |
+|---|---|---|---|
+| Full speed | 1.2 to 1.6 ms, 46 to 60 frames a second | 2.8 to 4.7 ms | 13 ms |
+| Four times slower | 6.0 to 7.0 ms, 48 to 60 | 14 to 21 ms | 66 ms |
+
+A spin costs less than the map at rest (12 to 15 ms four times slower, 47.2): the people are put away. All 589 upright drawings of the model campus are moved every frame, so nothing had to be left out. The frame that ends a turned spin lays the whole view again, as a turn always did (43.2); it comes a frame after the spin has stopped, while nothing moves.
+
+| Decision | Chosen | The alternative |
+|---|---|---|
+| How the ground turns | One picture through the turntable, so it costs one drawing a frame | Moving every tile, which cannot be done: a tile cannot be squashed into the shape a turned tile takes |
+| People and moving cars | Put away while it spins, as the brief allowed | Moved like the drawings, at many times the work |
+| When the drawings are laid again | At each 45-degree mark, 3 degrees past it, and only what stands up; the ground once, at the end | The whole view at each mark: twice the work there, a pause on a slow phone |
+| The end | A plain cut a frame after the quarter is reached | A fade: the two are nearly the same picture |
+| The way the phone remembers the view | Told once, at the end of the spin | At each mark, which redrew the screen's panels mid-spin |
+
+| Rough | Why |
+|---|---|
+| Never run on a phone | Played with real touch events in a desktop browser |
+| Near a 45-degree mark, tall drawings close together overlap a great deal | The streets run straight up the screen there, so houses along one stand one behind another |
+| The picture of the ground is a little softer on a large screen | It is held to 3,072 pixels on its longest side, so a big phone's is drawn at about two thirds of the screen's sharpness while it spins |
+| The map's earth edge turns with the ground | The earth along the map's front edges is part of the flat picture |
 
 ---
 
