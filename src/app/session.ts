@@ -170,9 +170,15 @@ class Session {
    */
   showHall(x: number, y: number, above: number, below: number): void {
     const height = typeof window === 'undefined' ? 0 : window.innerHeight;
-    const aim = height > 0 && below > above ? Math.max(0.12, Math.min(0.45, (above + below) / 2 / height + 0.03)) : 0.4;
-    this.focus = { x, y, seq: (this.focus?.seq ?? 0) + 1, aim };
     this.mark = { x, y, seq: (this.mark?.seq ?? 0) + 1 };
+    // On a small phone the card can leave no map above it: then the card steps aside and the hall is selected, as the
+    // Happiness row's building is.
+    if (height > 0 && below - above < 90) {
+      this.focusOn(x, y);
+      return;
+    }
+    const aim = height > 0 ? Math.max(0.12, Math.min(0.45, (above + below) / 2 / height + 0.03)) : 0.4;
+    this.focus = { x, y, seq: (this.focus?.seq ?? 0) + 1, aim };
     this.emit();
   }
 
