@@ -186,8 +186,10 @@ sprites['sign.crossing'] = {'layers': [standing(DECOR + 'TraficSign4.png', 0.5, 
 HOUSES = CITY + 'Houses/'
 TOWN_HOUSES = [('Blue', 1), ('Red', 5), ('Yellow', 9), ('Green', 13), ('Pink', 17), ('White', 20), ('Brown', 3), ('Grey', 7),
                ('Yellow', 2), ('Blue', 11), ('Red', 15), ('Green', 6)]
+# A house stands on the grass its cell already draws, with no tile of its own, so it stays upright and clean when the
+# map spins under it (DESIGN.md 43.6).
 for n, (colour, kind) in enumerate(TOWN_HOUSES):
-    sprites[f'town.house.{n}'] = {'layers': [GRASS, on_grid(f'{HOUSES}{colour}/House_Type{kind}.png')]}
+    sprites[f'town.house.{n}'] = {'layers': [on_grid(f'{HOUSES}{colour}/House_Type{kind}.png')]}
 # A driveway is a paved pad from the street to the back of the lot, where a car parks (DESIGN.md 59.3). Drawn by
 # tools/make_sidewalk.py in the pack's concrete colours.
 sprites['town.driveway'] = {'layers': [GRASS, on_grid('_rendered/fallback/kerb/drive.png')]}
@@ -318,11 +320,11 @@ sprites['lab.engineering'] = {'layers': [on_grid(PUBLIC + 'Industrial_PowerPlant
 sprites['lab.health'] = {'layers': [on_grid(PUBLIC + 'Doctor_Office.png', 2, 2, recolour='cross')]}
 
 # ------------------------------------------------------------- Greek Row --
-# Chapter houses (DESIGN.md section 51): the Medieval pack's two-storey half-timbered houses, as drawn, each on a cell of
-# grass as the town's houses are. Six looks, two roof colours; a chapter keeps its look.
+# Chapter houses (DESIGN.md section 51): the Medieval pack's two-storey half-timbered houses, as drawn, each on the grass
+# its cell draws, as the town's houses are (43.6). Six looks, two roof colours; a chapter keeps its look.
 CHAPTER_LOOKS = [('Style15', 14), ('Style13', 4), ('Style15', 24), ('Style13', 14), ('Style15', 4), ('Style13', 24)]
 for n, (style, kind) in enumerate(CHAPTER_LOOKS):
-    sprites[f'chapter.{n}'] = {'layers': [GRASS, on_grid(f'{OLD}Houses/{style}/houses_{kind:02d}.png')]}
+    sprites[f'chapter.{n}'] = {'layers': [on_grid(f'{OLD}Houses/{style}/houses_{kind:02d}.png')]}
 
 # The pack's building site for a block of two cells, for a big build of that size while it goes up.
 sprites['build.site.wide'] = {'layers': [on_grid(PUBLIC + 'Construction_1x2.png', 2, 1)]}

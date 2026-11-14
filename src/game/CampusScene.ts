@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { STAYING, type Stander } from '../app/activityPeople';
 import { kerbAt, planTraffic, type TrafficPlan } from '../app/traffic';
 import { clock } from '../app/clock';
-import { SETTLE_MS, settleDegrees, settling, twistMove, twistQuarters, twistStart, type Twist } from '../app/twist';
+import { quarterFor, spinAbout, stillSize, turntable } from '../app/spin';
+import { SETTLE_MS, settleDegrees, settling, twistMove, twistStart, type Twist } from '../app/twist';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
@@ -17,7 +18,7 @@ import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
 import { GroundsWorkers } from './GroundsWorkers';
-import { facingOf, Iso, type Turn } from './iso';
+import { facingOf, Iso, nextTurn, type Turn } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
 import { townLook } from './townLook';
 import { Walkers } from './Walkers';
@@ -77,8 +78,43 @@ const PARKED_AT = [0.02, 0.5, 1.0] as const;
 const MAX_ZOOM_FACTOR = 2.2;
 /** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
 const TWIST_FOLLOW_MS = 45;
-/** How long the picture of the map at the end of a twist takes to fade into the view drawn turned. */
-const TURN_FADE_MS = 240;
+/** The longest side of the spin's picture of the ground, in pixels: past it the picture is made a little softer. */
+const SPIN_STILL_MAX = 3072;
+/** Where the spin's picture of the ground is drawn, under everything, and where the upright drawings are sorted above it. */
+const SPIN_STILL_DEPTH = -10;
+const SPIN_DEPTH = 10_000;
+
+/** An upright drawing during a spin (DESIGN.md 43.6): where its owner put it, and the ground it stands on. */
+interface SpinPart {
+  object: Phaser.GameObjects.Image;
+  base: { x: number; y: number };
+  depth: number;
+  ground: { x: number; y: number };
+  /** The corners of its ground, for which is in front as the ground swings round. None for one that keeps its order. */
+  corners: Array<{ x: number; y: number }> | null;
+  /** A little further forward, as a cone beside what it marks. */
+  bias: number;
+}
+
+/** Something put away for the length of a spin, to be shown again at its end. */
+type Shown = Phaser.GameObjects.GameObject & { visible: boolean; setVisible(value: boolean): unknown };
+
+/** The turntable spin while two fingers twist the map, and while it settles (DESIGN.md 43.6). */
+interface Spin {
+  /** The angle it is shown at, in degrees from where it began, and the quarters the view has been drawn round since. */
+  shown: number;
+  quarter: number;
+  settle: { from: number; to: number; at: number; done?: boolean } | null;
+  /** The picture of the flat ground, and the container that turns it. */
+  still: Phaser.GameObjects.Container;
+  turner: Phaser.GameObjects.Container;
+  textureKey: string;
+  parts: SpinPart[];
+  hidden: Shown[];
+  /** Which ground tiles and sidewalks the view as drawn now shows, to show them again at the end. */
+  ground: boolean[];
+  kerb: boolean[];
+}
 const WHEEL_STEP = 1.12;
 
 type Gesture =
@@ -185,11 +221,17 @@ export class CampusScene extends Phaser.Scene {
   private nextBarsAt = 0;
   private touches = new Map<number, { x: number; y: number }>();
   private gesture: Gesture | null = null;
-  /** The map's turn while two fingers twist it, in degrees: where it is drawn, and where the fingers have it. */
-  private twistShown = 0;
+  /** Where two twisting fingers have the map, in degrees from where they began to twist (DESIGN.md 43.6). */
   private twistWanted = 0;
-  /** The map settling to the nearest quarter after a twist: from and to in degrees, the quarters, and when it began. */
-  private settle: { from: number; to: number; quarters: number; at: number; ending: boolean } | null = null;
+  /** The turntable spin while it lasts; asked for by the fingers and begun in the next frame. */
+  private spin: Spin | null = null;
+  private spinAsked = false;
+  /** Where to settle a spin the fingers let go of before it began. */
+  private spinSettleTo: number | null = null;
+  private spinCount = 0;
+  /** How long the last redraw a quarter round took in a spin, for the dev readout. */
+  spinRedrawMs = 0;
+  spinEndMs = 0;
   private dpr = 1;
   private pendingArrivals = 0;
   /** One walking responder for each incident that has help on the way. */
@@ -265,8 +307,8 @@ export class CampusScene extends Phaser.Scene {
     const unsubscribeSession = session.subscribe(() => {
       this.overlayDirty = true;
       this.placedDirty = true;
-      // The twist (DESIGN.md section 43).
-      if (session.turn !== this.iso.turn && this.visuals.length > 0) this.applyTurn(session.turn);
+      // The twist (DESIGN.md section 43). In the middle of a spin the view's own turn leads, until it ends.
+      if (!this.spin && session.turn !== this.iso.turn && this.visuals.length > 0) this.applyTurn(session.turn);
       // The ring goes under whoever's card is open: a student, or anyone else out walking.
       this.walkers.setMarked(session.student ? studentKey(session.student) : session.person ? `p:${personKey(session.person)}` : null);
     });
@@ -301,13 +343,27 @@ export class CampusScene extends Phaser.Scene {
       this.gameId = id;
       this.dirty = true;
     }
+    // The turntable spin (DESIGN.md 43.6). While it lasts the map waits: nothing else moves or is laid again.
+    if (this.spinAsked && !this.spin) {
+      this.spinAsked = false;
+      this.startSpin();
+      const started = this.spin as Spin | null;
+      if (started && this.spinSettleTo !== null) started.settle = { from: 0, to: this.spinSettleTo, at: time };
+      this.spinSettleTo = null;
+    }
+    let spinEnded = 0;
+    if (this.spin) {
+      this.watchFrames(time);
+      spinEnded = performance.now();
+      this.stepSpin(time, delta);
+      if (this.spin) return;
+    }
     // The hour moves slowly. Once a second is plenty.
     if (time >= this.nextLightAt) {
       this.nextLightAt = time + 1000;
       this.showLight();
     }
     this.watchFrames(time);
-    this.turnWithFingers(time, delta);
     if (this.dirty) {
       this.syncMap(state);
       this.walkers.setMap(state);
@@ -326,6 +382,8 @@ export class CampusScene extends Phaser.Scene {
       this.overlayDirty = true;
       this.nextBarsAt = 0;
     }
+    // How long the frame that ended a spin took to lay the view again, for the dev readout.
+    if (spinEnded > 0) this.spinEndMs = performance.now() - spinEnded;
     if (this.pendingArrivals > 0) {
       // Move-in: the newcomers walk in with a parent or two, and boxes are stacked by their dorms.
       this.scenes.moveIn(this.walkers.arrive(this.pendingArrivals), time);
@@ -419,7 +477,7 @@ export class CampusScene extends Phaser.Scene {
    * a quarter further round. Every tile is placed again and every drawing
    * chosen again, once. The spot in the middle of the screen stays there.
    */
-  private applyTurn(turn: Turn): void {
+  private applyTurn(turn: Turn, clamp = true): void {
     const cam = this.cameras.main;
     const middle = this.iso.toMap(cam.scrollX + cam.width / 2, cam.scrollY + cam.height / 2);
     this.iso.setTurn(turn);
@@ -442,7 +500,8 @@ export class CampusScene extends Phaser.Scene {
     this.glide = null;
     const at = this.iso.toWorld(middle.x, middle.y);
     cam.setScroll(at.x - cam.width / 2, at.y - cam.height / 2);
-    this.clampCamera();
+    // In the middle of a spin the middle of the screen must stay the same spot of the map, even at an edge.
+    if (clamp) this.clampCamera();
   }
 
   private pathMask(state: GameState, x: number, y: number): number {
@@ -1530,8 +1589,9 @@ export class CampusScene extends Phaser.Scene {
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     this.touches.set(pointer.id, { x: pointer.x, y: pointer.y });
-    // A finger down while the map settles from a twist: it is turned at once, so the new gesture starts on it.
-    if (this.settle) this.endSettle(false);
+    // A finger down while the map spins or settles: it settles at once, so the new gesture starts on the view drawn.
+    if (this.spin) this.finishSpin();
+    this.spinAsked = false;
     // Touching the map again drops a clear that was waiting for a yes.
     session.cancelClear();
     if (!store.hasGame) return;
@@ -1553,78 +1613,216 @@ export class CampusScene extends Phaser.Scene {
     this.updatePaint(start);
   }
 
-  /**
-   * The map turns with two twisting fingers the whole way round (DESIGN.md
-   * section 43). It catches up with them in a few frames, so the turn begins
-   * smoothly when a twist is first told from a pinch. When they lift it
-   * settles to the nearest quarter, and the view is drawn again turned so.
-   */
-  private turnWithFingers(time: number, delta: number): void {
+  /** The middle of the screen, in the world. */
+  private screenMiddle(): { x: number; y: number } {
     const cam = this.cameras.main;
-    if (this.settle) {
-      if (this.settle.ending) return;
-      const t = (time - this.settle.at) / SETTLE_MS;
-      this.twistShown = settling(this.settle.from, this.settle.to, t);
-      cam.setRotation(Phaser.Math.DegToRad(this.twistShown));
-      if (t >= 1) {
-        // Drawn at the quarter once more, then the picture is kept to fade into the view drawn turned.
-        this.settle.ending = true;
-        this.game.events.once(Phaser.Core.Events.POST_RENDER, () => this.endSettle(true));
-      }
-      return;
-    }
-    if (this.gesture?.kind === 'pinch' && this.gesture.twist.mode === 'twist') {
-      this.twistShown += (this.twistWanted - this.twistShown) * (1 - Math.exp(-delta / TWIST_FOLLOW_MS));
-      cam.setRotation(Phaser.Math.DegToRad(this.twistShown));
-    }
-  }
-
-  /** The twist is over: the view is drawn turned the quarters it settled on, behind a fading picture of the map as it was. */
-  private endSettle(fade: boolean): void {
-    const settle = this.settle;
-    if (!settle) return;
-    this.settle = null;
-    this.twistShown = 0;
-    this.twistWanted = 0;
-    if (settle.quarters !== 0 && fade) this.coverTurn();
-    this.cameras.main.setRotation(0);
-    if (settle.quarters !== 0) session.turnView(settle.quarters);
+    return { x: cam.scrollX + cam.width / 2, y: cam.scrollY + cam.height / 2 };
   }
 
   /**
-   * A still of the map as it is drawn now, laid over it and faded out, so the
-   * view drawn again turned comes in softly. Taken just after a frame is drawn,
-   * while the frame can still be read.
+   * Begin the turntable spin (DESIGN.md 43.6). The flat ground (tiles, roads,
+   * sidewalks, pads, water, flat buildings) is drawn once into a picture big
+   * enough to cover the screen at any angle, and shown through the turntable:
+   * squashed, turned and unsquashed, by three containers. Every upright drawing
+   * stays as it is and is moved with the ground under it. Everything else
+   * (people, moving cars, lights, markers) is put away until the end.
    */
-  private coverTurn(): void {
-    const source = this.game.canvas;
-    const parent = source.parentElement;
-    if (!parent) return;
-    const cover = document.createElement('canvas');
-    cover.width = source.width;
-    cover.height = source.height;
-    const context = cover.getContext('2d');
-    if (!context) return;
-    try {
-      context.drawImage(source, 0, 0);
-    } catch {
+  private startSpin(): void {
+    const cam = this.cameras.main;
+    const squash = this.iso.halfHeight / this.iso.halfWidth;
+    const size = stillSize(cam.width, cam.height, squash);
+    const renderer = this.game.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
+    const most = Math.min(SPIN_STILL_MAX, typeof renderer.getMaxTextureSize === 'function' ? renderer.getMaxTextureSize() : 4096);
+    const scale = Math.min(1, most / Math.max(size.width, size.height));
+    this.spinCount += 1;
+    const textureKey = `spin-ground-${this.spinCount}`;
+    const texture = this.textures.addDynamicTexture(textureKey, Math.ceil(size.width * scale), Math.ceil(size.height * scale));
+    if (!texture) return;
+    const middle = this.screenMiddle();
+    texture.camera.setZoom(cam.zoom * scale);
+    texture.camera.centerOn(middle.x, middle.y);
+    // Everything that lies flat, in the order it is drawn.
+    const flat: Phaser.GameObjects.Image[] = [];
+    for (const visual of this.visuals) {
+      if (visual.ground.visible) flat.push(visual.ground);
+      if (visual.kerb?.visible) flat.push(visual.kerb);
+    }
+    for (const part of this.placed.spinParts()) if (part.flat && part.sprite.visible) flat.push(part.sprite);
+    flat.sort((a, b) => a.depth - b.depth);
+    texture.draw(flat);
+
+    const image = this.add.image(0, 0, textureKey).setScale(1 / (cam.zoom * scale));
+    const unsquash = this.add.container(0, 0, [image]).setScale(1, 1 / squash);
+    const turner = this.add.container(0, 0, [unsquash]);
+    const still = this.add.container(middle.x, middle.y, [turner]).setScale(1, squash).setDepth(SPIN_STILL_DEPTH);
+    this.spin = { shown: 0, quarter: 0, settle: null, still, turner, textureKey, parts: [], hidden: [], ground: [], kerb: [] };
+    this.takeUpSpin(true);
+  }
+
+  /** The upright drawings to move, as the view is drawn now, and everything else put away. */
+  private takeUpSpin(first: boolean): void {
+    const spin = this.spin;
+    if (!spin) return;
+    const parts: SpinPart[] = [];
+    const keep = (object: Phaser.GameObjects.Image, ground: { x: number; y: number }, corners: SpinPart['corners'], bias = 0): void => {
+      parts.push({ object, base: { x: object.x, y: object.y }, depth: object.depth, ground, corners, bias });
+    };
+    const iso = this.iso;
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        const visual = this.visuals[y * this.mapWidth + x]!;
+        const upright = [visual.object, visual.works].filter((one): one is Phaser.GameObjects.Image => !!one && one.visible);
+        if (upright.length === 0) continue;
+        const ground = iso.toWorld(x + 0.5, y + 0.5);
+        const corners = [iso.toWorld(x, y), iso.toWorld(x + 1, y), iso.toWorld(x, y + 1), iso.toWorld(x + 1, y + 1)];
+        for (const one of upright) keep(one, ground, corners);
+      }
+    }
+    for (const part of this.placed.spinParts()) if (!part.flat && part.sprite.visible) keep(part.sprite, part.ground, part.corners, part.bias);
+    for (const part of this.cars.spinParts()) if (part.sprite.visible) keep(part.sprite, part.ground, [part.ground]);
+    spin.parts = parts;
+
+    // The ground as the view draws it now, shown again at the end; the picture stands in for it until then.
+    if (first) {
+      spin.ground = this.visuals.map((visual) => visual.ground.visible);
+      spin.kerb = this.visuals.map((visual) => visual.kerb?.visible === true);
+      for (const visual of this.visuals) {
+        visual.ground.setVisible(false);
+        visual.kerb?.setVisible(false);
+      }
+    }
+    const moving = new Set<Phaser.GameObjects.GameObject>(parts.map((part) => part.object));
+    for (const child of this.children.list) {
+      if (child === spin.still || child === this.lightLayer || moving.has(child)) continue;
+      const shown = child as Shown;
+      if (!shown.visible) continue;
+      shown.setVisible(false);
+      spin.hidden.push(shown);
+    }
+  }
+
+  /** The spin follows the fingers, or settles. */
+  private stepSpin(time: number, delta: number): void {
+    const spin = this.spin;
+    if (!spin) return;
+    if (spin.settle) {
+      const t = (time - spin.settle.at) / SETTLE_MS;
+      if (spin.settle.done) {
+        // The quarter has been on the screen for a frame. Laying the view again takes a moment on a slow phone, so it
+        // is done while nothing moves.
+        this.endSpin();
+        return;
+      }
+      spin.shown = settling(spin.settle.from, spin.settle.to, t);
+      this.showSpin();
+      if (t >= 1) spin.settle.done = true;
       return;
     }
-    const at = source.getBoundingClientRect();
-    const frame = parent.getBoundingClientRect();
-    Object.assign(cover.style, {
-      position: 'absolute',
-      left: `${at.left - frame.left}px`,
-      top: `${at.top - frame.top}px`,
-      width: `${at.width}px`,
-      height: `${at.height}px`,
-      pointerEvents: 'none',
-      transition: `opacity ${TURN_FADE_MS}ms ease-out`,
-    });
-    parent.appendChild(cover);
-    // Two frames on, once the turned view has been drawn under it, it fades.
-    requestAnimationFrame(() => requestAnimationFrame(() => (cover.style.opacity = '0')));
-    window.setTimeout(() => cover.remove(), TURN_FADE_MS + 200);
+    spin.shown += (this.twistWanted - spin.shown) * (1 - Math.exp(-delta / TWIST_FOLLOW_MS));
+    this.showSpin();
+  }
+
+  /**
+   * Show the spin at its angle. Past each 45-degree mark the view is drawn a
+   * quarter further round, so every drawing shows the side of the nearest
+   * quarter; the rest of the angle swings the ground and moves the drawings.
+   */
+  private showSpin(): void {
+    const spin = this.spin;
+    if (!spin) return;
+    const quarter = quarterFor(spin.shown, spin.quarter);
+    if (quarter !== spin.quarter) {
+      const began = performance.now();
+      // The drawings go back where their owners put them, and are laid again a quarter further round.
+      for (const part of spin.parts) part.object.setPosition(part.base.x, part.base.y).setDepth(part.depth);
+      this.spinTurn(nextTurn(this.iso.turn, quarter - spin.quarter));
+      spin.quarter = quarter;
+      this.takeUpSpin(false);
+      this.spinRedrawMs = performance.now() - began;
+    }
+    const middle = this.screenMiddle();
+    const squash = this.iso.halfHeight / this.iso.halfWidth;
+    const m = turntable(spin.shown - spin.quarter * 90, squash);
+    spin.still.setPosition(middle.x, middle.y);
+    spin.turner.setRotation(Phaser.Math.DegToRad(spin.shown));
+    for (const part of spin.parts) {
+      const to = spinAbout(part.ground, middle, m);
+      part.object.setPosition(part.base.x + to.x - part.ground.x, part.base.y + to.y - part.ground.y);
+      if (!part.corners) continue;
+      let front = -Infinity;
+      for (const corner of part.corners) front = Math.max(front, spinAbout(corner, middle, m).y);
+      // In front by its ground's front corner, and within one spot in the order its owner gave it.
+      const layer = (((part.depth % 4) + 4) % 4) * 0.01;
+      part.object.setDepth(SPIN_DEPTH + front + part.bias + layer);
+    }
+  }
+
+  /**
+   * In the middle of a spin, the view a quarter further round: only what stands
+   * up is laid again, quickly. The ground under the picture is laid again once,
+   * when the spin ends. A drawing of one cell keeps its spot within its cell at
+   * every turn, as it faces the viewer, so it moves with its cell.
+   */
+  private spinTurn(turn: Turn): void {
+    const cam = this.cameras.main;
+    const middle = this.iso.toMap(cam.scrollX + cam.width / 2, cam.scrollY + cam.height / 2);
+    const moved: Array<{ object: Phaser.GameObjects.Image; x: number; y: number; dx: number; dy: number; layer: number }> = [];
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        const visual = this.visuals[y * this.mapWidth + x]!;
+        for (const one of [visual.object, visual.works]) {
+          if (!one?.visible) continue;
+          const top = this.iso.cellTop(x, y);
+          moved.push({ object: one, x, y, dx: one.x - top.x, dy: one.y - top.y, layer: one.depth - this.iso.depth(x, y, 0) });
+        }
+      }
+    }
+    this.iso.setTurn(turn);
+    for (const one of moved) {
+      const top = this.iso.cellTop(one.x, one.y);
+      one.object.setPosition(top.x + one.dx, top.y + one.dy).setDepth(this.iso.depth(one.x, one.y, 0) + one.layer);
+    }
+    const at = this.iso.toWorld(middle.x, middle.y);
+    cam.setScroll(at.x - cam.width / 2, at.y - cam.height / 2);
+    // Buildings placed by hand are mirrored or not as the turned view has them. The phone is told the way the view
+    // faces when the spin ends: telling it redraws the screen's panels, which a spin has no time for.
+    this.showPlaced(store.state);
+    this.cars.relay(this.light.period);
+  }
+
+  /** The spin is over at a quarter: the view drawn turned takes over, and everything comes back. */
+  private endSpin(): void {
+    const spin = this.spin;
+    if (!spin) return;
+    this.spin = null;
+    this.twistWanted = 0;
+    for (const part of spin.parts) part.object.setPosition(part.base.x, part.base.y).setDepth(part.depth);
+    spin.still.destroy(true);
+    this.textures.remove(spin.textureKey);
+    for (const shown of spin.hidden) if (shown.scene) shown.setVisible(true);
+    session.setTurn(this.iso.turn);
+    if (spin.quarter !== 0) {
+      // Turned: the ground and everything on it are laid again for the view as it now faces, in this frame, as a
+      // turn always was (43.1). The ground tiles show again as they are laid.
+      this.applyTurn(this.iso.turn);
+    } else {
+      this.visuals.forEach((visual, n) => {
+        visual.ground.setVisible(spin.ground[n] === true);
+        visual.kerb?.setVisible(spin.kerb[n] === true);
+      });
+      this.clampCamera();
+    }
+    // The light of the hour back on its lamps.
+    this.nextLightAt = 0;
+  }
+
+  /** Settle a spin at once, at the quarter it was going to. */
+  private finishSpin(): void {
+    const spin = this.spin;
+    if (!spin) return;
+    spin.shown = spin.settle ? spin.settle.to : Math.round(spin.shown / 90) * 90;
+    this.showSpin();
+    this.endSpin();
   }
 
   private startPinch(): Gesture | null {
@@ -1662,11 +1860,12 @@ export class CampusScene extends Phaser.Scene {
       const was = this.gesture.twist.mode;
       const twist = a && b ? twistMove(this.gesture.twist, a, b) : this.gesture.twist;
       if (twist.mode === 'twist') {
-        // A twist never zooms: the map goes back to where the fingers found it, and turns with them the whole way
-        // until they lift and it settles to the nearest quarter (turnWithFingers).
+        // A twist never zooms: the map goes back to where the fingers found it, and spins with them the whole way
+        // until they lift and it settles to the nearest quarter (DESIGN.md 43.6).
         if (was !== 'twist') {
           cam.setZoom(this.gesture.from.zoom);
           cam.setScroll(this.gesture.from.scrollX, this.gesture.from.scrollY);
+          if (!this.spin) this.spinAsked = true;
         }
         this.twistWanted = twist.turned;
         this.gesture = { ...next, twist, from: this.gesture.from };
@@ -1684,6 +1883,8 @@ export class CampusScene extends Phaser.Scene {
     }
 
     if (this.gesture.kind === 'pan') {
+      // The map holds still under a spin that is settling.
+      if (this.spin) return;
       const dx = pointer.x - this.gesture.lastX;
       const dy = pointer.y - this.gesture.lastY;
       this.gesture.travelled += Math.abs(dx) + Math.abs(dy);
@@ -1711,8 +1912,10 @@ export class CampusScene extends Phaser.Scene {
     if (gesture.kind === 'pinch') {
       // A twist settles to the nearest quarter when its fingers lift, and the view is drawn turned that far.
       if (gesture.twist.mode === 'twist') {
-        this.settle = { from: this.twistShown, to: settleDegrees(gesture.twist), quarters: twistQuarters(gesture.twist), at: this.game.loop.time, ending: false };
-      } else this.cameras.main.setRotation(0);
+        const to = settleDegrees(gesture.twist);
+        if (this.spin) this.spin.settle = { from: this.spin.shown, to, at: this.game.loop.time };
+        else if (this.spinAsked) this.spinSettleTo = to;
+      }
       // One finger may still be down. Carry on as a pan that can no longer count as a tap.
       const rest = [...this.touches.values()][0];
       this.gesture = rest ? { kind: 'pan', lastX: rest.x, lastY: rest.y, travelled: Infinity } : null;
@@ -1949,7 +2152,7 @@ export class CampusScene extends Phaser.Scene {
   }
 
   private onWheel(pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number): void {
-    if (!store.hasGame) return;
+    if (!store.hasGame || this.spin) return;
     const cam = this.cameras.main;
     this.zoomAt(pointer.x, pointer.y, dy > 0 ? cam.zoom / WHEEL_STEP : cam.zoom * WHEEL_STEP);
   }

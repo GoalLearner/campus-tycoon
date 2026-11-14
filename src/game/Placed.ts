@@ -129,6 +129,38 @@ export class PlacedSprites {
     return found ? found.item : null;
   }
 
+  /**
+   * Each drawing, for the turntable spin (DESIGN.md 43.6): whether it lies
+   * flat, the spot of ground in the world it stands on, and the corners of its
+   * ground, which say what is in front as the ground swings round. A floating
+   * icon keeps its place in the drawing order, over everything.
+   */
+  spinParts(): Array<{ sprite: Phaser.GameObjects.Image; flat: boolean; ground: { x: number; y: number }; corners: Array<{ x: number; y: number }> | null; bias: number }> {
+    const iso = this.iso;
+    return this.drawn.map(({ item, sprite }) => {
+      const w = item.w ?? 1;
+      const h = item.h ?? 1;
+      const layer = item.layer ?? 'object';
+      const bias = (item.forward ?? 0) * iso.halfHeight;
+      if (item.on) {
+        // Stood on its host's drawing, at a spot of it, as a car is: the middle of that one cell is its ground.
+        const spot = iso.onDrawing(item.on, item.x - item.on.x, item.y - item.on.y);
+        const at = iso.toWorld(spot.x, spot.y);
+        const ground = { x: at.x, y: at.y + iso.halfHeight };
+        return { sprite, flat: false, ground, corners: [ground], bias };
+      }
+      if (layer === 'person') {
+        const ground = iso.toWorld(item.x + 0.5, item.y + 0.5);
+        return { sprite, flat: false, ground, corners: [ground], bias };
+      }
+      const ground = iso.toWorld(item.x + w / 2, item.y + h / 2);
+      if (layer === 'ground') return { sprite, flat: true, ground, corners: null, bias };
+      if (layer === 'float') return { sprite, flat: false, ground, corners: null, bias };
+      const corners = [iso.toWorld(item.x, item.y), iso.toWorld(item.x + w, item.y), iso.toWorld(item.x, item.y + h), iso.toWorld(item.x + w, item.y + h)];
+      return { sprite, flat: false, ground, corners, bias };
+    });
+  }
+
   /** Floating icons bob gently so they catch the eye. */
   update(timeMs: number): void {
     for (const drawn of this.drawn) {

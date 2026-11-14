@@ -5,9 +5,10 @@
  * Two fingers on the map are a pinch: they pan and zoom, as they always have.
  * A gesture becomes a twist when the fingers turn past the angle a pinch
  * drifts while they stay about as far apart. Once a gesture has zoomed it can
- * never turn, and once it has turned it never zooms. While they twist, the map
- * turns with them, the whole way. When they lift, it settles to the nearest
- * quarter in a short ease, and the view is drawn again turned that far.
+ * never turn, and once it has turned it never zooms. While they twist, the
+ * campus spins with them the whole way, as on a turntable (src/app/spin.ts,
+ * DESIGN.md 43.6). When they lift, it settles to the nearest quarter in a short
+ * ease, and the view drawn turned that far takes over.
  *
  * Plain numbers in, a decision out: no Phaser, so it is tested on its own.
  */

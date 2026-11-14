@@ -98,6 +98,9 @@ export class Cars {
   /** The rules of the road, and the signs that stand at its junctions and crossings. */
   private traffic = new Traffic(planTraffic(0, 0, [], TOWN_X));
   private signs: Phaser.GameObjects.Image[] = [];
+  /** Where each sign stands, with the middle of a cell at a whole number, and where each parked car does. */
+  private signSpots: Array<{ x: number; y: number }> = [];
+  private parkedSpots: Array<{ x: number; y: number }> = [];
   /** Car parks a road reaches: the road cell beside each, and the car park's footprint. */
   private parks: CarPark[] = [];
   /** Driveways of the streets students drive from. */
@@ -151,6 +154,7 @@ export class Cars {
     // A stop sign at every way into a junction, and a crossing sign at a crossing that stands by itself.
     for (const sprite of this.signs) sprite.destroy();
     this.signs = [];
+    this.signSpots = [];
     for (const sign of plan.signs) {
       const key = sign.kind === 'stop' ? 'sign.stop' : 'sign.crossing';
       if (!this.art.has(key)) continue;
@@ -160,6 +164,7 @@ export class Cars {
       const at = this.iso.standTop(sign.x + 0.5, sign.y + 0.5);
       sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(sign.x + 0.5, sign.y + 0.5) - 1) * 4 + 2.45);
       this.signs.push(sprite);
+      this.signSpots.push({ x: sign.x, y: sign.y });
     }
     // Student cars have a cap of their own, so they follow the real number who drive in.
     this.drivers = driversNow(state);
@@ -406,6 +411,7 @@ export class Cars {
     this.parkedFor = key;
     for (const sprite of this.parked) sprite.destroy();
     this.parked = [];
+    this.parkedSpots = [];
     for (const drive of this.drives) {
       const cell = drive.y * this.width + drive.x;
       if (mix(cell, 7) >= HOME[period]) continue;
@@ -417,7 +423,33 @@ export class Cars {
       const at = carTop(this.iso, drive.x, drive.y);
       sprite.setPosition(at.x, at.y).setDepth(carSum(this.iso, drive.x, drive.y) * 4 + 2.3);
       this.parked.push(sprite);
+      this.parkedSpots.push({ x: drive.x, y: drive.y });
     }
+  }
+
+  /** The signs and the parked cars, laid again for the view as it is turned now: in the middle of a spin (DESIGN.md 43.6). */
+  relay(period: DayPeriod): void {
+    this.signs.forEach((sprite, n) => {
+      const spot = this.signSpots[n]!;
+      const at = this.iso.standTop(spot.x + 0.5, spot.y + 0.5);
+      sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(spot.x + 0.5, spot.y + 0.5) - 1) * 4 + 2.45);
+    });
+    this.parkedFor = '';
+    this.showParked(period);
+  }
+
+  /** The signs and the parked cars, for the turntable spin: each with the spot of ground in the world it stands on. */
+  spinParts(): Array<{ sprite: Phaser.GameObjects.Image; ground: { x: number; y: number } }> {
+    const parts: Array<{ sprite: Phaser.GameObjects.Image; ground: { x: number; y: number } }> = [];
+    this.signs.forEach((sprite, n) => {
+      const spot = this.signSpots[n]!;
+      parts.push({ sprite, ground: this.iso.toWorld(spot.x + 0.5, spot.y + 0.5) });
+    });
+    this.parked.forEach((sprite, n) => {
+      const spot = this.parkedSpots[n]!;
+      parts.push({ sprite, ground: this.iso.toWorld(spot.x + 0.5, spot.y + 0.5) });
+    });
+    return parts;
   }
 
   update(deltaMs: number, period: DayPeriod): void {
