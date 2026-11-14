@@ -141,7 +141,7 @@ export function oddsOf(state: GameState, mc: MainCharacter, odds: Odds): { chanc
     if (way) return good ? `helped by ${way.up}` : `held back by ${way.down}`;
     const against = most(good ? -1 : 1);
     if (against) return good ? `despite ${against.down}` : `despite ${against.up}`;
-    return 'an even chance';
+    return 'nothing tipped it either way';
   };
   return { chance: clamp(chance, ODDS_RANGE.low, ODDS_RANGE.high), phrase };
 }
@@ -338,10 +338,12 @@ function play(state: GameState, mc: MainCharacter, arc: ActiveArc, log: LogEntry
   }
   for (const effect of outcome.effects) apply(state, mc, effect);
   const text = fill(state, mc, outcome.text);
-  const oddsLine = choice.odds ? `${outcome.title}: ${Math.round(shown * 100)}%, ${phrase}.` : '';
+  // The odds as a short clause after what happened (the main session's note on build 12): "Sasha says no (47% likely,
+  // nothing tipped it either way)." The outcome is said once, in the story's own words.
+  const oddsLine = choice.odds ? `${Math.round(shown * 100)}% likely, ${phrase}` : '';
   const scene: Scene = { tick: state.clock.tick, text: fill(state, mc, stage.text), chose: `${first(mc.name)} ${fill(state, mc, choice.label)}.`, outcome: text, odds: fill(state, mc, oddsLine), good: outcome === choice.good };
   state.story.chapters.find((one) => one.id === arc.chapter)?.scenes.push(scene);
-  remember(state, mc, `${text}${scene.odds ? ` ${scene.odds}` : ''}`, !!outcome.big, log);
+  remember(state, mc, scene.odds ? `${text.replace(/[.!]$/, '')} (${scene.odds}).` : text, !!outcome.big, log);
   // What comes next: the next stage, the end, or another story.
   const next = outcome.next;
   if (next === 'end' || (next === undefined && arc.stage + 1 >= spec.stages.length)) {
