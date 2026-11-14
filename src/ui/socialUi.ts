@@ -1,6 +1,7 @@
 import { campusSocial, type Told, type WebView } from '../app/socialView';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
 import { firstNameOf } from '../sim/systems/students';
+import { regularsNow } from '../sim/systems/regulars';
 import { drawSprite, loadAtlas } from './atlas';
 
 /**
@@ -67,6 +68,34 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       faces.append(face);
     }
     body.append(faces);
+    void loadAtlas().then((atlas) => {
+      const pack = atlas?.people;
+      if (!atlas || !pack) return;
+      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
+      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+    });
+  }
+
+  // The regulars (DESIGN.md 63.9): those followed, then those the seed named, each opening their card.
+  const regulars = regularsNow(state).filter((one) => one.why !== 'main').slice(0, 10);
+  if (regulars.length > 0) {
+    body.append(el('div', 'money-head', 'Regulars'));
+    const row = el('div', 'student-friends social-faces');
+    const canvases: Array<{ canvas: HTMLCanvasElement; ref: StudentRef }> = [];
+    for (const one of regulars) {
+      const face = el('button', 'student-friend');
+      face.type = 'button';
+      const first = firstNameOf(state, one.ref);
+      face.setAttribute('aria-label', `${first}: open their card`);
+      const canvas = el('canvas', 'student-friend-art');
+      canvas.width = 96;
+      canvas.height = 112;
+      canvases.push({ canvas, ref: one.ref });
+      face.append(canvas, el('span', 'student-friend-name', first), el('span', 'student-friend-role', one.why === 'followed' ? 'Followed' : 'Regular'));
+      face.addEventListener('click', () => open(one.ref));
+      row.append(face);
+    }
+    body.append(row);
     void loadAtlas().then((atlas) => {
       const pack = atlas?.people;
       if (!atlas || !pack) return;

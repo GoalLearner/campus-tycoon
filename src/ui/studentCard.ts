@@ -4,6 +4,9 @@ import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
+import { clockWords, itemAt, regularDay } from '../app/regularDay';
+import { happenedTo } from '../app/socialView';
+import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
@@ -19,6 +22,9 @@ import { drawSprite, loadAtlas, type Atlas } from './atlas';
  * identity and the campus numbers (src/sim/systems/students.ts). Nothing is
  * stored, and nothing here runs while the card is closed.
  */
+
+/** A line just remembered shows on the follow strip for this many minutes of the player's clock (DESIGN.md 63.9). */
+const FEED_FRESH_TICKS = 2;
 
 /** What the walker on the map is doing. */
 const DOING: Record<string, string> = {
@@ -219,7 +225,11 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const doing = row('Doing now');
   const follow = el('button', 'student-follow', 'Follow');
   follow.type = 'button';
-  follow.addEventListener('click', () => session.setFollowing(!session.following));
+  follow.addEventListener('click', () => {
+    // Followed, they become a regular, kept from now on (DESIGN.md 63.9).
+    if (!session.following && session.student) store.dispatch({ type: 'promoteRegular', ref: session.student });
+    session.setFollowing(!session.following);
+  });
   // Home in their dorm: a look inside their room (DESIGN.md 46).
   const inside = el('button', 'student-follow student-inside', 'Look inside');
   inside.type = 'button';
@@ -253,6 +263,14 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const faces = el('div', 'student-friends');
   peopleRow.value.replaceWith(faces);
 
+  // A regular's day and what has happened to them lately (DESIGN.md 63.9). Following a student makes them one.
+  const todayRow = row('Today');
+  const todayList = el('div', 'student-day');
+  todayRow.value.replaceWith(todayList);
+  const latelyRow = row('Lately');
+  const latelyList = el('div', 'student-day');
+  latelyRow.value.replaceWith(latelyList);
+
   // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
@@ -278,7 +296,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -407,16 +425,59 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       : null;
     reason.disabled = target === null;
 
+    showDay(state, ref, card);
+
     // The strip: the same live line as the card's Doing now, and Following only while the camera is (DESIGN.md 61).
-    // Gone indoors or dragged away from, it is one tap back to the card, which says where they are.
+    // Gone indoors or dragged away from, it is one tap back to the card, which says where they are. Something that
+    // has just happened to them on the map shows there first, for a minute or two: the live feed (63.9).
     stripFirst.textContent = card.name.split(' ')[0]!;
     stripFollowing.hidden = !session.following;
-    setText(stripDoing, doing.value.textContent ?? '');
+    const latest = regularRecord(state, ref)?.memory.at(-1);
+    const fresh = latest && state.clock.tick - latest.tick <= FEED_FRESH_TICKS ? latest.text : null;
+    setText(stripDoing, fresh ?? doing.value.textContent ?? '');
     strip.classList.toggle('following', session.following);
 
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
     node.classList.toggle('show', session.room === null && !session.tucked);
     strip.classList.toggle('show', session.room === null && session.tucked);
+  }
+
+  // ------------------------------------------------------------ their day --
+
+  let dayKey = '';
+  /** A regular's Today (now and what is next, with times) and Lately (what the map saw, then what the web says). */
+  function showDay(state: GameState, ref: StudentRef, card: StudentCard): void {
+    const why = regularWhy(state, ref);
+    // The Main Character's day is their page's (57.1); anyone not a regular has no day kept.
+    const shown = why === 'followed' || why === 'named';
+    if (!shown) {
+      todayRow.line.hidden = true;
+      latelyRow.line.hidden = true;
+      dayKey = '';
+      return;
+    }
+    const hour = shownHour();
+    const view = socialWeb.view;
+    const day = regularDay(view, state, ref, card);
+    const now = itemAt(day, hour);
+    const at = now ? day.indexOf(now) : -1;
+    const next = at >= 0 ? day.slice(at, at + 4) : day.slice(0, 4);
+    const memory = [...(regularRecord(state, ref)?.memory ?? [])].reverse().map((one) => one.text);
+    const told = view ? happenedTo(view, state, ref, 4).map((one) => one.line) : [];
+    const lately = [...memory, ...told].slice(0, 4);
+    todayRow.line.hidden = next.length === 0;
+    latelyRow.line.hidden = lately.length === 0;
+    const key = `${studentKey(ref)}|${next.map((one) => one.from + one.words).join(',')}|${lately.join(',')}`;
+    if (key === dayKey) return;
+    dayKey = key;
+    todayList.textContent = '';
+    next.forEach((item, i) => {
+      const line = el('div', i === 0 && item === now ? 'student-day-line now' : 'student-day-line');
+      line.append(el('span', 'student-day-time', i === 0 && item === now ? 'Now' : clockWords(item.from)), el('span', '', item.words));
+      todayList.append(line);
+    });
+    latelyList.textContent = '';
+    for (const text of lately) latelyList.append(el('div', 'student-day-line', text));
   }
 
   // ---------------------------------------------------------- their people --

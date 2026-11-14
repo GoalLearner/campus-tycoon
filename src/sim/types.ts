@@ -648,6 +648,19 @@ export interface GameState {
 export interface WebMeta {
   /** Students from here on are named from the wider lists that fit their gender. Everyone before keeps their name. */
   namesFrom: { entryYear: number; index: number };
+  /**
+   * The regulars kept (DESIGN.md 63.9): students the player has followed, and the memory of any regular. Missing in a
+   * save from before, which is the same as none.
+   */
+  regulars?: Regular[];
+}
+
+/** A regular as the save keeps them: who, since when they were followed, and what the map showed happening to them. */
+export interface Regular {
+  ref: { entryYear: number; index: number };
+  since: number;
+  followed: boolean;
+  memory: Array<{ tick: number; text: string }>;
 }
 
 /** Someone in the Main Character's life (DESIGN.md 53.2): stored, never rebuilt from the seed. */

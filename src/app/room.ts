@@ -1,4 +1,5 @@
 import { roommateInWeb } from './socialWeb';
+import { sleepHours } from './regularDay';
 import { roomsShared } from '../sim/systems/web';
 import { genderOf } from '../sim/systems/identity';
 import {
@@ -260,13 +261,8 @@ export const ROOM_PLANS: readonly Plan[] = [
 /** How high the desk's top stands, in atlas pixels: what is on it is raised this much. */
 const DESK_TOP = 13;
 
-/** The two hours a student is asleep between, by the 24-hour clock: a night owl later, a scholar a little earlier. */
-function sleeps(card: StudentCard): [number, number] {
-  if (card.archetype === 'allNighter') return [4, 9];
-  if (card.quirk === 'Night owl') return [2, 10];
-  if (card.archetype === 'scholar') return [23, 7];
-  return [24, 8];
-}
+/** The two hours a student is asleep between: the same hours as their day (src/app/regularDay.ts). */
+const sleeps = sleepHours;
 
 const between = (hour: number, from: number, to: number): boolean => {
   const h = ((hour % 24) + 24) % 24;

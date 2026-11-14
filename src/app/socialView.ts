@@ -286,6 +286,23 @@ export function gossip(view: WebView, state: GameState, sinceWeek: number, max =
   return [...out, ...lightSince(view, state, sinceWeek, null, max - out.length)];
 }
 
+/**
+ * What the web knows happened to one student (DESIGN.md 63.9), newest first, for a regular's card: light happenings,
+ * and a heavy one only when it is the week's one heavy item (63.3, decision 6).
+ */
+export function happenedTo(view: WebView, state: GameState, ref: StudentRef, max = 4): Told[] {
+  const heavy = heavyOfTheWeek(view, calendarAt(state.clock).year);
+  const out: Told[] = [];
+  for (const one of happeningsOf(view)) {
+    if (out.length >= max) break;
+    if (!one.people.some((p) => p.entryYear === ref.entryYear && p.index === ref.index)) continue;
+    if (isHeavy(one) && !(heavy && heavy.week === one.week && heavy.luck === one.luck)) continue;
+    const told = tell(state, one);
+    if (told) out.push(told);
+  }
+  return out;
+}
+
 /** The drama of the week: its one heavy item when there is one, otherwise the biggest light one. */
 export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
   const year = calendarAt(state.clock).year;

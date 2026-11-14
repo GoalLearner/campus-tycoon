@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
-import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor } from '../app/crowdTies';
+import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction } from '../app/crowdTies';
 import { effectsSetting } from '../app/life';
 import { socialWeb } from '../app/socialWeb';
 import { idIn, refIn, type WebView } from '../app/socialView';
+import { itemAt, regularDay } from '../app/regularDay';
+import { shownHour } from '../app/daylight';
 import { KIND, SLOTS } from '../sim/config/web';
 import { firstNameOf } from '../sim/systems/students';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
@@ -18,6 +20,7 @@ import {
   sampleStudents,
   studentHome,
   studentKey,
+  studentCard,
   studentFigure,
   TOWN_X,
   townLiving,
@@ -97,6 +100,24 @@ const ICONS_AT_STEP = [3, 5, 8, 12];
 /** Over the head, in world pixels above the feet, and the icon's size against the card's. */
 const ICON_LIFT = 40;
 const ICON_SCALE = 0.5;
+/** A greeting, a talk's topic and a passing face in a line of a regular's memory (DESIGN.md 63.9). */
+const GREETING_WORDS: Record<string, string> = { wave: 'Waved at', highfive: 'High-fived', fistbump: 'Bumped fists with', hug: 'Hugged' };
+const TOPIC_WORDS: Record<string, string> = {
+  'chat-sports': 'sports',
+  'chat-gaming': 'games',
+  'chat-music': 'music',
+  'chat-fitness': 'the gym',
+  'chat-partying': 'a party',
+  'chat-studying': 'class',
+  'chat-art': 'art',
+  'chat-fashion': 'clothes',
+};
+const PASSING_WORDS: Record<Reaction, (name: string) => string> = {
+  heart: (name) => `Passed their crush, ${name}`,
+  sweat: (name) => `Ran into their ex, ${name}`,
+  anger: (name) => `Passed ${name}, their rival`,
+  sparkle: (name) => `Caught the eye of ${name}`,
+};
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
@@ -295,6 +316,8 @@ export class Walkers {
   private icons: Icon[] = [];
   /** The social crowd (DESIGN.md 63.8), on unless the dev page turns it off to measure what it costs. */
   private social = true;
+  /** Told what happened to a student on the map, in a line for their memory if they are a regular (63.9). */
+  onMemory: ((ref: StudentRef, text: string) => void) | null = null;
   private iconPool: Phaser.GameObjects.Image[] = [];
   private townClock = 0;
   /** Arrivals still to step onto the map: each is a route and a delay. */
@@ -739,6 +762,11 @@ export class Walkers {
    * student only ever goes home to their own dorm.
    */
   private destinationFrom(origin: Stop, student: StudentRef | null): Stop | undefined {
+    // The student whose card is open, or who is followed, goes where their day says (DESIGN.md 63.9).
+    if (student && studentKey(student) === this.marked) {
+      const planned = this.plannedFrom(origin, student);
+      if (planned) return planned;
+    }
     // A home game: most of the campus is on its way to the stadium.
     if (this.fanTint !== null && this.stadiumStop && origin !== this.stadiumStop && Math.random() < FAN_SHARE) return this.stadiumStop;
     const others = this.stops.filter((stop) => stop !== origin);
@@ -971,8 +999,21 @@ export class Walkers {
 
   /** Ring the walker whose card is open: a student by their key, anyone else by `p:` and their own. */
   setMarked(key: string | null): void {
+    const changed = key !== this.marked;
     this.marked = key;
     if (key === null || !this.walkerOf(key)) this.ring?.setVisible(false);
+    // Their card opened while they walk somewhere their day does not say: they turn back and go where it does
+    // (DESIGN.md 63.9), back the way they came and on from there.
+    const walker = key && changed ? this.walkerOf(key) : undefined;
+    if (!walker || !walker.student || walker.fading !== null || walker.lingerMs > 0 || walker.talkMs > 0 || walker.party) return;
+    const planned = this.plannedFrom(walker.from, walker.student);
+    if (!planned || planned === walker.goal) return;
+    const onward = this.routeBetween(walker.from, planned);
+    if (!onward) return;
+    const back = walker.route.slice(0, walker.leg).reverse();
+    walker.route = [{ x: walker.x, y: walker.y }, ...back, ...onward.slice(1)];
+    walker.leg = 1;
+    walker.goal = planned;
   }
 
   // ---------------------------------------------------------------- town --
@@ -1190,6 +1231,11 @@ export class Walkers {
           // Rested on the lawn. Off to the next place: a party goes on together, where the first of them chose.
           const known = walker.party ? this.partyNext.get(walker.party) : undefined;
           const shared = known && known.from === walker.goal ? known : undefined;
+          // The student whose card is open, at the place their day says, goes in and stays there (DESIGN.md 63.9).
+          if (!shared && walker.student && walker.key === this.marked && this.staysAt(walker.goal, walker.student)) {
+            walker.fading = 'out';
+            continue;
+          }
           const next = shared ? shared.goal : this.destinationFrom(walker.goal, walker.student);
           const route = next ? (shared ? shared.route.map((one) => ({ ...one })) : this.routeBetween(walker.goal, next)) : null;
           if (walker.party && next && route && !shared) this.partyNext.set(walker.party, { from: walker.goal, goal: next, route: route.map((one) => ({ ...one })) });
@@ -1324,6 +1370,54 @@ export class Walkers {
 
   // ------------------------------------------------------ the social crowd --
 
+  /** Where a student's day sends them next, from their schedule at the player's hour; undefined to choose as usual. */
+  private plannedFrom(origin: Stop, student: StudentRef): Stop | undefined {
+    if (!this.state) return undefined;
+    const card = studentCard(this.state, student);
+    if (!card) return undefined;
+    const item = itemAt(regularDay(socialWeb.view, this.state, student, card), shownHour());
+    if (!item) return undefined;
+    const others = this.stops.filter((stop) => stop !== origin);
+    const places = others.filter((stop) => stop.kind === 'place');
+    const home = this.stopAt.get(this.homes.get(studentKey(student)) ?? -1);
+    const list: Stop[] =
+      item.where === 'class'
+        ? others.filter((stop) => stop.zone === 'academic')
+        : item.where === 'food'
+          ? places.filter((stop) => stop.use === 'food')
+          : item.where === 'play'
+            ? places.filter((stop) => stop.use === 'play')
+            : item.where === 'seat'
+              ? places.filter((stop) => stop.use === 'seat' || stop.use === 'other')
+              : item.where === 'quad'
+                ? others.filter((stop) => stop.kind === 'quad')
+                : home && home !== origin
+                  ? [home]
+                  : [];
+    return pick(list);
+  }
+
+  /** True when a student's day has them where they are now: a place of the kind their schedule says. */
+  private staysAt(stop: Stop, student: StudentRef): boolean {
+    if (!this.state) return false;
+    const card = studentCard(this.state, student);
+    const item = card ? itemAt(regularDay(socialWeb.view, this.state, student, card), shownHour()) : null;
+    if (!item) return false;
+    if (item.where === 'food') return stop.kind === 'place' && stop.use === 'food';
+    if (item.where === 'play') return stop.kind === 'place' && stop.use === 'play';
+    if (item.where === 'seat') return stop.kind === 'place' && (stop.use === 'seat' || stop.use === 'other');
+    return false;
+  }
+
+  /** A line for a student's memory, if anyone is listening. */
+  private remember(walker: Walker, text: string): void {
+    if (walker.student && this.onMemory) this.onMemory(walker.student, text);
+  }
+
+  private first(walker: Walker): string {
+    return walker.student && this.state ? firstNameOf(this.state, walker.student) : 'someone';
+  }
+
   /** Where a walker is drawn: their own spot, or their place beside the first of their party, across the way they go. */
   private placeOf(walker: Walker): { x: number; y: number } {
     if (!walker.party) return walker;
@@ -1352,6 +1446,11 @@ export class Walkers {
     const party = ++this.partySeq;
     leader.party = party;
     leader.place = PARTY_PLACES[0]!;
+    const all3 = [leader.student, ...take];
+    for (const ref of all3) {
+      const rest = all3.filter((one) => one !== ref).map((one) => firstNameOf(this.state!, one));
+      if (this.onMemory) this.onMemory(ref, `Walked out with ${rest.length <= 1 ? rest[0] : `${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`}`);
+    }
     take.forEach((ref, i) => {
       this.start(leader.from, leader.goal!, false, ref, 'student', {
         route: leader.route.map((one) => ({ ...one })),
@@ -1372,7 +1471,9 @@ export class Walkers {
     const web = socialWeb.view;
     if (!web || !this.state) return false;
     const walking = this.walkers.filter((one) => one.kind === 'student' && one.student && one.fading === null && one.lingerMs <= 0 && one.talkMs <= 0 && !one.party && one.goal && one.leg < one.route.length - 2 && this.inView(view, one.x, one.y, 0));
-    const walker = walking[Math.floor(Math.random() * walking.length)];
+    // The student the player follows is who people come to meet, half the time: their day is the one being watched.
+    const watched = walking.find((one) => one.key === this.marked && one.socialAt <= this.scene.time.now);
+    const walker = watched && Math.random() < 0.5 ? watched : walking[Math.floor(Math.random() * walking.length)];
     if (!walker || !walker.goal) return false;
     const id = idIn(web, walker.student!);
     if (id < 0) return false;
@@ -1535,12 +1636,18 @@ export class Walkers {
       const topic = topicFor(web, a.student!, b.student!, Math.random());
       this.showIcon(a, topic, 1100);
       this.showIcon(b, topic === 'speech' ? 'laugh' : topic, 2400);
+      const about = TOPIC_WORDS[topic];
+      for (const [one, other] of [[a, b], [b, a]] as const) this.remember(one, `${GREETING_WORDS[greeting]} ${this.first(other)}${about ? ` and talked about ${about}` : ' and stopped to talk'}`);
       return;
     }
     // An acquaintance waves in passing.
     if (ta && greetingFor(ta, 0) === 'wave') {
       this.showIcon(a, 'wave');
-      if (tb && greetingFor(tb, 0) === 'wave') this.showIcon(b, 'wave', 250);
+      this.remember(a, `Waved at ${this.first(b)}`);
+      if (tb && greetingFor(tb, 0) === 'wave') {
+        this.showIcon(b, 'wave', 250);
+        this.remember(b, `Waved at ${this.first(a)}`);
+      }
       return;
     }
     // A crush, an ex, a rival, or a stranger they would click with: it shows on their face.
@@ -1549,10 +1656,17 @@ export class Walkers {
     const rb = reactionFor(tb, chem);
     if (ra === 'sparkle') {
       this.showIcon(a, 'sparkle');
+      this.remember(a, `Caught the eye of ${this.first(b)}`);
       return;
     }
-    if (ra) this.showIcon(a, ra);
-    if (rb) this.showIcon(b, rb, 200);
+    if (ra) {
+      this.showIcon(a, ra);
+      this.remember(a, PASSING_WORDS[ra](this.first(b)));
+    }
+    if (rb) {
+      this.showIcon(b, rb, 200);
+      this.remember(b, PASSING_WORDS[rb](this.first(a)));
+    }
   }
 
   private wantedInView(view: Phaser.Geom.Rectangle): number {

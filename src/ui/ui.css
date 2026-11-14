@@ -893,6 +893,32 @@ button.student-row {
   margin-right: 6px;
 }
 
+/* A regular's day and what has happened lately (DESIGN.md 63.9): short lines, the one going on now first. */
+.student-day {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.student-day-line {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.student-day-line.now {
+  color: inherit;
+  font-weight: 700;
+}
+
+.student-day-time {
+  flex: none;
+  width: 58px;
+}
+
 .student-quiet {
   font-weight: 400;
   color: var(--muted);
