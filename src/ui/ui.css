@@ -2994,6 +2994,8 @@ button.students {
 }
 .main-odds {
   opacity: 0.8;
+}
+
 /* Beside the portrait, the level keeps close. */
 .main-button + .hud-chip.level-chip {
   margin-left: 4px;
