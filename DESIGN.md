@@ -1262,7 +1262,7 @@ The map alone will not carry the late game forever. The roadmap (section 20) ext
 
 ## 16. Tone guide and age rating
 
-**Changed in part by the owner on 2026-11-13, see section 52 (real-life college content):** alcohol is allowed with consequences, light hazing exists in Greek Row as a system, setbacks and heartbreak are normal, and the rating target is 13+. Where this section and section 52 disagree, section 52 stands.
+**Rewritten on 2026-11-13 to match section 52.1, the owner's real-life college content** (built in section 55): alcohol is allowed with consequences, light hazing exists in Greek Row as a system, setbacks and heartbreak are normal, and the rating target is 13+. Where this section and section 52 disagree, section 52 stands.
 
 This section is written before any inbox or newspaper content.
 
@@ -1272,27 +1272,28 @@ Light and satirical, like SimCity 2000's newspaper: funny and useful at once.
 
 1. **The joke sits on top and the number sits underneath.** Every item carries real information.
 2. **Jokes aim at institutions, never at students.** Administration, boosters, parking, bureaucracy and rival schools are fair game.
-3. **Events harm buildings, budgets and pride, never people,** with one exception the owner made on 2026-11-11: minor, comic injuries, such as a stubbed toe at the courts. Nothing serious, nothing graphic, nobody dies, and every one resolves. Campus Safety handles mischief and pranks, not crime.
-4. Scandals and incidents stay in comic territory: mascot theft, a booster's suspicious gift of a boat, a parking uprising, a professor's feud with the marching band, grade inflation, a rival's prank.
+3. **Consequences reach students, in proportion** (52.1): a hangover, a missed class, a bad grade, a broken heart, and the minor, comic injuries the owner allowed on 2026-11-11, such as a stubbed toe at the courts. Nothing serious, nothing graphic, nobody dies, and every one resolves. Campus Safety handles mischief, parties and pranks, not crime.
+4. Scandals and incidents stay in comic territory: mascot theft, a booster's suspicious gift of a boat, a parking uprising, a professor's feud with the marching band, grade inflation, a rival's prank. **Light hazing exists on Greek Row** as a system with costs: embarrassing pledge tasks, early-morning chores, silly dares. Never forced drinking or eating, never anything that hurts anyone, never a joke at a pledge's expense.
 5. Nothing depicts or implies serious real-world harm to students.
-6. **No alcohol, tobacco or drug references anywhere.** Not as policy flavour, not in art, not in names.
+6. **Alcohol is allowed** (52.1): parties, tailgates and Greek Row socials, and a student's choice to drink, shown plainly and never graphically. Every drink has a cost the player can see, drinking is never rewarded on balance, and it stays infrequent (52.2, held by the long run's budget). Drinking belongs to students of 21 and over; a younger student who drinks is breaking a rule, and is caught. **Tobacco, vaping and drugs stay out**: not as policy flavour, not in art, not in names.
 7. No betting or gambling storylines.
 8. No insult humour. The satire may have bite, but not at a person's expense.
+9. **Still out, whatever a story asks** (52.1): sexual content, assault, self-harm, suicide, eating disorders, drug addiction, serious violence. Romance stays at crushes, dates and relationships, at most a kiss, and seldom.
 
 ### 16.2 Vocabulary
 
 | Say | Not |
 |---|---|
-| Quiet Hours | Dry campus |
+| Dry campus, for the policy that bans drinking on campus (Quiet hours is a policy of its own, about noise) | |
 | Field storming | Riot |
 | Mischief | Crime |
-| Tailgate, with grills and tents | Any drink |
+| Tailgate, which may have drinks for fans of 21 and over | |
 | Most Spirited Campus | Party school |
 | Happiness | Approval, satisfaction |
 
 **Happiness is the one word for how students feel about the school, everywhere on screen:** the HUD, the student card, the Build menu cards, the Scorecard, the inbox and the newspaper. The owner retired "approval" from the interface on 2026-11-11. It is one number with one name. The code still calls that number `approval`, and that name never reaches the player. A test (`tests/wording.test.ts`) fails if on-screen text says approval.
 
-Student archetypes that touch feelings, such as Homesick, Stressed-Out, Heartbroken and Broke Student, stay comic and never imply a crisis. A Party Animal's parties are pizza and music.
+**Heartbreak, rejection, failure and setbacks are a normal part of life here** (52.1): a breakup, an unrequited crush, getting cut, no bid, a failed class. Characters feel them in Happiness, Stress and memory, and recover over time. They are handled kindly and never imply a crisis. **A Party Animal can drink** at 21 and over, and lives with what follows.
 
 ### 16.3 Age rating
 
@@ -1306,9 +1307,9 @@ Apple's current tiers are 4+, 9+, 13+, 16+ and 18+, set by a content questionnai
 | Crude or insult-based humour | 9+ |
 | None of the above | 4+ |
 
-**Target: 4+, without flattening the satire. 9+ is acceptable if the humour needs bite. 13+ is not.** The table was read through a summary of Apple's page on 2026-11-11, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
+**Target: 13+** (the owner, 2026-11-13; 52.2 has what keeps it there and what would move it). It was 4+ until then. The icon and screenshots still suit 4+ (Guideline 2.3.8). The table was read through a summary of Apple's page on 2026-11-11, and 52.2 has the fuller one read on 2026-11-13, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
 
-The relationship line on the student card (13.8) was checked against this table on 2026-11-11. It is a status and nothing more, with no detail, no partner and no storyline, and none of the rows above describes it. The target stays 4+. It goes on the list to recheck against Apple's questionnaire at submission.
+The relationship line on the student card (13.8) was checked against this table on 2026-11-11. It is a status and nothing more, with no detail, no partner and no storyline, and none of the rows above describes it. Since 2026-11-13 it may also say a student is single after a breakup (section 55). It goes on the list to recheck against Apple's questionnaire at submission.
 
 ---
 
@@ -6649,7 +6650,7 @@ The questionnaire answers this plans for: alcohol infrequent, mature themes infr
 
 ### 52.3 What it adds to the game
 
-Built as one stop right after Greek Row (the content stop), with each chapter's hazing risk switched on (Greek Row built it at zero), except the story arcs, which go into MC-2 (53).
+Built as one stop right after Greek Row (the content stop), with each chapter's hazing risk switched on (Greek Row built it at zero), except the story arcs, which go into MC-2 (53). **Built on 2026-11-13: section 55 has it as built, and each change from this table.**
 
 | Piece | What |
 |---|---|

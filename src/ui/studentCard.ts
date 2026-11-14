@@ -2,7 +2,7 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside } from '../app/room';
 import { currentDaylight, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { studentCard, studentFigure, studentKey, type GameState } from '../sim';
+import { studentCard, studentFigure, studentKey, type GameState, type StudentCard } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -90,6 +90,18 @@ function indoorsText(doing: string): string {
   // Gone from view without going indoors anywhere the card knows: what they were last seen doing (DESIGN.md 47).
   const seen = doingText(doing);
   return `Last seen ${seen.charAt(0).toLowerCase()}${seen.slice(1)}`;
+}
+
+/**
+ * Where a student is who has not been seen on the map since the card opened: from where they live and the part of
+ * the player's day, in place of "Out of sight".
+ */
+function awayText(card: StudentCard): string {
+  const period = currentDaylight().period;
+  const home = card.residence === 'chapter' ? `the ${card.chapter} house` : card.residence === 'dorm' ? 'the dorm' : null;
+  if (period === 'night') return home ? `Asleep in ${home}` : 'At home in town';
+  if (period === 'evening') return home ? `In ${home}` : 'At home in town';
+  return 'In class';
 }
 
 const MOOD_NAMES = ['Miserable', 'Unhappy', 'Fine', 'Happy', 'Delighted'];
@@ -186,7 +198,9 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
 
   // Stress, and what the calendar is doing to them this week. Low most of the year.
   const stress = row('Stress');
-  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, reason);
+  // A Party Animal's weekends, said plainly (DESIGN.md 55). Shown only for them.
+  const weekends = row('Weekends');
+  node.append(head, doing.line, grades.line, club.line, relationship.line, stress.line, weekends.line, reason);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -245,7 +259,7 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
 
     if (session.doing) lastDoing = session.doing;
     const outside = session.doing !== null;
-    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : 'Out of sight');
+    setText(doing.value, outside ? doingText(session.doing!) : lastDoing ? indoorsText(lastDoing) : awayText(card));
     follow.disabled = !outside;
     // Someone staying put has nowhere to be followed to.
     follow.hidden = stayingWords(session.doing) !== null;
@@ -264,6 +278,8 @@ export function mountStudentCard(): { node: HTMLElement; render: (state: GameSta
     setText(relationship.value, card.relationship.name);
     setText(relationshipNote, card.relationship.note);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
+    weekends.line.hidden = card.party === null;
+    setText(weekends.value, card.party ?? '');
 
     if (card.mood !== shownMood) {
       shownMood = card.mood;

@@ -16,7 +16,16 @@ import {
   GREEK_INTEREST,
   GREEK_LETTERS,
   GREEK_LIFE,
+  HAZING_BASE,
+  HAZING_LOOKED,
+  HAZING_REPORT,
+  HAZING_SCANDAL,
+  HAZING_SCANDAL_HOURS,
+  HAZING_TASKS,
+  HAZING_TROUBLE,
+  HAZING_WATCHED,
   PHILANTHROPY,
+  PLEDGE_SEASON_HOURS,
   PRANK_CHANCE,
   PRANKS,
   PROBATION_HOURS,
@@ -56,7 +65,7 @@ import { offCampusNow } from './town';
  */
 
 export function newGreek(): Greek {
-  return { chapters: [], used: [], rush: null, totals: { rushes: 0, pranks: 0, giving: 0 }, news: [] };
+  return { chapters: [], used: [], rush: null, totals: { rushes: 0, pranks: 0, giving: 0, reports: 0, suspensions: 0 }, news: [], scandalUntil: -1 };
 }
 
 /** The most events a chapter keeps on its record. */
@@ -138,7 +147,7 @@ function chapterName(state: GameState, salt: number): string {
 
 // --------------------------------------------------------------- policies --
 
-type Times = Extract<PolicyEffect, { kind: 'greekDrag' | 'greekMembers' }>;
+type Times = Extract<PolicyEffect, { kind: 'greekDrag' | 'greekMembers' | 'hazing' }>;
 
 /**
  * What the policies that are on do to Greek Row: the drag on the rating, and how many join. Read from the list itself,
@@ -179,8 +188,14 @@ export function chapterTrouble(state: GameState, chapter: Chapter): ChapterTroub
 
 const troubled = (trouble: ChapterTrouble): boolean => trouble.overfull || trouble.unsafe;
 
-/** How a chapter stands now, from what is true of it now: put right, it is Good again at once. */
+/**
+ * How a chapter stands now, from what is true of it now: put right, it is Good again at once. A suspension or a
+ * probation for hazing (DESIGN.md 55) lasts until the next rush week, whatever else is true.
+ */
 export function chapterStatus(state: GameState, chapter: Chapter): ChapterStatus {
+  const tick = state.clock.tick;
+  if (chapter.suspendedUntil > tick) return 'suspended';
+  if (chapter.probationUntil > tick) return 'probation';
   if (!troubled(chapterTrouble(state, chapter))) return 'good';
   if (chapter.since >= 0 && state.clock.tick - chapter.since >= PROBATION_HOURS * TICKS_PER_HOUR) return 'probation';
   return 'warning';
@@ -219,7 +234,8 @@ export interface ChapterLift {
 
 /** What a chapter's members feel, in points of Food & fun, and why. */
 export function chapterLift(state: GameState, chapter: Chapter): ChapterLift {
-  if (chapterStatus(state, chapter) === 'probation') return { points: 0, parts: [] };
+  const status = chapterStatus(state, chapter);
+  if (status === 'probation' || status === 'suspended') return { points: 0, parts: [] };
   const parts: Array<{ label: string; points: number }> = [{ label: 'A house of their own', points: GREEK_LIFE }];
   if (onTheRow(state, chapter)) parts.push({ label: 'Another house beside it', points: ROW_BONUS });
   const house = houseOf(state, chapter);
@@ -253,6 +269,8 @@ export function greekEffects(state: GameState): Array<{ spec: Pick<PolicySpec, '
   if (points > 0) out.push({ spec: GREEK_ROW, effect: { kind: 'cause', cause: 'life', points, among: 'greek' } });
   const drag = greekDrag(state);
   if (drag.points > 0) out.push({ spec: GREEK_ROW, effect: { kind: 'rating', input: 'graduation', points: -drag.points, why: drag.why } });
+  // A hazing case the president looked away from, in the news (DESIGN.md 55): the school's standing pays for a year.
+  if (state.greek.scandalUntil > state.clock.tick) out.push({ spec: GREEK_ROW, effect: { kind: 'rating', input: 'reputation', points: -HAZING_SCANDAL, why: 'hazing the school looked away from, in the news' } });
   return out;
 }
 const GREEK_ROW: Pick<PolicySpec, 'id' | 'name'> = { id: 'greekRow', name: 'Greek Row' };
@@ -349,6 +367,11 @@ function rush(state: GameState, log: LogEntry[]): void {
     chapter.members = Math.max(chapter.members, want);
     chapter.giving = 0;
     chapter.pranks = 0;
+    // Rush week ends a probation or a suspension for hazing, and the president's last answer is forgotten.
+    chapter.probationUntil = -1;
+    chapter.suspendedUntil = -1;
+    chapter.looked = false;
+    chapter.reports = 0;
     joined += chapter.pledges;
     moved += Math.max(0, housedIn(state, chapter.members) - before);
     remember(state, chapter, 'rush', `Rush week: ${headCount(chapter.pledges)} ${chapter.pledges === 1 ? 'pledge' : 'pledges'} joined, ${headCount(chapter.members)} members in all.`);
@@ -412,6 +435,10 @@ export function chapterPlaced(state: GameState, house: Placed): void {
     giving: 0,
     pranks: 0,
     hazing: 0,
+    probationUntil: -1,
+    suspendedUntil: -1,
+    looked: false,
+    reports: 0,
     events: [],
   };
   let fromOthers = 0;
@@ -466,20 +493,37 @@ function fixWords(trouble: ChapterTrouble): string {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 }
 
-/** Once an hour: each chapter's standing, with a change told once. Trouble put right is Good again at once. */
+const STATUS_CODE: Record<ChapterStatus, number> = { good: 0, warning: 1, probation: 2, suspended: 3 };
+
+/**
+ * Once an hour: each chapter's standing, with a change told once, and its hazing risk. Trouble put right is Good
+ * again at once. In pledge season a chapter already on probation for hazing, or one the president looked away
+ * from, may be reported again: that suspends it (DESIGN.md 55).
+ */
 export function stepGreek(state: GameState, log: LogEntry[]): void {
   const list = state.greek?.chapters;
   if (!list || list.length === 0) return;
   const tick = state.clock.tick;
+  const season = pledgeSeason(state);
   for (const chapter of list) {
     const trouble = chapterTrouble(state, chapter);
     if (!troubled(trouble)) chapter.since = -1;
     else if (chapter.since < 0) chapter.since = tick;
+    chapter.hazing = hazingRisk(state, chapter).risk;
+    if (season && chapter.suspendedUntil <= tick && (chapter.probationUntil > tick || chapter.looked)) {
+      if ((hashInts(state.seed, 5131, chapter.house, tick) % 100_000) / 100_000 < (chapter.hazing * HAZING_REPORT) / 24) suspend(state, chapter, true);
+    }
     const now = chapterStatus(state, chapter);
     if (now === chapter.status) continue;
     const was = chapter.status;
     chapter.status = now;
-    const data = { house: chapter.house, status: now === 'good' ? 0 : now === 'warning' ? 1 : 2, keep: 1 };
+    const data = { house: chapter.house, status: STATUS_CODE[now], keep: 1 };
+    // A probation or a suspension for hazing is told when it is given; its end, here.
+    if (now === 'suspended' || (now === 'probation' && chapter.probationUntil > tick)) continue;
+    if (was === 'suspended' || (was === 'probation' && now === 'good' && chapter.since < 0)) {
+      log.push({ tick, kind: 'greek', text: `${chapter.name} is in good standing again${was === 'suspended' ? ', back from its suspension' : ''}.`, data });
+      continue;
+    }
     if (now === 'warning') {
       log.push({ tick, kind: 'greek', text: `${chapter.name} is on Warning: ${troubleWords(state, chapter, trouble)}. ${fixWords(trouble)} Left as it is for ${PROBATION_HOURS} hours, it goes on Probation.`, data });
     } else if (now === 'probation') {
@@ -490,11 +534,146 @@ export function stepGreek(state: GameState, log: LogEntry[]): void {
   }
 }
 
+// ---------------------------------------------------------------- hazing --
+
+/** True in pledge season: the first hours after this school year's rush week, while there are pledges to haze. */
+export function pledgeSeason(state: GameState): boolean {
+  const from = dateIn(state.clock.week, 0);
+  const tick = state.clock.tick;
+  return tick >= from && tick < from + PLEDGE_SEASON_HOURS * TICKS_PER_HOUR;
+}
+
+export interface HazingRisk {
+  /** 0 to 1. */
+  risk: number;
+  /** Low, Some or High. */
+  level: 'Low' | 'Some' | 'High';
+  /** What raises or lowers it, in plain words. */
+  why: string[];
+}
+
+/** A chapter's hazing risk now, and why: a base, a house in trouble, the president's last answer, and the policies. */
+export function hazingRisk(state: GameState, chapter: Chapter): HazingRisk {
+  const tick = state.clock.tick;
+  if (chapter.suspendedUntil > tick) return { risk: 0, level: 'Low', why: ['suspended, with no pledges'] };
+  let risk = HAZING_BASE;
+  const why: string[] = [];
+  if (troubled(chapterTrouble(state, chapter))) {
+    risk += HAZING_TROUBLE;
+    why.push('its house is in trouble');
+  }
+  if (chapter.looked) {
+    risk *= HAZING_LOOKED;
+    why.push('you looked the other way on a report');
+  }
+  if (chapter.probationUntil > tick) {
+    risk *= HAZING_WATCHED;
+    why.push('it is watched while on probation');
+  }
+  const policy = policyTimes(state, 'hazing');
+  risk *= policy.times;
+  if (policy.by.length > 0) why.push(`eased by ${policy.by.map((spec) => spec.name).join(' and ')}`);
+  else why.push('no anti-hazing policy and no oversight');
+  risk = Math.max(0, Math.min(1, risk));
+  return { risk, level: risk < 0.15 ? 'Low' : risk < 0.35 ? 'Some' : 'High', why };
+}
+
+/** What a report says this chapter's pledges were made to do. */
+export function hazingTask(state: GameState, chapter: Chapter, salt: number): string {
+  return HAZING_TASKS[hashInts(state.seed, 5137, chapter.house, salt) % HAZING_TASKS.length]!.replace('{chapter}', chapter.name);
+}
+
+/**
+ * Today's first report of hazing, if a chapter in pledge season draws one: the desk's question (DESIGN.md 55). A
+ * chapter already on probation for it, or one the president looked away from, is not asked about again: a second
+ * report suspends it (`stepGreek`). `pick` is the desk's number for the day.
+ */
+export function hazingToday(state: GameState, pick: (salt: number) => number): { chapter: Chapter; text: string } | null {
+  if (!pledgeSeason(state)) return null;
+  const tick = state.clock.tick;
+  const list = chapters(state);
+  for (let i = 0; i < list.length; i++) {
+    const chapter = list[i]!;
+    if (chapter.suspendedUntil > tick || chapter.probationUntil > tick || chapter.looked || chapter.members <= 0) continue;
+    if ((pick(120 + i) % 100_000) / 100_000 >= hazingRisk(state, chapter).risk * HAZING_REPORT) continue;
+    return { chapter, text: hazingTask(state, chapter, pick(140 + i)) };
+  }
+  return null;
+}
+
+/** The next rush week's tick: when a probation or a suspension for hazing ends. */
+function untilRush(state: GameState): number {
+  return nextGreekDay(state, 0) ?? state.clock.tick + PLEDGE_SEASON_HOURS * TICKS_PER_HOUR;
+}
+
+/**
+ * A chapter is suspended until the next rush week: its members move back into the dorms and its house stands empty.
+ * Told on the next tick, with the paper's flags (`tellGreek`).
+ */
+function suspend(state: GameState, chapter: Chapter, again: boolean): void {
+  const tick = state.clock.tick;
+  const members = chapter.members;
+  const looked = chapter.looked;
+  chapter.suspendedUntil = untilRush(state);
+  chapter.probationUntil = -1;
+  chapter.members = 0;
+  chapter.pledges = 0;
+  chapter.reports += 1;
+  if (again) state.greek.totals.reports += 1;
+  state.greek.totals.suspensions += 1;
+  const moved = `Its ${headCount(members)} ${members === 1 ? 'member moves' : 'members move'} back into the dorms until rush week.`;
+  let text: string;
+  if (again && looked) {
+    state.greek.scandalUntil = tick + HAZING_SCANDAL_HOURS * TICKS_PER_HOUR;
+    text = `Hazing at ${chapter.name} again, after the school looked the other way: the chapter is suspended, and the story is in every paper. ${moved} The academic rating's Reputation is ${HAZING_SCANDAL} points lower for a year.`;
+  } else if (again) {
+    text = `A second report of hazing at ${chapter.name}, already on probation for it: the chapter is suspended. ${moved}`;
+  } else {
+    text = `${chapter.name} is suspended for hazing. ${moved}`;
+  }
+  remember(state, chapter, 'hazing', again ? 'Suspended after a second report of hazing.' : 'Suspended for hazing.');
+  state.greek.news.push(text);
+  chapter.status = 'suspended';
+}
+
+/** What the president does about a report (DESIGN.md 55): probation until rush, a suspension, or looking the other way. */
+export function greekHazing(state: GameState, house: number, act: 'probation' | 'suspend' | 'look'): void {
+  const chapter = chapterOf(state, house);
+  if (!chapter || chapter.suspendedUntil > state.clock.tick) return;
+  state.greek.totals.reports += 1;
+  if (act === 'suspend') {
+    suspend(state, chapter, false);
+    return;
+  }
+  chapter.reports += 1;
+  if (act === 'look') {
+    chapter.looked = true;
+    remember(state, chapter, 'hazing', 'Reported for hazing. The school looked the other way.');
+    return;
+  }
+  chapter.probationUntil = untilRush(state);
+  chapter.status = 'probation';
+  remember(state, chapter, 'hazing', 'On probation for hazing until rush week.');
+  state.greek.news.push(`${chapter.name} is on probation for hazing until rush week: its members lose what the house gives them, and a second report would suspend it.`);
+}
+
+/** A party at a chapter house was one of its socials, and it goes on the chapter's record. */
+export function greekSocial(state: GameState, chapter: Chapter, text: string): void {
+  remember(state, chapter, 'social', text);
+}
+
 /** Lines from a choice or an action, said on the next tick. */
 export function tellGreek(state: GameState, log: LogEntry[]): void {
   const news = state.greek?.news;
   if (!news || news.length === 0) return;
-  for (const text of news) log.push({ tick: state.clock.tick, kind: 'greek', text, data: { keep: 1 } });
+  for (const text of news) {
+    // A suspension or a probation for hazing is a problem for the paper (DESIGN.md 55); a scandal leads it.
+    const suspended = /\bsuspended\b/.test(text);
+    const probation = !suspended && /on probation for hazing/.test(text);
+    const scandal = suspended && /looked the other way/.test(text);
+    const data = suspended ? { keep: 1, status: 3, hazing: 1, scandal: scandal ? 1 : 0 } : probation ? { keep: 1, status: 2, hazing: 1 } : { keep: 1 };
+    log.push({ tick: state.clock.tick, kind: 'greek', text, data });
+  }
   state.greek.news = [];
 }
 
@@ -516,7 +695,8 @@ function philanthropy(state: GameState, log: LogEntry[]): void {
   let first = '';
   let held = 0;
   for (const chapter of chapters(state)) {
-    if (chapterStatus(state, chapter) === 'probation') continue;
+    const status = chapterStatus(state, chapter);
+    if (status === 'probation' || status === 'suspended') continue;
     const line = eventLine(state, chapter);
     heldEvent(state, chapter);
     remember(state, chapter, 'giving', line.replace(`${chapter.name} `, 'It '));

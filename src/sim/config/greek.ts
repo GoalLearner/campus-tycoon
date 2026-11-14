@@ -61,7 +61,7 @@ export const GREEK_DRAG_PER_SHARE = 50;
 export const GREEK_DRAG_MOST = 4;
 
 /** A chapter's chance of a prank in a school year, by its status: friendly, and more often from a house in trouble. */
-export const PRANK_CHANCE = { good: 0.25, warning: 0.6, probation: 1 } as const;
+export const PRANK_CHANCE = { good: 0.25, warning: 0.6, probation: 1, suspended: 0 } as const;
 
 /** The pranks: silly, harmless, and put right by morning. `{chapter}` is the chapter's name. */
 export const PRANKS: readonly string[] = [
@@ -79,4 +79,31 @@ export const PHILANTHROPY: readonly string[] = [
   '{chapter} ran a canned-food drive and filled the town pantry’s shelves.',
   '{chapter} walked laps of the track all day for the children’s library in town.',
   '{chapter} planted bulbs along the avenue with the town’s garden club.',
+];
+
+// ------------------------------------------------------------------ hazing --
+// DESIGN.md 52.3, as built in section 55. Light hazing is a system with costs, never a joke at a pledge's expense, and
+// never anything that hurts anyone: no forced drinking or eating, nothing dangerous (52.1).
+
+/** Pledge season: the real hours after rush week in which a chapter's pledges may be hazed and it may be reported. */
+export const PLEDGE_SEASON_HOURS = 48;
+/** A chapter's hazing risk, 0 to 1: a base, more for a house in trouble, more again once the president looked away. */
+export const HAZING_BASE = 0.3;
+export const HAZING_TROUBLE = 0.2;
+export const HAZING_LOOKED = 1.6;
+/** A chapter on probation for hazing is watched: its risk is this many times as large. */
+export const HAZING_WATCHED = 0.5;
+/** The chance of a report on a day of pledge season, times the chapter's risk. */
+export const HAZING_REPORT = 0.3;
+/** Points off the academic rating's Reputation input while a case the president looked away from is in the news, and how long. */
+export const HAZING_SCANDAL = 3;
+export const HAZING_SCANDAL_HOURS = 7 * 24;
+/** What a report says the pledges were made to do: embarrassing, early or silly, and nothing worse. `{chapter}` is its name. */
+export const HAZING_TASKS: readonly string[] = [
+  'Pledges of {chapter} were told to carry a rubber chicken to every class for a week and introduce it to each professor.',
+  'Pledges of {chapter} were woken at five every morning to wash the members’ cars and rake the lawn.',
+  'Pledges of {chapter} had to recite the chapter’s history on the quad at sunrise, in matching bathrobes.',
+  'Pledges of {chapter} were sent out at midnight to collect forty signatures from strangers in the library.',
+  'Pledges of {chapter} had to wear the same lime-green blazer to every class for two weeks.',
+  'Pledges of {chapter} were made to clean the whole house with toothbrushes before a social.',
 ];

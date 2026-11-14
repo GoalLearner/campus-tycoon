@@ -13,6 +13,8 @@ import {
   greekMembers,
   greekShare,
   hasDaily,
+  hazingRisk,
+  pledgeSeason,
   headCount,
   nextGreekDay,
   placedCost,
@@ -39,7 +41,7 @@ export function greekEntries(state: GameState, scale: number, card: (type: Place
   return [entry];
 }
 
-export const STATUS_NAME: Record<ChapterStatus, string> = { good: 'Good standing', warning: 'On Warning', probation: 'On Probation' };
+export const STATUS_NAME: Record<ChapterStatus, string> = { good: 'Good standing', warning: 'On Warning', probation: 'On Probation', suspended: 'Suspended' };
 
 /** What is wrong with a chapter, and what puts it right, in plain words. Empty for a chapter with nothing wrong. */
 export function troubleLines(state: GameState, chapter: Chapter): { wrong: string; fix: string } | null {
@@ -71,7 +73,8 @@ export function chapterSummary(state: GameState, placed: Placed): string {
   const parts = [`${chapter.name} · ${STATUS_NAME[status]}.`, `${headCount(chapter.members)} members, ${headCount(chapterBeds(state))} beds.`];
   const trouble = troubleLines(state, chapter);
   if (trouble) parts.push(`${trouble.wrong} ${trouble.fix}`);
-  parts.push(lift > 0 ? `Its members' Food & fun is ${lift} points higher.` : 'Its members feel nothing from the house while it is on Probation.');
+  if (status === 'suspended') parts.push('Suspended for hazing until rush week: the house stands empty.');
+  else parts.push(lift > 0 ? `Its members' Food & fun is ${lift} points higher.` : 'Its members feel nothing from the house while it is on Probation.');
   return parts.join(' ');
 }
 
@@ -92,20 +95,29 @@ export function chapterPage(state: GameState, placed: Placed): ChapterPage | nul
   if (!chapter) return null;
   const status = chapterStatus(state, chapter);
   const standing: string[] = [STATUS_NAME[status]];
+  const tick = state.clock.tick;
+  // A suspension or a probation for hazing lasts until rush week (DESIGN.md 55).
+  if (chapter.suspendedUntil > tick) standing.push(`Suspended for hazing until rush week, in ${duration(chapter.suspendedUntil - tick)}. Its members are back in the dorms.`);
+  else if (chapter.probationUntil > tick) standing.push(`On probation for hazing until rush week, in ${duration(chapter.probationUntil - tick)}. Its members lose what the house gives them, and a second report would suspend it.`);
   const trouble = troubleLines(state, chapter);
-  if (trouble) {
+  if (trouble && status !== 'suspended') {
     standing.push(trouble.wrong, trouble.fix);
     const left = probationIn(state, chapter);
     if (left !== null) standing.push(`Probation in ${duration(Math.max(1, left))} if nothing changes.`);
-    if (status === 'probation') standing.push('On Probation its members lose what the house gives them, and it pranks more.');
+    if (status === 'probation' && chapter.probationUntil <= tick) standing.push('On Probation its members lose what the house gives them, and it pranks more.');
   }
   const lift = chapterLift(state, chapter);
   const rows: Array<[string, string]> = [];
   rows.push(['Members', `${headCount(chapter.members)} in a house of ${headCount(chapterBeds(state))} beds${chapter.pledges > 0 ? ` · ${headCount(chapter.pledges)} joined ${chapter.events.some((event) => event.kind === 'rush') ? 'at the last rush' : 'when it was founded'}` : ''}`]);
   rows.push([
     'Its members feel',
-    lift.points > 0 ? `Food & fun +${lift.points}: ${lift.parts.map((part) => `${part.label.toLowerCase()} +${part.points}`).join(', ')}` : 'Nothing while on Probation',
+    lift.points > 0 ? `Food & fun +${lift.points}: ${lift.parts.map((part) => `${part.label.toLowerCase()} +${part.points}`).join(', ')}` : status === 'suspended' ? 'Nothing: the chapter is suspended' : 'Nothing while on Probation',
   ]);
+  // Its hazing risk, and why (DESIGN.md 55): reports come in pledge season, the first hours after rush week.
+  if (status !== 'suspended') {
+    const risk = hazingRisk(state, chapter);
+    rows.push(['Hazing risk', `${risk.level}: ${risk.why.join(', ')}${pledgeSeason(state) ? '. Pledge season: reports come now' : ''}`]);
+  }
   let near = 0;
   for (const building of state.map.buildings) {
     if (!building || building.stage < 1) continue;

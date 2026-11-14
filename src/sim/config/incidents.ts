@@ -48,3 +48,24 @@ export const INCIDENT_LINES: Record<IncidentKind, readonly string[]> = {
     'A dorm noticeboard has been rearranged into a very large frog.',
   ],
 };
+
+/**
+ * Calls from parties (DESIGN.md 52.3, as built in section 55), on a game with goals. Plain, never graphic: what
+ * happened, and somebody comes. Campus Safety's (as mischief) break up a party or catch someone under 21 drinking; the
+ * Medical Center's (as injuries) look after someone who drank too much. `{place}` is "a dorm" or "the Kappa Llama
+ * house".
+ */
+export const PARTY_LINES: Record<IncidentKind, readonly string[]> = {
+  mischief: [
+    'A party at {place} got too loud after midnight.',
+    'Two sophomores were caught drinking under 21 at a party at {place}.',
+    'A party at {place} spilled out onto the lawn at two in the morning.',
+    'A freshman was found with a beer at a party at {place}. Under 21, so it is a meeting with the Dean of Students.',
+    'A party at {place} ran two hours past its end, music and all.',
+  ],
+  injury: [
+    'A senior drank too much at a party at {place} and needed looking after.',
+    'A junior had too many drinks at a party at {place} and could not get home alone.',
+    'Two seniors drank too much at a party at {place} and needed looking after.',
+  ],
+};

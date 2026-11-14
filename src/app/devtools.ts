@@ -1,5 +1,5 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
-import { chapterBeds, chapters, coverFor, noiseAt, PROBATION_HOURS, WRITTEN } from '../sim';
+import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
 import { roomFor, roomShared } from './room';
 import { shownHour } from './daylight';
@@ -313,6 +313,18 @@ function applyViewParams(params: URLSearchParams): void {
   const card = params.get('card');
   // &room=3 opens the card and the room of the third student the seed offers who lives in a dorm (DESIGN.md 46).
   // &roommate=1 counts only students whose room is shared. &hour= sets the hour the room is read at, as for the map.
+  // &partycard=over opens the card of a Party Animal of 21 or over, and &partycard=under one younger (DESIGN.md 55).
+  const party = params.get('partycard');
+  if (party) {
+    setTimeout(() => {
+      const state = store.state;
+      const ref = sampleStudents(state, 400).find((one) => {
+        const card = studentCard(state, one);
+        return card !== null && card.archetype === 'party' && (party === 'over' ? card.classYear >= 2 : card.classYear < 2);
+      });
+      if (ref) session.openStudent(ref);
+    }, 2800);
+  }
   const roomAt = Number(params.get('room') ?? NaN);
   if (Number.isInteger(roomAt) && roomAt >= 0) {
     setTimeout(() => {
@@ -981,11 +993,26 @@ export function installDevTools(): void {
           set.inbox.nextId += 1;
         }
       }
+      // Hazing (DESIGN.md 55): &hazing=probation, suspend or look answers a report about the first chapter.
+      const hazing = params.get('hazing');
+      if (first && (hazing === 'probation' || hazing === 'suspend' || hazing === 'look')) greekHazing(set, first.house, hazing);
       store.adopt(set, { ephemeral: true });
     }
     if (params.has('away')) {
       clock.skip((Number(params.get('away')) || 24) * 3_600_000);
       store.catchUp();
+    }
+    // &hazingreport=0 puts a report about the first chapter on the desk, once the time away has reached pledge season.
+    const reportAt = Number(params.get('hazingreport') ?? NaN);
+    const report = WRITTEN.find((one) => one.key === 'hazingReport');
+    if (Number.isInteger(reportAt) && report && store.hasGame) {
+      const set = structuredClone(store.state);
+      const draft = report.when({ state: set, pick: (salt: number) => (salt === 120 + reportAt ? 0 : 99_999) } as never);
+      if (draft) {
+        set.inbox.open.push({ id: set.inbox.nextId, key: report.key, kind: report.kind, advisor: report.advisor, title: draft.title, body: draft.body, opens: set.clock.tick, closes: draft.closes ?? set.clock.tick + 36 * 60, options: draft.options, fallback: draft.fallback, advised: draft.advised });
+        set.inbox.nextId += 1;
+        store.adopt(set, { ephemeral: true });
+      }
     }
   } else if (params.get('demo') === 'unjoined') {
     store.adopt(unjoinedCampus(), { ephemeral: true });

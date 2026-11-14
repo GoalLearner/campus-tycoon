@@ -51,6 +51,11 @@ export function applicantsLift(state: GameState): number {
   return Math.max(0, Math.min(APPLICANTS_CAP, sum));
 }
 
+/** How much the desk adds to how often calls come from parties (DESIGN.md 55): a tailgate with drinks. */
+export function callsLift(state: GameState): number {
+  return active(state, 'calls').reduce((total, boost) => total + boost.amount, 0);
+}
+
 /** Drop what has ended. Called once a day. */
 export function pruneBoosts(state: GameState): void {
   const tick = state.clock.tick;

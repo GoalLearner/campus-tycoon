@@ -97,7 +97,7 @@ function everyone(state: GameState): PersonRef[] {
   ];
 }
 
-const BANNED = /\b(beer|wine|drunk|alcohol|pub|vodka|smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|stupid|idiot|ugly|fat|hate\w*)\b/i;
+const BANNED = /\b(smok\w*|cigar\w*|vape|drugs?|weed|bets?|betting|gambl\w*|casino|poker|kill\w*|dead|die[sd]?|blood\w*|crime|arrest\w*|weapon\w*|vomit\w*|vandal\w*|stupid|idiot|ugly|fat|hate\w*)\b/i;
 
 describe('a card for each kind of person', () => {
   it('covers every role the design lists', () => {

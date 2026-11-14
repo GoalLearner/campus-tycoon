@@ -1,5 +1,6 @@
 import { happyParts, stressOff } from './boosts';
 import { examsOff } from './policies';
+import { lateNightStress } from './parties';
 import { activeEntries, calendarAt, dateAt, marksAt, spanOf, type CalendarMark } from '../calendar';
 import { ACADEMIC_CALENDAR, type CalendarEntry } from '../config/academicCalendar';
 import { PLACED } from '../config/placed';
@@ -190,6 +191,8 @@ export function libraryShare(state: GameState): number {
 }
 
 export interface StressRead {
+  /** Points late nights add in a week of term on a campus with parties (DESIGN.md 55), already in the score. 0 with none. */
+  late: number;
   /** Points taken off by help from the desk, already out of the score, and what the help is called. 0 and '' with none. */
   eased: number;
   easedBy: string;
@@ -267,10 +270,12 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
   const help = stressOff(state);
   // A policy that eases exams comes off the top too, in exam weeks only, and is named beside Stress (DESIGN.md 41.7).
   const policy = examsOff(state, season, () => libraryShare(state));
-  const raw = Math.round(100 * season * factor);
+  // Late nights after parties add a little, in term only (DESIGN.md 55).
+  const late = Math.round(lateNightStress(state, season));
+  const raw = Math.round(100 * season * factor) + late;
   const off = help.points + Math.round(policy.points);
   const by = [help.label, ...policy.by].filter((label) => label !== '').join(', ');
-  return { score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };
+  return { late, score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };
 }
 
 /** Faculty Stress, 0 to 100: their own calendar, and how large classes are. */
@@ -474,7 +479,7 @@ export function stepSeason(state: GameState, log: LogEntry[], levels: () => Camp
     if (pos.tickInDay === 0 && pos.phase !== 'founding') term.factor = stressRead(state, levels()).factor;
     // A policy that eases exams is in the semester's average, so it is in how many students stay.
     const curve = seasonCurve(clock);
-    term.lastStress = Math.max(0, 100 * curve * term.factor - examsOff(state, curve, () => libraryShare(state)).points);
+    term.lastStress = Math.max(0, 100 * curve * term.factor + lateNightStress(state, curve) - examsOff(state, curve, () => libraryShare(state)).points);
   }
 
   // The first snow of each game year gets a line. Weather changes on the hour of a spell.

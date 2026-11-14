@@ -452,6 +452,17 @@ function setPolicies(state: GameState, style: Style): GameState {
         return style === 'daily' ? (greekDrag(state).before >= 1.5 ? true : greekDrag(state).before < 1 ? false : null) : null;
       case 'chapterGrades':
         return style === 'striver' ? (greekDrag(state).before >= 1 ? true : greekDrag(state).before < 0.6 ? false : null) : null;
+      // Parties and Greek Row's hazing (DESIGN.md 55). The once-a-day player and the player who works every cause
+      // register parties; the once-a-day player keeps an anti-hazing policy; the player who works every cause teaches
+      // about alcohol and puts an advisor in every chapter. The casual player leaves them all off, and so looks the
+      // other way. Nobody keeps a dry campus.
+      case 'partyRegistration':
+        return style === 'casual' ? null : true;
+      case 'alcoholEducation':
+      case 'greekOversight':
+        return style === 'striver' ? true : null;
+      case 'antiHazing':
+        return style === 'daily' ? true : null;
       default:
         return null;
     }

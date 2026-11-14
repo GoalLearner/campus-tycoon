@@ -27,8 +27,9 @@ import { markRatesDirty } from './money';
 import { hallName } from './people';
 import { playUse, waitMinutes } from './play';
 import { crowding, dayRead, type CampusDay } from './season';
-import { GIVING_BONUS, GIVING_MOST } from '../config/greek';
-import { greekGiving, greekPranked, greekPrankText, prankToday } from './greek';
+import { GIVING_BONUS, GIVING_MOST, HAZING_SCANDAL } from '../config/greek';
+import { greekGiving, greekHazing, greekPranked, greekPrankText, hazingToday, prankToday } from './greek';
+import { partiesOn } from './parties';
 
 /**
  * The routine side of the inbox (DESIGN.md sections 12 and 36): petitions,
@@ -654,6 +655,56 @@ export const WRITTEN: readonly Written[] = [
     },
   },
   {
+    // Greek Row's hazing (DESIGN.md 52.3, as built in section 55): a first report in pledge season, and the president's
+    // three answers. The default is the responsible one. A second report suspends the chapter with no question.
+    key: 'hazingReport',
+    kind: 'event',
+    advisor: 'dean',
+    rest: 0,
+    when: (f) => {
+      const report = hazingToday(f.state, f.pick);
+      if (!report) return null;
+      const { chapter, text } = report;
+      const house = chapter.house;
+      return {
+        title: `A report of hazing at ${chapter.name}`,
+        body: `${text} A pledge's family has written to the Dean of Students, who wants your answer.`,
+        options: [
+          option('probation', `Put ${chapter.name} on probation until rush week`, 'Its members lose what the house gives them until then, and a second report this year suspends it.', 0, [{ t: 'hazing', house, act: 'probation' }]),
+          option('suspend', `Suspend ${chapter.name} until rush week`, `Its ${headCount(chapter.members)} members move back into the dorms, and the house stands empty until then.`, 0, [{ t: 'hazing', house, act: 'suspend' }]),
+          option('look', 'Look the other way', `Nothing changes now. Its hazing risk is higher until rush week, and a second report would suspend it with the story in every paper: Reputation ${HAZING_SCANDAL} points lower for a year.`, 0, [{ t: 'hazing', house, act: 'look' }]),
+        ],
+        fallback: 'probation',
+        advised: 'probation',
+        closes: f.state.clock.tick + EVENT_WINDOW_TICKS,
+      };
+    },
+  },
+  {
+    // A tailgate with drinks (DESIGN.md 52.3, as built in section 55): fans like it, and it has a cost the player can
+    // see. The advisor never picks it: drinking is never rewarded on balance (52.2, point 3).
+    key: 'tailgate',
+    kind: 'event',
+    advisor: 'athletics',
+    rest: 1,
+    days: [2, 3],
+    when: (f) => {
+      if (!partiesOn(f.state) || !f.season || !f.homeAhead || f.small < INBOX_MIN_STUDENTS) return null;
+      const cost = amount(f, 1, 600);
+      return {
+        title: 'Drinks at the tailgate?',
+        body: 'The boosters ask whether fans of 21 and over may drink at the tailgate before the next home game. Campus Safety has views. So does the Medical Center.',
+        options: [
+          option('dry', 'Keep the tailgate dry', 'Nothing changes. Grills, tents and a great deal of lemonade.'),
+          option('drinks', `Allow drinks for fans of 21 and over, with ID checks: ${dollars(cost)}`, `Ten in a hundred more fans want a ticket for ${days(3)}. Calls from parties come twice as often for those ${days(3)}.`, -cost, [fans(0.1, 3, 'Tailgate drinks'), { t: 'boost', kind: 'calls', amount: 1, ticks: 3 * DAY, label: 'Tailgate drinks' }]),
+        ],
+        fallback: 'dry',
+        advised: 'dry',
+        closes: f.state.clock.tick + EVENT_WINDOW_TICKS,
+      };
+    },
+  },
+  {
     key: 'profBand',
     kind: 'event',
     advisor: 'provost',
@@ -901,6 +952,9 @@ function carryOut(state: GameState, item: InboxItem, picked: InboxOption): void 
         break;
       case 'giving':
         greekGiving(state, effect.house);
+        break;
+      case 'hazing':
+        greekHazing(state, effect.house, effect.act);
         break;
     }
   }

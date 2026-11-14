@@ -488,7 +488,7 @@ describe('a favourite place to eat', () => {
   it('has a line for every kind of food but the dining hall, which keeps its own', () => {
     for (const type of [...NEW_FOOD, 'coffee']) expect((FAVOURITES[type] ?? []).length, type).toBeGreaterThan(0);
     // Tone: food and nothing else.
-    for (const lines of Object.values(FAVOURITES)) for (const line of lines ?? []) expect(line).not.toMatch(/beer|wine|drunk|cigar|smok|\bbets?\b|gambl|casino/i);
+    for (const lines of Object.values(FAVOURITES)) for (const line of lines ?? []) expect(line).not.toMatch(/cigar|smok|\bbets?\b|gambl|casino/i);
   });
 });
 

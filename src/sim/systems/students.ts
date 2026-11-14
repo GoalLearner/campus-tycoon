@@ -36,6 +36,9 @@ import {
   QUIRKS,
   RELATIONSHIP_NAMES,
   RELATIONSHIP_NOTES,
+  BREAKUP_NAME,
+  BREAKUP_NOTES,
+  PARTY_CARD,
   RELATIONSHIP_POINTS,
   RELATIONSHIP_SIDES,
   SEATS_COMFORTABLE,
@@ -67,6 +70,8 @@ import { SOCIAL_SPOTS_PER_TABLE } from '../config/grounds';
 import { classSizeNow, teaching } from './staffing';
 import { causeShifts, ratingShift, type CauseShift } from './policies';
 import { chapterLift, memberOf } from './greek';
+import { partiesOn } from './parties';
+import { DRINKING_YEAR } from '../config/parties';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -277,6 +282,8 @@ export function semesterOf(state: GameState): number {
 
 export interface Relationship {
   id: RelationshipId;
+  /** True in the semester after a breakup (DESIGN.md 55): with someone last semester, single now. */
+  breakup: boolean;
   name: string;
   /** A short note for the card: its small effect on this student, or a hint when social life is thin. */
   note: string;
@@ -298,15 +305,22 @@ function leaning(odds: ReadonlyArray<readonly [RelationshipKind, number]>, natur
 export function relationshipOf(seed: number, ref: StudentRef, semester: number, nature: ArchetypeId, social: number): Relationship {
   const arrived = Math.max(0, (ref.entryYear - 1) * 2);
   let kind = pickWeighted(leaning(KIND_AT_ENTRY, nature), roll(seed, ref, SALT.kind, arrived));
+  let before = kind;
   for (let s = arrived + 1; s <= semester; s++) {
+    before = kind;
     if (roll(seed, ref, SALT.stays, s) < KIND_STAYS) continue;
     kind = pickWeighted(leaning(KIND_MOVES[kind], nature), roll(seed, ref, SALT.moves, s));
   }
   const happy = roll(seed, ref, SALT.side, semester) < 0.5 + SOCIAL_SWING * (social - 0.5);
   const id = RELATIONSHIP_SIDES[kind][happy ? 0 : 1];
+  const points = happy ? RELATIONSHIP_POINTS : -RELATIONSHIP_POINTS;
+  // A breakup: with someone last semester, single now. Only the words change (DESIGN.md 55).
+  if (semester > arrived && kind === 'single' && before !== 'single') {
+    return { id, breakup: true, name: BREAKUP_NAME, note: happy ? BREAKUP_NOTES.happier : BREAKUP_NOTES.lessHappy, points };
+  }
   let note: string = happy ? RELATIONSHIP_NOTES.happier : RELATIONSHIP_NOTES.lessHappy;
   if (id === 'singleLooking' && social < SOCIAL_THIN) note = RELATIONSHIP_NOTES.thin;
-  return { id, name: RELATIONSHIP_NAMES[id], note, points: happy ? RELATIONSHIP_POINTS : -RELATIONSHIP_POINTS };
+  return { id, breakup: false, name: RELATIONSHIP_NAMES[id], note, points };
 }
 
 
@@ -361,6 +375,8 @@ export interface StudentCard {
   week: string | null;
   /** null only on a campus with no building for the student to be unhappy about. */
   reason: StudentReason | null;
+  /** A Party Animal's weekends on a campus with parties, said plainly (DESIGN.md 55). null for everyone else. */
+  party: string | null;
 }
 
 function natureOf(seed: number, ref: StudentRef, resident: boolean): ArchetypeId {
@@ -536,9 +552,10 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
   // Greek Row: a student who lives on campus may be in a chapter, and live in its house (DESIGN.md 51).
   const member = resident ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
-  const archetype = archetypeNow(state, ref, classYear, nature, resident, member !== null);
-
   const relationship = relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state));
+  const phase = archetypeNow(state, ref, classYear, nature, resident, member !== null);
+  // A breakup is a phase laid over their nature for the semester, as homesickness is (DESIGN.md 55).
+  const archetype = relationship.breakup && phase === nature ? 'heartbroken' : phase;
 
   // Happiness is read where the student spends their days: the dorm, or for a commuter two lecture halls.
   let spots: number[] = [];
@@ -555,7 +572,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
   let reason: StudentReason | null = null;
   // What the calendar and the sky are doing to everyone this week. Some kinds of student take exams harder.
   const week = seasonOnCards(state);
-  const tilt = STRESS_TILT[archetype] ?? 1;
+  const tilt = STRESS_TILT[phase] ?? 1;
   const stress = Math.max(0, Math.min(100, Math.round(week.stress.score * tilt)));
   let seasonal = 0;
   for (const part of week.parts) seasonal += part.id === 'exams' ? Math.max(-STRESS_HAPPINESS, part.points * tilt) : part.points;
@@ -576,7 +593,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     GPA_FLOOR +
     GPA_SPAN * teachingQuality(state) +
     (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
-    (GPA_TILT[archetype] ?? 0) +
+    (GPA_TILT[phase] ?? 0) +
     (GPA_BY_CLASS_YEAR[classYear] ?? 0) -
     // Exam Stress nudges grades down a little, and lifts when the exams end.
     STRESS_GPA * (stress / 100);
@@ -605,6 +622,7 @@ export function studentCard(state: GameState, ref: StudentRef): StudentCard | nu
     reason,
     stress,
     week: week.parts.length > 0 ? week.parts.reduce((most, part) => (Math.abs(part.points) > Math.abs(most.points) ? part : most)).label : null,
+    party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
   };
 }
 

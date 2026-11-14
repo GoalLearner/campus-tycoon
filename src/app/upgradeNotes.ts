@@ -93,5 +93,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 25) {
     notes.push('New: Greek Row. From the Growth era, the Build menu has chapter houses. Each is a chapter with its own name: students move in from the dorms at rush week, early each fall, and are happier for it. Houses like the stadium and each other, and are a little noisy.');
   }
+  if (fromVersion < 26) {
+    notes.push('New: real college life. Parties lift Food & fun, and late nights cost a little Stress and grades. Students of 21 and over may drink, and now and then Campus Safety or the Medical Center gets a call. Three new policies are about parties. On Greek Row, pledges may be hazed: a report comes to your desk, and two more policies lower the risk.');
+  }
   return notes;
 }

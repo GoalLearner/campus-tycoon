@@ -2854,10 +2854,12 @@ button.students {
 .chapter-standing.probation strong {
   color: var(--warn, #f0c36a);
 }
-.chapter-standing.probation {
+.chapter-standing.probation,
+.chapter-standing.suspended {
   border-color: #e8847a;
 }
-.chapter-standing.probation strong {
+.chapter-standing.probation strong,
+.chapter-standing.suspended strong {
   color: #e8847a;
 }
 .chapter-standing p.fine {

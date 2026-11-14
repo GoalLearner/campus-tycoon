@@ -226,3 +226,5 @@ export * from './config/traditions';
 export * from './systems/traditions';
 export * from './config/greek';
 export * from './systems/greek';
+export * from './config/parties';
+export * from './systems/parties';
