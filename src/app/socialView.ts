@@ -321,11 +321,14 @@ export function dramaOfTheWeek(view: WebView, state: GameState): Told | null {
 
 /**
  * First names for a list of students said together, a repeated one with their surname's first letter, so a line
- * never reads "Toni and Toni": "Toni K." and "Toni M.".
+ * never reads "Toni and Toni": "Toni K." and "Toni M."; and the whole surname when that letter is shared too.
  */
 export function firstNamesOf(state: GameState, refs: StudentRef[]): string[] {
   const firsts = refs.map((ref) => firstNameOf(state, ref));
-  return firsts.map((name, i) => (firsts.indexOf(name) !== firsts.lastIndexOf(name) ? `${name} ${studentName(state, refs[i]!).split(' ')[1]?.charAt(0) ?? ''}.` : name));
+  const surnames = refs.map((ref) => studentName(state, ref).split(' ').slice(1).join(' '));
+  const twice = (list: string[], at: number): boolean => list.indexOf(list[at]!) !== list.lastIndexOf(list[at]!);
+  const lettered = firsts.map((name, i) => (twice(firsts, i) ? `${name} ${surnames[i]!.charAt(0)}.` : name));
+  return lettered.map((name, i) => (twice(lettered, i) && surnames[i] ? `${firsts[i]} ${surnames[i]}` : name));
 }
 
 // ------------------------------------------------------- campus social --

@@ -7,7 +7,7 @@ import { HEAVY_WORDS } from '../src/sim/config/tone';
 import { HEAVY_EVENTS } from '../src/sim/config/web';
 import { FOLLOWED_KEPT, MEMORY_KEPT, NAMED_FROM, NAMED_PER_CLASS, namedRegulars, promoteRegular, regularRecord, regularsNow, regularWhy, rememberRegular } from '../src/sim/systems/regulars';
 import { dayRead } from '../src/sim/systems/season';
-import { firstNameOf } from '../src/sim/systems/students';
+import { firstNameOf, studentName } from '../src/sim/systems/students';
 import { catchUp, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { DAY, T0 } from './helpers';
 
@@ -199,7 +199,13 @@ describe('first names said together', () => {
     const other = refs.find((ref) => firstNameOf(MODEL, ref) !== firstNameOf(MODEL, twins[0]!))!;
     const said = firstNamesOf(MODEL, [twins[0]!, other, twins[1]!]);
     expect(said[1]).toBe(firstNameOf(MODEL, other));
-    for (const i of [0, 2]) expect(said[i]).toMatch(new RegExp(`^${firstNameOf(MODEL, twins[0]!)} [A-Z]\.$`));
+    for (const i of [0, 2]) expect(said[i]).toMatch(new RegExp(`^${firstNameOf(MODEL, twins[0]!)} [A-Z]`));
+    // Sharing the surname's letter too, they are told apart by the whole surname.
+    const sameLetter = [...byName.values()].flatMap((list) => list.flatMap((a) => list.filter((b) => b !== a && studentName(MODEL, a).split(' ')[1]!.charAt(0) === studentName(MODEL, b).split(' ')[1]!.charAt(0) && studentName(MODEL, a) !== studentName(MODEL, b)).map((b) => [a, b] as const)))[0];
+    expect(sameLetter).toBeDefined();
+    const both = firstNamesOf(MODEL, [...sameLetter!]);
+    expect(both[0]).toBe(studentName(MODEL, sameLetter![0]));
+    expect(both[1]).toBe(studentName(MODEL, sameLetter![1]));
   });
 });
 
