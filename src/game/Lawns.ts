@@ -163,9 +163,11 @@ interface Group {
   noteAt: number;
   crowd: Array<{ image: Phaser.GameObjects.Image | null; on: number; until: number; next: number }>;
   night: number;
+  /** A dance-off (64.4, L6): until when the two in the middle dance it out. */
+  danceOffUntil: number;
 }
 
-/** A party night as the scene reads it (L6): the day the evening began on, its weekday, and the hour. */
+/** A party night as the scene reads it (L6): the game day, its weekday, and the shown hour, whole. */
 export interface PartyNight {
   night: number;
   weekday: number;
@@ -640,7 +642,7 @@ export class Lawns {
   }
 
   private newGroup(key: string, kind: LawnKind, x: number, y: number, where: string): Group {
-    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1 };
+    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0 };
   }
 
   /** From a spot on a quad, three to six cells across it along the grid, over quad and path only (L6), or null. */
@@ -696,7 +698,7 @@ export class Lawns {
   /** Each party near the screen drawn with the crowd it has by this hour; one that has gone off it gives way. */
   private recountParties(view: Phaser.Geom.Rectangle, keep: Set<string>): void {
     const night = this.night;
-    if (!night || this.reduced) return;
+    if (!night) return;
     const roll = mix(hashInts(this.state!.seed, night.night, 4759), 3);
     const want = Math.round(partySize(this.step, night.weekday, roll) * this.partyRamp(night.hour));
     if (want <= 0) return;
@@ -757,6 +759,8 @@ export class Lawns {
   /** A party's things: a big speaker in the middle, lights strung behind the crowd, lanterns at its edge. */
   private formParty(group: Group): void {
     const { x, y } = group;
+    // Notes rise only from a speaker: an atlas without one has a party with none.
+    if (!this.art.has('room.speaker')) group.noteAt = Number.POSITIVE_INFINITY;
     this.prop(group, 'room.speaker', x, y);
     const speaker = group.props[group.props.length - 1];
     speaker?.sprite.setScale(speaker.sprite.scaleX * PARTY_SPEAKER);
@@ -802,7 +806,7 @@ export class Lawns {
 
   /** Tonight's parties, where they are: for the walkers, who head there in groups (L6). */
   partySpots(): Array<{ x: number; y: number }> {
-    return this.night && !this.reduced ? this.partiesTonight().map((site) => ({ x: site.x, y: site.y })) : [];
+    return this.night ? this.partiesTonight().map((site) => ({ x: site.x, y: site.y })) : [];
   }
 
   /** Draw a group or stop drawing it, as it comes on or goes off the screen. Back on, it is drawn afresh. */
@@ -924,7 +928,12 @@ export class Lawns {
           moving = true;
         }
         // Dancers sway from side to side and bob (DESIGN.md 64.3), each a beat off the others; at a party, most of them.
-        const sway = (group.kind === 'dance' || (party && member.dancing)) && !this.reduced ? swayAt(timeMs, i * 0.13 + member.phase) : null;
+        // In a dance-off the two in the middle go faster and bigger (L6).
+        const off = i < 2 && timeMs < group.danceOffUntil;
+        const swaying = (group.kind === 'dance' || (party && member.dancing) || off) && !this.reduced;
+        const base = swaying ? swayAt(off ? timeMs * 1.7 : timeMs, i * 0.13 + member.phase) : null;
+        const sway = base && off ? { rotation: base.rotation * 1.8, lift: base.lift * 2.5 } : base;
+        if (off) moving = true;
         const bob = sway ? sway.lift : 0;
         member.sprite.setRotation(sway ? sway.rotation : 0);
         const flipFrom = people.flip?.[member.direction];
@@ -1002,7 +1011,7 @@ export class Lawns {
   /** Music notes rising from a party's speaker (L6), one after another, drifting a little as they go. */
   private notes(group: Group, timeMs: number, alpha: number): void {
     const speaker = group.props[0];
-    if (!speaker || this.reduced) return;
+    if (!speaker || this.reduced || !Number.isFinite(group.noteAt)) return;
     if (timeMs >= group.noteAt && this.art.has('emote.music')) {
       group.noteAt = timeMs + NOTE_EVERY_MS;
       const image = this.image('emote.music');
@@ -1034,6 +1043,7 @@ export class Lawns {
    */
   private partyIcons(group: Group, timeMs: number, alpha: number): void {
     if (group.beats.length > 0) {
+      for (const slot of group.crowd) slot.image?.setVisible(false);
       this.drawBeats(group, timeMs, alpha);
       return;
     }
@@ -1187,6 +1197,26 @@ export class Lawns {
       for (const beat of group.beats) beat.image?.destroy();
       group.beats = [];
     }
+  }
+
+  /**
+   * A dance-off at a dance or a party (64.4, L6): the two nearest the middle dance it out, faster and bigger, with an
+   * emote over each in turn and a high five at the end. The crowd round them is the walkers'.
+   */
+  stageDanceOff(at: { x: number; y: number }, ms: number): void {
+    const group = [...this.groups.values()].find((one) => !one.leaving && (one.kind === 'dance' || one.kind === 'party') && one.x === at.x && one.y === at.y);
+    if (!group || group.members.length < 2) return;
+    const now = this.nowMs;
+    group.danceOffUntil = now + ms;
+    group.icon?.setVisible(false);
+    for (const slot of group.crowd) slot.image?.setVisible(false);
+    const turn = Math.max(1200, Math.floor((ms - 1600) / 3));
+    group.beats = [
+      { key: 'emote.exclaim', on: 0, from: now + 200, until: now + 200 + turn, big: false, image: null },
+      { key: 'emote.music', on: 1, from: now + 200 + turn, until: now + 200 + 2 * turn, big: false, image: null },
+      { key: 'emote.laugh', on: 0, from: now + 200 + 2 * turn, until: now + 200 + 3 * turn, big: false, image: null },
+      { key: 'emote.highfive', on: 1, from: now + 300 + 3 * turn, until: now + 1300 + 3 * turn, big: false, image: null },
+    ];
   }
 
   /** A group of a kind whose spot is in view, for a crowd moment (DESIGN.md 64.4): a dance on a lawn. */

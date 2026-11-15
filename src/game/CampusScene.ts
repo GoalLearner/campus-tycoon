@@ -652,7 +652,7 @@ export class CampusScene extends Phaser.Scene {
     // A party night (L6): Thursday to Saturday evenings in term, in fine weather, on a game with parties. A crowd on the
     // grass by a hall or on Greek Row, and friend groups out for the night head there.
     const partying = partyTonight({ weekday: date.weekday, period: this.light.period, weather: this.weather, term: seasonCurve(state.clock) >= IN_TERM_FROM, parties: partiesOn(state) });
-    this.lawns.setParty(partying ? { night: Math.floor(state.clock.tick / TICKS_PER_DAY), weekday: date.weekday, hour: shownHour() } : null);
+    this.lawns.setParty(partying ? { night: Math.floor(state.clock.tick / TICKS_PER_DAY), weekday: date.weekday, hour: Math.floor(shownHour()) } : null);
     this.walkers.setPartySpots(this.lawns.partySpots());
     this.walkers.setResting(lawns * RESTING_AT_FULL);
     // What students may have a big moment about today (DESIGN.md 64.3), and the sky for what they carry.
