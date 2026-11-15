@@ -5320,6 +5320,86 @@
     "h": 45
    }
   },
+  "prop.dog": {
+   "frame": {
+    "x": 922,
+    "y": 525,
+    "w": 13,
+    "h": 10
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 13,
+    "h": 10
+   },
+   "sourceSize": {
+    "w": 13,
+    "h": 10
+   }
+  },
+  "prop.frisbee": {
+   "frame": {
+    "x": 961,
+    "y": 525,
+    "w": 8,
+    "h": 4
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 8,
+    "h": 4
+   },
+   "sourceSize": {
+    "w": 8,
+    "h": 4
+   }
+  },
+  "prop.phone": {
+   "frame": {
+    "x": 938,
+    "y": 525,
+    "w": 5,
+    "h": 8
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 5,
+    "h": 8
+   },
+   "sourceSize": {
+    "w": 5,
+    "h": 8
+   }
+  },
+  "prop.tray": {
+   "frame": {
+    "x": 946,
+    "y": 525,
+    "w": 12,
+    "h": 7
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 7
+   },
+   "sourceSize": {
+    "w": 12,
+    "h": 7
+   }
+  },
   "quad.bench": {
    "frame": {
     "x": 892,

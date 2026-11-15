@@ -5427,6 +5427,54 @@
     }
    ]
   },
+  "prop.frisbee": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/frisbee.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.17
+    }
+   ]
+  },
+  "prop.phone": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/phone.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.18
+    }
+   ]
+  },
+  "prop.tray": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/tray.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.22
+    }
+   ]
+  },
+  "prop.dog": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/dog.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.24
+    }
+   ]
+  },
   "decoration.statue": {
    "layers": [
     {
@@ -6652,6 +6700,80 @@
     "_rendered/fallback/faces/laugh-SportsPlayer2.png",
     "_rendered/fallback/faces/laugh-SportsPlayer3.png",
     "_rendered/fallback/faces/laugh-SportsPlayer4.png"
+   ]
+  },
+  "poses": {
+   "sit-sw": [
+    "_rendered/fallback/poses/sit-sw-Character2.png",
+    "_rendered/fallback/poses/sit-sw-Character3.png",
+    "_rendered/fallback/poses/sit-sw-Character7.png",
+    "_rendered/fallback/poses/sit-sw-Character8.png",
+    "_rendered/fallback/poses/sit-sw-Character9.png",
+    "_rendered/fallback/poses/sit-sw-Character10.png",
+    "_rendered/fallback/poses/sit-sw-Character11.png",
+    "_rendered/fallback/poses/sit-sw-Character12.png",
+    "_rendered/fallback/poses/sit-sw-Character13.png",
+    "_rendered/fallback/poses/sit-sw-Character14.png",
+    "_rendered/fallback/poses/sit-sw-Character15.png",
+    "_rendered/fallback/poses/sit-sw-Character16.png",
+    "_rendered/fallback/poses/sit-sw-SportsPlayer1.png",
+    "_rendered/fallback/poses/sit-sw-SportsPlayer2.png",
+    "_rendered/fallback/poses/sit-sw-SportsPlayer3.png",
+    "_rendered/fallback/poses/sit-sw-SportsPlayer4.png"
+   ],
+   "sit-nw": [
+    "_rendered/fallback/poses/sit-nw-Character2.png",
+    "_rendered/fallback/poses/sit-nw-Character3.png",
+    "_rendered/fallback/poses/sit-nw-Character7.png",
+    "_rendered/fallback/poses/sit-nw-Character8.png",
+    "_rendered/fallback/poses/sit-nw-Character9.png",
+    "_rendered/fallback/poses/sit-nw-Character10.png",
+    "_rendered/fallback/poses/sit-nw-Character11.png",
+    "_rendered/fallback/poses/sit-nw-Character12.png",
+    "_rendered/fallback/poses/sit-nw-Character13.png",
+    "_rendered/fallback/poses/sit-nw-Character14.png",
+    "_rendered/fallback/poses/sit-nw-Character15.png",
+    "_rendered/fallback/poses/sit-nw-Character16.png",
+    "_rendered/fallback/poses/sit-nw-SportsPlayer1.png",
+    "_rendered/fallback/poses/sit-nw-SportsPlayer2.png",
+    "_rendered/fallback/poses/sit-nw-SportsPlayer3.png",
+    "_rendered/fallback/poses/sit-nw-SportsPlayer4.png"
+   ],
+   "lie": [
+    "_rendered/fallback/poses/lie-Character2.png",
+    "_rendered/fallback/poses/lie-Character3.png",
+    "_rendered/fallback/poses/lie-Character7.png",
+    "_rendered/fallback/poses/lie-Character8.png",
+    "_rendered/fallback/poses/lie-Character9.png",
+    "_rendered/fallback/poses/lie-Character10.png",
+    "_rendered/fallback/poses/lie-Character11.png",
+    "_rendered/fallback/poses/lie-Character12.png",
+    "_rendered/fallback/poses/lie-Character13.png",
+    "_rendered/fallback/poses/lie-Character14.png",
+    "_rendered/fallback/poses/lie-Character15.png",
+    "_rendered/fallback/poses/lie-Character16.png",
+    "_rendered/fallback/poses/lie-SportsPlayer1.png",
+    "_rendered/fallback/poses/lie-SportsPlayer2.png",
+    "_rendered/fallback/poses/lie-SportsPlayer3.png",
+    "_rendered/fallback/poses/lie-SportsPlayer4.png"
+   ],
+   "nap": [
+    "_rendered/fallback/poses/nap-Character2.png",
+    "_rendered/fallback/poses/nap-Character3.png",
+    "_rendered/fallback/poses/nap-Character7.png",
+    "_rendered/fallback/poses/nap-Character8.png",
+    "_rendered/fallback/poses/nap-Character9.png",
+    "_rendered/fallback/poses/nap-Character10.png",
+    "_rendered/fallback/poses/nap-Character11.png",
+    "_rendered/fallback/poses/nap-Character12.png",
+    "_rendered/fallback/poses/nap-Character13.png",
+    "_rendered/fallback/poses/nap-Character14.png",
+    "_rendered/fallback/poses/nap-Character15.png",
+    "_rendered/fallback/poses/nap-Character16.png",
+    "_rendered/fallback/poses/nap-SportsPlayer1.png",
+    "_rendered/fallback/poses/nap-SportsPlayer2.png",
+    "_rendered/fallback/poses/nap-SportsPlayer3.png",
+    "_rendered/fallback/poses/nap-SportsPlayer4.png"
    ]
   },
   "flip": {

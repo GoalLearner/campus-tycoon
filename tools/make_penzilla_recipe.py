@@ -420,6 +420,10 @@ sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5,
 EMOTES = ('speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat', 'wave', 'highfive', 'fistbump', 'hug', 'chat-sports', 'chat-gaming', 'chat-music', 'chat-fitness', 'chat-partying', 'chat-studying', 'chat-art', 'chat-fashion', 'chat-love')
 for emote in EMOTES:
     sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
+# The living campus's props (DESIGN.md 64): ours, drawn in the pack's way by tools/make_props.py, for what the packs
+# do not have. Each about the size it is beside a figure 36 pixels tall: a frisbee, a phone, a dining tray, a dog.
+for prop, scale in (('frisbee', 0.17), ('phone', 0.18), ('tray', 0.22), ('dog', 0.24)):
+    sprites[f'prop.{prop}'] = {'layers': [standing(f'_rendered/ours/props/{prop}.png', 0.5, 0.5, scale=scale)]}
 
 # ----------------------------------------------------------- decorations --
 # The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
@@ -612,6 +616,9 @@ people = {
     # A student's mood (DESIGN.md 63.7): their figure as the card shows it, with one of the pack's own mouths, and
     # for a laugh its shut eyes, made by tools/make_faces.py and cut at the same size and feet.
     'moods': {mood: [f'_rendered/fallback/faces/{mood}-{name}.png' for name in students] for mood in ('smile', 'frown', 'flat', 'small', 'smirk', 'laugh')},
+    # Poses the pack lacks (DESIGN.md 64): sitting facing south-west and north-west, lying in the sun, napping, each
+    # the student's own figure moved, its stub squashed into a seat or the figure laid down, made by tools/make_poses.py.
+    'poses': {pose: [f'_rendered/fallback/poses/{pose}-{name}.png' for name in students] for pose in ('sit-sw', 'sit-nw', 'lie', 'nap')},
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
     'roles': roles,

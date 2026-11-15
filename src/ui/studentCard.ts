@@ -60,7 +60,7 @@ const INDOORS_BY_PERIOD: Partial<Record<DayPeriod, Record<string, string>>> = {
   night: { toClass: 'In a night class', nextClass: 'In a night class', toDorm: 'Asleep in the dorm' },
 };
 
-/** What a student is doing at a seat, by the part of the player's day. Nobody in the pack can sit, so they stand at it. */
+/** What a student is doing at a seat, by the part of the player's day. They sit at it, in a pose made from the pack (DESIGN.md 64). */
 const SEATS: Record<string, { a: string; at: Record<DayPeriod, string> }> = {
   Bench: {
     a: 'a bench',

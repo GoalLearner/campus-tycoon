@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting } from '../app/life';
 import { socialWeb } from '../app/socialWeb';
@@ -153,6 +154,9 @@ function likesParties(view: WebView, ref: StudentRef): boolean {
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
+/** Of those leaving a place to eat, the share carrying a tray or a cup; of those going to a quad, the share with a dog (DESIGN.md 64). */
+const CARRY_FROM_FOOD = 0.55;
+const DOG_WALKERS = 0.04;
 /** In the morning rush people hurry. */
 const HURRY: Record<DayPeriod, number> = { morning: 1.2, afternoon: 1, evening: 0.95, night: 0.9 };
 /** Routes on campus longer than this many cells are skipped, so nobody treks across the whole map. */
@@ -229,6 +233,8 @@ interface Extra {
   pace?: number;
   /** A sprite drawn beside them, because no figure can hold anything: the guide's pennant. */
   prop?: string;
+  /** The prop is held in front of them, a tray or a cup, not stood beside (DESIGN.md 64). */
+  held?: boolean;
   /** Walking with someone (DESIGN.md 63.8): which leg of the route, where on it, their party and their place in it. */
   leg?: number;
   at?: { x: number; y: number };
@@ -246,6 +252,10 @@ interface Walker {
   person: PersonRef | null;
   /** Something drawn beside them. */
   prop: Phaser.GameObjects.Image | null;
+  /** True when the prop is carried in front of them: a tray or a cup from a place to eat. */
+  held: boolean;
+  /** The prop is a dog on a walk, which faces the way they go. */
+  dog: boolean;
   key: string | null;
   look: number;
   /** Where this trip began. */
@@ -296,6 +306,16 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
   [0, 1],
   [0, -1],
 ];
+
+/**
+ * What a walker carries (DESIGN.md 64): a tray or a cup on the way from somewhere to eat, now and then a dog on the way
+ * to a quad. Only for show.
+ */
+function carried(from: Stop, to: Stop, period: DayPeriod): Extra {
+  if (from.use === 'food' && Math.random() < CARRY_FROM_FOOD) return { prop: period === 'morning' || Math.random() < 0.4 ? 'room.cup' : 'prop.tray', held: true };
+  if (to.kind === 'quad' && period !== 'night' && Math.random() < DOG_WALKERS) return { prop: 'prop.dog' };
+  return {};
+}
 
 function pick<T>(items: readonly T[]): T | undefined {
   return items[Math.floor(Math.random() * items.length)];
@@ -385,6 +405,8 @@ export class Walkers {
   private fanTint: number | null = null;
   /** The share of the usual crowd that is out. */
   private presence = 1;
+  /** The share of the walking crowd sitting on the lawns instead (DESIGN.md 64): more doing than walking in fine weather. */
+  private resting = 0;
   /** The stadium's gate, when a path reaches the plot. People go there on a home game day only. */
   private stadiumStop: Stop | null = null;
   /** The crowd step in force: the player's setting, or lower while frames are short. */
@@ -419,6 +441,11 @@ export class Walkers {
   }
 
   /** The share of the usual crowd that is out: a quarter on a break, fewer in the summer term. */
+  /** The share of the crowd that is on the lawns instead of walking, from the lawns' rule (DESIGN.md 64). */
+  setResting(share: number): void {
+    this.resting = Math.max(0, Math.min(0.6, share));
+  }
+
   setPresence(share: number): void {
     this.presence = Math.max(0, Math.min(1, share));
   }
@@ -869,6 +896,7 @@ export class Walkers {
     if (extra.prop && this.art.has(extra.prop)) {
       prop = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(prop, extra.prop);
+      fitOnMap(prop, extra.prop);
       // It stands on its own base, so it can sway about it.
       prop.setOrigin(0.5, 1).setAlpha(0);
     }
@@ -881,6 +909,8 @@ export class Walkers {
       student,
       person: extra.person ?? null,
       prop,
+      held: extra.held ?? false,
+      dog: extra.prop === 'prop.dog',
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
       look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
@@ -945,8 +975,13 @@ export class Walkers {
       if (fan) walker.sprite.setTint(this.fanTint!);
       else walker.sprite.clearTint();
     }
-    if (walker.prop) {
-      // Beside them: no figure in the pack can hold anything. A pennant moves in the wind.
+    if (walker.prop && walker.held) {
+      // Carried in front of them, at the waist, on the side they face (DESIGN.md 64): a tray or a cup from a place to eat.
+      const side = flipFrom !== undefined ? 1 : -1;
+      walker.prop.setPosition(at.x + side * walker.sprite.displayWidth * 0.2, at.y - walker.sprite.displayHeight * 0.22).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
+    } else if (walker.prop) {
+      // Beside them: no figure in the pack can hold anything. A pennant moves in the wind. A dog faces the way they go.
+      if (walker.dog) walker.prop.setFlipX(direction === 'se' || direction === 'ne');
       const off = this.iso.offset(0.2, 0.04);
       const beside = { x: at.x + off.x, y: at.y + off.y };
       const sway = walker.kind === 'guide' ? Math.sin(this.scene.time.now / 420 + walker.stride / 400) * 0.1 * this.wind : 0;
@@ -1379,7 +1414,7 @@ export class Walkers {
           // An emptier view is filled with people already on their way.
           // Now and then, someone a walker on screen knows, coming the other way (DESIGN.md 63.8).
           if (this.social && student && Math.random() < MEET_UP && this.meetUp(view)) continue;
-          if (from && to && this.start(from, to, seen < wanted * 0.6, student) && student && this.social) this.bringCompanions(this.walkers[this.walkers.length - 1]!);
+          if (from && to && this.start(from, to, seen < wanted * 0.6, student, 'student', carried(from, to, this.period)) && student && this.social) this.bringCompanions(this.walkers[this.walkers.length - 1]!);
         }
       }
       // And among them, the people who work here or are visiting.
@@ -1802,7 +1837,7 @@ export class Walkers {
     }
     const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, period: this.period, weekend: this.weekend, step: this.step });
     // Fewer on a break, half as many again on a home game day, and never an empty campus.
-    return Math.max(Math.min(wanted, 3), Math.round(wanted * this.presence * (this.fanTint !== null ? GAME_DAY_CROWD : 1)));
+    return Math.max(Math.min(wanted, 3), Math.round(wanted * this.presence * (1 - this.resting) * (this.fanTint !== null ? GAME_DAY_CROWD : 1)));
   }
 
   /** How many walkers are alive. For tests and the dev console. */

@@ -572,6 +572,17 @@ export class Scenes {
     return found;
   }
 
+  /** The cells the scenes on the map stand on, with a cell round each: the lawns leave them be (DESIGN.md 64). */
+  takenCells(): Set<number> {
+    const out = new Set<number>();
+    const width = this.state?.map.width ?? 0;
+    for (const scene of this.scenes.values()) {
+      if (scene.leaving) continue;
+      for (let y = scene.y - 1; y <= scene.y + scene.h; y++) for (let x = scene.x - 1; x <= scene.x + scene.w; x++) out.add(y * width + x);
+    }
+    return out;
+  }
+
   /** Where a student is and what they are doing, when they are in one of the scenes. */
   find(key: string): Stander | null {
     for (const scene of this.scenes.values()) {

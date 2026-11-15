@@ -359,6 +359,17 @@ class Builder:
                 anchor = ((fx - left) * factor, (fy - top) * factor)
                 box = piece.getbbox()
                 sprites[f'person.{look}.sleep'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
+            # Poses (DESIGN.md 64): seated or lying pictures of this person, scaled the same as their steps and standing on
+            # the cell's own ground point, but cut free of the walking crop: a figure lying down is wider than one standing.
+            for pose, files in spec.get('poses', {}).items():
+                if look >= len(files):
+                    continue
+                piece = resized(self.open(files[look]), factor)
+                box = piece.getbbox()
+                if box is None:
+                    continue
+                anchor = (cell_w / 2 * factor, (cell_h - 12) * factor)
+                sprites[f'person.{look}.pose.{pose}'] = (piece.crop(box), (round(anchor[0] - box[0]), round(anchor[1] - box[1])))
             # Moods (DESIGN.md 63.7): their first south-west step with another face, cut the same as that step.
             for mood, files in spec.get('moods', {}).items():
                 if look >= len(files):

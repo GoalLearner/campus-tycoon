@@ -17,6 +17,8 @@ import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Buil
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
+import { Lawns } from './Lawns';
+import { lawnShare, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
 import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
@@ -167,6 +169,7 @@ export class CampusScene extends Phaser.Scene {
   private activity!: Activity;
   /** Small scenes that come and go: club tables, pickup games, a busker, the boxes of move-in day. */
   private scenes!: Scenes;
+  private lawns!: Lawns;
   /** Students standing in an activity or a small scene, by key. Shared with the walkers, so nobody is in two places. */
   private readonly staying = new Set<string>();
   /** The ring under such a student while their card is open. */
@@ -282,6 +285,8 @@ export class CampusScene extends Phaser.Scene {
     const walking = (key: string): boolean => this.walkers.isOut(key);
     this.activity = new Activity(this, this.art, this.iso, this.staying, walking);
     this.scenes = new Scenes(this, this.art, this.iso, this.staying, walking);
+    // People doing things on the lawns and quads (DESIGN.md 64), clear of the small scenes.
+    this.lawns = new Lawns(this, this.art, this.iso, this.staying, walking, () => this.scenes.takenCells());
     this.walkers.setElsewhere(this.staying);
     this.ambient = new Ambient(this, this.art, this.iso);
     this.windows = new Windows(this, this.art, this.iso, LIGHT_DEPTH + 1);
@@ -397,6 +402,7 @@ export class CampusScene extends Phaser.Scene {
       this.crew.setMap(state);
       this.activity.setMap(state);
       this.scenes.setMap(state);
+      this.lawns.setMap(state);
       this.ambient.setMap(state);
       this.windows.setMap(state);
       this.nextLifeAt = 0;
@@ -425,6 +431,7 @@ export class CampusScene extends Phaser.Scene {
     this.crew.update(time);
     this.activity.update(time, delta);
     this.scenes.update(time, delta);
+    this.lawns.update(time, delta);
     this.ambient.update(time);
     this.sway(time);
     this.showHintTexts();
@@ -456,6 +463,7 @@ export class CampusScene extends Phaser.Scene {
     this.cars.clear();
     this.crew.clear();
     this.activity.clear();
+    this.lawns.clear();
     this.scenes.clear();
     this.staying.clear();
     this.stayRing?.setVisible(false);
@@ -610,6 +618,10 @@ export class CampusScene extends Phaser.Scene {
     const built = state.football.stadium.tier >= 1;
     this.walkers.setGameDay(built ? tint : null);
     this.walkers.setPresence(day.walkers);
+    // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them.
+    const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });
+    this.lawns.setLife(lawns, this.light.period, this.weather, day.kind === 'midterms' || day.kind === 'finals', reduced);
+    this.walkers.setResting(lawns * RESTING_AT_FULL);
     this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
     this.ambient.setWeather(this.weather, reduced);
     this.life = life;
@@ -617,6 +629,7 @@ export class CampusScene extends Phaser.Scene {
     this.ambient.setLife(life.ripples, life.sprinklers);
     this.windows.show(life.windows, this.light.lamps);
     this.activity.setStudy(life.studyGroups);
+    this.activity.setReduced(reduced);
     this.walkers.setWind(life.wind);
     sound.setFacts({
       walkersInView: this.walkers.onScreen,
@@ -665,6 +678,7 @@ export class CampusScene extends Phaser.Scene {
   /** Show the crowd step in force on everything that draws people or cars. */
   private applyStep(step: number): void {
     this.scenes.setStep(step);
+    this.lawns.setStep(step);
     this.walkers.setStep(step);
     this.cars.setStep(step);
     this.activity.setStep(step);
@@ -738,7 +752,7 @@ export class CampusScene extends Phaser.Scene {
    * view put on them. null when nobody is.
    */
   standerIn(role: string): Stander | null {
-    const who = this.activity.firstIn(role) ?? this.scenes.firstIn(role);
+    const who = this.activity.firstIn(role) ?? this.scenes.firstIn(role) ?? this.lawns.firstOf(role as LawnKind);
     if (!who) return null;
     const camera = this.cameras.main;
     camera.setScroll(who.x - camera.width / 2, who.y - camera.height / 2 + (camera.height * 0.12) / camera.zoom);
@@ -1522,7 +1536,7 @@ export class CampusScene extends Phaser.Scene {
     const key = student ? studentKey(student) : null;
     const walking = key ? this.walkers.doing(key) : null;
     // Not out walking: they may be standing in a game, a line or a small scene, which the card says in its own words.
-    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key)) : null;
+    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key)) : null;
     session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null);
     // A ring on the ground under them, as under a walker whose card is open.
     if (there) {
@@ -2159,7 +2173,8 @@ export class CampusScene extends Phaser.Scene {
     const walker = this.walkers.walkerAt(world.x, world.y, thumb);
     const figure = this.activity.figureAt(world.x, world.y, thumb);
     const actor = this.scenes.actorAt(world.x, world.y, thumb);
-    const stander = figure && actor ? (figure.far <= actor.far ? figure : actor) : (figure ?? actor);
+    const lawn = this.lawns.memberAt(world.x, world.y, thumb);
+    const stander = [figure, actor, lawn].filter((one): one is Stander => one !== null).sort((a, b) => a.far - b.far)[0] ?? null;
     if (stander && (!walker || stander.far < walker.far)) {
       // Someone in a game, a line, at a table or in a small scene is a student, with the ordinary card.
       if (stander.student) session.openStudent(stander.student, stander.look);
