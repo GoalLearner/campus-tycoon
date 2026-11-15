@@ -412,8 +412,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
         : card.residence === 'dorm'
           ? 'Lives in '
           : card.street
-            ? `Lives off campus on ${card.street}`
-            : 'Lives off campus';
+            ? `Lives off campus on ${card.street}${card.movedOut ? ', moved out this year' : ''}`
+            : `Lives off campus${card.movedOut ? ', moved out this year' : ''}`;
     // An undeclared student's leaning, or the major they left, beside the major (DESIGN.md 65.3).
     const major = card.majorNote ? `${card.major} (${card.majorNote.charAt(0).toLowerCase()}${card.majorNote.slice(1)})` : card.major;
     // A varsity athlete's team beside what they are (DESIGN.md 65.7).

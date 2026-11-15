@@ -9,7 +9,7 @@ import { majorAt, majorPath, semestersIn, type MajorPath } from './majors';
 import { CLASS_YEARS } from '../config/population';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
-import { BED_NEED } from '../config/demand';
+import { ON_CAMPUS_BY_YEAR } from '../config/fourYears';
 import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
 import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
 import { foodTypesAt, tutoringLift } from './food';
@@ -201,14 +201,25 @@ function placeAt(index: PlaceIndex, at: number): number | null {
   return index.cells[low] ?? null;
 }
 
-/** True for a student who needs a bed on campus. The rest commute. */
-function livesOnCampus(seed: number, ref: StudentRef): boolean {
-  return roll(seed, ref, SALT.lives) < BED_NEED;
+/**
+ * True for a student who lives on campus in a class year (R2, DESIGN.md 66.3): nearly every first-year, most juniors and
+ * seniors in town. Each student's own number against the year's share, so once they move out they stay out.
+ */
+function livesOnCampus(seed: number, ref: StudentRef, classYear: number): boolean {
+  return roll(seed, ref, SALT.lives) < ON_CAMPUS_BY_YEAR[Math.max(0, Math.min(ON_CAMPUS_BY_YEAR.length - 1, classYear))]!;
 }
 
-/** True for a student who moved away to live on campus: a commuter lives at home or in town. Cheap: no map is read. */
+/**
+ * True for a student who moved away from home to study, as nearly every first-year has (R2: a first-year's share on
+ * campus); the rest commute from home. Fixed for the student. Cheap: no map is read.
+ */
 export function movedAway(seed: number, ref: StudentRef): boolean {
-  return livesOnCampus(seed, ref);
+  return livesOnCampus(seed, ref, 0);
+}
+
+/** True for a student who moved out of the halls into town at the start of this class year (R2). */
+export function movedOutThisYear(seed: number, ref: StudentRef, classYear: number): boolean {
+  return classYear > 0 && livesOnCampus(seed, ref, classYear - 1) && !livesOnCampus(seed, ref, classYear);
 }
 
 /**
@@ -216,7 +227,7 @@ export function movedAway(seed: number, ref: StudentRef): boolean {
  * housing index when asking for many students at once.
  */
 export function studentHome(state: GameState, ref: StudentRef, housing = placeIndex(state, 'housing')): number | null {
-  if (!livesOnCampus(state.seed, ref)) return null;
+  if (!livesOnCampus(state.seed, ref, classYearOf(state, ref) ?? 0)) return null;
   return placeAt(housing, roll(state.seed, ref, SALT.bed));
 }
 
@@ -383,7 +394,7 @@ function fixedOf(seed: number, ref: StudentRef): FixedTraits {
     if (fixedTraits.size > 120_000) fixedTraits.clear();
     const path = majorPath(seed, ref);
     const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
-    const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
+    const nature = natureOf(seed, ref, movedAway(seed, ref));
     // A club leans toward the subject they came for: a later change of major leaves their club as it was.
     fixed = { path, nature, club: clubOf(seed, ref, nature, MAJORS[path.intended]!.group, quirk) };
     fixedTraits.set(key, fixed);
@@ -502,6 +513,8 @@ export interface StudentCard {
   home: number | null;
   /** Where they live, for the card's first line: a member of an overfull chapter may still have a dorm bed. */
   residence: 'dorm' | 'offCampus' | 'chapter';
+  /** Moved out of the halls into town at the start of this class year (R2, DESIGN.md 66.3). */
+  movedOut: boolean;
   /** The chapter a member belongs to (DESIGN.md 51). null for everyone else. */
   chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
@@ -727,7 +740,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
   const home = studentHome(state, ref);
   const resident = home !== null;
   // Who lives on campus is part of who the student is. Someone whose dorm is not built yet still counts.
-  const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
+  const nature = natureOf(seed, ref, movedAway(seed, ref));
   // Greek Row: a student who lives on campus may be in a chapter, and live in its house (DESIGN.md 51).
   const member = resident ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
   const relationship = relationshipOf(seed, ref, semesterOf(state), nature, socialLife(state));
@@ -815,6 +828,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     quirk,
     home,
     residence: member?.housed ? 'chapter' : resident ? 'dorm' : 'offCampus',
+    movedOut: !resident && movedOutThisYear(seed, ref, classYear),
     chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,

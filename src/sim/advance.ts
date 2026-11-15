@@ -13,6 +13,7 @@ import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
+import { tellMovingOut } from './systems/fourYears';
 import { closeWaitlist, fillFromWaitlist, graduate, promote, returnStopOuts, runIntake, semesterEnd, spreadClassYears } from './systems/admissions';
 import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
@@ -224,6 +225,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
         returnStopOuts(state, log);
       }
       runIntake(state, 'fall', log);
+      // Returning students move into town by class year, nearly every first-year in a hall (R2, DESIGN.md 66.3).
+      if (calendarAt(state.clock).year > 1) tellMovingOut(state, log);
       evaluateGrowth(state);
       // The fall class is in: the year's goals are set (DESIGN.md 44).
       rhythmOnFallIntake(state, log);

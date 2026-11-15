@@ -140,6 +140,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   const stretch = day.rhythmId ? RHYTHM_FEELINGS[day.rhythmId] : undefined;
   if (stretch && feels < stretch.share) add(stretch.emotion, stretch.label, stretch.weight + (stretch.emotion === 'tense' ? card.stress / 60 : 0));
   if (day.seniors && card.classYear >= 3) add('sad', 'Senior goodbyes', 1.6);
+  // Moving off campus (R2): a place of their own in town, felt through the fall's first weeks.
+  if (card.movedOut && (day.special === 'welcome' || day.rhythmId === 'fallStartWeeks')) add('happy', 'Own place in town', 1.2);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
   if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.over21 ? 'partycup' : 'sodacup');

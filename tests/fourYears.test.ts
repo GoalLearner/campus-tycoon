@@ -6,6 +6,8 @@ import { DAY, T0 } from './helpers';
 import { SEASON_CURVE } from '../src/sim/config/season';
 import type { CalDate } from '../src/sim/config/academicCalendar';
 import { ageOf, birthdayOf, over21Share } from '../src/sim/systems/birthdays';
+import { movedOutThisYear } from '../src/sim/systems/students';
+import { tellMovingOut } from '../src/sim/systems/fourYears';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
 
@@ -130,5 +132,27 @@ describe('under-21 drinking, counted (R2, the owner’s decision 8)', () => {
     const small = newGame({ seed: 7, name: 'Test College', now: T0 });
     const run = advance(small, small.clock.lastSimulatedAt, T0 + 3.6 * DAY);
     expect(run.log.some((entry) => entry.kind === 'writeUps')).toBe(false);
+  });
+});
+
+describe('moving off campus, R2', () => {
+  it('moves a student into town once, at the start of a class year, and never back', () => {
+    for (let index = 0; index < 2000; index++) {
+      const ref = { entryYear: 1, index };
+      let moves = 0;
+      for (let classYear = 1; classYear < 6; classYear++) if (movedOutThisYear(20261115, ref, classYear)) moves += 1;
+      expect(moves).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('tells each fall about how many returning students moved into town, with nothing saved', () => {
+    const model = newGame({ seed: 20261115, name: 'Test University', now: T0, campus: 'model' });
+    const before = JSON.stringify(model.offCampus);
+    const log: Parameters<typeof tellMovingOut>[1] = [];
+    const moved = tellMovingOut(model, log);
+    expect(moved).toBeGreaterThan(0.15 * (model.cohorts[1] + model.cohorts[2] + model.cohorts[3]));
+    expect(log[0]!.kind).toBe('housing');
+    expect(toneProblem(log[0]!.text)).toBeNull();
+    expect(JSON.stringify(model.offCampus)).toBe(before);
   });
 });

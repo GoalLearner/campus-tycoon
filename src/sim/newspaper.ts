@@ -276,6 +276,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'grades':
         out.push({ weight: 55, headline: `Dean's List Runs to ${Number(entry.data?.deans ?? 0).toLocaleString('en-US')} Names; Probation Letters Go Out Too`, deck: entry.text });
         break;
+      case 'housing':
+        // Moving off campus (R2, DESIGN.md 66.3).
+        out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });
+        break;
       case 'writeUps':
         // Under-21 drinking, caught as a rule broken (R2, DESIGN.md 66.2).
         out.push({ weight: 49, headline: `${Number(entry.data?.writeUps ?? 0).toLocaleString('en-US')} Written Up for Drinking Under 21; Resident Advisors Keep the Paperwork Moving`, deck: entry.text });

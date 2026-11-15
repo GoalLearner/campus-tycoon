@@ -44,3 +44,14 @@ export const WRITE_UPS_PER_THOUSAND = 7;
 export const WRITE_UPS_IN_DORMS = 0.93;
 /** Of students under 21, the share who drank in the past month (NIAAA from NSDUH: about half of full-time students drank, fewer under 21). [T] */
 export const UNDER_21_DRINKING = 0.35;
+
+// ------------------------------------------------------ where they live --
+
+/**
+ * Of each class year (first-year to sixth-year), the share living on campus: nearly every first-year in a hall, and
+ * most juniors and seniors moved into town (example flagships' Common Data Sets: first-years 58-89% on campus, all
+ * students 18-50%). Each student's home follows these by class year, so moving off campus is a milestone of the
+ * second and third years. Weighted by a campus's class sizes they come to about the 60% the beds and the town's places
+ * are counted by (BED_NEED), which are as before: the balance does not move.
+ */
+export const ON_CAMPUS_BY_YEAR: readonly [number, number, number, number, number, number] = [0.88, 0.7, 0.45, 0.38, 0.3, 0.25];

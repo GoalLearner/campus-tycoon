@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STRESS_HAPPINESS } from '../src/sim/config/season';
+import { ON_CAMPUS_BY_YEAR } from '../src/sim/config/fourYears';
 import {
   advance,
   applyAction,
@@ -146,8 +147,17 @@ describe('the student card', () => {
       expect(cell.zone).toBe('housing');
       expect(state.map.buildings[cell.buildingId!]!.stage).toBeGreaterThan(0);
     }
-    expect(residents / total).toBeGreaterThan(BED_NEED - 0.04);
-    expect(residents / total).toBeLessThan(BED_NEED + 0.04);
+    // By class year since R2 (DESIGN.md 66.3): nearly every first-year in a hall.
+    const share = ON_CAMPUS_BY_YEAR[classYearOf(state, { entryYear: 1, index: 0 }) ?? 0]!;
+    expect(residents / total).toBeGreaterThan(share - 0.04);
+    expect(residents / total).toBeLessThan(share + 0.04);
+  });
+
+  it('moves students into town by class year, and weighs out at about the share the beds are counted by (R2)', () => {
+    const weights = [0.255, 0.235, 0.22, 0.21, 0.06, 0.02];
+    const mean = ON_CAMPUS_BY_YEAR.reduce((sum, share, i) => sum + share * weights[i]!, 0);
+    expect(Math.abs(mean - BED_NEED)).toBeLessThan(0.03);
+    for (let i = 1; i < ON_CAMPUS_BY_YEAR.length; i++) expect(ON_CAMPUS_BY_YEAR[i]!).toBeLessThanOrEqual(ON_CAMPUS_BY_YEAR[i - 1]!);
   });
 
   it('reads happiness from the numbers at the student’s own dorm', () => {
