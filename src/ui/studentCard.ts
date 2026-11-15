@@ -142,6 +142,7 @@ function plannedText(state: GameState, card: StudentCard, item: DayItem): string
   if (item.words === 'Asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (item.words === 'Getting ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
   if (item.words === 'In their room') return town ? 'At home in town' : `In ${home}`;
+  if (item.words === 'Laundry') return town ? 'Laundry, at home in town' : `Laundry in ${home}'s laundry room`;
   return item.words;
 }
 

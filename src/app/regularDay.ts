@@ -1,6 +1,7 @@
 import { dateAt, type GameState, type StudentCard, type StudentRef } from '../sim';
 import { hashInts } from '../sim/rng';
 import { dayRead } from '../sim/systems/season';
+import { semesterOf } from '../sim/systems/students';
 import { INTEREST } from '../sim/systems/identity';
 import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socialView';
 
@@ -76,6 +77,40 @@ const likes = (view: WebView | null, ref: StudentRef, interest: number): boolean
   return id >= 0 && ((view.identity[id]! >>> (18 + interest)) & 1) === 1;
 };
 
+/**
+ * [T] Daily details (R3, DESIGN.md 67.5), as shares of days: a package at the mailroom, keys left inside, sleeping
+ * through the alarm (twice as often for a night owl, and only in a week they missed a class), a late-night food run on a
+ * school night and at the weekend or in exams; of students, those with 8 AM classes this term; and a gym phase, a
+ * three-week run of workouts, more in January. A hall's meal plan has this many swipes a week.
+ */
+export const DETAILS = { package: 0.08, lockedOut: 0.015, alarm: 0.06, foodRun: 0.1, foodRunWeekend: 0.3, eightAm: 0.4, gym: 0.15, gymJanuary: 0.35 } as const;
+export const MEAL_SWIPES = 14;
+
+/** Where a job on campus is, as the map knows places. */
+const JOB_WHERE: Readonly<Record<string, Where>> = {
+  'the library desk': 'seat',
+  'a dining hall': 'food',
+  'the rec center front desk': 'play',
+  'the mailroom': 'food',
+  'a lab': 'class',
+  'the campus store': 'food',
+  'the tutoring center': 'seat',
+};
+
+/** The days of the week a job's shifts fall on, Sunday 0: about four hours a shift, never more than six days. */
+export function shiftDays(seed: number, ref: StudentRef, hours: number): number[] {
+  const count = Math.max(1, Math.min(6, Math.round(hours / 4.5)));
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const start = (hashInts(seed, 9533, ref.entryYear, ref.index) >>> 0) % 7;
+  const out: number[] = [];
+  // Spread through the week: every other day first, then the days between.
+  for (let i = 0; out.length < count && i < 14; i++) {
+    const day = order[(start + (i < 7 ? i * 2 : (i - 7) * 2 + 1)) % 7]!;
+    if (!out.includes(day)) out.push(day);
+  }
+  return out;
+}
+
 /** The regular's day, waking to sleep. */
 export function regularDay(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard): DayItem[] {
   const day = Math.floor(state.clock.tick / (24 * 60));
@@ -119,54 +154,99 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   const gamer = likes(view, ref, INTEREST.gaming);
   const studious = card.archetype === 'scholar' || card.archetype === 'stressed' || exams;
 
+  // Daily details (R3, DESIGN.md 67.5): a meal plan's swipes for a student in a hall, a job's shifts, laundry once a
+  // week, a package at the mailroom, keys left inside, the alarm slept through, an 8 AM class and its coffee, a
+  // late-night food run, and a gym phase that comes and goes. Each from the seed and the day, the same every time.
+  const owl = card.quirk === 'Night owl';
+  const mealPlan = card.residence === 'dorm';
+  const sinceMonday = (weekday + 6) % 7;
+  const swipesLeft = Math.max(0, MEAL_SWIPES - 2 * (sinceMonday + 1));
+  const job = card.money.job;
+  const shiftToday = job !== null && shiftDays(state.seed, ref, job.hours).includes(weekday);
+  const shiftWords = job ? `A shift at ${job.where}` : '';
+  const shiftWhere: Where = job ? (job.onCampus ? JOB_WHERE[job.where] ?? 'seat' : 'away') : 'away';
+  const shiftHours = job ? Math.min(5, Math.max(3, job.hours / Math.max(1, shiftDays(state.seed, ref, job.hours).length))) : 0;
+  const steady = (salt: number): number => (hashInts(state.seed, 9530 + salt, ref.entryYear, ref.index) >>> 0) / 4294967296;
+  const laundry = Math.floor(steady(0) * 7) === weekday;
+  const slept = !weekend && card.classes !== null && card.classes.went < card.classes.of && roll(20) < (owl ? 2 : 1) * DETAILS.alarm;
+  // An 8 AM class: on two weekdays a week this term, for those up early enough to make it.
+  const eights = (hashInts(state.seed, 9531, ref.entryYear, ref.index, semesterOf(state)) >>> 0) / 4294967296 < DETAILS.eightAm;
+  const eight = !weekend && !slept && eights && wake <= 6.75 && (weekday === 2 || weekday === 4);
+  const gymPhase = (hashInts(state.seed, 9532, ref.entryYear, ref.index, Math.floor(day / 21)) >>> 0) / 4294967296 < (dateAt(state.clock).month === 1 ? DETAILS.gymJanuary : DETAILS.gym);
+  const meal = (words: string, last: boolean): string => (mealPlan ? `${words}${last ? (swipesLeft > 0 ? `, ${swipesLeft} meal swipes left this week` : ', the last meal swipe of the week') : ', a meal swipe'}` : words);
+
   let t = wake;
-  put(t, t + 1, 'home', 'Getting ready');
-  t += 1;
+  if (slept) {
+    put(t, t + 1.5, 'home', 'Slept through the alarm');
+    t += 1.5;
+    put(t, t + 0.5, 'home', 'Rushing out the door');
+    t += 0.5;
+  } else {
+    put(t, t + 1, 'home', 'Getting ready');
+    t += 1;
+  }
 
   if (!weekend) {
     // Classes in the morning, lunch with friends, a class after for the first two years.
-    const classFrom = Math.max(9, t);
-    if (classFrom > t) put(t, classFrom, 'food', 'Coffee before class');
-    put(classFrom, classFrom + 1.25, 'class', `${card.subject} lecture`);
-    t = classFrom + 1.5;
-    if (t < 12) {
-      put(t, Math.min(12, t + 1.25), 'class', `A ${card.subject} seminar`);
-      t = Math.max(t + 1.25, 12);
+    if (slept) {
+      const late = Math.max(10.5, t);
+      put(late, late + 1.25, 'class', `A ${card.subject} seminar, the morning lecture missed`);
+      t = Math.max(late + 1.5, 12);
+    } else {
+      const classFrom = eight ? 8 : Math.max(9, t);
+      if (classFrom > t) put(t, classFrom, 'food', eight ? 'Coffee before an 8 AM class' : 'Coffee before class');
+      put(classFrom, classFrom + 1.25, 'class', eight ? `An 8 AM ${card.subject} lecture` : `${card.subject} lecture`);
+      t = classFrom + 1.5;
+      if (t < 12) {
+        put(t, Math.min(12, t + 1.25), 'class', `A ${card.subject} seminar`);
+        t = Math.max(t + 1.25, 12);
+      }
     }
     const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
-    put(t, t + 1, 'food', `Lunch${withWords(state, lunch)}`, lunch);
+    put(t, t + 1, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
     t += 1;
+    if (roll(30) < DETAILS.package) {
+      put(t, t + 0.5, 'food', 'Picking up a package at the mailroom');
+      t += 0.5;
+    }
     if (card.classYear < 2) {
       put(t + 0.5, t + 2, 'class', `A ${card.subject} class`);
       t += 2;
     }
   } else {
     const brunch = pick(friends, 2, 3);
-    put(t, t + 1.25, 'food', `Brunch${withWords(state, brunch)}`, brunch);
+    put(t, t + 1.25, 'food', meal(`Brunch${withWords(state, brunch)}`, false), brunch);
     t += 1.5;
   }
 
-  // The afternoon: their club on its days, the gym, studying, or friends on a lawn.
+  // The afternoon: a weekend shift, their club on its days, the gym, studying, or friends on a lawn.
   const clubDay = card.club !== null && hashInts(state.seed, 9510, ref.entryYear, ref.index, weekday) % 7 < 2;
-  if (exams || (studious && roll(4) < 0.6)) {
+  if (weekend && shiftToday) put(t, t + shiftHours, shiftWhere, shiftWords);
+  else if (exams || (studious && roll(4) < 0.6)) {
     const mates = exams ? pick(friends, 1, 5) : [];
     put(t, t + 2.5, 'seat', exams ? `Studying for ${read.name ?? 'exams'}${withWords(state, mates)}` : 'Studying', mates);
   } else if (clubDay) put(t, t + 1.5, 'seat', `${card.club} meets`);
+  else if (gymPhase && roll(6) < 0.8) put(t, t + 1.5, 'play', 'A workout, in a gym phase');
   else if (fit && roll(6) < 0.7) put(t, t + 1.5, 'play', 'A workout');
   else {
     const out = pick(friends, 2, 7);
     put(t, t + 2, 'quad', out.length > 0 ? `Hanging out${withWords(state, out)}` : 'Some time on the lawn', out);
   }
-  t = Math.max(t + 2.5, 17.5);
+  t = Math.max(t + (weekend && shiftToday ? shiftHours : 2.5), 17.5);
 
   // Dinner, with their partner or friends.
   const dinner = partner.length > 0 && roll(8) < 0.6 ? partner : pick(friends, 2, 9);
-  put(t, t + 1, 'food', `Dinner${withWords(state, dinner)}`, dinner);
+  put(t, t + 1, 'food', meal(`Dinner${withWords(state, dinner)}`, true), dinner);
   t += 1.25;
+  if (laundry && !(shiftToday && !weekend)) {
+    put(t, t + 1.25, 'home', 'Laundry');
+    t += 1.25;
+  }
 
-  // The evening: a party on its nights, a date, studying, a game night with their roommate, or in.
+  // The evening: a weekday shift, a party on its nights, a date, studying, a game night with their roommate, or in.
   const partyNight = card.party !== null && (weekday === 4 || weekday === 5 || weekday === 6);
-  if (partyNight && !exams) {
+  if (!weekend && shiftToday) put(t, t + shiftHours, shiftWhere, shiftWords);
+  else if (partyNight && !exams) {
     put(t, t + 1.5, 'home', 'Getting ready to go out');
     put(t + 1.5, sleep - 0.5, 'away', 'At a party', pick(friends, 2, 10));
   } else if (partner.length > 0 && roll(11) < 0.35 && !exams) put(t, t + 2.5, 'food', `A date${withWords(state, partner)}`, partner);
@@ -176,9 +256,22 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     const out = pick(friends, 1, 13);
     put(t, t + 2, 'quad', out.length > 0 ? `Out${withWords(state, out)}` : 'A walk', out);
   }
-  const last = items[items.length - 1];
-  const home = Math.max(last ? last.to : t, t + 2);
-  put(home, sleep, 'home', 'In their room');
+  let last = items[items.length - 1];
+  let back = Math.max(last ? last.to : t, t + 2);
+  // A late-night food run, more at the weekend and in exams, more for a night owl.
+  if (!(partyNight && !exams) && roll(40) < (weekend || exams ? DETAILS.foodRunWeekend : DETAILS.foodRun) * (owl ? 2 : 1) && back + 0.6 < sleep - 0.25) {
+    const mates = pick(friends, 1, 41);
+    put(back, back + 0.6, 'food', `A late-night food run${withWords(state, mates)}`, mates);
+    back += 0.6;
+  }
+  // Keys left inside, now and then.
+  if (roll(50) < DETAILS.lockedOut && back + 0.5 < sleep - 0.25) {
+    put(back, back + 0.5, 'home', mealPlan ? 'Locked out: waiting for the RA with the spare key' : 'Locked out: waiting for the landlord with a spare key');
+    back += 0.5;
+  }
+  last = items[items.length - 1];
+  back = Math.max(back, last ? last.to : t);
+  put(back, sleep, 'home', 'In their room');
   // No gaps: each thing goes on until the next begins, the way between included.
   for (let i = 0; i + 1 < items.length; i++) items[i]!.to = items[i + 1]!.from;
   if (items.length > 0) items[items.length - 1]!.to = sleep;
