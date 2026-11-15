@@ -80,11 +80,13 @@ const likes = (view: WebView | null, ref: StudentRef, interest: number): boolean
 /**
  * [T] Daily details (R3, DESIGN.md 67.5), as shares of days: a package at the mailroom, keys left inside, sleeping
  * through the alarm (twice as often for a night owl, and only in a week they missed a class), a late-night food run on a
- * school night and at the weekend or in exams; of students, those with 8 AM classes this term; and a gym phase, a
- * three-week run of workouts, more in January. A hall's meal plan has this many swipes a week.
+ *  school night and at the weekend or in exams; of students, those with 8 AM classes this term; and a gym phase, a
+ * run of workouts, more in January. A hall's meal plan has this many swipes a week.
  */
 export const DETAILS = { package: 0.08, lockedOut: 0.015, alarm: 0.06, foodRun: 0.1, foodRunWeekend: 0.3, eightAm: 0.4, gym: 0.15, gymJanuary: 0.35 } as const;
 export const MEAL_SWIPES = 14;
+/** A gym phase lasts this many of the player's days (about three and a half months of the game's), then comes or goes. */
+export const GYM_PHASE_DAYS = 2;
 
 /** Where a job on campus is, as the map knows places. */
 const JOB_WHERE: Readonly<Record<string, Where>> = {
@@ -172,7 +174,7 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   // An 8 AM class: on two weekdays a week this term, for those up early enough to make it.
   const eights = (hashInts(state.seed, 9531, ref.entryYear, ref.index, semesterOf(state)) >>> 0) / 4294967296 < DETAILS.eightAm;
   const eight = !weekend && !slept && eights && wake <= 6.75 && (weekday === 2 || weekday === 4);
-  const gymPhase = (hashInts(state.seed, 9532, ref.entryYear, ref.index, Math.floor(day / 21)) >>> 0) / 4294967296 < (dateAt(state.clock).month === 1 ? DETAILS.gymJanuary : DETAILS.gym);
+  const gymPhase = (hashInts(state.seed, 9532, ref.entryYear, ref.index, Math.floor(day / GYM_PHASE_DAYS)) >>> 0) / 4294967296 < (dateAt(state.clock).month === 1 ? DETAILS.gymJanuary : DETAILS.gym);
   const meal = (words: string, last: boolean): string => (mealPlan ? `${words}${last ? (swipesLeft > 0 ? `, ${swipesLeft} meal swipes left this week` : ', the last meal swipe of the week') : ', a meal swipe'}` : words);
 
   let t = wake;
