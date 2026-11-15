@@ -5439,6 +5439,90 @@
     }
    ]
   },
+  "emote.thermometer": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/thermometer.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.cake": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/cake.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.suitcase": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/suitcase.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.briefcase": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/briefcase.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.mortarboard": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mortarboard.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.package": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/package.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.phone": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/phone.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
   "emote.big-heartbreak": {
    "layers": [
     {

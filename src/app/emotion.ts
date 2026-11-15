@@ -143,7 +143,7 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   // Most first-years who moved away miss home at first, and those who feel it most read as Homesick (DESIGN.md 65.5).
   if (card.missesHome) add('sad', 'Misses home', card.archetype === 'homesick' ? 1.5 : 0.7);
   // Flu season: down with it for a few days.
-  if (card.sick) add('sad', 'Down with the flu', 4);
+  if (card.sick) add('sad', 'Down with the flu', 4, 'thermometer');
   return out;
 }
 

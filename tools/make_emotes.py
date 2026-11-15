@@ -603,6 +603,137 @@ CHATS = {
 }
 
 
+
+# DESIGN.md 65.9 (his decision 10): seven small icons for the realism pass, drawn here in the same way: sick (a
+# thermometer), a birthday (a cake), going away (a suitcase), work (a briefcase), graduation (a mortarboard), the mail
+# room (a package) and a call home (a phone). Our own drawings, credited as made for this game.
+
+BROWN = (176, 112, 64, 255)
+BROWN_RIM = (118, 66, 34, 255)
+TAN = (226, 178, 112, 255)
+TAN_RIM = (176, 122, 64, 255)
+NAVY = (72, 64, 120, 255)
+NAVY_RIM = (40, 34, 80, 255)
+CREAM = (255, 240, 214, 255)
+CREAM_RIM = (222, 196, 160, 255)
+SCREEN = (120, 200, 240, 255)
+
+
+def thermometer():
+    c = blank('RGBA')
+    tube = rotated(rounded((420, 110, 604, 740), 92), -18, (512, 512))
+    bulb = ellipse((340, 610, 620, 890))
+    body(c, union(tube, bulb), WHITE, PAPER_RIM, (460, 190, 520, 330))
+    # The red column rising from the bulb, and the bulb itself red.
+    column = rotated(rounded((478, 360, 546, 760), 34), -18, (512, 512))
+    body(c, union(column, ellipse((392, 662, 568, 838))), RED, RED_RIM, (420, 690, 470, 740), 0, 20)
+    d = ImageDraw.Draw(c)
+    for k in range(4):
+        y = 240 + k * 90
+        x = 626 + (y - 512) * -0.33
+        d.line([(x, y), (x + 70, y + 20)], fill=PLUM, width=26)
+    return c
+
+
+def cake():
+    c = blank('RGBA')
+    lower = rounded((180, 560, 844, 860), 50)
+    upper = rounded((290, 380, 734, 600), 46)
+    body(c, union(lower, upper), PINK, PINK_RIM, (250, 600, 330, 660))
+    # Icing on each tier, dripping over its edge.
+    for top, left, right in ((560, 180, 844), (380, 290, 734)):
+        icing = union(rounded((left, top, right, top + 70), 34), *[ellipse((x - 34, top + 30, x + 34, top + 110)) for x in range(left + 70, right - 40, 110)])
+        body(c, icing, CREAM, CREAM_RIM, None, 0, 16)
+    # Three candles and their flames.
+    for x in (400, 512, 624):
+        body(c, rounded((x - 26, 210, x + 26, 390), 12), BLUE, BLUE_RIM, None, 22, 12)
+        flame = union(ellipse((x - 34, 120, x + 34, 200)), polygon([(x - 30, 150), (x + 30, 150), (x, 60)]))
+        body(c, flame, GOLD, GOLD_RIM, None, 20, 12)
+    return c
+
+
+def suitcase():
+    c = blank('RGBA')
+    handle = ImageChops.subtract(rounded((400, 170, 624, 360), 60), rounded((450, 220, 574, 400), 30))
+    body(c, handle, BROWN, BROWN_RIM, None, 34, 20)
+    case = rounded((160, 320, 864, 860), 70)
+    body(c, case, TEAL, TEAL_RIM, (220, 380, 320, 460))
+    d = ImageDraw.Draw(c)
+    for x in (330, 694):
+        d.rounded_rectangle((x - 30, 320, x + 30, 860), 10, fill=BROWN)
+        d.line([(x - 30, 320), (x - 30, 860)], fill=PLUM, width=16)
+        d.line([(x + 30, 320), (x + 30, 860)], fill=PLUM, width=16)
+    # A travel sticker.
+    body(c, ellipse((450, 520, 600, 670)), GOLD, GOLD_RIM, None, 20, 12)
+    return c
+
+
+def briefcase():
+    c = blank('RGBA')
+    handle = ImageChops.subtract(rounded((390, 200, 634, 380), 50), rounded((440, 250, 584, 420), 26))
+    body(c, handle, PLUM, PLUM, None, 30, 0)
+    case = rounded((150, 340, 874, 840), 60)
+    body(c, case, BROWN, BROWN_RIM, (210, 400, 310, 470))
+    d = ImageDraw.Draw(c)
+    d.line([(150, 520), (874, 520)], fill=PLUM, width=24)
+    body(c, rounded((462, 470, 562, 580), 18), GOLD, GOLD_RIM, None, 20, 12)
+    return c
+
+
+def mortarboard():
+    c = blank('RGBA')
+    cap = union(polygon([(330, 470), (694, 470), (694, 700), (330, 700)]), ellipse((330, 640, 694, 760)))
+    body(c, cap, NAVY, NAVY_RIM, None)
+    board = polygon([(512, 200), (900, 380), (512, 560), (124, 380)])
+    body(c, board, NAVY, NAVY_RIM, (380, 300, 470, 350))
+    # The button and the tassel.
+    body(c, ellipse((482, 350, 542, 410)), GOLD, GOLD_RIM, None, 18, 10)
+    tassel = union(polygon([(512, 380), (540, 380), (790, 500), (770, 530)]), polygon([(770, 500), (800, 500), (810, 700), (760, 700)]), rounded((740, 680, 830, 820), 20))
+    body(c, tassel, GOLD, GOLD_RIM, None, 22, 12)
+    return c
+
+
+def package():
+    c = blank('RGBA')
+    top = polygon([(512, 180), (860, 330), (512, 480), (164, 330)])
+    left = polygon([(164, 330), (512, 480), (512, 880), (164, 730)])
+    right = polygon([(512, 480), (860, 330), (860, 730), (512, 880)])
+    body(c, union(top, left, right), TAN, TAN_RIM, (240, 320, 320, 370))
+    d = ImageDraw.Draw(c)
+    d.line([(164, 330), (512, 480), (860, 330)], fill=PLUM, width=22)
+    d.line([(512, 480), (512, 880)], fill=PLUM, width=22)
+    # Tape across the top, and a label on the side.
+    d.polygon([(320, 248), (390, 218), (738, 368), (668, 398)], fill=CREAM)
+    d.polygon([(250, 500), (420, 573), (420, 700), (250, 627)], fill=WHITE)
+    d.line([(280, 560), (390, 607)], fill=PLUM, width=14)
+    d.line([(280, 610), (360, 644)], fill=PLUM, width=14)
+    return c
+
+
+def phone():
+    c = blank('RGBA')
+    body(c, rotated(rounded((350, 150, 674, 870), 70), 12, (512, 512)), NAVY, NAVY_RIM, (420, 230, 470, 300))
+    screen = rotated(rounded((400, 240, 624, 720), 30), 12, (512, 512))
+    paint(c, screen, SCREEN)
+    body(c, heart_mask(512, 430, 70), RED, RED_RIM, None, 20, 12)
+    # The sound of a call, off to one side.
+    d = ImageDraw.Draw(c)
+    for k, r in enumerate((90, 160)):
+        d.arc((760 - r, 300 - r, 760 + r, 300 + r), -60, 20, fill=PLUM, width=34)
+    return c
+
+
+ICONS = {
+    'thermometer': thermometer,
+    'cake': cake,
+    'suitcase': suitcase,
+    'briefcase': briefcase,
+    'mortarboard': mortarboard,
+    'package': package,
+    'phone': phone,
+}
+
+
 EMOTES = {
     'speech': speech,
     'thought': thought,
@@ -627,6 +758,7 @@ EMOTES = {
     'bell': bell,
     'splash': splash,
     **{f'mood-{name}': mood_ring(*colours) for name, colours in MOODS.items()},
+    **ICONS,
 }
 
 
@@ -638,6 +770,18 @@ def main():
         im.save(os.path.join(OUT, f'{name}.png'))
         pictures[name] = im
     print(f'wrote {len(pictures)} emotes into {os.path.relpath(OUT, ROOT)}')
+    if '--icons' in sys.argv:
+        out = sys.argv[sys.argv.index('--icons') + 1]
+        names = list(ICONS)
+        sheet = Image.new('RGBA', (len(names) * 200 + 20, 420), (241, 232, 211, 255))
+        for i, name in enumerate(names):
+            im = pictures[name]
+            sheet.alpha_composite(im.resize((180, 180), Image.LANCZOS), (i * 200 + 20, 20))
+            card = im.resize((32, 32), Image.LANCZOS).resize((128, 128), Image.NEAREST)
+            sheet.alpha_composite(card, (i * 200 + 46, 220))
+            head = im.resize((16, 16), Image.LANCZOS).resize((64, 64), Image.NEAREST)
+            sheet.alpha_composite(head, (i * 200 + 78, 350))
+        sheet.save(out)
     if '--sheet' in sys.argv:
         out = sys.argv[sys.argv.index('--sheet') + 1]
         sheet = Image.new('RGBA', (len(pictures) * 140, 300), (241, 232, 211, 255))
