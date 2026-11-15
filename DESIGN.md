@@ -8183,3 +8183,43 @@ Built 2026-11-15 on the branch `life-4`. While following a student (13.8, 61), a
 | At the map's most the figures are soft | They are drawn at the map's size; closer still would blur them more |
 | A party walking with them stands behind the one followed | The followed one is drawn over everything close up |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 64.6 L5 as built: wheels
+
+Built 2026-11-15 on the branch `life-5`. Some students ride where they are going (`src/app/wheels.ts` for the rule, `src/game/Walkers.ts` to draw it). Visual and travel speed on the map only: no walk time and no number in the game changes. A look sheet went to the owner first (`docs/handoff/life-5-look-sheet.html`).
+
+**The art**, ours (`tools/make_wheels.py`, both atlases): a bicycle, a skateboard, a longboard, a kick scooter, an electric scooter and inline skates, each drawn facing two ways on the map's grid (towards the viewer and away) and mirrored for the other two; the bike rack; a bike bell (`tools/make_emotes.py`). The packs have none of these. The rider is their own figure standing still on what they ride (skaters stride), raised to a saddle or a deck; a bike or a scooter is drawn in front of them going towards the viewer and behind going away, a board under their feet.
+
+**Who rides** (`wheelOf`, steady for a student, a day and a trip):
+
+| | As built |
+|---|---|
+| How many | About one in ten on a fine day, rising with the length of the trip to about one in five; a sixth more of those who like sports or fitness; at night six in ten as many; in rain three in ten; in snow one in ten. Not in a party walking together, nor while carrying a tray or a cup; a rider in the rain has no umbrella |
+| On what | The "Skateboards everywhere" quirk: seven in ten ride, on a skateboard, a longboard or skates. A commuter from the town: nearly half ride, most on an e-scooter. Sports and gym people: mostly bikes. Everyone else: a bike about half the time, then boards, scooters, e-scooters and skates |
+| How fast | 1.6 to 2.3 times walking pace (a bike the fastest), on the paths and roads everyone uses |
+| Weaving | A rider with someone just ahead and in line steps sideways round them, on the side they are not, and back |
+| Small moments, one a trip at most (`rideMomentOf`) | A bike rings its bell at someone in the way (a third of bike trips), who looks up; a bike or an e-scooter now and then has a near miss: the walker gasps and the rider sweats. A board does a trick off a kerb (two in five): up, a turn of the board, a sparkle. Rarely (one in twenty) a board, skates or a scooter wipes out: the rider lies down for under two seconds with a sweat drop, those near gasp or laugh, and they get up and ride on. No one is hurt. Each adds a line to their card ("Landed a trick on their skateboard", "Wiped out on their longboard and got right back up") |
+| The card | "Heading to the Library, on a bike"; the close-up's caption says the same (64.5), and close up the camera keeps up with a rider at its usual pace |
+
+**The bike rack** (Grounds, $1,200, a cell): built from the Build menu as a bench is. It costs its price and changes nothing else: no upkeep, no utilities, no opening for the daily layer, no reach that counts in any sum, and the test players never build one (its family, `rack`, is left out wherever bins and seats are). A bike or an e-scooter arriving within four cells of a rack is parked in it for a minute or so, up to four at a rack; with none in reach it leans against the wall by the door, ten at most on the map at once. Boards, kick scooters and skates are carried in.
+
+**Complaints on Quadline.** The campus wants a rack for every 500 students. With fewer than half that, students complain about bike parking: two posts a game week by students from the web, at steady moments of the week so far, under #BikeRacks ("where am i meant to lock my bike. a tree??"). These are the app's, not the web's (`rackPosts`, merged into the feed by when they went up): never kept, never viral, moving nothing; they stop when racks are built. The topic `racks` is listed with the others so the feed can word it; no cause leads to it, so the web never posts it and the official account never answers it.
+
+| Decisions made here | Instead |
+|---|---|
+| Visual and speed on the map only | A small faster-walk effect for riders, which would need a pace check |
+| One rack for every 500 students | Racks counted against riders seen, which would change with the view |
+| The complaints the app's own, moving nothing | Real posts in the web, which can go viral and move applicants |
+| A rider never stops on a lawn | Riders lingering on the quads with a bike beside them |
+| Bikes lean on walls by the door | On trees as well, which the map's trees would need a spot for |
+
+**Measured.** On the model campus on a fine afternoon at Normal, 8 to 22 of 50 to 90 walkers ride (most often bikes, e-scooters and skateboards); in rain at 10 AM, a few. Frames on the slowed phone (47.2), back to back with main (11889d2), 16 frames each, median frame work: Normal 15.3 ms against L5's 14.2; High, the morning rush, 17.2 against 18.5; rain 14.7 against 14.9. **The long run**: all 91 checks pass in 1,691 s, every number as before (the rack is never built by the test players, and the app's complaints are not the web's).
+
+**Tested**: `tests/wheels.test.ts` (9): about one in ten rides on a fine day, more on a long trip, few in rain and fewer in snow and at night; skateboarders on boards, sporty students on bikes, commuters on e-scooters; the same for the same trip; every wheel faster than walking, with words for a card, bikes and e-scooters parked and the rest carried; one small moment at most, a bell or a near miss on a bike, a trick or a rare wipeout on a board; the rack costs its price and nothing more, is built like a bench and is counted; one wanted for every 500 students and short below half; the complaints come while racks are short, two a week, never viral, newest first in the feed, worded inside the tone guide and its hard lines. The reference-map check now counts "bike" an ordinary word, as "parking" and "pool" are.
+
+| Rough | Why |
+|---|---|
+| On a dense campus buildings often hide riders; the close-up follow shows them over the buildings | The map draws people behind buildings as it always has |
+| A rider is their standing figure on what they ride | No riding poses in the pack |
+| Bikes lean only on the wall by the door, not on trees | No spot by a tree yet |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
