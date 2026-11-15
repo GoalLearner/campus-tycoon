@@ -46,7 +46,7 @@ const SPACING = 2;
  */
 const QUAD_JITTER = 0.16;
 /** Grass spots are nudged too, so a big lawn's groups do not stand in a grid. */
-const GRASS_JITTER = 0.3;
+const GRASS_JITTER = 0.2;
 /**
  * A lawn of this many cells or more is a big lawn (L6): spots over all of it, not only beside a path, filled after the
  * quads and before the small patches by the buildings.
@@ -321,16 +321,18 @@ export class Lawns {
         candidates.push({ x: x + 0.5, y: y + 0.5, quad, big, offset: hashInts(state.seed, x, y, 4723) % STAY_TICKS, order: mix(state.seed + y * width, x) });
       }
     }
-    // Quads first, every cell of them (L6), then grass two cells apart, each in a steady order.
+    // Quads first, every cell of them (L6), then big lawns every other cell, then other grass two cells apart.
     candidates.sort((a, b) => Number(b.quad) - Number(a.quad) || a.order - b.order);
     const kept: Spot[] = [];
     const used = new Set<number>();
     for (const spot of candidates) {
       const cx = Math.floor(spot.x);
       const cy = Math.floor(spot.y);
-      const apart = spot.quad ? 1 : SPACING;
-      let clash = false;
-      for (let dy = -apart + 1; dy < apart && !clash; dy++) for (let dx = -apart + 1; dx < apart && !clash; dx++) if (used.has((cy + dy) * width + cx + dx)) clash = true;
+      // A quad, every cell; a big lawn, every other cell, as a chessboard's squares of one colour; other grass, one
+      // cell in four.
+      let clash = used.has(cy * width + cx);
+      if (!spot.quad && spot.big) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) if (used.has((cy + dy) * width + cx + dx)) clash = true;
+      if (!spot.quad && !spot.big) for (let dy = -SPACING + 1; dy < SPACING && !clash; dy++) for (let dx = -SPACING + 1; dx < SPACING && !clash; dx++) if (used.has((cy + dy) * width + cx + dx)) clash = true;
       if (clash) continue;
       used.add(cy * width + cx);
       const nudge = spot.quad ? QUAD_JITTER : GRASS_JITTER;
@@ -620,7 +622,7 @@ export class Lawns {
         return { spot, slot, key: `${Math.floor(spot.x)},${Math.floor(spot.y)}:${slot}`, order: mix(Math.floor(spot.x) * 991 + Math.floor(spot.y), slot) };
       })
       .sort((a, b) => rankOf(a.spot) - rankOf(b.spot) || a.order - b.order);
-    // A group that takes room on a quad keeps the cells beside it: nobody sits in its game.
+    // A group that takes room on a quad or a big lawn keeps the cells beside it: nobody sits in its game.
     const wide = new Set<number>();
     const near = new Set<number>();
     const cell = (spot: Spot): number => Math.floor(spot.y) * width + Math.floor(spot.x);
@@ -648,7 +650,7 @@ export class Lawns {
       if (have && !have.leaving && !(have.plain && this.web) && count < budget) {
         keep.add(one.key);
         count += have.members.length;
-        hold(one.spot, WIDE.has(have.kind));
+        if (one.spot.quad || one.spot.big) hold(one.spot, WIDE.has(have.kind));
       } else fresh.push(one);
     }
     for (const { spot, slot, key } of fresh) {
@@ -664,7 +666,7 @@ export class Lawns {
       const crossing = spot.quad ? STROLL_SHARE : spot.big ? BIG_STROLL_SHARE : 0;
       const route = mix(hashInts(state.seed, slot, 4739), cell(spot)) < crossing && !this.exams && this.period !== 'night' ? this.strollRoute(spot, slot) : null;
       const kind: LawnKind = route ? 'stroll' : chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
-      if (spot.quad && WIDE.has(kind) && crowded(spot, true)) continue;
+      if ((spot.quad || spot.big) && WIDE.has(kind) && crowded(spot, true)) continue;
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
       if (count + members.length > budget && count > 0) continue;
@@ -674,7 +676,7 @@ export class Lawns {
       this.groups.set(key, group);
       keep.add(key);
       count += members.length;
-      if (spot.quad) hold(spot, WIDE.has(kind));
+      if (spot.quad || spot.big) hold(spot, WIDE.has(kind));
     }
     for (const group of this.groups.values()) if (!keep.has(group.key)) group.leaving = true;
     this.drawn = count;
