@@ -4,6 +4,7 @@ import { enrollment } from '../selectors';
 import type { GameState, LogEntry } from '../types';
 import { closeYear } from './money';
 import { scorecardYearEnd } from './scorecard';
+import { teamsYearEnd } from './teams';
 
 /** Day 7: close the books and write the year's summary line. */
 export function yearEnd(state: GameState, log: LogEntry[]): void {
@@ -12,6 +13,8 @@ export function yearEnd(state: GameState, log: LogEntry[]): void {
   state.stats.yearsCompleted += 1;
   // The Scorecard keeps this year's numbers for next year's arrows (DESIGN.md 54.3).
   scorecardYearEnd(state, year);
+  // The varsity teams' seasons (DESIGN.md 65.7).
+  teamsYearEnd(state, year, log);
   const net = earned - spent;
   log.push({
     tick: state.clock.tick,

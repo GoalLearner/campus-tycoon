@@ -50,7 +50,8 @@ import { enrollment, openCapacity } from '../selectors';
 import { bullyingTimes } from './policies';
 import type { GameState } from '../types';
 import { TICKS_PER_YEAR } from '../config/time';
-import { athleteShare } from './football';
+import { rostersOf } from './teams';
+import { ATHLETE_WHERE } from '../config/teams';
 import { chemistry, gender, identityOf, likes, TRAIT, traitOf } from './identity';
 import { classPlaces, placeIndex, socialProfile, studentHome, type PlaceIndex, type StudentRef } from './students';
 import { offCampusNow } from './town';
@@ -351,7 +352,7 @@ export function place(web: Web, state: GameState): void {
   const semester = `${calYear}:${calendarAt(state.clock).tickInYear >= 4 * 1440 ? 1 : 0}`;
   const key = `${semester}|${housing.cells.join(',')}|${housing.upTo.join(',')}`;
   const full = key !== web.placedFor;
-  const athletes = athleteShare(state);
+  const rosters = rostersOf(state);
   const sizes = capacities(housing);
   const majors = new Map(MAJORS.map((m, i) => [m.name, i]));
   // A major's sections are as many as its students fill, at its share of the class (DESIGN.md 65.3).
@@ -365,7 +366,7 @@ export function place(web: Web, state: GameState): void {
     if (classYear < 0) continue;
     if (!full && web.identity[id] !== 0) continue;
     const ref = refAt(web, id);
-    const p = socialProfile(state, ref, housing, athletes);
+    const p = socialProfile(state, ref, housing, rosters);
     if (!p) continue;
     if (web.identity[id] === 0) web.identity[id] = (identityOf(web.seed, ref, p.nature) | 0x80000000) >>> 0;
     const h = hash5(web.seed, 9911, ref.entryYear, ref.index, 0);
@@ -377,7 +378,8 @@ export function place(web: Web, state: GameState): void {
     web.place[1]![id] = ((majors.get(p.major) ?? 0) * 4 + classYear) * 64 + ((h >>> 6) % sections);
     const tables = Math.max(1, Math.min(256, Math.round((cohort * 4) / CLUBS.length / TABLE_SIZE)));
     web.place[2]![id] = p.club ? (clubs.get(p.club) ?? 0) * 256 + ((h >>> 12) % tables) : -1;
-    web.place[3]![id] = p.team ? (h >>> 20) % 8 : -1;
+    // A team of their own: teammates practise together most days (DESIGN.md 65.7).
+    web.place[3]![id] = p.team;
     if (p.chapter && !chapters.has(p.chapter)) chapters.set(p.chapter, chapters.size);
     web.place[4]![id] = p.chapter ? chapters.get(p.chapter)! : -1;
     const spot = p.home ?? 0;
@@ -815,8 +817,10 @@ export function stepWeek(web: Web): void {
       if (b < 0) {
         let r = share(hash5(seed, 9961, week, a, e));
         let p = 0;
-        while (p < PLACES - 1 && r >= WHERE[p]!) {
-          r -= WHERE[p]!;
+        // A varsity athlete meets most of their new people at practice (DESIGN.md 65.7).
+        const where = web.place[3]![a]! >= 0 ? ATHLETE_WHERE : WHERE;
+        while (p < PLACES - 1 && r >= where[p]!) {
+          r -= where[p]!;
           p += 1;
         }
         const key = web.place[p]![a]!;
@@ -1033,6 +1037,19 @@ export function holdMain(web: Web, state: GameState): void {
  * (decision 2). Each student is tied to the floor-mates, section-mates and club-mates they get on with, closer the
  * older they both are; a few single pairs who are each other's type are couples. Roommates are paired again.
  */
+/** Where a regrown campus finds each student's people, and how many tries at each: floor, section and club, or for a varsity athlete their team first. */
+const TIERS: ReadonlyArray<readonly [number, number]> = [
+  [0, 6],
+  [1, 5],
+  [2, 4],
+];
+const ATHLETE_TIERS: ReadonlyArray<readonly [number, number]> = [
+  [3, 7],
+  [0, 4],
+  [1, 3],
+  [2, 2],
+];
+
 export function regrow(web: Web, state: GameState): void {
   // What happened by name belongs to the ties as they were: a new history begins. The week's heavy pick is kept.
   web.happenings.fill(-1);
@@ -1051,7 +1068,9 @@ export function regrow(web: Web, state: GameState): void {
   for (let a = 0; a < n; a++) {
     const years = web.year[a]!;
     if (years < 0) continue;
-    for (const [p, tries] of [[0, 6], [1, 5], [2, 4]] as const) {
+    // A varsity athlete's team is where most of their people are, as on a lived campus (DESIGN.md 65.7).
+    const tiers = web.place[3]![a]! >= 0 ? ATHLETE_TIERS : TIERS;
+    for (const [p, tries] of tiers) {
       const key = web.place[p]![a]!;
       const group = web.groups[p];
       if (key < 0 || !group || key + 1 >= group.start.length) continue;

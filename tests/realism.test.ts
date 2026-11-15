@@ -12,6 +12,10 @@ import { dayOfAcademicYear, fluOf, fluShare, homesickShare, lonelyChance } from 
 import { SEASON_CURVE } from '../src/sim/config/season';
 import { campusSocial, relationshipWords, viewOf } from '../src/app/socialView';
 import { EVENT } from '../src/sim/config/web';
+import { rostersOf, teamFor, teamVenues, teamsYearEnd } from '../src/sim/systems/teams';
+import { VARSITY_TEAMS } from '../src/sim/config/teams';
+import { tightKnit } from '../src/app/tightKnit';
+import { GREEK_HOUSES_MOST } from '../src/sim/config/greek';
 import { catchUp as catchUpWeb } from '../src/sim/systems/web';
 import { sampleStudents } from '../src/sim';
 import { namedRegulars } from '../src/sim/systems/regulars';
@@ -412,4 +416,52 @@ describe('relationships and roommates', () => {
     catchUpWeb(web, at(spring, 4.6).state, webWeekOf(at(spring, 4.6).state));
     expect(web.events[EVENT.roomSwitch]).toBe(again);
   }, 90_000);
+});
+
+describe('varsity teams and Greek Row', () => {
+  it('field a team for each kind of building the campus has: about one in a hundred of a big campus', () => {
+    const rosters = rostersOf(MODEL);
+    expect(rosters.teams.length).toBeGreaterThanOrEqual(8);
+    expect(rosters.share).toBeGreaterThan(0.009);
+    expect(rosters.share).toBeLessThan(0.02);
+    // Every student on a roster has a team, in proportion to its roster.
+    const counts = new Map<number, number>();
+    for (let i = 0; i < 20_000; i++) {
+      const team = teamFor(rosters, (i / 20_000) * rosters.share);
+      expect(team).toBeGreaterThanOrEqual(0);
+      counts.set(team, (counts.get(team) ?? 0) + 1);
+    }
+    expect(teamFor(rosters, rosters.share)).toBe(-1);
+    const track = VARSITY_TEAMS.findIndex((team) => team.id === 'track');
+    const tennis = VARSITY_TEAMS.findIndex((team) => team.id === 'tennis');
+    if (counts.has(track) && counts.has(tennis)) expect(counts.get(track)!).toBeGreaterThan(counts.get(tennis)! * 4);
+    // Each team but football practises at a building of its kind.
+    const venues = teamVenues(MODEL);
+    const placed = [...venues.keys()].map((id) => MODEL.map.placed[id]!);
+    for (const one of placed) for (const team of venues.get(one.id)!) expect(team.needs).toBe(one.type);
+    // The athletes on the cards say their team.
+    const athletes = sampleStudents(MODEL, 4000).map((ref) => studentCard(MODEL, ref)!).filter((card) => card.archetype === 'athlete');
+    expect(athletes.length).toBeGreaterThan(5);
+    for (const card of athletes) expect(VARSITY_TEAMS.map((team) => team.name)).toContain(card.team);
+  });
+
+  it('keep teammates as close as the closest halls, near the top of the tight-knit list', () => {
+    const state = at(MODEL, 1).state;
+    const web = newWeb(state.seed, 1024);
+    catchUpWeb(web, state, webWeekOf(state));
+    const list = tightKnit(web, state);
+    const teams = list.filter((group) => group.kind === 'team');
+    const clubs = list.filter((group) => group.kind === 'club');
+    expect(teams.length).toBeGreaterThan(0);
+    for (const team of teams) for (const club of clubs) expect(team.share).toBeGreaterThan(club.share);
+    expect(teams[0]!.share).toBeGreaterThan(0.25);
+  }, 60_000);
+
+  it('tell the seasons at the year’s end, and leave room for a big Greek Row', () => {
+    const log: Parameters<typeof teamsYearEnd>[2] = [];
+    teamsYearEnd(MODEL, 1, log);
+    expect(log[0]!.text).toMatch(/^The varsity seasons are over: .+ \d+-\d+/);
+    expect(toneProblem(log[0]!.text)).toBeNull();
+    expect(GREEK_HOUSES_MOST).toBe(40);
+  });
 });

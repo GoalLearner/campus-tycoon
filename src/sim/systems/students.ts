@@ -1,4 +1,6 @@
 import { scaleOf, smallCount } from '../scale';
+import { rostersOf, teamAt, teamFor, type Rosters } from './teams';
+import type { VarsityTeam } from '../config/teams';
 import { fluOf, homesickOf } from './wellbeing';
 import { gradesOf, weekInClass } from './grades';
 import { GPA_FLOOR } from '../config/grades';
@@ -242,6 +244,11 @@ export function isVarsity(state: GameState, ref: StudentRef): boolean {
   return roll(state.seed, ref, SALT.sport) < athleteShare(state);
 }
 
+/** The varsity team a student is on, or null for most (DESIGN.md 65.7). */
+export function teamOf(state: GameState, ref: StudentRef, rosters: Rosters = rostersOf(state)): VarsityTeam | null {
+  return teamAt(teamFor(rosters, roll(state.seed, ref, SALT.sport)));
+}
+
 // ------------------------------------------------------------ happiness --
 
 /** 4 is delighted, 0 is miserable. */
@@ -355,7 +362,8 @@ export interface SocialProfile {
   major: string;
   field: string;
   club: string | null;
-  team: boolean;
+  /** Their varsity team, by its place in VARSITY_TEAMS, or -1 (DESIGN.md 65.7). */
+  team: number;
   nature: ArchetypeId;
 }
 
@@ -383,8 +391,8 @@ function fixedOf(seed: number, ref: StudentRef): FixedTraits {
   return fixed;
 }
 
-/** `athletes` is `athleteShare(state)`, which a caller reading many students works out once. */
-export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), athletes: number = athleteShare(state)): SocialProfile | null {
+/** `rosters` is `rostersOf(state)`, which a caller reading many students works out once. */
+export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), rosters: Rosters = rostersOf(state)): SocialProfile | null {
   const classYear = classYearOf(state, ref);
   if (classYear === null) return null;
   const seed = state.seed;
@@ -402,7 +410,7 @@ export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceI
     home,
     chapter: member?.chapter.name ?? null,
     housed: member?.housed ?? false,
-    team: roll(seed, ref, SALT.sport) < athletes,
+    team: teamFor(rosters, roll(seed, ref, SALT.sport)),
   };
 }
 
@@ -503,6 +511,8 @@ export interface StudentCard {
   sick: boolean;
   /** A first-year who moved away and misses home now: most do at first. Those who feel it most read as Homesick. */
   missesHome: boolean;
+  /** The varsity team they are on (DESIGN.md 65.7), or null for most. */
+  team: string | null;
   /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
   tutored: boolean;
   /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
@@ -799,6 +809,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     classes,
     sick: flu.sick,
     missesHome,
+    team: teamOf(state, ref)?.name ?? null,
     tutored: tutoring > 0,
     classSize: Math.round(classSizeNow(state)),
     club: fixed.club,

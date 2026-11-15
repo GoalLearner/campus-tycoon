@@ -1436,6 +1436,7 @@ export type LogKind =
   | 'returned'
   | 'grades'
   | 'flu'
+  | 'teams'
   | 'incident'
   | 'grounds'
   | 'yearEnd'

@@ -3,7 +3,8 @@ import { fitOnMap } from './propSize';
 import { activityWords, findStudent, type ActivityRole, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
+import { dayRead, enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
+import { teamVenues } from '../sim/systems/teams';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Box, type Iso } from './iso';
 
@@ -118,7 +119,12 @@ interface Site {
   figures: Figure[];
   /** Things floating in a pool, and the ball on a field. */
   props: Phaser.GameObjects.Image[];
+  /** A varsity team practises here (DESIGN.md 65.7): in the afternoons of term it is busy with them. */
+  practice: boolean;
 }
+
+/** [T] A team's practice fills this share of the most a court, a field, the track or a pool shows. */
+const PRACTICE_SHOWN = 0.8;
 
 /** A steady number from two whole numbers, so who is at which bench does not flicker. */
 function mix(a: number, b: number): number {
@@ -132,6 +138,8 @@ export class Activity {
   private pool: Phaser.GameObjects.Image[] = [];
   private readonly people: PeopleSpec | null;
   private period: DayPeriod = 'afternoon';
+  /** True in a term week: teams practise. */
+  private term = true;
   /** Reduce effects: no hops or cheers after a point. */
   private reduced = false;
   /** The cheer over a court or a field after a point, by the building's id. */
@@ -199,6 +207,10 @@ export class Activity {
     this.students = enrollment(state);
     const kept = new Map<number, Site>();
     for (const site of this.sites) kept.set(site.placed.id, site);
+    // Where the varsity teams practise, and whether it is term (DESIGN.md 65.7).
+    const venues = teamVenues(state);
+    const day = dayRead(state.clock).kind;
+    this.term = day !== 'break' && day !== 'summer' && day !== 'commencement';
     const next: Site[] = [];
     for (const placed of state.map.placed) {
       if (!placed) continue;
@@ -258,7 +270,7 @@ export class Activity {
           }
         }
       }
-      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [] });
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
     }
     // Whatever was cleared takes its people with it.
     for (const gone of kept.values()) {
@@ -337,7 +349,9 @@ export class Activity {
     if (!use) return [];
     const now = playingNow(use.demand, use.capacity, this.period);
     const most = SHOWN[type] ?? 4;
-    const playing = Math.min(most, Math.ceil((now.playing * most) / use.capacity));
+    let playing = Math.min(most, Math.ceil((now.playing * most) / use.capacity));
+    // A team at practice in the afternoon of a term day: the place is busy with them.
+    if (site.practice && this.term && this.period === 'afternoon') playing = Math.max(playing, Math.ceil(most * PRACTICE_SHOWN));
     const role: Role = type === 'courts' ? 'court' : type === 'field' ? 'field' : type === 'track' ? 'runner' : type === 'pool' ? 'swimmer' : 'door';
     return [
       [role, playing],

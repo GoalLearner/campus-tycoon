@@ -1,4 +1,5 @@
 import { policiesAt } from './systems/policies';
+import { VARSITY_TEAMS } from './config/teams';
 import { LEAVE_WHYS, type LeaveWhy } from './config/population';
 import { dateAt, formatDate } from './calendar';
 import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand';
@@ -258,6 +259,15 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         if (left <= 0) break;
         const most = LEAVE_WHYS.reduce((best, why) => (Number(entry.data?.[why] ?? 0) > Number(entry.data?.[best] ?? 0) ? why : best), LEAVE_WHYS[0]!);
         out.push({ weight: 57, headline: LEFT_HEADLINE[most], deck: entry.text });
+        break;
+      }
+      case 'teams': {
+        // In the headline's own capitals: "Swimming and Diving".
+        const name = (VARSITY_TEAMS[Number(entry.data?.best ?? 0)]?.name ?? 'A team')
+          .split(' ')
+          .map((word) => (word === 'and' ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+          .join(' ');
+        out.push({ weight: 52, headline: entry.data?.title === 1 ? `${name} Wins the Conference; Trophy Case Rearranged` : `${name} Has the Best Season; Coaches Promise More Next Year`, deck: entry.text });
         break;
       }
       case 'flu':

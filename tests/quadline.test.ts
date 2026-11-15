@@ -146,7 +146,8 @@ describe('posts', () => {
     for (const post of professor) expect(postWords(MODEL, post).text).toMatch(/professor|class|lecture/);
     const team = all.filter((post) => post.kind === POST.teamNews);
     expect(team.length).toBeGreaterThan(0);
-    for (const post of team) expect(socialProfile(MODEL, post.author)?.team).toBe(true);
+    // From an athlete on a team (DESIGN.md 65.7).
+    for (const post of team) expect(socialProfile(MODEL, post.author)!.team).toBeGreaterThanOrEqual(0);
   });
 
   it('bring Greek Row news from its members: house life, and philanthropy day when it is near', () => {
