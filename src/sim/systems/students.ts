@@ -241,12 +241,12 @@ export function studentFigure(state: GameState, ref: StudentRef, crowd: number, 
  * so the map can draw them in the pack's athlete figures and their cards agree.
  */
 export function isVarsity(state: GameState, ref: StudentRef): boolean {
-  return roll(state.seed, ref, SALT.sport) < athleteShare(state);
+  return teamOf(state, ref) !== null;
 }
 
 /** The varsity team a student is on, or null for most (DESIGN.md 65.7). */
 export function teamOf(state: GameState, ref: StudentRef, rosters: Rosters = rostersOf(state)): VarsityTeam | null {
-  return teamAt(teamFor(rosters, roll(state.seed, ref, SALT.sport)));
+  return teamAt(teamFor(rosters, roll(state.seed, ref, SALT.sport), genderOf(state.seed, ref) === 1));
 }
 
 // ------------------------------------------------------------ happiness --
@@ -410,7 +410,7 @@ export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceI
     home,
     chapter: member?.chapter.name ?? null,
     housed: member?.housed ?? false,
-    team: teamFor(rosters, roll(seed, ref, SALT.sport)),
+    team: teamFor(rosters, roll(seed, ref, SALT.sport), genderOf(seed, ref) === 1),
   };
 }
 
@@ -566,8 +566,10 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
   // Football's two: the roster, and the fans, who swell on a home game day and after a big win.
   const sport = roll(state.seed, ref, SALT.sport);
   const roster = athleteShare(state);
-  if (sport < roster) return 'athlete';
-  if (sport < roster + superfanShare(state)) return 'superfan';
+  // On a team, if one is fielded for them (DESIGN.md 65.7): football's roster is men's.
+  if (sport < roster) {
+    if (teamOf(state, ref) !== null) return 'athlete';
+  } else if (sport < roster + superfanShare(state)) return 'superfan';
   // A chapter's members (DESIGN.md 51): a pledge in their first year, a loyalist after.
   if (member) return classYear === 0 ? 'pledge' : 'greekLoyalist';
   // In finals week some of everyone is up all night. It passes with the exams.

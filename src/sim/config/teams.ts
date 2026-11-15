@@ -11,10 +11,12 @@ export interface VarsityTeam {
   roster: number;
   /** Where it practises: a kind of placed building, or the stadium for football. */
   needs: 'stadium' | 'field' | 'track' | 'pool' | 'courts' | 'gym';
+  /** A men's team only, as college football is. Every other team has a men's and a women's squad. */
+  men?: true;
 }
 
 export const VARSITY_TEAMS: readonly VarsityTeam[] = [
-  { id: 'football', name: 'Football', roster: 90, needs: 'stadium' },
+  { id: 'football', name: 'Football', roster: 90, needs: 'stadium', men: true },
   { id: 'soccer', name: 'Soccer', roster: 60, needs: 'field' },
   { id: 'lacrosse', name: 'Lacrosse', roster: 90, needs: 'field' },
   { id: 'baseball', name: 'Baseball and softball', roster: 60, needs: 'field' },

@@ -45,12 +45,20 @@ export function athleteShare(state: GameState): number {
   return rostersOf(state).share;
 }
 
-/** The team a student's sport roll puts them on, by its place in VARSITY_TEAMS, or -1 for no team. */
-export function teamFor(rosters: Rosters, sport: number): number {
+/**
+ * The team a student's sport roll puts them on, by its place in VARSITY_TEAMS, or -1 for no team. `man` is true for
+ * a man: a roll that lands on a men's team (football) for anyone else goes to the next team fielded with squads for all.
+ */
+export function teamFor(rosters: Rosters, sport: number, man = true): number {
   if (sport >= rosters.share || rosters.share <= 0) return -1;
   const at = sport / rosters.share;
-  for (const one of rosters.teams) if (at < one.upTo) return one.index;
-  return rosters.teams[rosters.teams.length - 1]?.index ?? -1;
+  let k = rosters.teams.findIndex((one) => at < one.upTo);
+  if (k < 0) k = rosters.teams.length - 1;
+  if (!man) {
+    for (let n = 0; n < rosters.teams.length && VARSITY_TEAMS[rosters.teams[k]!.index]!.men; n++) k = (k + 1) % rosters.teams.length;
+    if (VARSITY_TEAMS[rosters.teams[k]!.index]!.men) return -1;
+  }
+  return rosters.teams[k]?.index ?? -1;
 }
 
 /** A team by its place in VARSITY_TEAMS. */
