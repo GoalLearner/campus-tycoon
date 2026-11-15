@@ -4,7 +4,8 @@
  */
 import { sleepHours } from '../src/app/regularDay';
 import { campusSocial, relationshipWords, viewOf } from '../src/app/socialView';
-import { sampleStudents, studentCard, type GameState } from '../src/sim';
+import { enrollment, sampleStudents, studentCard, type GameState } from '../src/sim';
+import { drinkingFigures } from '../src/sim/systems/birthdays';
 import { LEAVE_WHYS } from '../src/sim/config/population';
 import { MAJORS } from '../src/sim/config/students';
 import { campusRates } from '../src/sim/systems/field';
@@ -70,6 +71,15 @@ export function campusReading(state: GameState) {
     taken: share(cards, ({ ref, card }) => !/single/i.test(relationshipWords(view, state, ref, card.relationship).name)),
     athletes: rostersOf(state).share,
     greek: greekShare(state),
+    // R2 (DESIGN.md 66): who is 21, the write-ups, who lives where, and seniors' milestones.
+    over21: drinkingFigures(state)?.over21 ?? null,
+    writeUps: state.admissions.lastSemester?.writeUps ? (state.admissions.lastSemester.writeUps * 2 * 1000) / Math.max(1, enrollment(state)) : null,
+    firstInHalls: share(cards.filter(({ card }) => card.classYear === 0), ({ card }) => card.residence !== 'offCampus'),
+    upperInHalls: share(cards.filter(({ card }) => card.classYear === 2 || card.classYear === 3), ({ card }) => card.residence !== 'offCampus'),
+    internship: share(seniors, ({ card }) => card.milestones.did.internship),
+    research: share(seniors, ({ card }) => card.milestones.did.research),
+    capstone: share(seniors, ({ card }) => card.milestones.did.capstone),
+    abroad: share(seniors, ({ card }) => card.milestones.did.abroad),
   };
 }
 
@@ -120,6 +130,23 @@ export function realismLines(tended: GameState[], alone: GameState): RealismLine
     'about half lonely, about half of roommates with some friction, about a third in a relationship',
     all.every((one) => within(one.lonely, 0.42, 0.65) && within(one.friction, 0.35, 0.65) && within(one.taken, 0.22, 0.48)),
     `lonely ${span(of('lonely', all))}; roommates with friction ${span(of('friction', all))}; in a relationship ${span(of('taken', all))} (a regrown web, at the moment each run ended)`,
+  );
+  // R2, four years (DESIGN.md 66).
+  const known = (key: 'over21' | 'writeUps'): number[] => all.map((one) => one[key]).filter((x): x is number => x !== null);
+  line(
+    '21 and over about two in five of a campus, and about 7 write-ups a year for drinking under 21 in every 1,000 students',
+    known('over21').length === all.length && known('over21').every((x) => within(x, 0.3, 0.52)) && known('writeUps').length > 0 && known('writeUps').every((x) => within(x, 4, 16)),
+    `21 and over ${span(known('over21'))}; write-ups ${known('writeUps').map((x) => x.toFixed(1)).join(', ')} a year in every 1,000`,
+  );
+  line(
+    'nearly every first-year in a hall, most juniors and seniors in town',
+    all.every((one) => within(one.firstInHalls, 0.8, 0.95) && within(one.upperInHalls, 0.3, 0.52)),
+    `first-years in a hall ${span(of('firstInHalls', all))}; juniors and seniors ${span(of('upperInHalls', all))}`,
+  );
+  line(
+    'by senior year about half did an internship, a fifth research with faculty, two in five senior work, one in nine studied abroad',
+    all.every((one) => within(one.internship, 0.4, 0.6) && within(one.research, 0.15, 0.31) && within(one.capstone, 0.32, 0.52) && within(one.abroad, 0.06, 0.18)),
+    `internship ${span(of('internship', all))}; research ${span(of('research', all))}; senior work ${span(of('capstone', all))}; abroad ${span(of('abroad', all))}`,
   );
   line(
     'varsity athletes about 1 to 2 in 100 of a big campus, and Greek Row inside its room',
