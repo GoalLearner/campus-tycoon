@@ -70,6 +70,14 @@ const ABOUT_STUDENT: ReadonlySet<number> = new Set([POST.couple, POST.best, POST
 export const aboutStudent = (kind: number): boolean => ABOUT_STUDENT.has(kind);
 
 const share = (h: number): number => (h >>> 0) / 4294967296;
+
+/**
+ * The tick a week's posts begin. The web lives a week when the clock reaches its number, so the week it has just
+ * lived is the one that has just passed: its posts went up in the game week before the clock's.
+ */
+export function postWeekStart(week: number): number {
+  return (week - 1) * WEB_WEEK_TICKS;
+}
 /** A happening's numbers, as the web keeps them (HAPPENING_FIELDS in web.ts, held equal by a test). */
 export const FIELDS = 10;
 
@@ -297,7 +305,7 @@ const has = (bits: number, interest: number): boolean => ((bits >>> 18) & (1 << 
 
 /** The week's calendar, read at the middle of the week: what the term is doing, and the sky. */
 function weekRead(ctx: PostContext, week: number): { kinds: Set<string>; ids: Set<string>; month: number; weather: string } {
-  const tick = week * WEB_WEEK_TICKS + Math.floor(WEB_WEEK_TICKS / 2);
+  const tick = postWeekStart(week) + Math.floor(WEB_WEEK_TICKS / 2);
   const at = { tick, week: tick >= ctx.week.start ? ctx.week : plainWeek(tick) };
   const entries = activeEntries(at);
   return { kinds: new Set(entries.map((entry) => entry.kind as string)), ids: new Set(entries.map((entry) => entry.id)), month: dateAt(at).month, weather: weatherAt(ctx.seed, at) };
@@ -326,7 +334,7 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
   if (read.weather === 'rain') add(POST.rain, 1.2);
   if ((read.weather === 'fair' || read.weather === 'sunny') && read.month >= 3 && read.month <= 5) add(POST.warm, 1);
   // A home game this week, or one just played.
-  const from = week * WEB_WEEK_TICKS;
+  const from = postWeekStart(week);
   const to = from + WEB_WEEK_TICKS;
   const fan = has(bits, INTEREST.sports) || profile.team || profile.nature === 'superfan';
   for (const game of ctx.games) {

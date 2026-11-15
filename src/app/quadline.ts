@@ -16,7 +16,7 @@ import { FEEL, KIND, SLOTS, WEB_WEEK_TICKS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
 import { teamName } from '../sim/systems/football';
 import { dormName, hallName } from '../sim/systems/people';
-import { aboutStudent, postsOf, type Post } from '../sim/systems/quadline';
+import { aboutStudent, postsOf, postWeekStart, type Post } from '../sim/systems/quadline';
 import { classYearOf, firstNameOf, socialProfile, studentName } from '../sim/systems/students';
 import { idIn, refIn, type WebView } from './socialView';
 
@@ -91,7 +91,7 @@ export function postWords(state: GameState, post: Post): PostWordsShown {
 
 /** When it went up, as a phone says it: "now", "12 m", "3 h", "2 d". */
 export function postAge(state: GameState, post: Post): string {
-  const ago = Math.max(0, state.clock.tick - (post.week * WEB_WEEK_TICKS + post.minute));
+  const ago = Math.max(0, state.clock.tick - (postWeekStart(post.week) + post.minute));
   if (ago < 1) return 'now';
   if (ago < 60) return `${ago} m`;
   if (ago < 24 * 60) return `${Math.floor(ago / 60)} h`;
@@ -199,8 +199,17 @@ export function commentsFor(view: WebView, state: GameState, post: Post): Commen
   const id = idIn(view, post.author);
   if (id < 0) return [];
   const out: Comment[] = [];
+  // No two comments on a post say the same: the next line of the kind is taken when one is used.
+  const used = new Set<string>();
   const pick = (kind: CommentKind, h: number): string => {
     const lines = COMMENT_LINES[kind];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[(h + i) % lines.length]!;
+      if (!used.has(line)) {
+        used.add(line);
+        return line;
+      }
+    }
     return lines[h % lines.length]!;
   };
   const authorName = firstNameOf(state, post.author);
