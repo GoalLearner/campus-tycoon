@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemAt, regularDay, sleepHours } from '../src/app/regularDay';
+import { itemAt, MEAL_SWIPES, regularDay, shiftDays, sleepHours } from '../src/app/regularDay';
 import { firstNamesOf, happenedTo, peopleOf, viewOf } from '../src/app/socialView';
 import { advance, applyAction, newGame, parseSave, sampleStudents, serialize, studentCard, studentFigure, toneProblem, type GameState, type StudentRef } from '../src/sim';
 import { calendarAt, dateAt } from '../src/sim/calendar';
@@ -142,7 +142,8 @@ describe('a regular’s day', () => {
       const [bed, up] = sleepHours(card, weekday === 0 || weekday === 6);
       const sleep = bed % 24;
       const wake = up % 24;
-      expect(day[0]!.words).toBe('Getting ready');
+      // Up and ready, or (now and then, in a week they missed a class) the alarm slept through (R3, DESIGN.md 67.5).
+      expect(['Getting ready', 'Slept through the alarm']).toContain(day[0]!.words);
       expect(day[0]!.from % 24).toBeGreaterThanOrEqual(wake);
       expect(day.at(-1)!.words).toBe('Asleep');
       // One after another with no gaps: every hour awake is something.
@@ -160,7 +161,7 @@ describe('a regular’s day', () => {
     for (const { ref, day } of days) {
       const classes = day.filter((one) => one.where === 'class');
       if (weekday === 0 || weekday === 6) expect(classes).toHaveLength(0);
-      else expect(classes.length).toBeGreaterThanOrEqual(2);
+      else expect(classes.length).toBeGreaterThanOrEqual(day[0]!.words === 'Slept through the alarm' ? 1 : 2);
       const theirs = new Set(peopleOf(VIEW, MODEL, ref).map((one) => key(one.ref)));
       for (const item of day) for (const one of item.with) expect(theirs.has(key(one))).toBe(true);
     }
@@ -191,6 +192,71 @@ describe('a regular’s day', () => {
     const day = regularDay(null, state, ref, studentCard(state, ref)!);
     expect(day).toHaveLength(1);
     expect(day[0]!.where).toBe('away');
+  });
+});
+
+describe('the details of a day, R3', () => {
+  // Many students over many days of term: a fortnight of days.
+  const MANY = sampleStudents(MODEL, 150);
+  const read = (() => {
+    const out: Array<{ card: NonNullable<ReturnType<typeof studentCard>>; day: ReturnType<typeof regularDay>; weekday: number }> = [];
+    let state = MODEL;
+    let at = MODEL.clock.lastSimulatedAt;
+    for (let n = 0; n < 14; n++) {
+      const kind = dayRead(state.clock).kind;
+      if (kind !== 'break' && kind !== 'summer') {
+        for (const ref of MANY) {
+          const card = studentCard(state, ref);
+          if (card) out.push({ card, day: regularDay(null, state, ref, card), weekday: dateAt(state.clock).weekday });
+        }
+      }
+      state = advance(state, at, at + DAY / 52).state;
+      at += DAY / 52;
+    }
+    return out;
+  })();
+  const has = (pattern: RegExp): number => read.filter(({ day }) => day.some((item) => pattern.test(item.words))).length;
+
+  it('works a job on its shift days, each where the job is, and never a shift for one without a job', () => {
+    expect(has(/^A shift at /)).toBeGreaterThan(20);
+    for (const { card, day, weekday } of read) {
+      const shifts = day.filter((item) => item.words.startsWith('A shift at '));
+      if (!card.money.job) expect(shifts).toHaveLength(0);
+      else {
+        expect(shifts.length).toBe(shiftDays(MODEL.seed, card.ref, card.money.job.hours).includes(weekday) ? 1 : 0);
+        for (const item of shifts) {
+          expect(item.words).toBe(`A shift at ${card.money.job.where}`);
+          if (!card.money.job.onCampus) expect(item.where).toBe('away');
+        }
+      }
+    }
+    // About four hours a shift: the week's shifts come to about the job's hours.
+    for (const hours of [8, 12, 20, 30]) expect(Math.abs(shiftDays(1, { entryYear: 0, index: 3 }, hours).length * 4.5 - hours)).toBeLessThanOrEqual(4.5);
+  });
+
+  it("counts a hall's meal swipes down through the week, and only for students in a hall", () => {
+    for (const { card, day, weekday } of read) {
+      const dinner = day.find((item) => item.words.startsWith('Dinner'));
+      if (!dinner) continue;
+      if (card.residence !== 'dorm') expect(dinner.words).not.toMatch(/swipe/);
+      else {
+        const left = Math.max(0, MEAL_SWIPES - 2 * (((weekday + 6) % 7) + 1));
+        expect(dinner.words).toMatch(left > 0 ? new RegExp(`, ${left} meal swipes left this week$`) : /the last meal swipe of the week$/);
+      }
+    }
+  });
+
+  it('has laundry, the mailroom, a late-night food run, a gym phase, an 8 AM class, now and then the alarm slept through and keys left inside', () => {
+    for (const pattern of [/^Laundry$/, /^Picking up a package at the mailroom$/, /^A late-night food run/, /^A workout, in a gym phase$/, /^Coffee before an 8 AM class$/]) expect(has(pattern), String(pattern)).toBeGreaterThan(0);
+    // An 8 AM class only for those up by 6:45, and only after coffee.
+    for (const { day } of read) {
+      const eight = day.findIndex((item) => /^An 8 AM /.test(item.words));
+      if (eight >= 0) expect(day[eight - 1]!.words).toBe('Coffee before an 8 AM class');
+    }
+    // Sleeping through the alarm only in a week they missed a class.
+    for (const { card, day } of read) if (day[0]!.words === 'Slept through the alarm') expect(card.classes!.went).toBeLessThan(card.classes!.of);
+    // Every word plain, and inside the tone guide.
+    for (const { day } of read) for (const item of day) expect(toneProblem(item.words), item.words).toBeNull();
   });
 });
 

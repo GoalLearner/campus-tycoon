@@ -7,7 +7,7 @@ import { ERAS, RANK_GOALS } from './config/goals';
 import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
-import { dollars, duration, headCount, shortName } from './format';
+import { dollars, duration, headCount, shortName, perHundred } from './format';
 import { hashInts } from './rng';
 import { buildings, enrollment, openCapacity } from './selectors';
 import { applicantsLift } from './systems/boosts';
@@ -282,6 +282,8 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
           weight: 46,
           headline: entry.data?.graduates
             ? 'Graduates Leave With Offers in Hand, or Plans for More School; Résumés Updated Accordingly'
+            : entry.data?.springTrips
+              ? 'Spring Break Begins: Trips, Trains and Extra Shifts; Campus Store Restocks Sunscreen'
             : entry.data?.packages
               ? 'Care Packages Pour In for Finals; Mail Room Runs Out of Shelf'
             : entry.data?.interns
@@ -559,7 +561,7 @@ export function welcomeEdition(state: GameState): Edition {
   }
 
   const books = budget(state);
-  if (books.incomeTotal > 0) top.push({ kind: 'money', text: `The campus keeps $${Math.round(books.kept)} of every $100 that comes in.` });
+  if (books.incomeTotal > 0) top.push({ kind: 'money', text: `The campus keeps ${perHundred(books.kept)} of every $100 that comes in.` });
 
   const poll = studentPoll(state);
   return {

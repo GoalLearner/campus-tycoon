@@ -142,6 +142,7 @@ function plannedText(state: GameState, card: StudentCard, item: DayItem): string
   if (item.words === 'Asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (item.words === 'Getting ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
   if (item.words === 'In their room') return town ? 'At home in town' : `In ${home}`;
+  if (item.words === 'Laundry') return town ? 'Laundry, at home in town' : `Laundry in ${home}'s laundry room`;
   return item.words;
 }
 
@@ -288,6 +289,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const club = row('Club');
   // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
   const milestones = row('Four years');
+  // Their money (R3, DESIGN.md 67): running short, a job, aid, loans, rent and books, the most telling first.
+  const wallet = row('Money');
 
   // 5. Relationship: the status, and a short note on what it does for this one student.
   const relationship = row('Relationship');
@@ -362,7 +365,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, milestones.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, milestones.line, wallet.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -491,6 +494,10 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
     milestones.line.hidden = years.length === 0;
     setText(milestones.value, years.join(' · '));
+    // The Main Character's money is their own story's (DESIGN.md 57), told on their page.
+    const mainNow = state.story?.mc;
+    wallet.line.hidden = !!mainNow && mainNow.ref.entryYear === ref.entryYear && mainNow.ref.index === ref.index;
+    setText(wallet.value, card.money.lines.slice(0, 4).join(' · '));
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);
     // Single, with their ties known: the old note said what their status did to Happiness, and their ties say it now.

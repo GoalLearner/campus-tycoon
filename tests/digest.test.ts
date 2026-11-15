@@ -1,3 +1,4 @@
+import { dollars } from '../src/sim/format';
 import { describe, expect, it } from 'vitest';
 import { advance, enrollment, summarizeAway, type LogEntry } from '../src/sim';
 import { DAY, freshGame, T0 } from './helpers';
@@ -11,13 +12,13 @@ describe('the away list', () => {
 
   it('says what was earned and how enrollment moved', () => {
     const { lines } = summarizeAway([], facts);
-    expect(lines).toContain('The campus earned $31,500.');
+    expect(lines).toContain(`The campus earned ${dollars(31_500)}.`);
     expect(lines).toContain('Enrollment went from 60 to 214.');
   });
 
   it('reports a loss as a loss', () => {
     const { lines } = summarizeAway([], { ...facts, cashAfter: 90_000 });
-    expect(lines).toContain('The campus spent $10,000 more than it earned.');
+    expect(lines).toContain(`The campus spent ${dollars(10_000)} more than it earned.`);
   });
 
   it('counts new buildings and growth separately', () => {

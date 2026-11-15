@@ -1,3 +1,4 @@
+import { dollars, dollarsShort } from '../src/sim/format';
 import { readFileSync } from 'node:fs';
 import { LEAVE_WHYS } from '../src/sim/config/population';
 import { join } from 'node:path';
@@ -503,10 +504,10 @@ describe('the three fixes for a shortage of beds', () => {
     const fixes = housingFixes(state);
     const lines = housingFixLines(fixes);
     expect(lines.lots).toMatch(new RegExp(`Zone ${fixes.lots!.count} more Housing lots: 12 beds each`));
-    expect(lines.path).toContain(`Lay a path to ${fixes.path!.street}: about 3 path cells, $6,000.`);
+    expect(lines.path).toContain(`Lay a path to ${fixes.path!.street}: about 3 path cells, ${dollars(6_000)}.`);
     expect(lines.path).toContain(`${fixes.path!.brings} locals could walk in`);
     expect(lines.path).toContain(`${fixes.path!.brings} fewer beds are needed`);
-    expect(lines.parking).toContain(`Build ${fixes.parking!.spaces} parking spaces with a road to a street: ${fixes.parking!.lots} Parking lots, $80K.`);
+    expect(lines.parking).toContain(`Build ${fixes.parking!.spaces} parking spaces with a road to a street: ${fixes.parking!.lots} Parking lots, ${dollarsShort(80_000)}.`);
     expect(lines.parking).toContain(`${fixes.parking!.brings} locals could drive in`);
     // Nothing is said about a fix that would bring nobody in.
     expect(housingFixLines({ bedsShort: 5, lots: { count: 1, perLot: 12, cost: 15_000 }, path: null, parking: null })).toMatchObject({ path: '', parking: '' });

@@ -1,3 +1,6 @@
+import { TUITION_ESTABLISHED_PER_YEAR } from '../sim/config/money';
+import { dollars } from '../sim/format';
+
 /**
  * What to tell a player whose save was made by an older version of the game:
  * one line for each rule that is new to them. Shown once, with the away list,
@@ -110,6 +113,10 @@ export function upgradeNotes(fromVersion: number): string[] {
   }
   if (fromVersion < 31) {
     notes.push('New: the numbers are real ones. First-years leave more than seniors, and every student who leaves has a reason, on the Scorecard and in the paper. Some seniors take a fifth or sixth year. Majors, grades, sleep, Stress, homesickness, loneliness and flu season follow real figures, and the Dean’s list and probation are on the cards. Your rank and Happiness keep more of them.');
+  }
+  if (fromVersion < 32) {
+    // Built through the one formatter, so it reads the same price as every other screen (DESIGN.md 67.1).
+    notes.push(`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`);
   }
   return notes;
 }

@@ -1,3 +1,4 @@
+import { debtWords } from './studentMoney';
 import { calendarAt } from '../calendar';
 import { deansListShare, probationShare } from './grades';
 import { teachingQuality } from './students';
@@ -547,7 +548,7 @@ export function graduate(state: GameState, log: LogEntry[]): void {
     log.push({
       tick: state.clock.tick,
       kind: 'milestones',
-      text: `Of the ${headCount(finished)} graduates, about ${headCount(offers)} have a job offer in hand and ${headCount(more)} go on to graduate school; the rest keep looking, and most have work within six months.`,
+      text: `Of the ${headCount(finished)} graduates, about ${headCount(offers)} have a job offer in hand and ${headCount(more)} go on to graduate school; the rest keep looking, and most have work within six months. ${debtWords()}`,
       data: { graduates: finished, offers, grad: more },
     });
     earn(state, 'graduation', log);

@@ -1,3 +1,4 @@
+import { dollars, dollarsShort } from '../src/sim/format';
 import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -292,7 +293,7 @@ describe('getting, placing, moving and putting away', () => {
     expect(refuse(state, { type: 'placeDecor', id: 'flowers', x: -1, y: 0 })).toBe('That does not fit on your land.');
     const poor = structuredClone(state);
     poor.money.cash = 10;
-    expect(refuse(poor, { type: 'placeDecor', id: 'flowers', x, y })).toMatch(/^That costs \$16,800\. You have \$10\.$/);
+    expect(refuse(poor, { type: 'placeDecor', id: 'flowers', x, y })).toBe(`That costs ${dollars(16_800)}. You have ${dollars(10)}.`);
     expect(previewDecor(poor, 'flowers', x, y)).toMatchObject({ way: 'cash', problem: 'cash' });
     expect(refuse(state, { type: 'placeDecor', id: 'noSuchThing', x, y })).toBe('There is no such decoration.');
   });
@@ -509,7 +510,7 @@ describe('the Workshop', () => {
     const waited = applyAction(poor, { type: 'collectCraft', bench: 0 });
     if (!waited.ok) throw new Error(waited.error);
     expect(waited.state.decor.benches[0]).toEqual({ recipe: 'banner', making: null, done: null });
-    expect(waited.note).toMatch(/^School banner costs \$16,800 to make\. You have \$5\.$/);
+    expect(waited.note).toBe(`School banner costs ${dollars(16_800)} to make. You have ${dollars(5)}.`);
   });
 
   it('finishes a craft now for Gold Seals, and sells a second bench for them, once', () => {
@@ -574,7 +575,7 @@ describe('the words on screen', () => {
     // Levels 2 to 13 have brought four, and the next two to come are shown, locked.
     expect(shelf.map((entry) => entry.name)).toEqual(['Red flowers', 'Globe lamp', 'Clipped hedge', 'Boulder', 'Mailbox', 'Lantern']);
     expect(shelf.map((entry) => entry.locked ?? '')).toEqual(['', '', '', '', 'Level 14', 'Level 17']);
-    expect(shelf[0]).toMatchObject({ cost: '$17K', key: 'decoration.flowers' });
+    expect(shelf[0]).toMatchObject({ cost: dollarsShort(16_800), key: 'decoration.flowers' });
     expect(entries.filter((entry) => entry.category.startsWith('Fall set'))).toHaveLength(5);
     const special = entries.filter((entry) => entry.category === 'Decor for Gold Seals');
     expect(special).toHaveLength(6);
@@ -589,7 +590,7 @@ describe('the words on screen', () => {
     const state = fresh(13, 9);
     state.decor.stored.gumball = 1;
     expect(decorPlacingLine(state, 'gumball', false)).toBe('Gumball machine · from storage, free');
-    expect(decorPlacingLine(state, 'flowers', false)).toBe('Red flowers · $17K');
+    expect(decorPlacingLine(state, 'flowers', false)).toBe(`Red flowers · ${dollarsShort(16_800)}`);
     expect(decorPlacingLine(state, 'sculpture', false)).toBe('Bronze sculpture · 6 Gold Seals');
     expect(decorPlacingLine(state, 'sculpture', true)).toBe('Bronze sculpture · moving it is free');
     const lot = quietLot(state);
@@ -715,7 +716,8 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(12);
+      // And R3's price level (DESIGN.md 67.1).
+      expect(notes).toHaveLength(13);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

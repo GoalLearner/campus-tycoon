@@ -1,3 +1,4 @@
+import { dollars, dollarsShort } from '../src/sim/format';
 import { newGreek } from '../src/sim/systems/greek';
 import { commencementLeavers } from '../src/sim/systems/population';
 import { readFileSync } from 'node:fs';
@@ -124,7 +125,7 @@ describe('faculty and staff are head counts the campus keeps', () => {
     expect(hiresBehind(state)).toBe(true);
     const faculty = budget(state).groups.flatMap((group) => group.lines).find((line) => line.id === 'faculty')!;
     expect(faculty.amount).toBe(2300 * FACULTY_PAY);
-    expect(faculty.detail).toBe('2,300 members at $58,000, funded at one for every 20 students');
+    expect(faculty.detail).toBe(`2,300 members at ${dollars(58_000)}, funded at one for every 20 students`);
   });
 
   it('arrive a semester behind the students, so a bigger class stretches the ratio until they do', () => {
@@ -625,10 +626,10 @@ describe('the Capacity page', () => {
 
     const slider = instructionView(state);
     expect(slider).toMatchObject({ step: INSTRUCTION_FULL, max: 10, line: '1 to 20 · full funding' });
-    expect(slider.note).toBe("2,300 faculty for today's students: $173.4M a year with benefits.");
+    expect(slider.note).toBe(`2,300 faculty for today's students: ${dollarsShort(2_300 * 58_000 * 1.3)} a year with benefits.`);
     const more = instructionView(act(state, { type: 'instruction', step: INSTRUCTION_FULL + 1 }));
     expect(more.line).toBe('1 to 19 · well funded');
-    expect(more.note).toBe("2,421 faculty for today's students: $182.5M a year with benefits. 121 more arrive in the spring.");
+    expect(more.note).toBe(`2,421 faculty for today's students: ${dollarsShort(2_421 * 58_000 * 1.3)} a year with benefits. 121 more arrive in the spring.`);
     const fewer = instructionView(act(state, { type: 'instruction', step: INSTRUCTION_FULL - 1 }));
     expect(fewer.line).toBe('1 to 21 · underfunded');
     expect(fewer.note).toMatch(/A change arrives a semester after it is made\.$|leave by the spring\. Nobody is let go\.$/);
@@ -718,7 +719,8 @@ describe('a save from version 15', () => {
   it('tells an upgraded save what is new, once', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    expect(notes.length).toBe(17);
+    // One more since R3: the price level (DESIGN.md 67.1).
+    expect(notes.length).toBe(18);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

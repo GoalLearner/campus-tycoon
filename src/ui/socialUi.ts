@@ -1,3 +1,5 @@
+import { studentDollars } from '../sim/format';
+import { moneyFigures } from '../sim/systems/studentMoney';
 import { campusHappiness } from '../sim';
 import { friendsKeep } from '../sim/systems/population';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
@@ -85,6 +87,23 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       stat('21 and over', `${Math.round(drinking.over21 * 100)}% of students`),
       stat('Under 21 who drank this month', `about ${count(drinking.under21Drank)}`),
       ...(drinking.writeUps !== null ? [stat('Written up last semester', `${count(drinking.writeUps)} for drinking under 21, most in the dorms`)] : []),
+    );
+  }
+
+  // Students' own money (R3, DESIGN.md 67.3): aid, work, running short, and what the last class left owing.
+  const wallet = moneyFigures(state);
+  const students = state.cohorts.reduce((sum, n) => sum + n, 0);
+  if (students > 0) {
+    const pct = (share: number): string => `${Math.round(share * 100)}%`;
+    // About so many: to the hundred once it is in the thousands.
+    const about = (n: number): string => count(n >= 1_000 ? Math.round(n / 100) * 100 : n);
+    body.append(
+      el('div', 'money-head', 'Money'),
+      stat('Aid', `${pct(wallet.grant)} have a grant, ${pct(wallet.loan)} a federal loan, ${pct(wallet.workStudy)} work-study`),
+      stat('Working', `about ${about(students * wallet.working)} (${pct(wallet.working)}); ${pct(wallet.longHours)} of students work 20 hours a week or more; ${pct(wallet.onCampus)} of jobs are on campus`),
+      stat('Running short this month', `about ${about(students * wallet.short)} (${pct(wallet.short)})`),
+      stat('Graduates owing', `${pct(wallet.borrowed)} borrowed, about ${studentDollars(wallet.debt)} on average`),
+      stat('Rent in town', `about ${studentDollars(wallet.rent)} a bed a month; books about ${studentDollars(wallet.textbooks)} a year`),
     );
   }
 

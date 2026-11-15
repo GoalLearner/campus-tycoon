@@ -1,6 +1,6 @@
 import { ADVISOR_ORDER, ADVISORS } from '../config/inbox';
 import type { DriverId } from '../config/students';
-import { dollars } from '../format';
+import { dollars, perHundred } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
 import type { AdvisorId, GameState } from '../types';
@@ -79,13 +79,13 @@ function cfo(state: GameState): string {
   if (books.incomeTotal <= 0) return 'Nothing comes in until the first class arrives.';
   if (kept < 5) {
     const largest = books.groups[0];
-    return `Only $${kept} of every $100 is kept.${largest ? ` ${largest.name} is the largest cost.` : ''}`;
+    return `Only ${perHundred(kept)} of every $100 is kept.${largest ? ` ${largest.name} is the largest cost.` : ''}`;
   }
   const beds = openCapacity(state, 'housing');
   const empty = beds > 0 ? 1 - occupiedBeds(state) / beds : 0;
   if (beds >= 50 * scaleOf(state) && empty >= 0.15) return `Housing is ${Math.round(empty * 100)}% empty, and an empty bed earns nothing.`;
   if (state.money.cash >= 400_000 * scaleOf(state) && state.money.cash >= 0.45 * state.money.spendingPerYear) return `${dollars(state.money.cash)} is sitting in the bank. The endowment would put some of it to work.`;
-  return `The campus keeps $${kept} of every $100 that comes in.`;
+  return `The campus keeps ${perHundred(kept)} of every $100 that comes in.`;
 }
 
 function athletics(state: GameState): string {

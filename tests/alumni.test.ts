@@ -232,7 +232,8 @@ describe('saves', () => {
       expect(validate(week.state)).toBeNull();
       expect(week.log.filter((entry) => entry.kind === 'alumni')).toHaveLength(1);
       const notes = upgradeNotes(26);
-      expect(notes).toHaveLength(5);
+      // One more since R3: the price level (DESIGN.md 67.1).
+      expect(notes).toHaveLength(6);
       expect(notes[0]).toMatch(/alumni/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

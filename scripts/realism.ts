@@ -2,6 +2,7 @@
  * The long run's check that a model campus's totals sit in the real ranges (DESIGN.md 65.10): the realism pass's
  * figures, read from the campuses the long run played. Each line names its real figure and its source in DESIGN.md 65.
  */
+import { moneyFigures } from '../src/sim/systems/studentMoney';
 import { sleepHours } from '../src/app/regularDay';
 import { campusSocial, relationshipWords, viewOf } from '../src/app/socialView';
 import { enrollment, sampleStudents, studentCard, type GameState } from '../src/sim';
@@ -80,6 +81,19 @@ export function campusReading(state: GameState) {
     research: share(seniors, ({ card }) => card.milestones.did.research),
     capstone: share(seniors, ({ card }) => card.milestones.did.capstone),
     abroad: share(seniors, ({ card }) => card.milestones.did.abroad),
+    // R3 (DESIGN.md 67): each student's own money, as the cards hold it; a job as held in term, whenever the run ends.
+    grant: share(cards, ({ card }) => card.money.grant > 0),
+    loan: share(cards, ({ card }) => card.money.loan > 0),
+    workStudy: share(cards, ({ card }) => card.money.workStudy),
+    working: share(cards, ({ card }) => card.money.work !== null),
+    longHours: share(cards, ({ card }) => (card.money.work?.hours ?? 0) >= 20),
+    runningShort: share(cards, ({ card }) => card.money.short),
+    runningShortExpected: moneyFigures(state).short,
+    borrowed: share(seniors, ({ card }) => card.money.owesAtFour > 0),
+    debt: (() => {
+      const owing = seniors.filter(({ card }) => card.money.owesAtFour > 0).map(({ card }) => card.money.owesAtFour);
+      return owing.length > 0 ? owing.reduce((sum, x) => sum + x, 0) / owing.length : 0;
+    })(),
   };
 }
 
@@ -147,6 +161,16 @@ export function realismLines(tended: GameState[], alone: GameState): RealismLine
     'by senior year about half did an internship, a fifth research with faculty, two in five senior work, one in nine studied abroad',
     all.every((one) => within(one.internship, 0.4, 0.6) && within(one.research, 0.15, 0.31) && within(one.capstone, 0.32, 0.52) && within(one.abroad, 0.06, 0.18)),
     `internship ${span(of('internship', all))}; research ${span(of('research', all))}; senior work ${span(of('capstone', all))}; abroad ${span(of('abroad', all))}`,
+  );
+  line(
+    'aid at the real shares: about 73% a grant, 44% a federal loan, 9% work-study; about 40% work, a quarter of everyone 20 hours or more',
+    all.every((one) => within(one.grant, 0.66, 0.8) && within(one.loan, 0.37, 0.51) && within(one.workStudy, 0.05, 0.14) && within(one.working, 0.33, 0.47) && within(one.longHours, 0.19, 0.31)),
+    `grant ${span(of('grant', all))}; federal loan ${span(of('loan', all))}; work-study ${span(of('workStudy', all))}; working ${span(of('working', all))}, 20 hours or more ${span(of('longHours', all))}`,
+  );
+  line(
+    'about 23% running short in a month, less with Campus jobs and Need-based scholarships; about 47% of seniors borrowed, owing about $30,220',
+    all.every((one) => Math.abs(one.runningShort - one.runningShortExpected) <= 0.07 && within(one.runningShortExpected, 0.1, 0.36) && within(one.borrowed, 0.35, 0.59) && within(one.debt, 26_000, 34_500)),
+    `running short ${span(of('runningShort', all))} (the policies put it at ${span(of('runningShortExpected', all))}); seniors who borrowed ${span(of('borrowed', all))}, owing $${Math.round(Math.min(...of('debt', all))).toLocaleString('en-US')} to $${Math.round(Math.max(...of('debt', all))).toLocaleString('en-US')} on average`,
   );
   line(
     'varsity athletes about 1 to 2 in 100 of a big campus, and Greek Row inside its room',

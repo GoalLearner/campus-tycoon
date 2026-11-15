@@ -356,7 +356,8 @@ describe('saves', () => {
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(7);
+      // One more since R3: the price level (DESIGN.md 67.1).
+      expect(notes).toHaveLength(8);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

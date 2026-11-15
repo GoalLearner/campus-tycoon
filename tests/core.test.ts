@@ -1,3 +1,4 @@
+import { PRICE_LEVEL, studentDollars } from '../src/sim/format';
 import { describe, expect, it } from 'vitest';
 import {
   advance,
@@ -233,12 +234,15 @@ describe('money', () => {
 
 describe('format', () => {
   it('writes money the same way everywhere', () => {
-    expect(dollars(1234567.4)).toBe('$1,234,567');
-    expect(dollars(-950)).toBe('-$950');
+    // At today's prices (DESIGN.md 67.1): an amount the campus counts reads PRICE_LEVEL times as much.
+    expect(dollars(1234567.4 / PRICE_LEVEL)).toBe('$1,234,567');
+    expect(dollars(-950 / PRICE_LEVEL)).toBe('-$950');
     expect(dollars(0)).toBe('$0');
-    expect(dollarsShort(1_250_000)).toBe('$1.3M');
-    expect(dollarsShort(34_400)).toBe('$34K');
-    expect(dollarsShort(-2_300)).toBe('-$2.3K');
+    expect(dollarsShort(1_250_000 / PRICE_LEVEL)).toBe('$1.3M');
+    expect(dollarsShort(34_400 / PRICE_LEVEL)).toBe('$34K');
+    expect(dollarsShort(-2_300 / PRICE_LEVEL)).toBe('-$2.3K');
+    // A student's own money is in today's dollars already.
+    expect(studentDollars(1234567.4)).toBe('$1,234,567');
   });
 
   it('writes durations in real time', () => {
