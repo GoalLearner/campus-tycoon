@@ -1208,13 +1208,16 @@ export class Walkers {
     if (showRing && !walker.ring) {
       walker.ring = this.ringPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(walker.ring, ringKey);
-      walker.ring.setScale(RING_SCALE).setVisible(true);
+      // Centred on their feet: the atlas stands an emote on a point above it, for a head.
+      walker.ring.setOrigin(0.5, 0.5).setScale(RING_SCALE).setVisible(true);
     } else if (!showRing && walker.ring) {
       walker.ring.setVisible(false);
       this.ringPool.push(walker.ring);
       walker.ring = null;
     }
-    if (walker.ring) walker.ring.setPosition(at.x, at.y + 1).setDepth(walker.sprite.depth - 0.2).setAlpha(walker.alpha * 0.95);
+    // Over the ground of every cell it can reach (a ring is wider than a walker's feet, and the next tile is drawn
+    // later), centred where they stand.
+    if (walker.ring) walker.ring.setPosition(at.x, at.y + 0.5).setDepth(Math.ceil(this.iso.sum(walker.x, walker.y)) * 4 + 0.5).setAlpha(walker.alpha * 0.95);
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
       const ring = this.ring ?? this.scene.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
