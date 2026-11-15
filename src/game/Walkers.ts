@@ -170,6 +170,8 @@ const RING_SCALE = 0.86;
 const UMBRELLA_RIM = 0.55;
 /** The most walkers carrying something at once, by crowd step (DESIGN.md 64.3): each is one more thing to draw. */
 const HELD_AT_STEP = [0, 24, 40, 64];
+/** The most mood rings at once, by crowd step: on a crowded path the first to come keep theirs. */
+const RINGS_AT_STEP = [0, 36, 60, 96];
 const UMBRELLA_TINTS = [0xffffff, 0x9cc8ff, 0xb4f0a0, 0xe2b4ff, 0xffffff];
 /** How often a couple out together shows a heart, and how many of those are a kiss on the cheek. */
 const HEART_EVERY_MS = 6000;
@@ -486,6 +488,7 @@ export class Walkers {
   private felt = new Map<string, Known | null>();
   private feltStamp = '';
   private ringPool: Phaser.GameObjects.Image[] = [];
+  private ringsShown = 0;
   private bigShown = new Set<string>();
   private today: Today = { homeWin: false, bids: false, exams: false };
   private weather: Weather = 'clear';
@@ -1183,6 +1186,7 @@ export class Walkers {
       walker.ring.setVisible(false);
       this.ringPool.push(walker.ring);
       walker.ring = null;
+      this.ringsShown -= 1;
     }
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
@@ -1241,8 +1245,9 @@ export class Walkers {
     }
     // The ring at their feet in their feeling's colour (DESIGN.md 64.3), unless hidden or the frames are short.
     const ringKey = walker.feel?.ring ?? null;
-    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked;
+    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked && (walker.ring !== null || this.ringsShown < RINGS_AT_STEP[this.step]!);
     if (showRing && !walker.ring) {
+      this.ringsShown += 1;
       walker.ring = this.ringPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(walker.ring, ringKey);
       // Centred on their feet: the atlas stands an emote on a point above it, for a head.
@@ -1251,6 +1256,7 @@ export class Walkers {
       walker.ring.setVisible(false);
       this.ringPool.push(walker.ring);
       walker.ring = null;
+      this.ringsShown -= 1;
     }
     // Over the ground of every cell it can reach (a ring is wider than a walker's feet, and the next tile is drawn
     // later), centred where they stand.
@@ -2186,8 +2192,15 @@ export class Walkers {
     this.partyNext.clear();
     this.partyChatAt.clear();
     for (const walker of this.walkers) walker.prop?.destroy();
+    for (const walker of this.walkers) walker.ring?.destroy();
     for (const walker of this.walkers) walker.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
+    for (const ring of this.ringPool) ring.destroy();
+    this.ringPool = [];
+    this.ringsShown = 0;
+    this.felt.clear();
+    this.heartAt.clear();
+    this.partyCouple.clear();
     for (const banner of this.banners) banner.text.destroy();
     this.ring?.destroy();
     this.ring = null;
