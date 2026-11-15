@@ -10,6 +10,7 @@ How to read this document:
 - Numbers without the mark are structural decisions.
 - Each decision carries a short "why" so later sessions do not reopen settled questions.
 - Section 21 lists what is still open.
+- Dollar figures before section 67 are before the price level: as the game counts them. The screen shows about 1.405 times as much, at today's prices (67.1).
 - Section 23 is the master building catalog: every kind of facility a complete campus has, and the layer it lands in.
 - Section 24 is the success metrics: the student pipeline, the Scorecard and the ranking weights.
 - Section 25 is off-campus neighbourhoods, roads and parking.
