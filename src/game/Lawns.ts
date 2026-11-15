@@ -2,14 +2,16 @@ import Phaser from 'phaser';
 import { fitOnMap } from './propSize';
 import { findStudent, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS } from '../app/crowd';
-import type { DayPeriod } from '../app/daylight';
-import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, type LawnKind, type LawnPose } from '../app/lawnLife';
+import { shownHour, type DayPeriod } from '../app/daylight';
+import { feelingOf } from '../app/emotion';
+import { itemAt, regularDay, type Where } from '../app/regularDay';
+import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, type LawnGroup, type LawnKind, type LawnPose } from '../app/lawnLife';
 import type { Weather } from '../app/life';
 import { idIn, refIn, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
 import { hashInts, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
-import { firstNameOf } from '../sim/systems/students';
-import { INTEREST } from '../sim/systems/identity';
+import { firstNameOf, studentCard } from '../sim/systems/students';
+import { INTEREST, TRAIT, traitOf } from '../sim/systems/identity';
 import { KIND, SLOTS } from '../sim/config/web';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Iso } from './iso';
@@ -108,7 +110,12 @@ interface Group {
   iconUntil: number;
   /** Formed before the social web answered, from the seed alone: it gives way to friends and couples once it has. */
   plain: boolean;
+  /** A group that keeps still, drawn in full: nothing about it changes until it leaves, so its frames are skipped. */
+  settled: boolean;
 }
+
+/** The kinds where nobody moves and nothing flies: once faded in they are left as drawn (DESIGN.md 64.2, frames). */
+const STILL: ReadonlySet<LawnKind> = new Set<LawnKind>(['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug']);
 
 interface Spot {
   x: number;
@@ -260,6 +267,34 @@ export class Lawns {
       if (ref && free(ref)) refs.push(ref);
     }
     return { refs, couple: false, vibe: null };
+  }
+
+  /** Who the group is (DESIGN.md 64.2): the first one's plan for the hour and mood, everyone's traits on average. */
+  private natureOf(refs: readonly StudentRef[]): Pick<LawnGroup, 'plan' | 'mood' | 'traits'> {
+    const state = this.state!;
+    const web = this.web;
+    const lead = refs[0];
+    let plan: Where | null = null;
+    let mood: LawnGroup['mood'] = null;
+    const card = lead ? studentCard(state, lead) : null;
+    if (lead && card) {
+      const hour = shownHour();
+      plan = itemAt(regularDay(web, state, lead, card), hour)?.where ?? null;
+      const emotion = feelingOf(web, state, lead, card, hour).emotion;
+      mood = emotion === 'happy' || emotion === 'excited' || emotion === 'flirty' ? 'up' : emotion === 'sad' || emotion === 'lonely' ? 'down' : emotion === 'tense' ? 'tense' : null;
+    }
+    const traits: NonNullable<LawnGroup['traits']> = {};
+    if (web) {
+      const ids = refs.map((ref) => idIn(web, ref)).filter((id) => id >= 0 && web.identity[id] !== 0);
+      if (ids.length > 0) {
+        const mean = (trait: number): number => ids.reduce((sum, id) => sum + traitOf(web.identity[id]!, trait), 0) / ids.length;
+        traits.outgoing = mean(TRAIT.outgoing);
+        traits.funny = mean(TRAIT.funny);
+        traits.laidBack = mean(TRAIT.laidBack);
+        traits.ambitious = mean(TRAIT.ambitious);
+      }
+    }
+    return { plan, mood, traits };
   }
 
   /** Interests most of them share, from the web's identities. */
@@ -447,11 +482,11 @@ export class Lawns {
       const { refs, couple, vibe } = this.company(spot, slot);
       if (refs.length === 0) continue;
       const roll = mix(hashInts(state.seed, slot, 4733), Math.floor(spot.x) * 997 + Math.floor(spot.y));
-      const kind = chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams }, this.period, this.weather, roll);
+      const kind = chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
       if (count + members.length > budget && count > 0) continue;
-      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web };
+      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false };
       this.form(group, members);
       this.groups.set(key, group);
       keep.add(key);
@@ -490,6 +525,12 @@ export class Lawns {
         continue;
       }
       const alpha = Math.max(0, group.alpha);
+      if (group.settled && !group.leaving) {
+        this.icons(group, timeMs, alpha);
+        continue;
+      }
+      // Drawn once more at full strength, then left as it is.
+      if (!group.leaving && group.alpha >= 1 && STILL.has(group.kind)) group.settled = true;
       const n = group.members.length;
       // Movers go round a loop about the spot: a jog, a chase, a dog walk.
       const loop = group.kind === 'jog' ? 0.85 : group.kind === 'goof' ? 0.42 : 0.6;

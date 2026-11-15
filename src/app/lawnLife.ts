@@ -1,5 +1,6 @@
 import type { DayPeriod } from './daylight';
 import { seasonOf, type LifeFacts, type Weather } from './life';
+import type { Where } from './regularDay';
 
 /**
  * The living campus, L1 (DESIGN.md 64): what students do on the lawns and quads when they are not walking. The owner's
@@ -87,6 +88,12 @@ export interface LawnGroup {
   likes: ReadonlySet<string>;
   /** Exam weeks. */
   exams: boolean;
+  /** Where the first of them planned to be this hour, from their regular day: on the grass they keep close to it. */
+  plan?: Where | null;
+  /** How the first of them feels now, from their card's moodlets: up, down or tense, or null for fine. */
+  mood?: 'up' | 'down' | 'tense' | null;
+  /** Their traits on average, 0 to 3. */
+  traits?: Partial<Record<'outgoing' | 'funny' | 'laidBack' | 'ambitious', number>>;
 }
 
 /**
@@ -111,7 +118,7 @@ export function chooseLawnKind(group: LawnGroup, period: DayPeriod, weather: Wea
     add('sun', fine && period === 'afternoon' ? 1 : 0);
     add('frisbee', fine && day ? 0.4 : 0);
     add('study', group.exams ? 1.2 : 0.3);
-    return pick(w, roll, group.size);
+    return pick(tilted(w, group), roll, group.size);
   }
   add('circle', 3);
   add('picnic', fine && period !== 'night' ? 1.5 : 0);
@@ -131,7 +138,53 @@ export function chooseLawnKind(group: LawnGroup, period: DayPeriod, weather: Wea
   add('goof', likes('partying') || likes('gaming') ? 1 : 0.4);
   add('dance', fine && period !== 'morning' ? (likes('partying') || likes('music') ? 1.4 : 0.25) : 0);
   add('dog', 0.35);
-  return pick(w, roll, group.size);
+  return pick(tilted(w, group), roll, group.size);
+}
+
+const SOCIAL: readonly LawnKind[] = ['circle', 'selfie', 'dance', 'goof', 'hug'];
+const ALONE: readonly LawnKind[] = ['phone', 'reading', 'music'];
+
+/**
+ * Who they are tilts the weights (DESIGN.md 64.2): their plan for the hour (a meal makes a picnic, a game a frisbee,
+ * a class between lectures a study group), their mood (up: the social kinds; down: music, reading, a nap; tense:
+ * revision and a run), and their traits (outgoing pulls to company, shy to doing something alone; funny goofs; laid
+ * back lies in the sun; ambitious studies).
+ */
+function tilted(w: Partial<Record<LawnKind, number>>, group: LawnGroup): Partial<Record<LawnKind, number>> {
+  const out = { ...w };
+  const times = (kinds: readonly LawnKind[], by: number): void => {
+    for (const kind of kinds) if (out[kind] !== undefined) out[kind] = out[kind]! * by;
+  };
+  if (group.plan === 'food') times(['picnic'], 2.5);
+  else if (group.plan === 'play') times(['frisbee', 'catch', 'kick'], 2);
+  else if (group.plan === 'class') {
+    times(['study'], 2);
+    times(['reading', 'phone'], 1.5);
+  } else if (group.plan === 'quad' || group.plan === 'seat') times(['circle', 'couple'], 1.3);
+  if (group.mood === 'up') times([...SOCIAL, 'frisbee'], 1.4);
+  else if (group.mood === 'down') {
+    times(['music'], 2.5);
+    times(['reading', 'nap'], 1.5);
+    times(['selfie', 'dance', 'goof'], 0.3);
+  } else if (group.mood === 'tense') {
+    times(['study'], 2);
+    times(['jog'], 1.5);
+  }
+  const traits = group.traits ?? {};
+  if (traits.outgoing !== undefined) {
+    times(SOCIAL, 0.6 + 0.3 * traits.outgoing);
+    times(ALONE, 1.5 - 0.3 * traits.outgoing);
+  }
+  if ((traits.funny ?? 0) >= 2) {
+    times(['goof'], 2);
+    times(['selfie'], 1.3);
+  }
+  if ((traits.laidBack ?? 0) >= 2) times(['sun', 'nap'], 1.8);
+  if ((traits.ambitious ?? 0) >= 2) {
+    times(['study'], 1.8);
+    times(['reading'], 1.3);
+  }
+  return out;
 }
 
 /** One kind by weight, from the roll; with nothing that fits, sitting together or on a phone. */

@@ -129,6 +129,29 @@ describe('what a group on the grass does', () => {
     expect(spread(group({ exams: true })).get('study') ?? 0).toBeGreaterThan(spread(group()).get('study') ?? 0);
   });
 
+  it('keeps to their plan for the hour: a meal makes a picnic, a game a frisbee, a class a study group', () => {
+    const count = (g: LawnGroup, kind: LawnKind): number => spread(g).get(kind) ?? 0;
+    expect(count(group({ plan: 'food' }), 'picnic')).toBeGreaterThan(count(group(), 'picnic'));
+    expect(count(group({ plan: 'play' }), 'frisbee')).toBeGreaterThan(count(group(), 'frisbee'));
+    expect(count(group({ plan: 'class' }), 'study')).toBeGreaterThan(count(group(), 'study'));
+  });
+
+  it('shows how they feel: down to music and reading, up to company, tense to revision', () => {
+    const one = (over: Partial<LawnGroup>): Map<LawnKind, number> => spread(group({ size: 1, ...over }));
+    expect(one({ mood: 'down' }).get('music') ?? 0).toBeGreaterThan(one({}).get('music') ?? 0);
+    const two = (over: Partial<LawnGroup>): Map<LawnKind, number> => spread(group({ size: 2, ...over }));
+    const social = (m: Map<LawnKind, number>): number => ['selfie', 'goof', 'dance', 'hug'].reduce((n, k) => n + (m.get(k as LawnKind) ?? 0), 0);
+    expect(social(two({ mood: 'up' }))).toBeGreaterThan(social(two({ mood: 'down' })));
+    expect(one({ mood: 'tense' }).get('study') ?? 0).toBeGreaterThan(one({}).get('study') ?? 0);
+  });
+
+  it('follows their nature: the outgoing keep company, the shy do something alone, the laid back lie in the sun', () => {
+    const alone = (m: Map<LawnKind, number>): number => (m.get('phone') ?? 0) + (m.get('reading') ?? 0) + (m.get('music') ?? 0);
+    expect(alone(spread(group({ size: 1, traits: { outgoing: 0 } })))).toBeGreaterThan(alone(spread(group({ size: 1, traits: { outgoing: 3 } }))));
+    expect(spread(group({ size: 1, traits: { laidBack: 3 } })).get('sun') ?? 0).toBeGreaterThan(spread(group({ size: 1 })).get('sun') ?? 0);
+    expect(spread(group({ size: 2, traits: { funny: 3 } })).get('goof') ?? 0).toBeGreaterThan(spread(group({ size: 2 })).get('goof') ?? 0);
+  });
+
   it('puts couples together most of the time', () => {
     const kinds = spread(group({ size: 2, couple: true }));
     expect(kinds.get('couple') ?? 0).toBeGreaterThan(300);
