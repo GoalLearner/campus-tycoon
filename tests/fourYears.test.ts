@@ -11,6 +11,7 @@ import { awayAbroad, classYearOf, movedOutThisYear, sampleStudents, studentCard 
 import { MAJORS, type MajorGroup } from '../src/sim/config/students';
 import { BY_SENIOR_YEAR, GRAD_SCHOOL, OFFER_BY_COMMENCEMENT } from '../src/sim/config/fourYears';
 import { calendarAt } from '../src/sim/calendar';
+import { moodletsOf } from '../src/app/emotion';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
 
@@ -238,5 +239,53 @@ describe('job offers and graduate school, R2', () => {
     expect(Number(line!.data!.offers)).toBe(Math.round(graduates * OFFER_BY_COMMENCEMENT));
     expect(Number(line!.data!.grad)).toBe(Math.round(graduates * GRAD_SCHOOL));
     expect(toneProblem(line!.text)).toBeNull();
+  });
+});
+
+describe('family and life outside, R2', () => {
+  const model = newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' });
+  const sample = sampleStudents(model, 300);
+  const onDate = (date: CalDate): typeof model => {
+    const week = { ...model.clock.week };
+    return { ...model, clock: { ...model.clock, tick: tickOfDate(week, date) + 10, week } };
+  };
+  const shareFeeling = (state: typeof model, reason: string, hour: number, only?: (card: NonNullable<ReturnType<typeof studentCard>>) => boolean): number => {
+    let n = 0;
+    let of = 0;
+    for (const ref of sample) {
+      const card = studentCard(state, ref);
+      if (!card || (only && !only(card))) continue;
+      of += 1;
+      if (moodletsOf(null, state, ref, card, hour).some((one) => one.reason === reason)) n += 1;
+    }
+    return of > 0 ? n / of : 0;
+  };
+
+  it('has many calling home on a Sunday evening, few on other evenings, with the phone', () => {
+    const sunday = onDate([9, 13, 0]);
+    expect(dateAt(sunday.clock).weekday).toBe(0);
+    const tuesday = onDate([9, 15, 0]);
+    expect(shareFeeling(sunday, 'Called home', 19)).toBeGreaterThan(0.3);
+    expect(shareFeeling(tuesday, 'Called home', 19)).toBeLessThan(0.1);
+    expect(shareFeeling(sunday, 'Called home', 10)).toBe(0);
+    const ref = sample.find((one) => moodletsOf(null, sunday, one, studentCard(sunday, one)!, 19).some((m) => m.reason === 'Called home'))!;
+    expect(moodletsOf(null, sunday, ref, studentCard(sunday, ref)!, 19).find((m) => m.reason === 'Called home')!.emote).toBe('phone');
+  });
+
+  it('sends more care packages in finals than in an ordinary week, and puts the suitcase over students going home for a break', () => {
+    const finals = Array.from({ length: 7 }, (_, d) => onDate([12, 12 + d, 0] as CalDate));
+    const ordinary = Array.from({ length: 7 }, (_, d) => onDate([10, 26 + d, 0] as CalDate));
+    const weekShare = (days: Array<typeof model>): number => days.reduce((sum, state) => sum + shareFeeling(state, 'Care package from home', 12), 0);
+    expect(weekShare(finals)).toBeGreaterThan(3 * weekShare(ordinary));
+    const thanksgiving = onDate([11, 26, 0]);
+    const ref = sample[0]!;
+    const home = moodletsOf(null, thanksgiving, ref, studentCard(thanksgiving, ref)!, 12).find((m) => m.reason === 'Thanksgiving break');
+    expect(home?.emote).toBe('suitcase');
+  });
+
+  it('has most families of a student on probation worried about their grades', () => {
+    const fall = onDate([10, 27, 0]);
+    expect(shareFeeling(fall, 'Family worried about grades', 12, (card) => card.probation)).toBeGreaterThan(0.45);
+    expect(shareFeeling(fall, 'Family worried about grades', 12, (card) => !card.probation)).toBe(0);
   });
 });

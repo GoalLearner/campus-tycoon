@@ -862,7 +862,7 @@ export class Walkers {
    * Parents' weekend (R2, DESIGN.md 66): students show their families round, a parent a step behind them, from where
    * they live to somewhere to eat, a lawn or a sight of the campus, near where the player is looking.
    */
-  visit(count: number): void {
+  visit(count: number, memory = "Showed their family round on parents' weekend"): void {
     const parent = this.people?.roles?.parent;
     if (parent === undefined || count <= 0) return;
     const view = this.scene.cameras.main.worldView;
@@ -881,7 +881,7 @@ export class Walkers {
       this.queue.push({ from, to, inMs: n * 900, student });
       const who = Math.floor(Math.random() * 100_000);
       this.queue.push({ from, to, inMs: n * 900 + 420, student: null, kind: 'parent', extra: { person: { role: 'parent', n: who }, look: parent + (who % 2) } });
-      if (this.onMemory) this.onMemory(student, "Showed their family round on parents' weekend");
+      if (this.onMemory) this.onMemory(student, memory);
     }
   }
 

@@ -1,4 +1,4 @@
-import { ABROAD_PLACES, ABROAD_SEMESTER, BY_SENIOR_YEAR, CAPSTONE_NAME, GRAD_ADMIT_FROM, GRAD_SCHOOL, INTERN_EARLY, INTERN_PLACES, OFFER_BY_COMMENCEMENT, OFFERS_IN_FALL, ON_CAMPUS_BY_YEAR, OUTCOME_TILT, PRACTICE_TILT, type Practice } from '../config/fourYears';
+import { ABROAD_PLACES, ABROAD_SEMESTER, BY_SENIOR_YEAR, CAPSTONE_NAME, FINALS_PACKAGES, GRAD_ADMIT_FROM, GRAD_SCHOOL, INTERN_EARLY, INTERN_PLACES, OFFER_BY_COMMENCEMENT, OFFERS_IN_FALL, ON_CAMPUS_BY_YEAR, OUTCOME_TILT, PRACTICE_TILT, type Practice } from '../config/fourYears';
 import { calendarAt, dateAt, type Phase } from '../calendar';
 import { dayOfYear } from './birthdays';
 import { MAJORS, type MajorGroup } from '../config/students';
@@ -124,6 +124,11 @@ export function practicesOf(seed: number, ref: { entryYear: number; index: numbe
  * shares each student's draws come to.
  */
 export function tellPractices(state: GameState, entryId: string, log: LogEntry[]): void {
+  // Finals week: care packages from home (DESIGN.md 66.6).
+  if (entryId === 'fallFinals' || entryId === 'springFinals') {
+    const packages = Math.round(state.cohorts.reduce((sum, n) => sum + n, 0) * FINALS_PACKAGES);
+    if (packages > 0) log.push({ tick: state.clock.tick, kind: 'milestones', text: `Care packages from home pour into the mail room for finals: about ${headCount(packages)} this week.`, data: { packages } });
+  }
   const c = state.cohorts;
   const abroad = BY_SENIOR_YEAR.abroad;
   const intern = BY_SENIOR_YEAR.internship;

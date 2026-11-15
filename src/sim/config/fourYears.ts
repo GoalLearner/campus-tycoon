@@ -137,3 +137,28 @@ export const OUTCOME_TILT: Readonly<Record<MajorGroup, { offer: number; grad: nu
 export const OFFERS_IN_FALL = 0.3;
 /** Graduate schools say yes from mid-March. */
 export const GRAD_ADMIT_FROM: readonly [number, number] = [3, 15];
+
+// ---------------------------------------------------------------- family --
+
+/**
+ * Family and life outside, as students feel it on a given day (DESIGN.md 66.6). [T, the shapes from the report: most
+ * call home weekly, care packages cluster in a first-year's first weeks and in finals, families visit now and then]
+ */
+export const FAMILY = {
+  /** A call home on a Sunday evening, most of all for first-years; now and then on other evenings. */
+  callSunday: 0.35,
+  callSundayFirstYear: 0.5,
+  callOther: 0.04,
+  /** A care package in a week: first-years in their first weeks and anyone in finals, and the rest of the year. */
+  packageBusy: 0.2,
+  packageOther: 0.03,
+  /** A family visiting at a weekend outside parents' weekend. */
+  visitWeekend: 0.05,
+  /** Of students on probation, the share whose family is on them about it; of the rest who switched majors or study the arts, music or letters, the share whose family would rather another major. */
+  pressureGrades: 0.6,
+  pressureMajor: 0.12,
+  /** A partner back home visits on a Friday or a Saturday. */
+  partnerVisit: 0.2,
+} as const;
+/** Care packages counted for the paper in finals week, of every student. */
+export const FINALS_PACKAGES = 0.18;

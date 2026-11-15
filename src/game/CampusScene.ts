@@ -98,6 +98,7 @@ const COVER_REACH = 4;
 const WEEK_EVENT_MS = 20_000;
 const WELCOME_ARRIVALS = 48;
 const PARENT_VISITS = 4;
+const WEEKEND_VISIT_MS = 45_000;
 /** The caption's type, the interface's own. */
 const CAPTION_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 /** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
@@ -665,6 +666,11 @@ export class CampusScene extends Phaser.Scene {
       this.nextWeekAt = now + WEEK_EVENT_MS;
       if (day.special === 'welcome' && calendarAt(state.clock).year >= 1 && !reduced) this.scenes.moveIn(this.walkers.arrive(WELCOME_ARRIVALS, false), now);
       if (day.special === 'parents' && this.light.period !== 'night') this.walkers.visit(PARENT_VISITS);
+    }
+    // An ordinary weekend: now and then a family visits (R2, DESIGN.md 66.6).
+    if (!day.special && weekend && day.kind === 'term' && this.light.period !== 'night' && now >= this.nextWeekAt) {
+      this.nextWeekAt = now + WEEKEND_VISIT_MS;
+      this.walkers.visit(1, 'Showed their family round');
     }
     // A party night (L6): Thursday to Saturday evenings in term, in fine weather, on a game with parties. A crowd on the
     // grass by a hall or on Greek Row, and friend groups out for the night head there.
