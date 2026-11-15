@@ -2936,6 +2936,50 @@
     1
    ]
   },
+  "prop.dog": {
+   "frame": "prop.dog",
+   "anchor": [
+    6,
+    -23
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.frisbee": {
+   "frame": "prop.frisbee",
+   "anchor": [
+    4,
+    -29
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.phone": {
+   "frame": "prop.phone",
+   "anchor": [
+    2,
+    -25
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.tray": {
+   "frame": "prop.tray",
+   "anchor": [
+    6,
+    -26
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "quad.bench": {
    "frame": "quad.bench",
    "anchor": [

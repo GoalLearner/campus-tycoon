@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fitOnMap } from './propSize';
 import { activityWords, findStudent, type ActivityRole, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
@@ -58,6 +59,15 @@ const STALL_SPOTS: ReadonlyArray<readonly [number, number]> = [
 /** How often who is where is worked out again. The figures themselves move every frame. */
 const RECOUNT_MS = 900;
 const FADE_MS = 350;
+/**
+ * A point won on a court or the field (DESIGN.md 64): every so many seconds one side hops and one of them shows a
+ * high five, a fist bump or a shout. Only for show, and off with Reduce effects.
+ */
+const POINT_S: Record<'court' | 'field', number> = { court: 8, field: 13 };
+const HOP_S = 0.9;
+const HOP_PX = 3;
+const CHEER_S = 1.5;
+const CHEERS = ['emote.highfive', 'emote.fistbump', 'emote.exclaim'] as const;
 
 type Role = ActivityRole;
 /** The order of the roles, for the seeded pick of who stands where. */
@@ -85,6 +95,8 @@ interface Figure {
   alpha: number;
   leaving: boolean;
   shownKey: string;
+  /** A tray or a cup in front of someone eating at a table or a bench (DESIGN.md 64). */
+  held: Phaser.GameObjects.Image | null;
 }
 
 interface Site {
@@ -118,6 +130,10 @@ export class Activity {
   private pool: Phaser.GameObjects.Image[] = [];
   private readonly people: PeopleSpec | null;
   private period: DayPeriod = 'afternoon';
+  /** Reduce effects: no hops or cheers after a point. */
+  private reduced = false;
+  /** The cheer over a court or a field after a point, by the building's id. */
+  private cheers = new Map<number, Phaser.GameObjects.Image>();
   private step = 2;
   private students = 0;
   private studyShare = 0;
@@ -146,6 +162,10 @@ export class Activity {
   setPeriod(period: DayPeriod): void {
     if (period !== this.period) this.recountAt = 0;
     this.period = period;
+  }
+
+  setReduced(reduced: boolean): void {
+    this.reduced = reduced;
   }
 
   /** The share of study tables with a group at them now, from the rule for small scenes. */
@@ -235,7 +255,11 @@ export class Activity {
       next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [] });
     }
     // Whatever was cleared takes its people with it.
-    for (const gone of kept.values()) this.empty(gone);
+    for (const gone of kept.values()) {
+      this.empty(gone);
+      this.cheers.get(gone.placed.id)?.destroy();
+      this.cheers.delete(gone.placed.id);
+    }
     this.sites = next;
     this.recountAt = 0;
   }
@@ -264,6 +288,8 @@ export class Activity {
   private empty(site: Site): void {
     for (const figure of site.figures) {
       this.release(figure);
+      figure.held?.destroy();
+      figure.held = null;
       figure.sprite.setVisible(false);
       this.pool.push(figure.sprite);
     }
@@ -335,7 +361,7 @@ export class Activity {
           sprite.setVisible(true).setAlpha(0).setCrop();
           const sporty = role === 'court' || role === 'field' || role === 'runner';
           const look = sporty && athletes !== undefined ? athletes + ((site.placed.id + n) % 4) : Math.floor(mix(site.placed.id * 13 + n, 5) * Math.min(16, crowd));
-          site.figures.push({ sprite, role, student: null, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '' });
+          site.figures.push({ sprite, role, student: null, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '', held: null });
         }
         // The last to come are the first to go.
         for (let n = have.length - 1; n >= want; n--) have[n]!.leaving = true;
@@ -438,14 +464,14 @@ export class Activity {
       y = site.line.y - site.line.dy * (figure.slot + 1) * 0.8;
       figure.moving = false;
     } else {
-      // At a bench or around a picnic table. Nobody in the pack can sit, so they stand at it.
+      // At a bench or around a picnic table, sitting (DESIGN.md 64): on a bench, in its middle.
       const around = [
         [0.24, 0.7],
         [0.76, 0.66],
         [0.5, 0.2],
       ][figure.slot % 3]!;
-      x = placed.x + around[0]!;
-      y = placed.y + around[1]!;
+      x = placed.x + (placed.type === 'bench' ? 0.5 : around[0]!);
+      y = placed.y + (placed.type === 'bench' ? 0.56 : around[1]!);
       figure.moving = false;
     }
     // A spot on the building's own drawing goes where the turned view draws that drawing (DESIGN.md section 43).
@@ -466,6 +492,42 @@ export class Activity {
 
   private boxOf(site: Site): Box {
     return { x: site.placed.x, y: site.placed.y, w: site.placed.w, h: site.placed.h };
+  }
+
+  /** The point being played on a court or the field: its number and the seconds since the last one was won. */
+  private pointAt(site: Site, role: ActivityRole, seconds: number): { n: number; part: number } | null {
+    if (this.reduced || (role !== 'court' && role !== 'field')) return null;
+    const every = POINT_S[role];
+    const t = seconds + mix(site.placed.id, 11) * every;
+    const n = Math.floor(t / every);
+    return { n, part: t - n * every };
+  }
+
+  /** A cheer over one of the side that won the point, for a moment after it. */
+  private cheer(site: Site, seconds: number): void {
+    const players = site.figures.filter((figure) => !figure.leaving && (figure.role === 'court' || figure.role === 'field'));
+    const point = players[0] ? this.pointAt(site, players[0].role, seconds) : null;
+    const winners = point ? players.filter((figure) => figure.slot % 2 === point.n % 2) : [];
+    let icon = this.cheers.get(site.placed.id);
+    if (!point || point.part >= CHEER_S || winners.length === 0) {
+      icon?.setVisible(false);
+      return;
+    }
+    const key = CHEERS[point.n % CHEERS.length]!;
+    if (!this.art.has(key)) return;
+    if (!icon) {
+      icon = this.scene.add.image(0, 0, '__DEFAULT');
+      this.cheers.set(site.placed.id, icon);
+    }
+    if (icon.getData('key') !== key) {
+      this.art.apply(icon, key);
+      icon.setOrigin(0.5, 1).setScale(0.5).setData('key', key);
+    }
+    const who = winners[point.n % winners.length]!;
+    const fade = Math.min(1, (CHEER_S - point.part) / 0.3);
+    // Over the whole game, so a player in front does not hide it.
+    const top = players.reduce((most, figure) => Math.max(most, figure.sprite.depth), who.sprite.depth);
+    icon.setVisible(true).setPosition(who.sprite.x, who.sprite.y - 44).setDepth(top + 0.1).setAlpha(Math.max(0, who.alpha) * fade);
   }
 
   private ballAt(site: Site, seconds: number): { x: number; y: number } {
@@ -497,6 +559,8 @@ export class Activity {
         figure.alpha = figure.leaving ? figure.alpha - dt / FADE_MS : Math.min(1, figure.alpha + dt / FADE_MS);
         if (figure.leaving && figure.alpha <= 0) {
           this.release(figure);
+          figure.held?.destroy();
+          figure.held = null;
           figure.sprite.setVisible(false);
           this.pool.push(figure.sprite);
           site.figures.splice(i, 1);
@@ -508,7 +572,21 @@ export class Activity {
         const flipFrom = people.flip?.[figure.direction];
         const facing = flipFrom ?? figure.direction;
         const frame = figure.moving ? Math.floor(figure.stride / people.frameMs) % people.frames : 0;
-        const key = `person.${figure.look}.${facing}.${frame}`;
+        let key = `person.${figure.look}.${facing}.${frame}`;
+        let flip = flipFrom !== undefined;
+        // At a bench or a picnic table they sit now (DESIGN.md 64): on the bench facing out, round the table facing it.
+        let seatedAway = false;
+        if (figure.role === 'seat') {
+          const middle = this.iso.view(site.placed.x + site.placed.w / 2, site.placed.y + site.placed.h / 2);
+          const own = this.iso.view(figure.x, figure.y);
+          const dir = site.placed.type === 'bench' ? 'sw' : facingOf(middle.x - own.x, middle.y - own.y);
+          seatedAway = dir === 'nw' || dir === 'ne';
+          const pose = `person.${figure.look}.pose.${seatedAway ? 'sit-nw' : 'sit-sw'}`;
+          if (this.art.has(pose)) {
+            key = pose;
+            flip = dir === 'se' || dir === 'ne';
+          }
+        }
         if (key !== figure.shownKey) {
           this.art.apply(figure.sprite, key);
           figure.shownKey = key;
@@ -516,17 +594,39 @@ export class Activity {
           if (figure.role === 'swimmer') figure.sprite.setCrop(0, 0, figure.sprite.frame.width, figure.sprite.frame.height * 0.46);
           else figure.sprite.setCrop();
         }
-        figure.sprite.setFlipX(flipFrom !== undefined);
+        figure.sprite.setFlipX(flip);
         const at = this.iso.toWorld(figure.x, figure.y);
         // The cut edge of a swimmer sits on the water.
         const sink = figure.role === 'swimmer' ? figure.sprite.displayHeight * 0.5 : 0;
-        figure.sprite.setPosition(at.x, at.y + sink);
+        // The side that won the point hops (DESIGN.md 64).
+        const point = this.pointAt(site, figure.role, seconds);
+        const hop = point && figure.slot % 2 === point.n % 2 && point.part < HOP_S ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX : 0;
+        figure.sprite.setPosition(at.x, at.y + sink - hop);
         const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
         // A line on a side nearer the viewer stands in front of its building, however wide the building is.
         const beside = figure.role === 'line' || figure.role === 'door';
         figure.sprite.setDepth(flat || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front));
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
+        // Someone eating at a seat has a tray or a cup in front of them, towards the table (DESIGN.md 64).
+        const eating = figure.role === 'seat' && !figure.leaving && site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
+        if (eating && !figure.held) {
+          const thing = figure.slot % 2 === 0 ? 'prop.tray' : 'room.cup';
+          if (this.art.has(thing)) {
+            figure.held = this.scene.add.image(0, 0, '__DEFAULT');
+            this.art.apply(figure.held, thing);
+            fitOnMap(figure.held, thing);
+            figure.held.setOrigin(0.5, 1);
+          }
+        } else if (!eating && figure.held) {
+          figure.held.destroy();
+          figure.held = null;
+        }
+        if (figure.held) {
+          const towards = this.iso.toWorld(figure.x + (site.placed.x + site.placed.w / 2 - figure.x) * 0.45, figure.y + (site.placed.y + site.placed.h / 2 - figure.y) * 0.45);
+          figure.held.setPosition(towards.x, towards.y - 4).setDepth(figure.sprite.depth + (seatedAway ? -0.05 : 0.05)).setAlpha(Math.max(0, figure.alpha));
+        }
       }
+      this.cheer(site, seconds);
       for (const prop of site.props) {
         if (site.placed.type !== 'field') {
           // A study group's book lies open on the table.
@@ -604,10 +704,15 @@ export class Activity {
   clear(): void {
     for (const site of this.sites) {
       for (const figure of site.figures) this.release(figure);
-      for (const figure of site.figures) figure.sprite.destroy();
+      for (const figure of site.figures) {
+        figure.sprite.destroy();
+        figure.held?.destroy();
+      }
       for (const prop of site.props) prop.destroy();
     }
     for (const sprite of this.pool) sprite.destroy();
+    for (const icon of this.cheers.values()) icon.destroy();
+    this.cheers.clear();
     this.sites = [];
     this.pool = [];
   }

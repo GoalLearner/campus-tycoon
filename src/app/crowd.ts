@@ -33,13 +33,15 @@ export interface CrowdStep {
   density: number;
   extras: number;
   traffic: number;
+  /** People doing something on the lawns and quads in view, at their fullest (DESIGN.md 64): a fine afternoon. */
+  lawn: number;
 }
 
 export const CROWD_STEPS: readonly CrowdStep[] = [
-  { inView: 32, alive: 48, density: 0.6, extras: 16, traffic: 0.5 },
-  { inView: 64, alive: 90, density: 1, extras: 36, traffic: 1 },
-  { inView: 120, alive: 170, density: 1.9, extras: 70, traffic: 1.4 },
-  { inView: 190, alive: 260, density: 3, extras: 110, traffic: 1.8 },
+  { inView: 32, alive: 48, density: 0.6, extras: 16, traffic: 0.5, lawn: 14 },
+  { inView: 64, alive: 90, density: 1, extras: 36, traffic: 1, lawn: 32 },
+  { inView: 120, alive: 170, density: 1.9, extras: 70, traffic: 1.4, lawn: 64 },
+  { inView: 190, alive: 260, density: 3, extras: 110, traffic: 1.8, lawn: 100 },
 ];
 
 /** The step a setting stands for: Low is 1, Normal 2, High 3. */
