@@ -166,6 +166,9 @@ const BIG_DELAY_MS = 900;
 const BIGS_AT_ONCE = [0, 1, 2, 2];
 /** A mood ring about 18 pixels across. */
 const RING_SCALE = 0.86;
+/** Where the canopy's lower edge is on the umbrella picture, from its top. */
+const UMBRELLA_RIM = 0.55;
+const UMBRELLA_TINTS = [0xffffff, 0x9cc8ff, 0xb4f0a0, 0xe2b4ff, 0xffffff];
 /** How often a couple out together shows a heart, and how many of those are a kiss on the cheek. */
 const HEART_EVERY_MS = 6000;
 const KISS_SHARE = 0.18;
@@ -1048,14 +1051,12 @@ export class Walkers {
     // Something in hand, when they carry nothing yet and the frames allow it.
     const reduced = effectsSetting() === 'reduced';
     if (!walker.prop && this.step > 0 && !reduced) {
-      const roll = (hashInts(state.seed, this.dayOf(), student.entryYear * 100003 + student.index, 6403) >>> 0) / 4294967296;
-      const held = heldOf({ weather: this.weather, period: this.period, from: tripEnd(from), to: tripEnd(to), likes: this.likesOf(student), roll });
+      const held = heldOf({ weather: this.weather, period: this.period, from: tripEnd(from), to: tripEnd(to), likes: this.likesOf(student), roll: this.rollFor(student, 6403) });
       if (held) this.hand(walker, held);
     }
     // A big moment of their own, once a day, a moment after they come into view.
     if (!reduced) {
-      const roll = (hashInts(state.seed, this.dayOf(), student.entryYear * 100003 + student.index, 6409) >>> 0) / 4294967296;
-      const moment = bigMomentOf({ emotion: known.emotion, reasons: known.reasons, chapter: known.chapter, classYear: known.classYear, gpa: known.gpa, roll }, this.today);
+      const moment = bigMomentOf({ emotion: known.emotion, reasons: known.reasons, chapter: known.chapter, classYear: known.classYear, gpa: known.gpa, roll: this.rollFor(student, 6409) }, this.today);
       if (moment) this.showBig(walker, moment, BIG_DELAY_MS);
     }
   }
@@ -1106,7 +1107,13 @@ export class Walkers {
     const prop = this.scene.add.image(0, 0, '__DEFAULT');
     this.art.apply(prop, key);
     fitOnMap(prop, key);
-    prop.setOrigin(0.5, 1).setAlpha(0);
+    // An umbrella hangs from the lower edge of its canopy, so the canopy can sit over the head.
+    prop.setOrigin(0.5, held === 'umbrella' ? UMBRELLA_RIM : 1).setAlpha(0);
+    // Umbrellas come in a few colours: the drawing tinted, one for each student.
+    if (held === 'umbrella' && walker.student) {
+      const tint = UMBRELLA_TINTS[Math.floor(this.rollFor(walker.student, 6421) * UMBRELLA_TINTS.length)];
+      if (tint !== undefined && tint !== 0xffffff) prop.setTint(tint);
+    }
     walker.prop = prop;
     walker.held = true;
     walker.hold = held === 'umbrella' ? 'over' : held === 'bag' ? 'back' : held === 'phone' ? 'face' : 'waist';
@@ -1132,8 +1139,28 @@ export class Walkers {
     this.today = today;
   }
 
+  /** The sky: when rain starts those out walking open an umbrella, as those setting out do; when it stops they put it away. */
   setWeather(weather: Weather): void {
+    if (weather === this.weather) return;
+    const wasRain = this.weather === 'rain';
     this.weather = weather;
+    if (!this.state) return;
+    for (const walker of this.walkers) {
+      if (!walker.student || walker.fading === 'out') continue;
+      if (weather === 'rain' && !walker.prop && this.step > 0 && effectsSetting() !== 'reduced') {
+        if (this.rollFor(walker.student, 6403) < 0.8) this.hand(walker, 'umbrella');
+      } else if (wasRain && walker.prop && walker.hold === 'over') {
+        walker.prop.destroy();
+        walker.prop = null;
+        walker.held = false;
+        walker.hold = 'waist';
+      }
+    }
+  }
+
+  /** A student's own steady number for the day, 0 to 1. */
+  private rollFor(student: StudentRef, salt: number): number {
+    return (hashInts(this.state?.seed ?? 0, this.dayOf(), student.entryYear * 100003 + student.index, salt) >>> 0) / 4294967296;
   }
 
   private retire(index: number): void {
@@ -1189,7 +1216,8 @@ export class Walkers {
       const y = walker.sprite.y;
       const h = walker.sprite.displayHeight;
       const w = walker.sprite.displayWidth;
-      if (walker.hold === 'over') walker.prop.setPosition(x + side * 2, y - h * 0.3).setDepth(walker.sprite.depth + 0.05);
+      // An umbrella is held behind them, its canopy just over the head: the shaft is hidden by the body.
+      if (walker.hold === 'over') walker.prop.setPosition(x + side * 3, y - h + 5).setDepth(walker.sprite.depth - 0.05);
       else if (walker.hold === 'back') walker.prop.setPosition(x - side * w * 0.3, y - h * 0.18).setDepth(walker.sprite.depth - 0.05);
       else if (walker.hold === 'face') walker.prop.setPosition(x + side * w * 0.22, y - h * 0.45).setDepth(walker.sprite.depth + 0.05);
       else walker.prop.setPosition(x + side * w * 0.2, y - h * 0.22).setDepth(walker.sprite.depth + 0.05);
