@@ -103,6 +103,10 @@ export const POST = {
   greekNews: 32,
   /** Team news from varsity athletes: practice, a trip away, new recruits. */
   teamNews: 33,
+  /** A rumour about someone, named (stop 10, decision 6): it spreads through the web and may start drama. */
+  rumour: 34,
+  /** Picking on someone on the app (63.11, stop 10): by the one who does it, about the one picked on. */
+  bullyPost: 35,
 } as const;
 export type PostKind = (typeof POST)[keyof typeof POST];
 
@@ -350,7 +354,205 @@ export const POST_WORDS: Record<PostKind, PostWords> = {
   [POST.greekNews]: { tags: ['GreekRow'], good: ['house dinner tonight. best cooks on Greek Row [heart]'], scene: SCENE.friends, sceneShare: 0.3 },
   // Team news: the lines come from `TEAM_POSTS` by what the team is doing.
   [POST.teamNews]: { tags: ['TeamLife', 'Go{nick}'], good: ['practice at 6 AM. the coach does not believe in sleep [sweat]'] },
+  // A rumour: the lines come from `RUMOUR_POSTS` by what it says.
+  [POST.rumour]: { tags: ['JustSaying', 'Allegedly'], good: ['heard something about {name}. allegedly'] },
+  [POST.bullyPost]: {
+    tags: ['JustSaying'],
+    good: [
+      '{name} acting like a know-it-all in every seminar. we get it',
+      'imagine being {name} and thinking everyone wants your opinion. such a show-off',
+      'not inviting {name}. that is the post',
+      '{name} is such a suck-up. every lecture. every single one',
+      'try-hard alert: {name} again',
+      '{name} is so fake. everyone knows',
+      '{name} asked for extra homework. teacher\'s pet behaviour',
+    ],
+  },
 };
+
+/**
+ * Rumours (stop 10, decision 6, "Drama"): what is said, by what it may do. Seen with someone may make a partner
+ * jealous; taking the credit sours a friendship; loose talk only gets around. None is sexual, none is about who
+ * anyone is: a rumour is about what someone did, or is said to have done.
+ */
+export const RUMOUR_KINDS = ['seen', 'credit', 'talk'] as const;
+export type RumourKind = (typeof RUMOUR_KINDS)[number];
+export const RUMOUR_POSTS: Record<RumourKind, readonly string[]> = {
+  seen: [
+    '{name} and someone from the study group at the diner at 2 AM? interesting',
+    'who was {name} laughing with outside the library for an hour. asking for a friend',
+    'saw {name} at the movies with someone who is very much not their partner. just saying',
+  ],
+  credit: [
+    'heard {name} skipped the whole group project and took the credit. allegedly',
+    '{name} presented our slides like they made them. we all know who made them',
+  ],
+  talk: [
+    'word is {name} told the whole floor they are moving off campus. their roommate has no idea',
+    'heard {name} applied for the same internship as their best friend. awkward',
+    '{name} said the dining hall is better at home. bold',
+  ],
+};
+
+/** Every rumour's line in one list, kind after kind: a rumour post keeps its line, which says which kind it was. */
+export const RUMOUR_LINES: readonly string[] = RUMOUR_KINDS.flatMap((kind) => RUMOUR_POSTS[kind]);
+/** The first line of a kind of rumour in RUMOUR_LINES, and how many it has. */
+export function rumourLines(kind: RumourKind): { from: number; count: number } {
+  let from = 0;
+  for (const one of RUMOUR_KINDS) {
+    if (one === kind) return { from, count: RUMOUR_POSTS[one].length };
+    from += RUMOUR_POSTS[one].length;
+  }
+  return { from: 0, count: RUMOUR_LINES.length };
+}
+
+/** A viral post's sign on the school's reach (main's decision of 2026-11-14): good news widens it, bad narrows it. */
+export const VIRAL_SIGN: Partial<Record<PostKind, 1 | -1>> = {
+  [POST.newBuilding]: 1,
+  [POST.gameWon]: 1,
+  [POST.tradition]: 1,
+  [POST.commencement]: 1,
+  [POST.praise]: 1,
+  [POST.complaint]: -1,
+  [POST.bullyPost]: -1,
+};
+/**
+ * Going viral (decision 7, "Light"): a few posts a week, chosen by how far they would spread; one seen beyond campus
+ * moves the school's reach, at most 3% of applicants either way across all of them, fading over two game weeks.
+ */
+export const VIRAL_A_WEEK = 2;
+/** How much of a following sees and likes each kind of post: its likes, and how far it could spread. */
+export const POST_ENGAGE: Partial<Record<PostKind, number>> = {
+  [POST.couple]: 0.45,
+  [POST.backTogether]: 0.35,
+  [POST.splitMessy]: 0.3,
+  [POST.best]: 0.3,
+  [POST.longterm]: 0.3,
+  [POST.split]: 0.25,
+  [POST.newBuilding]: 0.4,
+  [POST.commencement]: 0.5,
+  [POST.gameWon]: 0.4,
+  [POST.gameDay]: 0.3,
+  [POST.party]: 0.3,
+  [POST.tradition]: 0.3,
+  [POST.complaint]: 0.3,
+  [POST.praise]: 0.25,
+  [POST.roommate]: 0.25,
+  [POST.shade]: 0.15,
+  [POST.rumour]: 0.3,
+  [POST.bullyPost]: 0.2,
+};
+/** The share of the week's acts of picking on someone by name that are posted on the app, before the levers. */
+export const BULLY_POSTS = 0.3;
+export const VIRAL_REACH_EACH = 0.015;
+export const VIRAL_REACH_MOST = 0.03;
+export const VIRAL_FADE_WEEKS = 2;
+/** Shares at which a viral post is seen beyond campus, and the most it is shared. */
+export const VIRAL_BEYOND = 4000;
+export const VIRAL_SHARES_MOST = 12000;
+
+/**
+ * The paper's headline for a big viral moment (one a day at most), by what it was about. The paper's own voice never
+ * mocks a student: it tells what went around, not who.
+ */
+export const VIRAL_HEADLINES: Record<string, readonly string[]> = {
+  newBuilding: ['Photos of the New {place} Go Around the State', 'New {place} Draws a Crowd Online'],
+  gameWon: ['Game Day Post Seen Across the State', 'Win Over {opp} Lights Up the Campus App'],
+  tradition: ['The {tradition} Goes Viral', 'Campus Tradition Shared Thousands of Times'],
+  commencement: ['Commencement Post Shared Far Beyond Campus'],
+  praise: ['Campus Praise Thread Goes Around the State', 'Students Share Their Favourite Spots, and the State Notices'],
+  complaint: ['Student Thread on {topic} Spreads Beyond Campus', 'Complaints About {topic} Seen Across the State'],
+  bullyPost: ['Unkind Post Spreads; Students Push Back'],
+  other: ['A Student Post Goes Around the State'],
+};
+/** What each complaint or praise topic is called in a headline. */
+export const TOPIC_HEADLINE: Record<CauseTopic, string> = {
+  walk: 'the Long Walk to Class',
+  green: 'Green Space',
+  clean: 'Litter',
+  seating: 'Benches',
+  noise: 'Noise',
+  dining: 'Dining',
+  recreation: 'Places to Play',
+  safety: 'Campus Safety',
+  beds: 'Housing',
+  seats: 'Crowded Lectures',
+};
+
+/**
+ * Comments on picking on someone (stop 10): those who join in, those who stand up for the one picked on, the RAs and
+ * the counselling center when the anti-bullying program is on. {name} is the one picked on.
+ */
+export const BULLY_COMMENTS = {
+  join: ['facts', 'said it before', 'every time', 'not wrong'],
+  defend: ['not cool. leave {name} alone', 'this is not funny', 'reported. be better', '{name} is great and you know it'],
+  ra: ['this is not okay. talk to your RA, any time', 'the counselling center is open late this week. anyone can go'],
+} as const;
+
+/** The university's official account (decision 8, "Templates"): five kinds, up to three posts a real day. */
+export const OFFICIAL_KINDS = ['announce', 'celebrate', 'apologise', 'welcome', 'respond'] as const;
+export type OfficialKind = (typeof OFFICIAL_KINDS)[number];
+export const OFFICIAL_A_DAY = 3;
+export const OFFICIAL_NAMES: Record<OfficialKind, string> = {
+  announce: 'Announce an event',
+  celebrate: 'Celebrate a win',
+  apologise: 'Apologise for a problem',
+  welcome: 'Welcome a new class',
+  respond: 'Respond to a viral post',
+};
+/** What the account says, by kind and by what it is about. {place}, {tradition}, {nick}, {topic} as above. */
+export const OFFICIAL_LINES = {
+  announce: {
+    tradition: 'The {tradition} is coming up. See you there!',
+    game: 'Game day! Cheer on the {nick} this weekend.',
+    kindness: 'Kindness week starts Monday. Talk to your RA or the counselling center any time.',
+    fair: 'Club fair on the quad this week. Find your people.',
+  },
+  celebrate: {
+    win: 'What a win! Congratulations, {nick}!',
+    semester: 'Proud of every one of you. What a semester.',
+    graduates: 'Congratulations, graduates! You did it.',
+  },
+  apologise: {
+    walk: 'The walk to class is too long. We are working on it.',
+    green: 'You asked for more green space. It is coming.',
+    clean: 'The campus should be cleaner. We are on it.',
+    seating: 'More benches are on the way.',
+    noise: 'We hear you about the noise.',
+    dining: 'We hear you about the food. New menus are on the way.',
+    recreation: 'You need more places to play. We are on it.',
+    safety: 'Campus safety comes first. More help is on the way.',
+    beds: 'We know rooms are tight. More beds are coming.',
+    seats: 'Lectures are too full. We are adding seats.',
+  },
+  welcome: {
+    fall: 'Welcome to campus, new students! We are so glad you are here.',
+    spring: 'Welcome, new students! The spring semester starts now.',
+  },
+  respond: {
+    good: 'We saw this too. Proud of you!',
+    bad: 'We hear you, and we are on it.',
+  },
+} as const;
+/** Students' replies to the account, by how the post lands: in tune with the campus, or not. {topic} is the weak spot. */
+export const OFFICIAL_REPLIES = {
+  cheer: ['love this', 'proud to be here [heart]', 'best campus [sparkle]', 'yes!'],
+  thanks: ['finally', 'thank you for listening', 'we will see', 'about time'],
+  fixed: ['okay it really is better now [wow]', 'credit where it is due. it got better'],
+  welcome: ['welcome! [wave]', 'you are going to love it here', 'find the good bench early'],
+  offKey: {
+    walk: 'cool. the walk to class is still a hike though',
+    green: 'cool. now plant a tree?',
+    clean: 'cool. the bins though',
+    seating: 'cool. a bench would be nice',
+    noise: 'cool. it is still so loud',
+    dining: 'cool. now fix the food',
+    recreation: 'cool. a court would be nice too',
+    safety: 'cool. the paths are still dark at night',
+    beds: 'where are the beds tho',
+    seats: 'and the seats?',
+  },
+} as const;
 
 /** Greek Row news by what is going on at the chapter: its philanthropy day, probation, or everyday house life. */
 export const GREEK_NEWS = ['philanthropy', 'probation', 'house'] as const;
@@ -470,6 +672,10 @@ export const COMMENT_LINES = {
   laugh: ['[laugh] [laugh]', 'not you posting this', 'okay this one got me [laugh]'],
   /** An ex or a rival, naming the author (decision 5, "Named"): petty, never an insult beyond the mild names allowed. */
   shade: ['sure, {name}. sure.', 'bold post, {name}', '{name} said the same thing last semester', 'classic {name}', 'okay show-off', 'okay try-hard', 'we get it, {name}'],
+  /** Anyone on a rumour (stop 10). */
+  rumour: ['no way', 'source?', 'allegedly being the key word', 'this is not our business', 'wait what [wow]'],
+  /** A friend of the one a rumour is about. {name} is them. */
+  cover: ['leave {name} out of this', 'that is not what happened', 'ask {name} before you post'],
 } as const;
 export type CommentKind = keyof typeof COMMENT_LINES;
 
@@ -485,6 +691,7 @@ export function postLines(kind: PostKind, tone: number, a: number): readonly str
     if (lines) return lines;
   }
   if (kind === POST.greekNews) return GREEK_POSTS[GREEK_NEWS[a] ?? 'house'];
+  if (kind === POST.rumour) return RUMOUR_LINES;
   if (kind === POST.teamNews) return TEAM_POSTS[TEAM_NEWS[a] ?? 'practice'];
   const words = POST_WORDS[kind] ?? POST_WORDS[POST.praise];
   return tone === TONE.rough && words.rough ? words.rough : words.good;
@@ -495,7 +702,14 @@ export function quadlineTemplates(): string[] {
   const out: string[] = [];
   for (const words of Object.values(POST_WORDS)) out.push(...words.tags, ...words.good, ...(words.rough ?? []));
   for (const topic of Object.values(CAUSE_POSTS)) out.push(topic.tag, ...topic.good, ...topic.rough);
-  for (const lines of [...Object.values(GREEK_POSTS), ...Object.values(TEAM_POSTS)]) out.push(...lines);
+  for (const lines of [...Object.values(GREEK_POSTS), ...Object.values(TEAM_POSTS), ...Object.values(RUMOUR_POSTS)]) out.push(...lines);
   for (const lines of Object.values(COMMENT_LINES)) out.push(...lines);
+  for (const lines of Object.values(BULLY_COMMENTS)) out.push(...lines);
+  for (const lines of Object.values(VIRAL_HEADLINES)) out.push(...lines);
+  out.push(...Object.values(TOPIC_HEADLINE), ...Object.values(OFFICIAL_NAMES));
+  for (const group of Object.values(OFFICIAL_LINES)) out.push(...Object.values(group));
+  const { offKey, ...replies } = OFFICIAL_REPLIES;
+  for (const lines of Object.values(replies)) out.push(...lines);
+  out.push(...Object.values(offKey));
   return out;
 }

@@ -116,7 +116,7 @@ describe('the hard lines', () => {
       expect(toneProblem(line), line).toBeNull();
       expect(hardLineProblem(tag), tag).toBeNull();
       for (const comment of commentsFor(view, model, post).slice(0, 3)) {
-        const said = mask(comment.text, names([post.author, comment.who]));
+        const said = mask(comment.text, names([post.author, ...(comment.who ? [comment.who] : [])]));
         expect(hardLineProblem(said), said).toBeNull();
         expect(toneProblem(said), said).toBeNull();
       }

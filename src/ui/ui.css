@@ -3798,3 +3798,75 @@ button.students {
     min-width: 36px;
   }
 }
+
+/* Quadline's reach (63.14): the feed's mood, viral posts, the official account. */
+.quad-mood {
+  font-size: 13px;
+  color: #4b524e;
+  background: #fff;
+  border: 1px solid #ece6de;
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.quad-mood b {
+  color: #1f2522;
+}
+.quad-official-button {
+  border-color: #e2457f;
+  color: #e2457f;
+}
+.quad-viral-line {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2457f;
+}
+.quad-post.official {
+  border-color: #b9d4f3;
+  background: #f6faff;
+}
+.quad-avatar.crest {
+  width: 40px;
+  height: 40px;
+  background: #e5eefa;
+}
+.quad-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #2f7fd1;
+  padding: 3px 7px;
+  border-radius: 8px;
+}
+.quad-hint {
+  font-size: 12.5px;
+  color: #7a827d;
+  margin: 2px 2px 8px;
+}
+.quad-compose {
+  background: #fff;
+  border: 1px solid #ece6de;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.quad-compose-kind {
+  font-weight: 700;
+  font-size: 14px;
+}
+.quad-post-button {
+  min-height: 40px;
+  padding: 6px 18px;
+  border-radius: 12px;
+  border: 0;
+  background: #e2457f;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+.quad-post-button:disabled {
+  background: #e3dbd0;
+  color: #8a8f8b;
+}

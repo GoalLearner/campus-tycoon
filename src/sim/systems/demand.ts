@@ -1,3 +1,4 @@
+import { viralReach } from './buzz';
 import { applicantsLift } from './boosts';
 import { scaleOf } from '../scale';
 import { calendarAt, GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
@@ -101,7 +102,8 @@ export function fallApplicants(state: GameState): Applicants {
       ['football', 'Football', 1 + athleticLift(state)],
       ['rank', 'Academic rank', 1 + rankLift(state)],
     ];
-    const base = Math.round((REACH * scale) / GOAL_SCALE);
+    // Viral posts on Quadline widen or narrow the reach a little (DESIGN.md 63.14): at most 3% either way.
+    const base = Math.round(((REACH * scale) / GOAL_SCALE) * (1 + viralReach(state)));
     let running = base;
     const causes = factors.map(([id, name, factor]) => {
       const next = Math.round(running * factor);
@@ -117,7 +119,7 @@ export function fallApplicants(state: GameState): Applicants {
   // Athletic standing lifts it too, and so does a TV deal: football's applicants (DESIGN.md 10.1).
   // The least a campus draws and the most are head counts, so they follow the campus scale (DESIGN.md 35.7).
   // A profile in a college guide, a spring concert: what the desk has set going, for a few days.
-  const base = Math.max(FOUNDING_CLASS * scale, students * WORD_OF_MOUTH);
+  const base = Math.max(FOUNDING_CLASS * scale, students * WORD_OF_MOUTH) * (1 + viralReach(state));
   const pool = base * looks * (1 + marketingLift(state)) * (1 + athleticLift(state)) * (1 + applicantsLift(state));
   const total = Math.min(POOL_CEILING * scale, Math.round(pool));
   const causes: ApplicantCause[] = [

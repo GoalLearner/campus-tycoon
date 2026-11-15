@@ -2,6 +2,7 @@ import { campusHappiness } from '../sim';
 import { friendsStay } from '../sim/systems/friends';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
+import { feedOf, moodLine } from '../app/quadline';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
 import { regularsNow } from '../sim/systems/regulars';
 import { drawSprite, loadAtlas } from './atlas';
@@ -47,6 +48,10 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       stat('New friendships', `${count(social.week.friends)} this week`),
     );
   }
+
+  // The feed's mood on Quadline (DESIGN.md 63.14): read only, often a step ahead of Happiness.
+  const mood = moodLine(state, view, feedOf(view, state));
+  body.append(stat('On Quadline', `${Math.round(mood.upbeat * 100)}% upbeat${mood.worry ? ` · worried about ${mood.worry.toLowerCase()}` : ''}`));
 
   // What friends do (DESIGN.md 63.10), as the campus last read them: Happiness, exam Stress and who stays.
   const effects = state.web.effects;

@@ -69,7 +69,7 @@ class Session {
   /** The student whose network is open (DESIGN.md 63.12), or null. */
   network: StudentRef | null = null;
   /** Quadline, the campus app (DESIGN.md 63.13): its page, the student whose profile it is, the tag the feed shows. */
-  quad: { page: 'feed' | 'trending' | 'profile'; ref: StudentRef | null; tag: string | null } | null = null;
+  quad: { page: 'feed' | 'trending' | 'profile' | 'official'; ref: StudentRef | null; tag: string | null } | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
   doing: string | null = null;
   /**
@@ -286,7 +286,7 @@ class Session {
   }
 
   /** Open Quadline at a page: the feed (by a tag, if one is given), what is trending, or a student's profile. */
-  openQuad(page: 'feed' | 'trending' | 'profile' = 'feed', ref: StudentRef | null = null, tag: string | null = null): void {
+  openQuad(page: 'feed' | 'trending' | 'profile' | 'official' = 'feed', ref: StudentRef | null = null, tag: string | null = null): void {
     this.quad = { page, ref: ref ? { entryYear: ref.entryYear, index: ref.index } : null, tag };
     this.emit();
   }

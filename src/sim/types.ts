@@ -660,6 +660,18 @@ export interface WebMeta {
    * which is the same as nothing.
    */
   effects?: SocialEffects;
+  /** The university's official account on Quadline (DESIGN.md 63.14): its newest posts. Missing is none. */
+  official?: OfficialPost[];
+}
+
+/** A post by the university's official account: when, which of the five kinds, what about, how it landed. */
+export interface OfficialPost {
+  tick: number;
+  kind: 'announce' | 'celebrate' | 'apologise' | 'welcome' | 'respond';
+  /** A topic ('dining'), a tradition ('tradition:2'), 'game', 'kindness', 'fall', 'win', or a viral post ('bad:12345'). */
+  about: string;
+  /** In tune with the campus (1), plain (0) or off-key (-1). */
+  fit: number;
 }
 
 /** What the students' ties do to the campus, read from the web once a game week (DESIGN.md 63.10). */
@@ -684,6 +696,11 @@ export interface SocialEffects {
   study: number;
   /** The share picked on by someone (DESIGN.md 63.11). Missing in a reading from before. */
   bullied?: number;
+  /**
+   * Quadline's viral posts seen beyond campus (DESIGN.md 63.14): when each went up and how much it widens (above 0) or
+   * narrows the school's reach. The campus fades them over two game weeks. Missing is none.
+   */
+  viral?: Array<{ at: number; size: number }>;
 }
 
 /** A regular as the save keeps them: who, since when they were followed, and what the map showed happening to them. */

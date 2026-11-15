@@ -70,7 +70,7 @@ export const REGROW_COUPLE_PER_YEAR = 25;
 export const REGROW_EX_AT = 22;
 
 /** What happened, counted for the cards and the paper later. */
-export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle', 'picked on', 'left out', 'roommate pettiness', 'pile-on', 'stood up for', 'reported'] as const;
+export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle', 'picked on', 'left out', 'roommate pettiness', 'pile-on', 'stood up for', 'reported', 'rumour'] as const;
 export const EVENT = {
   met: 0,
   friends: 1,
@@ -99,13 +99,15 @@ export const EVENT = {
   stoodUp: 19,
   /** Reported to the conduct office. */
   reported: 20,
+  /** A rumour on Quadline that reached someone close to the one it was about (DESIGN.md 63.14). */
+  rumour: 21,
 } as const;
 
 /**
  * What the web remembers by name for the cards, the Campus social view and the paper (DESIGN.md 63.6): of each of
  * these kinds, a few each week, chosen by the pair's own luck so no class or hall is favoured, for the last 64 weeks.
  */
-export const HAPPENING_KINDS = [EVENT.best, EVENT.dating, EVENT.longterm, EVENT.splitMutual, EVENT.splitMessy, EVENT.cheating, EVENT.backTogether, EVENT.enemies, EVENT.triangle, EVENT.bullying, EVENT.shutOut, EVENT.pettiness, EVENT.pileOn, EVENT.stoodUp, EVENT.reported] as const;
+export const HAPPENING_KINDS = [EVENT.best, EVENT.dating, EVENT.longterm, EVENT.splitMutual, EVENT.splitMessy, EVENT.cheating, EVENT.backTogether, EVENT.enemies, EVENT.triangle, EVENT.bullying, EVENT.shutOut, EVENT.pettiness, EVENT.pileOn, EVENT.stoodUp, EVENT.reported, EVENT.rumour] as const;
 export const HAPPENINGS_KEPT = 6;
 export const HAPPENING_WEEKS = 64;
 /**
@@ -122,6 +124,23 @@ export const HEAVY_EVENTS: readonly number[] = [EVENT.splitMessy, EVENT.cheating
  * for them. Kind friends of the one doing it drift away, and some of it is reported to the conduct office, which ends
  * it. Every size is [T].
  */
+/**
+ * Rumours on Quadline (DESIGN.md 63.14, decision 6, "Drama"): a few a week from those who like to talk. One spreads as
+ * far as its teller is known, and may land on someone close to the one it is about: a partner, who is hurt by it, and
+ * now and then ends it; a friend, who is put out. Every size is [T].
+ */
+export const RUMOUR = {
+  /** Tellers tried each week, and how likely one who likes to talk starts one. */
+  tries: 40,
+  starts: 0.12,
+  /** How likely it lands, at its most: a teller who knows this many people, and more, carries it all the way. */
+  lands: 0.55,
+  reach: 40,
+  /** What a rumour that lands takes from the tie, and how likely it ends a couple. */
+  sting: 8,
+  split: 0.15,
+} as const;
+
 export const BULLY = {
   /** The weekly chance a student who would start on someone does, with someone they clash with to start on. */
   start: 0.02,
