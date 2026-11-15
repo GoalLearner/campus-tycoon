@@ -118,7 +118,8 @@ describe('the Main Character’s people', () => {
     expect(mc.exes).toContainEqual(partner.ref);
     catchUp(web, state, webWeekOf(state) + 7);
     expect(tie(web, REF, partner.ref!)!.kind).toBe(KIND.ex);
-  });
+    // A model campus's web grown and lived: several seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('are kept through a save and a load; the weekly reading is refused for anyone but the Main Character', () => {
     const { state, mc } = chosen();

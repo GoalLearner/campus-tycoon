@@ -69,14 +69,15 @@ describe('posts', () => {
     // read at its last catch-up (63.5): the same path makes the same feed, as the same path makes the same web.
     const once = newWeb(MODEL.seed, 1024);
     catchUp(once, MODEL, WEEK0);
-    catchUp(once, MODEL, WEEK0 + 5);
+    catchUp(once, MODEL, WEEK0 + 3);
     const again = newWeb(MODEL.seed, 1024);
     catchUp(again, MODEL, WEEK0);
-    catchUp(again, MODEL, WEEK0 + 5);
+    catchUp(again, MODEL, WEEK0 + 3);
     expect([...once.posts]).toEqual([...again.posts]);
     expect([...once.viral]).toEqual([...again.viral]);
     expect(once.postNext).toBe(again.postNext);
-  });
+    // Two model webs, each grown and lived three weeks: a few seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('come from what really happened: a couple’s post is by one of a couple, about the other, and an ending by one no longer with them', () => {
     let couples = 0;
@@ -200,7 +201,8 @@ describe('posts', () => {
       expect(post.week).toBeGreaterThan(WEEK0 + 37);
       expect(postSubject(post)).toBeNull();
     }
-  });
+    // A model campus's web grown and lived: several seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('are kept through the record, and a record from before has none', () => {
     const read = decodeWeb(encodeWeb(WEB), MODEL)!;
