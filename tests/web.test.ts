@@ -224,7 +224,8 @@ describe('the web', () => {
       expect(WEB.seen[back]).toBe(WEB.seen[s]);
       if (WEB.kind[s] !== KIND.crush && WEB.kind[back] !== KIND.crush) expect(WEB.kind[back]).toBe(WEB.kind[s]);
     }
-  });
+    // Half a million checks, one for every slot: about 10 s on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('has friends, couples, exes and roommates after a first catch-up, and reads them as a card would', () => {
     const kinds = census(WEB);

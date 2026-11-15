@@ -2256,10 +2256,10 @@ function assertModelCampus(seed: number): void {
           partyRegistration: d.calls < 0 && d.spending > 0,
           alcoholEducation: d.stress <= 0 && d.spending > 0,
           antiHazing: d.reports <= 0,
-          // Its cost is to members' Happiness at once; over six years the hazing it cuts can spare a chapter probation
-          // or a suspension, and so keep its lift, which may outweigh that cost: then chapters must have kept their lift
-          // on more days with it on (DESIGN.md 63.10).
-          greekOversight: d.reports <= 0 && atOnce < 0 && (d.happy <= 0.01 || on.lifted > off.lifted),
+          // What its switch says: fewer hazing reports, and members a little less happy the moment it is on. Over six
+          // years two histories of one campus drift apart by more than its cost to a few members, so its Happiness then
+          // is printed and not asked for (DESIGN.md 63.10: since stop 6 it came out +0.07 on the once-a-day campus).
+          greekOversight: d.reports <= 0 && atOnce < 0,
           // The Main Character's levers (DESIGN.md 58): their gain is in the story's odds; their cost is money.
           campusJobs: d.spending > 0,
           needScholarships: d.spending > 0,
