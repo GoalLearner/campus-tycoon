@@ -5,6 +5,8 @@ import {
   FALL_SHARE,
   HAPPY_ALL,
   HAPPY_NONE,
+  RANK_HAPPY_FROM,
+  RANK_HAPPY_FULL,
   LATE_FROM,
   LEAVE_WEIGHTS,
   LEAVE_WHYS,
@@ -43,11 +45,15 @@ export interface Standing {
   happy: number;
 }
 
-/** Standing from a rank (0 for none yet) and the campus's Happiness without the season (0 to 100). */
+/**
+ * Standing from a rank (0 for none yet) and the campus's Happiness without the season (0 to 100). The rank counts in
+ * full only on a happy campus (RANK_HAPPY_FROM to RANK_HAPPY_FULL), so it cannot lift a campus left alone by itself.
+ */
 export function standingOf(rank: number, happiness: number): Standing {
   const rankPart = rank > 0 ? clamp01((Math.log(RANK_NONE) - Math.log(rank)) / (Math.log(RANK_NONE) - Math.log(RANK_ALL))) : RANK_UNRANKED;
   const happy = clamp01((happiness - HAPPY_NONE) / (HAPPY_ALL - HAPPY_NONE));
-  return { q: STANDING_RANK_WEIGHT * rankPart + (1 - STANDING_RANK_WEIGHT) * happy, rank: rankPart, happy };
+  const gate = clamp01((happiness - RANK_HAPPY_FROM) / (RANK_HAPPY_FULL - RANK_HAPPY_FROM));
+  return { q: STANDING_RANK_WEIGHT * rankPart * gate + (1 - STANDING_RANK_WEIGHT) * happy, rank: rankPart, happy };
 }
 
 const mix = (a: number, b: number, t: number): number => a + (b - a) * t;

@@ -144,9 +144,11 @@ export const COLLECT_READY_HOURS = 6;
  * Which buildings fill, by family, and what an hour is worth: experience,
  * and a little cash on the small campus's count. The cash is a rate with a
  * cap, so a year of it is a known small sum whatever the player does.
+ * A food place filled with 0.8 experience an hour until R1's balance pass (DESIGN.md 65.10): a once-a-day player
+ * whose campus had half as many again of them as most went past seven levels a week.
  */
 export const COLLECT: Partial<Record<PlacedFamily, { xpPerHour: number; cashPerHour: number }>> = {
-  dining: { xpPerHour: 0.8, cashPerHour: 2 },
+  dining: { xpPerHour: 0.65, cashPerHour: 2 },
   store: { xpPerHour: 1.2, cashPerHour: 3 },
 };
 

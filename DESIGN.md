@@ -5350,7 +5350,7 @@ Built on 2026-11-12, on the owner's "Build it". Only a game with goals has the l
 | Nothing is sold | No store, no purchase, no price in money anywhere | |
 | Collecting | Food places and the campus store fill by the hour. What one holds is worked out from the time since it was last collected, when somebody asks. Nothing runs on a tick, and no lot is walked | `collectables` |
 | How much it holds | 36 hours' worth, counted in time. Its marker shows once it has filled for six hours | `COLLECT_HOURS`, `COLLECT_READY_HOURS` |
-| What it pays | Experience, and a little cash: 0.8 experience and $2 an hour for a food place, 1.2 and $3 for a campus store, the dollars on the small campus's count. Rounding is carried, so collecting often pays exactly what collecting seldom pays | `COLLECT` |
+| What it pays | Experience, and a little cash: 0.65 experience (0.8 until R1's balance pass, 65.10) and $2 an hour for a food place, 1.2 and $3 for a campus store, the dollars on the small campus's count. Rounding is carried, so collecting often pays exactly what collecting seldom pays | `COLLECT` |
 | The store after a home win | Fills twice as fast for a day | `STORE_WIN_TIMES`, `STORE_WIN_TICKS` |
 | The stadium | A home game leaves 40 experience and a little cash at the stadium plot. It holds three games. A fourth, or a game on a campus with no stadium plot, pays its experience at once | `dailyOnHomeGame`, `GAMES_HELD` |
 | A building that has just opened | Holds an opening bonus, ready at once. A dozen a real day at most, so building and clearing is not a way to level. A bin or a bench is not a building | `dailyOnPlaced`, `dailyOnBuilt`, `OPENINGS_PER_DAY` |
@@ -8253,7 +8253,7 @@ The sources, by name: the NCES Digest of Education Statistics (tables 326.30 for
 
 ### 65.2 Who stays, who finishes, and why the others leave
 
-Students are counts by class year, now six of them: freshman to senior, then fifth- and sixth-year seniors (save version 31; a save from before gains the two, empty). A campus's standing, 0 to 1, is half its academic rank (on a log scale from No. 200, nothing, to No. 5, all of it; unranked counts as a tenth) and half its Happiness without the season (40 nothing, 90 all of it). Standing places the campus between three anchors, each a set of yearly shares that leave from each class year and shares that finish at each commencement, fitted so a class's path gives the real figures (NCES 326.30, 326.10):
+Students are counts by class year, now six of them: freshman to senior, then fifth- and sixth-year seniors (save version 31; a save from before gains the two, empty). A campus's standing, 0 to 1, is half its academic rank (on a log scale from No. 200, nothing, to No. 5, all of it; unranked counts as a tenth) and half its Happiness without the season (40 nothing, 90 all of it). The rank's half counts in full only on a happy campus: at Happiness 90 and up, fading in a straight line to nothing at 75. A name draws strong students, and a campus that looks after them keeps them; and without the fade rank, the rates and the rating fed one another on a campus left alone, which was still climbing after forty years (the long run's settle check, 65.10). A tended campus sits above 90 and is not touched. Standing places the campus between three anchors, each a set of yearly shares that leave from each class year and shares that finish at each commencement, fitted so a class's path gives the real figures (NCES 326.30, 326.10):
 
 | Anchor | Back for a second year | Finished in 4 years | In 5 | In 6 |
 | --- | --- | --- | --- | --- |
@@ -8261,7 +8261,7 @@ Students are counts by class year, now six of them: freshman to senior, then fif
 | Flagship (selective publics), standing 0.5 | 92% | 57% | 72% | 76% |
 | Best (the most selective), standing 1 | 96% | 80% | 90% | 91% |
 
-Between two anchors every share is read along the line, so every rate climbs with standing. First-years leave most; a year's leavers split between the fall and the spring, first-years mostly after the spring. The model campus opens at about 0.52, a flagship, and a well-run campus reaches 1 near the Top 5.
+Between two anchors every share is read along the line, so every rate climbs with standing. First-years leave most; a year's leavers split between the fall and the spring, first-years mostly after the spring. The model campus opens at about 0.40, its classes' history read there, and stands near 0.52, a flagship, once its first students are happy; a well-run campus reaches 1 near the Top 5. One left alone stays near 0.42 (90% back for a second year, 75% finished in six), rank or no rank.
 
 At commencement most seniors finish; the rest stay on as fifth-year seniors, some of those as sixth-year seniors, and who has not finished by the end of a sixth year stops out. The late seniors are a run of their class's places from its 151st on, so the named regulars, chosen from the first 150, finish on time; a card for any other place of that class reads as gone. Each class keeps its ring in the social web for its six years (record version 4; an older record's places are moved to their class's ring as it is read).
 

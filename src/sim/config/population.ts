@@ -56,6 +56,14 @@ export const RANK_ALL = 5;
 export const RANK_UNRANKED = 0.1;
 export const HAPPY_NONE = 40;
 export const HAPPY_ALL = 90;
+/**
+ * [T] The rank's part counts in full on a campus whose Happiness is RANK_HAPPY_FULL or more, and fades in a straight
+ * line to nothing at RANK_HAPPY_FROM: a name draws strong students, and a campus that looks after them keeps them.
+ * Without it, rank, the rates and the rating fed one another on a campus left alone, which was still climbing after
+ * forty years (the long run's settle check, DESIGN.md 65.2). A tended campus sits above 90 and is not touched.
+ */
+export const RANK_HAPPY_FROM = 75;
+export const RANK_HAPPY_FULL = 90;
 
 /** Why a student left. */
 export type LeaveWhy = 'transfer' | 'stoppedOut' | 'money' | 'grades' | 'homesick' | 'housing';

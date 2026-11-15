@@ -60,7 +60,11 @@ describe('a class’s path', () => {
   });
 
   it('rises with the rank and with Happiness, and a model campus opens as a flagship', () => {
-    expect(standingOf(10, 70).q).toBeGreaterThan(standingOf(100, 70).q);
+    expect(standingOf(10, 90).q).toBeGreaterThan(standingOf(100, 90).q);
+    // The rank counts in full on a happy campus, half at 82.5, and not at all at 75 or below (DESIGN.md 65.2).
+    expect(standingOf(10, 82.5).q - standingOf(100, 82.5).q).toBeCloseTo((standingOf(10, 90).q - standingOf(100, 90).q) / 2, 9);
+    expect(standingOf(10, 75).q).toBeCloseTo(standingOf(100, 75).q, 9);
+    expect(standingOf(5, 60).q).toBeCloseTo(standingOf(200, 60).q, 9);
     expect(standingOf(100, 80).q).toBeGreaterThan(standingOf(100, 60).q);
     expect(standingOf(5, 90).q).toBeCloseTo(1, 9);
     expect(standingOf(200, 40).q).toBeCloseTo(0, 9);
