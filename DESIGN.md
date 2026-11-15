@@ -8164,7 +8164,7 @@ Built 2026-11-15 on the branch `life-4`. While following a student (13.8, 61), a
 |---|---|
 | The caption | Under their feet, about 13 points tall at any zoom: what the card says they are doing now and how they feel ("Walking in from home · Happy"; Fine says nothing), white on the dark of the interface |
 | The follow | A little softer close up, so a walk does not judder at that size. It now goes on when they stop on a lawn, at a table or in a game, where before it ended |
-| Seen through walls | Close up, the student followed is drawn over the buildings and everything else on the map but the floating icons, so a wall never hides them |
+| Seen through walls | Close up, the student followed is drawn over the buildings and everything else on the map but the floating icons, so a wall never hides them. Since L6 they keep their place and what covers them fades (64.8) |
 | The strip | Its magnifying glass is lit while the close-up is on |
 
 | Decisions made here | Instead |
@@ -8230,8 +8230,47 @@ After L5, a page for the owner of a busy quad on a sunny afternoon, a party at n
 
 | Found | Fixed |
 |---|---|
-| Followed close up, a student's friends or date walking with them were hidden behind buildings while they were drawn over them (64.5) | The whole party they walk with is drawn over the buildings close up |
+| Followed close up, a student's friends or date walking with them were hidden behind buildings while they were drawn over them (64.5) | The whole party they walk with is drawn over the buildings close up (since L6, what covers them fades instead, 64.8) |
 | A frisbee game on a lawn at ten at night | Games on the grass (frisbee, catch, kicking a ball) are for the light: none at night (`chooseLawnKind`; tested) |
+
+### 64.8 L6 as built: a busy quad, a real party, and the close-up through walls
+
+Built 2026-11-15 on the branch `life-6`, a short polish stop asked for between R1 and R2. Three things the afternoon page (64.7) showed: the lawns were no busier on the quad than anywhere else and empty in their middles, the party at night was a few people standing on a lawn, and close up a student behind a building was drawn on its roof.
+
+**The quad is the hub** (`src/game/Lawns.ts`, `src/app/lawnLife.ts`, `src/app/crowd.ts`). A lawn held a group only within two cells of a path, so the middle of a big lawn stayed empty (on the model campus, two thirds of its open green). Now the lawns are read as connected stretches of quad and the campus's own grass. A quad holds a spot on every cell; a big lawn (40 cells or more) on every other cell, as the squares of one colour on a chessboard, in every part of it; a small patch of grass by the buildings, one cell in four beside a path, as before. Spots are nudged off the middles of their cells so the groups do not stand in rows. The quads fill first, then the big lawns, then the small patches. A group that takes room (frisbee, catch, a kick-about, a jog, a goof, a dog) keeps the cells beside it, so nobody sits in its game. People cross the lawns between the groups: of the spots a group takes, about one in six on a quad and one in ten on a big lawn is one to three walking side by side from the spot to the far side, three to six cells, and back (`stroll`; not at night or in exams). The lawn figures are raised to 20, 44, 120 and 170 people for the four crowd steps, from 14, 32, 64 and 100: still the most in view at once, times the hour and the sky, and still stepped down when the frames are short.
+
+| People on screen doing something (on the lawns, at tables, benches, courts and fields), the model campus's big lawn, a September Tuesday at three, Normal | Before (main) | L6 |
+|---|---|---|
+| At phone zoom (the close view, 390 wide) | 13 | 29 to 32 |
+| Zoomed out (on the lawns, the slowed phone's view) | 44 | 89 |
+| The opening view, an afternoon (on the lawns) | 45 | 86 |
+
+At 375, 430 and 530 wide the close view holds 25, 32 and 36.
+
+**A party night** (`partyTonight`, `partySize`, `Lawns` `recountParties`). Thursday to Saturday, in the evening and at night (it fills from six, is full from nine, thins after one and is over at two), in term, in fine weather, on a game with parties. Where: grass or a quad within three cells of a hall or a chapter house with open ground all round it; one site for each forty such cells, at most four on the map, ten cells apart, chosen for the night from the seed, so a party stays where it is all night. Who: friend groups who like parties or music first, each together, then anyone free; nobody who is somewhere else on the map. How many: 15 to 30 at Normal (10 to 18 at Low, 22 to 38 at High, 6 to 10 on a slow phone), more on a Friday or a Saturday than a Thursday. As the evening fills, more arrive, each fading in, and friend groups out for the night walk there (the walkers' party groups head for the stop nearest it). Most dance (the L2 sway, each a beat off the others); the rest stand and talk. A big speaker in the middle with music notes rising from it, string lights strung behind the crowd and lanterns at its edge (the packs' own), a warm pool of light on the grass under them after dark (drawn in code, as strong as the street lamps are), and party hats on two in five (ours, three colours, `tools/make_props.py`, in both atlases). Over the crowd, a few at a time: laughing, music, a high five, a heart. A red cup only over a student of 21 or over whose own day says Party tonight, a soda over a younger one, as their card's feeling has it (63.9). A dance-off (64.4) happens there, a party counting as a dance: the two nearest the middle go head to head, faster and bigger, with an emote over each in turn and a high five at the end, and the crowd round them is the walkers' (a dance on a lawn has the same since L6). With Reduce effects on the party is there, standing still, with no notes or emotes.
+
+**Close up through walls** (`CampusScene.fadeCovers`, `Walkers.markedSprites`, `PlacedSprites.covering`, `Lawns.spriteOf`). The student followed close up, and the friends or date walking with them, keep their place in the drawing order (64.5 and 64.7 drew them over everything). Whatever is drawn in front of them and covers part of them (a hall, a tree, a building from the Build menu) fades to 30% over a fifth of a second, looked for eight times a second within four cells of them, and comes back as it was when they come out. A student sitting on a lawn is looked after the same way.
+
+| Decisions made here | Instead |
+|---|---|
+| A spot on every quad cell and every other big-lawn cell, filled in that order | The same spacing everywhere, with more people to a group |
+| Groups over the whole of a big lawn, including ground not yet built on | Only by the paths, which left the middle of the campus's green empty |
+| Crossing a lawn drawn as a lawn group walking a line | Walkers sent across the grass, which the paths' routing does not know |
+| A party at a site chosen for the night | A party wherever the walkers' groups happen to stop |
+| Cups as an emote over the head, only from the student's own day | A cup in every hand |
+| The building in front fades | An outline of the student over it, which still reads as standing on the roof |
+
+**Measured.** Frames on the slowed phone, back to back with main (2d26928), two rounds each, the median of eight frames: an afternoon at the opening view 14.0 and 14.5 ms against L6's 14.8 and 14.9; the busy lawn zoomed out 14.5 and 14.7 against 16.9 and 14.3; the morning rush at High 16.3 and 19.7 against 18.1 and 18.9; a party night at the party 12.9 and 12.2 against 13.9 and 12.9. About a millisecond more for about twice the people. The long run was not run again: L6 changes nothing the simulator reads.
+
+**Tested**: `tests/lawnLife.test.ts` (5 more): no placed kind is ever chosen by `chooseLawnKind`; words for crossing and a party; a party only Thursday to Saturday, evening or night, in term, in fine weather, with parties; 15 to 30 at Normal, fewer at Low, more at High, Friday and Saturday fuller than Thursday; the lawn figures raised. The rest is drawing, checked in pictures (`docs/handoff/life-afternoon.html`, retaken).
+
+| Rough | Why |
+|---|---|
+| The whole building fades, not only the part round the student | The art is one drawing per building; it comes back as soon as they are out from behind it |
+| A party by a hall can sit partly behind the hall from some views | Its spot is grass within three cells of a hall or a chapter house |
+| The party's warm light also falls on the roofs in front of it | Light is drawn over everything after dark, as the street lamps' is |
+| A big empty lawn is full of people, including land not built on yet | It is open green; as halls go up the groups move to what is left |
+| Nobody sits or lies down at a party | The packs have no dancing pose; the L2 sway stands in for it |
 
 ## 65. The realism pass, R1: the numbers match (approved 2026-11-14)
 
