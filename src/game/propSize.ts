@@ -21,6 +21,13 @@ const ON_MAP: Readonly<Record<string, number>> = {
   'room.soccerBall': 9,
   'room.speaker': 10,
   'room.cup': 6,
+  // A party night (L6): a hat sits on a head; the lights and lanterns stand round the crowd.
+  'prop.partyhat.0': 8,
+  'prop.partyhat.1': 8,
+  'prop.partyhat.2': 8,
+  'decoration.stringLights': 46,
+  'decoration.lantern': 20,
+  'decoration.bunting': 46,
 };
 
 /** Scale a sprite showing one of a room's things down to its size on the map. */

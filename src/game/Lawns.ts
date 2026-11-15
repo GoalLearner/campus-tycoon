@@ -7,7 +7,8 @@ import { CROWD_STEPS } from '../app/crowd';
 import { shownHour, type DayPeriod } from '../app/daylight';
 import { feelingOf } from '../app/emotion';
 import { itemAt, regularDay, type Where } from '../app/regularDay';
-import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, type LawnGroup, type LawnKind, type LawnPose } from '../app/lawnLife';
+import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, partySize, STROLL_SHARE, type LawnGroup, type LawnKind, type LawnPose } from '../app/lawnLife';
+import { DRINKING_YEAR } from '../sim/config/parties';
 import type { Weather } from '../app/life';
 import { idIn, refIn, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
@@ -37,8 +38,39 @@ const FADE_MS = 500;
 const RECOUNT_MS = 1100;
 /** How long a group stays, in game ticks (minutes): each spot keeps its group this long, on its own clock. */
 const STAY_TICKS = 9;
-/** Spots are at least this many cells apart, so groups do not stand in each other. */
+/** Spots on the grass are at least this many cells apart, so groups do not stand in each other. */
 const SPACING = 2;
+/**
+ * On a quad a spot is every cell (L6): the quad is the campus's hub, the busiest place on it. A spot there is nudged off
+ * the middle of its cell, so the groups do not stand in rows, and a group that takes room keeps the cells beside it.
+ */
+const QUAD_JITTER = 0.16;
+const WIDE: ReadonlySet<LawnKind> = new Set<LawnKind>(['frisbee', 'catch', 'kick', 'jog', 'goof', 'dog']);
+/** People crossing a quad walk this fast, in cells a second, to the far side and back, three to six cells. */
+const STROLL_SPEED = 0.5;
+/**
+ * A party night (L6): a crowd on the grass within PARTY_REACH cells of a hall or a chapter house, with room round it.
+ * At most PARTIES_MOST on the map in a night, PARTY_APART cells apart; one is drawn while it is near the screen.
+ */
+const PARTY_REACH = 3;
+const PARTIES_MOST = 4;
+const PARTY_APART = 10;
+const PARTY_MARGIN = 260;
+/** Music notes rise from a party's speaker, one this often, each for this long. */
+const NOTE_EVERY_MS = 620;
+const NOTE_MS = 1800;
+const NOTE_RISE = 34;
+/** Emotes over a party's crowd at once, and the wait before a slot shows its next. */
+const PARTY_ICONS = 3;
+const PARTY_ICON_EVERY_MS = [900, 2600] as const;
+/** Of a party, the share dancing (the rest stand and talk), and the share wearing a party hat. */
+const DANCING = 0.72;
+const HATS = 0.42;
+/** Where a hat sits, as a share of the figure's height from the feet, and the speaker's size against a room's. */
+const HAT_AT = 0.86;
+const PARTY_SPEAKER = 1.8;
+/** What a party's crowd shows over their heads now and then; a cup only over someone whose own day says Party tonight. */
+const PARTY_EMOTES = ['laugh', 'music', 'highfive', 'laugh', 'heart', 'music'] as const;
 /** An emote over someone in a group every so often, and for this long. */
 const ICON_EVERY_MS = [3800, 7600] as const;
 const ICON_MS = 1700;
@@ -83,6 +115,12 @@ interface Member {
   /** Something they hold: a phone, a book. */
   held: Phaser.GameObjects.Image | null;
   heldLift: number;
+  /** At a party (L6): dancing or standing to talk, a party hat, and the cup their own day gives them, if any. */
+  dancing: boolean;
+  hat: Phaser.GameObjects.Image | null;
+  cup: 'partycup' | 'sodacup' | null;
+  /** Their own fade in, 0 to 1: someone arriving at a party already going. */
+  fade: number;
 }
 
 interface Prop {
@@ -118,6 +156,20 @@ interface Group {
   settled: boolean;
   /** Kept just off the screen, so it is there when the view moves, but not drawn (DESIGN.md 64.2, frames). */
   hidden: boolean;
+  /** Crossing a quad (L6): from the spot to the far side and back. */
+  route: { ax: number; ay: number; bx: number; by: number } | null;
+  /** A party (L6): notes rising from the speaker, emotes over the crowd, and the night it is for. */
+  notes: Array<{ image: Phaser.GameObjects.Image; born: number; side: number }>;
+  noteAt: number;
+  crowd: Array<{ image: Phaser.GameObjects.Image | null; on: number; until: number; next: number }>;
+  night: number;
+}
+
+/** A party night as the scene reads it (L6): the day the evening began on, its weekday, and the hour. */
+export interface PartyNight {
+  night: number;
+  weekday: number;
+  hour: number;
 }
 
 /** How far beyond the screen, in world pixels, a group is still drawn: a jog's loop and a thrown ball stay inside it. */
@@ -152,6 +204,10 @@ function mix(a: number, b: number): number {
 export class Lawns {
   private groups = new Map<string, Group>();
   private spots: Spot[] = [];
+  /** Grass by a hall or a chapter house with room for a crowd (L6), tonight's parties among them, and the night. */
+  private partySites: Array<{ x: number; y: number; greek: boolean }> = [];
+  private tonight: { night: number; sites: Array<{ x: number; y: number; greek: boolean }> } | null = null;
+  private night: PartyNight | null = null;
   private readonly people: PeopleSpec | null;
   private state: GameState | null = null;
   private everyone: StudentRef[] = [];
@@ -193,6 +249,12 @@ export class Lawns {
     this.step = Math.max(0, Math.min(CROWD_STEPS.length - 1, step));
   }
 
+  /** A party night now (L6), or null: Thursday to Saturday evenings in term, in fine weather, on a game with parties. */
+  setParty(night: PartyNight | null): void {
+    if ((night?.night ?? -1) !== (this.night?.night ?? -1) || (night?.hour ?? -1) !== (this.night?.hour ?? -1)) this.recountAt = 0;
+    this.night = night;
+  }
+
 
   /** Read the map again: the spots on quads and on the campus's grass beside a path. */
   setMap(state: GameState): void {
@@ -221,20 +283,38 @@ export class Lawns {
         candidates.push({ x: x + 0.5, y: y + 0.5, quad, offset: hashInts(state.seed, x, y, 4723) % STAY_TICKS, order: mix(state.seed + y * width, x) });
       }
     }
-    // Quads first, then grass, each in a steady order; two cells apart.
+    // Quads first, every cell of them (L6), then grass two cells apart, each in a steady order.
     candidates.sort((a, b) => Number(b.quad) - Number(a.quad) || a.order - b.order);
     const kept: Spot[] = [];
     const used = new Set<number>();
     for (const spot of candidates) {
       const cx = Math.floor(spot.x);
       const cy = Math.floor(spot.y);
+      const apart = spot.quad ? 1 : SPACING;
       let clash = false;
-      for (let dy = -SPACING + 1; dy < SPACING && !clash; dy++) for (let dx = -SPACING + 1; dx < SPACING && !clash; dx++) if (used.has((cy + dy) * width + cx + dx)) clash = true;
+      for (let dy = -apart + 1; dy < apart && !clash; dy++) for (let dx = -apart + 1; dx < apart && !clash; dx++) if (used.has((cy + dy) * width + cx + dx)) clash = true;
       if (clash) continue;
       used.add(cy * width + cx);
-      kept.push({ x: spot.x, y: spot.y, quad: spot.quad, offset: spot.offset });
+      const nudge = spot.quad ? QUAD_JITTER : 0;
+      kept.push({ x: spot.x + (mix(cx * 31, cy) - 0.5) * 2 * nudge, y: spot.y + (mix(cy * 37, cx) - 0.5) * 2 * nudge, quad: spot.quad, offset: spot.offset });
     }
     this.spots = kept;
+    // Where a party can be (L6): grass or a quad within a few cells of a hall or a chapter house, with open ground all round.
+    const homes: Array<{ x: number; y: number; w: number; h: number; greek: boolean }> = [];
+    for (const lot of state.map.buildings) if (lot && lot.zone === 'housing' && lot.stage > 0) homes.push({ x: lot.x, y: lot.y, w: 1, h: 1, greek: false });
+    for (const placed of state.map.placed) if (placed && placed.type === 'chapterHouse') homes.push({ x: placed.x, y: placed.y, w: placed.w, h: placed.h, greek: true });
+    const open = (x: number, y: number): boolean => kind(x, y) === 'quad' || (kind(x, y) === 'empty' && ownedAt(state.map, x, y));
+    this.partySites = [];
+    for (const spot of candidates) {
+      const cx = Math.floor(spot.x);
+      const cy = Math.floor(spot.y);
+      let room = true;
+      for (let dy = -1; dy <= 1 && room; dy++) for (let dx = -1; dx <= 1 && room; dx++) if (!open(cx + dx, cy + dy)) room = false;
+      if (!room) continue;
+      const home = homes.find((one) => cx >= one.x - PARTY_REACH && cx < one.x + one.w + PARTY_REACH && cy >= one.y - PARTY_REACH && cy < one.y + one.h + PARTY_REACH);
+      if (home) this.partySites.push({ x: cx + 0.5, y: cy + 0.5, greek: home.greek });
+    }
+    this.tonight = null;
     this.recountAt = 0;
   }
 
@@ -376,6 +456,10 @@ export class Lawns {
       shownKey: '',
       held: holding,
       heldLift,
+      dancing: false,
+      hat: null,
+      cup: null,
+      fade: 1,
     });
   }
 
@@ -456,6 +540,12 @@ export class Lawns {
         this.member(group, refs[0]!, x - 0.09, y, 'stand', x + 1, y);
         this.member(group, refs[1]!, x + 0.09, y, 'stand', x - 1, y);
         break;
+      case 'stroll':
+        // Side by side, across the way they walk (L6): drawn where they are each frame.
+        refs.forEach((ref) => this.member(group, ref, x, y, 'move', x + 1, y));
+        break;
+      case 'party':
+        break;
       case 'jog':
       case 'goof':
       case 'dog':
@@ -475,8 +565,10 @@ export class Lawns {
     const taken = this.taken();
     const width = state.map.width;
     const keep = new Set<string>();
+    // A party night's crowds first (L6): their own size, outside the lawns' figures.
+    this.recountParties(view, keep);
     let count = 0;
-    // Spots in view, each with its group for its own time, the steadiest order first.
+    // Spots in view, each with its group for its own time: the quad first, the hub, then the grass; each in a steady order.
     const margin = 120;
     const inView = this.spots.filter((spot) => {
       const at = this.iso.toWorld(spot.x, spot.y);
@@ -485,36 +577,232 @@ export class Lawns {
     const ranked = inView
       .map((spot) => {
         const slot = Math.floor((tick + spot.offset) / STAY_TICKS);
-        return { spot, slot, order: mix(Math.floor(spot.x) * 991 + Math.floor(spot.y), slot) };
+        return { spot, slot, key: `${Math.floor(spot.x)},${Math.floor(spot.y)}:${slot}`, order: mix(Math.floor(spot.x) * 991 + Math.floor(spot.y), slot) };
       })
-      .sort((a, b) => a.order - b.order);
-    for (const { spot, slot } of ranked) {
-      if (count >= budget) break;
-      if (taken.has(Math.floor(spot.y) * width + Math.floor(spot.x))) continue;
-      const key = `${Math.floor(spot.x)},${Math.floor(spot.y)}:${slot}`;
-      const have = this.groups.get(key);
-      if (have && !have.leaving && !(have.plain && this.web)) {
-        keep.add(key);
-        count += have.members.length;
-        continue;
+      .sort((a, b) => Number(b.spot.quad) - Number(a.spot.quad) || a.order - b.order);
+    // A group that takes room on a quad keeps the cells beside it: nobody sits in its game.
+    const wide = new Set<number>();
+    const near = new Set<number>();
+    const cell = (spot: Spot): number => Math.floor(spot.y) * width + Math.floor(spot.x);
+    const hold = (spot: Spot, isWide: boolean): void => {
+      const c = cell(spot);
+      near.add(c);
+      if (isWide) wide.add(c);
+    };
+    const crowded = (spot: Spot, isWide: boolean): boolean => {
+      const cx = Math.floor(spot.x);
+      const cy = Math.floor(spot.y);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const c = (cy + dy) * width + cx + dx;
+          if (wide.has(c) || (isWide && near.has(c))) return true;
+        }
       }
+      return false;
+    };
+    // The groups already there stay while the figures allow.
+    const fresh: typeof ranked = [];
+    for (const one of ranked) {
+      const have = this.groups.get(one.key);
+      if (have && !have.leaving && !(have.plain && this.web) && count < budget) {
+        keep.add(one.key);
+        count += have.members.length;
+        hold(one.spot, WIDE.has(have.kind));
+      } else fresh.push(one);
+    }
+    for (const { spot, slot, key } of fresh) {
+      if (count >= budget) break;
+      if (taken.has(cell(spot)) || near.has(cell(spot)) || crowded(spot, false)) continue;
+      const have = this.groups.get(key);
       // One group to a spot and a time: one there already, leaving or formed from the seed alone, gives way at once.
       if (have) this.release(have);
       const { refs, couple, vibe } = this.company(spot, slot);
       if (refs.length === 0) continue;
       const roll = mix(hashInts(state.seed, slot, 4733), Math.floor(spot.x) * 997 + Math.floor(spot.y));
-      const kind = chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
+      // On a quad some cross it, from one side to the other and back, between the groups (L6).
+      const route = spot.quad && mix(hashInts(state.seed, slot, 4739), cell(spot)) < STROLL_SHARE && !this.exams && this.period !== 'night' ? this.strollRoute(spot, slot) : null;
+      const kind: LawnKind = route ? 'stroll' : chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
+      if (spot.quad && WIDE.has(kind) && crowded(spot, true)) continue;
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
       if (count + members.length > budget && count > 0) continue;
-      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [] };
+      const group = this.newGroup(key, kind, spot.x, spot.y, spot.quad ? 'the quad' : 'the lawn');
+      group.route = route;
       this.form(group, members);
       this.groups.set(key, group);
       keep.add(key);
       count += members.length;
+      if (spot.quad) hold(spot, WIDE.has(kind));
     }
     for (const group of this.groups.values()) if (!keep.has(group.key)) group.leaving = true;
     this.drawn = count;
+  }
+
+  private newGroup(key: string, kind: LawnKind, x: number, y: number, where: string): Group {
+    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1 };
+  }
+
+  /** From a spot on a quad, three to six cells across it along the grid, over quad and path only (L6), or null. */
+  private strollRoute(spot: Spot, slot: number): Group['route'] {
+    const { width, height, cells } = this.state!.map;
+    const walkable = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && (cells[y * width + x]!.kind === 'quad' || cells[y * width + x]!.kind === 'path');
+    const dirs = [
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+      [0, -1],
+    ] as const;
+    const cx = Math.floor(spot.x);
+    const cy = Math.floor(spot.y);
+    const first = hashInts(this.state!.seed, cx, cy, slot) % 4;
+    for (let k = 0; k < 4; k++) {
+      const [dx, dy] = dirs[(first + k) % 4]!;
+      let len = 0;
+      while (len < 6 && walkable(cx + dx * (len + 1), cy + dy * (len + 1))) len += 1;
+      if (len >= 3) return { ax: spot.x, ay: spot.y, bx: spot.x + dx * len, by: spot.y + dy * len };
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------ parties --
+
+  /** Tonight's parties (L6): sites chosen for the night from the seed, apart from each other. The same all night. */
+  private partiesTonight(): Array<{ x: number; y: number; greek: boolean }> {
+    const night = this.night;
+    const state = this.state;
+    if (!night || !state || this.partySites.length === 0) return [];
+    if (this.tonight && this.tonight.night === night.night) return this.tonight.sites;
+    const most = Math.max(1, Math.min(PARTIES_MOST, Math.round(this.partySites.length / 40)));
+    const order = this.partySites.map((site, i) => ({ site, order: mix(hashInts(state.seed, night.night, 4757), i) })).sort((a, b) => a.order - b.order);
+    const sites: Array<{ x: number; y: number; greek: boolean }> = [];
+    for (const { site } of order) {
+      if (sites.length >= most) break;
+      if (sites.some((one) => Math.hypot(one.x - site.x, one.y - site.y) < PARTY_APART)) continue;
+      sites.push(site);
+    }
+    this.tonight = { night: night.night, sites };
+    return sites;
+  }
+
+  /** How full a party is by the hour: filling from six, full from nine, thinning after one, over at two. */
+  private partyRamp(hour: number): number {
+    if (hour >= 21 || hour < 1) return 1;
+    if (hour >= 18) return 0.45 + (0.55 * (hour - 18)) / 3;
+    if (hour < 2) return 0.75;
+    return 0;
+  }
+
+  /** Each party near the screen drawn with the crowd it has by this hour; one that has gone off it gives way. */
+  private recountParties(view: Phaser.Geom.Rectangle, keep: Set<string>): void {
+    const night = this.night;
+    if (!night || this.reduced) return;
+    const roll = mix(hashInts(this.state!.seed, night.night, 4759), 3);
+    const want = Math.round(partySize(this.step, night.weekday, roll) * this.partyRamp(night.hour));
+    if (want <= 0) return;
+    for (const site of this.partiesTonight()) {
+      const at = this.iso.toWorld(site.x, site.y);
+      if (at.x < view.x - PARTY_MARGIN || at.x > view.right + PARTY_MARGIN || at.y < view.y - PARTY_MARGIN || at.y > view.bottom + PARTY_MARGIN) continue;
+      const key = `party:${night.night}:${site.x},${site.y}`;
+      let group = this.groups.get(key);
+      if (group && group.leaving) {
+        this.release(group);
+        group = undefined;
+      }
+      if (!group) {
+        group = this.newGroup(key, 'party', site.x, site.y, site.greek ? 'Greek Row' : 'the lawn by the halls');
+        group.night = night.night;
+        this.formParty(group);
+        this.groups.set(key, group);
+      }
+      // People arrive as the night fills, a friend group at a time.
+      if (group.members.length < want) this.joinParty(group, this.partyPeople(night.night, want - group.members.length, group));
+      keep.add(key);
+    }
+  }
+
+  /**
+   * Who is at a party: friend groups who like parties or music first, each together, then anyone free from the seed.
+   * Nobody already somewhere else on the map.
+   */
+  private partyPeople(night: number, want: number, group: Group): StudentRef[] {
+    const state = this.state!;
+    const web = this.web;
+    const out: StudentRef[] = [];
+    const taken = new Set(group.members.map((member) => (member.student ? studentKey(member.student) : '')));
+    const free = (ref: StudentRef): boolean => !this.busy(studentKey(ref)) && !taken.has(studentKey(ref));
+    const add = (ref: StudentRef): void => {
+      out.push(ref);
+      taken.add(studentKey(ref));
+    };
+    if (web) {
+      const groups = web.groupStart.length - 1;
+      for (let tries = 0; groups > 0 && tries < 80 && out.length < want; tries++) {
+        const g = hashInts(state.seed, night, group.members.length + tries, 4761) % groups;
+        const vibe = INTEREST_NAMES[web.groupVibe[g]!];
+        if (tries < 60 && vibe !== 'partying' && vibe !== 'music') continue;
+        for (let i = web.groupStart[g]!; i < web.groupStart[g + 1]! && out.length < want; i++) {
+          const ref = refIn(web, web.groupMembers[i]!);
+          if (free(ref)) add(ref);
+        }
+      }
+    }
+    for (let n = 0; out.length < want && n < want * 3; n++) {
+      const ref = findStudent(state.seed, this.everyone, night * 7919 + group.members.length * 31 + n, n, (key) => this.busy(key) || taken.has(key));
+      if (ref) add(ref);
+    }
+    return out;
+  }
+
+  /** A party's things: a big speaker in the middle, lights strung behind the crowd, lanterns at its edge. */
+  private formParty(group: Group): void {
+    const { x, y } = group;
+    this.prop(group, 'room.speaker', x, y);
+    const speaker = group.props[group.props.length - 1];
+    speaker?.sprite.setScale(speaker.sprite.scaleX * PARTY_SPEAKER);
+    for (const [dx, dy] of [
+      [-1.55, -0.55],
+      [-0.55, -1.55],
+    ] as const) {
+      this.prop(group, this.art.has('decoration.stringLights') ? 'decoration.stringLights' : 'decoration.bunting', x + dx, y + dy);
+    }
+    for (const [dx, dy] of [
+      [1.7, -0.6],
+      [-0.6, 1.7],
+      [1.25, 1.25],
+    ] as const) {
+      this.prop(group, 'decoration.lantern', x + dx, y + dy);
+    }
+  }
+
+  /** People join a party: round the speaker, nearest first, most of them dancing, some in party hats. */
+  private joinParty(group: Group, refs: readonly StudentRef[]): void {
+    const state = this.state!;
+    const turn = mix(Math.floor(group.x * 10), Math.floor(group.y * 10)) * Math.PI * 2;
+    const arriving = group.alpha > 0;
+    for (const ref of refs) {
+      const i = group.members.length;
+      // A sunflower's spiral: evenly spread, the newest at the edge.
+      const a = turn + i * 2.39996;
+      const r = 0.4 + 0.2 * Math.sqrt(i);
+      this.member(group, ref, group.x + Math.cos(a) * r, group.y + Math.sin(a) * r, 'stand', group.x, group.y);
+      const member = group.members[i]!;
+      member.dancing = mix(i * 31 + 7, group.night) < DANCING;
+      member.fade = arriving ? 0 : 1;
+      if (mix(i * 17 + 3, group.night) < HATS) {
+        const hat = this.image(`prop.partyhat.${Math.floor(mix(i * 5 + 1, group.night) * 3)}`);
+        hat?.setOrigin(0.5, 1);
+        member.hat = hat;
+      }
+      // A red cup only for someone of 21 or over whose own day says Party tonight; a soda for a younger one (63.9).
+      const card = studentCard(state, ref);
+      member.cup = card && card.party ? (card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup') : null;
+    }
+  }
+
+  /** Tonight's parties, where they are: for the walkers, who head there in groups (L6). */
+  partySpots(): Array<{ x: number; y: number }> {
+    return this.night && !this.reduced ? this.partiesTonight().map((site) => ({ x: site.x, y: site.y })) : [];
   }
 
   /** Draw a group or stop drawing it, as it comes on or goes off the screen. Back on, it is drawn afresh. */
@@ -524,11 +812,14 @@ export class Lawns {
     for (const member of group.members) {
       member.sprite.setVisible(on);
       member.held?.setVisible(on);
+      member.hat?.setVisible(on);
     }
     for (const prop of group.props) prop.sprite.setVisible(on);
     if (!on) {
       group.icon?.setVisible(false);
       for (const beat of group.beats) beat.image?.setVisible(false);
+      for (const note of group.notes) note.image.setVisible(false);
+      for (const slot of group.crowd) slot.image?.setVisible(false);
     }
   }
 
@@ -537,10 +828,13 @@ export class Lawns {
       if (member.student) this.staying.delete(studentKey(member.student));
       member.sprite.destroy();
       member.held?.destroy();
+      member.hat?.destroy();
     }
     for (const prop of group.props) prop.sprite.destroy();
     group.icon?.destroy();
     for (const beat of group.beats) beat.image?.destroy();
+    for (const note of group.notes) note.image.destroy();
+    for (const slot of group.crowd) slot.image?.destroy();
     if (this.groups.get(group.key) === group) this.groups.delete(group.key);
   }
 
@@ -588,11 +882,31 @@ export class Lawns {
       const part = t - pass;
       const from = n > 1 ? pass % n : 0;
       const to = n > 1 ? (pass + 1) % n : 0;
+      const party = group.kind === 'party';
+      const route = group.route;
       group.members.forEach((member, i) => {
         let x = member.x;
         let y = member.y;
         let moving = false;
-        if (member.pose === 'move') {
+        member.fade = Math.min(1, member.fade + dt / FADE_MS);
+        if (route) {
+          // Crossing the quad and back (L6), side by side, a little apart along the way too.
+          const dx = route.bx - route.ax;
+          const dy = route.by - route.ay;
+          const len = Math.max(0.001, Math.hypot(dx, dy));
+          const t = (seconds * STROLL_SPEED) / len + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * 2;
+          const leg = t % 2;
+          const f = leg < 1 ? leg : 2 - leg;
+          const side = (i - (n - 1) / 2) * 0.22;
+          const back = i * 0.06;
+          x = route.ax + dx * f - (dy / len) * side - (dx / len) * back;
+          y = route.ay + dy * f + (dx / len) * side - (dy / len) * back;
+          const sign = leg < 1 ? 1 : -1;
+          const v0 = this.iso.view(0, 0);
+          const v1 = this.iso.view(dx * sign, dy * sign);
+          member.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
+          moving = true;
+        } else if (member.pose === 'move') {
           const a = angleOf(i);
           x = group.x + Math.cos(a) * loop;
           y = group.y + Math.sin(a) * loop;
@@ -605,12 +919,12 @@ export class Lawns {
           moving = true;
         } else if ((group.kind === 'frisbee' || group.kind === 'catch' || group.kind === 'kick') && (i === from || i === to) && part < 0.25) {
           moving = true;
-        } else if (group.kind === 'dance') {
+        } else if (group.kind === 'dance' || (party && member.dancing)) {
           // Stepping on the spot to the beat, each a little off the others.
           moving = true;
         }
-        // Dancers sway from side to side and bob (DESIGN.md 64.3), each a beat off the others.
-        const sway = group.kind === 'dance' && !this.reduced ? swayAt(timeMs, i * 0.13 + member.phase) : null;
+        // Dancers sway from side to side and bob (DESIGN.md 64.3), each a beat off the others; at a party, most of them.
+        const sway = (group.kind === 'dance' || (party && member.dancing)) && !this.reduced ? swayAt(timeMs, i * 0.13 + member.phase) : null;
         const bob = sway ? sway.lift : 0;
         member.sprite.setRotation(sway ? sway.rotation : 0);
         const flipFrom = people.flip?.[member.direction];
@@ -640,7 +954,13 @@ export class Lawns {
         member.sprite.setFlipX(flip);
         const at = this.iso.toWorld(x, y);
         const depth = (this.iso.sum(x, y) - 1) * 4 + 2.5;
-        member.sprite.setPosition(at.x, at.y - bob).setDepth(depth).setAlpha(alpha);
+        member.sprite.setPosition(at.x, at.y - bob).setDepth(depth).setAlpha(alpha * member.fade);
+        if (member.hat) {
+          // On top of the head, leaning as they sway.
+          const tall = member.sprite.displayHeight * HAT_AT;
+          const lean = member.sprite.rotation;
+          member.hat.setPosition(at.x + Math.sin(lean) * tall, at.y - bob - Math.cos(lean) * tall).setRotation(lean).setDepth(depth + 0.03).setAlpha(alpha * member.fade);
+        }
         if (member.held) {
           // Held in front of them: at the lap for a book, up by the face for a phone, a guitar across them.
           const side = flip ? 1 : -1;
@@ -672,8 +992,76 @@ export class Lawns {
         prop.sprite.setPosition(at.x, at.y - lift).setDepth(depth).setAlpha(alpha);
         if (prop.moves === 'disc') prop.sprite.setRotation(Math.sin(seconds * 9) * 0.15);
       }
-      this.icons(group, timeMs, alpha);
+      if (party) {
+        this.notes(group, timeMs, alpha);
+        this.partyIcons(group, timeMs, alpha);
+      } else this.icons(group, timeMs, alpha);
     }
+  }
+
+  /** Music notes rising from a party's speaker (L6), one after another, drifting a little as they go. */
+  private notes(group: Group, timeMs: number, alpha: number): void {
+    const speaker = group.props[0];
+    if (!speaker || this.reduced) return;
+    if (timeMs >= group.noteAt && this.art.has('emote.music')) {
+      group.noteAt = timeMs + NOTE_EVERY_MS;
+      const image = this.image('emote.music');
+      if (image) {
+        image.setOrigin(0.5, 1).setScale(ICON_SCALE * 0.8);
+        group.notes.push({ image, born: timeMs, side: (group.notes.length % 2 === 0 ? 1 : -1) * (0.5 + mix(Math.floor(timeMs), 3) * 0.5) });
+      }
+    }
+    const top = speaker.sprite.y - speaker.sprite.displayHeight;
+    group.notes = group.notes.filter((note) => {
+      const age = (timeMs - note.born) / NOTE_MS;
+      if (age >= 1) {
+        note.image.destroy();
+        return false;
+      }
+      const fade = Math.min(1, age * 5, (1 - age) * 3);
+      note.image
+        .setVisible(true)
+        .setPosition(speaker.sprite.x + note.side * 8 * age + Math.sin(age * 9) * 2, top - NOTE_RISE * age)
+        .setDepth(speaker.sprite.depth + 0.5)
+        .setAlpha(alpha * fade);
+      return true;
+    });
+  }
+
+  /**
+   * Emotes over a party's crowd (L6), a few at a time: laughing, music, a high five, a heart. A cup only over someone
+   * whose own day says Party tonight: red for a student of 21 or over, a soda for a younger one.
+   */
+  private partyIcons(group: Group, timeMs: number, alpha: number): void {
+    if (group.beats.length > 0) {
+      this.drawBeats(group, timeMs, alpha);
+      return;
+    }
+    if (this.reduced || group.members.length === 0) return;
+    while (group.crowd.length < PARTY_ICONS) group.crowd.push({ image: null, on: 0, until: 0, next: timeMs + group.crowd.length * 700 });
+    group.crowd.forEach((slot, n) => {
+      if (timeMs >= slot.next) {
+        const h = hashInts(Math.floor(group.x * 13) + n, Math.floor(group.y * 13), Math.floor(timeMs / 250));
+        slot.on = h % group.members.length;
+        const member = group.members[slot.on]!;
+        const cup = member.cup && (h >>> 9) % 3 === 0 ? member.cup : null;
+        slot.image?.destroy();
+        slot.image = this.image(`emote.${cup ?? PARTY_EMOTES[(h >>> 12) % PARTY_EMOTES.length]!}`);
+        slot.image?.setOrigin(0.5, 1).setScale(ICON_SCALE);
+        slot.until = timeMs + ICON_MS;
+        slot.next = slot.until + PARTY_ICON_EVERY_MS[0] + ((h >>> 16) % (PARTY_ICON_EVERY_MS[1] - PARTY_ICON_EVERY_MS[0]));
+      }
+      const image = slot.image;
+      if (!image) return;
+      if (timeMs > slot.until) {
+        image.setVisible(false);
+        return;
+      }
+      const member = group.members[slot.on % group.members.length]!;
+      const fade = Math.min(1, (slot.until - timeMs) / 300, (timeMs - (slot.until - ICON_MS)) / 200);
+      const lift = member.hat ? ICON_LIFT + 7 : ICON_LIFT;
+      image.setVisible(true).setPosition(member.sprite.x, member.sprite.y - lift).setDepth(member.sprite.depth + 0.1).setAlpha(alpha * member.fade * Math.max(0, fade));
+    });
   }
 
   /** Now and then an emote over one of them: a laugh in a circle, music over a guitar, a heart between a couple. */
@@ -730,6 +1118,15 @@ export class Lawns {
       }
     }
     return found;
+  }
+
+  /** The figure of a student on the lawns, for the close-up's fade (L6), or null. */
+  spriteOf(key: string): Phaser.GameObjects.Image | null {
+    for (const group of this.groups.values()) {
+      if (group.leaving || group.hidden) continue;
+      for (const member of group.members) if (member.student && studentKey(member.student) === key) return member.sprite;
+    }
+    return null;
   }
 
   /** Where a student is and what they are doing, when they are on the lawns. */
@@ -795,7 +1192,9 @@ export class Lawns {
   /** A group of a kind whose spot is in view, for a crowd moment (DESIGN.md 64.4): a dance on a lawn. */
   groupIn(view: Phaser.Geom.Rectangle, kind: LawnKind): { x: number; y: number } | null {
     for (const group of this.groups.values()) {
-      if (group.leaving || group.kind !== kind || group.alpha < 1 || group.hidden) continue;
+      // A party is a dance too (L6): a dance-off happens there.
+      const same = group.kind === kind || (kind === 'dance' && group.kind === 'party');
+      if (group.leaving || !same || group.alpha < 1 || group.hidden) continue;
       const at = this.iso.toWorld(group.x, group.y);
       if (view.contains(at.x, at.y)) return { x: group.x, y: group.y };
     }
@@ -806,6 +1205,16 @@ export class Lawns {
   firstOf(kind: LawnKind): Stander | null {
     for (const group of this.groups.values()) if (!group.leaving && group.kind === kind && group.members[0] && group.alpha >= 0.5) return this.stander(group, group.members[0], 0);
     return null;
+  }
+
+  /** People on the lawns drawn inside a view now (L6's measure of the quad): sitting, playing, crossing, dancing. */
+  doingIn(view: Phaser.Geom.Rectangle): number {
+    let n = 0;
+    for (const group of this.groups.values()) {
+      if (group.leaving || group.hidden) continue;
+      for (const member of group.members) if (member.sprite.visible && member.sprite.alpha > 0.5 && view.contains(member.sprite.x, member.sprite.y)) n += 1;
+    }
+    return n;
   }
 
   /** People on the lawns now, and the groups by kind: for the dev readout. */
