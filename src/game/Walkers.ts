@@ -3,6 +3,7 @@ import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
+import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
 import { BIG_KEY, bigMomentOf, cheeringAt, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
@@ -179,6 +180,10 @@ const KISS_SHARE = 0.18;
 const FELT_KEPT = 4000;
 const TICKS_A_DAY = 24 * 60;
 const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1, turned: false };
+/** A scuffle's dust cloud (DESIGN.md 64.4): a moment after the argument, for this long. A fall into a fountain lasts this long. */
+export const DUST_FROM_MS = 900;
+export const DUST_MS = 2800;
+const FOUNTAIN_MS = 2600;
 /** What a big moment adds to the student's day on their card. */
 const BIG_WORDS: Record<BigMoment, string> = {
   heartbreak: 'Still upset about the break-up',
@@ -187,6 +192,7 @@ const BIG_WORDS: Record<BigMoment, string> = {
   argue: 'Had words with someone',
   bid: 'Got a bid from a chapter',
   fail: 'Got a bad grade back',
+  ring: 'Proposed at commencement',
 };
 /** Of those leaving a place to eat, the share carrying a tray or a cup; of those going to a quad, the share with a dog (DESIGN.md 64). */
 const CARRY_FROM_FOOD = 0.55;
@@ -303,6 +309,18 @@ interface Walker {
   /** Until when they laugh (bounce and shake) or cheer (jump), on the scene's clock. */
   laughUntil: number;
   cheerUntil: number;
+  /** In a crowd moment (DESIGN.md 64.4): how long to stand once at their place by it, the way on after, what they face. */
+  watchMs: number;
+  resume: Spot[] | null;
+  faceAt: { x: number; y: number } | null;
+  /** One of the moment's own people until then: not a watcher. */
+  momentUntil: number;
+  /** In a dust cloud, kneeling, or standing in a fountain, until then; `fallOnArrive` sends them in at the end of the way. */
+  hiddenUntil: number;
+  kneelUntil: number;
+  fallUntil: number;
+  fallOnArrive: boolean;
+  cropped: boolean;
   key: string | null;
   look: number;
   /** Where this trip began. */
@@ -364,6 +382,11 @@ function carried(from: Stop, to: Stop, period: DayPeriod): Extra {
   if (from.use === 'food' && Math.random() < CARRY_FROM_FOOD) return { prop: period === 'morning' || Math.random() < 0.4 ? 'room.cup' : 'prop.tray', held: true, hold: 'waist' };
   if (to.kind === 'quad' && period !== 'night' && Math.random() < DOG_WALKERS) return { prop: 'prop.dog' };
   return {};
+}
+
+/** The way to face from one point of the map to another, as the walk chooses it. */
+function facing(dx: number, dy: number): WalkDirection {
+  return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'se' : 'nw') : dy >= 0 ? 'sw' : 'ne';
 }
 
 /** Interests by name, in the order of the web's identity bits. */
@@ -1010,6 +1033,15 @@ export class Walkers {
       phase: Math.random(),
       laughUntil: 0,
       cheerUntil: 0,
+      watchMs: 0,
+      resume: null,
+      faceAt: null,
+      momentUntil: 0,
+      hiddenUntil: 0,
+      kneelUntil: 0,
+      fallUntil: 0,
+      fallOnArrive: false,
+      cropped: false,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
       look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
@@ -1181,6 +1213,7 @@ export class Walkers {
     if (walker.key !== null && walker.key === this.marked) this.ring?.setVisible(false);
     walker.sprite.setVisible(false);
     walker.sprite.setScale(1).setRotation(0);
+    if (walker.cropped) walker.sprite.setCrop();
     walker.prop?.destroy();
     if (walker.ring) {
       walker.ring.setVisible(false);
@@ -1199,7 +1232,13 @@ export class Walkers {
     const flipFrom = people.flip?.[direction];
     const facing = flipFrom ?? direction;
     const frame = walker.lingerMs > 0 || walker.talkMs > 0 ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
-    const key = `person.${walker.look}.${facing}.${frame}`;
+    let key = `person.${walker.look}.${facing}.${frame}`;
+    // On one knee to propose (DESIGN.md 64.4): the sitting pose, facing the way they face.
+    const kneeling = this.scene.time.now < walker.kneelUntil;
+    if (kneeling) {
+      const pose = `person.${walker.look}.pose.${direction === 'nw' || direction === 'ne' ? 'sit-nw' : 'sit-sw'}`;
+      if (this.art.has(pose)) key = pose;
+    }
     if (key !== walker.shownKey) {
       this.art.apply(walker.sprite, key);
       walker.shownKey = key;
@@ -1208,12 +1247,22 @@ export class Walkers {
     const at = this.iso.toWorld(spot.x, spot.y);
     // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
     const pose = this.poseOf(walker);
-    walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
+    if (kneeling) walker.sprite.setFlipX(direction === 'se' || direction === 'ne');
+    else walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
     if (walker.sprite.scaleY !== pose.squash) walker.sprite.setScale(1, pose.squash);
-    walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift);
+    // In a fountain (DESIGN.md 64.4): up to the waist in the water, as a swimmer is drawn.
+    const inWater = this.scene.time.now < walker.fallUntil;
+    if (inWater !== walker.cropped) {
+      walker.cropped = inWater;
+      if (inWater) walker.sprite.setCrop(0, 0, walker.sprite.frame.width, walker.sprite.frame.height * 0.62);
+      else walker.sprite.setCrop();
+    }
+    walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
-    walker.sprite.setAlpha(walker.alpha);
+    // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
+    const hidden = this.scene.time.now < walker.hiddenUntil;
+    walker.sprite.setAlpha(hidden ? 0 : walker.alpha);
     // A fan on the way to the game wears the school's colour: the figure itself is tinted, since none has a scarf.
     const fan = this.fanTint !== null && walker.kind === 'student' && walker.goal === this.stadiumStop;
     if (fan !== walker.tinted) {
@@ -1234,7 +1283,7 @@ export class Walkers {
       else if (walker.hold === 'back') walker.prop.setPosition(x - side * w * 0.3, y - h * 0.18).setDepth(walker.sprite.depth - 0.05);
       else if (walker.hold === 'face') walker.prop.setPosition(x + side * w * 0.22, y - h * 0.45).setDepth(walker.sprite.depth + 0.05);
       else walker.prop.setPosition(x + side * w * 0.2, y - h * 0.22).setDepth(walker.sprite.depth + 0.05);
-      walker.prop.setAlpha(walker.alpha);
+      walker.prop.setAlpha(hidden ? 0 : walker.alpha);
     } else if (walker.prop) {
       // Beside them: no figure in the pack can hold anything. A pennant moves in the wind. A dog faces the way they go.
       if (walker.dog) walker.prop.setFlipX(direction === 'se' || direction === 'ne');
@@ -1245,7 +1294,7 @@ export class Walkers {
     }
     // The ring at their feet in their feeling's colour (DESIGN.md 64.3), unless hidden or the frames are short.
     const ringKey = walker.feel?.ring ?? null;
-    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked && (walker.ring !== null || this.ringsShown < RINGS_AT_STEP[this.step]!);
+    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked && !inWater && (walker.ring !== null || this.ringsShown < RINGS_AT_STEP[this.step]!);
     if (showRing && !walker.ring) {
       this.ringsShown += 1;
       walker.ring = this.ringPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
@@ -1264,7 +1313,8 @@ export class Walkers {
       const depth = Math.ceil(this.iso.sum(walker.x, walker.y)) * 4 + 0.5;
       walker.ring.setPosition(at.x, at.y + 0.5);
       if (walker.ring.depth !== depth) walker.ring.setDepth(depth);
-      if (walker.ring.alpha !== walker.alpha * 0.95) walker.ring.setAlpha(walker.alpha * 0.95);
+      const ringAlpha = hidden ? 0 : walker.alpha * 0.95;
+      if (walker.ring.alpha !== ringAlpha) walker.ring.setAlpha(ringAlpha);
     }
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
@@ -1273,6 +1323,211 @@ export class Walkers {
       ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
       ring.setPosition(at.x, at.y).setDepth(walker.sprite.depth - 0.2).setVisible(true).setAlpha(walker.alpha);
     }
+  }
+
+  // ---------------------------------------------------- crowd moments --
+
+  /** Two students walking close in view, those who do not get on first (DESIGN.md 64.4), or null. */
+  private pairIn(view: Phaser.Geom.Rectangle): [Walker, Walker] | null {
+    const now = this.scene.time.now;
+    const free = this.walkers.filter((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.momentUntil < now && w.watchMs === 0 && this.inView(view, w.x, w.y, -40) && this.openAt(w.x, w.y));
+    const web = socialWeb.view;
+    let best: [Walker, Walker] | null = null;
+    let bestScore = -1;
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        const a = free[i]!;
+        const b = free[j]!;
+        if (Math.hypot(a.x - b.x, a.y - b.y) > 1.4) continue;
+        const tie = web ? tieOf(web, a.student!, b.student!) : null;
+        // Those who do not get on first, then where the most are about to see it.
+        const score = (tie && (tie.kind === KIND.rival || tie.kind === KIND.enemy) ? 100 : 0) + this.crowdNear((a.x + b.x) / 2, (a.y + b.y) / 2);
+        if (score > bestScore) {
+          best = [a, b];
+          bestScore = score;
+        }
+      }
+    }
+    return best;
+  }
+
+  /** True on open ground: a path, a lawn or grass all round, where no building hides a moment (DESIGN.md 64.4). */
+  private openAt(x: number, y: number): boolean {
+    const map = this.state?.map;
+    if (!map) return false;
+    let open = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const cx = Math.floor(x) + dx;
+        const cy = Math.floor(y) + dy;
+        if (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height) continue;
+        const kind = map.cells[cy * map.width + cx]!.kind;
+        if (kind === 'path' || kind === 'quad' || kind === 'empty') open += 1;
+      }
+    }
+    return open >= 8;
+  }
+
+  /** A couple out together in view, or null. */
+  private coupleIn(view: Phaser.Geom.Rectangle): [Walker, Walker] | null {
+    const now = this.scene.time.now;
+    const byParty = new Map<number, Walker[]>();
+    for (const w of this.walkers) {
+      if (!w.party || !this.partyCouple.has(w.party) || w.fading !== null || w.momentUntil >= now || !this.inView(view, w.x, w.y, -40) || !this.openAt(w.x, w.y)) continue;
+      const list = byParty.get(w.party);
+      if (list) list.push(w);
+      else byParty.set(w.party, [w]);
+    }
+    let best: [Walker, Walker] | null = null;
+    let most = -1;
+    for (const pair of byParty.values()) {
+      if (pair.length < 2) continue;
+      const near = this.crowdNear(pair[0]!.x, pair[0]!.y);
+      if (near > most) {
+        most = near;
+        best = [pair[0]!, pair[1]!];
+      }
+    }
+    return best;
+  }
+
+  /** How many students are walking within a moment's reach of a point. */
+  private crowdNear(x: number, y: number): number {
+    let n = 0;
+    for (const w of this.walkers) if (w.kind === 'student' && w.fading === null && Math.hypot(w.x - x, w.y - y) <= WATCH_REACH) n += 1;
+    return n;
+  }
+
+  /** A fountain in view with a student walking within a few cells of it, or null. */
+  private fountainIn(view: Phaser.Geom.Rectangle, fountains: ReadonlyArray<{ x: number; y: number }>): { at: { x: number; y: number }; walker: Walker } | null {
+    const now = this.scene.time.now;
+    for (const at of fountains) {
+      const world = this.iso.toWorld(at.x, at.y);
+      if (!view.contains(world.x, world.y)) continue;
+      const near = this.walkers.find((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.lingerMs <= 0 && w.talkMs <= 0 && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) < 3);
+      if (near) return { at, walker: near };
+    }
+    return null;
+  }
+
+  /** What the walkers could make a moment of now, in view. */
+  momentFacts(view: Phaser.Geom.Rectangle, fountains: ReadonlyArray<{ x: number; y: number }>): { pairs: boolean; couples: boolean; fountain: boolean } {
+    return { pairs: this.pairIn(view) !== null, couples: this.coupleIn(view) !== null, fountain: this.fountainIn(view, fountains) !== null };
+  }
+
+  /**
+   * Stage a moment made of walkers (DESIGN.md 64.4): a scuffle (two who meet, a big argument, then a dust cloud), a
+   * couple arguing, a proposal at commencement (one kneels, a ring, then a kiss on the cheek), or a fall into a
+   * fountain. Returns where it is, for the crowd to gather round, or null when there is nobody to make it of.
+   */
+  stage(kind: MomentKind, view: Phaser.Geom.Rectangle, fountains: ReadonlyArray<{ x: number; y: number }>, ms: number): { x: number; y: number } | null {
+    const now = this.scene.time.now;
+    const hold = (a: Walker, b: Walker): void => {
+      for (const [one, other] of [[a, b], [b, a]] as const) {
+        one.momentUntil = now + ms;
+        if (one.lingerMs > 0) one.lingerMs = Math.max(one.lingerMs, ms);
+        else one.talkMs = ms;
+        one.talkWith = other.student;
+        one.direction = facing(other.x - one.x, other.y - one.y);
+      }
+    };
+    const mid = (a: Walker, b: Walker): { x: number; y: number } => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    if (kind === 'dustup') {
+      const pair = this.pairIn(view);
+      if (!pair) return null;
+      const [a, b] = pair;
+      hold(a, b);
+      this.showBig(a, 'argue');
+      this.showIcon(b, 'anger', 400);
+      // Into the cloud and out again, and each off their own way with a sweat drop and a scowl.
+      a.hiddenUntil = b.hiddenUntil = now + DUST_FROM_MS + DUST_MS;
+      a.laughUntil = b.laughUntil = 0;
+      this.showIcon(a, 'sweat', DUST_FROM_MS + DUST_MS + 200);
+      this.showIcon(b, 'anger', DUST_FROM_MS + DUST_MS + 400);
+      if (this.onMemory) {
+        this.onMemory(a.student!, actorWords('dustup', this.first(b)));
+        this.onMemory(b.student!, actorWords('dustup', this.first(a)));
+      }
+      return mid(a, b);
+    }
+    if (kind === 'coupleFight' || kind === 'proposal') {
+      const pair = this.coupleIn(view);
+      if (!pair) return null;
+      const [a, b] = pair;
+      hold(a, b);
+      if (kind === 'coupleFight') {
+        this.showBig(a, 'argue');
+        this.showIcon(b, 'anger', 700);
+        this.showIcon(b, 'sadcloud', 3600);
+      } else {
+        a.kneelUntil = now + ms * 0.75;
+        this.showBig(a, 'ring', 300);
+        this.showBig(b, 'kiss', 3400);
+        b.cheerUntil = now + 3400 + 2000;
+      }
+      if (this.onMemory) {
+        this.onMemory(a.student!, actorWords(kind, this.first(b), true));
+        this.onMemory(b.student!, actorWords(kind, this.first(a), false));
+      }
+      return mid(a, b);
+    }
+    if (kind === 'fountain') {
+      const found = this.fountainIn(view, fountains);
+      if (!found) return null;
+      const { at, walker } = found;
+      walker.momentUntil = now + ms;
+      walker.resume = walker.route.slice(walker.leg).map((one) => ({ ...one }));
+      if (walker.resume.length === 0) walker.resume = null;
+      walker.route = [{ x: walker.x, y: walker.y }, { x: at.x, y: at.y }];
+      walker.leg = 1;
+      walker.watchMs = FOUNTAIN_MS;
+      walker.fallOnArrive = true;
+      walker.faceAt = null;
+      if (this.onMemory) this.onMemory(walker.student!, actorWords('fountain', null));
+      return at;
+    }
+    return null;
+  }
+
+  /**
+   * The crowd takes it in (DESIGN.md 64.4): students near enough walk over and stand in a ring round it, facing it, a
+   * few at most by crowd step; others near stop where they are and turn; each reacts in turn, some cheer. Returns how
+   * many watch.
+   */
+  watch(at: { x: number; y: number }, kind: MomentKind, ms: number): number {
+    const now = this.scene.time.now;
+    const view = this.scene.cameras.main.worldView;
+    const near = this.walkers
+      .filter((w) => w.kind === 'student' && w.student && w.fading === null && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) <= WATCH_REACH && this.inView(view, w.x, w.y, 0))
+      .sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+    const most = WATCHERS_AT_STEP[this.step] ?? 0;
+    const ring = Math.max(3, Math.min(most, near.length));
+    const reaction = WATCH_REACTIONS[kind];
+    near.forEach((w, i) => {
+      w.faceAt = { x: at.x, y: at.y };
+      w.momentUntil = now + ms;
+      if (i < most && !w.party) {
+        // Over to a place in the ring round it.
+        const angle = (i / ring) * Math.PI * 2 + 0.4;
+        const r = 1.05 + (i % 2) * 0.3;
+        const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
+        w.resume = resume.length > 0 ? resume : null;
+        w.route = [{ x: w.x, y: w.y }, { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r }];
+        w.leg = 1;
+        w.lingerMs = 0;
+        w.talkMs = 0;
+        w.watchMs = Math.max(1500, ms - 900);
+      } else {
+        // Near enough: they stop where they are and turn to look.
+        if (w.lingerMs > 0) w.lingerMs = Math.max(w.lingerMs, ms * 0.7);
+        else w.talkMs = ms * 0.7;
+        w.direction = facing(at.x - w.x, at.y - w.y);
+      }
+      this.showIcon(w, reaction.emotes[i % reaction.emotes.length]!, 900 + i * 420);
+      if (reaction.cheer && i % 2 === 0) w.cheerUntil = now + 1200 + i * 200 + 2400;
+      if (this.onMemory) this.onMemory(w.student!, watchWords(kind));
+    });
+    return near.length;
   }
 
   /** The body this moment: laughing, cheering, a fan on game day, or as they feel; still with Reduce effects. */
@@ -1596,7 +1851,13 @@ export class Walkers {
         if (walker.talkMs <= 0) walker.talkWith = null;
       } else if (walker.lingerMs > 0) {
         walker.lingerMs -= dt;
-        if (walker.lingerMs <= 0 && walker.goal) {
+        if (walker.lingerMs <= 0 && walker.resume) {
+          // Done watching (DESIGN.md 64.4): on along the way they were going.
+          walker.route = [{ x: walker.x, y: walker.y }, ...walker.resume];
+          walker.leg = 1;
+          walker.resume = null;
+          walker.faceAt = null;
+        } else if (walker.lingerMs <= 0 && walker.goal) {
           // Rested on the lawn. Off to the next place: a party goes on together, where the first of them chose.
           const known = walker.party ? this.partyNext.get(walker.party) : undefined;
           const shared = known && known.from === walker.goal ? known : undefined;
@@ -1652,7 +1913,18 @@ export class Walkers {
           }
         }
         if (!waiting) walker.stride += dt * (walker.pace / PACE);
-        if (walker.leg >= walker.route.length && walker.fading !== 'out') {
+        if (walker.leg >= walker.route.length && walker.fading !== 'out' && walker.watchMs > 0) {
+          // At their place by a moment (DESIGN.md 64.4): they stand and watch it, facing it; or they are in the fountain.
+          walker.lingerMs = walker.watchMs;
+          walker.watchMs = 0;
+          if (walker.faceAt) walker.direction = facing(walker.faceAt.x - walker.x, walker.faceAt.y - walker.y);
+          if (walker.fallOnArrive) {
+            walker.fallOnArrive = false;
+            walker.fallUntil = this.scene.time.now + walker.lingerMs;
+            this.showIcon(walker, 'splash');
+            this.showIcon(walker, 'sweat', 1400);
+          }
+        } else if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           const stays = walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play');
           // A party stays as long as each other: the same while for all of them, from who they are together.

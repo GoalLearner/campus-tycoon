@@ -142,6 +142,17 @@
     1
    ]
   },
+  "emote.big-ring": {
+   "frame": "emote.big-ring",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.big-win": {
    "frame": "emote.big-win",
    "anchor": [
@@ -246,6 +257,17 @@
    "anchor": [
     15,
     -3
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.dustup": {
+   "frame": "emote.dustup",
+   "anchor": [
+    41,
+    35
    ],
    "footprint": [
     1,
@@ -466,6 +488,17 @@
    "anchor": [
     14,
     -8
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.splash": {
+   "frame": "emote.splash",
+   "anchor": [
+    11,
+    -14
    ],
    "footprint": [
     1,

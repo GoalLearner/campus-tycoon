@@ -510,6 +510,40 @@ def in_fail(c):
     body(c, f, RED, RED_RIM, None, 14, 10)
 
 
+def in_ring(c):
+    # An engagement ring: a gold band and a stone, for a proposal at commencement (DESIGN.md 64.4).
+    band = ImageChops.subtract(ellipse((372, 360, 652, 620)), ellipse((420, 400, 604, 580)))
+    body(c, band, GOLD, GOLD_RIM, (400, 400, 430, 440), INNER, INNER_RIM)
+    stone = polygon([(512, 230), (580, 290), (512, 380), (444, 290)])
+    body(c, stone, (190, 236, 255, 255), (110, 180, 230, 255), (480, 260, 505, 290), INNER, INNER_RIM)
+
+
+# The living campus, L3 (DESIGN.md 64.4): a scuffle as the cartoons draw one, a cloud of dust with stars and a
+# shoe or two flying out of it; and the splash when someone falls into a fountain. No one is hurt in either.
+
+def dustup():
+    c = blank('RGBA')
+    puffs = [(80, 330, 420, 670), (250, 180, 600, 530), (450, 210, 800, 560), (600, 360, 950, 700), (230, 450, 800, 830)]
+    body(c, union(*[ellipse(b) for b in puffs]), (236, 226, 206, 255), (196, 180, 152, 255), (300, 240, 420, 320))
+    for cx, cy, r in ((300, 300, 90), (720, 330, 70), (520, 700, 60)):
+        body(c, polygon(star_points(cx, cy, r, r * 0.42, 5)), GOLD, GOLD_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for x0, y0, x1, y1 in ((70, 250, 10, 190), (960, 300, 1010, 240), (110, 760, 40, 830), (930, 760, 1000, 820)):
+        d.line([(x0, y0), (x1, y1)], fill=PLUM, width=40)
+    # A sneaker kicked up out of the cloud.
+    shoe = union(rounded((600, 90, 800, 170), 40), rounded((600, 150, 830, 200), 20))
+    body(c, shoe, RED, RED_RIM, None, INNER, INNER_RIM)
+    return c
+
+
+def splash():
+    c = blank('RGBA')
+    for x, y, r in ((300, 560, 80), (512, 420, 110), (724, 560, 80), (400, 300, 55), (624, 300, 55)):
+        drop = union(ellipse((x - r, y - r * 0.2, x + r, y + r * 1.6)), polygon([(x - r * 0.9, y + r * 0.4), (x + r * 0.9, y + r * 0.4), (x, y - r * 1.4)]))
+        body(c, drop, DROP, DROP_RIM, (x - r * 0.5, y, x - r * 0.1, y + r * 0.5))
+    return c
+
+
 BIGS = {
     'big-heartbreak': big(BLUE, BLUE_RIM, inside(heartbreak, 0.56, (512, 450))),
     'big-kiss': big(PINK, PINK_RIM, in_kiss),
@@ -517,6 +551,7 @@ BIGS = {
     'big-argue': big(RED, RED_RIM, in_argue),
     'big-bid': big(VIOLET, VIOLET_RIM, in_bid),
     'big-fail': big(GREY, GREY_RIM, in_fail),
+    'big-ring': big(GOLD, GOLD_RIM, in_ring),
 }
 
 
@@ -575,6 +610,8 @@ EMOTES = {
     'hug': hug,
     **{name: chat(inside) for name, inside in CHATS.items()},
     **BIGS,
+    'dustup': dustup,
+    'splash': splash,
     **{f'mood-{name}': mood_ring(*colours) for name, colours in MOODS.items()},
 }
 

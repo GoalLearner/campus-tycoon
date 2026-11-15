@@ -109,6 +109,8 @@ interface Group {
   iconOn: number;
   iconAt: number;
   iconUntil: number;
+  /** A crowd moment's bubbles over them (DESIGN.md 64.4), in turn: a proposal's ring then a kiss, an argument. */
+  beats: Beat[];
   /** Formed before the social web answered, from the seed alone: it gives way to friends and couples once it has. */
   plain: boolean;
   /** A group that keeps still, drawn in full: nothing about it changes until it leaves, so its frames are skipped. */
@@ -119,6 +121,16 @@ interface Group {
 
 /** How far beyond the screen, in world pixels, a group is still drawn: a jog's loop and a thrown ball stay inside it. */
 const OFF_PAD = 70;
+
+/** One bubble of a crowd moment over a member of a group: which, on whom, from when until when, and big or not. */
+interface Beat {
+  key: string;
+  on: number;
+  from: number;
+  until: number;
+  big: boolean;
+  image: Phaser.GameObjects.Image | null;
+}
 
 /** The kinds where nobody moves and nothing flies: once faded in they are left as drawn (DESIGN.md 64.2, frames). */
 const STILL: ReadonlySet<LawnKind> = new Set<LawnKind>(['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug']);
@@ -150,6 +162,8 @@ export class Lawns {
   private exams = false;
   private reduced = false;
   private recountAt = 0;
+  /** The update's clock. */
+  private nowMs = 0;
   private drawn = 0;
 
   constructor(
@@ -492,7 +506,7 @@ export class Lawns {
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
       if (count + members.length > budget && count > 0) continue;
-      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false };
+      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [] };
       this.form(group, members);
       this.groups.set(key, group);
       keep.add(key);
@@ -511,7 +525,10 @@ export class Lawns {
       member.held?.setVisible(on);
     }
     for (const prop of group.props) prop.sprite.setVisible(on);
-    if (!on) group.icon?.setVisible(false);
+    if (!on) {
+      group.icon?.setVisible(false);
+      for (const beat of group.beats) beat.image?.setVisible(false);
+    }
   }
 
   private release(group: Group): void {
@@ -522,6 +539,7 @@ export class Lawns {
     }
     for (const prop of group.props) prop.sprite.destroy();
     group.icon?.destroy();
+    for (const beat of group.beats) beat.image?.destroy();
     if (this.groups.get(group.key) === group) this.groups.delete(group.key);
   }
 
@@ -530,6 +548,7 @@ export class Lawns {
   update(timeMs: number, deltaMs: number): void {
     const people = this.people;
     if (!people) return;
+    this.nowMs = timeMs;
     if (timeMs >= this.recountAt) {
       this.recountAt = timeMs + RECOUNT_MS;
       this.recount(this.scene.cameras.main.worldView);
@@ -658,6 +677,10 @@ export class Lawns {
 
   /** Now and then an emote over one of them: a laugh in a circle, music over a guitar, a heart between a couple. */
   private icons(group: Group, timeMs: number, alpha: number): void {
+    if (group.beats.length > 0) {
+      this.drawBeats(group, timeMs, alpha);
+      return;
+    }
     const keys = ICONS[group.kind];
     if (!keys || this.reduced || group.members.length === 0) return;
     if (timeMs >= group.iconAt) {
@@ -713,6 +736,67 @@ export class Lawns {
     for (const group of this.groups.values()) {
       if (group.leaving) continue;
       for (const member of group.members) if (member.student && studentKey(member.student) === key) return this.stander(group, member, 0);
+    }
+    return null;
+  }
+
+  /**
+   * A couple sitting on the grass in view becomes a crowd moment (DESIGN.md 64.4): a proposal (a ring, then a kiss on
+   * the cheek) or an argument. Where it is, or null.
+   */
+  stageCouple(view: Phaser.Geom.Rectangle, kind: 'proposal' | 'coupleFight'): { x: number; y: number } | null {
+    const at = this.groupIn(view, 'couple');
+    if (!at) return null;
+    const group = [...this.groups.values()].find((one) => one.kind === 'couple' && !one.leaving && one.x === at.x && one.y === at.y);
+    if (!group || group.members.length < 2) return null;
+    const now = this.nowMs;
+    group.icon?.setVisible(false);
+    group.beats =
+      kind === 'proposal'
+        ? [
+            { key: 'emote.big-ring', on: 0, from: now + 300, until: now + 2900, big: true, image: null },
+            { key: 'emote.big-kiss', on: 1, from: now + 3400, until: now + 6000, big: true, image: null },
+          ]
+        : [
+            { key: 'emote.big-argue', on: 0, from: now, until: now + 2600, big: true, image: null },
+            { key: 'emote.anger', on: 1, from: now + 700, until: now + 2400, big: false, image: null },
+            { key: 'emote.sadcloud', on: 1, from: now + 3600, until: now + 5300, big: false, image: null },
+          ];
+    return at;
+  }
+
+  /** A crowd moment's bubbles, each in its turn, popped in when big; done, the group's own emotes come back. */
+  private drawBeats(group: Group, timeMs: number, alpha: number): void {
+    for (const beat of group.beats) {
+      const live = timeMs >= beat.from && timeMs < beat.until;
+      if (live && !beat.image) {
+        beat.image = this.image(beat.key);
+        beat.image?.setOrigin(0.5, 1);
+      }
+      if (!beat.image) continue;
+      const member = group.members[beat.on % group.members.length]!;
+      const age = timeMs - beat.from;
+      const scale = beat.big ? 0.47 * (age < 160 ? 0.6 + (0.5 * age) / 160 : age < 260 ? 1.1 - (0.1 * (age - 160)) / 100 : 1) : ICON_SCALE;
+      const fade = Math.min(1, age / 150, (beat.until - timeMs) / 200);
+      beat.image
+        .setVisible(live)
+        .setScale(scale)
+        .setPosition(member.sprite.x, member.sprite.y - (beat.big ? ICON_LIFT + 2 : ICON_LIFT))
+        .setDepth(member.sprite.depth + 0.2)
+        .setAlpha(alpha * Math.max(0, fade));
+    }
+    if (group.beats.every((beat) => timeMs >= beat.until)) {
+      for (const beat of group.beats) beat.image?.destroy();
+      group.beats = [];
+    }
+  }
+
+  /** A group of a kind whose spot is in view, for a crowd moment (DESIGN.md 64.4): a dance on a lawn. */
+  groupIn(view: Phaser.Geom.Rectangle, kind: LawnKind): { x: number; y: number } | null {
+    for (const group of this.groups.values()) {
+      if (group.leaving || group.kind !== kind || group.alpha < 1 || group.hidden) continue;
+      const at = this.iso.toWorld(group.x, group.y);
+      if (view.contains(at.x, at.y)) return { x: group.x, y: group.y };
     }
     return null;
   }

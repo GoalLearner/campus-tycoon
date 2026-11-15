@@ -68,6 +68,8 @@ const HOP_S = 0.9;
 const HOP_PX = 3;
 const CHEER_S = 1.5;
 const CHEERS = ['emote.highfive', 'emote.fistbump', 'emote.exclaim'] as const;
+/** A game-winning shot (DESIGN.md 64.4): the winners jump twice as high for this long, under a big trophy bubble. */
+const BIG_POINT_S = 3.2;
 
 type Role = ActivityRole;
 /** The order of the roles, for the seeded pick of who stands where. */
@@ -134,6 +136,10 @@ export class Activity {
   private reduced = false;
   /** The cheer over a court or a field after a point, by the building's id. */
   private cheers = new Map<number, Phaser.GameObjects.Image>();
+  /** A game-winning shot on a court or the field, by the building's id: the second it was won. */
+  private bigs = new Map<number, number>();
+  /** The update's clock, in seconds. */
+  private seconds = 0;
   private step = 2;
   private students = 0;
   private studyShare = 0;
@@ -494,13 +500,32 @@ export class Activity {
     return { x: site.placed.x, y: site.placed.y, w: site.placed.w, h: site.placed.h };
   }
 
+  /** A game on a court or the field in view, with four or more playing, for a crowd moment (DESIGN.md 64.4). */
+  gameIn(view: Phaser.Geom.Rectangle): { x: number; y: number; id: number } | null {
+    for (const site of this.sites) {
+      if (site.figures.filter((figure) => !figure.leaving && (figure.role === 'court' || figure.role === 'field')).length < 4) continue;
+      const x = site.placed.x + site.placed.w / 2;
+      const y = site.placed.y + site.placed.h / 2;
+      const at = this.iso.toWorld(x, y);
+      if (view.contains(at.x, at.y)) return { x, y, id: site.placed.id };
+    }
+    return null;
+  }
+
+  /** The game-winning shot: the winning side jumps and a trophy goes up over them. */
+  bigPoint(id: number): void {
+    this.bigs.set(id, this.seconds);
+  }
+
   /** The point being played on a court or the field: its number and the seconds since the last one was won. */
-  private pointAt(site: Site, role: ActivityRole, seconds: number): { n: number; part: number } | null {
+  private pointAt(site: Site, role: ActivityRole, seconds: number): { n: number; part: number; big: boolean } | null {
     if (this.reduced || (role !== 'court' && role !== 'field')) return null;
+    const big = this.bigs.get(site.placed.id);
+    if (big !== undefined && seconds - big >= 0 && seconds - big < BIG_POINT_S) return { n: 0, part: seconds - big, big: true };
     const every = POINT_S[role];
     const t = seconds + mix(site.placed.id, 11) * every;
     const n = Math.floor(t / every);
-    return { n, part: t - n * every };
+    return { n, part: t - n * every, big: false };
   }
 
   /** A cheer over one of the side that won the point, for a moment after it. */
@@ -509,11 +534,12 @@ export class Activity {
     const point = players[0] ? this.pointAt(site, players[0].role, seconds) : null;
     const winners = point ? players.filter((figure) => figure.slot % 2 === point.n % 2) : [];
     let icon = this.cheers.get(site.placed.id);
-    if (!point || point.part >= CHEER_S || winners.length === 0) {
+    const lasts = point?.big ? BIG_POINT_S : CHEER_S;
+    if (!point || point.part >= lasts || winners.length === 0) {
       icon?.setVisible(false);
       return;
     }
-    const key = CHEERS[point.n % CHEERS.length]!;
+    const key = point.big ? 'emote.big-win' : CHEERS[point.n % CHEERS.length]!;
     if (!this.art.has(key)) return;
     if (!icon) {
       icon = this.scene.add.image(0, 0, '__DEFAULT');
@@ -521,10 +547,10 @@ export class Activity {
     }
     if (icon.getData('key') !== key) {
       this.art.apply(icon, key);
-      icon.setOrigin(0.5, 1).setScale(0.5).setData('key', key);
+      icon.setOrigin(0.5, 1).setScale(point.big ? 0.47 : 0.5).setData('key', key);
     }
     const who = winners[point.n % winners.length]!;
-    const fade = Math.min(1, (CHEER_S - point.part) / 0.3);
+    const fade = Math.min(1, (lasts - point.part) / 0.3);
     // Over the whole game, so a player in front does not hide it.
     const top = players.reduce((most, figure) => Math.max(most, figure.sprite.depth), who.sprite.depth);
     icon.setVisible(true).setPosition(who.sprite.x, who.sprite.y - 44).setDepth(top + 0.1).setAlpha(Math.max(0, who.alpha) * fade);
@@ -543,6 +569,7 @@ export class Activity {
   update(time: number, deltaMs: number): void {
     const people = this.people;
     if (!people) return;
+    this.seconds = time / 1000;
     const dt = Math.min(deltaMs, 100);
     if (time >= this.recountAt) {
       this.recountAt = time + RECOUNT_MS;
@@ -600,7 +627,8 @@ export class Activity {
         const sink = figure.role === 'swimmer' ? figure.sprite.displayHeight * 0.5 : 0;
         // The side that won the point hops (DESIGN.md 64).
         const point = this.pointAt(site, figure.role, seconds);
-        const hop = point && figure.slot % 2 === point.n % 2 && point.part < HOP_S ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX : 0;
+        const hopS = point?.big ? BIG_POINT_S - 0.4 : HOP_S;
+        const hop = point && figure.slot % 2 === point.n % 2 && point.part < hopS ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX * (point.big ? 1.8 : 1) : 0;
         figure.sprite.setPosition(at.x, at.y + sink - hop);
         const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
         // A line on a side nearer the viewer stands in front of its building, however wide the building is.
