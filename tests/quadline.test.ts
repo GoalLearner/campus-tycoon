@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { commentsFor, feedOf, followersOf, postCounts, postSubject, postWords, trendingOf } from '../src/app/quadline';
 import { idIn, viewOf } from '../src/app/socialView';
-import { advance, newGame, type StudentRef } from '../src/sim';
+import { advance, applyAction, landRankGoals, newGame, previewPlace, type GameState, type StudentRef } from '../src/sim';
 import { POST, POST_FIELDS, POSTS_KEPT, VIRAL_KEPT } from '../src/sim/config/quadline';
 import { KIND, SLOTS, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { FIELDS, postsOf, type Post } from '../src/sim/systems/quadline';
 import { classYearOf, firstNameOf, socialProfile } from '../src/sim/systems/students';
+import { TRAIT, traitOf } from '../src/sim/systems/identity';
+import { nextGreekDay } from '../src/sim/systems/greek';
 import { catchUp, decodeWeb, encodeWeb, HAPPENING_FIELDS, idOf, newWeb, webWeekOf, type Web } from '../src/sim/systems/web';
-import { DAY, T0 } from './helpers';
+import { DAY, MIN, T0 } from './helpers';
 
 /**
  * Quadline, the campus app (DESIGN.md 63.13, social stop 9): posts made as the web lives each game week, from what
@@ -122,6 +124,58 @@ describe('posts', () => {
     expect(per('attention')).toBeGreaterThan(per('homesick') * 2);
     expect(per('party')).toBeGreaterThan(per('scholar'));
   });
+
+  it('come rarely from the shy (the spec’s Wallflowers), and most from the outgoing', () => {
+    const posted = [0, 0, 0, 0];
+    const people = [0, 0, 0, 0];
+    for (const post of EACH.flat()) posted[traitOf(WEB.identity[idOf(WEB, post.author)]!, TRAIT.outgoing)]! += 1;
+    for (let id = 0; id < WEB.n; id++) if (WEB.year[id]! >= 0) people[traitOf(WEB.identity[id]!, TRAIT.outgoing)]! += 1;
+    const per = posted.map((n, i) => n / Math.max(1, people[i]!));
+    expect(per[0]!).toBeLessThan(per[2]! / 2);
+    expect(per[3]!).toBeGreaterThan(per[0]! * 2);
+  });
+
+  it('take in a class or a kind of professor, never a named one, and the team’s news from its athletes', () => {
+    const all = EACH.flat();
+    const professor = all.filter((post) => post.kind === POST.professor);
+    expect(professor.length).toBeGreaterThan(0);
+    for (const post of professor) expect(postWords(MODEL, post).text).toMatch(/professor|class|lecture/);
+    const team = all.filter((post) => post.kind === POST.teamNews);
+    expect(team.length).toBeGreaterThan(0);
+    for (const post of team) expect(socialProfile(MODEL, post.author)?.team).toBe(true);
+  });
+
+  it('bring Greek Row news from its members: house life, and philanthropy day when it is near', () => {
+    let state: GameState = structuredClone(MODEL);
+    state.field.rank = 120;
+    state.field.rankYear = 1;
+    landRankGoals(state, []);
+    state.money.cash = 2_000_000_000;
+    for (let built = 0; built < 3; built++) {
+      let at: [number, number] | null = null;
+      for (let y = 0; y < state.map.height && !at; y++) for (let x = 0; x < state.map.width && !at; x++) if (previewPlace(state, 'chapterHouse', x, y).problem === null) at = [x, y];
+      const result = applyAction(state, { type: 'place', building: 'chapterHouse', x: at![0], y: at![1] });
+      if (!result.ok) throw new Error(result.error);
+      state = result.state;
+    }
+    const rush = nextGreekDay(state, 0)!;
+    state = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + (rush - state.clock.tick + 2) * MIN).state;
+    const web = newWeb(state.seed, 1024);
+    catchUp(web, state, webWeekOf(state));
+    const posts: Post[] = [];
+    for (let w = 1; w <= 6; w++) {
+      const before = web.postNext;
+      catchUp(web, state, webWeekOf(state) + w);
+      posts.push(...postsOf(web.posts, web.viral).slice(0, web.postNext - before));
+    }
+    const greek = posts.filter((post) => post.kind === POST.greekNews);
+    expect(greek.length).toBeGreaterThan(0);
+    for (const post of greek) {
+      const chapter = socialProfile(state, post.author)?.chapter;
+      expect(chapter).toBeTruthy();
+      expect(postWords(state, post).text).not.toMatch(/\{\w+\}/);
+    }
+  }, 120_000);
 
   it('read every week of the calendar and the campus: the weakest spot, the weather, the term', () => {
     const kinds = new Set(EACH.flat().map((post) => post.kind));
