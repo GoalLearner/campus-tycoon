@@ -1499,11 +1499,25 @@ export class Walkers {
         leader.goal = lawn;
       }
     }
+    // A couple out together in the evening make it a date: somewhere to eat, a bench or a lawn (63.11).
+    const suitsDate = (stop: Stop): boolean => stop.kind === 'quad' || (stop.kind === 'place' && (stop.use === 'food' || stop.use === 'seat'));
+    const dateMood = couple && evening && roll < DATE_WITH_PARTNER;
+    if (dateMood && !suitsDate(leader.goal)) {
+      const spots = this.stops.filter((stop) => stop !== leader.from && stop.kind === 'place' && stop.use === 'food');
+      const spot = spots[Math.floor(Math.random() * spots.length)];
+      const route = spot ? this.routeBetween(leader.from, spot) : null;
+      if (spot && route) {
+        route[0] = { x: leader.x, y: leader.y };
+        leader.route = route;
+        leader.leg = 1;
+        leader.goal = spot;
+      }
+    }
     const goal = leader.goal;
-    const date = couple && evening && (goal.kind === 'quad' || (goal.kind === 'place' && goal.use === 'food'));
+    const date = dateMood && suitsDate(goal);
     const partyNight = partyMood && goal.kind === 'quad';
     const want = couple
-      ? roll < (date ? DATE_WITH_PARTNER : WITH_PARTNER)
+      ? date || roll < WITH_PARTNER
         ? 1
         : 0
       : partyNight

@@ -561,7 +561,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     facesKey = key;
     faces.textContent = '';
     // Two of one first name on a card get their surname's first letter: "Sabrina M." and "Sabrina K.".
-    const firsts = firstNamesOf(state, list.map((one) => one.ref));
+    // Told apart from each other and from the student themself.
+    const firsts = firstNamesOf(state, [ref, ...list.map((one) => one.ref)]).slice(1);
     for (const [i, one] of list.entries()) {
       const first = firsts[i]!;
       const button = el('button', `student-friend ${one.role}`);

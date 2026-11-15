@@ -2365,7 +2365,17 @@ export function mountUi(root: HTMLElement): void {
           body.append(line);
         }
         body.append(el('div', 'money-head', 'People'));
-        for (const [role, who] of mc.people) {
+        for (const [role, who, ref] of mc.people) {
+          // A real student (DESIGN.md 63.11) opens their card.
+          if (ref) {
+            const line = button('', 'size-row go', () => {
+              close();
+              session.openStudent(ref);
+            });
+            line.append(el('span', '', role), el('span', 'size-value', `${who} ›`));
+            body.append(line);
+            continue;
+          }
           const line = el('div', 'size-row');
           line.append(el('span', '', role), el('span', 'size-value', who));
           body.append(line);

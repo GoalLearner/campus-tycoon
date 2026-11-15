@@ -7,7 +7,7 @@ import { hashInts } from '../sim/rng';
 import { homeGameNow } from '../sim/systems/football';
 import { dayRead } from '../sim/systems/season';
 import { firstNameOf } from '../sim/systems/students';
-import { idIn, refIn, type WebView } from './socialView';
+import { firstNamesOf, idIn, refIn, type WebView } from './socialView';
 
 /**
  * What a student is feeling right now, as the Sims show it (DESIGN.md 63.7): small reasons, each pulling towards an
@@ -96,7 +96,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
       const kind = view.kind[s]!;
       const strength = view.strength[s]!;
       const feeling = view.feeling[s]!;
-      const first = (): string => firstNameOf(state, refIn(view, b));
+      // Told apart from the student themself: "Picked on by Lou R." on Lou S.'s card.
+      const first = (): string => firstNamesOf(state, [ref, refIn(view, b)])[1]!;
       if (kind === KIND.dating || kind === KIND.exclusive || kind === KIND.longterm) {
         partnered = true;
         if (feeling === FEEL.complicated) add('tense', `It's complicated with ${first()}`, 2.5);

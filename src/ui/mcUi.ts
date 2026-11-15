@@ -30,7 +30,8 @@ export interface McView {
     needs: Array<{ name: string; level: number; low: boolean }>;
     plan: Array<{ text: string; done: boolean }>;
     goals: Array<[string, string]>;
-    people: Array<[string, string]>;
+    /** Each with the student they are, when their story cast a real one (DESIGN.md 63.11): tapping opens their card. */
+    people: Array<[string, string, { entryYear: number; index: number } | null]>;
     timeline: string[];
     /** The Story tab (DESIGN.md 53.3): chapters, newest first, each told as scenes. */
     chapters: Array<{ title: string; open: boolean; scenes: Array<{ text: string; chose: string; outcome: string; odds: string; good: boolean }> }>;
@@ -74,7 +75,7 @@ export function mcView(state: GameState): McView {
       needs: NEEDS.map((need) => ({ name: NEED_NAMES[need], level: Math.round(mc.needs[need]), low: mc.needs[need] < NEED_LOW })),
       plan: (mc.plan?.items ?? []).map((item) => ({ text: `${ACTIVITIES[item.activity].name}: ${item.why}`, done: item.done })),
       goals: goalStatus(mc).map((goal) => [goal.name, goal.status]),
-      people: mc.cast.map((one) => [`${ROLE[one.role] ?? one.role}`, `${one.name} · ${one.traits.map((trait) => CAST_TRAITS[trait].name.toLowerCase()).join(', ')} · ${Math.round(one.closeness)} of 100`]),
+      people: mc.cast.map((one) => [`${ROLE[one.role] ?? one.role}`, `${one.name} · ${one.traits.map((trait) => CAST_TRAITS[trait].name.toLowerCase()).join(', ')} · ${Math.round(one.closeness)} of 100`, one.ref ?? null]),
       timeline: mc.memory.slice(-10).reverse().map((entry) => entry.text),
       chapters: (story?.chapters ?? [])
         .filter((chapter) => chapter.name === mc.name && chapter.scenes.length > 0)
