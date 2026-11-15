@@ -1,3 +1,4 @@
+import { trusteesDip } from './chaos';
 import {
   ARC_CHANCE,
   ARC_STEP,
@@ -259,6 +260,12 @@ export function academicInputs(state: GameState): AcademicInput[] {
   // The research labs (DESIGN.md 49) lift Reputation a little, once it exists, and say so on its line.
   const labs = labReputation(state);
   const reputation = inputs.find((input) => input.id === 'reputation');
+  // A trustees' letter ignored (DESIGN.md 68.4) takes a little off it for a while.
+  const dip = trusteesDip(state);
+  if (dip > 0 && reputation && reputation.level !== null) {
+    reputation.level = Math.max(0, reputation.level - dip);
+    reputation.detail = `${reputation.detail}. ${dip} ${dip === 1 ? 'point' : 'points'} lower for a letter from the trustees that went unanswered`;
+  }
   if (labs > 0 && reputation && reputation.level !== null) {
     reputation.level = Math.min(100, reputation.level + labs);
     reputation.detail = `${reputation.detail}. The research labs add ${labs} ${labs === 1 ? 'point' : 'points'}`;

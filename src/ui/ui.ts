@@ -1817,6 +1817,8 @@ export function mountUi(root: HTMLElement): void {
             value.prepend(mark);
             top.append(el('span', 'score-name', row.name), value);
             box.append(top, el('p', 'fine', row.limit));
+            // The Chaos meter's next causes and a letter from the trustees, a line each (DESIGN.md 68.3).
+            for (const line of row.more ?? []) box.append(el('p', 'fine', line));
             body.append(box);
           }
         } else if (campusPage === 'policies' && policies) {

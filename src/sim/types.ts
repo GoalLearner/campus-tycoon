@@ -1,4 +1,5 @@
 import type { ActivityId, GoalId, LifeNeed, CastTrait } from './config/mc';
+import type { ChaosKind, ProtestTopic } from './config/chaos';
 /**
  * The whole game state. Plain JSON only: no classes, Maps, Sets or Dates,
  * so cloning and saving are exact. See DESIGN.md section 17.5.
@@ -246,7 +247,7 @@ export interface MapState {
 }
 
 /** 'football' was added last, so the streams before it are what they always were. */
-export type RngStream = 'growth' | 'intake' | 'names' | 'events' | 'football' | 'orders';
+export type RngStream = 'growth' | 'intake' | 'names' | 'events' | 'football' | 'orders' | 'chaos';
 export type RngState = Record<RngStream, number>;
 
 /** Where the game year stands. See calendar.ts. */
@@ -642,6 +643,8 @@ export interface GameState {
   timerSeq: number;
   stats: Stats;
   incidents: Incidents;
+  /** The chaos sandbox (DESIGN.md 68): the Chaos meter and what it has set going. */
+  chaos: ChaosState;
   grounds: Grounds;
   term: Term;
   field: Field;
@@ -1384,6 +1387,50 @@ export interface Incident {
   endTick: number;
   /** A call from a party (DESIGN.md 55): its line is from the party lines. */
   party?: true;
+  /** Chaos (DESIGN.md 68): a dust-up, a shouting match, a prank, graffiti or a protest. Its line is from chaos's lines. */
+  chaos?: Exclude<ChaosKind, 'party'>;
+  /** What a protest is about. */
+  topic?: ProtestTopic;
+}
+
+/** A game week of chaos, as the meter read it. */
+export interface ChaosWeek {
+  /** How many of each kind, and of those how many nobody came to. */
+  tally: Record<ChaosKind, number>;
+  missed: Record<ChaosKind, number>;
+  /** The share of students in the web's drama: freshly split, with a rival, or picked on. */
+  drama: number;
+  /** Students in thousands, as the small game counts them. */
+  thousands: number;
+  /** What the week read, before smoothing, 0 to 100. */
+  raw: number;
+  /** What a protest was about, if any was strong this week. */
+  topic: ProtestTopic | null;
+}
+
+export interface ChaosState {
+  /** The meter, 0 to 100, smoothed, and the game week it was last read (-1 before its first). */
+  level: number;
+  week: number;
+  /** This week so far. */
+  tally: Record<ChaosKind, number>;
+  missed: Record<ChaosKind, number>;
+  /** The last week read, for the causes. */
+  last: ChaosWeek | null;
+  /** Read once a game week for the rates: how short tempers are, and the share of dorms Campus Safety reaches. */
+  tension: number;
+  covered: number;
+  /** What students would protest about now, and how strongly, 0 to 1. null when nothing is wrong enough. */
+  grievance: { topic: ProtestTopic; strength: number; words: string } | null;
+  /** Headlines that move applicants' reach: bad ones below 0, spirit above. They fade. */
+  reach: Array<{ at: number; size: number }>;
+  /** The trustees' open letter, if any: when it was sent and the tick it asks by. */
+  letter: { from: number; until: number } | null;
+  letters: { sent: number; met: number; missed: number; lastClosed: number };
+  /** Reputation is down a little until this tick, for a letter ignored. */
+  dipUntil: number;
+  /** The last legendary night. */
+  spiritAt: number;
 }
 
 export interface Incidents {
@@ -1465,7 +1512,8 @@ export type LogKind =
   | 'game'
   | 'football'
   | 'decision'
-  | 'rankings';
+  | 'rankings'
+  | 'chaos';
 
 /** Something notable that happened. The away list is built from these. */
 export interface LogEntry {

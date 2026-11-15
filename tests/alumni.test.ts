@@ -28,7 +28,7 @@ import { academicInputs } from '../src/sim/systems/field';
 import { edition } from '../src/sim/newspaper';
 import { moneyView } from '../src/ui/buildUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, T0, webMetaFor, sixClassYears } from './helpers';
+import { DAY, freshGame, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
 
 /**
  * Alumni giving (DESIGN.md 54, as built in section 56): the pool, the drive
@@ -173,7 +173,8 @@ describe('the academic rating', () => {
 describe('the Scorecard', () => {
   it('has the seven stages as seven rows, each with a number and what limits it most', () => {
     const rows = scorecard(THREE.state)!;
-    expect(rows.map((row) => row.name)).toEqual(['Applications', 'Acceptance rate', 'Yield', 'Retention', 'Graduation rate', 'Alumni success', 'Donations']);
+    // And the Chaos meter since C1 (DESIGN.md 68.3), on a game with goals.
+    expect(rows.map((row) => row.name)).toEqual(['Applications', 'Acceptance rate', 'Yield', 'Retention', 'Graduation rate', 'Alumni success', 'Donations', 'Chaos']);
     for (const row of rows) {
       expect(row.value.length).toBeGreaterThan(0);
       expect(row.limit.length).toBeGreaterThan(10);
@@ -226,6 +227,7 @@ describe('saves', () => {
       expected.story = newStory();
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
+      withChaos(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY);
@@ -233,7 +235,7 @@ describe('saves', () => {
       expect(week.log.filter((entry) => entry.kind === 'alumni')).toHaveLength(1);
       const notes = upgradeNotes(26);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(6);
+      expect(notes).toHaveLength(7);
       expect(notes[0]).toMatch(/alumni/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

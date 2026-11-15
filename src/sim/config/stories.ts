@@ -15,7 +15,7 @@ import type { ActivityId, CastTrait, GoalId, LifeNeed } from './mc';
  * Never anything on the "still out" list of 52.1. Every size is [T].
  */
 
-export type StoryCategory = 'roommates' | 'classes' | 'dating' | 'partying' | 'social' | 'money' | 'greek' | 'teams' | 'good';
+export type StoryCategory = 'roommates' | 'classes' | 'dating' | 'partying' | 'social' | 'money' | 'greek' | 'teams' | 'good' | 'chaos';
 
 /** What the odds may read, each 0 to 1. `effort.*` is hours of an activity lately against a full week's worth. */
 export type OddsRead =
@@ -140,7 +140,11 @@ export type StoryNeed =
   | 'job'
   | 'noJob'
   | 'club'
-  | 'term';
+  | 'term'
+  /** The chaos sandbox (DESIGN.md 68.6): the Chaos meter at Lively or worse, at Rowdy or worse, and a protest brewing. */
+  | 'lively'
+  | 'rowdy'
+  | 'protest';
 
 export interface StorySpec {
   id: string;

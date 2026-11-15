@@ -73,7 +73,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -598,8 +598,9 @@ describe('each policy, in its own numbers', () => {
     expect(mischiefTimes(off)).toBe(1);
     // A lot already full of Food & fun with the parties in it cannot lose all of the point.
     expect(cause(on, 'life').level).toBeCloseTo(cause(off, 'life').level - 0.01, 2);
-    // Counted over two weeks of the same campus: far fewer. Calls from parties are not mischief (DESIGN.md 55).
-    const count = (state: GameState): number => advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * WEEK).log.filter((entry) => entry.kind === 'incident' && entry.data?.party !== 1 && /dorm/.test(entry.text)).length;
+    // Counted over two weeks of the same campus: far fewer. Calls from parties are not mischief (DESIGN.md 55), nor is
+    // chaos (DESIGN.md 68), which quiet hours touch only in part.
+    const count = (state: GameState): number => advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * WEEK).log.filter((entry) => entry.kind === 'incident' && entry.data?.party !== 1 && entry.data?.chaos === undefined && /dorm/.test(entry.text)).length;
     const loud = count(off);
     const quiet = count(on);
     expect(loud).toBeGreaterThan(50);
@@ -725,6 +726,7 @@ describe('a save from version 16', () => {
     expected.story = newStory();
     expected.web = webMetaFor(expected);
     sixClassYears(expected);
+    withChaos(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -771,7 +773,7 @@ describe('a save from version 16', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
     // And R3's price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(16);
+    expect(notes).toHaveLength(17);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

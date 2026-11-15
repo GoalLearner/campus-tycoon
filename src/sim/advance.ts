@@ -11,6 +11,7 @@ import { stepMain, tellMain } from './systems/mc';
 import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
+import { countEnding, spawnChaos, stepChaos } from './systems/chaos';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
 import { tellMovingOut } from './systems/fourYears';
@@ -118,8 +119,12 @@ function tick(state: GameState, log: LogEntry[]): void {
     evaluateGrowth(state);
   }
 
+  // Chaos counts what ends this tick before the incidents end (DESIGN.md 68), and begins its own after theirs.
+  countEnding(state);
   stepIncidents(state, log);
   spawnIncidents(state);
+  spawnChaos(state);
+  stepChaos(state, log);
   stepGrounds(state, log);
   // Each chapter's standing, once an hour (DESIGN.md 51).
   if (clock.tick % TICKS_PER_HOUR === 0) stepGreek(state, log);

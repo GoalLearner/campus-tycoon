@@ -1,3 +1,5 @@
+import { newChaos } from '../src/sim/systems/chaos';
+import { seedStreams } from '../src/sim/rng';
 import { advance, newGame, TICK_MS, type GameState, type LogEntry } from '../src/sim';
 import { calendarAt } from '../src/sim/calendar';
 
@@ -135,4 +137,10 @@ export function olderWebRecord(bytes: Uint8Array, version: 1 | 2 | 3): Uint8Arra
 export function sixClassYears(state: GameState): void {
   state.cohorts = [0, 1, 2, 3, 4, 5].map((classYear) => Number(state.cohorts[classYear] ?? 0)) as GameState['cohorts'];
   state.offCampus = [0, 1, 2, 3, 4, 5].map((classYear) => Number(state.offCampus[classYear] ?? 0)) as GameState['offCampus'];
+}
+
+/** What version 33 adds to an older save (DESIGN.md 68): the Chaos meter, and chaos's own random stream. */
+export function withChaos(state: GameState): void {
+  if (!state.chaos) state.chaos = newChaos();
+  if (typeof state.rng.chaos !== 'number') state.rng.chaos = seedStreams(state.seed).chaos;
 }

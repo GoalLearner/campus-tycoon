@@ -118,5 +118,8 @@ export function upgradeNotes(fromVersion: number): string[] {
     // Built through the one formatter, so it reads the same price as every other screen (DESIGN.md 67.1).
     notes.push(`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`);
   }
+  if (fromVersion < 33) {
+    notes.push('New: a Chaos meter on the Scorecard, from Serene to Pandemonium. Dust-ups, pranks, protests and party calls come from how the campus is run, and the meter says what drives them. A rowdy campus makes headlines and gets letters from the trustees; a lively, happy one has the odd legendary night.');
+  }
   return notes;
 }

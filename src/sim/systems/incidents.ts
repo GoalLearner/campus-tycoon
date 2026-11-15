@@ -14,6 +14,7 @@ import {
   RESPONSE_TICKS_PER_CELL,
   SAFETY_LEVELS,
 } from '../config/incidents';
+import { CHAOS_LINES, PROTEST_LINES } from '../config/chaosLines';
 import { PLACED } from '../config/placed';
 import { nextFloat, nextInt } from '../rng';
 import { enrollment, openCapacity } from '../selectors';
@@ -68,8 +69,24 @@ export function coverFor(map: MapState, family: 'medical' | 'safety', x: number,
   return best;
 }
 
+/** Incidents of before at once: chaos's (DESIGN.md 68) have a cap of their own, so they never crowd these out. */
+function ordinary(state: GameState): number {
+  let n = 0;
+  for (const incident of state.incidents.active) if (!incident.chaos) n += 1;
+  return n;
+}
+
 /** One line for the icon on the map. */
 export function incidentText(incident: Incident): string {
+  // Chaos (DESIGN.md 68): a dust-up, a shouting match, a prank, graffiti or a protest, in its own comic lines.
+  if (incident.chaos === 'protest') {
+    const lines = PROTEST_LINES[incident.topic ?? 'beds'];
+    return lines[incident.line % lines.length]!.replace('{place}', incident.place);
+  }
+  if (incident.chaos) {
+    const lines = CHAOS_LINES[incident.chaos];
+    return lines[incident.line % lines.length]!.replace('{place}', incident.place);
+  }
   const pool = (incident.party ? PARTY_LINES : INCIDENT_LINES)[incident.kind];
   return pool[incident.line % pool.length]!.replace('{place}', incident.place);
 }
@@ -83,7 +100,8 @@ export function safetyAt(state: GameState, x: number, y: number): number {
   if (coverFor(state.map, 'medical', x, y)) level += SAFETY_LEVELS.medical;
   if (coverFor(state.map, 'safety', x, y)) level += SAFETY_LEVELS.safety;
   for (const incident of state.incidents.active) {
-    if (incident.responder !== null) continue;
+    // A protest is students saying their piece: nothing about it makes a place feel unsafe.
+    if (incident.responder !== null || incident.chaos === 'protest') continue;
     if (Math.max(Math.abs(incident.x - x), Math.abs(incident.y - y)) <= INCIDENT_NEAR_CELLS) level -= SAFETY_LEVELS.unanswered;
   }
   return Math.max(0, Math.min(1, level));
@@ -153,7 +171,7 @@ export function spawnIncidents(state: GameState): void {
   const scale = smallCount(state, students) / 1000;
 
   const play = state.map.placed.filter((p): p is Placed => !!p && PLACED[p.type].family === 'recreation');
-  if (play.length > 0 && state.incidents.active.length < MAX_ACTIVE_INCIDENTS && injuryRoll < Math.min(0.9, scale * INJURY_RATE)) {
+  if (play.length > 0 && ordinary(state) < MAX_ACTIVE_INCIDENTS && injuryRoll < Math.min(0.9, scale * INJURY_RATE)) {
     const where = play[Math.min(play.length - 1, Math.floor(injuryPick * play.length))]!;
     begin(state, 'injury', where.x, where.y, PLACED[where.type].name);
   }
@@ -161,7 +179,7 @@ export function spawnIncidents(state: GameState): void {
   const dorms = state.map.buildings.filter((b) => b && b.zone === 'housing' && b.stage > 0);
   const beds = openCapacity(state, 'housing');
   const crowding = beds > 0 ? Math.min(1, Math.max(0, students - offCampusNow(state)) / beds) : 0;
-  if (dorms.length > 0 && state.incidents.active.length < MAX_ACTIVE_INCIDENTS && mischiefRoll < Math.min(0.9, scale * MISCHIEF_RATE * crowding * crowding) * mischiefTimes(state)) {
+  if (dorms.length > 0 && ordinary(state) < MAX_ACTIVE_INCIDENTS && mischiefRoll < Math.min(0.9, scale * MISCHIEF_RATE * crowding * crowding) * mischiefTimes(state)) {
     const where = dorms[Math.min(dorms.length - 1, Math.floor(mischiefPick * dorms.length))]!;
     begin(state, 'mischief', where.x, where.y, 'a dorm');
   }
@@ -180,6 +198,11 @@ export function stepIncidents(state: GameState, log: LogEntry[]): void {
       still.push(incident);
       continue;
     }
+    // A protest ends when the students go home (DESIGN.md 68.2): no responder, and nothing missed.
+    if (incident.chaos === 'protest') {
+      log.push({ tick, kind: 'chaos', text: `The rally on ${incident.place} broke up: the students have said their piece.`, data: { protest: 1, topic: incident.topic ?? 'beds' } });
+      continue;
+    }
     const need = NEEDS[incident.kind];
     // The building may have been cleared while its responder was on the way.
     const responder = incident.responder === null ? null : (state.map.placed[incident.responder] ?? null);
@@ -190,7 +213,7 @@ export function stepIncidents(state: GameState, log: LogEntry[]): void {
         tick,
         kind: 'incident',
         text: `${PLACED[responder.type].name} handled it: ${what}`,
-        data: incident.party ? { handled: 1, need, place: incident.place, party: 1 } : { handled: 1, need, place: incident.place },
+        data: { handled: 1, need, place: incident.place, ...(incident.party ? { party: 1 } : {}), ...(incident.chaos ? { chaos: incident.chaos } : {}) },
       });
     } else {
       book.missed += 1;
@@ -198,7 +221,7 @@ export function stepIncidents(state: GameState, log: LogEntry[]): void {
         tick,
         kind: 'incident',
         text: `Nobody came: ${what} ${need === 'medical' ? 'A Medical Center' : 'Campus Safety'} in reach of ${incident.place === 'a dorm' ? 'that dorm' : incident.place.startsWith('the ') ? incident.place : `the ${incident.place}`} would have handled it.`,
-        data: incident.party ? { handled: 0, need, place: incident.place, party: 1 } : { handled: 0, need, place: incident.place },
+        data: { handled: 0, need, place: incident.place, ...(incident.party ? { party: 1 } : {}), ...(incident.chaos ? { chaos: incident.chaos } : {}) },
       });
     }
   }

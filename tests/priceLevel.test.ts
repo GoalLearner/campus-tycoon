@@ -100,6 +100,6 @@ describe('the price level, R3', () => {
     if (!loaded.ok) return;
     expect(loaded.state.money).toEqual(state.money);
     expect({ ...loaded.state, version: 0 }).toEqual({ ...state, version: 0 });
-    expect(upgradeNotes(31)).toEqual([`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`]);
+    expect(upgradeNotes(31)[0]).toBe(`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`);
   });
 });

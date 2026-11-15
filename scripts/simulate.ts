@@ -1,3 +1,6 @@
+import { CHAOS_FROM, ROWDY } from '../src/sim/config/chaos';
+import { chaosStepName, chaosStepOf } from '../src/sim/systems/chaos';
+import { WEB_WEEK_TICKS as CHAOS_WEEK_TICKS } from '../src/sim/config/web';
 import { storySpec } from '../src/sim/systems/storyteller';
 import { realismLines } from './realism';
 import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
@@ -214,6 +217,9 @@ const CHECK_IN_MS: Record<Style, number> = {
   optimizer: 2 * 60 * TICK_MS,
   // The striver looks in once a day, as the once-a-day player does (DESIGN.md 37.8).
   striver: 24 * 60 * TICK_MS,
+  // The chaos sandbox's two (DESIGN.md 68.7) look in once a day as well.
+  pandemonium: 24 * 60 * TICK_MS,
+  serene: 24 * 60 * TICK_MS,
 };
 
 interface YearRow {
@@ -328,6 +334,8 @@ interface Seen {
   goalsUnsaid: number;
   /** The most students the campus ever held, whenever it was looked at. */
   mostStudents: number;
+  /** The most the Chaos meter read at a visit (DESIGN.md 68). */
+  chaosMost: number;
   /** By game year: what the research labs took of the yearly allowance, and what all of its takers did (DESIGN.md 49). */
   labPaid: Record<number, number>;
   allowancePaid: Record<number, number>;
@@ -411,6 +419,7 @@ const newSeen = (): Seen => ({
   orderLines: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
+  chaosMost: 0,
   greekWeeks: [],
   greekRush: [],
   drives: [],
@@ -499,6 +508,8 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
   }
   seen.deskMost = Math.max(seen.deskMost, state.inbox.open.length);
   seen.mostStudents = Math.max(seen.mostStudents, enrollment(state));
+  // The chaos sandbox (DESIGN.md 68): the most the Chaos meter read at any visit.
+  if (state.chaos && state.goals) seen.chaosMost = Math.max(seen.chaosMost, state.chaos.level);
   const season = campusHappiness(state).season;
   seen.stressMax = Math.max(seen.stressMax, season.stress.score);
   if (season.day.kind !== 'finals' && season.day.kind !== 'midterms') seen.stressOutsideExams = Math.max(seen.stressOutsideExams, season.stress.score);
@@ -2509,6 +2520,52 @@ function assertModelCampus(seed: number): void {
   console.log('');
   console.log('THE REAL FIGURES (DESIGN.md 65)');
   for (const one of realismLines(runs.map((run) => run.final), alone.final)) check(one.name, one.ok, one.detail);
+
+  // The chaos sandbox, stop C1 (DESIGN.md 68.7): the usual players, and the two who play for chaos and for calm.
+  console.log('');
+  console.log('THE CHAOS METER (DESIGN.md 68)');
+  {
+    const usual = runs.map((run) => ({ name: `${run.style} ${run.seed}`, most: run.seen.chaosMost, now: run.final.chaos.level, letters: run.final.chaos.letters }));
+    check(
+      'the usual players keep their campuses Calm to Lively: never Chaotic at a visit, and the trustees seldom write',
+      usual.every((one) => one.most < CHAOS_FROM[4]! && chaosStepOf(one.now) <= 2 && one.letters.sent <= 6),
+      usual.map((one) => `${one.name}: ${chaosStepName(one.now)} at the end, ${Math.round(one.most)} at the most; ${one.letters.sent} letters, ${one.letters.met} met`).join('; '),
+    );
+    // Two days of each: the Pandemonium player on purpose, then the Serene player putting it right; and Serene alone.
+    const chaosDays = (first: Style, days: number, then: Style | null, more: number): { levels: Array<{ week: number; level: number; style: Style }>; state: GameState } => {
+      let state = newGame({ seed, name: 'Chaos University', now: T0, campus: 'model' });
+      let at = T0;
+      const levels: Array<{ week: number; level: number; style: Style }> = [];
+      for (const [style, count] of [[first, days], ...(then ? [[then, more]] : [])] as Array<[Style, number]>) {
+        for (let n = 0; n < count * 8; n++) {
+          state = advance(state, at, at + DAY_MS / 8).state;
+          at += DAY_MS / 8;
+          if (levels.length === 0 || levels[levels.length - 1]!.week !== state.chaos.week) levels.push({ week: state.chaos.week, level: state.chaos.level, style });
+          if (n % 8 === 7) state = takeTurn(state, style).state;
+        }
+      }
+      return { levels, state };
+    };
+    const wild = chaosDays('pandemonium', 2, 'serene', 2);
+    const most = Math.max(...wild.levels.filter((one) => one.style === 'pandemonium').map((one) => one.level));
+    const calmFrom = wild.levels.findIndex((one) => one.style === 'serene');
+    // The first Serene visit is at the end of its first day: the weeks to recover are counted from there.
+    const visited = calmFrom + Math.round(DAY_MS / TICK_MS / CHAOS_WEEK_TICKS);
+    const below = wild.levels.findIndex((one, i) => i >= visited && chaosStepOf(one.level) < ROWDY);
+    const weeks = below >= 0 ? below - visited : Infinity;
+    check(
+      'a campus run for Pandemonium on purpose gets there, and is below Rowdy within a few game weeks of being run well again',
+      chaosStepOf(most) === 5 && weeks <= 6 && chaosStepOf(wild.state.chaos.level) <= 2,
+      `${Math.round(most)} at the most (${chaosStepName(most)}) in two real days with no Campus Safety, no new beds, its yards' crews sent home and every calming switch off; below Rowdy ${Number.isFinite(weeks) ? `${weeks} game weeks` : 'never'} after the Serene player's first visit, and ${chaosStepName(wild.state.chaos.level)} two days on; ${wild.state.chaos.letters.sent} letters from the trustees, ${wild.state.chaos.letters.missed} ignored`,
+    );
+    const calm = chaosDays('serene', 3, null, 0);
+    const later = calm.levels.slice(Math.floor(calm.levels.length / 3));
+    check(
+      'a campus kept Serene stays Calm or quieter, once its first weeks are past',
+      later.every((one) => chaosStepOf(one.level) <= 2) && later.filter((one) => chaosStepOf(one.level) <= 1).length >= later.length * 0.7,
+      `${later.filter((one) => chaosStepOf(one.level) <= 1).length} of ${later.length} game weeks Calm or Serene, ${Math.round(Math.max(...later.map((one) => one.level)))} at the most`,
+    );
+  }
 }
 
 // ------------------------------------------------------------------- main --

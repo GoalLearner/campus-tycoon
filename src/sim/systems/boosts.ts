@@ -1,3 +1,4 @@
+import { SPIRIT } from '../config/chaos';
 import { APPLICANTS_CAP, FANS_CAP, HAPPY_CAP, STRESS_OFF_CAP } from '../config/inbox';
 import type { Boost, GameState } from '../types';
 
@@ -21,6 +22,9 @@ const NONE: Boost[] = [];
 /** The desk's lines on the week's Happiness, each with its points. Together they never pass the cap, either way. */
 export function happyParts(state: GameState): Array<{ label: string; points: number }> {
   const parts = active(state, 'happy').map((boost) => ({ label: boost.label, points: boost.amount }));
+  // A legendary night's spirit (DESIGN.md 68.5) is not the desk's doing, and shares its cap all the same.
+  const tick = state.clock.tick;
+  if (state.goals && state.chaos && tick < state.chaos.spiritAt + SPIRIT.days * 24 * 60) parts.push({ label: 'Campus spirit', points: SPIRIT.happiness });
   if (parts.length === 0) return parts;
   const total = parts.reduce((sum, part) => sum + part.points, 0);
   const capped = Math.max(-HAPPY_CAP, Math.min(HAPPY_CAP, total));
