@@ -223,7 +223,8 @@ function onCalendar(state: GameState, spec: StorySpec): boolean {
 
 // ----------------------------------------------------------- the effects --
 
-function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
+/** One effect of an outcome on the Main Character. Exported for the tests of what a story does (DESIGN.md 63.11). */
+export function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
   switch (effect.t) {
     case 'need':
       mc.needs[effect.need] = clamp(mc.needs[effect.need] + effect.by, 0, 100);
