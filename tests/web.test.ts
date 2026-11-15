@@ -286,7 +286,8 @@ describe('the web', () => {
 
   it('reads back only its own campus’s record, whole, and lets go of students who have left', () => {
     const record = encodeWeb(WEB);
-    expect(record.byteLength).toBe(64 + EVENTS.length * 8 + WEB.weekly.length * 8 + WEB.happenings.length * 4 + 64 * 8 + 40 + WEB.n * SLOTS * 9);
+    // Version 3 (63.13): Quadline's posts after the slots, behind a head of four numbers.
+    expect(record.byteLength).toBe(64 + EVENTS.length * 8 + WEB.weekly.length * 8 + WEB.happenings.length * 4 + 64 * 8 + 40 + WEB.n * SLOTS * 9 + 16 + (WEB.posts.length + WEB.viral.length) * 4);
     expect(decodeWeb(record, { ...MODEL, seed: MODEL.seed + 1 })).toBeNull();
     expect(decodeWeb(record.subarray(0, record.byteLength - 1), MODEL)).toBeNull();
     expect(decodeWeb(new Uint8Array(40), MODEL)).toBeNull();

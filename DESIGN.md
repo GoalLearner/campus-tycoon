@@ -7849,3 +7849,60 @@ Built 2026-11-14 on the branch `social-sim-8`, the first of the three stops the 
 | The varsity teams rarely make the tight-knit list | Teammates meet in 6 of every 100 first meetings (the web's weights of 63.5), so only about 1 in 100 of an athlete's friendships is a teammate; left as it is, for the owner |
 | The owner's spec "word for word" at the bottom of the design page | Not in the copy of the page or the brief this was built from; built from the page's sections and the brief |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.13 Stop 9 as built: Quadline, the campus app
+
+Built 2026-11-14 on the branch `social-sim-9`, the owner's decisions of that day for the app: 2 Quadline (the name is to be checked against real brands before the App Store), 3 Scenes, 4 Normal, 5 Named, 9 Ours, 10 Later (DeepSeek writes the Main Character's posts only with MC-3). Rumours, going viral, the paper, the mood line, the official account and bullying on the app are stop 10 (decisions 6, 7 and 8). The save version is unchanged: the web's own record goes to version 3.
+
+**Where posts come from** (`src/sim/systems/quadline.ts`): made as the web lives each game week, in its catch-up, from that week alone.
+
+| From | Posts |
+|---|---|
+| What happened by name that week (63.6) | A new couple ("officially off the market"), a new best friend, a couple still together, an ending, a messy one, getting back together: one of the two posts, the more outgoing. Half the time for a new couple, down to 15 in 100 for an ending, so the feed is mostly campus life and not its endings; and only as things stand, so a couple who split again the same week posts nothing about getting together. Never the Main Character's romances, which are their story's (63.11) |
+| Named shade (decision 5) | An ex, a rival or an enemy of someone who posts good news answers, 3 times in 10, with a post naming them: "funny how Mei has time to post but not to text back". Petty, never an insult beyond the mild names of 63.11 |
+| The calendar | Move-in for freshmen, the first week back, midterms, finals and study groups, the breaks, commencement for seniors, the 8 AM; the week's weather: snow, rain, the first warm day of spring |
+| The campus | Its weakest parts of Happiness, and beds or seats when short: a complaint aimed at the place, never at a person ("nothing to do near Ashstead Hall but homework. please give us a court"). Its best parts: praise. A home game and its result, a tradition coming, bid day for chapter members, a building opened since the web last read the campus, a party (party-likers), their club, a favourite meal (the cards' own lines), the gym, a roommate they do not get on with (a rant that never names them) |
+| How often: who they are | An Attention Seeker posts at every turn, a Party Animal or a Class Clown three times in four, a Social Butterfly a third of the time (they comment more), Homesick students and Lost Freshmen hardly at all; the outgoing more |
+| The tone: their mood | Rough lines for the stressed, the heartbroken, the homesick and those with tense ties or someone picking on them; good ones for those with someone close and for the laid-back |
+| How many (decision 4, Normal) | A sample of 22 campus posts a game week, the week's happenings and shade, and every post of the Main Character (up to 3 a week), followed students (2) and named regulars (1). Measured on the model campus over 30 weeks: 37 a game week (32 to 46), 278 a real day |
+
+A kind's lines take turns through a week, and a kind weighs less the more of it the week already has: the weakest spot is told, not told forty times. A week's posts are dated in the week the web has just lived, the one just passed.
+
+**Kept** with the web, in its record (version 3): the newest 400 posts, and room for 30 viral ones (stop 10), ten numbers each (who, which kind, which line, about whom or what, when, mood, picture): 17 KB, about 7 KB once squeezed. A version 2 record is read with no posts. After a long time away (a regrow, 63.5) the feed starts again with the last two weeks, campus posts only, as the regrow's happenings are not news (63.12). Same seed, same feed: five weeks caught up at once and five a week at a time make the same posts.
+
+**The app** (`src/ui/quadlineApp.ts`), a phone-style sheet from its own button on the top bar (a pink app icon beside the Main Character's portrait):
+
+| | As built |
+|---|---|
+| Feed | The Main Character's two newest first ("Your main character"), then the newest posts, 25 at a time |
+| A post | Their face, name, class and how long ago; the words, with the game's own emotes drawn in them (decision 9) and the tag; for some kinds a small picture (decision 3); likes and comments |
+| Comments | Made when the post is opened, the same every time: the one it is about, then friends, the closest first and Social Butterflies the likelier; on good news, half the time, a jab from an ex or a rival naming the author ("bold post, Toni"). No two alike |
+| Trending | The week's tags, the most used first; a tag opens a feed of it. The campus's weakest spot is usually near the top |
+| Profile | From any name or face, and from a new Quadline row on every card (followers and their latest post): followers, following, posts, their feeling as their card has it, and "Open their card" |
+
+Followers are everyone a student knows and everyone those know, times seven and a little; likes are their followers, by how much a kind of post draws, by the post's luck; comments a share of the likes. All worked out when shown (`src/app/quadline.ts`); nothing but the posts' numbers is kept.
+
+**Pictures** (`src/ui/postScene.ts`), from the game's own sprites, the people the post's own: a couple at sunset under a heart; friends on the lawn; a party at night with lights, up to four friends, music, a party hat and a laugh, never a cup (52.2); a game-day crowd; the new building's own sprite; a snow day; a study table before a hall, with a book and a sweat drop; a tradition's night; commencement.
+
+**Words**: every line is in `src/sim/config/quadline.ts`. `tests/hardLines.test.ts` reads all of them, the cards' favourite meals a meal post uses, and every post and comment written on a lived campus (students' names and hall names masked): within the hard lines and the tone guide, none about drinking, none of the heavy words, no quotes. Two existing lines were reworded on the way: a favourite meal said "face" a lecture (on the body list), and a midterm line used a word the reference map prints.
+
+| Decisions made here | Instead |
+|---|---|
+| Posts made as the web lives each week and kept with it | Made on the phone when opened, which would change with the campus and is not the same feed twice |
+| Words, likes, comments and followers rebuilt when shown | Kept, at several times the memory |
+| The button on the top bar's chip row, the chips a little narrower under 400 wide | A floating button, off the top bar the design page named |
+| Shade as its own post 3 times in 10, and in comments half the time | More, which would make the feed mostly jabs |
+| The web never posts the Main Character's romances | Posting them, against their story (63.11) |
+
+**Measured.** Posts: as above, 278 a real day; 17 KB kept, about 7 KB in the squeezed record; a week's posts take under a millisecond and reading the campus for them about 3 ms a catch-up, beside the web's own week. Frames, as in 63.10, on a quiet PC, back to back with main (b78734c), 16 frames each: the crowd at Normal 14.3 ms median against main's 13.8; the morning rush at High 16.5 against 18.1; an evening 15.0 against 15.1. Nothing that shows: the app is drawn only while it is open. The long run: all 91 checks pass in 1,631 s, and against stop 8 (63.12) not one line moved but the timings (the social web's 30 days away in 402 ms, was 396): posts change nothing on the campus until stop 10.
+
+**Tested**: `tests/quadline.test.ts` (250 to 350 a real day; the newest 400 kept, 17 KB; the same feed however caught up; from what really happened, a couple's post by one of the couple as things stand; shade only from an ex, a rival or an enemy, naming them; Attention Seekers post more for their numbers than the Homesick; the weakest spot complained of; a long absence starts again with two weeks and nothing by name; kept through the record, none in a record from before; every post's words from the templates, every slot filled, lines taking turns; likes, and comments from the author's own people, shade only from the sore ones, the same each time; followers by reach; trending), `tests/hardLines.test.ts` (every template and every lived post and comment), the record tests of `tests/web.test.ts` and `tests/socialView.test.ts` for version 3.
+
+| Rough | Why |
+|---|---|
+| The name Quadline | To be checked against real brands before the App Store (decision 2) |
+| The top bar's chip row at 375 wide has no room to spare | A longer Inbox count puts the level on a second row, as the Growth era's policies chip already did |
+| The new building's picture | Only for a building opened while the web is running; not in this stop's pictures |
+| The Main Character's story beats are not posted yet | Their posts are the campus's kinds and their friendships; DeepSeek writes theirs with MC-3 |
+| Viral posts, rumours, the official account, the mood line, bullying on the app | Stop 10 |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

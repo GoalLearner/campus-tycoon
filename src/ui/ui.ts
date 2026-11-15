@@ -102,6 +102,7 @@ import { drawSocialPage } from './socialUi';
 import { socialWeb } from '../app/socialWeb';
 import { mainPeopleOf } from '../app/socialView';
 import { mountNetworkView } from './networkView';
+import { mountQuadline } from './quadlineApp';
 import { mountRoomView } from './roomView';
 
 /**
@@ -376,8 +377,13 @@ export function mountUi(root: HTMLElement): void {
     drawSprite(sealArt, atlas, 'ui.seal');
   });
   let shownLevel = -1;
+  // Quadline, the campus app (DESIGN.md 63.13): its own small button, a phone's app icon.
+  const quadButton = button('', 'hud-chip quad-chip', () => session.openQuad());
+  quadButton.setAttribute('aria-label', 'Quadline, the campus app');
+  quadButton.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="currentColor"/><circle cx="11.5" cy="11.5" r="4.6" fill="none" stroke="#16201b" stroke-width="2.2"/><path d="M14.2 14.2 L17.6 17.6" stroke="#16201b" stroke-width="2.4" stroke-linecap="round"/></svg>';
   // The Main Character's portrait sits beside the level, where the row has room whatever the cash reads (DESIGN.md 57).
-  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, mainButton, levelButton);
+  chips.append(footballButton.node, inboxButton.node, ordersButton.node, policyButton.node, quadButton, mainButton, levelButton);
 
   const bars = el('div', 'bars');
   const barParts = {} as Record<Zone, { tag: HTMLElement; amount: HTMLElement; fill: HTMLElement; row: HTMLElement }>;
@@ -538,6 +544,7 @@ export function mountUi(root: HTMLElement): void {
   const studentPanel = mountStudentCard();
   const roomPanel = mountRoomView();
   const networkPanel = mountNetworkView();
+  const quadApp = mountQuadline();
   const personPanel = mountPersonCard();
 
   // ---------------------------------------------------------------- build --
@@ -678,7 +685,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, quadApp.node, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2583,6 +2590,7 @@ export function mountUi(root: HTMLElement): void {
       studentPanel.render(null);
       roomPanel.render(null);
       networkPanel.render(null);
+      quadApp.render(null);
       personPanel.render(null);
       if (!modalOpen) openSetup();
       return;
@@ -2595,6 +2603,7 @@ export function mountUi(root: HTMLElement): void {
     studentPanel.render(state);
     roomPanel.render(state);
     networkPanel.render(state);
+    quadApp.render(state);
     personPanel.render(state);
     renderModeBar();
     renderPlacer(state);

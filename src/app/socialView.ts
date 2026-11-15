@@ -43,6 +43,9 @@ export interface WebView {
   groupStart: Int32Array;
   groupMembers: Int32Array;
   groupVibe: Uint8Array;
+  /** Quadline's posts (DESIGN.md 63.13): the newest kept, then the viral ones, as their numbers. */
+  posts: Int32Array;
+  viral: Int32Array;
 }
 
 /** The web's view: copied for sending from the worker, or shared for reading in place. */
@@ -68,12 +71,14 @@ export function viewOf(web: Web, copy: boolean): WebView {
     groupStart: copy ? web.friendGroups.start.slice() : web.friendGroups.start,
     groupMembers: copy ? web.friendGroups.members.slice() : web.friendGroups.members,
     groupVibe: copy ? web.groupVibe.slice() : web.groupVibe,
+    posts: copy ? web.posts.slice() : web.posts,
+    viral: copy ? web.viral.slice() : web.viral,
   };
 }
 
 /** The buffers a view is made of, for moving it between threads without a copy. */
 export function viewBuffers(view: WebView): ArrayBufferLike[] {
-  return [view.other, view.kind, view.strength, view.feeling, view.identity, view.happenings, view.weekly, view.weeklyWeek, view.weeklyYear, view.ration, view.groupOf, view.groupStart, view.groupMembers, view.groupVibe].map((one) => one.buffer);
+  return [view.other, view.kind, view.strength, view.feeling, view.identity, view.happenings, view.weekly, view.weeklyWeek, view.weeklyYear, view.ration, view.groupOf, view.groupStart, view.groupMembers, view.groupVibe, view.posts, view.viral].map((one) => one.buffer);
 }
 
 /** A student's place in the view, or -1. */

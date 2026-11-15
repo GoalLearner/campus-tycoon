@@ -3428,3 +3428,373 @@ button.students {
   font-size: 11px;
   padding: 3px 6px;
 }
+
+/* --------------------------------------------------- Quadline (63.13) */
+/* The campus app: a phone-style sheet over the map, its own light screen like an app on the phone. */
+.quad-chip {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff7eb6;
+}
+.quad-chip svg {
+  width: 26px;
+  height: 26px;
+}
+.quad-app {
+  display: none;
+  position: absolute;
+  left: calc(var(--safe-left) + 8px);
+  right: calc(var(--safe-right) + 8px);
+  top: calc(var(--safe-top) + 8px);
+  bottom: calc(var(--safe-bottom) + 8px);
+  max-width: 460px;
+  margin: 0 auto;
+  flex-direction: column;
+  background: #fbf8f4;
+  color: #1f2522;
+  border-radius: 22px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 6;
+}
+.quad-app.show {
+  display: flex;
+}
+.quad-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid #ece6de;
+}
+.quad-back,
+.quad-done {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid #e3dbd0;
+  background: #fff;
+  color: #1f2522;
+  font: inherit;
+  font-weight: 600;
+}
+.quad-back {
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 12px 8px;
+}
+.quad-back[hidden] {
+  display: inline-block;
+  visibility: hidden;
+}
+.quad-brand {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.quad-wordmark {
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  color: #e2457f;
+}
+.quad-campus {
+  font-size: 11.5px;
+  color: #7a827d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.quad-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #ece6de;
+}
+.quad-tabs[hidden] {
+  display: none;
+}
+.quad-tab {
+  flex: 1;
+  min-height: 38px;
+  border-radius: 12px;
+  border: 1px solid #e3dbd0;
+  background: #fff;
+  color: #4b524e;
+  font: inherit;
+  font-weight: 600;
+}
+.quad-tab.on {
+  background: #e2457f;
+  border-color: #e2457f;
+  color: #fff;
+}
+.quad-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 10px 16px;
+}
+.quad-post {
+  background: #fff;
+  border: 1px solid #ece6de;
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.quad-post.viral {
+  border-color: #f2a3c3;
+  box-shadow: 0 0 0 2px rgba(226, 69, 127, 0.15);
+}
+.quad-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e2457f;
+  margin-bottom: 4px;
+}
+.quad-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.quad-avatar-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  flex: none;
+}
+.quad-avatar {
+  display: block;
+  width: 38px;
+  height: 44px;
+  border-radius: 12px;
+  background: #e9e1d2;
+}
+.quad-avatar.big {
+  width: 64px;
+  height: 75px;
+  border-radius: 16px;
+}
+.quad-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.quad-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1f2522;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: left;
+  min-height: 0;
+}
+.quad-name.small {
+  font-size: 13.5px;
+}
+.quad-meta {
+  font-size: 12px;
+  color: #7a827d;
+}
+.quad-viral {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #e2457f;
+  padding: 3px 7px;
+  border-radius: 8px;
+}
+.quad-text {
+  margin: 8px 0 6px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #1f2522;
+  overflow-wrap: anywhere;
+}
+.quad-emote {
+  width: 20px;
+  height: 20px;
+  vertical-align: -4px;
+  margin: 0 1px;
+}
+.quad-tag {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #2f7fd1;
+  font-weight: 600;
+  min-height: 0;
+}
+.quad-scene {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 12px;
+  margin: 4px 0 6px;
+  image-rendering: pixelated;
+}
+.quad-foot {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.quad-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #4b524e;
+}
+.quad-comments-button {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #4b524e;
+}
+.quad-comments {
+  margin-top: 6px;
+  border-top: 1px solid #f0ebe4;
+  padding-top: 4px;
+}
+.quad-comment .quad-text {
+  margin: 4px 0;
+  font-size: 13.5px;
+}
+.quad-comment.shade .quad-text {
+  color: #8a5560;
+}
+.quad-more-comments {
+  font-size: 12px;
+  color: #7a827d;
+}
+.quad-more,
+.quad-card-button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 4px 0 10px;
+  border-radius: 14px;
+  border: 1px solid #e3dbd0;
+  background: #fff;
+  color: #1f2522;
+  font: inherit;
+  font-weight: 600;
+}
+.quad-filter,
+.quad-section {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4b524e;
+  margin: 4px 2px 8px;
+}
+.quad-empty {
+  color: #7a827d;
+  font-size: 14px;
+  text-align: center;
+  margin: 20px 0;
+}
+.quad-trend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  border: 1px solid #ece6de;
+  background: #fff;
+  color: #1f2522;
+  font: inherit;
+  text-align: left;
+}
+.quad-rank {
+  width: 20px;
+  color: #a39c93;
+  font-weight: 700;
+}
+.quad-trend-tag {
+  flex: 1;
+  font-weight: 700;
+  color: #2f7fd1;
+}
+.quad-trend-count {
+  font-size: 12.5px;
+  color: #7a827d;
+}
+.quad-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 2px 10px;
+}
+.quad-profile-words {
+  min-width: 0;
+}
+.quad-profile-name {
+  font-weight: 800;
+  font-size: 18px;
+}
+.quad-profile-counts {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.quad-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #ece6de;
+  font-size: 12px;
+  color: #7a827d;
+}
+.quad-stat b {
+  font-size: 16px;
+  color: #1f2522;
+}
+.quad-feeling {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 2px 2px 8px;
+}
+.student-quad .student-thought {
+  font-size: 12px;
+}
+/* On the narrowest phones the chip row holds Quadline's button too: a little less padding and gap (63.13). */
+@media (max-width: 400px) {
+  .hud-chips {
+    gap: 4px;
+  }
+  .hud-chip.stat.show {
+    padding: 2px 6px;
+  }
+  .quad-chip {
+    width: 36px;
+    min-width: 36px;
+  }
+}

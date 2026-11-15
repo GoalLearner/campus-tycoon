@@ -10,6 +10,7 @@ import { studentFriends, type StudentFriends } from '../sim/systems/friends';
 import { BULLIED_TIE } from '../sim/config/bullying';
 import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
+import { feedOf, followersOf, postsBy, postWords } from '../app/quadline';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
@@ -292,6 +293,17 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   });
   peopleRow.line.append(network);
 
+  // Their Quadline profile (DESIGN.md 63.13): followers and their latest post; tapped, the profile in the app.
+  const quadRow = el('button', 'student-row student-reason student-quad');
+  quadRow.type = 'button';
+  const quadValue = el('span', 'student-value');
+  const quadNote = el('span', 'student-thought');
+  quadRow.append(el('span', 'student-label', 'Quadline'), quadValue, quadNote, el('span', 'student-go', '›'));
+  quadRow.addEventListener('click', () => {
+    if (session.student) session.openQuad('profile', session.student);
+  });
+  let quadFor = '';
+
   // A regular's day and what has happened to them lately (DESIGN.md 63.9). Following a student makes them one.
   const todayRow = row('Today');
   const todayList = el('div', 'student-day');
@@ -332,7 +344,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -451,6 +463,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     setText(relationshipNote, card.friends && ties && ties.partner < 0 ? '' : status.note);
     showFriends(state, card, ties);
     showPeople(state, ref);
+    showQuad(state, ref);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
     weekends.line.hidden = card.party === null;
     const main = state.story?.mc;
@@ -559,6 +572,21 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   }
 
   // ---------------------------------------------------------- their people --
+
+  /** Their followers and latest post, read again when the web answers or the card changes hands. */
+  let quadView: unknown = null;
+  function showQuad(state: GameState, ref: StudentRef): void {
+    const view = socialWeb.view;
+    quadRow.hidden = !view;
+    if (!view) return;
+    const key = studentKey(ref);
+    if (view === quadView && key === quadFor) return;
+    quadView = view;
+    quadFor = key;
+    const latest = postsBy(feedOf(view, state), ref)[0];
+    setText(quadValue, `${followersOf(view, ref).toLocaleString('en-US')} followers`);
+    setText(quadNote, latest ? postWords(state, latest).text.replace(/\s*\[\w+\]/g, '') : 'No posts lately');
+  }
 
   let facesKey = '';
   function showPeople(state: GameState, ref: StudentRef): void {

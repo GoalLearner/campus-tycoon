@@ -352,7 +352,7 @@ export const FAVOURITES: Partial<Record<string, readonly string[]>> = {
   smoothie: ['A smoothie between classes. Today I am a healthy person.', 'The juice bar has a flavour of the week. I plan around it.'],
   convenience: ['The convenience store has kept me going on snacks since move-in.', 'Instant noodles from the convenience store at midnight. A classic.'],
   truck: ['I plan my day around where the food truck is parked.', 'Whatever the food truck is selling today, I am having it.'],
-  coffee: ['The coffee stand knows my name, my order and my timetable.', 'One coffee from the stand and I can face a nine o clock lecture.'],
+  coffee: ['The coffee stand knows my name, my order and my timetable.', 'One coffee from the stand and I am ready for a nine o clock lecture.'],
 };
 
 export const THOUGHTS = {

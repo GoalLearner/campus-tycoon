@@ -50,6 +50,8 @@ import { athleteShare } from './football';
 import { chemistry, gender, identityOf, likes, TRAIT, traitOf } from './identity';
 import { placeIndex, socialProfile, studentHome, type PlaceIndex, type StudentRef } from './students';
 import { offCampusNow } from './town';
+import { newPosts, postContext, postWeek } from './quadline';
+import { POST_FIELDS, POSTS_KEPT, VIRAL_KEPT } from '../config/quadline';
 
 /**
  * The social web (DESIGN.md 63): every student's ties, for all of them, on typed arrays. Twelve slots a student, both
@@ -125,6 +127,15 @@ export interface Web {
   bullyTimes: { start: number; reported: number };
   /** Each chapter's number among the places, kept between placings so a student new mid-semester joins the right one (63.12). Not saved. */
   chapterIndex: Map<string, number>;
+  /**
+   * Quadline's posts (DESIGN.md 63.13): the newest POSTS_KEPT as POST_FIELDS numbers each, written round, `postNext`
+   * the count ever written; and the viral ones kept longer (stop 10). Saved with the web.
+   */
+  posts: Int32Array;
+  viral: Int32Array;
+  postNext: number;
+  /** The buildings open when the web last read the campus, so a new one is posted about once. Not saved: null after a load. */
+  postSeen: Set<number> | null;
 }
 
 /** A happening's numbers: its week, its event, its campus year, its luck, then up to three students as entry year and index. */
@@ -193,6 +204,9 @@ export function newWeb(seed: number, classSlot: number): Web {
     mainId: -1,
     bullyTimes: { start: 1, reported: 1 },
     chapterIndex: new Map(),
+    ...newPosts(),
+    postNext: 0,
+    postSeen: null,
   };
 }
 
@@ -1060,11 +1074,17 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
     regrow(web, state);
     holdMain(web, state);
     regrown = true;
+    // After a long time away the feed starts again with the last two weeks (63.13): older posts are of another campus.
+    web.posts.fill(-1);
+    web.postNext = 0;
   }
+  // What the campus holds for Quadline's posts, read once for every week lived (63.13).
+  const posting = postContext(web, state, toWeek);
   let lived = 0;
   while (web.week < toWeek) {
     stepWeek(web);
     lived += 1;
+    if (!regrown || web.week > toWeek - 2) postWeek(web, posting, regrown);
   }
   holdMain(web, state);
   // A regrown web's weeks are part of the regrowing (63.12): a campus grown again pairs off fast for a while, and none
@@ -1167,16 +1187,17 @@ const MAGIC = 0x43545731; // CTW1
 const HEADER = 16; // int32s
 
 /**
- * The web as its save record, version 2 (DESIGN.md 63.6): a header, what has happened since it began, the kept weeks'
- * counts and happenings, then each slot's other end, week together, kind, strength and feeling. Version 1 (stop 1)
- * had no weeks kept, and is still read.
+ * The web as its save record, version 3 (DESIGN.md 63.6, 63.13): a header, what has happened since it began, the kept
+ * weeks' counts and happenings, each slot's other end, week together, kind, strength and feeling, then Quadline's
+ * posts. Version 2 had no posts and version 1 (stop 1) no weeks kept: both are still read.
  */
 export function encodeWeb(web: Web): Uint8Array {
   const slots = web.n * SLOTS;
   const kept = web.happenings.length;
-  const bytes = new Uint8Array(HEADER * 4 + EVENTS.length * 8 + web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 + slots * (4 + 2 + 1 + 1 + 1));
+  const posts = web.posts.length + web.viral.length;
+  const bytes = new Uint8Array(HEADER * 4 + EVENTS.length * 8 + web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 + slots * (4 + 2 + 1 + 1 + 1) + POSTS_HEAD * 4 + posts * 4);
   const head = new Int32Array(bytes.buffer, 0, HEADER);
-  head.set([MAGIC, 2, web.seed | 0, web.week, web.classSlot, ...web.ring, web.roomsFor, EVENTS.length, kept, HAPPENING_WEEKS, web.rationFor, 0, 0]);
+  head.set([MAGIC, 3, web.seed | 0, web.week, web.classSlot, ...web.ring, web.roomsFor, EVENTS.length, kept, HAPPENING_WEEKS, web.rationFor, 0, 0]);
   let at = HEADER * 4;
   new Float64Array(bytes.buffer, at, EVENTS.length).set(web.events);
   at += EVENTS.length * 8;
@@ -1199,8 +1220,18 @@ export function encodeWeb(web: Web): Uint8Array {
   bytes.set(web.strength, at);
   at += slots;
   bytes.set(web.feeling, at);
+  at += slots;
+  // Version 3: Quadline's posts, after a head of their own that says their shape (63.13).
+  new Int32Array(bytes.buffer, at, POSTS_HEAD).set([POST_FIELDS, web.posts.length / POST_FIELDS, web.viral.length / POST_FIELDS, web.postNext]);
+  at += POSTS_HEAD * 4;
+  new Int32Array(bytes.buffer, at, web.posts.length).set(web.posts);
+  at += web.posts.length * 4;
+  new Int32Array(bytes.buffer, at, web.viral.length).set(web.viral);
   return bytes;
 }
+
+/** The posts' own head in a version 3 record: fields a post, posts kept, viral kept, posts ever written. */
+const POSTS_HEAD = 4;
 
 /** A web read back from its record for this campus, or null when the record is for another campus or broken. */
 export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
@@ -1208,27 +1239,36 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   const copy = new Uint8Array(bytes);
   const head = new Int32Array(copy.buffer, 0, HEADER);
   const version = head[1];
-  if (head[0] !== MAGIC || (version !== 1 && version !== 2) || head[2] !== (state.seed | 0)) return null;
+  if (head[0] !== MAGIC || (version !== 1 && version !== 2 && version !== 3) || head[2] !== (state.seed | 0)) return null;
   const classSlot = head[4]!;
   if (classSlot <= 0 || classSlot > 200_000) return null;
   const web = newWeb(state.seed, classSlot);
   const slots = web.n * SLOTS;
   // A record from before 63.11 holds fewer kinds of event and of happening: it is read into the first of each.
   const kinds = head[10]!;
-  const kept = version === 2 ? head[11]! : web.happenings.length;
+  const kept = version >= 2 ? head[11]! : web.happenings.length;
   const perWeekThen = kept / (HAPPENING_WEEKS * HAPPENING_FIELDS);
   if (kinds < 15 || kinds > EVENTS.length || !Number.isInteger(perWeekThen) || perWeekThen > PER_WEEK) return null;
   const weeklyThen = HAPPENING_WEEKS * kinds;
-  const weeks = version === 2 ? weeklyThen * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
-  if (copy.byteLength !== HEADER * 4 + kinds * 8 + weeks + slots * 9) return null;
-  if (version === 2 && head[12] !== HAPPENING_WEEKS) return null;
+  const weeks = version >= 2 ? weeklyThen * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
+  const before = HEADER * 4 + kinds * 8 + weeks + slots * 9;
+  // Version 3 holds Quadline's posts after the slots, in a shape its own head says.
+  let postsShape: number[] | null = null;
+  if (version === 3) {
+    if (copy.byteLength < before + POSTS_HEAD * 4) return null;
+    postsShape = [...new Int32Array(copy.buffer, before, POSTS_HEAD)];
+    const [fields, keptPosts, keptViral] = postsShape as [number, number, number, number];
+    if (fields !== POST_FIELDS || keptPosts < 0 || keptViral < 0 || keptPosts > 10_000 || keptViral > 10_000) return null;
+    if (copy.byteLength !== before + POSTS_HEAD * 4 + (keptPosts + keptViral) * fields * 4) return null;
+  } else if (copy.byteLength !== before) return null;
+  if (version >= 2 && head[12] !== HAPPENING_WEEKS) return null;
   web.week = head[3]!;
   web.ring = [head[5]!, head[6]!, head[7]!, head[8]!];
   web.roomsFor = head[9]!;
   let at = HEADER * 4;
   web.events.set(new Float64Array(copy.buffer, at, kinds));
   at += kinds * 8;
-  if (version === 2) {
+  if (version >= 2) {
     const weekly = new Float64Array(copy.buffer, at, weeklyThen);
     for (let row = 0; row < HAPPENING_WEEKS; row++) web.weekly.set(weekly.subarray(row * kinds, (row + 1) * kinds), row * EVENTS.length);
     at += weeklyThen * 8;
@@ -1253,6 +1293,27 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   web.strength.set(copy.subarray(at, at + slots));
   at += slots;
   web.feeling.set(copy.subarray(at, at + slots));
+  at += slots;
+  if (postsShape) {
+    const [, keptPosts, keptViral, written] = postsShape as [number, number, number, number];
+    at += POSTS_HEAD * 4;
+    const posts = new Int32Array(copy.buffer, at, keptPosts * POST_FIELDS);
+    at += keptPosts * POST_FIELDS * 4;
+    const viral = new Int32Array(copy.buffer, at, keptViral * POST_FIELDS);
+    if (keptPosts === POSTS_KEPT) {
+      web.posts.set(posts);
+      web.postNext = written;
+    } else {
+      // Kept to another number before: read in oldest first, so the newest are the ones kept.
+      const order = Array.from({ length: keptPosts }, (_, i) => i).filter((i) => posts[i * POST_FIELDS] !== -1);
+      order.sort((x, y) => posts[x * POST_FIELDS]! - posts[y * POST_FIELDS]! || posts[x * POST_FIELDS + 1]! - posts[y * POST_FIELDS + 1]!);
+      for (const i of order.slice(-POSTS_KEPT)) {
+        web.posts.set(posts.subarray(i * POST_FIELDS, (i + 1) * POST_FIELDS), (web.postNext % POSTS_KEPT) * POST_FIELDS);
+        web.postNext += 1;
+      }
+    }
+    web.viral.set(viral.subarray(0, Math.min(viral.length, VIRAL_KEPT * POST_FIELDS)));
+  }
   // Who is enrolled, then the other ends and the pairs' chemistry, worked out again.
   const year = calendarAt(state.clock).year;
   for (let classYear = 0; classYear < 4; classYear++) {

@@ -297,13 +297,14 @@ describe('the record, version 2', () => {
     expect([...read.weekly]).toEqual([...WEB.weekly]);
     expect([...read.ration]).toEqual([...WEB.ration]);
     expect(read.rationFor).toBe(WEB.rationFor);
-    // Version 1, as stop 1 wrote it: the header, the counts, then the slots.
+    // Version 1, as stop 1 wrote it: the header, the counts, then the slots (since 63.13 followed by the posts).
     const slots = WEB.n * SLOTS;
     const head = 64 + EVENTS.length * 8;
+    const slotsEnd = bytes.byteLength - 16 - (WEB.posts.length + WEB.viral.length) * 4;
     const v1 = new Uint8Array(head + slots * 9);
     v1.set(bytes.subarray(0, head));
     new Int32Array(v1.buffer, 0, 16).set([1], 1);
-    v1.set(bytes.subarray(bytes.byteLength - slots * 9), head);
+    v1.set(bytes.subarray(slotsEnd - slots * 9, slotsEnd), head);
     const old = decodeWeb(v1, MODEL)!;
     expect(old).not.toBeNull();
     expect(Buffer.from(old.other.buffer).equals(Buffer.from(WEB.other.buffer))).toBe(true);

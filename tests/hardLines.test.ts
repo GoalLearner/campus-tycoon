@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { commentsFor, feedOf, postWords } from '../src/app/quadline';
 import { happeningLine, happeningsOf, viewOf } from '../src/app/socialView';
 import { advance, newGame, toneProblem } from '../src/sim';
 import { BULLYING_LINES, bullyingTemplates } from '../src/sim/config/bullying';
 import { HARD_LINES, hardLineProblem, NAME_CALLING } from '../src/sim/config/hardLines';
 import { POLICIES } from '../src/sim/config/policies';
+import { quadlineTemplates } from '../src/sim/config/quadline';
+import { FAVOURITES } from '../src/sim/config/students';
+import { DRINK_WORDS, HEAVY_WORDS } from '../src/sim/config/tone';
 import { EVENT } from '../src/sim/config/web';
 import { studentName } from '../src/sim/systems/students';
 import { catchUp, newWeb, webWeekOf } from '../src/sim/systems/web';
@@ -13,7 +17,7 @@ import { DAY, T0 } from './helpers';
  * The hard lines (DESIGN.md 63.11, 52.2): whatever the rating, nothing that picks on someone is about race, religion,
  * ethnicity, sexuality, gender identity, disability, or body and weight, nothing sexual, no threats, nothing about
  * self-harm or suicide, and no slurs: the only names anyone is called are a short fixed list. Every bullying template
- * is read here; every post template joins them when the campus app comes (stops 9 and 10).
+ * is read here, and since stop 9 every Quadline template, post and comment (DESIGN.md 63.13).
  */
 
 const TEMPLATES = bullyingTemplates();
@@ -77,4 +81,45 @@ describe('the hard lines', () => {
     }
     expect(Object.keys(BULLYING_LINES)).toHaveLength(6);
   });
+
+  it('hold for every Quadline template, and for every post and comment written on a lived campus, names and all', () => {
+    // Every line the app can write: the posts by kind, the complaints and praise, the comments, the tags, and the
+    // cards' favourite meals that a meal post reuses. None about drinking, none of the heavy words.
+    const lines = [...quadlineTemplates(), ...Object.values(FAVOURITES).flat()];
+    expect(lines.length).toBeGreaterThan(200);
+    for (const line of lines) {
+      expect(hardLineProblem(line!), line).toBeNull();
+      expect(toneProblem(line!), line).toBeNull();
+      expect(DRINK_WORDS.test(line!), line).toBe(false);
+      expect(HEAVY_WORDS.test(line!), line).toBe(false);
+      expect(line, line).not.toMatch(/["“”]/);
+    }
+    // Only the names on the list are ever used to call anyone anything: the shade's mild ones.
+    for (const line of quadlineTemplates()) {
+      for (const word of ['try-hard', 'show-off']) if (line.includes(word)) expect(NAME_CALLING as readonly string[]).toContain(word);
+    }
+    const model = advance(newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + DAY).state;
+    const web = newWeb(model.seed, 1024);
+    catchUp(web, model, webWeekOf(model));
+    for (let w = 1; w <= 8; w++) catchUp(web, model, webWeekOf(model) + w);
+    const view = viewOf(web, false);
+    const posts = feedOf(view, model);
+    expect(posts.length).toBeGreaterThan(200);
+    const mask = (text: string, names: string[]): string => names.reduce((line, name) => line.split(name).join('{name}'), text);
+    const names = (refs: Array<{ entryYear: number; index: number }>): string[] => refs.flatMap((ref) => studentName(model, ref).split(' '));
+    for (const post of posts) {
+      const subject = post.kind <= 6 ? [{ entryYear: post.a, index: post.b }] : [];
+      const { text, tag } = postWords(model, post);
+      // Buildings are named from the game's own name pools, as students are: masked too.
+      const line = mask(text, names([post.author, ...subject])).replace(/[A-Z][a-z]+ Hall/g, '{place}');
+      expect(hardLineProblem(line), line).toBeNull();
+      expect(toneProblem(line), line).toBeNull();
+      expect(hardLineProblem(tag), tag).toBeNull();
+      for (const comment of commentsFor(view, model, post).slice(0, 3)) {
+        const said = mask(comment.text, names([post.author, comment.who]));
+        expect(hardLineProblem(said), said).toBeNull();
+        expect(toneProblem(said), said).toBeNull();
+      }
+    }
+  }, 120_000);
 });
