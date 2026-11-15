@@ -254,14 +254,22 @@ describe('the Campus social page', () => {
     expect(social.inGroups).toBeLessThan(1);
     let couples = 0;
     let splits = 0;
+    // This week is the newest week lived, not the year so far.
     for (let row = 0; row < WEB.weeklyWeek.length; row++) {
-      if (WEB.weeklyWeek[row]! < 0 || WEB.weeklyYear[row] !== YEAR) continue;
+      if (WEB.weeklyWeek[row] !== WEB.week || WEB.weeklyYear[row] !== YEAR) continue;
       couples += WEB.weekly[row * EVENTS.length + EVENT.dating]! + WEB.weekly[row * EVENTS.length + EVENT.backTogether]!;
       splits += WEB.weekly[row * EVENTS.length + EVENT.splitMutual]! + WEB.weekly[row * EVENTS.length + EVENT.splitMessy]!;
     }
     expect(social.week.couples).toBe(couples);
     expect(social.week.splits).toBe(splits);
     expect(couples).toBeGreaterThan(0);
+    // The weeks before it are not added in: the year so far holds more.
+    let year = 0;
+    for (let row = 0; row < WEB.weeklyWeek.length; row++) {
+      if (WEB.weeklyWeek[row]! < 0 || WEB.weeklyYear[row] !== YEAR) continue;
+      year += WEB.weekly[row * EVENTS.length + EVENT.dating]! + WEB.weekly[row * EVENTS.length + EVENT.backTogether]!;
+    }
+    expect(year).toBeGreaterThan(couples);
   });
 
   it('names the most popular, the week’s news and the biggest groups: students still here, nothing heavy but the drama', () => {
