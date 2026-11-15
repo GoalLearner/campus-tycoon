@@ -60,6 +60,13 @@ class Session {
   /** True while the camera keeps that student in view. */
   following = false;
   /**
+   * The close-up while following (DESIGN.md 64.5): the map zooms in on them until faces and what they carry read, with
+   * what they are doing and how they feel in a caption under them. Off whenever following stops.
+   */
+  closeUp = false;
+  /** What the card says they are doing now, as its strip shows it: the close-up's caption reads it. Not a reason to draw. */
+  doingWords = '';
+  /**
    * True while the open student card is put away to a small strip, so the map can be watched (DESIGN.md 61). The
    * camera goes on following; tapping the strip brings the card back.
    */
@@ -115,6 +122,8 @@ class Session {
       this.student = null;
       this.person = null;
       this.following = false;
+      this.closeUp = false;
+    this.closeUp = false;
       this.tucked = false;
     }
     this.emit();
@@ -150,6 +159,7 @@ class Session {
     this.student = null;
     this.person = null;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.emit();
   }
@@ -214,6 +224,7 @@ class Session {
     this.student = null;
     this.person = null;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.emit();
   }
@@ -225,6 +236,7 @@ class Session {
     this.person = null;
     this.network = null;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.doing = null;
     this.selected = null;
@@ -237,6 +249,7 @@ class Session {
     this.student = null;
     this.network = null;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.doing = null;
     this.selected = null;
@@ -250,6 +263,7 @@ class Session {
     this.person = null;
     this.network = null;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.room = null;
     this.emit();
@@ -276,6 +290,7 @@ class Session {
   openNetwork(ref: StudentRef): void {
     this.network = { entryYear: ref.entryYear, index: ref.index };
     this.following = false;
+    this.closeUp = false;
     this.emit();
   }
 
@@ -302,6 +317,7 @@ class Session {
     if (!this.student) return;
     this.room = this.student;
     this.following = false;
+    this.closeUp = false;
     this.tucked = false;
     this.emit();
   }
@@ -316,6 +332,15 @@ class Session {
   setFollowing(on: boolean): void {
     if (this.following === on) return;
     this.following = on;
+    if (!on) this.closeUp = false;
+    this.emit();
+  }
+
+  /** The close-up on or off (DESIGN.md 64.5): only while following. */
+  setCloseUp(on: boolean): void {
+    const next = on && this.following;
+    if (this.closeUp === next) return;
+    this.closeUp = next;
     this.emit();
   }
 

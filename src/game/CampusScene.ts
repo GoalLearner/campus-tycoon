@@ -84,6 +84,10 @@ interface CollectSpot {
 const PARKED_AT = [0.02, 0.5, 1.0] as const;
 
 const MAX_ZOOM_FACTOR = 2.2;
+/** The close-up's zoom while following (DESIGN.md 64.5): as far in as the map goes. */
+const CLOSE_UP_ZOOM = MAX_ZOOM_FACTOR;
+/** The caption's type, the interface's own. */
+const CAPTION_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 /** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
 const TWIST_FOLLOW_MS = 45;
 /** The longest side of the spin's picture of the ground, in pixels: past it the picture is made a little softer. */
@@ -197,6 +201,10 @@ export class CampusScene extends Phaser.Scene {
   private stormHeld = false;
   /** The zoom the map opened at: sound is fullest there and closer, and quieter zoomed out. */
   private homeZoom = 1;
+  /** The close-up while following (DESIGN.md 64.5): the zoom to go back to, and the caption under them. */
+  private zoomBeforeClose: number | null = null;
+  private caption: Phaser.GameObjects.Text | null = null;
+  private feelingName = '';
   /** The sentence that stands with each edge marker, by which marker it is. */
   private hintTexts = new Map<'walk' | 'drive', Phaser.GameObjects.Text>();
   /** Where each edge marker stands, for taps. */
@@ -1559,9 +1567,11 @@ export class CampusScene extends Phaser.Scene {
       ring.setPosition(there.x, there.y).setDepth(there.depth - 0.2).setVisible(true);
     } else this.stayRing?.setVisible(false);
     this.drawEmote(student, key, walking ? this.walkers.spot(key!) : there ? { x: there.x, y: there.y } : null);
-    const at = key && session.following ? this.walkers.spot(key) : null;
+    // Followed walking, or where they have stopped on a lawn, at a table or in a game (DESIGN.md 64.5).
+    const at = key && session.following ? (this.walkers.spot(key) ?? (there ? { x: there.x, y: there.y } : null)) : null;
     // They went indoors: there is nobody left to follow.
     if (session.following && !at) session.setFollowing(false);
+    this.closeUp(delta, at);
 
     const target = at ?? this.glide;
     if (!target) return;
@@ -1572,10 +1582,49 @@ export class CampusScene extends Phaser.Scene {
     const wantY = target.y - cam.height / 2 + (cam.height * (0.5 - aim)) / cam.zoom;
     const fromX = cam.scrollX;
     const fromY = cam.scrollY;
-    cam.setScroll(fromX + (wantX - fromX) * ease, fromY + (wantY - fromY) * ease);
+    // Close up, the camera glides a little softer, so a walk does not judder at that size.
+    const glide = at && session.closeUp ? 1 - Math.pow(0.02, delta / 1000) : ease;
+    cam.setScroll(fromX + (wantX - fromX) * glide, fromY + (wantY - fromY) * glide);
     this.clampCamera();
     // A glide ends when it arrives, or when the edge of the map stops it.
     if (!at && Math.abs(cam.scrollX - fromX) + Math.abs(cam.scrollY - fromY) < 0.3) this.glide = null;
+  }
+
+  /**
+   * The close-up while following (DESIGN.md 64.5): the camera zooms in on them, as far as the map goes, so faces, what
+   * they carry and how they move read; a caption under them says what they are doing and how they feel. Off, it zooms
+   * back to where it was. About a second either way.
+   */
+  private closeUp(delta: number, at: { x: number; y: number } | null): void {
+    const cam = this.cameras.main;
+    const settle = 1 - Math.pow(0.03, delta / 1000);
+    const on = session.closeUp && at !== null;
+    this.walkers.setMarkedOnTop(on);
+    if (on) {
+      if (this.zoomBeforeClose === null) this.zoomBeforeClose = cam.zoom;
+      cam.setZoom(cam.zoom + (CLOSE_UP_ZOOM * this.dpr - cam.zoom) * settle);
+    } else if (this.zoomBeforeClose !== null) {
+      cam.setZoom(cam.zoom + (this.zoomBeforeClose - cam.zoom) * settle);
+      if (Math.abs(cam.zoom - this.zoomBeforeClose) < 0.002) {
+        cam.setZoom(this.zoomBeforeClose);
+        this.zoomBeforeClose = null;
+      }
+    }
+    const words = on ? `${session.doingWords}${this.feelingName ? ` · ${this.feelingName}` : ''}` : '';
+    if (!words || !at) {
+      this.caption?.setVisible(false);
+      return;
+    }
+    const caption =
+      this.caption ??
+      this.add
+        .text(0, 0, '', { fontFamily: CAPTION_FONT, fontSize: '26px', color: '#ffffff', backgroundColor: 'rgba(22, 32, 27, 0.82)', padding: { x: 12, y: 6 }, align: 'center', wordWrap: { width: 560 } })
+        .setOrigin(0.5, 0)
+        .setDepth(EMOTE_DEPTH);
+    this.caption = caption;
+    if (caption.text !== words) caption.setText(words);
+    // About 13 points tall on the screen at any zoom, just under their feet.
+    caption.setScale(0.5 / this.scale.zoom / cam.zoom).setPosition(at.x, at.y + 5).setVisible(true);
   }
 
   /** A ring round the hall named on a card, pulsing three times over a few seconds, then gone (DESIGN.md 60). */
@@ -1592,6 +1641,7 @@ export class CampusScene extends Phaser.Scene {
         const card = studentCard(store.state, student);
         const feeling = card ? feelingOf(socialWeb.view, store.state, student, card, hour) : null;
         this.emoteKey = feeling?.emote ? `emote.${feeling.emote}` : null;
+        this.feelingName = feeling && feeling.emotion !== 'fine' ? feeling.name : '';
       }
     }
     // A greeting or a chat bubble over them says more just now (DESIGN.md 63.8): the mood's emote waits.
@@ -1668,6 +1718,9 @@ export class CampusScene extends Phaser.Scene {
 
   private zoomAt(screenX: number, screenY: number, zoom: number): void {
     const cam = this.cameras.main;
+    // A pinch or the wheel takes the zoom back from the close-up, which then stays where the player put it.
+    this.zoomBeforeClose = null;
+    if (session.closeUp) session.setCloseUp(false);
     const before = this.toWorld(screenX, screenY);
     cam.setZoom(Phaser.Math.Clamp(zoom, this.minZoom(), MAX_ZOOM_FACTOR * this.dpr));
     const after = this.toWorld(screenX, screenY);

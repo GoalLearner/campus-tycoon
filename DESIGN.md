@@ -8155,3 +8155,31 @@ Built 2026-11-15 on the branch `life-3`. Now and then, where the player is looki
 | Watchers walk straight over the grass to their place in the ring | A path to it would often be longer than the moment |
 | Pictures were staged on demand, each kind where it could happen | In play a moment comes every 20 to 45 seconds, chosen as above |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 64.5 L4 as built: the close-up follow
+
+Built 2026-11-15 on the branch `life-4`. While following a student (13.8, 61), a **Close up** button (a magnifying glass with a plus on the follow strip, a 44-point tap; "Close up" beside Following on the card) zooms the map in on them as far as it goes (`CLOSE_UP_ZOOM`, the map's own most), in about a second, so faces, what they carry (64.3) and how they move read. Tapped again (a minus now), or when the follow ends, the map zooms back to where it was. A pinch or the wheel takes the zoom back from it, and it stays where the player put it (`src/app/session.ts` `closeUp`, `src/game/CampusScene.ts` `closeUp()`).
+
+| | As built |
+|---|---|
+| The caption | Under their feet, about 13 points tall at any zoom: what the card says they are doing now and how they feel ("Walking in from home · Happy"; Fine says nothing), white on the dark of the interface |
+| The follow | A little softer close up, so a walk does not judder at that size. It now goes on when they stop on a lawn, at a table or in a game, where before it ended |
+| Seen through walls | Close up, the student followed is drawn over the buildings and everything else on the map but the floating icons, so a wall never hides them |
+| The strip | Its magnifying glass is lit while the close-up is on |
+
+| Decisions made here | Instead |
+|---|---|
+| As far in as the map goes | A zoom of its own, closer still, where the art would blur |
+| The caption from the card's own words for what they are doing | A second set of words for the map |
+| Drawn over the buildings close up | Hidden behind them as anyone else is, which a close-up cannot afford |
+| Ended by a pinch or the wheel | Fighting the player's own zoom |
+
+**Measured.** Frames on the slowed phone, back to back with main (7c6e088), 16 frames each: Normal 16.1 ms against L4's 19.2 in one run and 16.4 against 15.0 in the next; High, the morning rush, 20.5 against 19.1. Nothing L4 adds runs unless someone is followed close up, and close up there is less of the map to draw; the difference is the PC's. The long run was not run again: L4 changes nothing the simulator reads.
+
+**Tested**: `tests/closeUp.test.ts` (4): only for someone followed; kept through putting the card away and bringing it back; ended by stopping, going indoors, closing the card or opening another student; its 44-point button on the strip and on the card, and no zoom past the map's own most. The follow strip's tests unchanged.
+
+| Rough | Why |
+|---|---|
+| At the map's most the figures are soft | They are drawn at the map's size; closer still would blur them more |
+| A party walking with them stands behind the one followed | The followed one is drawn over everything close up |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

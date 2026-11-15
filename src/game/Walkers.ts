@@ -167,6 +167,8 @@ const BIG_DELAY_MS = 900;
 const BIGS_AT_ONCE = [0, 1, 2, 2];
 /** A mood ring about 18 pixels across. */
 const RING_SCALE = 0.86;
+/** The followed student's depth in the close-up: over the buildings, under the emote over their head. */
+const ON_TOP_DEPTH = 900_000;
 /** Where the canopy's lower edge is on the umbrella picture, from its top. */
 const UMBRELLA_RIM = 0.55;
 /** The most walkers carrying something at once, by crowd step (DESIGN.md 64.3): each is one more thing to draw. */
@@ -512,6 +514,7 @@ export class Walkers {
   private feltStamp = '';
   private ringPool: Phaser.GameObjects.Image[] = [];
   private ringsShown = 0;
+  private markedOnTop = false;
   private bigShown = new Set<string>();
   private today: Today = { homeWin: false, bids: false, exams: false };
   private weather: Weather = 'clear';
@@ -1260,6 +1263,8 @@ export class Walkers {
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
+    // Followed close up (DESIGN.md 64.5): over everything on the map but the floating icons.
+    if (this.markedOnTop && walker.key !== null && walker.key === this.marked) walker.sprite.setDepth(ON_TOP_DEPTH);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
     const hidden = this.scene.time.now < walker.hiddenUntil;
     walker.sprite.setAlpha(hidden ? 0 : walker.alpha);
@@ -1621,6 +1626,11 @@ export class Walkers {
   }
 
   /** Ring the walker whose card is open: a student by their key, anyone else by `p:` and their own. */
+  /** In the close-up (DESIGN.md 64.5) the student followed is drawn over the buildings, so a wall never hides them. */
+  setMarkedOnTop(on: boolean): void {
+    this.markedOnTop = on;
+  }
+
   setMarked(key: string | null): void {
     const changed = key !== this.marked;
     this.marked = key;
