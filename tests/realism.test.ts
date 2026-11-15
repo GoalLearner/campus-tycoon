@@ -10,7 +10,8 @@ import { attendanceOf, gpaAt, normalCdf, normalInv, shareBelow, weekInClass } fr
 import { sleepHours } from '../src/app/regularDay';
 import { dayOfAcademicYear, fluOf, fluShare, homesickShare, lonelyChance } from '../src/sim/systems/wellbeing';
 import { SEASON_CURVE } from '../src/sim/config/season';
-import { campusSocial, viewOf } from '../src/app/socialView';
+import { campusSocial, relationshipWords, viewOf } from '../src/app/socialView';
+import { EVENT } from '../src/sim/config/web';
 import { catchUp as catchUpWeb } from '../src/sim/systems/web';
 import { sampleStudents } from '../src/sim';
 import { namedRegulars } from '../src/sim/systems/regulars';
@@ -370,4 +371,45 @@ describe('sleep, Stress, homesickness, loneliness and the flu', () => {
     expect(most).toBeGreaterThan(0.015);
     expect(most).toBeLessThan(0.06);
   });
+});
+
+describe('relationships and roommates', () => {
+  it('put about a third in a relationship, hometown partners included, and card and web agree', () => {
+    const state = at(MODEL, 1.6).state;
+    const web = newWeb(state.seed, 1024);
+    catchUpWeb(web, state, webWeekOf(state));
+    const view = viewOf(web, false);
+    const cards = sampleStudents(state, 1000).map((ref) => ({ ref, card: studentCard(state, ref)! }));
+    const taken = cards.filter(({ ref, card }) => !/single/i.test(relationshipWords(view, state, ref, card.relationship).name)).length / cards.length;
+    expect(taken).toBeGreaterThan(0.25);
+    expect(taken).toBeLessThan(0.45);
+    // Hometown partners are mostly first-years', and fewer by the last year.
+    const far = (classYear: number): number => {
+      const some = cards.filter(({ card }) => card.classYear === classYear);
+      return some.filter(({ card }) => card.relationship.id.startsWith('distance')).length / Math.max(1, some.length);
+    };
+    expect(far(0)).toBeGreaterThan(far(3));
+    // About half of roommates have some friction, fewer are at odds.
+    const rooms = campusSocial(view, state).roommates!;
+    expect(rooms.friction).toBeGreaterThan(0.4);
+    expect(rooms.friction).toBeLessThan(0.6);
+    expect(rooms.atOdds).toBeGreaterThan(0.08);
+    expect(rooms.atOdds).toBeLessThan(rooms.friction);
+  }, 60_000);
+
+  it('move some roommates at odds apart at the spring semester, once, and never back together that year', () => {
+    const fall = at(MODEL, 2).state;
+    const web = newWeb(fall.seed, 1024);
+    catchUpWeb(web, fall, webWeekOf(fall));
+    const before = web.events[EVENT.roomSwitch]!;
+    const spring = at(fall, 4.2).state;
+    catchUpWeb(web, spring, webWeekOf(spring));
+    const moved = web.events[EVENT.roomSwitch]! - before;
+    // About 3% of students with a roommate a year: a few hundred pairs on a campus this size.
+    expect(moved).toBeGreaterThan(100);
+    expect(moved).toBeLessThan(1000);
+    const again = web.events[EVENT.roomSwitch]!;
+    catchUpWeb(web, at(spring, 4.6).state, webWeekOf(at(spring, 4.6).state));
+    expect(web.events[EVENT.roomSwitch]).toBe(again);
+  }, 90_000);
 });

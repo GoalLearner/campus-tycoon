@@ -332,18 +332,22 @@ export const RELATIONSHIP_NAMES: Record<RelationshipId, string> = {
   distanceHappy: 'Happy long-distance',
   distanceStruggling: 'Struggling long-distance',
 };
-/** [T] How a new student arrives: plenty still have someone back home. */
+/**
+ * [T] How a new student arrives: a quarter still have someone back home, a hometown partner (DESIGN.md 65.6), and
+ * fewer as the years go on. On the cards a student with a partner on campus shows the web's; "together" here is read
+ * only without the web.
+ */
 export const KIND_AT_ENTRY: ReadonlyArray<readonly [RelationshipKind, number]> = [
-  ['single', 55],
+  ['single', 60],
   ['together', 12],
-  ['distance', 33],
+  ['distance', 28],
 ];
 /** [T] At each intake most students stay as they are. */
 export const KIND_STAYS = 0.6;
 /** [T] Where the others go. */
 export const KIND_MOVES: Record<RelationshipKind, ReadonlyArray<readonly [RelationshipKind, number]>> = {
-  single: [['together', 85], ['distance', 15]],
-  together: [['single', 70], ['distance', 30]],
+  single: [['together', 95], ['distance', 5]],
+  together: [['single', 85], ['distance', 15]],
   distance: [['single', 60], ['together', 40]],
 };
 /**

@@ -3,7 +3,7 @@ import type { MainPeople } from '../sim/types';
 import { BULLYING_LINES, BULLYING_ROLES } from '../sim/config/bullying';
 import type { GameState } from '../sim';
 import { calendarAt } from '../sim/calendar';
-import { EVENT, FEEL, FRIEND_AT, HEAVY_EVENTS, KIND, SLOTS } from '../sim/config/web';
+import { EVENT, FEEL, FRIEND_AT, HEAVY_EVENTS, KIND, SLOTS, ROOM_FRICTION_BELOW } from '../sim/config/web';
 import { classYearOf, firstNameOf, movedAway, semesterOf, studentName, type StudentRef } from '../sim/systems/students';
 import { homesickOf, lonelyOf } from '../sim/systems/wellbeing';
 import { HAPPENING_FIELDS, type Web } from '../sim/systems/web';
@@ -47,6 +47,26 @@ export interface WebView {
   /** Quadline's posts (DESIGN.md 63.13): the newest kept, then the viral ones, as their numbers. */
   posts: Int32Array;
   viral: Int32Array;
+  /**
+   * Roommate pairs (DESIGN.md 65.6), read where each pair's chemistry is known: how many there are, how many have some
+   * friction, and how many are at odds.
+   */
+  roommates: { pairs: number; friction: number; atOdds: number };
+}
+
+/** The roommate pairs of a web: each pair once, by its chemistry and its feeling. */
+function roommatePairs(web: Web): WebView['roommates'] {
+  let pairs = 0;
+  let friction = 0;
+  let atOdds = 0;
+  for (let s = 0; s < web.n * SLOTS; s++) {
+    const b = web.other[s]!;
+    if (b < 0 || web.kind[s] !== KIND.roommate || b < Math.floor(s / SLOTS)) continue;
+    pairs += 1;
+    if (web.chem[s]! < ROOM_FRICTION_BELOW * 100) friction += 1;
+    if (web.feeling[s] === FEEL.tense) atOdds += 1;
+  }
+  return { pairs, friction, atOdds };
 }
 
 /** The web's view: copied for sending from the worker, or shared for reading in place. */
@@ -74,6 +94,7 @@ export function viewOf(web: Web, copy: boolean): WebView {
     groupVibe: copy ? web.groupVibe.slice() : web.groupVibe,
     posts: copy ? web.posts.slice() : web.posts,
     viral: copy ? web.viral.slice() : web.viral,
+    roommates: roommatePairs(web),
   };
 }
 
@@ -508,9 +529,19 @@ export interface CampusSocial {
    */
   lonely: number;
   homesick: number | null;
+  /** Roommates (65.6): the share of pairs with some friction and at odds, and how many moved apart this year. */
+  roommates: { friction: number; atOdds: number; switched: number } | null;
 }
 
 const isFriendKind = (kind: number): boolean => kind === KIND.friend || kind === KIND.best || kind === KIND.crush || kind === KIND.roommate;
+
+/** Students who moved apart from a roommate this campus year: two for each pair. */
+function switchedThisYear(view: WebView, year: number): number {
+  const width = view.weekly.length / view.weeklyWeek.length;
+  let pairs = 0;
+  for (let row = 0; row < view.weeklyWeek.length; row++) if (view.weeklyWeek[row]! >= 0 && view.weeklyYear[row] === year) pairs += view.weekly[row * width + EVENT.roomSwitch] ?? 0;
+  return pairs * 2;
+}
 
 export function campusSocial(view: WebView, state: GameState): CampusSocial {
   const year = calendarAt(state.clock).year;
@@ -626,5 +657,9 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     lines: lightSince(view, state, -1, year, 4),
     lonely: students > 0 ? lonely / students : 0,
     homesick: away > 0 ? homesick / away : null,
+    roommates:
+      view.roommates.pairs > 0
+        ? { friction: view.roommates.friction / view.roommates.pairs, atOdds: view.roommates.atOdds / view.roommates.pairs, switched: switchedThisYear(view, year) }
+        : null,
   };
 }

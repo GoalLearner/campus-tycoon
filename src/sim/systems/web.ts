@@ -1,6 +1,6 @@
 import { EX_START } from '../config/social';
 import { CLASS_YEARS } from '../config/population';
-import { calendarAt } from '../calendar';
+import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { CLUBS, MAJORS } from '../config/students';
 import {
   BACK_TOGETHER,
@@ -43,6 +43,8 @@ import {
   TABLE_SIZE,
   WEB_WEEK_TICKS,
   WHERE,
+  DATE_CHANCE,
+  ROOM_SWITCH,
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
 import { bullyingTimes } from './policies';
@@ -484,8 +486,13 @@ const pairChem = (web: Web, a: number, b: number): number => {
  * longer shared, or who no longer share a floor, are roommates no more.
  */
 function placeRoommates(web: Web, state: GameState, calYear: number): void {
-  const newYear = web.roomsFor !== calYear;
-  web.roomsFor = calYear;
+  // The year and its half (DESIGN.md 65.6): pairs are made each fall, and at the spring semester the pairs at odds may
+  // move apart, once.
+  const spring = calendarAt(state.clock).tickInYear >= SPRING_INTAKE_TICK_IN_YEAR ? 1 : 0;
+  const newYear = web.roomsFor < 0 || Math.floor(web.roomsFor / 2) !== calYear;
+  const switching = !newYear && spring === 1 && web.roomsFor % 2 === 0;
+  web.roomsFor = calYear * 2 + spring;
+  const apart = new Set<number>();
   const floor = web.place[0]!;
   const shared = new Map<number, boolean>();
   const isShared = (key: number): boolean => {
@@ -504,7 +511,16 @@ function placeRoommates(web: Web, state: GameState, calYear: number): void {
     const b = web.other[s]!;
     if (b < a) continue;
     const ok = !newYear && web.year[a]! >= 0 && web.year[b]! >= 0 && floor[a] === floor[b] && floor[a]! >= 0 && isShared(floor[a]!) && gender(web.identity[a]!) === gender(web.identity[b]!);
-    if (!ok) setBoth(web, s, web.back[s]!, web.strength[s]! >= FRIEND_AT ? KIND.friend : KIND.met, FEEL.warm);
+    if (!ok) {
+      setBoth(web, s, web.back[s]!, web.strength[s]! >= FRIEND_AT ? KIND.friend : KIND.met, FEEL.warm);
+      continue;
+    }
+    // A pair at odds may move apart at the spring semester: each to another room, never back together this year.
+    if (switching && web.feeling[s] === FEEL.tense && a !== web.mainId && b !== web.mainId && share(hash5(web.seed, 9960, a, b, calYear)) < ROOM_SWITCH) {
+      setBoth(web, s, web.back[s]!, KIND.met, FEEL.tense);
+      apart.add(a * web.n + b);
+      count(web, EVENT.roomSwitch);
+    }
   }
   const group = web.groups[0];
   if (!group) return;
@@ -523,6 +539,8 @@ function placeRoommates(web: Web, state: GameState, calYear: number): void {
         continue;
       }
       const a = waiting[g]!;
+      // Two who have just moved apart are not paired again: the next one waits instead.
+      if (apart.has(Math.min(a, one) * web.n + Math.max(a, one))) continue;
       waiting[g] = -1;
       const chem = pairChem(web, a, one);
       const s = slotOf(web, a, one);
@@ -692,7 +710,7 @@ function meet(web: Web, a: number, b: number, h: number): void {
     count(web, web.kind[sa] === KIND.crush ? 4 : 3);
   }
   // Both with a crush, close enough, a good evening: they start dating, if both are free, or one cheats.
-  if (web.kind[sa] === KIND.crush && web.kind[sb] === KIND.crush && st >= DATE_FROM && share(h >>> 5) < 0.35) {
+  if (web.kind[sa] === KIND.crush && web.kind[sb] === KIND.crush && st >= DATE_FROM && share(h >>> 5) < DATE_CHANCE) {
     // Both must be free, or ready to cheat; only then does anything end.
     const fa = freeToDate(web, a, h);
     const fb = freeToDate(web, b, h >>> 2);
@@ -1325,7 +1343,8 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
     const r = Math.floor(id / classSlot);
     return held[r] ? ringOf(ringThen[r]!) * classSlot + (id % classSlot) : -1;
   };
-  web.roomsFor = head[9]!;
+  // Before version 4 it was the year alone; since, the year and its half (DESIGN.md 65.6).
+  web.roomsFor = version >= 4 || head[9]! < 0 ? head[9]! : head[9]! * 2;
   let at = HEADER * 4;
   web.events.set(new Float64Array(copy.buffer, at, kinds));
   at += kinds * 8;

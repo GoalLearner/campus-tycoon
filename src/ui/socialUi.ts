@@ -67,6 +67,10 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       // Lonely, and missing home (DESIGN.md 65.5): common feelings, counted from everyone's ties.
       stat('Lonely', `${Math.round(social.lonely * 100)}% of students`),
       ...(social.homesick !== null ? [stat('Missing home', `${Math.round(social.homesick * 100)}% of first-years who moved away`)] : []),
+      // Roommates (DESIGN.md 65.6): about half have some friction, and a few move apart each spring.
+      ...(social.roommates
+        ? [stat('Roommates', `${Math.round(social.roommates.friction * 100)}% with some friction, ${Math.round(social.roommates.atOdds * 100)}% at odds${social.roommates.switched > 0 ? `; ${social.roommates.switched.toLocaleString('en-US')} moved rooms this year` : ''}`)]
+        : []),
       // Picking on someone (DESIGN.md 63.11).
       ...(effects.bullied !== undefined ? [stat('Picked on', `${(effects.bullied * 100).toFixed(1)}% of students`)] : []),
     );
