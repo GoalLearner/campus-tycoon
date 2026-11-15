@@ -68,6 +68,12 @@ const unit = (seed: number, ref: { entryYear: number; index: number }, salt: num
 const lerp = (range: readonly [number, number], at: number): number => range[0] + (range[1] - range[0]) * at;
 const round = (value: number, step: number): number => Math.round(value / step) * step;
 const money = studentDollars;
+/** "a" or "an" before an amount, as it is said: an $8,000, an $11,000 and an $18,500, a $1,800. */
+export function an(amount: number): 'a' | 'an' {
+  const whole = Math.round(Math.abs(amount));
+  const lead = whole >= 1_000_000 ? Math.floor(whole / 1_000_000) : whole >= 1_000 ? Math.floor(whole / 1_000) : whole;
+  return String(lead).startsWith('8') || lead === 11 || lead === 18 ? 'an' : 'a';
+}
 /** Pay an hour: "$15", "$14.50". */
 const hourly = (pay: number): string => studentDollars(pay, true);
 
@@ -191,8 +197,8 @@ export function moneyOf(state: GameState, ref: { entryYear: number; index: numbe
   else if (trip === 'back') lines.push('Back from a spring break trip');
   if (job) lines.push(`${workStudy ? 'Work-study, ' : 'Works '}${job.hours} hours a week at ${job.where}, ${hourly(job.pay)} an hour`);
   const aid: string[] = [];
-  if (grant > 0) aid.push(`a ${money(grant)} grant`);
-  if (loan > 0) aid.push(`a ${money(loan)} loan`);
+  if (grant > 0) aid.push(`${an(grant)} ${money(grant)} grant`);
+  if (loan > 0) aid.push(`${an(loan)} ${money(loan)} loan`);
   if (workStudy) aid.push('work-study');
   lines.push(aid.length > 0 ? `Aid this year: ${aid.length === 1 ? aid[0] : `${aid.slice(0, -1).join(', ')} and ${aid[aid.length - 1]}`}` : 'No aid this year: their family and savings pay');
   if (classYear >= 3 && owes > 0) lines.push(`Will graduate owing about ${money(round(Math.max(owes, owesAtFour), 100))}`);

@@ -95,11 +95,13 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
   const students = state.cohorts.reduce((sum, n) => sum + n, 0);
   if (students > 0) {
     const pct = (share: number): string => `${Math.round(share * 100)}%`;
+    // About so many: to the hundred once it is in the thousands.
+    const about = (n: number): string => count(n >= 1_000 ? Math.round(n / 100) * 100 : n);
     body.append(
       el('div', 'money-head', 'Money'),
       stat('Aid', `${pct(wallet.grant)} have a grant, ${pct(wallet.loan)} a federal loan, ${pct(wallet.workStudy)} work-study`),
-      stat('Working', `about ${count(Math.round(students * wallet.working))}, ${pct(wallet.longHours)} of students 20 hours a week or more; ${pct(wallet.onCampus)} of jobs on campus`),
-      stat('Running short this month', `about ${count(Math.round(students * wallet.short))} (${pct(wallet.short)})`),
+      stat('Working', `about ${about(students * wallet.working)} (${pct(wallet.working)}); ${pct(wallet.longHours)} of students work 20 hours a week or more; ${pct(wallet.onCampus)} of jobs are on campus`),
+      stat('Running short this month', `about ${about(students * wallet.short)} (${pct(wallet.short)})`),
       stat('Graduates owing', `${pct(wallet.borrowed)} borrowed, about ${studentDollars(wallet.debt)} on average`),
       stat('Rent in town', `about ${studentDollars(wallet.rent)} a bed a month; books about ${studentDollars(wallet.textbooks)} a year`),
     );

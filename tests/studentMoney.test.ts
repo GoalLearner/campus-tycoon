@@ -3,7 +3,7 @@ import { advance, edition, newGame, toneProblem, type GameState, type LogEntry }
 import { moodletsOf } from '../src/app/emotion';
 import { AID_SHARE, BORROWED_BY_GRADUATION, DEBT_AVERAGE, RENT_PER_BED_MONTH, RUNNING_SHORT, TEXTBOOKS_PER_YEAR, WORKING, WORKING_20_PLUS } from '../src/sim/config/studentMoney';
 import { MAJORS, NATURE_WEIGHTS, type ArchetypeId, type MajorGroup } from '../src/sim/config/students';
-import { debtAverageAtFour, debtWords, moneyFigures, moneyOf, shortEase, tellSpringBreak } from '../src/sim/systems/studentMoney';
+import { an, debtAverageAtFour, debtWords, moneyFigures, moneyOf, shortEase, tellSpringBreak } from '../src/sim/systems/studentMoney';
 import { sampleStudents, studentCard } from '../src/sim/systems/students';
 import { DAY, T0 } from './helpers';
 
@@ -131,6 +131,12 @@ describe('money, R3', () => {
       for (const text of [card.name, card.archetypeName, card.quirk, card.major, card.majorNote ?? '', card.club ?? '', card.week ?? '', card.party ?? '', ...card.milestones.lines, card.outcome?.line ?? '']) expect(text).not.toMatch(weight);
     }
     expect(cards).toBeGreaterThan(300);
+  });
+});
+
+describe('the words, R3', () => {
+  it('says "an" before an amount said with a vowel, as an $11,000 loan', () => {
+    for (const [amount, word] of [[8_000, 'an'], [11_000, 'an'], [18_500, 'an'], [800, 'an'], [1_800, 'a'], [6_500, 'a'], [110_000, 'a'], [80_000, 'an']] as const) expect(an(amount), String(amount)).toBe(word);
   });
 });
 
