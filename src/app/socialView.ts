@@ -487,7 +487,7 @@ export interface CampusSocial {
   groups: number;
   /** The share of students in a friend group, 0 to 1. */
   inGroups: number;
-  /** This campus week: new couples (and couples back together), splits and new best friends. */
+  /** This campus week, the newest lived: new couples (and couples back together), splits and new best friends. */
   week: { couples: number; splits: number; best: number; friends: number };
   /**
    * The five most popular (DESIGN.md 63.7): by how many students they reach, their friends and their friends'
@@ -564,8 +564,9 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     .sort((x, y) => y.known - x.known || y.close - x.close || x.id - y.id)
     .slice(0, 5);
   const week = { couples: 0, splits: 0, best: 0, friends: 0 };
+  // The newest week lived only: the ring keeps 64 weeks, and summing the year's rows told the year so far as "this week".
   for (let row = 0; row < view.weeklyWeek.length; row++) {
-    if (view.weeklyWeek[row]! < 0 || view.weeklyYear[row] !== year) continue;
+    if (view.weeklyWeek[row] !== view.week || view.weeklyYear[row] !== year) continue;
     const at = (event: number): number => view.weekly[row * (view.weekly.length / view.weeklyWeek.length) + event]!;
     // New couples, and couples back together: what makes the number of couples go up.
     week.couples += at(EVENT.dating) + at(EVENT.backTogether);

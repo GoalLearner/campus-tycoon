@@ -7819,6 +7819,7 @@ Built 2026-11-14 on the branch `social-sim-8`, the first of the three stops the 
 | Friend groups | The biggest dozen as clusters: up to six of their faces in a ring with a line between each two, their vibe ("the study crew") and how many they are. Tapped, a cluster opens to its members' names, each opening their card. It replaces the three biggest groups as lines of names |
 | This week | New couples and splits as before, and a new line: new friendships this week |
 | This week, after a long time away | Its two lines wait for the first week lived (below) |
+| This week, fixed 2026-11-15 | The newest week lived only. From stop 2 until then the lines added up every week kept for the calendar year, so a campus a few weeks into its year showed about 330 new couples "this week" where a week has 40 to 50 |
 | Most tight-knit | The best two halls, clubs, chapters and teams (`tightKnit` in `src/app/tightKnit.ts`), the tightest first: of their members' friendships, how many stay inside ("49% inside", a line under the heading says so). Whether a student has a friend on their own floor says little (nearly all do); how much of their circle is there says how close a place keeps people. A group of fewer than 12, or with fewer than 5 in 100 of its friendships inside, is left out. Read by the web's worker each week (19 ms on the model campus); it lives outside the simulation because it names halls by the card's names, which the simulation never reads (46) |
 | The most connected | As before ("Most popular", by reach) |
 
