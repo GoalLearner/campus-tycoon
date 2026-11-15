@@ -1486,17 +1486,28 @@ export class Walkers {
     const couple = first !== null && first.kind >= KIND.dating && first.kind <= KIND.longterm;
     const roll = Math.random();
     const evening = this.period === 'evening' || this.period === 'night';
+    // On a party night someone who likes parties, out with their friend group, makes for a lawn (63.11).
+    const partyMood = !couple && evening && roll < PARTY_NIGHT_GROUP && this.partyNight() && likesParties(view, leader.student);
+    if (partyMood && leader.goal.kind !== 'quad') {
+      const lawns = this.stops.filter((stop) => stop.kind === 'quad' && stop !== leader.from);
+      const lawn = lawns[Math.floor(Math.random() * lawns.length)];
+      const route = lawn ? this.routeBetween(leader.from, lawn) : null;
+      if (lawn && route) {
+        route[0] = { x: leader.x, y: leader.y };
+        leader.route = route;
+        leader.leg = 1;
+        leader.goal = lawn;
+      }
+    }
     const goal = leader.goal;
     const date = couple && evening && (goal.kind === 'quad' || (goal.kind === 'place' && goal.use === 'food'));
-    const partyNight = !couple && evening && goal.kind === 'quad' && this.partyNight() && likesParties(view, leader.student);
+    const partyNight = partyMood && goal.kind === 'quad';
     const want = couple
       ? roll < (date ? DATE_WITH_PARTNER : WITH_PARTNER)
         ? 1
         : 0
       : partyNight
-        ? roll < PARTY_NIGHT_GROUP
-          ? 2 + Math.floor(Math.random() * 4)
-          : 0
+        ? 2 + Math.floor(Math.random() * 4)
         : roll < WITH_GROUP
           ? 1 + Math.floor(Math.random() * 3)
           : 0;
