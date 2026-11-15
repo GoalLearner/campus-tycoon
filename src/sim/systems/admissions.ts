@@ -1,4 +1,6 @@
 import { calendarAt } from '../calendar';
+import { deansListShare, probationShare } from './grades';
+import { teachingQuality } from './students';
 import { FOUNDING_SHARES } from '../config/demand';
 import { CLASS_YEARS, LATE_FROM, LEAVE_WHYS, LEAVE_WORDS, RETURN_SHARE, type LeaveWhy } from '../config/population';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
@@ -443,6 +445,19 @@ export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): vo
           ? 'The semester ended and every student is staying on.'
           : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back: ${whyWords(why)}. Happiness was ${Math.round(mood.base)}.${byPolicy > 0 ? ` ${harder.by.join(' and ')}: ${headCount(byPolicy)} of them.` : ''}`,
       data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress), policy: byPolicy, ...Object.fromEntries(LEAVE_WHYS.map((one, i) => [one, why[i]!])) },
+    });
+  }
+  // Then the grades are in (DESIGN.md 65.4): the Dean's list and probation at the campus's teaching, and who was suspended.
+  if (log && stayed > 0) {
+    const teaching = teachingQuality(state);
+    const deans = Math.round(stayed * deansListShare(teaching));
+    const probation = Math.round(stayed * probationShare(teaching));
+    const suspended = why[WHY('grades')]!;
+    log.push({
+      tick: state.clock.tick,
+      kind: 'grades',
+      text: `Grades are in: ${headCount(deans)} on the Dean's list and ${headCount(probation)} on academic probation${suspended > 0 ? `; ${headCount(suspended)} were suspended for grades` : ''}.`,
+      data: { deans, probation, suspended },
     });
   }
 }

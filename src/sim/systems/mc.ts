@@ -1,4 +1,5 @@
 import { castFromWeb, mainPeopleSound } from './mainWeb';
+import { PROBATION_BELOW } from '../config/grades';
 import {
   ACTIVITIES,
   ALLOWANCE,
@@ -507,6 +508,15 @@ export function mcOnSemester(state: GameState, log?: LogEntry[]): void {
   if (grade >= DEANS_LIST) remember(state, mc, `${mc.name} made the Dean's list with a ${grade.toFixed(2)} this semester.`, true, log);
   else if (grade < 2) remember(state, mc, `${mc.name} had a hard semester: a ${grade.toFixed(2)}. Next semester is a fresh start.`, true, log);
   else remember(state, mc, `${mc.name} finished the semester with a ${grade.toFixed(2)}, in ${Math.round(attended * 100)}% of their classes.`, false, log);
+  // Academic probation (DESIGN.md 65.4): an average below 2.0. A second term in a row would suspend anyone else; the
+  // Main Character is the player's own story, so it is a final warning.
+  if (mc.gpa < PROBATION_BELOW) {
+    mc.probation = (mc.probation ?? 0) + 1;
+    remember(state, mc, mc.probation === 1 ? `${mc.name} is on academic probation: their average is ${mc.gpa.toFixed(2)}, below 2.0.` : `${mc.name} is on probation for a semester more, and has a final warning from the dean.`, true, log);
+  } else if ((mc.probation ?? 0) > 0) {
+    mc.probation = 0;
+    remember(state, mc, `${mc.name} is off academic probation, at ${mc.gpa.toFixed(2)}.`, true, log);
+  }
 }
 
 // ------------------------------------------------------------ the page --

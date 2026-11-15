@@ -260,6 +260,9 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         out.push({ weight: 57, headline: LEFT_HEADLINE[most], deck: entry.text });
         break;
       }
+      case 'grades':
+        out.push({ weight: 55, headline: `Dean's List Runs to ${Number(entry.data?.deans ?? 0).toLocaleString('en-US')} Names; Probation Letters Go Out Too`, deck: entry.text });
+        break;
       case 'returned':
         out.push({ weight: 56, headline: 'Stop-Outs Return for the Fall; Registrar Finds Their Files', deck: entry.text });
         break;

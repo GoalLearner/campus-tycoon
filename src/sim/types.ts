@@ -823,6 +823,11 @@ export interface MainCharacter {
   /** Grade point average over the semesters graded since they were chosen, and how many. null before the first. */
   gpa: number | null;
   semesters: number;
+  /**
+   * Semesters in a row on academic probation, their average below 2.0 (DESIGN.md 65.4). Two in a row suspends any
+   * other student; the Main Character, the player's own story, is given a final warning instead.
+   */
+  probation?: number;
   /** This semester so far: the study need summed at each step, the steps, classes attended and classes there were. */
   term: { study: number; steps: number; attended: number; classes: number };
   /** Hours of each activity in today, for the day's line. */
@@ -1427,6 +1432,7 @@ export type LogKind =
   | 'classes'
   | 'semester'
   | 'returned'
+  | 'grades'
   | 'incident'
   | 'grounds'
   | 'yearEnd'

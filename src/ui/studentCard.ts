@@ -476,7 +476,10 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
     // The ratio as this student meets it: how many of them there are to a member of faculty (DESIGN.md 38).
     const classes = card.classSize > 0 ? ` · classes of ${card.classSize}` : '';
-    setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${classes}`);
+    // The Dean's list or probation, and this week's classes they went to (DESIGN.md 65.4).
+    const standing = card.deansList ? " · Dean's list" : card.probation ? ' · on academic probation' : '';
+    const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
+    setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);

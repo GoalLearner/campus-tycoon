@@ -21,6 +21,9 @@ import {
 import type { ClassRecord, GameState } from '../types';
 import { friendsStay } from './friends';
 import { moneyLeavingEase } from './policies';
+import { probationShare } from './grades';
+import { teachingQuality } from './students';
+import { TEACH_TYPICAL } from '../config/grades';
 
 /**
  * Who stays, who finishes and when, and why the others leave (DESIGN.md 65.2). Students are counts by class year, as
@@ -107,7 +110,8 @@ export function leaveShares(state: GameState, standing: Standing, classYear: num
     transfer: LEAVE_WEIGHTS.transfer[first] * (1 - TRANSFER_RANK_EASE * standing.rank + TRANSFER_RANK_EASE / 2),
     stoppedOut: LEAVE_WEIGHTS.stoppedOut[first],
     money: LEAVE_WEIGHTS.money[first] * moneyLeavingEase(state),
-    grades: LEAVE_WEIGHTS.grades[first],
+    // More are suspended where more are on probation: teaching moves it (DESIGN.md 65.4).
+    grades: (LEAVE_WEIGHTS.grades[first] * probationShare(teachingQuality(state))) / probationShare(TEACH_TYPICAL),
     homesick: LEAVE_WEIGHTS.homesick[first] * (1.5 - standing.happy),
   };
   const total = Object.values(weights).reduce((sum, w) => sum + w, 0);

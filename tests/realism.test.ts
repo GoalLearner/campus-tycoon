@@ -6,6 +6,7 @@ import { campusRates } from '../src/sim/systems/field';
 import { anchorAt, classPath, leaveShares, splitCount, standingOf } from '../src/sim/systems/population';
 import { afterSwitching, FINAL, INTENDED, majorAt, majorPath } from '../src/sim/systems/majors';
 import { MAJORS } from '../src/sim/config/students';
+import { attendanceOf, gpaAt, normalCdf, normalInv, shareBelow, weekInClass } from '../src/sim/systems/grades';
 import { sampleStudents } from '../src/sim';
 import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
@@ -218,5 +219,61 @@ describe('majors', () => {
     expect(cards.filter((card) => card.classYear >= 2).every((card) => card.major !== 'Undeclared')).toBe(true);
     expect(cards.some((card) => card.majorNote?.startsWith('Switched from '))).toBe(true);
     for (const card of cards) expect(card.subject).not.toBe('Undeclared');
+  });
+});
+
+describe('grades and classes', () => {
+  it('follow the real spread: NPSAS:16 at public doctoral universities', () => {
+    // The bands as the source gives them, from the quantiles.
+    const band = (lo: number, hi: number): number => shareBelow(hi) - shareBelow(lo);
+    expect(shareBelow(1.75)).toBeCloseTo(0.04, 9);
+    expect(band(1.75, 2.25)).toBeCloseTo(0.08, 9);
+    expect(band(2.25, 2.75)).toBeCloseTo(0.19, 9);
+    expect(band(2.75, 3.25)).toBeCloseTo(0.29, 9);
+    expect(band(3.25, 3.75)).toBeCloseTo(0.27, 9);
+    expect(1 - shareBelow(3.75)).toBeCloseTo(0.13, 9);
+    for (const p of [0.01, 0.2, 0.5, 0.9]) expect(shareBelow(gpaAt(p))).toBeCloseTo(p, 9);
+    for (const p of [0.001, 0.03, 0.5, 0.97, 0.999]) expect(normalCdf(normalInv(p))).toBeCloseTo(p, 6);
+  });
+
+  it('give a model campus the real spread, about a quarter on the Dean’s list, and 6 to 9 in a hundred on probation', () => {
+    const cards = sampleStudents(MODEL, 2000).map((ref) => studentCard(MODEL, ref)!);
+    const share = (test: (gpa: number) => boolean): number => cards.filter((card) => test(card.gpa)).length / cards.length;
+    expect(share((gpa) => gpa < 2.25)).toBeGreaterThan(0.08);
+    expect(share((gpa) => gpa < 2.25)).toBeLessThan(0.17);
+    expect(share((gpa) => gpa >= 3.75)).toBeGreaterThan(0.08);
+    expect(share((gpa) => gpa >= 3.75)).toBeLessThan(0.18);
+    const mean = cards.reduce((sum, card) => sum + card.gpa, 0) / cards.length;
+    expect(Math.abs(mean - 3.0)).toBeLessThan(0.12);
+    const deans = cards.filter((card) => card.deansList).length / cards.length;
+    const probation = cards.filter((card) => card.probation).length / cards.length;
+    expect(deans).toBeGreaterThan(0.2);
+    expect(deans).toBeLessThan(0.31);
+    expect(probation).toBeGreaterThan(0.05);
+    expect(probation).toBeLessThan(0.1);
+    for (const card of cards) expect(card.deansList && card.probation).toBe(false);
+  });
+
+  it('are worse on Fridays, in the rain and the morning after a party, and none while sick', () => {
+    const ref = { entryYear: 3, index: 77 };
+    const plain = weekInClass(5, ref, 'butterfly', 40, { wet: false, partied: false, sickDays: 0 });
+    const wet = weekInClass(5, ref, 'butterfly', 40, { wet: true, partied: false, sickDays: 0 });
+    const party = weekInClass(5, ref, 'butterfly', 40, { wet: false, partied: true, sickDays: 0 });
+    const sick = weekInClass(5, ref, 'butterfly', 40, { wet: false, partied: false, sickDays: 5 });
+    expect(wet.went).toBeLessThanOrEqual(plain.went);
+    expect(party.went).toBeLessThanOrEqual(plain.went);
+    expect(sick.went).toBe(0);
+    // About two thirds of seats are filled across a campus, scholars more and slackers less.
+    let sum = 0;
+    for (let index = 0; index < 4000; index++) sum += attendanceOf(5, { entryYear: 3, index }, 'butterfly');
+    expect(sum / 4000).toBeGreaterThan(0.7);
+    expect(sum / 4000).toBeLessThan(0.82);
+    expect(attendanceOf(5, ref, 'scholar')).toBeGreaterThan(attendanceOf(5, ref, 'slacker'));
+  });
+
+  it('are reported at each semester’s end, in the paper too', () => {
+    const report = LATER.log.filter((entry) => entry.kind === 'grades').pop()!;
+    expect(report.text).toMatch(/^Grades are in: [\d,]+ on the Dean's list and [\d,]+ on academic probation/);
+    expect(toneProblem(report.text)).toBeNull();
   });
 });

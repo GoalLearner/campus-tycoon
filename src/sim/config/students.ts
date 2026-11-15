@@ -261,32 +261,10 @@ export const NO_CLUB_SHARE: Partial<Record<ArchetypeId, number>> & { default: nu
   ra: 0.15,
 };
 
-/**
- * [T] Grades. The campus average sits between these two, by how good the
- * teaching side of campus is. A student sits within SPREAD of that average,
- * and some natures study more than others.
- */
-export const GPA_FLOOR = 2.3;
-export const GPA_SPAN = 1.1;
-export const GPA_SPREAD = 0.6;
-export const GPA_TILT: Partial<Record<ArchetypeId, number>> = {
-  superfan: -0.1,
-  scholar: 0.5,
-  stressed: 0.2,
-  lost: -0.1,
-  clown: -0.2,
-  party: -0.3,
-  superSenior: -0.3,
-  slacker: -0.5,
-};
 /** Classes feel crowded once this share of seats is taken. A full campus loses the whole crowding share. */
 export const SEATS_COMFORTABLE = 0.7;
 export const TEACHING_WEIGHTS = { lots: 0.55, room: 0.45 };
-/** GPA is on a 4.0 scale and shown to one decimal. Nobody on a card is failing. */
-export const GPA_MIN = 1.5;
-export const GPA_MAX = 4.0;
-/** [T] A little lower in the first year, a little higher by the last. */
-export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
+/** Grades are at the real spread since R1: config/grades.ts (DESIGN.md 65.4). */
 
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,

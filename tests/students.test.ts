@@ -21,8 +21,6 @@ import {
 import {
   ARCHETYPE_NAMES,
   CLUBS,
-  GPA_MAX,
-  GPA_MIN,
   QUIRKS,
   RELATIONSHIP_NAMES,
   RELATIONSHIP_NOTES,
@@ -90,8 +88,9 @@ describe('the student card', () => {
       expect(['Freshman', 'Sophomore', 'Junior', 'Senior', 'Fifth-year senior', 'Sixth-year senior']).toContain(card.classYearName);
       expect(card.major.length).toBeGreaterThan(0);
       expect(QUIRKS).toContain(card.quirk);
-      expect(card.gpa).toBeGreaterThanOrEqual(GPA_MIN);
-      expect(card.gpa).toBeLessThanOrEqual(GPA_MAX);
+      // The real spread's ends (DESIGN.md 65.4).
+      expect(card.gpa).toBeGreaterThanOrEqual(0.8);
+      expect(card.gpa).toBeLessThanOrEqual(4);
       // One decimal, as the card shows it.
       expect(card.gpa.toFixed(1)).toBe(String(card.gpa).includes('.') ? String(card.gpa) : `${card.gpa}.0`);
       expect(STATUSES).toContain(card.relationship.name);

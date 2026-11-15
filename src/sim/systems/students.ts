@@ -1,4 +1,7 @@
 import { scaleOf, smallCount } from '../scale';
+import { gradesOf, weekInClass } from './grades';
+import { GPA_FLOOR } from '../config/grades';
+import { WEB_WEEK_TICKS } from '../config/web';
 import { majorAt, majorPath, semestersIn, type MajorPath } from './majors';
 import { CLASS_YEARS } from '../config/population';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
@@ -18,13 +21,6 @@ import {
   COMMUTER_WEIGHT,
   CONTENT_MOOD,
   FIRST_NAMES,
-  GPA_BY_CLASS_YEAR,
-  GPA_FLOOR,
-  GPA_MAX,
-  GPA_MIN,
-  GPA_SPAN,
-  GPA_SPREAD,
-  GPA_TILT,
   HOMESICK_SHARE,
   KIND_AT_ENTRY,
   KIND_LEAN,
@@ -65,7 +61,7 @@ import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
 import { athleteShare, superfanShare } from './football';
-import { dayRead, seasonLine, type SeasonLine } from './season';
+import { dayRead, seasonLine, weatherAt, type SeasonLine } from './season';
 import { STRESS_GPA, STRESS_HAPPINESS, STRESS_TILT } from '../config/season';
 import { townLiving } from './town';
 import { socialTables } from './grounds';
@@ -491,8 +487,13 @@ export interface StudentCard {
   chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
   street: string | null;
-  /** On a 4.0 scale, to one decimal. */
+  /** On a 4.0 scale, to one decimal: at the real spread (DESIGN.md 65.4). */
   gpa: number;
+  /** On the Dean's list for last semester's grades, and on academic probation for their average below 2.0. */
+  deansList: boolean;
+  probation: boolean;
+  /** This week's classes they went to, of how many: null out of term. */
+  classes: { went: number; of: number } | null;
   /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
   tutored: boolean;
   /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
@@ -747,21 +748,21 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
-  // Tutoring: a study center in reach of where they spend their days. A stand-in until layer 2: only the card reads it.
+  // Tutoring: a study center in reach of where they spend their days.
   let tutoring = 0;
   for (const spot of spots) tutoring = Math.max(tutoring, tutoringLift(state.map, spot % state.map.width, Math.floor(spot / state.map.width)));
-  const raw =
-    tutoring +
-    GPA_FLOOR +
-    GPA_SPAN * teachingQuality(state) +
-    (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
-    (GPA_TILT[phase] ?? 0) +
-    (GPA_BY_CLASS_YEAR[classYear] ?? 0) -
-    // Exam Stress nudges grades down a little, and lifts when the exams end.
-    STRESS_GPA * (stress / 100);
+  // Grades at the real spread (DESIGN.md 65.4): who they are, how often they go to class, how well the campus teaches,
+  // and a study center in reach. Exam Stress nudges them down a little, and lifts when the exams end.
+  const grades = gradesOf(seed, ref, { archetype: phase, classYear, teaching: teachingQuality(state), tutoring }, semesterOf(state));
   // A study partner lifts grades a little; a messy breakup in an exam week takes some off (DESIGN.md 63.10).
   const ownGpa = friends ? (exams > 0 ? friends.gpaInExams : friends.gpa) : 0;
-  const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw + ownGpa)) * 10) / 10;
+  const gpa = Math.round(Math.max(GPA_FLOOR, Math.min(4, grades.gpa - STRESS_GPA * (stress / 100) + ownGpa)) * 10) / 10;
+  // This week's classes, in a week of term: Fridays, wet weather and the morning after a party keep some away.
+  const term = !['break', 'summer', 'moveIn', 'founding', 'commencement'].includes(week.day.kind);
+  const weather = weatherAt(seed, state.clock);
+  const classes = term
+    ? weekInClass(seed, ref, phase, Math.floor(state.clock.tick / WEB_WEEK_TICKS), { wet: weather === 'rain' || weather === 'snow', partied: phase === 'party' && partiesOn(state), sickDays: 0 })
+    : null;
 
   return {
     ref,
@@ -779,6 +780,9 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,
+    deansList: grades.deansList,
+    probation: grades.probation,
+    classes,
     tutored: tutoring > 0,
     classSize: Math.round(classSizeNow(state)),
     club: fixed.club,
