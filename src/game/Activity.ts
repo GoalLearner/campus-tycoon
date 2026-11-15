@@ -525,7 +525,9 @@ export class Activity {
     }
     const who = winners[point.n % winners.length]!;
     const fade = Math.min(1, (CHEER_S - point.part) / 0.3);
-    icon.setVisible(true).setPosition(who.sprite.x, who.sprite.y - 38).setDepth(who.sprite.depth + 0.1).setAlpha(Math.max(0, who.alpha) * fade);
+    // Over the whole game, so a player in front does not hide it.
+    const top = players.reduce((most, figure) => Math.max(most, figure.sprite.depth), who.sprite.depth);
+    icon.setVisible(true).setPosition(who.sprite.x, who.sprite.y - 44).setDepth(top + 0.1).setAlpha(Math.max(0, who.alpha) * fade);
   }
 
   private ballAt(site: Site, seconds: number): { x: number; y: number } {
