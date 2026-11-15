@@ -131,7 +131,7 @@ describe('what they carry', () => {
   };
 
   it('opens an umbrella in the rain, most of the time', () => {
-    expect(rolls({ weather: 'rain' }).get('umbrella')).toBeGreaterThan(700);
+    expect(rolls({ weather: 'rain' }).get('umbrella')).toBeGreaterThan(500);
     expect(rolls({}).get('umbrella') ?? 0).toBe(0);
   });
 

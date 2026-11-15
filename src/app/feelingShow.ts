@@ -144,7 +144,7 @@ export interface Trip {
  */
 export function heldOf(trip: Trip): Held | null {
   const r = trip.roll;
-  if (trip.weather === 'rain') return r < 0.8 ? 'umbrella' : null;
+  if (trip.weather === 'rain') return r < 0.6 ? 'umbrella' : null;
   if (trip.to === 'class') {
     if (r < 0.2) return 'bag';
     if (r < 0.28) return 'book';

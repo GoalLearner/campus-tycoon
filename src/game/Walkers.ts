@@ -168,6 +168,8 @@ const BIGS_AT_ONCE = [0, 1, 2, 2];
 const RING_SCALE = 0.86;
 /** Where the canopy's lower edge is on the umbrella picture, from its top. */
 const UMBRELLA_RIM = 0.55;
+/** The most walkers carrying something at once, by crowd step (DESIGN.md 64.3): each is one more thing to draw. */
+const HELD_AT_STEP = [0, 24, 40, 64];
 const UMBRELLA_TINTS = [0xffffff, 0x9cc8ff, 0xb4f0a0, 0xe2b4ff, 0xffffff];
 /** How often a couple out together shows a heart, and how many of those are a kiss on the cheek. */
 const HEART_EVERY_MS = 6000;
@@ -1050,7 +1052,7 @@ export class Walkers {
     walker.pace *= MOTION_PACE[known.motion];
     // Something in hand, when they carry nothing yet and the frames allow it.
     const reduced = effectsSetting() === 'reduced';
-    if (!walker.prop && this.step > 0 && !reduced) {
+    if (!walker.prop && this.step > 0 && !reduced && this.carrying() < HELD_AT_STEP[this.step]!) {
       const held = heldOf({ weather: this.weather, period: this.period, from: tripEnd(from), to: tripEnd(to), likes: this.likesOf(student), roll: this.rollFor(student, 6403) });
       if (held) this.hand(walker, held);
     }
@@ -1148,7 +1150,7 @@ export class Walkers {
     for (const walker of this.walkers) {
       if (!walker.student || walker.fading === 'out') continue;
       if (weather === 'rain' && !walker.prop && this.step > 0 && effectsSetting() !== 'reduced') {
-        if (this.rollFor(walker.student, 6403) < 0.8) this.hand(walker, 'umbrella');
+        if (this.rollFor(walker.student, 6403) < 0.6 && this.carrying() < HELD_AT_STEP[this.step]!) this.hand(walker, 'umbrella');
       } else if (wasRain && walker.prop && walker.hold === 'over') {
         walker.prop.destroy();
         walker.prop = null;
@@ -1156,6 +1158,13 @@ export class Walkers {
         walker.hold = 'waist';
       }
     }
+  }
+
+  /** How many walkers carry something now: each is one more thing to draw. */
+  private carrying(): number {
+    let n = 0;
+    for (const walker of this.walkers) if (walker.prop && walker.held) n += 1;
+    return n;
   }
 
   /** A student's own steady number for the day, 0 to 1. */
