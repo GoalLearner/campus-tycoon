@@ -80,7 +80,8 @@ describe('the hard lines', () => {
       expect(toneProblem(line), line).toBeNull();
     }
     expect(Object.keys(BULLYING_LINES)).toHaveLength(6);
-  });
+    // A model campus's web grown and lived: several seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('hold for every Quadline template, and for every post and comment written on a lived campus, names and all', () => {
     // Every line the app can write: the posts by kind, the complaints and praise, the comments, the tags, and the

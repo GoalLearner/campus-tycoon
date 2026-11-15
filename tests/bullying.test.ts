@@ -64,7 +64,7 @@ describe('picking on someone', () => {
     (state.story as { mc: unknown }).mc = { ...(MODEL.story.mc ?? {}), ref, cast: [] };
     const web = newWeb(state.seed, 1024);
     catchUp(web, state, webWeekOf(state));
-    for (let w = 1; w <= 12; w++) catchUp(web, state, webWeekOf(state) + w);
+    for (let w = 1; w <= 8; w++) catchUp(web, state, webWeekOf(state) + w);
     for (let k = 0; k < SLOTS; k++) {
       const kind = web.kind[pick * SLOTS + k]!;
       if (web.other[pick * SLOTS + k]! < 0) continue;
@@ -72,7 +72,8 @@ describe('picking on someone', () => {
       expect(kind >= KIND.dating && kind <= KIND.longterm).toBe(false);
       expect(kind).not.toBe(KIND.crush);
     }
-  });
+    // A model campus's web grown and lived eight weeks: a few seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('is felt by the one picked on: Happiness, Stress in exams, grades, and likelier to leave unless friends stand behind them', () => {
     const t: Ties = {

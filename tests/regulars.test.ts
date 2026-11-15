@@ -229,5 +229,6 @@ describe('what happened to them', () => {
     expect(told).toBeGreaterThan(0);
     expect(heavy).toBeGreaterThan(0);
     expect(HEAVY_EVENTS.length).toBe(6);
-  });
+    // A model campus's web grown and lived: several seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 });

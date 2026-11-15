@@ -68,8 +68,8 @@ describe('advance: determinism', () => {
       expect(once.log.length).toBeGreaterThan(0);
     }
     // Three thousand advances, each copying the whole state. This checks sameness, not speed:
-    // the speed of catch-up is held by the simulate script.
-  }, 30_000);
+    // the speed of catch-up is held by the simulate script. About 12 s on a quiet PC; the limit allows for a busy one.
+  }, 90_000);
 
   it('gives the same result for the same seed and a different one for another', () => {
     const a = advance(busyGame(5), T0, T0 + DAY).state;

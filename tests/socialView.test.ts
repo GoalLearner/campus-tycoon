@@ -74,7 +74,8 @@ describe('happenings', () => {
     expect(Buffer.from(again.happenings.buffer).equals(Buffer.from(first.happenings.buffer))).toBe(true);
     expect([...again.weekly]).toEqual([...first.weekly]);
     expect([...again.friendGroups.members]).toEqual([...first.friendGroups.members]);
-  });
+    // Two model webs, each grown and lived three weeks: a few seconds on a quiet PC, more when it is busy.
+  }, 60_000);
 
   it('tell couples the cards agree with: a new couple, still together, is dating on both cards', () => {
     const fresh = all.filter((one) => one.event === EVENT.dating && one.week === WEB.week);
