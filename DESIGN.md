@@ -7342,7 +7342,7 @@ Today's model campus save is 0.3 MB. Every week in full in a worker took 12.1 s 
 | Effects | Light and capped: Happiness, Stress around exams, GPA at most 0.15, retention at most 0.3 points a semester across the campus; checked in the long run against money, level pace and rank pace |
 | Emotion | A current emotion with reasons (moodlets) on the card, over the head, and in faces from the pack's mouths and eyes; emote art drawn in the packs' style, look sheet first |
 | Visible life | The crowd from real ties; cards with tappable ties; a Campus social view; a gossip column |
-| MC-1 and MC-2 | Underneath them: their people are the web's, their arcs cast real people and change ties; the web never starts or ends the Main Character's romances |
+| MC-1 and MC-2 | Underneath them: their people are the web's, their arcs cast real people and change ties; the web never starts or ends the Main Character's romances (as built: 63.11) |
 | Rating | 13+ when heavy drama is rationed on screen (one heavy item a week); shown freely, 16+ (52.2's "mature themes, frequent") |
 | Catch-up | Short absences week by week; long ones regrown and the last 8 weeks lived, in a worker |
 | Save | The ties as their own record, written once a game week |
@@ -7725,4 +7725,71 @@ Sixty of the 91 checks moved in their numbers and still pass; the tables that mo
 | A long absence uses the last reading until the game is opened | The web is stepped only while the game is open; the campus keeps what it last knew |
 | The long run reads the web once a real day, not each game week | As above: the average moves slowly, and every week of every run would take an hour |
 | GPA is not yet a campus number | Nothing the campus does reads an average GPA |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.11 Stop 7 as built: the Main Character on the web, bullying, and scenes
+
+Built 2026-11-14 on the branch `social-sim-7`, with the owner's two decisions of that day folded in: 16+ (52.2) and "allow bullying and drama -- I want real simulations when you mix 42,000 personalities". The save version is unchanged: everything new is optional.
+
+**The Main Character on the web** (`src/sim/systems/mainWeb.ts`, `holdMain` in `src/sim/systems/web.ts`), as 63.2 and the design page's section 10 had it:
+
+| | As built |
+|---|---|
+| Their people | Made the Main Character once the web has answered, their people are their real ties: their roommate, their two closest friends, and their partner or crush on campus, each as close as their tie, by their own names. A partner far away is from home, as before. Without the web (the first seconds of a game) they are made up, as before |
+| Who is around them | Once a game week the web reads who is around them (roommate, partner, crush, friends closest first, people met, single people met who are each other's type) and the save keeps it on them (`webPeople`) |
+| Their story casts real people | A new friend or a new roommate is someone they have met; a new crush someone single who is their type and they theirs. Nobody already in their life is cast twice. With nobody to cast, someone is made up, as before |
+| What the story does, the web holds to | Each week the web ties them to their story's people as the story has it, at its closeness: a friend at 90 is a best friend, a couple the story made is a couple. A breakup in the story makes them exes in the web (`exes`). A romance the web made for them that the story has not is only a friendship. If the story's partner was in a couple with someone else in the web, that couple is over |
+| The web never starts or ends theirs | No crush, no couple, no breakup, no getting back together and nobody cheating on them, in a meeting, a week or a regrowing |
+| Their card | Their People, Friends row and feeling read the web like anyone's; they walk out with their friends. The paper still leaves their romances to their story. On their page, a real person opens their card |
+| Already chosen | A Main Character chosen before keeps their made-up people, who keep their names (nobody already in a story is renamed, 63.4); anyone new from now on is a real student |
+
+**Bullying** (in the web's week, `bullyWeek`; sizes in `BULLY` in `src/sim/config/web.ts`; every line in `src/sim/config/bullying.ts`), from who students are:
+
+| Who | What they do |
+|---|---|
+| Not kind, and jealous (not loyal) or short-tempered (not calm) | May start on someone they clash with (2 in 100 a week): a rival, an enemy, an acquaintance whose ways grate. A mean comment, name-calling, a rumour, naming and shaming in a group chat, a feud; if they have a friend group and the one they start on is not in it, the group shuts them out. With a roommate they do not get on with, it stays roommate pettiness |
+| Their friends who are not kind and are outgoing | May join in (half the time, two at most): a pile-on |
+| Friends of the one picked on who are kind or loyal | Stand up for them (four in ten), and are the closer for it |
+| Kind friends of the one doing it | Drift away a little, every week it goes on |
+| The conduct office | Hears of it 12 times in 100 a week, and it ends: they are left rivals. Otherwise it goes on most weeks, and fades when it stops |
+
+It is a tie with two ends, `bully` and `bullied`, so a card names it ("Picks on them" among their people) and the effects of 63.10 read it: picked on is −4 Happiness, the Stress of a breakup in an exam week, −0.05 GPA, and as likely to leave as someone alone unless a friend group stands behind them. It never sparks a romance. The paper and the cards say it as it happens (16+): picked on, shut out and piled on are heavy; pettiness, standing up and being reported are light. Measured on the model campus over 40 weeks lived: about 2 to 3 in 100 picked on at a time (0.5% to 6% held by a test), about 150 new a week of 46,000, 120 reported and 200 stood up for; the Friends line on Happiness still +1.6 to +1.9.
+
+**The lever**: an **Anti-bullying program** (Growth era): half as often started, twice as often reported, at $20 a student a year. The Growth era now opens seven switches. Counselling, the RAs and the official account speaking up come with the campus app (stops 9 and 10), where going viral does.
+
+**The hard lines** (`src/sim/config/hardLines.ts`, `tests/hardLines.test.ts`): no slurs; never about race, religion, ethnicity, sexuality, gender identity, disability, or body and weight; nothing sexual; no threats; nothing about self-harm or suicide. Every bullying template, the people row's words, the feeling, the Friends row, the map's lines and the program's words are read against them and the tone guide. No slur is written anywhere: the only names anyone is called are six (try-hard, teacher's pet, fake, know-it-all, show-off, suck-up), and the test fails on any other. Every post template joins the scan when the campus app comes.
+
+**Scenes** (`src/game/Walkers.ts`), fun beyond school, on the map:
+
+| Scene | What happens |
+|---|---|
+| A date | A couple out together in the evening (eight times in ten) makes for somewhere to eat, a bench or a lawn; they stay twice as long, with hearts. Their card: "On a date with Zion" |
+| A party night | Thursday to Saturday from the evening, someone who likes parties, out with their friend group (six times in ten), makes for a lawn with up to five of them; they stay three times as long and talk about the party and the music (the party hat of 63.9, a music note, a laugh; no cups). Their card: "At a party on the lawn" |
+| Joining in | A friend who passes a group lingering together joins them there, greets, and goes on with them |
+| Meeting someone | Whoever in that group they did not know, they meet through the friend who was there: "Met Jordan through Sam", kept for a regular (63.9) |
+| Passing the one who picks on them | A sweat drop over them, an anger mark over the other, and a regular remembers it in the bullying file's words |
+
+**Names**: every name on a card is told apart from the card's own student too ("Picked on by Lou R." on Lou S.'s card), as 63.9 told them apart from each other.
+
+**The web's record** keeps its version: a record from before, with fewer kinds of event and of happening, is read whole into the first of each.
+
+| Decisions made here | Instead |
+|---|---|
+| The Main Character's people from the web when they are chosen, and their story's new people from a weekly reading | Linking the made-up people to real students later, which would rename them |
+| The web holds to the story every week | The story asking the web each time it needs someone, which it cannot: the web lives in a worker |
+| Bullying a tie with two ends, fading when it stops | A mark on a student, which would not say who |
+| Bullying from four traits the web already has | New traits, which would change every student's identity |
+| The Anti-bullying program at Growth | Later eras, when bullying is there from the start |
+| Six names anyone may be called, and a test that fails on any other | A list of slurs to scan for, which would have to be written down |
+
+**Measured.** Frames, as in 63.10, on a quiet PC: measured back to back with main (30913c8), the builds taking turns, nothing heavy running: the crowd at Normal 14.6 ms median against main's 15.4; the morning rush at High 17.7 against 17.4; an evening, when dates and party nights happen, 15.1 against 15.6. The scenes and bullying cost nothing that shows. The long run: all 91 checks pass. Against stop 6 (63.10): the Friends line on Happiness +1.68 to +2.00 (was +1.76 to +2.00), Stress in finals −3.1 to −4.0 (was −3.3 to −4.0), students 0.879 to 0.893 times as likely to leave (was 0.877 to 0.890): bullying takes a little of what friends give. Money kept 12.4% to 15.2% of every $100 in years 3 to 8, levels 5.5 to 6.3 a week, the Top 10 no sooner than week 24. The Anti-bullying program on the once-a-day campus for six years: $0.93 million a year, 0.16 less kept of every $100, and nothing else on the campus moves: its gain is in the web. 27 of the 91 checks moved in their numbers and pass; 181 table lines moved in 22 tables, the policies' six years most (one switch more).
+
+**Tested**: `tests/mainWeb.test.ts` (their people read from the web; chosen with real people by their own names, made up without; cast by the story from the web; held in the web, a couple kept through weeks and an ex after a breakup; kept through a save; the weekly reading refused for anyone else), `tests/bullying.test.ts` (it happens in every way to a few in a hundred; started and joined by who the traits say, both ends; never started by the Main Character, whose romances stay theirs; felt; less with the program), `tests/hardLines.test.ts` (each hard line caught; every template within them and the tone guide; nobody called anything but the six; every line written on a lived campus within them). The tests of policies, goals, emotion, the crowd, the web and the social view updated for the seventh switch, the Main Character's people and the two-ended tie.
+
+| Rough | Why |
+|---|---|
+| A Main Character chosen before keeps made-up people | Nobody already in a story is renamed (63.4) |
+| The long run's Main Characters keep made-up people | It reads the web once a real day for a whole seed, not each player's; the story casts real people only in the app |
+| Joining in is rare | Only friends of the one who starts it who already know the one picked on |
+| Counselling, the RAs, the official account | With the campus app, stops 9 and 10 |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
