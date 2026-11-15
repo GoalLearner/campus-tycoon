@@ -604,6 +604,8 @@ export class CampusScene extends Phaser.Scene {
       this.dirty = true;
     }
     for (const glow of this.glows.values()) glow.setAlpha(light.lamps).setVisible(lit);
+    // A party's lights glow as the street lamps do (L6), over the dark the light layer lays down.
+    this.lawns.setLamps(light.lamps, LIGHT_DEPTH + 1);
     this.walkers.setPeriod(light.period);
     this.activity.setPeriod(light.period);
   }

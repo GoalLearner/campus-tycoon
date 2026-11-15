@@ -22,9 +22,9 @@ const ON_MAP: Readonly<Record<string, number>> = {
   'room.speaker': 10,
   'room.cup': 6,
   // A party night (L6): a hat sits on a head; the lights and lanterns stand round the crowd.
-  'prop.partyhat.0': 8,
-  'prop.partyhat.1': 8,
-  'prop.partyhat.2': 8,
+  'prop.partyhat.0': 11,
+  'prop.partyhat.1': 11,
+  'prop.partyhat.2': 11,
   'decoration.stringLights': 46,
   'decoration.lantern': 20,
   'decoration.bunting': 46,

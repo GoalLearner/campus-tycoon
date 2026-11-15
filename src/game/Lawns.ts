@@ -72,12 +72,14 @@ const NOTE_RISE = 34;
 /** Emotes over a party's crowd at once, and the wait before a slot shows its next. */
 const PARTY_ICONS = 3;
 const PARTY_ICON_EVERY_MS = [900, 2600] as const;
-/** Of a party, the share dancing (the rest stand and talk), and the share wearing a party hat. */
+/** Of a party, the share dancing; the rest stand and talk. Two in five wear a party hat. */
 const DANCING = 0.72;
-const HATS = 0.42;
 /** Where a hat sits, as a share of the figure's height from the feet, and the speaker's size against a room's. */
 const HAT_AT = 0.86;
-const PARTY_SPEAKER = 1.8;
+const PARTY_SPEAKER = 2.4;
+/** The warm pool of a party's lights after dark (L6): drawn in code, about four cells across, this strong at most. */
+const PARTY_GLOW_KEY = 'lawns.partyGlow';
+const PARTY_GLOW_ALPHA = 0.55;
 /** What a party's crowd shows over their heads now and then; a cup only over someone whose own day says Party tonight. */
 const PARTY_EMOTES = ['laugh', 'music', 'highfive', 'laugh', 'heart', 'music'] as const;
 /** An emote over someone in a group every so often, and for this long. */
@@ -174,6 +176,8 @@ interface Group {
   night: number;
   /** A dance-off (64.4, L6): until when the two in the middle dance it out. */
   danceOffUntil: number;
+  /** A party's glow after dark (L6). */
+  glow: Phaser.GameObjects.Image | null;
 }
 
 /** A party night as the scene reads it (L6): the game day, its weekday, and the shown hour, whole. */
@@ -221,6 +225,9 @@ export class Lawns {
   private partySites: Array<{ x: number; y: number; greek: boolean }> = [];
   private tonight: { night: number; sites: Array<{ x: number; y: number; greek: boolean }> } | null = null;
   private night: PartyNight | null = null;
+  /** How strong the street lamps are now, and where light is drawn: a party's glow follows them (L6). */
+  private lamps = 0;
+  private glowDepth = 0;
   private readonly people: PeopleSpec | null;
   private state: GameState | null = null;
   private everyone: StudentRef[] = [];
@@ -260,6 +267,12 @@ export class Lawns {
 
   setStep(step: number): void {
     this.step = Math.max(0, Math.min(CROWD_STEPS.length - 1, step));
+  }
+
+  /** The street lamps' strength, 0 by day, and the depth light is drawn at: a party's glow follows them (L6). */
+  setLamps(strength: number, depth: number): void {
+    this.lamps = strength;
+    this.glowDepth = depth;
   }
 
   /** A party night now (L6), or null: Thursday to Saturday evenings in term, in fine weather, on a game with parties. */
@@ -683,7 +696,7 @@ export class Lawns {
   }
 
   private newGroup(key: string, kind: LawnKind, x: number, y: number, where: string): Group {
-    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0 };
+    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0, glow: null };
   }
 
   /** From a spot on a quad or a big lawn, three to six cells across it along the grid, over open ground only (L6), or null. */
@@ -807,6 +820,8 @@ export class Lawns {
     const { x, y } = group;
     // Notes rise only from a speaker: an atlas without one has a party with none.
     if (!this.art.has('room.speaker')) group.noteAt = Number.POSITIVE_INFINITY;
+    // A warm pool of light on the grass after dark, under the lights.
+    group.glow = this.scene.add.image(0, 0, this.glowTexture()).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
     this.prop(group, 'room.speaker', x, y);
     const speaker = group.props[group.props.length - 1];
     speaker?.sprite.setScale(speaker.sprite.scaleX * PARTY_SPEAKER);
@@ -825,6 +840,26 @@ export class Lawns {
     }
   }
 
+  /** The party's pool of light: a soft warm oval, made once, the shape of a circle of ground seen from the side. */
+  private glowTexture(): string {
+    const textures = this.scene.textures;
+    if (!textures.exists(PARTY_GLOW_KEY)) {
+      const canvas = textures.createCanvas(PARTY_GLOW_KEY, 256, 128);
+      const context = canvas?.getContext();
+      if (canvas && context) {
+        context.setTransform(1, 0, 0, 0.5, 0, 0);
+        const fill = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+        fill.addColorStop(0, 'rgba(255, 200, 120, 1)');
+        fill.addColorStop(0.45, 'rgba(255, 160, 80, 0.45)');
+        fill.addColorStop(1, 'rgba(255, 120, 50, 0)');
+        context.fillStyle = fill;
+        context.fillRect(0, 0, 256, 256);
+        canvas.refresh();
+      }
+    }
+    return PARTY_GLOW_KEY;
+  }
+
   /** People join a party: round the speaker, nearest first, most of them dancing, some in party hats. */
   private joinParty(group: Group, refs: readonly StudentRef[]): void {
     const state = this.state!;
@@ -839,7 +874,8 @@ export class Lawns {
       const member = group.members[i]!;
       member.dancing = mix(i * 31 + 7, group.night) < DANCING;
       member.fade = arriving ? 0 : 1;
-      if (mix(i * 17 + 3, group.night) < HATS) {
+      // About two in five in a party hat, spread through the crowd.
+      if ((i + group.night) % 5 === 0 || (i + group.night) % 5 === 2) {
         const hat = this.image(`prop.partyhat.${Math.floor(mix(i * 5 + 1, group.night) * 3)}`);
         hat?.setOrigin(0.5, 1);
         member.hat = hat;
@@ -870,6 +906,7 @@ export class Lawns {
       for (const beat of group.beats) beat.image?.setVisible(false);
       for (const note of group.notes) note.image.setVisible(false);
       for (const slot of group.crowd) slot.image?.setVisible(false);
+      group.glow?.setVisible(false);
     }
   }
 
@@ -885,6 +922,7 @@ export class Lawns {
     for (const beat of group.beats) beat.image?.destroy();
     for (const note of group.notes) note.image.destroy();
     for (const slot of group.crowd) slot.image?.destroy();
+    group.glow?.destroy();
     if (this.groups.get(group.key) === group) this.groups.delete(group.key);
   }
 
@@ -1046,6 +1084,10 @@ export class Lawns {
         const depth = prop.flat ? (this.iso.sum(group.x, group.y) - 1) * 4 + 2.3 : (this.iso.sum(px, py) - 1) * 4 + 2.45;
         prop.sprite.setPosition(at.x, at.y - lift).setDepth(depth).setAlpha(alpha);
         if (prop.moves === 'disc') prop.sprite.setRotation(Math.sin(seconds * 9) * 0.15);
+      }
+      if (party && group.glow) {
+        const at = this.iso.toWorld(group.x, group.y);
+        group.glow.setPosition(at.x, at.y).setDepth(this.glowDepth).setAlpha(alpha * this.lamps * PARTY_GLOW_ALPHA).setVisible(this.lamps > 0.05);
       }
       if (party) {
         this.notes(group, timeMs, alpha);
