@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CROWD_STEPS } from '../src/app/crowd';
 import type { DayPeriod } from '../src/app/daylight';
 import type { LifeFacts, Weather } from '../src/app/life';
-import { chooseLawnKind, LAWN_KINDS, LAWN_POSE, LAWN_SIZE, lawnShare, lawnWords, RESTING_AT_FULL, type LawnGroup, type LawnKind } from '../src/app/lawnLife';
+import { chooseLawnKind, LAWN_KINDS, LAWN_POSE, LAWN_SIZE, lawnShare, lawnWords, PARTY_SIZES, partySize, partyTonight, PLACED_KINDS, RESTING_AT_FULL, STROLL_SHARE, type LawnGroup, type LawnKind, type PartyFacts } from '../src/app/lawnLife';
 
 /**
  * The living campus, L1 (DESIGN.md 64): who is out on the lawns and what they do. The rules are plain sums and a
@@ -177,5 +177,62 @@ describe('what a group on the grass does', () => {
   it('names a big group by one friend and how many others', () => {
     expect(lawnWords('circle', 'the quad', ['Sasha', 'Nico', 'Toni'])).toBe('Hanging out with Sasha and 2 friends on the quad');
     expect(lawnWords('picnic', 'the lawn', ['Sasha', 'Nico'])).toBe('Having a picnic with Sasha and Nico on the lawn');
+  });
+});
+
+describe('the busy quad and the party night (L6)', () => {
+  it('never chooses a kind the lawns place themselves: crossing a quad, a party', () => {
+    const periods: DayPeriod[] = ['morning', 'afternoon', 'evening', 'night'];
+    for (const period of periods) {
+      for (let size = 1; size <= 5; size++) {
+        for (let n = 0; n < 200; n++) {
+          const kind = chooseLawnKind(group({ size, couple: size === 2 && n % 2 === 0, likes: new Set(['partying', 'music']) }), period, 'clear', n / 200);
+          expect(PLACED_KINDS.has(kind)).toBe(false);
+        }
+      }
+    }
+    expect(STROLL_SHARE).toBeGreaterThan(0);
+    expect(STROLL_SHARE).toBeLessThan(0.3);
+  });
+
+  it('says where people crossing and partying are', () => {
+    expect(lawnWords('stroll', 'the quad', ['Sasha'])).toBe('Walking across the quad with Sasha');
+    expect(lawnWords('party', 'Greek Row', ['Sasha', 'Nico', 'Toni', 'Ali'])).toBe('At a party with Sasha and 3 friends on Greek Row');
+  });
+
+  it('has a party only Thursday to Saturday, in the evening or at night, in term, in fine weather, on a game with parties', () => {
+    const night: PartyFacts = { weekday: 5, period: 'night', weather: 'clear', term: true, parties: true };
+    expect(partyTonight(night)).toBe(true);
+    expect(partyTonight({ ...night, weekday: 4, period: 'evening' })).toBe(true);
+    expect(partyTonight({ ...night, weekday: 6 })).toBe(true);
+    for (const weekday of [0, 1, 2, 3]) expect(partyTonight({ ...night, weekday })).toBe(false);
+    expect(partyTonight({ ...night, period: 'afternoon' })).toBe(false);
+    expect(partyTonight({ ...night, period: 'morning' })).toBe(false);
+    expect(partyTonight({ ...night, weather: 'rain' })).toBe(false);
+    expect(partyTonight({ ...night, weather: 'snow' })).toBe(false);
+    expect(partyTonight({ ...night, term: false })).toBe(false);
+    expect(partyTonight({ ...night, parties: false })).toBe(false);
+  });
+
+  it('draws 15 to 30 at a party at Normal, fewer at Low and more at High, and fills Friday and Saturday more than Thursday', () => {
+    for (let n = 0; n <= 20; n++) {
+      const roll = n / 20;
+      for (const weekday of [4, 5, 6]) {
+        const normal = partySize(2, weekday, roll);
+        expect(normal).toBeGreaterThanOrEqual(15);
+        expect(normal).toBeLessThanOrEqual(30);
+        expect(partySize(1, weekday, roll)).toBeLessThan(normal);
+        expect(partySize(3, weekday, roll)).toBeGreaterThan(normal);
+        expect(partySize(0, weekday, roll)).toBeLessThanOrEqual(partySize(1, weekday, roll));
+      }
+      expect(partySize(2, 4, roll)).toBeLessThanOrEqual(partySize(2, 5, roll));
+    }
+    expect(PARTY_SIZES[2]).toEqual([15, 30]);
+    expect(partySize(2, 6, 1)).toBe(30);
+  });
+
+  it('fills the lawns more at Normal than before L6, so the quad reads as the hub', () => {
+    expect(CROWD_STEPS[2]!.lawn).toBeGreaterThanOrEqual(110);
+    expect(CROWD_STEPS[3]!.lawn).toBeGreaterThan(CROWD_STEPS[2]!.lawn);
   });
 });

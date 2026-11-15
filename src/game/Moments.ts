@@ -104,7 +104,11 @@ export class Moments {
     const ms = MOMENT_MS[kind];
     let at: { x: number; y: number } | null = null;
     if (kind === 'performer') at = busker;
-    else if (kind === 'danceOff') at = dance;
+    else if (kind === 'danceOff') {
+      at = dance;
+      // At a party or a dance on a lawn, two in the middle go head to head (L6).
+      if (dance) this.lawns.stageDanceOff(dance, ms);
+    }
     else if (kind === 'winningShot' && game) {
       this.activity.bigPoint(game.id);
       at = { x: game.x, y: game.y };

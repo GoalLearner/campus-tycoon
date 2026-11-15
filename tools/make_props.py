@@ -10,6 +10,8 @@ room.speaker) are used as they are; these are only what they do not have.
     dog       a small dog, side on, facing left (south-west); mirrored for the other way
     bag       a backpack, side on, carried on one shoulder (DESIGN.md 64.3)
     umbrella  an open umbrella on its handle, held over the head in the rain (DESIGN.md 64.3)
+    partyhat-0, -1, -2   a striped party cone with a pom-pom, worn at a party night (L6): red and yellow, teal and
+              white, violet and pink
 
     art/source/_rendered/ours/props/<name>.png    256 by 256, the thing standing on the bottom middle
 
@@ -128,9 +130,39 @@ def umbrella():
     return c
 
 
+PARTY_HATS = (
+    ((236, 72, 92, 255), (255, 228, 120, 255)),
+    ((84, 196, 206, 255), (255, 255, 255, 255)),
+    ((126, 104, 232, 255), (255, 180, 220, 255)),
+)
+
+
+def partyhat(colours):
+    """A party cone in two colours of stripe, darker on the side away from the light, with a yellow pom-pom."""
+    c = canvas()
+    d = ImageDraw.Draw(c)
+    tip, left, right = (512, 180), (300, 880), (724, 880)
+    d.polygon([(tip[0], tip[1] - 60), (left[0] - 50, left[1] + 40), (right[0] + 50, right[1] + 40)], fill=PLUM)
+    cone = Image.new('L', (BIG, BIG), 0)
+    ImageDraw.Draw(cone).polygon([tip, left, right], fill=255)
+    stripes = Image.new('RGBA', (BIG, BIG), colours[0])
+    sd = ImageDraw.Draw(stripes)
+    for k in range(-6, 10):
+        y = 260 + k * 130
+        sd.polygon([(0, y), (BIG, y - 260), (BIG, y - 190), (0, y + 70)], fill=colours[1])
+    c.paste(stripes, (0, 0), cone)
+    shade = Image.new('L', (BIG, BIG), 0)
+    ImageDraw.Draw(shade).polygon([tip, (612, 880), right], fill=90)
+    c.paste(Image.new('RGBA', (BIG, BIG), (40, 0, 30, 255)), (0, 0), shade)
+    d.ellipse((512 - 110, 180 - 150, 512 + 110, 180 + 70), fill=PLUM)
+    d.ellipse((512 - 72, 180 - 112, 512 + 72, 180 + 32), fill=(255, 236, 120, 255))
+    return c
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog), ('bag', bag), ('umbrella', umbrella)):
+    hats = tuple((f'partyhat-{n}', (lambda colours=colours: partyhat(colours))) for n, colours in enumerate(PARTY_HATS))
+    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog), ('bag', bag), ('umbrella', umbrella)) + hats:
         im = draw()
         box = im.getbbox()
         # Standing on the bottom middle of the picture, as the art build expects a prop to.

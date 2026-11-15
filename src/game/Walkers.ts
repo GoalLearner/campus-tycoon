@@ -168,8 +168,6 @@ const BIG_DELAY_MS = 900;
 const BIGS_AT_ONCE = [0, 1, 2, 2];
 /** A mood ring about 18 pixels across. */
 const RING_SCALE = 0.86;
-/** The followed student's depth in the close-up: over the buildings, under the emote over their head. */
-const ON_TOP_DEPTH = 900_000;
 /** Riders (DESIGN.md 64.6): how high each stands on what they ride; a trick and a wipeout; where they park. */
 const RIDE_LIFT: Record<Wheel, number> = { bike: 9, skateboard: 3, longboard: 3, kick: 4, escooter: 5, skates: 1 };
 const TRICK_MS = 450;
@@ -536,6 +534,8 @@ export class Walkers {
   private ringPool: Phaser.GameObjects.Image[] = [];
   private ringsShown = 0;
   private markedOnTop = false;
+  /** Tonight's parties (L6), from the lawns. */
+  private partySpots: ReadonlyArray<{ x: number; y: number }> = [];
   private markedParty = 0;
   /** Bike racks on the map (DESIGN.md 64.6), and the bikes parked at them or leaning on walls. */
   private racks: Array<{ id: number; x: number; y: number }> = [];
@@ -1323,11 +1323,7 @@ export class Walkers {
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
-    // Followed close up (DESIGN.md 64.5): over everything on the map but the floating icons, and the friends or the date
-    // walking with them too, so lunch with friends shows the friends.
-    if (this.markedOnTop && walker.key !== null && (walker.key === this.marked || (walker.party !== 0 && walker.party === this.markedParty))) {
-      walker.sprite.setDepth(ON_TOP_DEPTH + (this.iso.sum(walker.x, walker.y) % 1000) * 0.001);
-    }
+    // Followed close up they keep their place in the drawing order: what stands in front of them fades instead (L6).
     if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
     const hidden = this.scene.time.now < walker.hiddenUntil;
@@ -1843,12 +1839,38 @@ export class Walkers {
       .map((walker) => walker.person!);
   }
 
-  /** Ring the walker whose card is open: a student by their key, anyone else by `p:` and their own. */
-  /** In the close-up (DESIGN.md 64.5) the student followed is drawn over the buildings, so a wall never hides them. */
+  /**
+   * In the close-up (DESIGN.md 64.5) the student followed, and the friends or the date walking with them, are kept in
+   * sight. Since L6 they stay where they stand in the drawing order, and whatever is drawn in front of them fades to
+   * see-through (`markedSprites`, read by the scene): drawn over a wall, they looked as if they stood on its roof.
+   */
   setMarkedOnTop(on: boolean): void {
     this.markedOnTop = on;
     this.markedParty = on && this.marked ? (this.walkerOf(this.marked)?.party ?? 0) : 0;
   }
+
+  /** The student followed close up and those walking with them, as drawn now: none outside the close-up. */
+  markedSprites(): Phaser.GameObjects.Image[] {
+    if (!this.markedOnTop || this.marked === null) return [];
+    const out: Phaser.GameObjects.Image[] = [];
+    for (const walker of this.walkers) {
+      if (walker.key === null || walker.fading === 'out' || !walker.sprite.visible) continue;
+      if (walker.key === this.marked || (walker.party !== 0 && walker.party === this.markedParty)) out.push(walker.sprite);
+    }
+    return out;
+  }
+
+  /** Tonight's parties on the map (L6): where a friend group out for the night heads. */
+  setPartySpots(spots: ReadonlyArray<{ x: number; y: number }>): void {
+    this.partySpots = spots;
+  }
+
+  /** The key of the student whose card is open, or null. */
+  get markedKey(): string | null {
+    return this.marked;
+  }
+
+  /** Ring the walker whose card is open: a student by their key, anyone else by `p:` and their own. */
 
   setMarked(key: string | null): void {
     const changed = key !== this.marked;
@@ -2321,9 +2343,12 @@ export class Walkers {
     const evening = this.period === 'evening' || this.period === 'night';
     // On a party night someone who likes parties, out with their friend group, makes for a lawn (63.11).
     const partyMood = !couple && evening && roll < PARTY_NIGHT_GROUP && this.partyNight() && likesParties(view, leader.student);
-    if (partyMood && leader.goal.kind !== 'quad') {
+    // A party tonight (L6): they head for the stop nearest it, so the crowd there is seen arriving a group at a time.
+    const partyAt = this.partySpots.length > 0 ? this.partySpots[Math.floor(Math.random() * this.partySpots.length)]! : null;
+    const partyStop = partyAt ? this.nearestStop(partyAt.x, partyAt.y, leader.from) : null;
+    if (partyMood && (partyStop ? leader.goal !== partyStop : leader.goal.kind !== 'quad')) {
       const lawns = this.stops.filter((stop) => stop.kind === 'quad' && stop !== leader.from);
-      const lawn = lawns[Math.floor(Math.random() * lawns.length)];
+      const lawn = partyStop ?? lawns[Math.floor(Math.random() * lawns.length)];
       const route = lawn ? this.routeBetween(leader.from, lawn) : null;
       if (lawn && route) {
         route[0] = { x: leader.x, y: leader.y };
@@ -2348,7 +2373,7 @@ export class Walkers {
     }
     const goal = leader.goal;
     const date = dateMood && suitsDate(goal);
-    const partyNight = partyMood && goal.kind === 'quad';
+    const partyNight = partyMood && (goal.kind === 'quad' || goal === partyStop);
     const want = couple
       ? date || roll < WITH_PARTNER
         ? 1
@@ -2652,6 +2677,21 @@ export class Walkers {
       this.remember(a, `Met ${this.first(one)} through ${this.first(b)}`);
       this.remember(one, `Met ${this.first(a)} through ${this.first(b)}`);
     }
+  }
+
+  /** The stop nearest a spot of the map, other than one: where someone heading for a party walks to (L6). */
+  private nearestStop(x: number, y: number, not: Stop | null): Stop | null {
+    let best: Stop | null = null;
+    let far = Infinity;
+    for (const stop of this.stops) {
+      if (stop === not) continue;
+      const d = Math.hypot(stop.cell.x + 0.5 - x, stop.cell.y + 0.5 - y);
+      if (d < far) {
+        far = d;
+        best = stop;
+      }
+    }
+    return best;
   }
 
   /** A party night: Thursday to Saturday on the game's calendar (as a regular's day has it, 63.9). */

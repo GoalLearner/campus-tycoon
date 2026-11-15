@@ -455,7 +455,7 @@ def write_credits():
         '',
         '- **By:** Made for this game.',
         '- **Licence:** None needed.',
-        '- **From:** `tools/make_props.py`, drawn in code in the people pack' + "'" + 's way, with its plum outline: a frisbee, a phone, a tray, a dog, a backpack and an umbrella; and from `tools/make_wheels.py` what students ride (a bicycle, a skateboard, a longboard, a kick scooter, an electric scooter, inline skates), each facing two ways, and the bike rack.',
+        '- **From:** `tools/make_props.py`, drawn in code in the people pack' + "'" + 's way, with its plum outline: a frisbee, a phone, a tray, a dog, a backpack, an umbrella and three party hats; and from `tools/make_wheels.py` what students ride (a bicycle, a skateboard, a longboard, a kick scooter, an electric scooter, inline skates), each facing two ways, and the bike rack.',
         '- **Changes made:** None. Each is one file named in the art recipes, so it can be swapped for a drawn one.',
         '- **Where:** Every build.',
         '',

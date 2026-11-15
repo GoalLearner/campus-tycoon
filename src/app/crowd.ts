@@ -33,15 +33,18 @@ export interface CrowdStep {
   density: number;
   extras: number;
   traffic: number;
-  /** People doing something on the lawns and quads in view, at their fullest (DESIGN.md 64): a fine afternoon. */
+  /**
+   * People doing something on the lawns and quads in view, at their fullest (DESIGN.md 64): a fine afternoon. Raised in
+   * L6 (64.8, from 14, 32, 64 and 100) with a spot on every cell of a quad, so a quad on screen is full.
+   */
   lawn: number;
 }
 
 export const CROWD_STEPS: readonly CrowdStep[] = [
-  { inView: 32, alive: 48, density: 0.6, extras: 16, traffic: 0.5, lawn: 14 },
-  { inView: 64, alive: 90, density: 1, extras: 36, traffic: 1, lawn: 32 },
-  { inView: 120, alive: 170, density: 1.9, extras: 70, traffic: 1.4, lawn: 64 },
-  { inView: 190, alive: 260, density: 3, extras: 110, traffic: 1.8, lawn: 100 },
+  { inView: 32, alive: 48, density: 0.6, extras: 16, traffic: 0.5, lawn: 20 },
+  { inView: 64, alive: 90, density: 1, extras: 36, traffic: 1, lawn: 44 },
+  { inView: 120, alive: 170, density: 1.9, extras: 70, traffic: 1.4, lawn: 120 },
+  { inView: 190, alive: 260, density: 3, extras: 110, traffic: 1.8, lawn: 170 },
 ];
 
 /** The step a setting stands for: Low is 1, Normal 2, High 3. */

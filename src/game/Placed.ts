@@ -118,6 +118,20 @@ export class PlacedSprites {
     }
   }
 
+  /**
+   * What stands in front of someone drawn at `depth` and covers part of `box` (L6): drawings that stand up, drawn after
+   * them. Not the ground, a floating icon or a person.
+   */
+  covering(box: Phaser.Geom.Rectangle, depth: number): Phaser.GameObjects.Image[] {
+    const out: Phaser.GameObjects.Image[] = [];
+    for (const drawn of this.drawn) {
+      const layer = drawn.item.layer ?? 'object';
+      if (layer !== 'object' || !drawn.sprite.visible || drawn.sprite.depth <= depth) continue;
+      if (Phaser.Geom.Rectangle.Overlaps(drawn.sprite.getBounds(), box)) out.push(drawn.sprite);
+    }
+    return out;
+  }
+
   /** The front-most building from the game state under a point of the world, or null. */
   hit(worldX: number, worldY: number): PlacedItem | null {
     let found: Drawn | null = null;

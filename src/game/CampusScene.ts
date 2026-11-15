@@ -19,7 +19,11 @@ import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
 import { Lawns } from './Lawns';
 import { Moments } from './Moments';
-import { lawnShare, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
+import { lawnShare, partyTonight, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
+import { seasonCurve } from '../sim/systems/season';
+import { IN_TERM_FROM } from '../sim/config/season';
+import { partiesOn } from '../sim/systems/parties';
+import { TICKS_PER_DAY } from '../sim/config/time';
 import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
@@ -86,6 +90,11 @@ const PARKED_AT = [0.02, 0.5, 1.0] as const;
 const MAX_ZOOM_FACTOR = 2.2;
 /** The close-up's zoom while following (DESIGN.md 64.5): as far in as the map goes. */
 const CLOSE_UP_ZOOM = MAX_ZOOM_FACTOR;
+/** What stands in front of the student followed close up fades to this, over this long, looked for this often, this many cells round them (L6). */
+const COVER_ALPHA = 0.3;
+const COVER_FADE_MS = 200;
+const COVER_EVERY_MS = 120;
+const COVER_REACH = 4;
 /** The caption's type, the interface's own. */
 const CAPTION_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 /** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
@@ -203,6 +212,10 @@ export class CampusScene extends Phaser.Scene {
   private homeZoom = 1;
   /** The close-up while following (DESIGN.md 64.5): the zoom to go back to, and the caption under them. */
   private zoomBeforeClose: number | null = null;
+  /** What has faded for the close-up (L6), with the strength each was drawn at before, and when next to look again. */
+  private faded = new Map<Phaser.GameObjects.Image, number>();
+  private covers = new Set<Phaser.GameObjects.Image>();
+  private coversAt = 0;
   private caption: Phaser.GameObjects.Text | null = null;
   private feelingName = '';
   /** The sentence that stands with each edge marker, by which marker it is. */
@@ -591,6 +604,8 @@ export class CampusScene extends Phaser.Scene {
       this.dirty = true;
     }
     for (const glow of this.glows.values()) glow.setAlpha(light.lamps).setVisible(lit);
+    // A party's lights glow as the street lamps do (L6), over the dark the light layer lays down.
+    this.lawns.setLamps(light.lamps, LIGHT_DEPTH + 1);
     this.walkers.setPeriod(light.period);
     this.activity.setPeriod(light.period);
   }
@@ -636,6 +651,11 @@ export class CampusScene extends Phaser.Scene {
     // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them.
     const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });
     this.lawns.setLife(lawns, this.light.period, this.weather, day.kind === 'midterms' || day.kind === 'finals', reduced);
+    // A party night (L6): Thursday to Saturday evenings in term, in fine weather, on a game with parties. A crowd on the
+    // grass by a hall or on Greek Row, and friend groups out for the night head there.
+    const partying = partyTonight({ weekday: date.weekday, period: this.light.period, weather: this.weather, term: seasonCurve(state.clock) >= IN_TERM_FROM, parties: partiesOn(state) });
+    this.lawns.setParty(partying ? { night: Math.floor(state.clock.tick / TICKS_PER_DAY), weekday: date.weekday, hour: Math.floor(shownHour()) } : null);
+    this.walkers.setPartySpots(this.lawns.partySpots());
     this.walkers.setResting(lawns * RESTING_AT_FULL);
     // What students may have a big moment about today (DESIGN.md 64.3), and the sky for what they carry.
     this.walkers.setWeather(this.weather);
@@ -1601,6 +1621,7 @@ export class CampusScene extends Phaser.Scene {
     const settle = 1 - Math.pow(0.03, delta / 1000);
     const on = session.closeUp && at !== null;
     this.walkers.setMarkedOnTop(on);
+    this.fadeCovers(on, delta);
     if (on) {
       if (this.zoomBeforeClose === null) this.zoomBeforeClose = cam.zoom;
       cam.setZoom(cam.zoom + (CLOSE_UP_ZOOM * this.dpr - cam.zoom) * settle);
@@ -1626,6 +1647,55 @@ export class CampusScene extends Phaser.Scene {
     if (caption.text !== words) caption.setText(words);
     // About 13 points tall on the screen at any zoom, just under their feet.
     caption.setScale(0.5 / this.scale.zoom / cam.zoom).setPosition(at.x, at.y + 5).setVisible(true);
+  }
+
+  /**
+   * In the close-up the student followed keeps their place in the drawing order, and what stands in front of them fades
+   * to see-through about them (L6): a hall, a tree or a building from the Build menu. Drawn over everything instead, they
+   * looked as if they stood on the roof. It fades in and out over a fifth of a second, and comes back as it was.
+   */
+  private fadeCovers(on: boolean, delta: number): void {
+    const now = this.time.now;
+    if (now >= this.coversAt) {
+      this.coversAt = now + COVER_EVERY_MS;
+      this.covers.clear();
+      if (on) {
+        const key = this.walkers.markedKey;
+        const sitting = key ? this.lawns.spriteOf(key) : null;
+        const people = [...this.walkers.markedSprites(), ...(sitting ? [sitting] : [])];
+        for (const person of people) {
+          const box = person.getBounds();
+          const depth = person.depth;
+          const cell = this.iso.toMap(person.x, person.y);
+          const cx = Math.floor(cell.x);
+          const cy = Math.floor(cell.y);
+          // Anything that covers them stands within a few cells: a tall hall's drawing reaches a few cells back.
+          for (let y = Math.max(0, cy - COVER_REACH); y <= Math.min(this.mapHeight - 1, cy + COVER_REACH); y++) {
+            for (let x = Math.max(0, cx - COVER_REACH); x <= Math.min(this.mapWidth - 1, cx + COVER_REACH); x++) {
+              const object = this.visuals[y * this.mapWidth + x]?.object;
+              if (!object || !object.visible || object.depth <= depth) continue;
+              if (Phaser.Geom.Rectangle.Overlaps(object.getBounds(), box)) this.covers.add(object);
+            }
+          }
+          for (const sprite of this.placed.covering(box, depth)) this.covers.add(sprite);
+        }
+      }
+    }
+    const step = Math.min(1, delta / COVER_FADE_MS);
+    for (const sprite of this.covers) {
+      if (!sprite.active) continue;
+      if (!this.faded.has(sprite)) this.faded.set(sprite, sprite.alpha);
+      sprite.setAlpha(Math.max(COVER_ALPHA, sprite.alpha - step));
+    }
+    for (const [sprite, was] of this.faded) {
+      if (this.covers.has(sprite)) continue;
+      if (!sprite.active) {
+        this.faded.delete(sprite);
+        continue;
+      }
+      sprite.setAlpha(Math.min(was, sprite.alpha + step));
+      if (sprite.alpha >= was) this.faded.delete(sprite);
+    }
   }
 
   /** A ring round the hall named on a card, pulsing three times over a few seconds, then gone (DESIGN.md 60). */

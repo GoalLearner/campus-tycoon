@@ -28,8 +28,16 @@ export type LawnKind =
   | 'jog'
   | 'goof'
   | 'dance'
-  | 'dog';
-export const LAWN_KINDS: readonly LawnKind[] = ['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'frisbee', 'catch', 'kick', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug', 'jog', 'goof', 'dance', 'dog'];
+  | 'dog'
+  | 'stroll'
+  | 'party';
+export const LAWN_KINDS: readonly LawnKind[] = ['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'frisbee', 'catch', 'kick', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug', 'jog', 'goof', 'dance', 'dog', 'stroll', 'party'];
+
+/**
+ * Kinds the lawns place themselves, never chosen by `chooseLawnKind`: people crossing a quad between the groups on it
+ * (L6), and a party night's crowd by a hall or on Greek Row (L6).
+ */
+export const PLACED_KINDS: ReadonlySet<LawnKind> = new Set<LawnKind>(['stroll', 'party']);
 
 /** How many are in each, at the least and the most. */
 export const LAWN_SIZE: Record<LawnKind, readonly [number, number]> = {
@@ -52,6 +60,8 @@ export const LAWN_SIZE: Record<LawnKind, readonly [number, number]> = {
   goof: [2, 2],
   dance: [2, 4],
   dog: [1, 1],
+  stroll: [1, 3],
+  party: [6, 40],
 };
 
 /** The share of the crowd step's lawn figures out in each part of the day, in fine weather. */
@@ -224,6 +234,8 @@ export const LAWN_POSE: Record<LawnKind, LawnPose> = {
   goof: 'move',
   dance: 'stand',
   dog: 'move',
+  stroll: 'move',
+  party: 'stand',
 };
 
 /** The "Doing now" line of someone in a group on the grass. `with` is who else is there, by first name. */
@@ -268,5 +280,51 @@ export function lawnWords(kind: LawnKind, where: string, with_: readonly string[
       return `Dancing${others} on ${where}`;
     case 'dog':
       return 'Walking a dog';
+    case 'stroll':
+      return `Walking across ${where}${others}`;
+    case 'party':
+      return `At a party${others} on ${where}`;
   }
+}
+
+// ------------------------------------------------------------- L6 --
+
+/**
+ * The quad is the campus's hub (L6): of every quad spot a group takes, this share is people crossing it, one to three
+ * walking from one side to the other and back, so the groups have people moving between them.
+ */
+export const STROLL_SHARE = 0.16;
+
+/** A party night (L6, 63.11): Thursday to Saturday, in the evening and at night, in term, and not in rain or snow. */
+export interface PartyFacts {
+  /** 0 Sunday to 6 Saturday, the game's calendar. */
+  weekday: number;
+  period: DayPeriod;
+  weather: Weather;
+  /** In term: not a break, the summer or move-in week. */
+  term: boolean;
+  /** A campus with a party scene: a game with goals. */
+  parties: boolean;
+}
+
+export function partyTonight(facts: PartyFacts): boolean {
+  return facts.parties && facts.term && facts.weekday >= 4 && facts.weekday <= 6 && (facts.period === 'evening' || facts.period === 'night') && facts.weather === 'clear';
+}
+
+/**
+ * How many are at a party by the crowd step (0 sparse, 1 Low, 2 Normal, 3 High): at Normal 15 to 30, more on a Friday
+ * or a Saturday. `roll` (0 to 1) is the night's, from the seed and the date, so a party keeps its size all night.
+ */
+export const PARTY_SIZES: readonly (readonly [number, number])[] = [
+  [6, 10],
+  [10, 18],
+  [15, 30],
+  [22, 38],
+];
+
+export function partySize(step: number, weekday: number, roll: number): number {
+  const [least, most] = PARTY_SIZES[Math.max(0, Math.min(PARTY_SIZES.length - 1, step))]!;
+  // Thursday sits in the lower half; Friday and Saturday reach the top.
+  const t = weekday === 4 ? roll * 0.6 : 0.3 + roll * 0.7;
+  return Math.round(least + (most - least) * Math.max(0, Math.min(1, t)));
 }

@@ -5822,7 +5822,7 @@
   },
   "prop.bag": {
    "frame": {
-    "x": 196,
+    "x": 226,
     "y": 571,
     "w": 6,
     "h": 8
@@ -5842,7 +5842,7 @@
   },
   "prop.dog": {
    "frame": {
-    "x": 165,
+    "x": 195,
     "y": 571,
     "w": 13,
     "h": 10
@@ -5862,7 +5862,7 @@
   },
   "prop.frisbee": {
    "frame": {
-    "x": 243,
+    "x": 273,
     "y": 571,
     "w": 8,
     "h": 4
@@ -5880,9 +5880,69 @@
     "h": 4
    }
   },
+  "prop.partyhat.0": {
+   "frame": {
+    "x": 165,
+    "y": 571,
+    "w": 7,
+    "h": 11
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 7,
+    "h": 11
+   },
+   "sourceSize": {
+    "w": 7,
+    "h": 11
+   }
+  },
+  "prop.partyhat.1": {
+   "frame": {
+    "x": 175,
+    "y": 571,
+    "w": 7,
+    "h": 11
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 7,
+    "h": 11
+   },
+   "sourceSize": {
+    "w": 7,
+    "h": 11
+   }
+  },
+  "prop.partyhat.2": {
+   "frame": {
+    "x": 185,
+    "y": 571,
+    "w": 7,
+    "h": 11
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 7,
+    "h": 11
+   },
+   "sourceSize": {
+    "w": 7,
+    "h": 11
+   }
+  },
   "prop.phone": {
    "frame": {
-    "x": 205,
+    "x": 235,
     "y": 571,
     "w": 5,
     "h": 8
@@ -5902,7 +5962,7 @@
   },
   "prop.tray": {
    "frame": {
-    "x": 228,
+    "x": 258,
     "y": 571,
     "w": 12,
     "h": 7
@@ -6362,7 +6422,7 @@
   },
   "wheel.skates.nw": {
    "frame": {
-    "x": 213,
+    "x": 243,
     "y": 571,
     "w": 12,
     "h": 8
@@ -6382,7 +6442,7 @@
   },
   "wheel.skates.sw": {
    "frame": {
-    "x": 181,
+    "x": 211,
     "y": 571,
     "w": 12,
     "h": 9
