@@ -7793,3 +7793,59 @@ It is a tie with two ends, `bully` and `bullied`, so a card names it ("Picks on 
 | Joining in is rare | Only friends of the one who starts it who already know the one picked on |
 | Counselling, the RAs, the official account | With the campus app, stops 9 and 10 |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.12 Stop 8 as built: the network view
+
+Built 2026-11-14 on the branch `social-sim-8`, the first of the three stops the owner approved that day for the network view and the campus app (decisions 1 to 10 of the design page `docs/handoff/social-app-design.html`: After, Quadline, Scenes, Normal, Named, Drama, Light, Templates, Ours, Later). The save version is unchanged: nothing new is saved.
+
+**A student's network** (`networkFor` in `src/app/socialView.ts`, the sheet in `src/ui/networkView.ts`), from a **Network** button at the end of every card's People row:
+
+| | As built |
+|---|---|
+| The middle | The student, their face from the people pack, a little larger |
+| The nearest ring | Their partner ("dating", "exclusive", "long-term") and their best friend |
+| The next ring | Their roommate, their friends ("friend", or "friend, has a crush on them" when that is so from the other end), and those in their friend group they are not tied to themselves ("same group", a faint grey dotted line) |
+| The outer ring | Their crush ("their crush"), exes, rivals ("rival", "arch-rival"), and who picks on them or whom they pick on (63.11's words) |
+| Each line | How the tie feels from their end: warm a solid green line, tense a dashed red one, complicated a dotted purple one; a key under the faces says so. The label under each face names the tie |
+| At most | 16 faces: with more, the faintest of the friends' ring give way, so the nearest and the troubled always show. Acquaintances are left out |
+| Where the faces go | Spread round the circle so no two share a direction: the nearest evenly from the top, the friends' ring beside them, the outer ring farthest from them, so no line to the outer ring runs through a face nearer in; then nudged apart where two would still cover each other. The same people always land in the same places |
+| A tap on a face | Hops to that student's network; the line under the title is the path ("Remy › Noor B. › Zion", named as the faces are) and Back retraces it. "Open Zion's card" goes to the card of whoever is in the middle; Done goes back to the card the button was pressed on |
+| While it is open | The card waits behind it, as it does behind a room (46), and the follow ends |
+
+**On the Social tab** (behind the student count, `src/ui/socialUi.ts`):
+
+| | As built |
+|---|---|
+| Friend groups | The biggest dozen as clusters: up to six of their faces in a ring with a line between each two, their vibe ("the study crew") and how many they are. Tapped, a cluster opens to its members' names, each opening their card. It replaces the three biggest groups as lines of names |
+| This week | New couples and splits as before, and a new line: new friendships this week |
+| This week, after a long time away | Its two lines wait for the first week lived (below) |
+| Most tight-knit | The best two halls, clubs, chapters and teams (`tightKnit` in `src/app/tightKnit.ts`), the tightest first: of their members' friendships, how many stay inside ("49% inside", a line under the heading says so). Whether a student has a friend on their own floor says little (nearly all do); how much of their circle is there says how close a place keeps people. A group of fewer than 12, or with fewer than 5 in 100 of its friendships inside, is left out. Read by the web's worker each week (19 ms on the model campus); it lives outside the simulation because it names halls by the card's names, which the simulation never reads (46) |
+| The most connected | As before ("Most popular", by reach) |
+
+**Folded in from stop 7's checks:**
+
+| | What it was, and the fix |
+|---|---|
+| "890 new couples this week" on the stop 7 page | A campus grown again (a regrow: a first opening, or back after more than 12 weeks away, 63.5) lives its last 8 weeks so the web is lived in. Those 8 weeks counted their couples and kept their happenings, and the first weeks of a grown web pair people off fast: 85 to 118 new couples a week against about 40 to 50 on a settled campus, so the Social tab's "this week", the drama of the week and the paper's gossip told a burst that nobody saw happen. Couples the regrow itself made were never counted. Now a regrown web keeps no happenings and no week's counts from those weeks (`catchUp` clears them after the regrow): the Social tab's two lines for the week wait, and the gossip column is empty, until the first week the player lives through, which tells its own. On the model save, that first week: 77 new couples, 30 split up, 1,896 new friendships |
+| A new student's chapter | The web numbered chapters afresh on each placing, so a student placed on their own mid-semester (new since the last full placing) could be put with the wrong chapter. The numbering is now kept on the web between placings (`chapterIndex`, not saved: a full placing rebuilds it) |
+| The anti-bullying test | It lives two campuses of 46,000 for twelve weeks each, which took over 20 seconds on a loaded PC; it has a 90-second limit now |
+
+**What a network shows on the model campus** after 12 weeks lived (every tenth student, 4,600 networks): about 7 faces each, none at the 16 cap, 3 in 1,000 with nobody close yet; of the ties drawn, 96 in 100 warm, 4 tense and fewer than 1 complicated. A network is read in under a hundredth of a millisecond.
+
+| Decisions made here | Instead |
+|---|---|
+| Three rings by closeness, at most 16 faces | Every tie, which crowds a phone; or one ring, which hides who is closest |
+| Friend-group members not tied to them shown faintly | Leaving them out, which hides the group the design names |
+| The tight-knit share as friendships kept inside | The share of members with a friend inside, which reads nearly 100% for every hall |
+| A cluster opens in place to its names | A second network view for a group, which is the next thing to build if the owner wants it |
+| The Social tab's three groups as lines replaced by the clusters | Both, which repeats the same groups |
+
+**Measured.** Frames, as in 63.10, on a quiet PC, back to back with main (a8f1e83), 16 frames each: the crowd at Normal 13.0 ms median against main's 12.6; the morning rush at High 15.8 against 16.2; an evening 14.9 against 15.2. Nothing that shows: the network and the Social tab are drawn only when open. The long run: all 91 checks pass in 1,617 s, and against stop 7 (63.11) not one line moved but the timings. The regrow fix changes only what is told; the chapter numbering only where a chapter member new mid-semester is placed, which moved nothing in the long run's campuses.
+
+**Tested**: `tests/network.test.ts` (a network nearest first, at most 16, never themself or twice; each tie named and drawn as it feels from their end, all three feelings on a lived campus; a partner or best friend finds them on their own nearest ring; the most tight-knit, two of each kind, halls the tightest; chapters keep their number between placings, which fails without the fix), `tests/socialView.test.ts` (a regrown web tells no news; the dozen clusters, the biggest first; new friendships counted), `tests/regulars.test.ts` (what happened to a regular, read from weeks lived after the regrow).
+
+| Rough | Why |
+|---|---|
+| The varsity teams rarely make the tight-knit list | Teammates meet in 6 of every 100 first meetings (the web's weights of 63.5), so only about 1 in 100 of an athlete's friendships is a teammate; left as it is, for the owner |
+| The owner's spec "word for word" at the bottom of the design page | Not in the copy of the page or the brief this was built from; built from the page's sections and the brief |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

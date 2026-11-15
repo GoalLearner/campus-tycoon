@@ -177,10 +177,20 @@ export function mountNetworkView(): { node: HTMLElement; render: (state: GameSta
   function draw(now: GameState, ref: StudentRef): void {
     const view = socialWeb.view;
     const people = view ? networkFor(view, now, ref) : [];
-    const names = firstNamesOf(now, [ref, ...people.map((one) => one.ref)]);
+    // Everyone on show named together, so the path's "Noor B." is the face's "Noor B.".
+    const shown = [ref, ...people.map((one) => one.ref)];
+    const keys = new Set(shown.map(studentKey));
+    for (const one of trail) {
+      if (keys.has(studentKey(one))) continue;
+      keys.add(studentKey(one));
+      shown.push(one);
+    }
+    const named = firstNamesOf(now, shown);
+    const nameOf = new Map(shown.map((one, i) => [studentKey(one), named[i]!]));
+    const names = named.slice(0, people.length + 1);
     title.textContent = `${names[0]}'s network`;
     back.hidden = trail.length < 2;
-    trailLine.textContent = trail.length > 1 ? trail.map((one) => firstNamesOf(now, [one])[0]).join(' › ') : `${studentName(now, ref)} · ${people.length === 0 ? 'nobody close yet' : `${people.length} ${people.length === 1 ? 'person' : 'people'}`}`;
+    trailLine.textContent = trail.length > 1 ? trail.map((one) => nameOf.get(studentKey(one))).join(' › ') : `${studentName(now, ref)} · ${people.length === 0 ? 'nobody close yet' : `${people.length} ${people.length === 1 ? 'person' : 'people'}`}`;
     cardButton.textContent = `Open ${names[0]}'s card`;
     stage.textContent = '';
     const svg = document.createElementNS(SVG, 'svg');
