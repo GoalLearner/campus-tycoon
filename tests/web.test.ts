@@ -222,7 +222,10 @@ describe('the web', () => {
       expect(WEB.other[back]).toBe(a);
       expect(WEB.strength[back]).toBe(WEB.strength[s]);
       expect(WEB.seen[back]).toBe(WEB.seen[s]);
-      if (WEB.kind[s] !== KIND.crush && WEB.kind[back] !== KIND.crush) expect(WEB.kind[back]).toBe(WEB.kind[s]);
+      // A crush is one end's own; picking on someone has an end for each (63.11): bully at one, bullied at the other.
+      if (WEB.kind[s] === KIND.bully) expect(WEB.kind[back]).toBe(KIND.bullied);
+      else if (WEB.kind[s] === KIND.bullied) expect(WEB.kind[back]).toBe(KIND.bully);
+      else if (WEB.kind[s] !== KIND.crush && WEB.kind[back] !== KIND.crush) expect(WEB.kind[back]).toBe(WEB.kind[s]);
     }
     // Half a million checks, one for every slot: about 10 s on a quiet PC, more when it is busy.
   }, 60_000);
@@ -251,7 +254,8 @@ describe('the web', () => {
     for (let s = 0; s < WEB.n * SLOTS; s++) if (WEB.other[s]! >= 0) expect(read.back[s]).toBe(WEB.back[s]);
     catchUp(read, MODEL, week + 3);
     same(read, once);
-  });
+    // Several webs grown and lived side by side: about 15 s on a quiet PC.
+  }, 60_000);
 
   it('is caught up week by week after a short absence, and regrown with its last weeks lived after a long one', () => {
     const week = webWeekOf(MODEL);

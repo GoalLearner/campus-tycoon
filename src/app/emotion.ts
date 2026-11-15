@@ -1,3 +1,5 @@
+import { BULLIED_REASON } from '../sim/config/bullying';
+import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
 import { DRINKING_YEAR } from '../sim/config/parties';
 import { FEEL, FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
@@ -5,7 +7,7 @@ import { hashInts } from '../sim/rng';
 import { homeGameNow } from '../sim/systems/football';
 import { dayRead } from '../sim/systems/season';
 import { firstNameOf } from '../sim/systems/students';
-import { idIn, isMain, refIn, type WebView } from './socialView';
+import { idIn, refIn, type WebView } from './socialView';
 
 /**
  * What a student is feeling right now, as the Sims show it (DESIGN.md 63.7): small reasons, each pulling towards an
@@ -82,8 +84,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   const out: Moodlet[] = [];
   const add = (emotion: Emotion, reason: string, weight: number, emote?: string): void => void out.push({ emotion, reason, weight, ...(emote ? { emote } : {}) });
 
-  // Their people: the web's, except the Main Character's, whose people are their story's until stop 7.
-  const id = view && !isMain(state, ref) ? idIn(view, ref) : -1;
+  // Their people: the web's, the Main Character's too since their story's people are on the web (DESIGN.md 63.11).
+  const id = view ? idIn(view, ref) : -1;
   if (view && id >= 0) {
     let friends = 0;
     let partnered = false;
@@ -110,6 +112,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
       } else if (kind === KIND.enemy) add('tense', `Not speaking to ${first()}`, 2);
       else if (kind === KIND.rival) add('tense', `A rivalry with ${first()}`, 1.2);
       else if (kind === KIND.roommate && feeling === FEEL.tense) add('tense', `Not getting on with ${first()}`, 1.8);
+      // Picked on (DESIGN.md 63.11): it weighs, more the longer it goes on.
+      else if (kind === KIND.bullied && strength >= BULLIED_FROM) add('sad', BULLIED_REASON.replace('{name}', first()), 2 + strength / 40);
       else if (kind === KIND.best && strength >= 85) add('happy', `Close with ${first()}`, 1.2);
       if ((kind === KIND.friend || kind === KIND.best || kind === KIND.roommate || kind === KIND.crush) && strength >= FRIEND_AT) friends += 1;
     }

@@ -65,6 +65,10 @@ export function startSocialWeb(host: Host): void {
     // What the ties do to the campus goes into the save, for the campus to use until the next week (DESIGN.md 63.10).
     const kept = host.state.web.effects;
     if (reply.effects && host.hasGame && reply.view.seed === host.state.seed && kept?.week !== reply.effects.week) host.dispatch({ type: 'socialEffects', effects: reply.effects });
+    // Who is around the Main Character, for their story to cast from (63.11).
+    const main = host.state.story?.mc;
+    const people = reply.mainPeople;
+    if (people && main && host.hasGame && people.for.entryYear === main.ref.entryYear && people.for.index === main.ref.index && main.webPeople?.week !== people.week) host.dispatch({ type: 'mainPeople', people });
     if (!host.isEphemeral) void writeWebRecord(reply.record);
     for (const listener of listeners) listener();
     const next = wanted;

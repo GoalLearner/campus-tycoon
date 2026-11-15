@@ -110,7 +110,7 @@ const lotOf = (state: GameState, zone: 'housing' | 'academic'): number => {
 };
 
 describe('the list of policies', () => {
-  it('is eighteen, in the three eras, each with one gain and one named cost in plain words', () => {
+  it('is nineteen, in the three eras, each with one gain and one named cost in plain words', () => {
     expect(POLICIES.map((spec) => spec.name)).toEqual([
       'Reading days before finals',
       'Tough grading',
@@ -125,13 +125,14 @@ describe('the list of policies', () => {
       'Dry campus',
       'Party registration',
       'Alcohol education',
+      'Anti-bullying program',
       'Anti-hazing policy',
       'Greek life oversight',
       'Campus jobs program',
       'Need-based scholarships',
       'Cheaper dining plans',
     ]);
-    expect(policiesAt(1)).toHaveLength(6);
+    expect(policiesAt(1)).toHaveLength(7);
     expect(policiesAt(2).map((spec) => spec.id)).toEqual(['allNightLibrary', 'parkingFees', 'alcoholEducation', 'campusJobs', 'needScholarships', 'cheaperDining']);
     expect(policiesAt(3).map((spec) => spec.id)).toEqual(['quietHours', 'namingRights']);
     expect(new Set(POLICIES.map((spec) => spec.id)).size).toBe(POLICIES.length);
@@ -166,7 +167,7 @@ describe('the list of policies', () => {
       }
     }
     // Every kind of effect there is has a policy that uses it.
-    expect([...kinds].sort()).toEqual(['cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
+    expect([...kinds].sort()).toEqual(['bullying', 'cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
   });
 });
 
@@ -192,11 +193,11 @@ describe('an era opens its switches', () => {
     expect(applyAction(small, { type: 'policy', id: 'nothing', on: true }).ok).toBe(false);
   });
 
-  it('opens six at Growth, six more at Flagship and two more at Legacy, every one off', () => {
+  it('opens seven at Growth, six more at Flagship and two more at Legacy, every one off', () => {
     expect(policiesOpen(ranked(126).state)).toHaveLength(0);
-    expect(policiesOpen(growth()).map((spec) => spec.id)).toEqual(['readingDays', 'toughGrading', 'freshmenOnCampus', 'freeStudentSection', 'dryCampus', 'partyRegistration']);
-    expect(policiesOpen(flagship())).toHaveLength(12);
-    expect(policiesOpen(legacy())).toHaveLength(14);
+    expect(policiesOpen(growth()).map((spec) => spec.id)).toEqual(['readingDays', 'toughGrading', 'freshmenOnCampus', 'freeStudentSection', 'dryCampus', 'partyRegistration', 'antiBullying']);
+    expect(policiesOpen(flagship())).toHaveLength(13);
+    expect(policiesOpen(legacy())).toHaveLength(15);
     for (const state of [growth(), flagship(), legacy()]) {
       expect(state.policies.on).toEqual([]);
       expect(policiesView(state)!.rows.every((row) => !row.on && !row.locked)).toBe(true);
@@ -231,13 +232,13 @@ describe('an era opens its switches', () => {
   it('says what it opens the day it begins, in the goal, the headline and a line that leads to the page', () => {
     const { state, log } = ranked(120);
     const goal = log.find((entry) => entry.kind === 'goal')!;
-    expect(goal.text.endsWith('The Growth era begins. It opens the Policies page, with six switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus and Party registration; and Greek Row, with chapter houses in the Build menu.')).toBe(true);
+    expect(goal.text.endsWith('The Growth era begins. It opens the Policies page, with seven switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus, Party registration and Anti-bullying program; and Greek Row, with chapter houses in the Build menu.')).toBe(true);
     expect(goal.data?.era).toBe(1);
     const paper = edition(state, log, facts(state));
     expect(paper.headline.startsWith('The Growth Era Begins at Test')).toBe(true);
     expect(paper.deck).toBe(goal.text);
     const lead = [...paper.top].find((item) => item.go === 'policies')!;
-    expect(lead.text).toBe('6 new switches are on the Policies page. All are off until you turn them on.');
+    expect(lead.text).toBe('7 new switches are on the Policies page. All are off until you turn them on.');
     for (const text of [paper.headline, paper.deck, ...paper.top.map((item) => item.text)]) expect(toneProblem(text), text).toBeNull();
 
     // The later eras say theirs too.
@@ -257,7 +258,7 @@ describe('an era opens its switches', () => {
     const start = opened();
     expect(nextEra(start)).toEqual({ era: 1, name: 'Growth', top: 125, opens: eraOpens(1) });
     expect(sizeView(start).era).toBe('Era: Arrival');
-    expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with six switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus and Party registration; and Greek Row, with chapter houses in the Build menu.');
+    expect(sizeView(start).eraNext).toBe('The Growth era, at the Top 125, opens the Policies page, with seven switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus, Party registration and Anti-bullying program; and Greek Row, with chapter houses in the Build menu.');
     expect(sizeView(growth()).eraNext).toBe('The Flagship era, at the Top 75, opens three buildings to buy in the Build menu: the Student Union, the Honors College and the Welcome Center; and six more policies: All-night library, Parking fees, Alcohol education, Campus jobs program, Need-based scholarships and Cheaper dining plans.');
     expect(sizeView(flagship()).eraNext).toBe("The Legacy era, at the Top 25, opens one landmark to buy in the Build menu: the Founders' Commons; and two more policies: Quiet hours and Naming rights.");
     expect(sizeView(legacy()).eraNext).toBe('');
@@ -273,7 +274,7 @@ describe('an era opens its switches', () => {
 describe('a switch', () => {
   it('says its gain and its cost before it is turned on, in words and in this campus\'s numbers', () => {
     const view = policiesView(legacy())!;
-    expect(view.rows).toHaveLength(14);
+    expect(view.rows).toHaveLength(15);
     for (const row of view.rows) {
       const spec = policySpec(row.id)!;
       expect(row.gain).toBe(spec.gives);
@@ -632,7 +633,7 @@ describe('content is data', () => {
     list.push(ninth);
     try {
       const { state, log } = ranked(120);
-      expect(log.find((entry) => entry.kind === 'goal')!.text).toContain('with seven switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus, Party registration and Evening shuttle; and Greek Row');
+      expect(log.find((entry) => entry.kind === 'goal')!.text).toContain('with eight switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus, Party registration, Anti-bullying program and Evening shuttle; and Greek Row');
       const row = policiesView(state)!.rows.find((one) => one.id === 'testNinth')!;
       expect(row).toMatchObject({ name: 'Evening shuttle', on: false, locked: false, gain: 'Income', cost: 'A little Happiness' });
       expect(row.costLines).toEqual(['Safety & health −2']);
@@ -646,7 +647,7 @@ describe('content is data', () => {
     } finally {
       list.pop();
     }
-    expect(POLICIES).toHaveLength(18);
+    expect(POLICIES).toHaveLength(19);
   });
 
   it('no rule, page or line of the game names a policy: only the list does', () => {
@@ -741,7 +742,7 @@ describe('a save from version 16', () => {
   });
 
   it('already in Growth or later opens with every switch off', () => {
-    for (const [rank, open] of [[3, 6], [5, 12], [7, 14]] as const) {
+    for (const [rank, open] of [[3, 7], [5, 13], [7, 15]] as const) {
       const file = JSON.parse(text) as { v: number; savedAt: number; state: GameState };
       file.state.goals = { size: 1, rank, reached: [], rewards: 0 };
       const loaded = parseSave(JSON.stringify(file));

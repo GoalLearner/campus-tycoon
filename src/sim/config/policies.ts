@@ -57,7 +57,9 @@ export type PolicyEffect =
   /** A lever the Main Character's stories read (DESIGN.md 53.3): better odds where it applies. `words` says it with its numbers. */
   | { kind: 'storyOdds'; lever: 'jobs' | 'aid' | 'dining'; words: string }
   /** So much a year for each student enrolled, named for the policy on the Money panel. */
-  | { kind: 'perStudent'; amount: number };
+  | { kind: 'perStudent'; amount: number }
+  /** Picking on someone (DESIGN.md 63.11) starts this many times as often, and is reported this many times as often. */
+  | { kind: 'bullying'; starts: number; reports: number };
 
 export interface PolicySpec {
   id: string;
@@ -233,6 +235,19 @@ export const POLICIES: readonly PolicySpec[] = [
     costs: [{ kind: 'upkeep', family: 'medical', perYear: 3_000, one: 'Medical Center', many: 'Medical Centers' }],
     begins: 'Alcohol education begins: every freshman takes a short course, and the Medical Center runs a talk before every big weekend.',
     ends: 'Alcohol education ends.',
+  },
+  // Picking on someone (DESIGN.md 63.11): the lever the owner asked for. Its gain is in the social web, so the long
+  // run sees its cost; tests/bullying.test.ts sees the gain.
+  {
+    id: 'antiBullying',
+    name: 'Anti-bullying program',
+    era: 1,
+    gives: 'Fewer students picked on, and more of it reported',
+    takes: 'It costs a little for every student',
+    gains: [{ kind: 'bullying', starts: 0.5, reports: 2 }],
+    costs: [{ kind: 'perStudent', amount: 20 }],
+    begins: 'An anti-bullying program begins: RAs trained to spot it, a way to report it, and someone who answers.',
+    ends: 'The anti-bullying program ends.',
   },
   // Greek Row's hazing (DESIGN.md 52.3 and 55): the president's three choices are these two switches, or neither,
   // which is looking the other way. Each shows once the campus has a chapter house.

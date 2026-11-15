@@ -100,6 +100,7 @@ import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
 import { drawSocialPage } from './socialUi';
 import { socialWeb } from '../app/socialWeb';
+import { mainPeopleOf } from '../app/socialView';
 import { mountRoomView } from './roomView';
 
 /**
@@ -2301,7 +2302,8 @@ export function mountUi(root: HTMLElement): void {
             body.append(el('p', '', `${suggestion.name} · ${suggestion.about}`));
             body.append(
               button(`Make ${suggestion.name.split(' ')[0]} your main character`, 'wide', () => {
-                const result = store.dispatch({ type: 'makeMain', ref: suggestion.ref });
+                const people = mainPeopleOf(socialWeb.view, suggestion.ref);
+                const result = store.dispatch({ type: 'makeMain', ref: suggestion.ref, ...(people ? { people } : {}) });
                 if (!result.ok) session.notify(result.error, 'error');
                 draw();
               }),

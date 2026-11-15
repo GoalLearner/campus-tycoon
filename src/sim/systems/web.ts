@@ -5,6 +5,7 @@ import {
   BACK_TOGETHER,
   BEST_AT,
   BREAKUP,
+  BULLY,
   CATCHUP_FULL_WEEKS,
   CLASH_BELOW,
   CRUSH_FROM,
@@ -42,6 +43,7 @@ import {
   WHERE,
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
+import { bullyingTimes } from './policies';
 import type { GameState } from '../types';
 import { TICKS_PER_YEAR } from '../config/time';
 import { athleteShare } from './football';
@@ -117,6 +119,10 @@ export interface Web {
   friendGroups: Group;
   /** Each group's vibe: the interest most of them share, by INTEREST. */
   groupVibe: Uint8Array;
+  /** The Main Character's place in the web, or -1 (DESIGN.md 63.11): their romances are their story's. Not saved. */
+  mainId: number;
+  /** What the campus's policies do to picking on someone: how often it starts, how often it is reported. Not saved. */
+  bullyTimes: { start: number; reported: number };
 }
 
 /** A happening's numbers: its week, its event, its campus year, its luck, then up to three students as entry year and index. */
@@ -182,6 +188,8 @@ export function newWeb(seed: number, classSlot: number): Web {
     groupOf: new Int32Array(n).fill(-1),
     friendGroups: { start: new Int32Array(1), members: new Int32Array(0) },
     groupVibe: new Uint8Array(0),
+    mainId: -1,
+    bullyTimes: { start: 1, reported: 1 },
   };
 }
 
@@ -625,7 +633,9 @@ function meet(web: Web, a: number, b: number, h: number): void {
     note(web, EVENT.best, a, b);
   }
   // Romance, between friends: a rare spark, and each must be the other's type.
-  if (st < CRUSH_FROM || ka === KIND.roommate || ka === KIND.ex || (ka >= KIND.dating && ka <= KIND.longterm)) return;
+  // The Main Character's romances are their story's (DESIGN.md 63.11): the web starts none for them.
+  // Nor does it spark between someone picked on and whoever picks on them (63.11).
+  if (st < CRUSH_FROM || ka === KIND.roommate || ka === KIND.ex || (ka >= KIND.dating && ka <= KIND.longterm) || ka === KIND.bully || ka === KIND.bullied || a === web.mainId || b === web.mainId) return;
   const spark = share(hash5(web.seed, 9930, lo, hi, 0));
   if (spark < SPARK) return;
   const ia = web.identity[a]!;
@@ -658,6 +668,8 @@ function meet(web: Web, a: number, b: number, h: number): void {
     const fa = freeToDate(web, a, h);
     const fb = freeToDate(web, b, h >>> 2);
     if (fa === 0 || fb === 0) return;
+    // Nobody cheats on the Main Character in the web: that would end their couple, which is their story's to end.
+    if ((fa === 2 && partnerOf(web, a) === web.mainId) || (fb === 2 && partnerOf(web, b) === web.mainId)) return;
     if (fa === 2) cheat(web, a, b);
     if (fb === 2) cheat(web, b, a);
     setBoth(web, sa, sb, KIND.dating, FEEL.warm);
@@ -686,7 +698,8 @@ function settle(web: Web): void {
     }
     const lo = a < b ? a : b;
     const hi = a < b ? b : a;
-    if (kind >= KIND.dating && kind <= KIND.longterm) {
+    const held = a === web.mainId || b === web.mainId;
+    if (kind >= KIND.dating && kind <= KIND.longterm && !held) {
       const h = share(hash5(web.seed, 9940, lo, hi, web.week));
       const chance = kind === KIND.longterm ? BREAKUP.longterm : kind === KIND.exclusive ? BREAKUP.exclusive : BREAKUP.dating;
       if (st < 30 || h < chance) {
@@ -709,7 +722,7 @@ function settle(web: Web): void {
           note(web, EVENT.longterm, lo, hi);
         }
       }
-    } else if (kind === KIND.ex && web.seen[s] === week && a === hi && st > 0) {
+    } else if (kind === KIND.ex && web.seen[s] === week && a === hi && st > 0 && !held) {
       // On and off: exes who keep seeing each other, both free, may get back together. Decided at the end settled
       // second, so neither end is settled again after it.
       const h = share(hash5(web.seed, 9950, lo, hi, web.week));
@@ -723,7 +736,7 @@ function settle(web: Web): void {
         }
       }
     } else if ((kind === KIND.friend || kind === KIND.best || kind === KIND.crush) && st < 25) web.kind[s] = KIND.met;
-    if (st === 0 && (kind === KIND.met || kind === KIND.ex || kind === KIND.rival || kind === KIND.crush)) clear(web, s);
+    if (st === 0 && (kind === KIND.met || kind === KIND.ex || kind === KIND.rival || kind === KIND.crush || kind === KIND.bully || kind === KIND.bullied)) clear(web, s);
   }
 }
 
@@ -772,8 +785,198 @@ export function stepWeek(web: Web): void {
       meet(web, a, b, h);
     }
   }
+  bullyWeek(web);
   settle(web);
   for (let k = 0; k < EVENTS.length; k++) web.weekly[row * EVENTS.length + k] = web.events[k]! - before[k]!;
+}
+
+// ------------------------------------------------- picking on someone --
+
+/** Not kind, and jealous (not loyal) or short-tempered (not calm): who may start on someone (DESIGN.md 63.11). */
+const starts = (bits: number): boolean => traitOf(bits, TRAIT.kind) <= 1 && (traitOf(bits, TRAIT.loyal) <= 1 || traitOf(bits, TRAIT.calm) <= 1);
+/** Not kind and outgoing: who joins in. */
+const joins = (bits: number): boolean => traitOf(bits, TRAIT.kind) <= 1 && traitOf(bits, TRAIT.outgoing) >= 2;
+/** Kind or loyal: who stands up for the one picked on. */
+const defends = (bits: number): boolean => traitOf(bits, TRAIT.kind) >= 2 || traitOf(bits, TRAIT.loyal) >= 2;
+const close = (kind: number): boolean => kind === KIND.friend || kind === KIND.best;
+
+/** Both ends of a tie by `amount`, within 0 and 100. */
+function nudge(web: Web, s: number, amount: number): void {
+  const back = web.back[s]!;
+  const st = Math.max(0, Math.min(100, web.strength[s]! + amount));
+  web.strength[s] = st;
+  if (back >= 0) web.strength[back] = st;
+}
+
+/**
+ * The week's picking on someone (DESIGN.md 63.11). What goes on grows, may stop, and may be reported, which ends it; a
+ * student who would start on someone may, with someone they clash with; friends of theirs may join in, friends of the
+ * one picked on may stand up for them, and kind friends of the one doing it drift away. The Main Character never
+ * starts it, and may be picked on like anyone.
+ */
+function bullyWeek(web: Web): void {
+  const { seed, n } = web;
+  const week = web.week;
+  for (let a = 0; a < n; a++) {
+    if (web.year[a]! < 0) continue;
+    for (let k = 0; k < SLOTS; k++) {
+      const s = a * SLOTS + k;
+      const b = web.other[s]!;
+      if (b < 0 || web.kind[s] !== KIND.bully) continue;
+      const back = web.back[s]!;
+      const h = hash5(seed, 9980, a, b, week);
+      if (share(h) < BULLY.reported * web.bullyTimes.reported) {
+        // Reported to the conduct office: it ends, and they are left rivals.
+        setBoth(web, s, back, KIND.rival, FEEL.tense);
+        web.strength[s] = web.strength[back] = Math.min(web.strength[s]!, RIVAL_AT);
+        count(web, EVENT.reported);
+        note(web, EVENT.reported, a, b);
+      } else if (share(h >>> 7) < 0.85) nudge(web, s, BULLY.grows);
+    }
+    const ia = web.identity[a]!;
+    if (a === web.mainId || !starts(ia)) continue;
+    const h0 = hash5(seed, 9981, a, week, 0);
+    if (share(h0) >= BULLY.start * web.bullyTimes.start) continue;
+    // Someone they clash with: a rival, an enemy, a roommate they do not get on with, or an acquaintance who grates.
+    let s = -1;
+    for (let t = 0; t < SLOTS && s < 0; t++) {
+      const at = a * SLOTS + ((h0 >>> 9) + t) % SLOTS;
+      const b = web.other[at]!;
+      if (b < 0 || web.year[b]! < 0) continue;
+      const kind = web.kind[at]!;
+      const grates = kind === KIND.met && web.chem[at]! < CLASH_BELOW * 100;
+      if (kind === KIND.rival || kind === KIND.enemy || grates || (kind === KIND.roommate && web.feeling[at] === FEEL.tense)) s = at;
+    }
+    if (s < 0) continue;
+    const b = web.other[s]!;
+    const back = web.back[s]!;
+    if (web.kind[s] === KIND.roommate) {
+      // Roommates stay roommates: it is pettiness, and the room stays tense.
+      count(web, EVENT.pettiness);
+      note(web, EVENT.pettiness, a, b);
+      continue;
+    }
+    web.kind[s] = KIND.bully;
+    web.kind[back] = KIND.bullied;
+    web.feeling[s] = web.feeling[back] = FEEL.tense;
+    web.strength[s] = web.strength[back] = Math.max(web.strength[s]!, BULLY.from);
+    // A clique: they have a group, and the one they start on is not in it.
+    const event = web.groupOf[a]! >= 0 && web.groupOf[a] !== web.groupOf[b] ? EVENT.shutOut : EVENT.bullying;
+    count(web, event);
+    note(web, event, a, b);
+    // Friends of theirs who are not kind and outgoing, and who know the one picked on, may join in.
+    let joined = 0;
+    for (let k = 0; k < SLOTS && joined < BULLY.joinMost; k++) {
+      const f = web.other[a * SLOTS + k]!;
+      if (f < 0 || f === b || f === web.mainId || !close(web.kind[a * SLOTS + k]!) || !joins(web.identity[f]!)) continue;
+      const sf = slotOf(web, f, b);
+      if (sf < 0) continue;
+      const kf = web.kind[sf]!;
+      if (kf !== KIND.met && kf !== KIND.rival && kf !== KIND.enemy) continue;
+      if (share(hash5(seed, 9982, f, b, week)) >= BULLY.join) continue;
+      const bf = web.back[sf]!;
+      web.kind[sf] = KIND.bully;
+      web.kind[bf] = KIND.bullied;
+      web.feeling[sf] = web.feeling[bf] = FEEL.tense;
+      web.strength[sf] = web.strength[bf] = Math.max(web.strength[sf]!, BULLY.from);
+      count(web, EVENT.pileOn);
+      note(web, EVENT.pileOn, a, b, f);
+      joined += 1;
+    }
+    // Friends of the one picked on who are kind or loyal may stand up for them, and are the closer for it.
+    for (let k = 0; k < SLOTS; k++) {
+      const sb = b * SLOTS + k;
+      const f = web.other[sb]!;
+      const kind = web.kind[sb]!;
+      if (f < 0 || f === a || !(close(kind) || (kind === KIND.roommate && web.feeling[sb] === FEEL.warm)) || !defends(web.identity[f]!)) continue;
+      if (share(hash5(seed, 9983, f, b, week)) >= BULLY.defend) continue;
+      nudge(web, sb, BULLY.rally);
+      count(web, EVENT.stoodUp);
+      note(web, EVENT.stoodUp, f, b);
+    }
+    // Kind friends of the one doing it drift away a little.
+    for (let k = 0; k < SLOTS; k++) {
+      const sa = a * SLOTS + k;
+      const f = web.other[sa]!;
+      if (f < 0 || !close(web.kind[sa]!) || traitOf(web.identity[f]!, TRAIT.kind) < 2) continue;
+      nudge(web, sa, -BULLY.drift);
+    }
+  }
+}
+
+/** The partner at the other end of a's couple, or -1. */
+function partnerOf(web: Web, a: number): number {
+  const s = partnered(web, a);
+  return s < 0 ? -1 : web.other[s]!;
+}
+
+/**
+ * The Main Character's people, held to their story (DESIGN.md 63.11): each of their story's people who is a student
+ * here is tied to them as the story has it, at its closeness; a romance the story has ended is an ex; and any romance
+ * the web made for them that the story has not is only a friendship. The web starts and ends none of theirs.
+ */
+export function holdMain(web: Web, state: GameState): void {
+  const mc = state.story?.mc;
+  web.mainId = mc ? idOf(web, mc.ref) : -1;
+  const a = web.mainId;
+  if (a < 0 || !mc) return;
+  const want = new Map<number, { kind: number; strength: number }>();
+  for (const one of mc.cast) {
+    if (!one.ref) continue;
+    const b = idOf(web, one.ref);
+    if (b < 0 || b === a) continue;
+    const c = Math.max(0, Math.min(100, Math.round(one.closeness)));
+    if (one.role === 'partner') want.set(b, { kind: c >= 95 ? KIND.longterm : c >= 70 ? KIND.exclusive : KIND.dating, strength: Math.max(DATE_FROM, c) });
+    else if (one.role === 'crush') want.set(b, { kind: KIND.crush, strength: Math.max(CRUSH_FROM, c) });
+    else if (one.role === 'roommate') want.set(b, { kind: KIND.roommate, strength: Math.max(FRIEND_AT, c) });
+    else want.set(b, { kind: c >= BEST_AT ? KIND.best : KIND.friend, strength: Math.max(FRIEND_AT, c) });
+  }
+  for (const ref of mc.exes ?? []) {
+    const b = idOf(web, ref);
+    if (b >= 0 && b !== a && !want.has(b)) want.set(b, { kind: KIND.ex, strength: -1 });
+  }
+  // What the web made that the story has not: a couple or a crush of theirs, or a second roommate, is a friendship.
+  const roommate = [...want.values()].some((one) => one.kind === KIND.roommate);
+  for (let k = 0; k < SLOTS; k++) {
+    const s = a * SLOTS + k;
+    const b = web.other[s]!;
+    if (b < 0 || want.has(b)) continue;
+    const kind = web.kind[s]!;
+    if ((kind >= KIND.dating && kind <= KIND.longterm) || (roommate && kind === KIND.roommate)) setBoth(web, s, web.back[s]!, KIND.friend, FEEL.warm);
+    else if (kind === KIND.crush) web.kind[s] = KIND.friend;
+  }
+  for (const [b, { kind, strength }] of want) {
+    let s = slotOf(web, a, b);
+    if (s < 0) {
+      const made = link(web, a, b, KIND.met, MET_AT, pairChem(web, a, b));
+      if (!made) continue;
+      s = made[0];
+    }
+    const back = web.back[s]!;
+    if (kind === KIND.ex) {
+      if (web.kind[s] !== KIND.ex) {
+        setBoth(web, s, back, KIND.ex, FEEL.tense);
+        web.strength[s] = web.strength[back] = EX_START;
+      }
+      continue;
+    }
+    if (kind >= KIND.dating && kind <= KIND.longterm) {
+      // The story's partner is theirs alone: a couple of the partner's in the web with someone else is over.
+      const other = partnerOf(web, b);
+      if (other >= 0 && other !== a) {
+        const so = slotOf(web, b, other);
+        setBoth(web, so, web.back[so]!, KIND.ex, FEEL.complicated);
+        web.strength[so] = web.strength[web.back[so]!] = EX_START;
+      }
+    }
+    web.strength[s] = web.strength[back] = strength;
+    if (kind === KIND.crush) {
+      // A crush is theirs: the other end keeps what it is, a friendship at least.
+      web.kind[s] = KIND.crush;
+      web.feeling[s] = FEEL.warm;
+      if (web.kind[back] === KIND.met) web.kind[back] = KIND.friend;
+    } else setBoth(web, s, back, kind, FEEL.warm);
+  }
 }
 
 // ----------------------------------------------------------- regrowing --
@@ -819,7 +1022,7 @@ export function regrow(web: Web, state: GameState): void {
         // has made, steadier the longer it is, and never so weak it ends the first week it is lived.
         const together = Math.min(years, web.year[b]!) + into;
         const kept = share(hash5(seed, 9975, a, b, 0)) < Math.min(REGROW_COUPLES_KEPT, REGROW_COUPLES_A_YEAR * together);
-        const pair = spark > SPARK + 0.01 && likes(web.identity[a]!, web.identity[b]!) && likes(web.identity[b]!, web.identity[a]!) && partnered(web, a) < 0 && partnered(web, b) < 0;
+        const pair = spark > SPARK + 0.01 && likes(web.identity[a]!, web.identity[b]!) && likes(web.identity[b]!, web.identity[a]!) && partnered(web, a) < 0 && partnered(web, b) < 0 && a !== web.mainId && b !== web.mainId;
         if (pair && kept) {
           const close = Math.min(100, Math.round(REGROW_COUPLE_FROM + REGROW_COUPLE_PER_YEAR * together));
           link(web, a, b, close >= 95 ? KIND.longterm : close >= 70 ? KIND.exclusive : KIND.dating, close, chem);
@@ -841,6 +1044,8 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
   fitClasses(web, state);
   place(web, state);
   web.calYear = calendarAt(state.clock).year;
+  web.bullyTimes = bullyingTimes(state);
+  holdMain(web, state);
   const fresh = web.week < 0;
   if (fresh) web.week = toWeek - 1;
   const gap = toWeek - web.week;
@@ -849,6 +1054,7 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
   if (gap > CATCHUP_FULL_WEEKS || fresh) {
     web.week = toWeek - REGROW_LIVED_WEEKS;
     regrow(web, state);
+    holdMain(web, state);
     regrown = true;
   }
   let lived = 0;
@@ -856,6 +1062,7 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
     stepWeek(web);
     lived += 1;
   }
+  holdMain(web, state);
   findGroups(web);
   pickRation(web);
   return { lived, regrown };
@@ -994,20 +1201,28 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   if (classSlot <= 0 || classSlot > 200_000) return null;
   const web = newWeb(state.seed, classSlot);
   const slots = web.n * SLOTS;
-  const kept = web.happenings.length;
-  const weeks = version === 2 ? web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
-  if (head[10] !== EVENTS.length || copy.byteLength !== HEADER * 4 + EVENTS.length * 8 + weeks + slots * 9) return null;
-  if (version === 2 && (head[11] !== kept || head[12] !== HAPPENING_WEEKS)) return null;
+  // A record from before 63.11 holds fewer kinds of event and of happening: it is read into the first of each.
+  const kinds = head[10]!;
+  const kept = version === 2 ? head[11]! : web.happenings.length;
+  const perWeekThen = kept / (HAPPENING_WEEKS * HAPPENING_FIELDS);
+  if (kinds < 15 || kinds > EVENTS.length || !Number.isInteger(perWeekThen) || perWeekThen > PER_WEEK) return null;
+  const weeklyThen = HAPPENING_WEEKS * kinds;
+  const weeks = version === 2 ? weeklyThen * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
+  if (copy.byteLength !== HEADER * 4 + kinds * 8 + weeks + slots * 9) return null;
+  if (version === 2 && head[12] !== HAPPENING_WEEKS) return null;
   web.week = head[3]!;
   web.ring = [head[5]!, head[6]!, head[7]!, head[8]!];
   web.roomsFor = head[9]!;
   let at = HEADER * 4;
-  web.events.set(new Float64Array(copy.buffer, at, EVENTS.length));
-  at += EVENTS.length * 8;
+  web.events.set(new Float64Array(copy.buffer, at, kinds));
+  at += kinds * 8;
   if (version === 2) {
-    web.weekly.set(new Float64Array(copy.buffer, at, web.weekly.length));
-    at += web.weekly.length * 8;
-    web.happenings.set(new Int32Array(copy.buffer, at, kept));
+    const weekly = new Float64Array(copy.buffer, at, weeklyThen);
+    for (let row = 0; row < HAPPENING_WEEKS; row++) web.weekly.set(weekly.subarray(row * kinds, (row + 1) * kinds), row * EVENTS.length);
+    at += weeklyThen * 8;
+    const happenings = new Int32Array(copy.buffer, at, kept);
+    const rowThen = perWeekThen * HAPPENING_FIELDS;
+    for (let row = 0; row < HAPPENING_WEEKS; row++) web.happenings.set(happenings.subarray(row * rowThen, (row + 1) * rowThen), row * PER_WEEK * HAPPENING_FIELDS);
     at += kept * 4;
     web.weeklyWeek.set(new Int32Array(copy.buffer, at, HAPPENING_WEEKS));
     at += HAPPENING_WEEKS * 4;

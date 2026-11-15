@@ -79,6 +79,8 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
       return `${percent(1 - effect.times)} fewer ${effect.calls === 'safety' ? 'parties broken up by Campus Safety' : effect.calls === 'medical' ? 'Medical Center calls from parties' : 'calls from parties on campus'}`;
     case 'storyOdds':
       return effect.words;
+    case 'bullying':
+      return `${percent(1 - effect.starts)} less picking on others, and ${effect.reports} times as much of it reported to the conduct office`;
     case 'perStudent': {
       const students = enrollment(state);
       return `${dollars(effect.amount * students)} a year: ${dollars(effect.amount)} for each of the ${headCount(students)} students`;

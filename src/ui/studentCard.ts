@@ -2,11 +2,12 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { isMain, isMain as isMainCharacter, peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
 import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
-import { firstNamesOf, happenedTo, idIn, refIn } from '../app/socialView';
+import { firstNamesOf, happenedTo, idIn, mainPeopleOf, refIn } from '../app/socialView';
 import { studentFriends, type StudentFriends } from '../sim/systems/friends';
+import { BULLIED_TIE } from '../sim/config/bullying';
 import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
@@ -311,7 +312,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   makeMain.addEventListener('click', () => {
     const ref = session.student;
     if (!ref) return;
-    const result = store.dispatch({ type: 'makeMain', ref });
+    // Their people are their real ties, once the web has answered (DESIGN.md 63.11).
+    const people = mainPeopleOf(socialWeb.view, ref);
+    const result = store.dispatch({ type: 'makeMain', ref, ...(people ? { people } : {}) });
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
@@ -339,9 +342,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       shownKey = '';
       return;
     }
-    // Their own ties, once the web has answered: the Main Character's are their story's (57.1) until stop 7.
+    // Their own ties, once the web has answered; the Main Character's too, whose story's people are on the web (63.11).
     const web = socialWeb.view;
-    const tieId = web && !isMainCharacter(state, ref) ? idIn(web, ref) : -1;
+    const tieId = web ? idIn(web, ref) : -1;
     const ties = web && tieId >= 0 ? studentFriends(web, tieId) : null;
     const card = studentCard(state, ref, ties);
     if (!card) {
@@ -529,6 +532,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       splitMessy: (who) => `a bad split with ${name(who)}`,
       rival: (who) => `${name(who)}, a rival`,
       alone: () => 'nobody close yet',
+      bullied: (who) => BULLIED_TIE.replace('{name}', name(who)),
     };
     const parts = [`Happiness ${signed(card.friends.happiness)}`];
     if (card.friends.stress !== 0) parts.push(`Stress ${signed(card.friends.stress)}`);
@@ -544,9 +548,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   let facesKey = '';
   function showPeople(state: GameState, ref: StudentRef): void {
     const view = socialWeb.view;
-    // The Main Character's people are their story's until the story reads the web (63.2, stop 7).
-    const list: Person[] = view && !isMain(state, ref) ? peopleOf(view, state, ref) : [];
-    peopleRow.line.hidden = !view || isMain(state, ref);
+    // The Main Character's people too: their story's people are on the web (DESIGN.md 63.11).
+    const list: Person[] = view ? peopleOf(view, state, ref) : [];
+    peopleRow.line.hidden = !view;
     const pack = atlas?.people;
     const looks = pack ? Math.min(pack.looks, pack.crowd ?? pack.looks) : 1;
     const key = `${studentKey(ref)}|${list.map((one) => `${studentKey(one.ref)}${one.role}`).join(',')}${atlas ? '' : '-'}`;

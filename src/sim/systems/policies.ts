@@ -59,6 +59,17 @@ export function policiesOpen(state: GameState): PolicySpec[] {
   return POLICIES.filter((spec) => spec.era <= era && (!spec.greek || greek || state.policies.on.includes(spec.id)));
 }
 
+/** What the policies do to picking on someone (DESIGN.md 63.11): how often it starts, and how often it is reported. */
+export function bullyingTimes(state: GameState): { start: number; reported: number } {
+  let start = 1;
+  let reported = 1;
+  for (const { effect } of effects(state, 'bullying')) {
+    start *= effect.starts;
+    reported *= effect.reports;
+  }
+  return { start, reported };
+}
+
 export function policyOn(state: GameState, id: string): boolean {
   return state.policies.on.includes(id);
 }
