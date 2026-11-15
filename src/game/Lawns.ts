@@ -70,8 +70,8 @@ const NOTE_EVERY_MS = 620;
 const NOTE_MS = 1800;
 const NOTE_RISE = 34;
 /** Emotes over a party's crowd at once, and the wait before a slot shows its next. */
-const PARTY_ICONS = 3;
-const PARTY_ICON_EVERY_MS = [900, 2600] as const;
+const PARTY_ICONS = 4;
+const PARTY_ICON_EVERY_MS = [500, 1800] as const;
 /** Of a party, the share dancing; the rest stand and talk. Two in five wear a party hat. */
 const DANCING = 0.72;
 /** Where a hat sits, as a share of the figure's height from the feet, and the speaker's size against a room's. */
@@ -1016,7 +1016,7 @@ export class Lawns {
         const off = i < 2 && timeMs < group.danceOffUntil;
         const swaying = (group.kind === 'dance' || (party && member.dancing) || off) && !this.reduced;
         const base = swaying ? swayAt(off ? timeMs * 1.7 : timeMs, i * 0.13 + member.phase) : null;
-        const sway = base && off ? { rotation: base.rotation * 1.8, lift: base.lift * 2.5 } : base;
+        const sway = base && off ? { rotation: base.rotation * 2.2, lift: base.lift * 3 } : base;
         if (off) moving = true;
         const bob = sway ? sway.lift : 0;
         member.sprite.setRotation(sway ? sway.rotation : 0);
@@ -1289,7 +1289,7 @@ export class Lawns {
 
   /**
    * A dance-off at a dance or a party (64.4, L6): the two nearest the middle dance it out, faster and bigger, with an
-   * emote over each in turn and a high five at the end. The crowd round them is the walkers'.
+   * emote over each in turn and a big bubble for the winner at the end. The crowd round them is the walkers'.
    */
   stageDanceOff(at: { x: number; y: number }, ms: number): void {
     const group = [...this.groups.values()].find((one) => !one.leaving && (one.kind === 'dance' || one.kind === 'party') && one.x === at.x && one.y === at.y);
@@ -1303,7 +1303,7 @@ export class Lawns {
       { key: 'emote.exclaim', on: 0, from: now + 200, until: now + 200 + turn, big: false, image: null },
       { key: 'emote.music', on: 1, from: now + 200 + turn, until: now + 200 + 2 * turn, big: false, image: null },
       { key: 'emote.laugh', on: 0, from: now + 200 + 2 * turn, until: now + 200 + 3 * turn, big: false, image: null },
-      { key: 'emote.highfive', on: 1, from: now + 300 + 3 * turn, until: now + 1300 + 3 * turn, big: false, image: null },
+      { key: this.art.has('emote.big-win') ? 'emote.big-win' : 'emote.highfive', on: 1, from: now + 300 + 3 * turn, until: now + 2300 + 3 * turn, big: this.art.has('emote.big-win'), image: null },
     ];
   }
 
