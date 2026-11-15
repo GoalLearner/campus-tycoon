@@ -45,6 +45,15 @@ const SPACING = 2;
  * the middle of its cell, so the groups do not stand in rows, and a group that takes room keeps the cells beside it.
  */
 const QUAD_JITTER = 0.16;
+/** Grass spots are nudged too, so a big lawn's groups do not stand in a grid. */
+const GRASS_JITTER = 0.3;
+/**
+ * A lawn of this many cells or more is a big lawn (L6): spots over all of it, not only beside a path, filled after the
+ * quads and before the small patches by the buildings.
+ */
+const BIG_LAWN = 40;
+/** On a big lawn, of every spot a group takes, this share is people crossing it (a quad's share is STROLL_SHARE). */
+const BIG_STROLL_SHARE = 0.1;
 const WIDE: ReadonlySet<LawnKind> = new Set<LawnKind>(['frisbee', 'catch', 'kick', 'jog', 'goof', 'dog']);
 /** People crossing a quad walk this fast, in cells a second, to the far side and back, three to six cells. */
 const STROLL_SPEED = 0.5;
@@ -194,6 +203,8 @@ interface Spot {
   x: number;
   y: number;
   quad: boolean;
+  /** On a big lawn (L6): grass of BIG_LAWN cells or more, the campus's open green, filled in every part of it. */
+  big: boolean;
   /** Each spot changes group on its own clock. */
   offset: number;
 }
@@ -272,17 +283,42 @@ export class Lawns {
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (kind(x + dx, y + dy) === 'path') return true;
       return false;
     };
+    // The lawns (L6): quads and the campus's own grass, joined where they touch, and how big each is.
+    const lawn = (x: number, y: number): boolean => kind(x, y) === 'quad' || (kind(x, y) === 'empty' && ownedAt(state.map, x, y));
+    const size = new Int32Array(width * height);
+    for (let i = 0; i < size.length; i++) {
+      const x0 = i % width;
+      if (size[i] !== 0 || !lawn(x0, (i - x0) / width)) continue;
+      const part: number[] = [i];
+      size[i] = -1;
+      for (let k = 0; k < part.length; k++) {
+        const j = part[k]!;
+        const x = j % width;
+        const y = (j - x) / width;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          const n = ny * width + nx;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height || size[n] !== 0 || !lawn(nx, ny)) continue;
+          size[n] = -1;
+          part.push(n);
+        }
+      }
+      for (const j of part) size[j] = part.length;
+    }
     const candidates: Array<Spot & { order: number }> = [];
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const here = kind(x, y);
-        const quad = here === 'quad';
-        if (!quad && (here !== 'empty' || !ownedAt(state.map, x, y) || !nearPath(x, y))) continue;
+        if (!lawn(x, y)) continue;
+        const quad = kind(x, y) === 'quad';
+        const big = size[y * width + x]! >= BIG_LAWN;
+        // A small patch of grass holds a group only beside a path; a quad or a big lawn, in every part of it.
+        if (!quad && !big && !nearPath(x, y)) continue;
         // Open all round: a group needs room, so a cell hemmed in by buildings is left alone.
         let open = 0;
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) if (['empty', 'quad', 'path'].includes(kind(x + dx, y + dy))) open += 1;
         if (open < 3) continue;
-        candidates.push({ x: x + 0.5, y: y + 0.5, quad, offset: hashInts(state.seed, x, y, 4723) % STAY_TICKS, order: mix(state.seed + y * width, x) });
+        candidates.push({ x: x + 0.5, y: y + 0.5, quad, big, offset: hashInts(state.seed, x, y, 4723) % STAY_TICKS, order: mix(state.seed + y * width, x) });
       }
     }
     // Quads first, every cell of them (L6), then grass two cells apart, each in a steady order.
@@ -297,8 +333,8 @@ export class Lawns {
       for (let dy = -apart + 1; dy < apart && !clash; dy++) for (let dx = -apart + 1; dx < apart && !clash; dx++) if (used.has((cy + dy) * width + cx + dx)) clash = true;
       if (clash) continue;
       used.add(cy * width + cx);
-      const nudge = spot.quad ? QUAD_JITTER : 0;
-      kept.push({ x: spot.x + (mix(cx * 31, cy) - 0.5) * 2 * nudge, y: spot.y + (mix(cy * 37, cx) - 0.5) * 2 * nudge, quad: spot.quad, offset: spot.offset });
+      const nudge = spot.quad ? QUAD_JITTER : GRASS_JITTER;
+      kept.push({ x: spot.x + (mix(cx * 31, cy) - 0.5) * 2 * nudge, y: spot.y + (mix(cy * 37, cx) - 0.5) * 2 * nudge, quad: spot.quad, big: spot.big, offset: spot.offset });
     }
     this.spots = kept;
     // Where a party can be (L6): grass or a quad within a few cells of a hall or a chapter house, with open ground all round.
@@ -570,7 +606,9 @@ export class Lawns {
     // A party night's crowds first (L6): their own size, outside the lawns' figures.
     this.recountParties(view, keep);
     let count = 0;
-    // Spots in view, each with its group for its own time: the quad first, the hub, then the grass; each in a steady order.
+    // Spots in view, each with its group for its own time: the quads first, the hub, then the big lawns, then the patches
+    // of grass by the buildings; each in a steady order.
+    const rankOf = (spot: Spot): number => (spot.quad ? 0 : spot.big ? 1 : 2);
     const margin = 120;
     const inView = this.spots.filter((spot) => {
       const at = this.iso.toWorld(spot.x, spot.y);
@@ -581,7 +619,7 @@ export class Lawns {
         const slot = Math.floor((tick + spot.offset) / STAY_TICKS);
         return { spot, slot, key: `${Math.floor(spot.x)},${Math.floor(spot.y)}:${slot}`, order: mix(Math.floor(spot.x) * 991 + Math.floor(spot.y), slot) };
       })
-      .sort((a, b) => Number(b.spot.quad) - Number(a.spot.quad) || a.order - b.order);
+      .sort((a, b) => rankOf(a.spot) - rankOf(b.spot) || a.order - b.order);
     // A group that takes room on a quad keeps the cells beside it: nobody sits in its game.
     const wide = new Set<number>();
     const near = new Set<number>();
@@ -623,7 +661,8 @@ export class Lawns {
       if (refs.length === 0) continue;
       const roll = mix(hashInts(state.seed, slot, 4733), Math.floor(spot.x) * 997 + Math.floor(spot.y));
       // On a quad some cross it, from one side to the other and back, between the groups (L6).
-      const route = spot.quad && mix(hashInts(state.seed, slot, 4739), cell(spot)) < STROLL_SHARE && !this.exams && this.period !== 'night' ? this.strollRoute(spot, slot) : null;
+      const crossing = spot.quad ? STROLL_SHARE : spot.big ? BIG_STROLL_SHARE : 0;
+      const route = mix(hashInts(state.seed, slot, 4739), cell(spot)) < crossing && !this.exams && this.period !== 'night' ? this.strollRoute(spot, slot) : null;
       const kind: LawnKind = route ? 'stroll' : chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
       if (spot.quad && WIDE.has(kind) && crowded(spot, true)) continue;
       const [, most] = LAWN_SIZE[kind];
@@ -645,10 +684,15 @@ export class Lawns {
     return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0 };
   }
 
-  /** From a spot on a quad, three to six cells across it along the grid, over quad and path only (L6), or null. */
+  /** From a spot on a quad or a big lawn, three to six cells across it along the grid, over open ground only (L6), or null. */
   private strollRoute(spot: Spot, slot: number): Group['route'] {
-    const { width, height, cells } = this.state!.map;
-    const walkable = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && (cells[y * width + x]!.kind === 'quad' || cells[y * width + x]!.kind === 'path');
+    const map = this.state!.map;
+    const { width, height, cells } = map;
+    const walkable = (x: number, y: number): boolean => {
+      if (x < 0 || y < 0 || x >= width || y >= height) return false;
+      const here = cells[y * width + x]!.kind;
+      return here === 'quad' || here === 'path' || (here === 'empty' && ownedAt(map, x, y));
+    };
     const dirs = [
       [1, 0],
       [0, 1],
