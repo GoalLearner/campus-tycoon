@@ -659,23 +659,23 @@ export const CAUSE_POSTS: Record<CauseTopic, { tag: string; good: readonly strin
 /** Comments, made when a post is opened, by who writes them. {name} in shade is the post's author. */
 export const COMMENT_LINES = {
   /** A friend or partner on good news about a couple or a friendship. */
-  cheer: ['FINALLY. told you so', 'you two [heart]', 'love this for you', 'called it [laugh]', 'my favourite pair on campus'],
+  cheer: ['FINALLY. told you so', 'you two [heart]', 'love this for you', 'called it [laugh]', 'my favourite pair on campus', 'so happy for you two [heart]', 'took you long enough [laugh]', 'this made my day', 'cutest news on campus'],
   /** The one the post is about, answering. */
-  reply: ['stuck with you forever [heart]', 'the duo [sparkle]', 'okay this is so sweet'],
+  reply: ['stuck with you forever [heart]', 'the duo [sparkle]', 'okay this is so sweet', 'right back at you [sparkle]', 'okay stop, I am blushing'],
   /** A friend on sad news. */
-  comfort: ['here if you need me [hug]', 'dinner on me this week', 'you deserve better days [heart]', 'sending a hug [hug]'],
+  comfort: ['here if you need me [hug]', 'dinner on me this week', 'you deserve better days [heart]', 'sending a hug [hug]', 'snacks are on their way [hug]', 'you know where my room is', 'call me later', 'proud of you for getting through it'],
   /** Anyone on a complaint, exams, the 8 AM, the weather, a roommate. */
-  relate: ['so real', 'same [sweat]', 'this is my whole week', 'saving this', 'felt this'],
+  relate: ['so real', 'same [sweat]', 'this is my whole week', 'saving this', 'felt this', 'the most real post on here', 'not just you', 'every single week', 'why is this so true'],
   /** Anyone on a game, a party, a tradition, a club, a new building. */
-  hype: ['lets go [wow]', 'see you there', 'save me a spot', 'best night [sparkle]', 'I am in'],
+  hype: ['lets go [wow]', 'see you there', 'save me a spot', 'best night [sparkle]', 'I am in', 'count me in', 'would not miss it', 'bringing the whole floor', 'already counting the hours'],
   /** Anyone, on anything light. */
-  laugh: ['[laugh] [laugh]', 'not you posting this', 'okay this one got me [laugh]'],
+  laugh: ['[laugh] [laugh]', 'not you posting this', 'okay this one got me [laugh]', 'this is too good [laugh]', 'sending this to everyone', 'the way I laughed [laugh]'],
   /** An ex or a rival, naming the author (decision 5, "Named"): petty, never an insult beyond the mild names allowed. */
   shade: ['sure, {name}. sure.', 'bold post, {name}', '{name} said the same thing last semester', 'classic {name}', 'okay show-off', 'okay try-hard', 'we get it, {name}'],
   /** Anyone on a rumour (stop 10). */
-  rumour: ['no way', 'source?', 'allegedly being the key word', 'this is not our business', 'wait what [wow]'],
+  rumour: ['no way', 'source?', 'allegedly being the key word', 'this is not our business', 'wait what [wow]', 'who is telling you all this', 'need more details. for science'],
   /** A friend of the one a rumour is about. {name} is them. */
-  cover: ['leave {name} out of this', 'that is not what happened', 'ask {name} before you post'],
+  cover: ['leave {name} out of this', 'that is not what happened', 'ask {name} before you post', 'we were there. it was nothing', '{name} would never'],
 } as const;
 export type CommentKind = keyof typeof COMMENT_LINES;
 

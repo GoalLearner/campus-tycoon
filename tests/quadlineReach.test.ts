@@ -177,6 +177,7 @@ describe('the official account (decision 8, Templates)', () => {
     const offKey = { tick: state.clock.tick, kind: 'celebrate' as const, about: 'semester', fit: -1 };
     const replies = officialReplies(VIEW, state, offKey, weak.map((one) => one.topic));
     expect(replies.length).toBeGreaterThan(2);
+    expect(new Set(replies.map((one) => one.text)).size).toBe(replies.length);
     if (weak[0]) expect(replies.some((reply) => /cool|where|and the/.test(reply.text))).toBe(true);
     for (const reply of replies) {
       expect(hardLineProblem(reply.text), reply.text).toBeNull();
