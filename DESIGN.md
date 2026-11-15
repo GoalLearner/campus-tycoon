@@ -8369,3 +8369,50 @@ The long run reads every model campus it plays, and the one left alone, against 
 | On a campus nobody tends, the free student section no longer cost income | Its happier students stay a little more, and their tuition covers the free seats | The long run reads the switch's own cost on its own line, ticket income |
 
 The lines that moved against L5, each with why, are on the R1 page (`docs/handoff/realism-1.html`). In short: Stress sits higher outside exams (60 at most, was 43) and on a break (13, was 10), as decision 6 asks; the University Level comes at 5.6 to 6.4 levels a week for the once-a-day player (was 5.8 to 6.3) with 4 or 5 in the first sitting; the money lows in the later weeks are $12.20 to $12.60 (were $12.40 to $13.00); the Top 10 lands in the same weeks but one (the second casual player at week 27, was 25); alumni pools are smaller, as real classes finish at 65 to 80%; finals week is met more often; a campus left alone stays at its cap of 50,000; the social web catches 30 days up in 430 ms with six class years.
+
+## 66. The realism pass, R2: four years (approved 2026-11-14)
+
+The second part of the realism pass the owner approved ("Yes, all ten", 65): the milestones of four years and life outside class. Move-in and orientation every fall, parents' weekend, the year's rhythm, spring break in mid-March; birthdays and turning 21, with under-21 drinking counted (his decision 8); where students live by class year; internships, study abroad, research with faculty and senior work; job offers and graduate school; and family. As in R1, everything runs through what the game already has: each student's own draws from the seed, against shares that land the campus on the real figures, and the calendar. R2 adds no saved state, so the save version stays at 31.
+
+The sources, by name: an example large public's academic calendar (spring break in the middle of March, as at most); the Common Data Sets of example flagships for who lives on campus (first-years 58-89%, all students 18-50%); NCES (delayed entry) for students a year older; NCES Digest table 329.10 (Clery figures for 2021) for liquor-law referrals, about 7 a year in every 1,000 students, 93% in residence halls; NIAAA from NSDUH (2024) for drinking; NSSE 2025's high-impact practices for seniors (an internship or field placement about half, research with faculty 22-24%, a culminating senior experience 42-43%); Open Doors 2025 for study abroad (about one graduate in nine, most for a summer or less) and where students go; NACE's 2026 student survey for job offers (43% with an offer before graduating); NCES B&B:16/17 for graduate school (about 17% within a year).
+
+### 66.1 The year
+
+| | As built |
+|---|---|
+| Welcome week | Aug 19-23 every fall, before the first classes: the day line says "Welcome week", Stress is as easy as the founding's move-in week, and in every fall after the founding one, new students keep arriving with a parent and their boxes while the player watches, and orientation groups go round behind a leader with the pennant (the tours' own walk) |
+| Parents' weekend | A Friday to a Sunday early in October: students show their families round, a parent a step behind them; about two in five students feel "Family visiting" |
+| Spring break | Mar 15-19, two weeks earlier, after spring midterms (Mar 1-5) |
+| The year's rhythm | The stretches of the year named on the day line and felt by most students, each their own way: the first weeks of fall (Fall energy), the midterm slump, finals crunch, the first weeks of spring, spring fatigue (February and April), and seniors' goodbyes before commencement. Calendar data (`academicCalendar.ts`, kinds `welcome`, `visit`, `rhythm` and `senior`); a day of these is a day of term like any other to everything else |
+
+### 66.2 Birthdays and 21
+
+Each student's birthday comes from the seed, any day of the year as likely as another; their age follows the calendar: 18 at their first fall (6% a year older, from a year out first), a year older at each birthday. So most turn 19 in their first year and 21 in their third, and about two in five of a campus is 21 or over. The card says their age, and the day they turn 21 when it is this year; a cake floats over them on their birthday, the 21st most of all. Cups at a party, party cards and the main character's drinks follow the real age, not the class year (`ageOf`, `src/sim/systems/birthdays.ts`).
+
+Under-21 drinking is counted, as the owner decided: in the numbers, caught as a rule broken, never on the map. Each semester Campus Safety and the resident advisors write students up for drinking under 21 at about the real rate, 7 a year in every 1,000 students, 93% in the dorms, moved by the party scene and the party policies as calls from parties are; the paper tells it. The Social tab counts who is 21, about how many under 21 drank this month (about a third of them, with the party scene), and last semester's write-ups.
+
+### 66.3 Where students live
+
+Each student's home follows their class year: 88% of first-years in a hall, 70% of sophomores, 45% of juniors, 38% of seniors, fewer after. A student moves into town once, at a year's start, and the card says so ("moved out this year"); a place of their own is felt through the fall's first weeks. Moving away from home is now nearly every student's (88%), so the Commuter nature is about 4% of a campus, as at a real flagship. Each fall the paper tells how many moved out. The campus's beds and its places in town are counted as before (60% need a bed, which these shares weigh out to), so the balance does not move.
+
+### 66.4 Internships, study abroad, research and senior work
+
+Each student's own draws, tilted by field (engineering and business intern most, the sciences do the most research, letters and the arts go abroad most) and scaled so the campus lands on the real shares by senior year: about half an internship, about a fifth research with a professor, two in five senior work, about one in nine abroad. An internship the summer after the second or third year; study abroad for a summer, or for the spring of the third year, away from the map that semester; research from the third or fourth year; senior work in the last year, named by field (a senior thesis, a senior design project, student teaching, a senior recital, a senior show). Interns and the abroad go to plain places ("a hospital", "an engineering firm"; the United Kingdom, Spain, Japan), never a real company. On the card as Four years; the paper tells the spring abroad and the summer's internships.
+
+### 66.5 After four years
+
+Each senior plans graduate school (about 17% start within a year) or job hunts, with an offer that comes some time from October to May for about 43% by commencement, tilted by field and scaled to the real class figures. On the card ("Job hunting", "Has a job offer from an engineering firm", "Into a graduate program for the fall"); felt as Job hunting and Got a job offer (the briefcase), Into graduate school, and Graduating at commencement (the mortarboard). Commencement tells where the graduates go. A class's placement within six months (a job or more school, 55-95% with the rating, `PLACEMENT`), which alumni success and so the rating read, is as before: it matches first-destination surveys.
+
+### 66.6 Family and life outside
+
+Calls home on Sunday evenings (most first-years, the phone), care packages (a first-year's first weeks and finals most of all, the package; the paper counts finals week's), a family visiting at a weekend now and then (and walking with their student on the map), home for a break with the suitcase, a partner back home visiting on a Friday or a Saturday, and the pressure some families put on grades (most of those on probation) or a major. Each student's own day, from the seed; nothing saved.
+
+| Decisions made here | Instead |
+|---|---|
+| Who lives where by class year on the cards, the campus's beds and town counted as before | Moving the counts by class year, which left the fall's new class without beds and changed the money |
+| Birthdays from the seed, nothing saved | A saved birthday for each student |
+| Write-ups as a count each semester | Calls that need answering, which would load Campus Safety |
+| Milestones and outcomes scaled so the campus lands on the real shares, field by field | Plain shares for everyone |
+| Placement within six months kept as the rating reads it | Placement from the offers at commencement, which would move the rank's pace |
+
+**Tested**: `tests/fourYears.test.ts` (19): welcome week every fall, parents' weekend a Friday to a Sunday in October, spring break in mid-March, the year's stretches; birthdays even through the year, ages by class year, the share 21 or over, the cake; write-ups at about the real rate, most in the dorms, none without parties; moving out once and never back, the fall's line; the milestones' campus shares and timing, students abroad off the map; offers and graduate school by commencement, and its line; calls home, care packages in finals, the suitcase, family pressure on probation. And the cards, the Social tab and the paper as before. The long run reads every campus against R2's figures (`scripts/realism.ts`): 21 and over and the write-ups; who lives in a hall by class year; seniors' milestones.
