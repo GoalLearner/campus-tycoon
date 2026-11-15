@@ -1,4 +1,5 @@
 import { GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR, yearLength } from '../calendar';
+import { STRESS_SUSTAINED } from '../config/season';
 import { expectedGraduates } from './population';
 import { LEVEL_UNLOCKS } from '../config/daily';
 import { ADVISORS } from '../config/inbox';
@@ -450,8 +451,9 @@ function begin(state: GameState, order: Order, seen: Look, today = false): void 
   } else if (kind.metric === 'calmSemester') {
     order.from = 0;
     // No calmer than the semester before, and never asked under a middling one: late nights after parties are part of
-    // a middling semester on a campus that has them (DESIGN.md 55).
-    order.target = Math.max(20 + Math.round(lateNights(state).stress), Math.round(state.term.lastAverage) + (t.add ?? 0));
+    // a middling semester on a campus that has them (DESIGN.md 55). Middling is where a semester's Stress starts to
+    // cost students, which R1 raised with the everyday level (65.5).
+    order.target = Math.max(STRESS_SUSTAINED + Math.round(lateNights(state).stress), Math.round(state.term.lastAverage) + (t.add ?? 0));
   } else if (MARKED.has(kind.metric)) {
     order.from = 0;
     order.target = t.n ?? 1;

@@ -1,4 +1,5 @@
 import { scaleOf, smallCount } from '../scale';
+import { fluOf, homesickOf } from './wellbeing';
 import { gradesOf, weekInClass } from './grades';
 import { GPA_FLOOR } from '../config/grades';
 import { WEB_WEEK_TICKS } from '../config/web';
@@ -21,7 +22,6 @@ import {
   COMMUTER_WEIGHT,
   CONTENT_MOOD,
   FIRST_NAMES,
-  HOMESICK_SHARE,
   KIND_AT_ENTRY,
   KIND_LEAN,
   KIND_MOVES,
@@ -202,6 +202,11 @@ function placeAt(index: PlaceIndex, at: number): number | null {
 /** True for a student who needs a bed on campus. The rest commute. */
 function livesOnCampus(seed: number, ref: StudentRef): boolean {
   return roll(seed, ref, SALT.lives) < BED_NEED;
+}
+
+/** True for a student who moved away to live on campus: a commuter lives at home or in town. Cheap: no map is read. */
+export function movedAway(seed: number, ref: StudentRef): boolean {
+  return livesOnCampus(seed, ref);
 }
 
 /**
@@ -494,6 +499,10 @@ export interface StudentCard {
   probation: boolean;
   /** This week's classes they went to, of how many: null out of term. */
   classes: { went: number; of: number } | null;
+  /** Down with the flu now (DESIGN.md 65.5). */
+  sick: boolean;
+  /** A first-year who moved away and misses home now: most do at first. Those who feel it most read as Homesick. */
+  missesHome: boolean;
   /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
   tutored: boolean;
   /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
@@ -557,9 +566,9 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
   if (classYear === 0) {
     const fall = calendarAt(state.clock).phase === 'fall';
     const lost = fall ? LOST_SHARE.fall : LOST_SHARE.later;
-    const homesick = resident ? (fall ? HOMESICK_SHARE.fall : HOMESICK_SHARE.later) : 0;
     if (at < lost) return 'lost';
-    if (at < lost + homesick) return 'homesick';
+    // Homesick: those who moved away, most at move-in and fading over the fall, more before Thanksgiving (65.5).
+    if (resident && homesickOf(state.seed, ref, state.clock).strong) return 'homesick';
     // Nobody runs a dorm floor in their first year.
     if (nature === 'ra') return 'butterfly';
   }
@@ -757,12 +766,17 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
   // A study partner lifts grades a little; a messy breakup in an exam week takes some off (DESIGN.md 63.10).
   const ownGpa = friends ? (exams > 0 ? friends.gpaInExams : friends.gpa) : 0;
   const gpa = Math.round(Math.max(GPA_FLOOR, Math.min(4, grades.gpa - STRESS_GPA * (stress / 100) + ownGpa)) * 10) / 10;
-  // This week's classes, in a week of term: Fridays, wet weather and the morning after a party keep some away.
+  // Flu season (DESIGN.md 65.5): down with it for a few days, December to February.
+  const flu = fluOf(seed, ref, state.clock);
+  // This week's classes, in a week of term: Fridays, wet weather and the morning after a party keep some away, and
+  // the flu keeps them in bed.
   const term = !['break', 'summer', 'moveIn', 'founding', 'commencement'].includes(week.day.kind);
   const weather = weatherAt(seed, state.clock);
   const classes = term
-    ? weekInClass(seed, ref, phase, Math.floor(state.clock.tick / WEB_WEEK_TICKS), { wet: weather === 'rain' || weather === 'snow', partied: phase === 'party' && partiesOn(state), sickDays: 0 })
+    ? weekInClass(seed, ref, phase, Math.floor(state.clock.tick / WEB_WEEK_TICKS), { wet: weather === 'rain' || weather === 'snow', partied: phase === 'party' && partiesOn(state), sickDays: flu.sick ? Math.min(5, flu.daysLeft) : 0 })
     : null;
+  // A first-year who moved away may miss home (DESIGN.md 65.5).
+  const missesHome = classYear === 0 && resident && homesickOf(seed, ref, state.clock).missesHome;
 
   return {
     ref,
@@ -783,6 +797,8 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     deansList: grades.deansList,
     probation: grades.probation,
     classes,
+    sick: flu.sick,
+    missesHome,
     tutored: tutoring > 0,
     classSize: Math.round(classSizeNow(state)),
     club: fixed.club,
@@ -792,7 +808,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     reason,
     stress,
     // What the week is doing to them: the calendar and the sky. Their ties have a row of their own (DESIGN.md 63.10).
-    week: weekLabel(week.parts.filter((part) => part.id !== 'friends')),
+    week: flu.sick ? 'Down with the flu' : weekLabel(week.parts.filter((part) => part.id !== 'friends')),
     party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
     friends: friends ? { happiness: ownHappiness, stress: ownStress, gpa: ownGpa } : null,
   };

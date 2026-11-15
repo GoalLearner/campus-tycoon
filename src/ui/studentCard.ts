@@ -127,6 +127,7 @@ function awayText(state: GameState, card: StudentCard): string {
   const home = homeName(state, card);
   if (doing === 'asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (doing === 'ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
+  if (doing === 'sick') return town ? 'In bed with the flu, at home in town' : `In bed with the flu, in ${home}`;
   return town ? 'At home in town' : `In ${home}`;
 }
 

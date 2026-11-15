@@ -1,12 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { advance, newGame, parseSave, scorecard, studentCard, type GameState } from '../src/sim';
+import { advance, dateAt, newGame, parseSave, scorecard, studentCard, type GameState } from '../src/sim';
 import { ANCHORS, CLASS_YEARS, LATE_FROM, LEAVE_WHYS } from '../src/sim/config/population';
 import { campusRates } from '../src/sim/systems/field';
 import { anchorAt, classPath, leaveShares, splitCount, standingOf } from '../src/sim/systems/population';
 import { afterSwitching, FINAL, INTENDED, majorAt, majorPath } from '../src/sim/systems/majors';
 import { MAJORS } from '../src/sim/config/students';
 import { attendanceOf, gpaAt, normalCdf, normalInv, shareBelow, weekInClass } from '../src/sim/systems/grades';
+import { sleepHours } from '../src/app/regularDay';
+import { dayOfAcademicYear, fluOf, fluShare, homesickShare, lonelyChance } from '../src/sim/systems/wellbeing';
+import { SEASON_CURVE } from '../src/sim/config/season';
+import { campusSocial, viewOf } from '../src/app/socialView';
+import { catchUp as catchUpWeb } from '../src/sim/systems/web';
 import { sampleStudents } from '../src/sim';
 import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
@@ -275,5 +280,94 @@ describe('grades and classes', () => {
     const report = LATER.log.filter((entry) => entry.kind === 'grades').pop()!;
     expect(report.text).toMatch(/^Grades are in: [\d,]+ on the Dean's list and [\d,]+ on academic probation/);
     expect(toneProblem(report.text)).toBeNull();
+  });
+});
+
+describe('sleep, Stress, homesickness, loneliness and the flu', () => {
+  it('sleep about six and a half hours, two nights in three under seven, more at the weekend', () => {
+    const cards = sampleStudents(MODEL, 500).map((ref) => studentCard(MODEL, ref)!).filter((card) => card.archetype !== 'allNighter');
+    let hours = 0;
+    let under = 0;
+    let nights = 0;
+    let weekendMore = 0;
+    for (const card of cards) {
+      for (let day = 0; day < 7; day++) {
+        const [bed, up] = sleepHours(card, day >= 5);
+        hours += up - bed;
+        if (up - bed < 7) under += 1;
+        nights += 1;
+      }
+      const [a, b] = sleepHours(card, false);
+      const [c, d] = sleepHours(card, true);
+      weekendMore += d - c - (b - a);
+    }
+    // Creswell and others, PNAS 2023: 6 h 37 min, about two thirds of nights under seven hours, half an hour more at weekends.
+    expect(Math.abs(hours / nights - 6.62)).toBeLessThan(0.15);
+    expect(Math.abs(under / nights - 0.66)).toBeLessThan(0.06);
+    expect(weekendMore / cards.length).toBeCloseTo(0.6, 6);
+  });
+
+  it('keep the shape of Stress, with a higher everyday hum', () => {
+    expect(SEASON_CURVE.term).toBeGreaterThan(0.5);
+    expect(SEASON_CURVE.term + SEASON_CURVE.ramp).toBeLessThan(SEASON_CURVE.midterms);
+    expect(SEASON_CURVE.midterms).toBeLessThan(SEASON_CURVE.finals);
+    expect(SEASON_CURVE.break).toBeLessThan(SEASON_CURVE.term / 3);
+  });
+
+  it('miss home most at move-in, less over the fall, more before Thanksgiving', () => {
+    const on = (month: number, day: number): number => {
+      const state = structuredClone(MODEL);
+      const start = state.clock.tick;
+      for (let tick = start; tick < start + 7 * 1440; tick += 10) {
+        state.clock.tick = tick;
+        const date = dateAt(state.clock);
+        if (date.month === month && date.day === day) return homesickShare(state.clock);
+      }
+      throw new Error(`no ${month}/${day}`);
+    };
+    const moveIn = on(8, 20);
+    const october = on(10, 15);
+    const early = on(11, 5);
+    const beforeThanksgiving = on(11, 23);
+    const march = on(3, 15);
+    expect(moveIn).toBeGreaterThan(0.85);
+    expect(october).toBeLessThan(moveIn / 2);
+    expect(beforeThanksgiving).toBeGreaterThan(early);
+    expect(march).toBeLessThan(october);
+    expect(dayOfAcademicYear(8, 1)).toBe(0);
+    expect(dayOfAcademicYear(7, 31)).toBe(364);
+  });
+
+  it('feel lonely about half the time, more with nobody close, less with a partner', () => {
+    expect(lonelyChance({ close: 0, partnered: false, group: false, firstYear: true, commuter: true })).toBeGreaterThan(0.9);
+    expect(lonelyChance({ close: 4, partnered: true, group: true, firstYear: false, commuter: false })).toBeLessThan(0.3);
+    const state = at(MODEL, 1).state;
+    const web = newWeb(state.seed, 1024);
+    catchUpWeb(web, state, webWeekOf(state));
+    const social = campusSocial(viewOf(web, false), state);
+    // Healthy Minds 2024-25: 51%; ACHA-NCHA 2022: 58%.
+    expect(social.lonely).toBeGreaterThan(0.45);
+    expect(social.lonely).toBeLessThan(0.6);
+    expect(social.homesick).not.toBeNull();
+  }, 60_000);
+
+  it('come down with the flu December to February, about a third of them in a season', () => {
+    const state = structuredClone(MODEL);
+    let most = 0;
+    const ill = new Set<number>();
+    const start = state.clock.tick;
+    for (let tick = start; tick < start + 7 * 1440; tick += 30) {
+      state.clock.tick = tick;
+      const date = dateAt(state.clock);
+      const share = fluShare(state.clock);
+      if (date.month >= 3 && date.month <= 11) expect(share).toBe(0);
+      most = Math.max(most, share);
+      for (let index = 0; index < 600; index++) if (fluOf(state.seed, { entryYear: 1, index }, state.clock).sick) ill.add(index);
+    }
+    // A University of Minnesota cohort: 37% in one season; a few in a hundred at once at its height.
+    expect(ill.size / 600).toBeGreaterThan(0.3);
+    expect(ill.size / 600).toBeLessThan(0.44);
+    expect(most).toBeGreaterThan(0.015);
+    expect(most).toBeLessThan(0.06);
   });
 });

@@ -1,6 +1,6 @@
 import { CALLS_MOST, CHAPTER_PARTY_WEIGHT, LATE_NIGHT_RATING, LATE_NIGHT_STRESS, PARTY_CALL_RATE, PARTY_LIFT, PARTY_MEDICAL_SHARE, SCENE_PER_GREEK } from '../config/parties';
 import { POLICIES, type PolicyEffect, type PolicySpec } from '../config/policies';
-import { SEASON_CURVE } from '../config/season';
+import { IN_TERM_FROM } from '../config/season';
 import type { GameState } from '../types';
 import { hasDaily } from './daily';
 import { greekShare } from './greek';
@@ -62,7 +62,7 @@ export function lateNights(state: GameState): { stress: number; rating: number; 
 
 /** Points late nights add to Stress at a point on the calendar's curve: in term only, never on a break or in the summer. */
 export function lateNightStress(state: GameState, curve: number): number {
-  if (curve < SEASON_CURVE.term) return 0;
+  if (curve < IN_TERM_FROM) return 0;
   return lateNights(state).stress;
 }
 
@@ -99,7 +99,7 @@ export function callTimes(state: GameState, extra: number): { safety: number; me
  * campus's size on the small game's count, in thousands. Nothing outside term.
  */
 export function partyCallChance(state: GameState, perThousand: number, curve: number, extra: number): { chance: number; medical: number } {
-  if (!partiesOn(state) || curve < SEASON_CURVE.term) return { chance: 0, medical: 0 };
+  if (!partiesOn(state) || curve < IN_TERM_FROM) return { chance: 0, medical: 0 };
   const times = callTimes(state, extra);
   const medical = PARTY_MEDICAL_SHARE * times.medical;
   const safety = (1 - PARTY_MEDICAL_SHARE) * times.safety;

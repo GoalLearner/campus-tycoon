@@ -137,7 +137,11 @@ describe('a regular’s day', () => {
   it('runs from waking to sleep in order, ready first and asleep last, as Look inside has their hours', () => {
     for (const { card, day } of days) {
       expect(day.length).toBeGreaterThan(5);
-      const [sleep, wake] = sleepHours(card);
+      // Their own hours, later at the weekend (DESIGN.md 65.5), by the 24-hour clock.
+      const weekday = dateAt(MODEL.clock).weekday;
+      const [bed, up] = sleepHours(card, weekday === 0 || weekday === 6);
+      const sleep = bed % 24;
+      const wake = up % 24;
       expect(day[0]!.words).toBe('Getting ready');
       expect(day[0]!.from % 24).toBeGreaterThanOrEqual(wake);
       expect(day.at(-1)!.words).toBe('Asleep');

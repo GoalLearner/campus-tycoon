@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { SEASON_CURVE } from '../src/sim/config/season';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -432,7 +433,7 @@ describe('no fifth cause', () => {
     expect(finals.cause).toBe(finalsOff.cause);
     expect(finals.factor).toBe(finalsOff.factor);
     // A share of it at midterms, and nothing in an ordinary week or on a break.
-    expect(stressRead(on, levels, 0.75).score).toBe(stressRead(off, levels, 0.75).score - 20 * EXAMS_AT_MIDTERMS);
+    expect(stressRead(on, levels, SEASON_CURVE.midterms).score).toBe(stressRead(off, levels, SEASON_CURVE.midterms).score - 20 * EXAMS_AT_MIDTERMS);
     for (const season of [0.6, 0.3, 0.1]) {
       expect(stressRead(on, levels, season).score).toBe(stressRead(off, levels, season).score);
       expect(stressRead(on, levels, season).policy).toBe(0);

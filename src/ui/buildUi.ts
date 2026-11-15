@@ -1,4 +1,5 @@
 import { friendsKeep, projectedPath } from '../sim/systems/population';
+import { fluShare } from '../sim/systems/wellbeing';
 import { whyWords } from '../sim/systems/admissions';
 import {
   BUILD_ORDER,
@@ -331,7 +332,10 @@ function baseSummary(state: GameState, placed: Placed): string {
     case 'safety': {
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
       const job = spec.family === 'medical' ? 'Treats injuries' : 'Handles mischief';
-      return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.`;
+      // Flu season fills the waiting room (DESIGN.md 65.5).
+      const sick = spec.family === 'medical' ? Math.round(enrollment(state) * fluShare(state.clock)) : 0;
+      const flu = sick > 0 ? ` Flu season: about ${plural(sick, 'student is', 'students are')} down with the flu, and the waiting room is busy.` : '';
+      return `${job} within ${spec.radius} cells, and ${plural(lots, 'dorm or lecture hall feels', 'dorms and lecture halls feel')} safer for it. So far the campus has handled ${state.incidents.handled} and missed ${state.incidents.missed}.${flu}`;
     }
     case 'parking': {
       const cars = placedCars(placed.type, scaleOf(state));

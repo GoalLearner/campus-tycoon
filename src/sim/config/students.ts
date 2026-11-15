@@ -212,9 +212,8 @@ export const COMMUTER_WEIGHT = 40;
 
 /** [T] In finals week this share of students reads as All-Nighter, a passing phase like Lost Freshman. */
 export const ALL_NIGHTER_SHARE = 0.18;
-/** [T] Share of freshmen who read as Lost Freshman or Homesick: first in the fall, then for the rest of the year. */
+/** [T] Share of freshmen who read as Lost Freshman: first in the fall, then for the rest of the year. Homesick: config/wellbeing.ts. */
 export const LOST_SHARE = { fall: 0.3, later: 0.12 };
-export const HOMESICK_SHARE = { fall: 0.12, later: 0.05 };
 
 export const QUIRKS: readonly string[] = [
   'Night owl',

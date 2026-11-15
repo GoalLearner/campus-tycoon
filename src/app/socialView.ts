@@ -4,7 +4,8 @@ import { BULLYING_LINES, BULLYING_ROLES } from '../sim/config/bullying';
 import type { GameState } from '../sim';
 import { calendarAt } from '../sim/calendar';
 import { EVENT, FEEL, FRIEND_AT, HEAVY_EVENTS, KIND, SLOTS } from '../sim/config/web';
-import { classYearOf, firstNameOf, studentName, type StudentRef } from '../sim/systems/students';
+import { classYearOf, firstNameOf, movedAway, semesterOf, studentName, type StudentRef } from '../sim/systems/students';
+import { homesickOf, lonelyOf } from '../sim/systems/wellbeing';
 import { HAPPENING_FIELDS, type Web } from '../sim/systems/web';
 
 /**
@@ -501,6 +502,12 @@ export interface CampusSocial {
   drama: Told[];
   /** This week's light happenings, a kind at a time. */
   lines: Told[];
+  /**
+   * The share of students who feel lonely (DESIGN.md 65.5): about half, more with nobody close, in the first year or
+   * living in town. And the share of first-years who moved away who miss home now, or null with none.
+   */
+  lonely: number;
+  homesick: number | null;
 }
 
 const isFriendKind = (kind: number): boolean => kind === KIND.friend || kind === KIND.best || kind === KIND.crush || kind === KIND.roommate;
@@ -511,6 +518,7 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
   let couples = 0;
   let students = 0;
   const here = new Uint8Array(n);
+  const partnered = new Uint8Array(n);
   const friendsOf = new Uint8Array(n);
   const closeness = new Uint16Array(n);
   const isFriendSlot = (s: number): boolean => view.other[s]! >= 0 && isFriendKind(view.kind[s]!) && view.strength[s]! >= FRIEND_AT;
@@ -523,7 +531,10 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
       const s = a * SLOTS + k;
       const b = view.other[s]!;
       if (b < 0) continue;
-      if (b > a && PARTNER_LABEL[view.kind[s]!]) couples += 1;
+      if (PARTNER_LABEL[view.kind[s]!]) {
+        partnered[a] = 1;
+        if (b > a) couples += 1;
+      }
       if (isFriendSlot(s)) {
         friendsOf[a] = friendsOf[a]! + 1;
         closeness[a] = closeness[a]! + view.strength[s]!;
@@ -575,6 +586,22 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     week.best += at(EVENT.best);
     week.friends += at(EVENT.friends);
   }
+  // Who feels lonely, and which first-years miss home (DESIGN.md 65.5): each student's draw at their own chance.
+  const semester = semesterOf(state);
+  let lonely = 0;
+  let away = 0;
+  let homesick = 0;
+  for (let a = 0; a < n; a++) {
+    if (!here[a]) continue;
+    const ref = refIn(view, a);
+    const firstYear = classYearOf(state, ref) === 0;
+    const resident = movedAway(state.seed, ref);
+    if (lonelyOf(state.seed, ref, semester, { close: friendsOf[a]!, partnered: partnered[a] === 1, group: view.groupOf[a]! >= 0, firstYear, commuter: !resident })) lonely += 1;
+    if (firstYear && resident) {
+      away += 1;
+      if (homesickOf(state.seed, ref, state.clock).missesHome) homesick += 1;
+    }
+  }
   const groups = view.groupStart.length - 1;
   const sizes: Array<{ g: number; size: number }> = [];
   for (let g = 0; g < groups; g++) sizes.push({ g, size: view.groupStart[g + 1]! - view.groupStart[g]! });
@@ -597,5 +624,7 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     clusters,
     drama: dramaOfTheWeek(view, state),
     lines: lightSince(view, state, -1, year, 4),
+    lonely: students > 0 ? lonely / students : 0,
+    homesick: away > 0 ? homesick / away : null,
   };
 }

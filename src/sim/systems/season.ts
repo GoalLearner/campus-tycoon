@@ -1,4 +1,6 @@
 import { happyParts, stressOff } from './boosts';
+import { fluShare } from './wellbeing';
+import { headCount } from '../format';
 import { friendsHappiness, friendsStress } from './friends';
 import { examsOff } from './policies';
 import { lateNightStress } from './parties';
@@ -46,6 +48,9 @@ import type { Clock, GameState, LogEntry } from '../types';
 import { markRatesDirty } from './money';
 import { staffSupport, teaching } from './staffing';
 
+
+/** Flu season is told when this share of the campus is down with it. */
+const FLU_TOLD = 0.01;
 /**
  * The pulse of the academic year (DESIGN.md sections 4.8, 27 and 28): who is
  * on campus, how stressed they are, the lift of a break, and the weather.
@@ -491,6 +496,12 @@ export function stepSeason(state: GameState, log: LogEntry[], levels: () => Camp
   }
 
   // The first snow of each game year gets a line. Weather changes on the hour of a spell.
+  // Flu season reaching the campus is told once a year, as the first few in a hundred are down with it (DESIGN.md 65.5).
+  if (clock.tick % TICKS_PER_HOUR === 0 && term.fluYear !== clock.week.year && fluShare(clock) >= FLU_TOLD) {
+    term.fluYear = clock.week.year;
+    const sick = Math.round(enrollment(state) * fluShare(clock));
+    log.push({ tick: clock.tick, kind: 'flu', text: `Flu season has reached the campus: about ${headCount(sick)} students are down with it, and the Medical Center's waiting room is full.`, data: { sick } });
+  }
   if (clock.tick % SPELL_TICKS === 0 && term.snowYear !== clock.week.year && weatherAt(state.seed, clock) === 'snow') {
     term.snowYear = clock.week.year;
     log.push({ tick: clock.tick, kind: 'weather', text: 'The first snow of the year fell on campus.', data: { weather: 'snow' } });

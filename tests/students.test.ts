@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STRESS_HAPPINESS } from '../src/sim/config/season';
 import {
   advance,
   applyAction,
@@ -156,7 +157,9 @@ describe('the student card', () => {
       if (card.home === null) continue;
       expect(card.residence).toBe('dorm');
       const approval = approvalAt(state, card.home);
-      expect(Math.abs(card.happiness - approval.score)).toBeLessThanOrEqual(TEMPERAMENT_SPREAD + RELATIONSHIP_POINTS + 0.5);
+      // Their temperament, their relationship, and the everyday hum of Stress, which costs the most stressed a little
+      // in an ordinary week since R1 (DESIGN.md 65.5): half of the most exams can take.
+      expect(Math.abs(card.happiness - approval.score)).toBeLessThanOrEqual(TEMPERAMENT_SPREAD + RELATIONSHIP_POINTS + STRESS_HAPPINESS / 2 + 0.5);
       expect(approval.walkMinutes).toBe(state.map.walkMinutes[card.home]);
       // The thought is about that dorm, and tapping it goes there.
       expect(card.reason!.cell).toBe(card.home);

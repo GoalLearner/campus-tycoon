@@ -1417,6 +1417,8 @@ export interface Term {
   lastAverage: number;
   /** The game year the first snow was last reported in. */
   snowYear: number;
+  /** The game year flu season last reached the campus, so it is told once a year (DESIGN.md 65.5). */
+  fluYear?: number;
 }
 
 export type LogKind =
@@ -1433,6 +1435,7 @@ export type LogKind =
   | 'semester'
   | 'returned'
   | 'grades'
+  | 'flu'
   | 'incident'
   | 'grounds'
   | 'yearEnd'
