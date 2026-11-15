@@ -219,7 +219,7 @@ export const POST_WORDS: Record<PostKind, PostWords> = {
   [POST.midterms]: {
     tags: ['MidtermWeek'],
     good: ['midterms? so ready. probably [book]', 'study playlist on, snacks out, let us go [music]', 'one midterm down. we are so back [sparkle]'],
-    rough: ['midterm week. my sleep schedule has left the building [sweat]', 'read the same page four times. it did not help [sweat]', 'my notes from week two are written in a language I no longer speak'],
+    rough: ['midterm week. my sleep schedule has left the building [sweat]', 'read the same page four times. it did not help [sweat]', 'my notes from week two were written by a stranger, apparently'],
   },
   [POST.finals]: {
     tags: ['FinalsWeek'],
