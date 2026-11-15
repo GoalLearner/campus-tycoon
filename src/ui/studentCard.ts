@@ -418,7 +418,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const major = card.majorNote ? `${card.major} (${card.majorNote.charAt(0).toLowerCase()}${card.majorNote.slice(1)})` : card.major;
     // A varsity athlete's team beside what they are (DESIGN.md 65.7).
     const nature = card.team ? `${card.archetypeName} (${card.team})` : card.archetypeName;
-    setText(aboutText, `${card.classYearName} · ${major} · ${nature} · ${card.quirk} · ${lives}`);
+    // Their age (R2, DESIGN.md 66.2), and the day they turn 21 when it is this year, or that it is their birthday.
+    const age = card.birthdayToday ? `${card.age} today` : card.age === 20 ? `20, 21 on ${card.birthday}` : String(card.age);
+    setText(aboutText, `${card.classYearName}, ${age} · ${major} · ${nature} · ${card.quirk} · ${lives}`);
     hallLink.hidden = hall === null;
     setText(hallLink, hall ?? '');
     setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');

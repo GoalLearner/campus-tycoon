@@ -3,7 +3,6 @@ import { lonelyOf } from '../sim/systems/wellbeing';
 import { semesterOf } from '../sim/systems/students';
 import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
-import { DRINKING_YEAR } from '../sim/config/parties';
 import { PARENTS_VISITING, RHYTHM_FEELINGS } from '../sim/config/fourYears';
 import { FEEL, FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
@@ -143,7 +142,10 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   if (day.seniors && card.classYear >= 3) add('sad', 'Senior goodbyes', 1.6);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
-  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup');
+  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.over21 ? 'partycup' : 'sodacup');
+  // Their birthday (R2, DESIGN.md 66.2): a cake over their head all day, the 21st most of all.
+  if (card.turned21Today) add('excited', 'Turned 21 today', 3.5, 'cake');
+  else if (card.birthdayToday) add('happy', `Birthday today, ${card.age}`, 3, 'cake');
 
   // How they find the campus.
   if (card.mood >= 4) add('happy', 'Loves it here', 1.5);

@@ -26,5 +26,4 @@ export const CHAPTER_PARTY_WEIGHT = 3;
 /** The most a tailgate's drinks (or anything else on the desk) may add to how often calls come: twice as often. */
 export const CALLS_MOST = 1;
 
-/** Students in this class year and later are taken to be 21: juniors and seniors (0 is the first year). */
-export const DRINKING_YEAR = 2;
+/** Who is 21 is decided by each student's birthday since R2 (`ageOf`, DESIGN.md 66.2): juniors turn 21 through their year. */

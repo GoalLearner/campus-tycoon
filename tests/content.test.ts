@@ -11,7 +11,6 @@ import {
   chapterStatus,
   chapters,
   DRINK_WORDS,
-  DRINKING_YEAR,
   everyWrittenItem,
   greekHazing,
   greekMembers,
@@ -385,7 +384,7 @@ describe('student cards', () => {
     state = later(state, 6 * HOUR).state;
     const cards = sampleStudents(state, 300).map((ref) => studentCard(state, ref)!).filter((card) => card && card.archetype === 'party');
     expect(cards.length).toBeGreaterThan(0);
-    for (const card of cards) expect(card.party).toBe(card.classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21);
+    for (const card of cards) expect(card.party).toBe(card.over21 ? PARTY_CARD.over21 : PARTY_CARD.under21);
     // Nobody else has the line, but a Party Animal in the semester after a breakup, who reads as Heartbroken.
     const others = sampleStudents(state, 100).map((ref) => studentCard(state, ref)!).filter((card) => card && card.archetype !== 'party' && card.archetype !== 'heartbroken');
     expect(others.every((card) => card.party === null)).toBe(true);

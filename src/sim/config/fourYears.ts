@@ -22,3 +22,25 @@ export const RHYTHM_FEELINGS: Readonly<Record<string, { share: number; emotion: 
   springFatigueLate: { share: 0.55, emotion: 'sad', label: 'Spring fatigue', weight: 0.9 },
   springCrunch: { share: 0.8, emotion: 'tense', label: 'Finals crunch', weight: 1.1 },
 };
+
+// -------------------------------------------------------- birthdays, 21 --
+
+/**
+ * A student is this old at their first fall and has a birthday spread evenly through the year, so most turn 19 in
+ * their first year and 21 in their third; a few took a year out first and are a year older (about 6%, NCES's
+ * delayed entry). [T for the share]
+ */
+export const ENTRY_AGE = 18;
+export const GAP_YEAR_SHARE = 0.06;
+/** The drinking age. */
+export const DRINKING_AGE = 21;
+
+/**
+ * Under-21 drinking is counted (the owner's decision 8): it happens in the numbers and is caught as a rule broken.
+ * Liquor-law write-ups at about 7 a year for every 1,000 students, 93% of them in the dorms (NCES Digest 329.10, Clery
+ * figures for 2021), moved by the party scene and the party policies as calls from parties are.
+ */
+export const WRITE_UPS_PER_THOUSAND = 7;
+export const WRITE_UPS_IN_DORMS = 0.93;
+/** Of students under 21, the share who drank in the past month (NIAAA from NSDUH: about half of full-time students drank, fewer under 21). [T] */
+export const UNDER_21_DRINKING = 0.35;

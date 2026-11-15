@@ -8,7 +8,6 @@ import { shownHour, type DayPeriod } from '../app/daylight';
 import { feelingOf } from '../app/emotion';
 import { itemAt, regularDay, type Where } from '../app/regularDay';
 import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, partySize, STROLL_SHARE, type LawnGroup, type LawnKind, type LawnPose } from '../app/lawnLife';
-import { DRINKING_YEAR } from '../sim/config/parties';
 import type { Weather } from '../app/life';
 import { idIn, refIn, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
@@ -882,7 +881,7 @@ export class Lawns {
       }
       // A red cup only for someone of 21 or over whose own day says Party tonight; a soda for a younger one (63.9).
       const card = studentCard(state, ref);
-      member.cup = card && card.party ? (card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup') : null;
+      member.cup = card && card.party ? (card.over21 ? 'partycup' : 'sodacup') : null;
     }
   }
 

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ACADEMIC_CALENDAR, dateAt, dayRead, FIRST_INTAKE_TICK, seasonCurve, tickOfDate, type Week } from '../src/sim';
+import { ACADEMIC_CALENDAR, advance, dateAt, dayRead, FIRST_INTAKE_TICK, newGame, seasonCurve, tickOfDate, type Week } from '../src/sim';
+import { WRITE_UPS_IN_DORMS, WRITE_UPS_PER_THOUSAND } from '../src/sim/config/fourYears';
+import { toneProblem } from '../src/sim/config/tone';
+import { DAY, T0 } from './helpers';
 import { SEASON_CURVE } from '../src/sim/config/season';
 import type { CalDate } from '../src/sim/config/academicCalendar';
+import { ageOf, birthdayOf, over21Share } from '../src/sim/systems/birthdays';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
 
@@ -60,5 +64,71 @@ describe('the year, R2', () => {
     expect(dayRead(noon(PLAIN, [5, 1, 1])).seniors).toBe(true);
     expect(dayRead(noon(PLAIN, [5, 14, 1])).seniors).toBe(true);
     expect(dayRead(noon(PLAIN, [4, 1, 1])).seniors).toBeFalsy();
+  });
+});
+
+describe('birthdays and turning 21, R2', () => {
+  const SEED = 20261115;
+  const refs = Array.from({ length: 4000 }, (_, index) => ({ entryYear: 1, index }));
+  const share = (list: boolean[]): number => list.filter(Boolean).length / list.length;
+
+  it('spreads birthdays through the year, and a student keeps theirs', () => {
+    const months = new Array<number>(12).fill(0);
+    for (const ref of refs) months[birthdayOf(SEED, ref).month - 1]! += 1;
+    for (const n of months) expect(Math.abs(n - refs.length / 12)).toBeLessThan(refs.length / 12 * 0.2);
+    expect(birthdayOf(SEED, refs[7]!)).toEqual(birthdayOf(SEED, refs[7]!));
+  });
+
+  it('makes a student 18 at their first fall (a few a year older), 19 in their first year and 21 in their third', () => {
+    const firstFall = noon(PLAIN, [8, 20, 0]);
+    const ages = refs.map((ref) => ageOf(SEED, ref, firstFall).age);
+    expect(ages.every((age) => age >= 18 && age <= 20)).toBe(true);
+    expect(share(ages.map((age) => age === 18))).toBeGreaterThan(0.85);
+    // By the spring, about half have had their birthday; a junior turns 21 in their third year.
+    const third: Week = { year: 3, start: FIRST_INTAKE_TICK + 2 * 10_080, extra: 0 };
+    const juniorsStart = refs.map((ref) => ageOf(SEED, ref, noon(third, [8, 20, 0])).over21);
+    const juniorsEnd = refs.map((ref) => ageOf(SEED, ref, noon(third, [8, 17, 1])).over21);
+    expect(share(juniorsStart)).toBeLessThan(0.1);
+    expect(share(juniorsEnd)).toBeGreaterThan(0.95);
+    const fourth: Week = { year: 4, start: FIRST_INTAKE_TICK + 3 * 10_080, extra: 0 };
+    expect(refs.every((ref) => ageOf(SEED, ref, noon(fourth, [8, 20, 0])).over21)).toBe(true);
+    // The share worked out for a class year agrees with the students' own.
+    const midJunior = noon(third, [2, 1, 1]);
+    expect(Math.abs(over21Share(2, midJunior) - share(refs.map((ref) => ageOf(SEED, ref, midJunior).over21)))).toBeLessThan(0.03);
+    expect(over21Share(0, midJunior)).toBe(0);
+    expect(over21Share(3, midJunior)).toBe(1);
+  });
+
+  it('marks the birthday on the day, and the 21st', () => {
+    const ref = refs.find((one) => birthdayOf(SEED, one).month === 3 && birthdayOf(SEED, one).day === 3)!;
+    const third: Week = { year: 3, start: FIRST_INTAKE_TICK + 2 * 10_080, extra: 0 };
+    const day = ageOf(SEED, ref, noon(third, [3, 3, 1]));
+    expect(day.birthday).toBe('Mar 3');
+    expect(day.today).toBe(true);
+    expect(day.turned21Today).toBe(day.age === 21);
+    expect(ageOf(SEED, ref, noon(third, [3, 4, 1])).today).toBe(false);
+  });
+});
+
+describe('under-21 drinking, counted (R2, the owner’s decision 8)', () => {
+  it('writes up students for drinking under 21 at about the real rate each semester, most of them in the dorms', () => {
+    const model = newGame({ seed: 20261115, name: 'Test University', now: T0, campus: 'model' });
+    const run = advance(model, model.clock.lastSimulatedAt, T0 + 3.6 * DAY);
+    const line = run.log.find((entry) => entry.kind === 'writeUps');
+    expect(line).toBeDefined();
+    const students = run.state.admissions.lastSemester!.stayed + run.state.admissions.lastSemester!.left;
+    const count = Number(line!.data!.writeUps);
+    // About 7 a year for every 1,000 students, half of it in a semester, more with a bigger party scene.
+    expect(count).toBeGreaterThanOrEqual(Math.round((WRITE_UPS_PER_THOUSAND / 1000) * students * 0.5 * 0.9));
+    expect(count).toBeLessThanOrEqual(Math.round((WRITE_UPS_PER_THOUSAND / 1000) * students * 0.5 * 2));
+    expect(Number(line!.data!.dorms) / count).toBeCloseTo(WRITE_UPS_IN_DORMS, 1);
+    expect(run.state.admissions.lastSemester!.writeUps).toBe(count);
+    expect(toneProblem(line!.text)).toBeNull();
+  });
+
+  it('has no write-ups on a game without parties', () => {
+    const small = newGame({ seed: 7, name: 'Test College', now: T0 });
+    const run = advance(small, small.clock.lastSimulatedAt, T0 + 3.6 * DAY);
+    expect(run.log.some((entry) => entry.kind === 'writeUps')).toBe(false);
   });
 });

@@ -73,7 +73,7 @@ import { causeShifts, examPart, ratingShift, type CauseShift } from './policies'
 import type { StudentFriends } from './friends';
 import { chapterLift, memberOf } from './greek';
 import { partiesOn } from './parties';
-import { DRINKING_YEAR } from '../config/parties';
+import { ageOf } from './birthdays';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -483,6 +483,12 @@ export interface StudentCard {
   /** 0 for a freshman to 3 for a senior. */
   classYear: number;
   classYearName: string;
+  /** Their age today, their birthday ("Mar 3"), whether it is today, and whether they are 21 or over (R2, DESIGN.md 66.2). */
+  age: number;
+  birthday: string;
+  birthdayToday: boolean;
+  turned21Today: boolean;
+  over21: boolean;
   /** As shown (DESIGN.md 65.3): "Undeclared", "Biology", or "Biology and Economics". */
   major: string;
   /** The major they study: the one they intend while undeclared. A lecture, a story or a professor names it. */
@@ -712,6 +718,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
   const seed = state.seed;
 
   const first = firstNameOf(state, ref);
+  const age = ageOf(seed, ref, state.clock);
   const last = pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start)) + pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end));
   const fixed = fixedOf(seed, ref);
   const majorNow = majorAt(fixed.path, semestersIn(ref.entryYear, semesterOf(state)));
@@ -795,6 +802,11 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     name: `${first} ${last}`,
     classYear,
     classYearName: CLASS_YEAR_NAMES[classYear]!,
+    age: age.age,
+    birthday: age.birthday,
+    birthdayToday: age.today,
+    turned21Today: age.turned21Today,
+    over21: age.over21,
     major: majorNow.shown,
     subject: MAJORS[majorNow.subject]!.name,
     majorNote: majorNow.undeclared ? `Leaning toward ${MAJORS[majorNow.subject]!.name}` : majorNow.switchedFrom !== null ? `Switched from ${MAJORS[majorNow.switchedFrom]!.name}` : null,
@@ -822,7 +834,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     stress,
     // What the week is doing to them: the calendar and the sky. Their ties have a row of their own (DESIGN.md 63.10).
     week: flu.sick ? 'Down with the flu' : weekLabel(week.parts.filter((part) => part.id !== 'friends')),
-    party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
+    party: phase === 'party' && partiesOn(state) ? (age.over21 ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
     friends: friends ? { happiness: ownHappiness, stress: ownStress, gpa: ownGpa } : null,
   };
 }
