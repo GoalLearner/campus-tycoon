@@ -7973,3 +7973,78 @@ Three a real day. No free text: the player picks the kind and sees what it will 
 | The official account's replies come from students picked by its post | Not those it would reach first |
 | A rumour about someone with no partner and no close friend is only talk | By design: there is no one for it to land on |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+## 64. The living campus (approved 2026-11-14)
+
+The owner's words, from playing: "the people are boring. The sim has moods, relationships, and plans, but on screen everyone just walks between home and class. Make their lives visible, like The Sims: people doing things, having fun, and showing emotion. Visual layer only; it reads the existing sim state." He asked for a short plan and then the build, with no approval round; the plan was posted to him on 2026-11-14 and is this section's approval. It comes before the realism pass and chaos.
+
+Five stops, each merged and shipped on its own: L1 activities, not just walking; L2 emotion you can see (procedural motion, held things, a mood mark of our own, bigger emotes for big moments); L3 moments the crowd gathers round; L4 a close-up follow; L5 wheels (bikes, boards and scooters, and bike racks, the one new thing to place). After L5, one page of a busy quad on a sunny afternoon and a party at night, which also covers the social afternoon of 63, and then a stop for him to play.
+
+The rules for all five: visual only, never a sim number (the racks' cost is the one exception); every choice deterministic from the sim state; the frame budget holds on the slowed phone, and the crowd density setting and Reduce effects cut every new layer; the 16+ tone guide and its hard lines, alcohol rare on screen (party cups only on 21+ students' own party, as 63.9 set); every visible thing a real sprite from the packs or our own drawing in their hand-drawn way. Our drawings may go in the public atlas; the packs' paid parts never do.
+
+### 64.1 The art
+
+The Penzilla packs are drawn by hand: about 220 px a frame, smooth lines, a thick plum outline, flat fills. Their catalogue has no people sitting or lying, no dog, no held phone, tray or cup, and the artist takes no commissions until about May 2027. So new poses are made from the pack's own figures, the way the sleeping and mood faces were (60, 63.7), and the few missing things are drawn in code in the pack's way; a 3D render in the pack's colours with a plum outline is the fallback for vehicles (L5). A look sheet of the poses and things at game size, beside the pack's own figures, went to main first (`docs/handoff/life-look-sheet.html`).
+
+| Made | How | Where |
+|---|---|---|
+| Sitting, facing the viewer and facing away (`person.N.pose.sit-sw`, `sit-nw`) | Their own walking figure with the body under the head pressed to 46% of its height and 138% of its width, the head lowered onto it (`tools/make_poses.py`) | Private atlas |
+| Lying in the sun (`pose.lie`) | Their own front figure turned on its side, flattened a little and tipped 14 degrees | Private atlas |
+| Napping (`pose.nap`) | Their sleeping picture (60) turned the same way | Private atlas |
+| A frisbee, a phone, a tray, a dog (`prop.*`) | Drawn in code in the pack's way, plum outline at its weight (`tools/make_props.py`) | Both atlases: ours |
+| A rug, a basket, bread, a book, notes, a lute, a ball, a football, a speaker, a cup | The packs' own room things, shrunk to the map (`src/game/propSize.ts`: a book 7 px beside a figure 36 high, a picnic rug 58) | Private atlas |
+
+### 64.2 L1 as built: people doing things
+
+**On the lawns and quads** (`src/app/lawnLife.ts` for the rule, `src/game/Lawns.ts` to draw it):
+
+| | As built |
+|---|---|
+| Where | Every quad cell, and the campus's own grass within two cells of a path with at least three open sides, two cells apart: 86 spots on the model campus. Not under a small scene of 33.4 (its cells and one round it) |
+| Who | A couple from the social web 28 times in 100 (both free), a friend group from the web (as many as are free, up to five) to 78 in 100, else one or two students from the seed. Nobody is in two places: everyone on the grass is kept off the walks, the courts and the scenes. Until the web has answered, a spot has seed students; they give way to friends and couples once it has |
+| What | 19 kinds: a circle, a picnic (rug, basket, bread), lying in the sun, a nap, a study group (books and notes), guitar (the pack's lute) with friends round, frisbee, catch, kicking a ball, dancing round a speaker, a couple sitting close, a phone, reading, music on a rug, a selfie, a hug, a jog, goofing about, walking a dog. Chosen by weight (`chooseLawnKind`) from their number, whether they are a couple, the group's vibe and the interests most of them share, the hour, the sky and exam weeks; then tilted by who they are: the first one's plan for the hour (a meal makes a picnic, a game a frisbee, a class between lectures a study group), the first one's mood from their card (up: the social kinds; down: music, reading, a nap; tense: revision and a run), and their traits on average (outgoing to company, shy to something alone, funny goofs, laid back lies in the sun, ambitious studies). A couple keeps to couple things |
+| How long | Each spot changes group on its own clock, every 9 ticks |
+| How many | The crowd step's lawn figures (Low 32, Normal 64, High 100, and 14 at the step kept for short frames) times the lawns' share (`lawnShare`): the afternoon 1, the evening 0.7, the morning 0.4, the night 0.06; rain 0.08, snow 0.2; winter 0.55, the summer break 0.6; a weekend 1.15; most students away (a break) down to a fifth; Reduce effects half. Counted in view, with the spots nearest in a steady order first |
+| More doing than walking | As the lawns fill, the walking crowd thins by up to 35% (`RESTING_AT_FULL`): on a fine fall afternoon on the model campus at Normal, 64 on the grass in the whole view against 58 walking, besides those at the courts and tables |
+| Motion | Sitters face the middle; a thrown frisbee or ball flies from one to the next in an arc and a kicked ball rolls; joggers, goofers and dog walkers go round a loop; dancers step and bob, each a beat off the others. Now and then an emote over one of them, the game's own (a laugh in a circle, music over a guitar, a heart between a couple), none with Reduce effects |
+| The card | A tap on one opens their card, "Doing now: Having a picnic with Sasha and 2 friends on the quad" (`lawnWords`) |
+
+**At places to eat**: people at benches and picnic tables sit now, facing the table's middle (a bench faces out), and those eating have the pack's cup or our tray in front of them, towards the table. Of those walking away from a place to eat, 55 in 100 carry a cup (mornings) or a tray. Queues are as 33.
+
+**At recreation**: every 8 seconds on a court and 13 on the field a point is won: the side that won it hops, and one of them shows a high five, a fist bump or a shout over the game. None with Reduce effects.
+
+**On the walks**: 4 in 100 of those walking to a quad by day have a dog with them, facing the way they go.
+
+| Decisions made here | Instead |
+|---|---|
+| Poses made from each student's own figure, pressed and turned | Drawn by hand per look (130 drawings), or 3D renders, which would not match the line |
+| Mood and plan read for the first of a group | For everyone in it, which costs a card each |
+| A spot's group changes every 9 ticks on its own clock | All at once, which would blink the lawns |
+| Lawn people come out of the walking crowd (up to 35%) | Added on top, which would cost frames and crowd the walks |
+| A won point every 8 or 13 seconds, by the clock | From a real score, which the game does not keep |
+
+**Measured.** On a fresh model campus on a fine fall afternoon at Normal, 90 spots, and in the whole view 27 groups and 64 people on the grass in 14 kinds (10 circles, 9 frisbee games, 8 picnics, 7 selfies, 6 in the sun, 6 study groups, guitar, kicking a ball, goofing, dancing, music, a hug, a phone, a jog), against 58 walking.
+
+Frames on the slowed phone (47.2), back to back with main (ce03ede), 16 frames each, median frame work:
+
+| | Main | L1 |
+|---|---|---|
+| Normal, a fine afternoon | 14.3 ms | 15.0 ms |
+| An evening, Normal | 16.3 ms | 15.2 ms |
+| High, the morning rush | 17.0 ms | 18.9 ms |
+| High, a fine afternoon (100 on the grass) | 13.6 ms | 16.5 ms |
+
+Most of the cost is drawing: each figure or thing costs about the same as a walker, and the lawns' own work is about 0.4 ms a frame. Two savings were made: a group where nobody moves is left as drawn once it has faded in (Normal went from 16.9 to 15.0), and a group just off the screen is kept but not drawn (High's morning rush went from 20.1 to 18.9). At High the morning rush was over 16.7 ms on main already; the frame budget of 28.5 steps the crowd, and the lawns with it (to 14 people at its lowest step), down by itself when frames stay short. The owner's play copy may have been open in the Claude app's browser during the runs; the two builds took turns, so both saw the same.
+
+**The long run was not run again**: the simulator and its test players read only `src/sim` and `scripts`, and L1 changes neither, so main's run on ce03ede (91 of 91) stands.
+
+**Tested**: `tests/lawnLife.test.ts` (17): how full the lawns are by the hour, the sky, the season, a weekend, a break and Reduce effects, always between 0 and 1; the crowd steps' lawn figures rising with the setting; every kind one their number allows, the same for the same roll; no games, picnics, sunbathing or dancing in rain or snow; interests, exam weeks, plans, moods and traits each tilting the choice the right way; couples together most of the time; every kind's size, pose and words.
+
+| Rough | Why |
+|---|---|
+| Sitting is the student's own figure pressed down, not a new drawing | Drawn by hand it would be 130 drawings; the look sheet showed it first |
+| Lying in the sun is the front view turned on its side | The pack has no figure lying down |
+| A won point comes by the clock | The game keeps no score of a pickup game |
+| Mood and plan are read for the first of a group only | A card for each would cost more |
+| The morning rush at High runs about 2 ms over main on the slowed phone | Main was already over 16.7 ms there; the frame budget steps the crowd down by itself when it must |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
