@@ -32,7 +32,7 @@ import { FAVOURITES } from '../config/students';
 import { TRADITIONS } from '../config/traditions';
 import { EVENT, FEEL, HAPPENING_KINDS, HAPPENING_WEEKS, HAPPENINGS_KEPT, KIND, RUMOUR, SLOTS, WEB_WEEK_TICKS } from '../config/web';
 import { officialMood, speakingUp } from './buzz';
-import { policyOn } from './policies';
+import { bullyingTimes } from './policies';
 import { hashInts } from '../rng';
 import type { GameState, Week } from '../types';
 import { capacity } from './capacity';
@@ -214,7 +214,8 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
   return {
     state,
     moodBias: officialMood(state),
-    bullyShown: (policyOn(state, 'antiBullying') ? 0.5 : 1) * (speakingUp(state) ? 0.6 : 1),
+    // What is reported more is taken down more: the share left showing is one over how much more is reported.
+    bullyShown: (1 / Math.max(1, bullyingTimes(state).reported)) * (speakingUp(state) ? 0.6 : 1),
     seed: web.seed,
     housing,
     athletes: athleteShare(state),

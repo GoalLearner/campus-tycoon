@@ -443,7 +443,7 @@ export const POST_ENGAGE: Partial<Record<PostKind, number>> = {
   [POST.bullyPost]: 0.2,
 };
 /** The share of the week's acts of picking on someone by name that are posted on the app, before the levers. */
-export const BULLY_POSTS = 0.3;
+export const BULLY_POSTS = 0.15;
 export const VIRAL_REACH_EACH = 0.015;
 export const VIRAL_REACH_MOST = 0.03;
 export const VIRAL_FADE_WEEKS = 2;

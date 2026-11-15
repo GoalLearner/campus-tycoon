@@ -19,7 +19,7 @@ import { dormName, hallName } from '../sim/systems/people';
 import { aboutStudent, postsOf, postWeekStart, viralOf, type Post } from '../sim/systems/quadline';
 import { BULLY_COMMENTS, OFFICIAL_LINES, OFFICIAL_REPLIES, TOPIC_HEADLINE, VIRAL_HEADLINES, type CauseTopic } from '../sim/config/quadline';
 import { TRAIT, traitOf } from '../sim/systems/identity';
-import { policyOn } from '../sim/systems/policies';
+import { bullyingTimes } from '../sim/systems/policies';
 import type { OfficialPost } from '../sim/types';
 import { classYearOf, firstNameOf, socialProfile, studentName } from '../sim/systems/students';
 import { idIn, refIn, type WebView } from './socialView';
@@ -161,7 +161,9 @@ const ENGAGE: Partial<Record<PostKind, number>> = {
 export function postCounts(view: WebView, post: Post): { likes: number; comments: number } {
   const followers = followersOf(view, post.author);
   const engage = ENGAGE[post.kind as PostKind] ?? 0.15;
-  const likes = Math.round(followers * engage * (0.35 + 1.1 * share(hashInts(post.luck, 17)))) + 1;
+  let likes = Math.round(followers * engage * (0.35 + 1.1 * share(hashInts(post.luck, 17)))) + 1;
+  // A viral post is liked by many more than follow its author: about as many again as shared it (63.14).
+  if (post.viral) likes = Math.max(likes, Math.round(viralOf(post.kind, post.luck).shares * (1.3 + 0.7 * share(hashInts(post.luck, 21)))));
   const comments = Math.max(commentsFor0(view, post), Math.round(likes * (0.06 + 0.12 * share(hashInts(post.luck, 19)))));
   return { likes, comments };
 }
@@ -336,8 +338,9 @@ function bullyComments(view: WebView, state: GameState, post: Post, id: number):
       if (traitIn(view, tie.id, TRAIT.kind) >= 2 || traitIn(view, tie.id, TRAIT.loyal) >= 2) out.push({ who: ref, text: line('defend', hashInts(post.luck, 41, tie.id)), shade: false });
     }
   }
-  // With the anti-bullying program, an RA they know and the counselling center answer (the program's own words).
-  if (policyOn(state, 'antiBullying')) {
+  // With a program that has it reported more (the anti-bullying program's own words: RAs trained to spot it, someone
+  // who answers), an RA they know and the counselling center answer.
+  if (bullyingTimes(state).reported > 1) {
     if (ra) out.push({ who: ra, text: BULLY_COMMENTS.ra[0], shade: false });
     out.push({ who: null, from: 'Counselling Center', text: BULLY_COMMENTS.ra[1], shade: false });
   }
@@ -402,7 +405,18 @@ export function officialWords(state: GameState, post: OfficialPost): string {
  */
 export function officialReplies(view: WebView, state: GameState, post: OfficialPost, weakNow: readonly CauseTopic[]): Comment[] {
   const out: Comment[] = [];
-  const pick = (lines: readonly string[], h: number): string => lines[h % lines.length]!;
+  // No two replies alike: the next line is taken when one is used.
+  const used = new Set<string>();
+  const pick = (lines: readonly string[], h: number): string => {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[(h + i) % lines.length]!;
+      if (!used.has(line)) {
+        used.add(line);
+        return line;
+      }
+    }
+    return lines[h % lines.length]!;
+  };
   const repliers: StudentRef[] = [];
   for (let t = 0; repliers.length < 4 && t < 60; t++) {
     const id = hashInts(view.seed, 8201, post.tick, t) % (view.classSlot * 4);
@@ -413,7 +427,8 @@ export function officialReplies(view: WebView, state: GameState, post: OfficialP
   repliers.forEach((who, i) => {
     const h = hashInts(post.tick, 8203, i);
     let text: string;
-    if (post.fit < 0 && weakNow[0] && i < 2) text = OFFICIAL_REPLIES.offKey[weakNow[i] ?? weakNow[0]];
+    if (post.fit < 0 && weakNow[i] && i < 2) text = OFFICIAL_REPLIES.offKey[weakNow[i]!];
+    else if (post.fit < 0 && i === 1) text = pick(['we will see', 'about time'], h);
     else if (post.kind === 'apologise') text = weakNow.includes(what as CauseTopic) ? pick(OFFICIAL_REPLIES.thanks, h) : pick(OFFICIAL_REPLIES.fixed, h);
     else if (post.kind === 'welcome') text = pick(OFFICIAL_REPLIES.welcome, h);
     else if (post.kind === 'respond' && what === 'bad') text = pick(OFFICIAL_REPLIES.thanks, h);
