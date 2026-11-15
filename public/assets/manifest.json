@@ -87,6 +87,17 @@
     1
    ]
   },
+  "emote.bell": {
+   "frame": "emote.bell",
+   "anchor": [
+    14,
+    -12
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.big-argue": {
    "frame": "emote.big-argue",
    "anchor": [
@@ -543,6 +554,17 @@
    "anchor": [
     66,
     0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "grounds.rack": {
+   "frame": "grounds.rack",
+   "anchor": [
+    31,
+    3
    ],
    "footprint": [
     1,
@@ -3293,6 +3315,138 @@
    "anchor": [
     15,
     52
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.bike.nw": {
+   "frame": "wheel.bike.nw",
+   "anchor": [
+    16,
+    1
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.bike.sw": {
+   "frame": "wheel.bike.sw",
+   "anchor": [
+    16,
+    -4
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.escooter.nw": {
+   "frame": "wheel.escooter.nw",
+   "anchor": [
+    10,
+    2
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.escooter.sw": {
+   "frame": "wheel.escooter.sw",
+   "anchor": [
+    10,
+    -6
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.kick.nw": {
+   "frame": "wheel.kick.nw",
+   "anchor": [
+    10,
+    -1
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.kick.sw": {
+   "frame": "wheel.kick.sw",
+   "anchor": [
+    10,
+    -8
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.longboard.nw": {
+   "frame": "wheel.longboard.nw",
+   "anchor": [
+    12,
+    -19
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.longboard.sw": {
+   "frame": "wheel.longboard.sw",
+   "anchor": [
+    12,
+    -19
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.skateboard.nw": {
+   "frame": "wheel.skateboard.nw",
+   "anchor": [
+    9,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.skateboard.sw": {
+   "frame": "wheel.skateboard.sw",
+   "anchor": [
+    9,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.skates.nw": {
+   "frame": "wheel.skates.nw",
+   "anchor": [
+    6,
+    -25
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "wheel.skates.sw": {
+   "frame": "wheel.skates.sw",
+   "anchor": [
+    6,
+    -24
    ],
    "footprint": [
     1,

@@ -536,6 +536,19 @@ def dustup():
     return c
 
 
+def bell():
+    # A bike bell (DESIGN.md 64.6): a gold dome on its clamp, and the ring going out from it.
+    c = blank('RGBA')
+    dome = union(ellipse((300, 330, 724, 760)), rounded((280, 560, 744, 700), 60))
+    body(c, dome, GOLD, GOLD_RIM, (360, 400, 450, 480))
+    body(c, rounded((470, 230, 554, 340), 30), GREY, GREY_RIM)
+    d = ImageDraw.Draw(c)
+    for k, r in enumerate((80, 150)):
+        d.arc((220 - r, 330 - r, 220 + r, 330 + r), 200, 260, fill=PLUM, width=36)
+        d.arc((804 - r, 330 - r, 804 + r, 330 + r), 280, 340, fill=PLUM, width=36)
+    return c
+
+
 def splash():
     c = blank('RGBA')
     for x, y, r in ((300, 560, 80), (512, 420, 110), (724, 560, 80), (400, 300, 55), (624, 300, 55)):
@@ -611,6 +624,7 @@ EMOTES = {
     **{name: chat(inside) for name, inside in CHATS.items()},
     **BIGS,
     'dustup': dustup,
+    'bell': bell,
     'splash': splash,
     **{f'mood-{name}': mood_ring(*colours) for name, colours in MOODS.items()},
 }

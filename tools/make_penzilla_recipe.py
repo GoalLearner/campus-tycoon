@@ -417,7 +417,7 @@ sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5,
 # The social campus's emotes and bubbles (DESIGN.md 63.7): drawn for this game in the pack's way by
 # tools/make_emotes.py, about 32 pixels here for a student's card; the map shows them at half that over a head.
 # Stop 4 adds the greetings (a wave, a high five, a fist bump, a hug) and the chat bubbles, one for each topic (63.8).
-EMOTES = ('speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat', 'wave', 'highfive', 'fistbump', 'hug', 'chat-sports', 'chat-gaming', 'chat-music', 'chat-fitness', 'chat-partying', 'chat-studying', 'chat-art', 'chat-fashion', 'chat-love')
+EMOTES = ('bell', 'speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat', 'wave', 'highfive', 'fistbump', 'hug', 'chat-sports', 'chat-gaming', 'chat-music', 'chat-fitness', 'chat-partying', 'chat-studying', 'chat-art', 'chat-fashion', 'chat-love')
 for emote in EMOTES:
     sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
 # The living campus, L2 (DESIGN.md 64.3): big bubbles for big moments, twice an emote's size, and the mood rings at a
@@ -428,6 +428,13 @@ for moment in BIG_MOMENTS:
 # L3 (DESIGN.md 64.4): the dust cloud of a scuffle, about two figures wide, and the splash of a fall into a fountain.
 sprites['emote.dustup'] = {'layers': [standing('_rendered/ours/emotes/dustup.png', 0.5, 0.5, scale=1.25)]}
 sprites['emote.splash'] = {'layers': [standing('_rendered/ours/emotes/splash.png', 0.5, 0.5, scale=0.485)]}
+# L5 (DESIGN.md 64.6): what students ride, each facing two ways, and the bike rack. Ours, by tools/make_wheels.py,
+# each about its size beside a figure 36 pixels tall.
+WHEELS = {'bike': 0.74, 'skateboard': 0.64, 'longboard': 0.64, 'kick': 0.62, 'escooter': 0.66, 'skates': 0.47}
+for wheel, scale in WHEELS.items():
+    for way in ('sw', 'nw'):
+        sprites[f'wheel.{wheel}.{way}'] = {'layers': [standing(f'_rendered/ours/wheels/{wheel}-{way}.png', 0.5, 0.5, scale=scale)]}
+sprites['grounds.rack'] = {'layers': [standing('_rendered/ours/wheels/rack.png', 0.5, 0.62, scale=1.1)]}
 MOOD_RINGS = ('happy', 'excited', 'flirty', 'tense', 'embarrassed', 'sad', 'lonely')
 for mood in MOOD_RINGS:
     sprites[f'emote.mood-{mood}'] = {'layers': [standing(f'_rendered/ours/emotes/mood-{mood}.png', 0.5, 0.5, scale=0.33)]}
