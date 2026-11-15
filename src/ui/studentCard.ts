@@ -78,6 +78,9 @@ function doingText(doing: string): string {
   if (staying) return staying;
   // Stopped on a path to talk with someone they know (DESIGN.md 63.8).
   if (doing.startsWith('chatting:')) return `Stopped to talk with ${doing.slice(9)}`;
+  // A scene (DESIGN.md 63.11): on a date, at a party.
+  if (doing.startsWith('date:')) return `On a date with ${doing.slice(5)}`;
+  if (doing.startsWith('party:')) return `At a party on ${doing.slice(6)}`;
   // A bench or a picnic table: what they are doing there depends on the time of day.
   const seat = SEATS[doing.slice(8)];
   if (seat && doing.startsWith('toPlace:')) return `Looking for ${seat.a}`;

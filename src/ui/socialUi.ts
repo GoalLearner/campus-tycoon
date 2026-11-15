@@ -61,6 +61,8 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       stat('Stress in finals', `${signed(effects.examStress, 0)}`),
       stat('Each semester', `${(Math.abs(stay) * 100).toFixed(2)} points ${stay >= 0 ? 'more' : 'fewer'} stay`),
       stat('Nobody close yet', `${Math.round(effects.alone * 100)}% of students`),
+      // Picking on someone (DESIGN.md 63.11).
+      ...(effects.bullied !== undefined ? [stat('Picked on', `${(effects.bullied * 100).toFixed(1)}% of students`)] : []),
     );
   }
 
