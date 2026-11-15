@@ -1,3 +1,4 @@
+import { partyCallChance } from '../src/sim/systems/parties';
 import { CHAOS_FROM, ROWDY } from '../src/sim/config/chaos';
 import { chaosStepName, chaosStepOf } from '../src/sim/systems/chaos';
 import { WEB_WEEK_TICKS as CHAOS_WEEK_TICKS } from '../src/sim/config/web';
@@ -2272,7 +2273,10 @@ function assertModelCampus(seed: number): void {
           deferredRush: d.rating > 0 && d.happy < 0,
           chapterGrades: d.rating > 0,
           dryCampus: d.calls < 0 && d.happy < 0,
-          partyRegistration: d.calls < 0 && d.spending > 0,
+          // Its number is Campus Safety's calls from parties. A campus has a few a year, too few for two six-year histories
+          // to show it every time (C1, DESIGN.md 68: chaos makes the histories drift apart sooner), so the chance of one is
+          // read on and off at the same moment; the six-year count is printed above.
+          partyRegistration: partyCallChance(result.state, 1, 1, 0).chance * (1 - partyCallChance(result.state, 1, 1, 0).medical) < partyCallChance(base, 1, 1, 0).chance * (1 - partyCallChance(base, 1, 1, 0).medical) && d.spending > 0,
           alcoholEducation: d.stress <= 0 && d.spending > 0,
           antiHazing: d.reports <= 0,
           // What its switch says: fewer hazing reports, and members a little less happy the moment it is on. Over six
