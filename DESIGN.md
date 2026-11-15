@@ -8223,3 +8223,12 @@ Built 2026-11-15 on the branch `life-5`. Some students ride where they are going
 | A rider is their standing figure on what they ride | No riding poses in the pack |
 | Bikes lean only on the wall by the door, not on trees | No spot by a tree yet |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 64.7 The living campus in an afternoon, and two fixes
+
+After L5, a page for the owner of a busy quad on a sunny afternoon, a party at night and the social campus's afternoon (63's): a followed student's lunch with friends, a conversation on a path, a pickup game, a date, and Quadline that afternoon (`docs/handoff/life-afternoon.html`). Two things found while making it, fixed on the branch `life-afternoon`:
+
+| Found | Fixed |
+|---|---|
+| Followed close up, a student's friends or date walking with them were hidden behind buildings while they were drawn over them (64.5) | The whole party they walk with is drawn over the buildings close up |
+| A frisbee game on a lawn at ten at night | Games on the grass (frisbee, catch, kicking a ball) are for the light: none at night (`chooseLawnKind`; tested) |

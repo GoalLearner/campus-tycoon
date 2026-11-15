@@ -113,6 +113,11 @@ describe('what a group on the grass does', () => {
     }
   });
 
+  it('plays no games on the grass at night', () => {
+    const kinds = spread(group({ size: 2, likes: new Set(['sports']) }), 'night', 'clear');
+    for (const game of ['frisbee', 'catch', 'kick'] as const) expect(kinds.get(game) ?? 0).toBe(0);
+  });
+
   it('plays no games on the grass in the rain or snow', () => {
     for (const weather of ['rain', 'snow'] as const) {
       const kinds = spread(group({ size: 2, likes: new Set(['sports']) }), 'afternoon', weather);
