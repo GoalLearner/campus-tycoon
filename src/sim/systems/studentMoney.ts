@@ -278,7 +278,7 @@ export function tellSpringBreak(state: GameState, log: LogEntry[]): number {
     log.push({
       tick: state.clock.tick,
       kind: 'milestones',
-      text: `Spring break: about ${headCount(trips)} students head off on trips they saved for since February; the rest go home, stay on campus, or pick up extra shifts. Some come back running short until payday.`,
+      text: `Spring break: about ${headCount(trips >= 1_000 ? Math.round(trips / 100) * 100 : trips)} students head off on trips they saved for since February; the rest go home, stay on campus, or pick up extra shifts. Some come back running short until payday.`,
       data: { springTrips: trips },
     });
   }
