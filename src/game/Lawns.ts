@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { fitOnMap } from './propSize';
+import { swayAt } from '../app/feelingShow';
 import { findStudent, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS } from '../app/crowd';
 import { shownHour, type DayPeriod } from '../app/daylight';
@@ -588,7 +589,10 @@ export class Lawns {
           // Stepping on the spot to the beat, each a little off the others.
           moving = true;
         }
-        const bob = group.kind === 'dance' && !this.reduced ? Math.abs(Math.sin(seconds * 5.2 + i * 1.3)) * 2.5 : 0;
+        // Dancers sway from side to side and bob (DESIGN.md 64.3), each a beat off the others.
+        const sway = group.kind === 'dance' && !this.reduced ? swayAt(timeMs, i * 0.13 + member.phase) : null;
+        const bob = sway ? sway.lift : 0;
+        member.sprite.setRotation(sway ? sway.rotation : 0);
         const flipFrom = people.flip?.[member.direction];
         const facing = flipFrom ?? member.direction;
         let key: string;

@@ -13,7 +13,7 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -622,6 +622,9 @@ export class CampusScene extends Phaser.Scene {
     const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });
     this.lawns.setLife(lawns, this.light.period, this.weather, day.kind === 'midterms' || day.kind === 'finals', reduced);
     this.walkers.setResting(lawns * RESTING_AT_FULL);
+    // What students may have a big moment about today (DESIGN.md 64.3), and the sky for what they carry.
+    this.walkers.setWeather(this.weather);
+    this.walkers.setToday({ homeWin: homeWinLately(state), bids: pledgeSeason(state) && chapters(state).length > 0, exams: day.kind === 'midterms' || day.kind === 'finals' });
     this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
     this.ambient.setWeather(this.weather, reduced);
     this.life = life;
@@ -2252,4 +2255,16 @@ export class CampusScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.zoomAt(pointer.x, pointer.y, dy > 0 ? cam.zoom / WHEEL_STEP : cam.zoom * WHEEL_STEP);
   }
+}
+
+/** A home game won, from its kickoff to six hours after: the campus is still celebrating (DESIGN.md 64.3). */
+function homeWinLately(state: GameState): boolean {
+  const season = state.football.season;
+  if (!season) return false;
+  const tick = state.clock.tick;
+  return season.games.some((game) => game.home && game.done && tick >= game.kick && tick - game.kick < 6 * 60 && sum(game.us) > sum(game.them));
+}
+
+function sum(values: readonly number[]): number {
+  return values.reduce((total, one) => total + one, 0);
 }

@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
-import { effectsSetting } from '../app/life';
+import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
+import { feelingOf, type Emotion } from '../app/emotion';
+import { BIG_KEY, bigMomentOf, cheeringAt, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
 import { itemAt, regularDay } from '../app/regularDay';
@@ -16,6 +18,7 @@ import type { DayPeriod } from '../app/daylight';
 import { avenueCrossing, avenueCrossingBack, KERB_MIDDLE, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
 import {
   enrollment,
+  hashInts,
   isPathKind,
   peopleCounts,
   personKey,
@@ -154,6 +157,30 @@ function likesParties(view: WebView, ref: StudentRef): boolean {
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
+/** The feelings that show (DESIGN.md 64.3). A big bubble lasts longer than an everyday emote and is about 30 high. */
+const BIG_MS = 2600;
+const BIG_SCALE = 0.47;
+const BIG_LIFT = 42;
+const BIG_DELAY_MS = 900;
+/** Big bubbles on screen at once, by crowd step: none when the frames are short. */
+const BIGS_AT_ONCE = [0, 1, 2, 2];
+/** A mood ring about 18 pixels across. */
+const RING_SCALE = 0.86;
+/** How often a couple out together shows a heart, and how many of those are a kiss on the cheek. */
+const HEART_EVERY_MS = 6000;
+const KISS_SHARE = 0.18;
+const FELT_KEPT = 4000;
+const TICKS_A_DAY = 24 * 60;
+const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1, turned: false };
+/** What a big moment adds to the student's day on their card. */
+const BIG_WORDS: Record<BigMoment, string> = {
+  heartbreak: 'Still upset about the break-up',
+  kiss: 'Kissed their partner on the cheek',
+  win: 'Celebrated the home win',
+  argue: 'Had words with someone',
+  bid: 'Got a bid from a chapter',
+  fail: 'Got a bad grade back',
+};
 /** Of those leaving a place to eat, the share carrying a tray or a cup; of those going to a quad, the share with a dog (DESIGN.md 64). */
 const CARRY_FROM_FOOD = 0.55;
 const DOG_WALKERS = 0.04;
@@ -235,6 +262,8 @@ interface Extra {
   prop?: string;
   /** The prop is held in front of them, a tray or a cup, not stood beside (DESIGN.md 64). */
   held?: boolean;
+  /** Where a held thing is: at the waist, up by the face, over the head, on the back (DESIGN.md 64.3). */
+  hold?: Hold;
   /** Walking with someone (DESIGN.md 63.8): which leg of the route, where on it, their party and their place in it. */
   leg?: number;
   at?: { x: number; y: number };
@@ -256,6 +285,17 @@ interface Walker {
   held: boolean;
   /** The prop is a dog on a walk, which faces the way they go. */
   dog: boolean;
+  /** Where a held prop is drawn (DESIGN.md 64.3). */
+  hold: Hold;
+  /** How they feel, as it shows (DESIGN.md 64.3): how they move and the ring at their feet, or null for anyone else. */
+  feel: Feel | null;
+  /** The ring at their feet, while it shows. */
+  ring: Phaser.GameObjects.Image | null;
+  /** Their own offset in time, so no two move together. */
+  phase: number;
+  /** Until when they laugh (bounce and shake) or cheer (jump), on the scene's clock. */
+  laughUntil: number;
+  cheerUntil: number;
   key: string | null;
   look: number;
   /** Where this trip began. */
@@ -290,6 +330,8 @@ interface Walker {
 interface Icon {
   walker: Walker;
   key: string;
+  /** A big moment's bubble (DESIGN.md 64.3): bigger, longer, and popped in. */
+  big: boolean;
   startAt: number;
   endAt: number;
   image: Phaser.GameObjects.Image | null;
@@ -312,9 +354,41 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
  * to a quad. Only for show.
  */
 function carried(from: Stop, to: Stop, period: DayPeriod): Extra {
-  if (from.use === 'food' && Math.random() < CARRY_FROM_FOOD) return { prop: period === 'morning' || Math.random() < 0.4 ? 'room.cup' : 'prop.tray', held: true };
+  if (from.use === 'food' && Math.random() < CARRY_FROM_FOOD) return { prop: period === 'morning' || Math.random() < 0.4 ? 'room.cup' : 'prop.tray', held: true, hold: 'waist' };
   if (to.kind === 'quad' && period !== 'night' && Math.random() < DOG_WALKERS) return { prop: 'prop.dog' };
   return {};
+}
+
+/** Interests by name, in the order of the web's identity bits. */
+const INTEREST_NAMES = Object.keys(INTEREST) as Array<keyof typeof INTEREST>;
+
+/** Where a held thing is drawn on a walker (DESIGN.md 64.3). */
+type Hold = 'waist' | 'face' | 'over' | 'back';
+
+/** How a student feels, as the walk shows it. */
+interface Feel {
+  motion: Motion;
+  ring: string | null;
+}
+
+/** What is kept of a student's feeling for the hour: it, its motion, and what a big moment needs to know. */
+interface Known {
+  emotion: Emotion;
+  reasons: readonly string[];
+  motion: Motion;
+  chapter: string | null;
+  classYear: number;
+  gpa: number;
+}
+
+/** One end of a trip, as what a student carries reads it. */
+function tripEnd(stop: Stop): Trip['from'] {
+  if (stop.use === 'food') return 'food';
+  if (stop.use === 'play') return 'play';
+  if (stop.kind === 'quad') return 'quad';
+  if (stop.kind === 'house' || stop.zone === 'housing') return 'home';
+  if (stop.zone === 'academic') return 'class';
+  return 'other';
 }
 
 function pick<T>(items: readonly T[]): T | undefined {
@@ -403,6 +477,17 @@ export class Walkers {
   private weekend = false;
   /** The school's colour while a home game is on, laid over the fans walking to it. null on any other day. */
   private fanTint: number | null = null;
+  /** The feelings that show (DESIGN.md 64.3): each student's for the hour, the rings put away, today's news, the sky. */
+  private felt = new Map<string, Known | null>();
+  private feltStamp = '';
+  private ringPool: Phaser.GameObjects.Image[] = [];
+  private bigShown = new Set<string>();
+  private today: Today = { homeWin: false, bids: false, exams: false };
+  private weather: Weather = 'clear';
+  private partyCouple = new Set<number>();
+  private heartAt = new Map<number, number>();
+  /** Read once a frame from the setting. */
+  private rings = true;
   /** The share of the usual crowd that is out. */
   private presence = 1;
   /** The share of the walking crowd sitting on the lawns instead (DESIGN.md 64): more doing than walking in fine weather. */
@@ -911,6 +996,12 @@ export class Walkers {
       prop,
       held: extra.held ?? false,
       dog: extra.prop === 'prop.dog',
+      hold: extra.hold ?? 'waist',
+      feel: null,
+      ring: null,
+      phase: Math.random(),
+      laughUntil: 0,
+      cheerUntil: 0,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
       look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
@@ -936,7 +1027,113 @@ export class Walkers {
       socialAt: this.scene.time.now + SOCIAL_REST_MS * Math.random(),
     });
     sprite.clearTint();
+    if (student) this.dress(this.walkers[this.walkers.length - 1]!, from, to);
     return true;
+  }
+
+  // ------------------------------------------------- feelings that show --
+
+  /**
+   * How a student walking out feels, as it shows (DESIGN.md 64.3): their motion and pace, the ring at their feet, what
+   * they carry, and a big moment of their own if they have one today. Their feeling is stop 3's, kept for the hour.
+   */
+  private dress(walker: Walker, from: Stop, to: Stop): void {
+    const state = this.state;
+    const student = walker.student;
+    if (!state || !student) return;
+    const known = this.feelingOf(student);
+    if (!known) return;
+    walker.feel = { motion: known.motion, ring: RING[known.emotion] };
+    walker.pace *= MOTION_PACE[known.motion];
+    // Something in hand, when they carry nothing yet and the frames allow it.
+    const reduced = effectsSetting() === 'reduced';
+    if (!walker.prop && this.step > 0 && !reduced) {
+      const roll = (hashInts(state.seed, this.dayOf(), student.entryYear * 100003 + student.index, 6403) >>> 0) / 4294967296;
+      const held = heldOf({ weather: this.weather, period: this.period, from: tripEnd(from), to: tripEnd(to), likes: this.likesOf(student), roll });
+      if (held) this.hand(walker, held);
+    }
+    // A big moment of their own, once a day, a moment after they come into view.
+    if (!reduced) {
+      const roll = (hashInts(state.seed, this.dayOf(), student.entryYear * 100003 + student.index, 6409) >>> 0) / 4294967296;
+      const moment = bigMomentOf({ emotion: known.emotion, reasons: known.reasons, chapter: known.chapter, classYear: known.classYear, gpa: known.gpa, roll }, this.today);
+      if (moment) this.showBig(walker, moment, BIG_DELAY_MS);
+    }
+  }
+
+  /** A student's feeling for the hour, worked out once and kept (stop 3's feeling, 63.7). */
+  private feelingOf(student: StudentRef): Known | null {
+    const state = this.state;
+    if (!state) return null;
+    const hour = shownHour();
+    const web = socialWeb.view && socialWeb.view.seed === state.seed ? socialWeb.view : null;
+    const stamp = `${hour}|${web?.week ?? -1}|${this.dayOf()}`;
+    if (stamp !== this.feltStamp || this.felt.size > FELT_KEPT) {
+      this.felt.clear();
+      this.feltStamp = stamp;
+    }
+    const key = studentKey(student);
+    const kept = this.felt.get(key);
+    if (kept !== undefined) return kept;
+    const card = studentCard(state, student);
+    const feeling = card ? feelingOf(web, state, student, card, hour) : null;
+    const known: Known | null = card && feeling ? { emotion: feeling.emotion, reasons: feeling.reasons, motion: motionOf(feeling.emotion, feeling.reasons), chapter: card.chapter, classYear: card.classYear, gpa: card.gpa } : null;
+    this.felt.set(key, known);
+    return known;
+  }
+
+  /** Their interests, from the web's identities. */
+  private likesOf(student: StudentRef): Set<string> {
+    const out = new Set<string>();
+    const web = socialWeb.view;
+    if (!web || !this.state || web.seed !== this.state.seed) return out;
+    const id = idIn(web, student);
+    if (id < 0) return out;
+    INTEREST_NAMES.forEach((name, i) => {
+      if (((web.identity[id]! >>> (18 + i)) & 1) === 1) out.add(name);
+    });
+    return out;
+  }
+
+  /** The game's day, for what is kept for a day. */
+  private dayOf(): number {
+    return this.state ? Math.floor(this.state.clock.tick / TICKS_A_DAY) : 0;
+  }
+
+  /** Put something in their hand, where that thing is held. */
+  private hand(walker: Walker, held: Held): void {
+    const key = HELD_KEY[held];
+    if (!this.art.has(key)) return;
+    const prop = this.scene.add.image(0, 0, '__DEFAULT');
+    this.art.apply(prop, key);
+    fitOnMap(prop, key);
+    prop.setOrigin(0.5, 1).setAlpha(0);
+    walker.prop = prop;
+    walker.held = true;
+    walker.hold = held === 'umbrella' ? 'over' : held === 'bag' ? 'back' : held === 'phone' ? 'face' : 'waist';
+  }
+
+  /** A big moment's bubble over someone (DESIGN.md 64.3): a few at once at most, once a day each. */
+  private showBig(walker: Walker, moment: BigMoment, inMs = 0): void {
+    if (!walker.key || effectsSetting() === 'reduced') return;
+    const once = `${walker.key}|${moment}|${this.dayOf()}`;
+    if (this.bigShown.has(once)) return;
+    const now = this.scene.time.now;
+    const live = this.icons.filter((one) => one.big && one.endAt > now).length;
+    if (live >= BIGS_AT_ONCE[this.step]! && walker.key !== this.marked) return;
+    if (this.bigShown.size > FELT_KEPT) this.bigShown.clear();
+    this.bigShown.add(once);
+    this.icons.push({ walker, key: BIG_KEY[moment], big: true, startAt: now + inMs, endAt: now + inMs + BIG_MS, image: null });
+    if (moment === 'win' || moment === 'bid') walker.cheerUntil = now + inMs + BIG_MS;
+    if (this.onMemory && walker.student) this.onMemory(walker.student, BIG_WORDS[moment]);
+  }
+
+  /** What is going on today that a student may have a big moment about: a home win, bids going out, exams. */
+  setToday(today: Today): void {
+    this.today = today;
+  }
+
+  setWeather(weather: Weather): void {
+    this.weather = weather;
   }
 
   private retire(index: number): void {
@@ -944,7 +1141,13 @@ export class Walkers {
     if (walker.key !== null) this.out.delete(walker.key);
     if (walker.key !== null && walker.key === this.marked) this.ring?.setVisible(false);
     walker.sprite.setVisible(false);
+    walker.sprite.setScale(1).setRotation(0);
     walker.prop?.destroy();
+    if (walker.ring) {
+      walker.ring.setVisible(false);
+      this.ringPool.push(walker.ring);
+      walker.ring = null;
+    }
     this.pool.push(walker.sprite);
     this.walkers.splice(index, 1);
     for (const icon of this.icons) if (icon.walker === walker) icon.endAt = 0;
@@ -961,10 +1164,13 @@ export class Walkers {
       this.art.apply(walker.sprite, key);
       walker.shownKey = key;
     }
-    walker.sprite.setFlipX(flipFrom !== undefined);
     const spot = this.placeOf(walker);
     const at = this.iso.toWorld(spot.x, spot.y);
-    walker.sprite.setPosition(at.x, at.y);
+    // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
+    const pose = this.poseOf(walker);
+    walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
+    walker.sprite.setScale(1, pose.squash);
+    walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift);
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
     walker.sprite.setAlpha(walker.alpha);
@@ -976,9 +1182,18 @@ export class Walkers {
       else walker.sprite.clearTint();
     }
     if (walker.prop && walker.held) {
-      // Carried in front of them, at the waist, on the side they face (DESIGN.md 64): a tray or a cup from a place to eat.
+      // Carried (DESIGN.md 64, 64.3): at the waist on the side they face, a phone up by the face, an umbrella over the
+      // head, a bag on the back.
       const side = flipFrom !== undefined ? 1 : -1;
-      walker.prop.setPosition(at.x + side * walker.sprite.displayWidth * 0.2, at.y - walker.sprite.displayHeight * 0.22).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
+      const x = walker.sprite.x;
+      const y = walker.sprite.y;
+      const h = walker.sprite.displayHeight;
+      const w = walker.sprite.displayWidth;
+      if (walker.hold === 'over') walker.prop.setPosition(x + side * 2, y - h * 0.3).setDepth(walker.sprite.depth + 0.05);
+      else if (walker.hold === 'back') walker.prop.setPosition(x - side * w * 0.3, y - h * 0.18).setDepth(walker.sprite.depth - 0.05);
+      else if (walker.hold === 'face') walker.prop.setPosition(x + side * w * 0.22, y - h * 0.45).setDepth(walker.sprite.depth + 0.05);
+      else walker.prop.setPosition(x + side * w * 0.2, y - h * 0.22).setDepth(walker.sprite.depth + 0.05);
+      walker.prop.setAlpha(walker.alpha);
     } else if (walker.prop) {
       // Beside them: no figure in the pack can hold anything. A pennant moves in the wind. A dog faces the way they go.
       if (walker.dog) walker.prop.setFlipX(direction === 'se' || direction === 'ne');
@@ -987,6 +1202,19 @@ export class Walkers {
       const sway = walker.kind === 'guide' ? Math.sin(this.scene.time.now / 420 + walker.stride / 400) * 0.1 * this.wind : 0;
       walker.prop.setPosition(beside.x, beside.y).setRotation(sway).setDepth(walker.sprite.depth + 0.05).setAlpha(walker.alpha);
     }
+    // The ring at their feet in their feeling's colour (DESIGN.md 64.3), unless hidden or the frames are short.
+    const ringKey = walker.feel?.ring ?? null;
+    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked;
+    if (showRing && !walker.ring) {
+      walker.ring = this.ringPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
+      this.art.apply(walker.ring, ringKey);
+      walker.ring.setScale(RING_SCALE).setVisible(true);
+    } else if (!showRing && walker.ring) {
+      walker.ring.setVisible(false);
+      this.ringPool.push(walker.ring);
+      walker.ring = null;
+    }
+    if (walker.ring) walker.ring.setPosition(at.x, at.y + 1).setDepth(walker.sprite.depth - 0.2).setAlpha(walker.alpha * 0.95);
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
       const ring = this.ring ?? this.scene.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
@@ -994,6 +1222,19 @@ export class Walkers {
       ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
       ring.setPosition(at.x, at.y).setDepth(walker.sprite.depth - 0.2).setVisible(true).setAlpha(walker.alpha);
     }
+  }
+
+  /** The body this moment: laughing, cheering, a fan on game day, or as they feel; still with Reduce effects. */
+  private poseOf(walker: Walker): Pose {
+    if (!walker.feel && walker.laughUntil === 0 && walker.cheerUntil === 0) return STILL_POSE;
+    if (effectsSetting() === 'reduced' || walker.fading === 'out') return STILL_POSE;
+    const now = this.scene.time.now;
+    if (now < walker.laughUntil && now >= walker.laughUntil - ICON_MS) return laughingAt(now, walker.phase);
+    if (now < walker.cheerUntil) return cheeringAt(now, walker.phase);
+    const moving = walker.lingerMs <= 0 && walker.talkMs <= 0;
+    const fan = this.fanTint !== null && walker.goal === this.stadiumStop;
+    const motion: Motion = fan ? 'hop' : (walker.feel?.motion ?? 'none');
+    return motionAt(motion, now, moving, walker.phase);
   }
 
   // ------------------------------------------------------- student cards --
@@ -1265,6 +1506,7 @@ export class Walkers {
   update(deltaMs: number): void {
     const people = this.people;
     if (!people) return;
+    this.rings = moodRingsSetting();
     const dt = Math.min(deltaMs, 100);
     const camera = this.scene.cameras.main;
     const view = camera.worldView;
@@ -1567,6 +1809,7 @@ export class Walkers {
     leader.place = PARTY_PLACES[0]!;
     const scene = date ? 'date' : partyNight && take.length >= 2 ? 'party' : null;
     if (scene) this.partyScene.set(party, scene);
+    if (couple) this.partyCouple.add(party);
     const all3 = [leader.student, ...take];
     for (const ref of all3) {
       const rest = firstNamesOf(this.state!, all3.filter((one) => one !== ref));
@@ -1632,7 +1875,9 @@ export class Walkers {
     const live = this.icons.filter((one) => one.endAt > now).length;
     // The student whose card is open always shows theirs: it is who the player is watching.
     if (live >= room && walker.key !== this.marked) return;
-    this.icons.push({ walker, key, startAt: now + inMs, endAt: now + inMs + ICON_MS, image: null });
+    this.icons.push({ walker, key, big: false, startAt: now + inMs, endAt: now + inMs + ICON_MS, image: null });
+    // Laughing, bouncing and shaking, while the laugh shows.
+    if (emote === 'laugh') walker.laughUntil = now + inMs + ICON_MS;
   }
 
   /** Turn the social crowd on or off: off, the crowd walks as it did before stop 4. For the dev page. */
@@ -1669,8 +1914,10 @@ export class Walkers {
       const left = icon.endAt - now;
       const fade = Math.min(1, age / 150, left / 200);
       const rise = Math.min(1, age / 200) * 4;
+      // A big moment pops in a little larger than it settles (DESIGN.md 64.3).
+      if (icon.big) icon.image.setScale(BIG_SCALE * (age < 160 ? 0.6 + (0.5 * age) / 160 : age < 260 ? 1.1 - (0.1 * (age - 160)) / 100 : 1));
       icon.image
-        .setPosition(walker.sprite.x, walker.sprite.y - ICON_LIFT - rise)
+        .setPosition(walker.sprite.x, walker.sprite.y - (icon.big ? BIG_LIFT : ICON_LIFT) - rise)
         .setDepth(walker.sprite.depth + 0.2)
         .setAlpha(fade * walker.alpha)
         .setVisible(true);
@@ -1734,6 +1981,29 @@ export class Walkers {
       const say = scene === 'date' ? DATE_CHAT[Math.floor(Math.random() * DATE_CHAT.length)]! : scene === 'party' ? PARTY_NIGHT_CHAT[Math.floor(Math.random() * PARTY_NIGHT_CHAT.length)]! : topicFor(web, speaker.student!, listener.student!, Math.random());
       this.showIcon(speaker, say);
     }
+    // A couple out together: little hearts between them now and then, and once a kiss on the cheek (DESIGN.md 64.3).
+    const couples = new Map<number, Walker[]>();
+    for (const walker of this.walkers) {
+      if (!walker.party || !this.partyCouple.has(walker.party) || walker.fading !== null || !this.inView(view, walker.x, walker.y, 0)) continue;
+      const list = couples.get(walker.party);
+      if (list) list.push(walker);
+      else couples.set(walker.party, [walker]);
+    }
+    for (const [party, pair] of couples) {
+      if (pair.length < 2) continue;
+      const due = this.heartAt.get(party);
+      if (due === undefined) {
+        this.heartAt.set(party, now + HEART_EVERY_MS * Math.random());
+        continue;
+      }
+      if (due > now) continue;
+      this.heartAt.set(party, now + HEART_EVERY_MS * (0.7 + Math.random() * 0.6));
+      const one = pair[Math.floor(Math.random() * pair.length)]!;
+      if (Math.random() < KISS_SHARE && effectsSetting() !== 'reduced') this.showBig(one, 'kiss');
+      else this.showIcon(one, 'heart');
+    }
+    if (this.heartAt.size > 200) this.heartAt.clear();
+    if (this.partyCouple.size > 200) this.partyCouple.clear();
     // Parties that have gone: forget where they were going.
     if (this.partyNext.size > 200) this.partyNext.clear();
     if (this.partyChatAt.size > 200) this.partyChatAt.clear();
@@ -1787,6 +2057,14 @@ export class Walkers {
     if (ra === 'sparkle') {
       this.showIcon(a, 'sparkle');
       this.remember(a, `Caught the eye of ${this.first(b)}`);
+      return;
+    }
+    // Two who are angry with each other have it out, in a big bubble (DESIGN.md 64.3).
+    if (ra === 'anger' && rb === 'anger') {
+      this.showBig(a, 'argue');
+      this.showIcon(b, 'anger', 300);
+      this.remember(a, passingWords(ta, ra, this.first(b)));
+      this.remember(b, passingWords(tb, rb, this.first(a)));
       return;
     }
     if (ra) {

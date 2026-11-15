@@ -94,7 +94,7 @@ import { chapterPage, STATUS_NAME } from './greekUi';
 import { traditionsButton, traditionsView } from './traditionsUi';
 import { hoodSummary, housingFixLines, lampSummary, parcelSummary, SECOND_BUILDER_ENTRY, TOOL_ENTRY } from './buildUi';
 import { CROWD_NAMES, CROWDS, crowdSetting, setCrowdSetting } from '../app/crowd';
-import { effectsSetting, muted, musicVolume, setEffectsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
+import { effectsSetting, moodRingsSetting, muted, musicVolume, setEffectsSetting, setMoodRingsSetting, setMusicVolume, setMuted, setSoundVolume, soundVolume } from '../app/life';
 import { sound } from '../app/sound';
 import { mountPersonCard } from './personCard';
 import { face, mountStudentCard } from './studentCard';
@@ -964,6 +964,14 @@ export function mountUi(root: HTMLElement): void {
       });
       setText(effects, effectsSetting() === 'full' ? 'Reduce effects: off' : 'Reduce effects: on');
       card.append(effects);
+
+      // The mood rings at students' feet (DESIGN.md 64.3), for a player who wants the map plain.
+      const rings = button('', 'wide', () => {
+        setMoodRingsSetting(!moodRingsSetting());
+        setText(rings, moodRingsSetting() ? 'Mood rings: on' : 'Mood rings: off');
+      });
+      setText(rings, moodRingsSetting() ? 'Mood rings: on' : 'Mood rings: off');
+      card.append(rings);
 
       // Sound and music each have a volume of their own. Both start low, and zero is off.
       const volume = (label: string, value: number, set: (value: number) => void): HTMLElement => {
