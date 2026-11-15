@@ -74,7 +74,7 @@ import type { StudentFriends } from './friends';
 import { chapterLift, memberOf } from './greek';
 import { partiesOn } from './parties';
 import { ageOf } from './birthdays';
-import { practicesOf, type Practices } from './fourYears';
+import { outcomeOf, practicesOf, type Outcome, type Practices } from './fourYears';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -533,6 +533,8 @@ export interface StudentCard {
   movedOut: boolean;
   /** Their milestones of four years (R2, DESIGN.md 66.4): internships, study abroad, research, senior work. */
   milestones: Practices;
+  /** A senior's last year (R2, DESIGN.md 66.5): graduate school, or the job hunt and an offer. */
+  outcome: Outcome | null;
   /** The chapter a member belongs to (DESIGN.md 51). null for everyone else. */
   chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
@@ -848,6 +850,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     residence: member?.housed ? 'chapter' : resident ? 'dorm' : 'offCampus',
     movedOut: !resident && movedOutThisYear(seed, ref, classYear),
     milestones: practicesOf(seed, ref, classYear, MAJORS[majorNow.subject]!.group, calendarAt(state.clock).phase),
+    outcome: outcomeOf(seed, ref, classYear, MAJORS[majorNow.subject]!.group, state.clock),
     chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,

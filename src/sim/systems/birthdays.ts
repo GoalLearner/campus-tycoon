@@ -29,7 +29,7 @@ export function birthdayOf(seed: number, ref: StudentRef): { month: number; day:
 }
 
 /** Days from the year's start (Aug 19) to a date, 0 to 364. */
-function dayOfYear(month: number, day: number): number {
+export function dayOfYear(month: number, day: number): number {
   const ordinal = (m: number, d: number): number => MONTH_DAYS.slice(0, m - 1).reduce((sum, n) => sum + n, 0) + d - 1;
   return (ordinal(month, day) - ordinal(YEAR_STARTS[0], YEAR_STARTS[1]) + 365) % 365;
 }

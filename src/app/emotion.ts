@@ -140,6 +140,13 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   const stretch = day.rhythmId ? RHYTHM_FEELINGS[day.rhythmId] : undefined;
   if (stretch && feels < stretch.share) add(stretch.emotion, stretch.label, stretch.weight + (stretch.emotion === 'tense' ? card.stress / 60 : 0));
   if (day.seniors && card.classYear >= 3) add('sad', 'Senior goodbyes', 1.6);
+  // A senior's last year (R2, DESIGN.md 66.5): the job hunt, an offer, graduate school, and commencement itself.
+  const outcome = card.outcome;
+  if (outcome?.offerNew) add('excited', 'Got a job offer', 3, 'briefcase');
+  else if (outcome?.offer) add('happy', 'Has a job lined up', 0.9);
+  else if (outcome?.plan === 'job' && outcome.line === 'Job hunting' && day.kind !== 'break' && day.kind !== 'summer') add('tense', 'Job hunting', 1.1, 'briefcase');
+  if (outcome?.admitted) add('happy', 'Into graduate school', 1.3);
+  if (day.kind === 'commencement' && card.classYear >= 3) add('excited', 'Graduating', 3.5, 'mortarboard');
   // Moving off campus (R2): a place of their own in town, felt through the fall's first weeks.
   if (card.movedOut && (day.special === 'welcome' || day.rhythmId === 'fallStartWeeks')) add('happy', 'Own place in town', 1.2);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);

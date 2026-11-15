@@ -112,3 +112,28 @@ export const CAPSTONE_NAME: Readonly<Record<MajorGroup, string>> = {
   arts: 'a senior show',
   health: 'a capstone placement',
 };
+
+// ---------------------------------------------------------- after four years --
+
+/**
+ * Of seniors, the share with a job offer by commencement (NACE's 2026 student survey: 43%), and the share who start
+ * graduate school within a year (NCES B&B:16/17: about 17%). A class's placement within six months (`PLACEMENT` in
+ * alumni.ts: a job or more school, 55-95% with the rating) is as before, and matches first-destination surveys.
+ */
+export const OFFER_BY_COMMENCEMENT = 0.43;
+export const GRAD_SCHOOL = 0.17;
+/** How a field's seniors differ, against the class as a whole: offers come sooner in engineering and business, more go on to graduate school from the sciences and health. [T] */
+export const OUTCOME_TILT: Readonly<Record<MajorGroup, { offer: number; grad: number }>> = {
+  engineering: { offer: 1.45, grad: 0.9 },
+  sciences: { offer: 0.75, grad: 1.9 },
+  letters: { offer: 0.8, grad: 1 },
+  business: { offer: 1.35, grad: 0.6 },
+  education: { offer: 1.2, grad: 0.8 },
+  music: { offer: 0.55, grad: 0.9 },
+  arts: { offer: 0.6, grad: 0.7 },
+  health: { offer: 1.1, grad: 1.5 },
+};
+/** Of the offers made by commencement, the share made in the fall; the rest come from January to May. [T] */
+export const OFFERS_IN_FALL = 0.3;
+/** Graduate schools say yes from mid-March. */
+export const GRAD_ADMIT_FROM: readonly [number, number] = [3, 15];

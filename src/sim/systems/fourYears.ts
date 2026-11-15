@@ -1,9 +1,10 @@
-import { ABROAD_PLACES, ABROAD_SEMESTER, BY_SENIOR_YEAR, CAPSTONE_NAME, INTERN_EARLY, INTERN_PLACES, ON_CAMPUS_BY_YEAR, PRACTICE_TILT, type Practice } from '../config/fourYears';
+import { ABROAD_PLACES, ABROAD_SEMESTER, BY_SENIOR_YEAR, CAPSTONE_NAME, GRAD_ADMIT_FROM, GRAD_SCHOOL, INTERN_EARLY, INTERN_PLACES, OFFER_BY_COMMENCEMENT, OFFERS_IN_FALL, ON_CAMPUS_BY_YEAR, OUTCOME_TILT, PRACTICE_TILT, type Practice } from '../config/fourYears';
+import { calendarAt, dateAt, type Phase } from '../calendar';
+import { dayOfYear } from './birthdays';
 import { MAJORS, type MajorGroup } from '../config/students';
-import type { Phase } from '../calendar';
 import { hashInts } from '../rng';
 import { headCount } from '../format';
-import type { GameState, LogEntry } from '../types';
+import type { Clock, GameState, LogEntry } from '../types';
 
 /**
  * Four years, R2 of the realism pass (DESIGN.md 66), as the simulation tells it. Who lives where is each student's own
@@ -135,4 +136,58 @@ export function tellPractices(state: GameState, entryId: string, log: LogEntry[]
     const summer = Math.round((c[1]! + c[2]!) * abroad * (1 - ABROAD_SEMESTER) * 0.5);
     if (interns > 0) log.push({ tick: state.clock.tick, kind: 'milestones', text: `${headCount(interns)} ${interns === 1 ? 'student starts a summer internship' : 'students start summer internships'}${summer > 0 ? `, and ${headCount(summer)} ${summer === 1 ? 'goes' : 'go'} abroad for the summer` : ''}.`, data: { interns, abroad: summer } });
   }
+}
+
+// ---------------------------------------------------------- after four years --
+
+/** A field's share of a practice-like figure, scaled so the class as a whole lands on the real one. */
+function outcomeChance(kind: 'offer' | 'grad', group: MajorGroup): number {
+  const total = MAJORS.reduce((sum, major) => sum + major.share, 0);
+  const mean = MAJORS.reduce((sum, major) => sum + major.share * OUTCOME_TILT[major.group][kind], 0) / total;
+  const base = kind === 'grad' ? GRAD_SCHOOL : OFFER_BY_COMMENCEMENT / (1 - GRAD_SCHOOL);
+  return Math.min(0.95, (base * OUTCOME_TILT[group][kind]) / mean);
+}
+
+export interface Outcome {
+  plan: 'grad' | 'job';
+  /** A job offer by now, and where from. */
+  offer: string | null;
+  /** Their offer came in the last few days: the card and the map make something of it. */
+  offerNew: boolean;
+  /** Into graduate school by now. */
+  admitted: boolean;
+  /** What the card says: "Job hunting", "Has a job offer from an engineering firm", "Into a graduate program". */
+  line: string;
+}
+
+/**
+ * A senior's last year (DESIGN.md 66.5): applying to graduate school, or job hunting with an offer that comes some
+ * time from October to May, or not by commencement. Only a student in their last years; null for the rest.
+ */
+export function outcomeOf(seed: number, ref: { entryYear: number; index: number }, classYear: number, group: MajorGroup, clock: Pick<Clock, 'tick' | 'week'>): Outcome | null {
+  if (classYear < 3) return null;
+  const roll = (salt: number): number => (hashInts(seed, 4831, ref.entryYear, ref.index, salt) >>> 0) / 4294967296;
+  const date = dateAt(clock);
+  const phase = calendarAt(clock).phase;
+  // Past commencement it is done: the senior who is still here is staying on for another year.
+  const today = phase === 'summer' ? 365 : dayOfYear(date.month, date.day);
+  if (roll(1) < outcomeChance('grad', group)) {
+    const admitted = today >= dayOfYear(GRAD_ADMIT_FROM[0], GRAD_ADMIT_FROM[1]);
+    return { plan: 'grad', offer: null, offerNew: false, admitted, line: admitted ? 'Into a graduate program for the fall' : 'Applying to graduate school' };
+  }
+  const place = INTERN_PLACES[group][Math.floor(roll(2) * INTERN_PLACES[group].length)]!;
+  let offer: string | null = null;
+  let offerNew = false;
+  if (roll(3) < outcomeChance('offer', group)) {
+    // October to the end of the fall, or January to commencement.
+    const fall = roll(4) < OFFERS_IN_FALL;
+    const [from, to] = fall ? [dayOfYear(10, 1), dayOfYear(12, 17)] : [dayOfYear(1, 19), dayOfYear(5, 12)];
+    const at = from + Math.floor(roll(5) * (to - from));
+    if (today >= at) {
+      offer = place;
+      offerNew = today - at <= 6;
+    }
+  }
+  const started = today >= dayOfYear(9, 15);
+  return { plan: 'job', offer, offerNew, admitted: false, line: offer ? `Has a job offer from ${offer}` : started ? 'Job hunting' : 'Starting to look for jobs' };
 }

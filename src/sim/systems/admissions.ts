@@ -24,7 +24,7 @@ import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 import { closeSemester, stressLoss } from './season';
 import { callTimes, partiesOn, partyScene } from './parties';
-import { WRITE_UPS_IN_DORMS, WRITE_UPS_PER_THOUSAND } from '../config/fourYears';
+import { GRAD_SCHOOL, OFFER_BY_COMMENCEMENT, WRITE_UPS_IN_DORMS, WRITE_UPS_PER_THOUSAND } from '../config/fourYears';
 import { addWhy, anchorAt, lateFrom, leaveShares, semesterStays, splitCount, standingOf, survivalTo } from './population';
 
 /**
@@ -540,6 +540,15 @@ export function graduate(state: GameState, log: LogEntry[]): void {
       kind: 'graduation',
       text: `${headCount(finished)} seniors graduated${later > 0 ? `, ${headCount(later)} of them in their fifth or sixth year` : ''}. ${c[3] > 0 ? `${headCount(c[3])} stay on for a fifth year. ` : ''}${headCount(state.stats.graduates)} alumni so far.`,
       data: { seniors: finished, late: later, staying: c[3], alumni: state.stats.graduates },
+    });
+    // Where the graduates go (R2, DESIGN.md 66.5): an offer in hand, or more school, at the real shares.
+    const offers = Math.round(finished * OFFER_BY_COMMENCEMENT);
+    const more = Math.round(finished * GRAD_SCHOOL);
+    log.push({
+      tick: state.clock.tick,
+      kind: 'milestones',
+      text: `Of the ${headCount(finished)} graduates, about ${headCount(offers)} have a job offer in hand and ${headCount(more)} go on to graduate school; the rest keep looking, and most have work within six months.`,
+      data: { graduates: finished, offers, grad: more },
     });
     earn(state, 'graduation', log);
   }

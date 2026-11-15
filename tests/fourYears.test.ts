@@ -6,10 +6,10 @@ import { DAY, T0 } from './helpers';
 import { SEASON_CURVE } from '../src/sim/config/season';
 import type { CalDate } from '../src/sim/config/academicCalendar';
 import { ageOf, birthdayOf, over21Share } from '../src/sim/systems/birthdays';
-import { practicesOf, practiceShares, tellMovingOut } from '../src/sim/systems/fourYears';
+import { outcomeOf, practicesOf, practiceShares, tellMovingOut } from '../src/sim/systems/fourYears';
 import { awayAbroad, classYearOf, movedOutThisYear, sampleStudents, studentCard } from '../src/sim/systems/students';
 import { MAJORS, type MajorGroup } from '../src/sim/config/students';
-import { BY_SENIOR_YEAR } from '../src/sim/config/fourYears';
+import { BY_SENIOR_YEAR, GRAD_SCHOOL, OFFER_BY_COMMENCEMENT } from '../src/sim/config/fourYears';
 import { calendarAt } from '../src/sim/calendar';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
@@ -204,5 +204,39 @@ describe('internships, study abroad, research and senior work, R2', () => {
     expect(juniors).toBeGreaterThan(400 * 0.9);
     const card = studentCard(spring, sample[0]!)!;
     expect(Array.isArray(card.milestones.lines)).toBe(true);
+  });
+});
+
+describe('job offers and graduate school, R2', () => {
+  const SEED = 20261115;
+  const many = Array.from({ length: 6000 }, (_, index) => ({ entryYear: 1, index }));
+  const groups = MAJORS.flatMap((major) => new Array<MajorGroup>(Math.max(1, Math.round(major.share * 10))).fill(major.group));
+  const groupOf = (index: number): MajorGroup => groups[index % groups.length]!;
+  const share = (list: boolean[]): number => list.filter(Boolean).length / list.length;
+
+  it('has about 43% of seniors with an offer by commencement and 17% into graduate school, offers coming through the year', () => {
+    const eve = noon(PLAIN, [5, 12, 1]);
+    const seniors = many.map((ref) => outcomeOf(SEED, ref, 3, groupOf(ref.index), eve)!);
+    expect(Math.abs(share(seniors.map((one) => one.offer !== null)) - OFFER_BY_COMMENCEMENT)).toBeLessThan(0.04);
+    expect(Math.abs(share(seniors.map((one) => one.plan === 'grad')) - GRAD_SCHOOL)).toBeLessThan(0.03);
+    expect(share(seniors.map((one) => one.admitted))).toBeCloseTo(share(seniors.map((one) => one.plan === 'grad')), 5);
+    const october = many.map((ref) => outcomeOf(SEED, ref, 3, groupOf(ref.index), noon(PLAIN, [10, 20, 0]))!);
+    const offersOct = share(october.map((one) => one.offer !== null));
+    expect(offersOct).toBeGreaterThan(0);
+    expect(offersOct).toBeLessThan(0.1);
+    expect(october.every((one) => !one.admitted)).toBe(true);
+    expect(outcomeOf(SEED, many[0]!, 2, groupOf(0), eve)).toBeNull();
+    for (const one of seniors.slice(0, 500)) expect(toneProblem(one.line), one.line).toBeNull();
+  });
+
+  it('says at commencement where the graduates go', () => {
+    const model = newGame({ seed: SEED, name: 'Test University', now: T0, campus: 'model' });
+    const run = advance(model, model.clock.lastSimulatedAt, T0 + 5.4 * DAY);
+    const line = run.log.find((entry) => entry.kind === 'milestones' && entry.data?.graduates);
+    expect(line).toBeDefined();
+    const graduates = Number(line!.data!.graduates);
+    expect(Number(line!.data!.offers)).toBe(Math.round(graduates * OFFER_BY_COMMENCEMENT));
+    expect(Number(line!.data!.grad)).toBe(Math.round(graduates * GRAD_SCHOOL));
+    expect(toneProblem(line!.text)).toBeNull();
   });
 });

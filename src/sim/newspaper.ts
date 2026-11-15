@@ -278,7 +278,15 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         break;
       case 'milestones':
         // Study abroad and summer internships (R2, DESIGN.md 66.4).
-        out.push({ weight: 46, headline: entry.data?.interns ? 'Summer Internships Begin; Business Casual Spotted on Campus' : 'Third-Years Head Abroad for the Spring; Rolling Suitcases Heard on Every Path', deck: entry.text });
+        out.push({
+          weight: 46,
+          headline: entry.data?.graduates
+            ? 'Graduates Leave With Offers in Hand, or Plans for More School; Résumés Updated Accordingly'
+            : entry.data?.interns
+              ? 'Summer Internships Begin; Business Casual Spotted on Campus'
+              : 'Third-Years Head Abroad for the Spring; Rolling Suitcases Heard on Every Path',
+          deck: entry.text,
+        });
         break;
       case 'housing':
         // Moving off campus (R2, DESIGN.md 66.3).

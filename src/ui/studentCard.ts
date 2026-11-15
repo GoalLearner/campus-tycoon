@@ -488,8 +488,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
     setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
-    milestones.line.hidden = card.milestones.lines.length === 0;
-    setText(milestones.value, card.milestones.lines.join(' · '));
+    const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
+    milestones.line.hidden = years.length === 0;
+    setText(milestones.value, years.join(' · '));
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);
     // Single, with their ties known: the old note said what their status did to Happiness, and their ties say it now.
