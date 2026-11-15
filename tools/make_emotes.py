@@ -436,6 +436,112 @@ def in_heart(c):
     body(c, heart_mask(512, 380, 110), RED, RED_RIM, (420, 300, 470, 350), INNER, INNER_RIM)
 
 
+# ---------------------------------------------------- the living campus, L2 --
+# DESIGN.md 64.3. Big moments get a bigger bubble: round, with a thick band of the moment's colour inside the outline
+# and three short lines off its top, so it reads as news across a quad. Our own drawings, like everything here.
+
+def big(band, band_rim, draw_inside):
+    def make():
+        c = blank('RGBA')
+        shape = union(ellipse((96, 90, 928, 790)), polygon([(300, 700), (500, 740), (230, 960)]))
+        body(c, shape, band, band_rim)
+        body(c, shrink(shape, 70), PAPER, PAPER_RIM, (230, 190, 360, 280), 0, INNER_RIM)
+        d = ImageDraw.Draw(c)
+        for x0, y0, x1, y1 in ((800, 140, 880, 50), (860, 250, 970, 210), (690, 80, 712, 10)):
+            d.line([(x0, y0), (x1, y1)], fill=PLUM, width=46)
+        draw_inside(c)
+        return c
+    return make
+
+
+def inside(draw, scale=0.56, at=(512, 430)):
+    """Another of these drawings, made smaller and set in the middle of a big bubble."""
+    def put(c):
+        picture = draw().resize((round(BIG * scale), round(BIG * scale)), Image.LANCZOS)
+        c.alpha_composite(picture, (round(at[0] - picture.width / 2), round(at[1] - picture.height / 2)))
+    return put
+
+
+def in_kiss(c):
+    # A kiss on the cheek, at most (DESIGN.md 16.1): a small heart and the print of a kiss beside it.
+    body(c, heart_mask(380, 380, 95), RED, RED_RIM, (300, 310, 345, 350), INNER, INNER_RIM)
+    upper = union(ellipse((520, 340, 640, 440)), ellipse((610, 340, 730, 440)))
+    lower = ellipse((530, 400, 720, 520))
+    body(c, union(upper, lower), PINK, PINK_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    d.line([(540, 440), (712, 440)], fill=PLUM, width=16)
+
+
+def in_trophy(c):
+    bowl = union(polygon([(370, 250), (654, 250), (620, 440), (404, 440)]), ellipse((390, 380, 634, 500)))
+    handles = union(ImageChops.subtract(ellipse((290, 270, 420, 420)), ellipse((330, 305, 395, 385))),
+                    ImageChops.subtract(ellipse((604, 270, 734, 420)), ellipse((629, 305, 694, 385))))
+    stem = polygon([(480, 480), (544, 480), (560, 560), (464, 560)])
+    base = rounded((410, 550, 614, 610), 18)
+    body(c, union(bowl, handles, stem, base), GOLD, GOLD_RIM, (410, 280, 450, 340), INNER, INNER_RIM)
+    body(c, polygon(star_points(512, 345, 62, 26, 5)), WHITE, PAPER_RIM, None, 14, 10)
+
+
+def in_argue(c):
+    bolt = polygon([(560, 200), (400, 430), (500, 440), (430, 650), (640, 380), (530, 370), (610, 200)])
+    body(c, bolt, RED, RED_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for x, y, a in ((300, 330, 1), (720, 520, -1)):
+        d.line([(x - 50, y - 50 * a), (x + 50, y + 50 * a)], fill=PLUM, width=30)
+        d.line([(x - 50, y + 50 * a), (x + 50, y - 50 * a)], fill=PLUM, width=30)
+
+
+def in_bid(c):
+    # An envelope with a seal: a bid to join a fraternity or a sorority (DESIGN.md 51).
+    body(c, rounded((290, 280, 734, 580), 30), PAPER, PAPER_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    d.line([(300, 290), (512, 450), (724, 290)], fill=PLUM, width=22)
+    body(c, ellipse((452, 400, 572, 520)), RED, RED_RIM, (475, 420, 500, 445), 14, 10)
+
+
+def in_fail(c):
+    # A test paper with a red F.
+    sheet = polygon([(340, 230), (640, 230), (700, 290), (700, 640), (340, 640)])
+    body(c, sheet, WHITE, PAPER_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for k in range(4):
+        d.line([(380, 300 + k * 40), (520, 300 + k * 40)], fill=SKY_RIM, width=12)
+    f = union(rounded((480, 380, 530, 600), 8), rounded((480, 380, 640, 425), 8), rounded((480, 470, 600, 512), 8))
+    body(c, f, RED, RED_RIM, None, 14, 10)
+
+
+BIGS = {
+    'big-heartbreak': big(BLUE, BLUE_RIM, inside(heartbreak, 0.56, (512, 450))),
+    'big-kiss': big(PINK, PINK_RIM, in_kiss),
+    'big-win': big(GOLD, GOLD_RIM, in_trophy),
+    'big-argue': big(RED, RED_RIM, in_argue),
+    'big-bid': big(VIOLET, VIOLET_RIM, in_bid),
+    'big-fail': big(GREY, GREY_RIM, in_fail),
+}
+
+
+# How a student feels, as a ring on the ground at their feet (DESIGN.md 64.3): our own mark, a flat ring seen from
+# the map's angle, in the feeling's colour. Fine has none.
+MOODS = {
+    'happy': (GREEN, GREEN_RIM),
+    'excited': (GOLD, GOLD_RIM),
+    'flirty': (PINK, PINK_RIM),
+    'tense': (ORANGE, ORANGE_RIM),
+    'embarrassed': ((255, 170, 150, 255), (220, 110, 100, 255)),
+    'sad': (BLUE, BLUE_RIM),
+    'lonely': (VIOLET, VIOLET_RIM),
+}
+
+
+def mood_ring(fill, shade):
+    def make():
+        c = blank('RGBA')
+        ring = ImageChops.subtract(ellipse((90, 330, 934, 760)), ellipse((230, 405, 794, 685)))
+        body(c, ring, fill, shade, (200, 400, 330, 470), 52, 40)
+        return c
+    return make
+
+
 CHATS = {
     'chat-sports': in_ball,
     'chat-gaming': in_pad,
@@ -468,6 +574,8 @@ EMOTES = {
     'fistbump': fistbump,
     'hug': hug,
     **{name: chat(inside) for name, inside in CHATS.items()},
+    **BIGS,
+    **{f'mood-{name}': mood_ring(*colours) for name, colours in MOODS.items()},
 }
 
 

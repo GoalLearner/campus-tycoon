@@ -17,6 +17,7 @@ const ON_MAP: Readonly<Record<string, number>> = {
   'room.lute': 15,
   'room.ball': 8,
   'prop.frisbee': 12,
+  'prop.umbrella': 30,
   'room.soccerBall': 9,
   'room.speaker': 10,
   'room.cup': 6,

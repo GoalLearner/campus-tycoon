@@ -5427,6 +5427,162 @@
     }
    ]
   },
+  "emote.big-heartbreak": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-heartbreak.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.big-kiss": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-kiss.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.big-win": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-win.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.big-argue": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-argue.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.big-bid": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-bid.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.big-fail": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-fail.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.mood-happy": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-happy.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-excited": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-excited.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-flirty": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-flirty.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-tense": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-tense.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-embarrassed": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-embarrassed.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-sad": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-sad.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
+  "emote.mood-lonely": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/mood-lonely.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.33
+    }
+   ]
+  },
   "prop.frisbee": {
    "layers": [
     {
@@ -5472,6 +5628,30 @@
       0.5
      ],
      "scale": 0.24
+    }
+   ]
+  },
+  "prop.bag": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/bag.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.16
+    }
+   ]
+  },
+  "prop.umbrella": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/umbrella.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.315
     }
    ]
   },
@@ -7039,7 +7219,7 @@
    "licence": "Penzilla Design Standard Licence: commercial use in one project, credit required, the files may not be shared",
    "licenceUrl": "https://penzilla.itch.io/",
    "source": "https://penzilla.itch.io/",
-   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders' Commons is the packs' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student's room is the Medieval stable's back corner taken apart into its two walls, on the city pack's concrete tile, with the packs' furniture and things; the Sport and Games icons in it are shrunk. Its bed is two of the Medieval benches, the sheet off its laundry line laid flat, its cream sack and its rug turned and drawn longer, with the outlines of the enlarged pieces trimmed to the pack's width; a roommate's blanket is the rug recoloured blue. A sleeping student is their own figure with its open eyes painted over in the colour of the face round them and the people pack's shut eyes drawn in. A student's mood on their card is their own figure with its mouth painted over the same way and one of the people pack's own mouths drawn in, and for a laugh its shut eyes."
+   "changes": "Sprites are shrunk to the map scale and packed into one atlas. The drawn rim on the top edges of grass tiles is painted the colour of the grass, so tiles join. The lawn is a brightened grass tile. The gym is the plain hall with a dumbbell icon on its sign. The study center is the plain roofed shop with the open book from the Medieval pack on its signs. The outdoor court is cut from the tennis stadium. The first-aid icon is the pharmacy sign. Stadium tiers two and three add a second deck and a second stand made from the stand the stadium already has. Red crosses on the medical building, the health lab and the first-aid icon are recoloured green. Road pieces and cars are mirrored to face every way. The crossing is a road piece with its own lane mark enlarged and repeated across it. The recreation field is the soccer stadium with its stand, booth and banner cut away. For lit windows at night, the window glass of each apartment block is cut out on its own and recoloured a warm yellow. A club table, a picnic and a busker are the packs' own parasol, table, sign, banner, rug, basket, drum and lute stood together. The school banner among the decorations has its red cloth recoloured to each school colour. Founders' Commons is the packs' own grass, paving, statue, trees, street lamps, benches and flowers laid out together. A student's room is the Medieval stable's back corner taken apart into its two walls, on the city pack's concrete tile, with the packs' furniture and things; the Sport and Games icons in it are shrunk. Its bed is two of the Medieval benches, the sheet off its laundry line laid flat, its cream sack and its rug turned and drawn longer, with the outlines of the enlarged pieces trimmed to the pack's width; a roommate's blanket is the rug recoloured blue. A sleeping student is their own figure with its open eyes painted over in the colour of the face round them and the people pack's shut eyes drawn in. A student's mood on their card is their own figure with its mouth painted over the same way and one of the people pack's own mouths drawn in, and for a laugh its shut eyes. A student sitting on the grass, at a bench or at a table is their own figure with the body under the head pressed shorter and wider and the head lowered onto it, facing the viewer or facing away; a student lying in the sun is their own front-facing figure turned on its side, flattened a little and tipped; a napping one is their sleeping picture turned the same way. On the map, the packs' rug, basket, bread, apple, book, notes, lute, balls, speaker and cup are shrunk to stand beside or be held by the people."
   },
   {
    "name": "Football stadium (3D model)",

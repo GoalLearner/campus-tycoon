@@ -7695,7 +7695,7 @@ Measured over a campus year lived a week at a time: the model campus's Friends l
 
 About 111 walking at Normal and 195 at High in every build. Stop 4's own reading was 14.4 ms at Normal (63.8): the crowd costs no more than it did. Between runs the busiest medians move by more than any build does (stop 4's two were 20.8 and 17.6). A short video check from another session started during part of the measuring. Stop 6 adds nothing on the map; storing the week's reading takes 4.4 ms once a game week, and a card's ties under a thousandth of a millisecond.
 
-**The long run** reads the web at a player's visit once its last reading is eight game weeks old (about a real day): a web grown and its last eight weeks lived, as the app does after a long absence, shared by players of one seed. Living every week of every run would add about an hour. In the long run that was 646 readings, about six minutes of its 29 on a busy PC, every one inside its caps: the Friends line +1.76 to +2.00, Stress in finals −3.3 to −4.0, students 0.877 to 0.890 times as likely to leave, and 2,288 semesters each keeping 0.08 to 0.29 points more.
+**The long run** reads the web at a player's visit once its last reading is eight game weeks old (about a real day): a web grown and its last eight weeks lived, as the app does after a long absence, shared by players of one seed. Each reading is worked out from the campus of the first player to need it (the once-a-day player, who runs first) and reused by the casual and optimizer players of that seed; since stop 10 that includes which campus posts go viral, which read the weak spot of that first campus (noted 2026-11-15, left as it is). Living every week of every run would add about an hour. In the long run that was 646 readings, about six minutes of its 29 on a busy PC, every one inside its caps: the Friends line +1.76 to +2.00, Stress in finals −3.3 to −4.0, students 0.877 to 0.890 times as likely to leave, and 2,288 semesters each keeping 0.08 to 0.29 points more.
 
 **What moved in the long run**, against main's (every line of a played run moves a little, as decision 7 allowed from this stop; a run nobody opens reads no web and moves not at all):
 
@@ -7964,7 +7964,7 @@ Three a real day. No free text: the player picks the kind and sees what it will 
 | An answered bad viral at half | No lever on it, or the whole of it |
 | A rumour lands as far as its teller is known | Every rumour landing, which would make couples brittle |
 
-**Measured.** Posts: 320 a real day on the model campus over 30 weeks (43 a game week): rumours about 1 a week, picking on someone about 2, two viral a week. Frames, as in 63.10, on a quiet PC, back to back with main (0ed1364), 16 frames each: the crowd at Normal 13.9 ms median against main's 14.3; the morning rush at High 17.9 against 20.2; an evening 15.9 against 17.4. Nothing that shows. The long run: all 91 checks pass in 1,725 s. Its web is grown again at each reading, and a grown web's weeks post only about the campus, so at first none of them went viral and the long run never read the pull on applicants; a grown web's campus posts may go viral now (none of the regrowing's happenings is news), so the long run reads it as the app does. Against stop 9 (63.13), 28 of the 91 checks moved in their numbers and pass, 143 table lines moved: money kept of every $100 in years 3 to 8 casual 13.7% to 15.2% (as before), daily 13.0% to 15.0% (as before), striver 12.4% to 14.4% (was 14.3%); the small campus's mid-game margin 12.2% to 16.9% (was 13.5% to 17.8%, within 10 to 20%); the Top 10 no sooner than week 24 (unchanged); levels a week 5.64 at the least for one player (was 5.61), under 7.00; the Friends line 1.64 to 2.00 points of Happiness (was 1.68). On the model campus the weak spot's complaints go viral and narrow the reach a little, so a few fewer apply at some intakes, and the endowments end lower (the daily player's $138M against $182M). Rumours run only in weeks the app lives, so the long run, which grows its web again, does not see them; a few land a week of 46,000 students, too few to show in what ties do.
+**Measured.** Posts: 320 a real day on the model campus over 30 weeks (43 a game week): rumours about 1 a week, picking on someone about 2, two viral a week. Frames, as in 63.10, on a quiet PC, back to back with main (0ed1364), 16 frames each: the crowd at Normal 13.9 ms median against main's 14.3; the morning rush at High 17.9 against 20.2; an evening 15.9 against 17.4. Nothing that shows. The long run: all 91 checks pass in 1,725 s. Its web is grown again at each reading, and a grown web's weeks post only about the campus, so at first none of them went viral and the long run never read the pull on applicants; a grown web's campus posts may go viral now (none of the regrowing's happenings is news), so the long run reads it as the app does. Against stop 9 (63.13), 28 of the 91 checks moved in their numbers and pass, 143 table lines moved: money kept of every $100 in years 3 to 8 casual 13.7% to 15.2% (as before), daily 13.0% to 15.0% (as before), striver 12.4% to 14.4% (was 14.3%); the small campus's mid-game margin 12.2% to 16.9% (was 13.5% to 17.8%, within 10 to 20%); the Top 10 no sooner than week 24 (unchanged); levels a week 5.64 at the least for one player (was 5.61), under 7.00; the Friends line 1.64 to 2.00 points of Happiness (was 1.68). On the model campus the weak spot's complaints go viral and narrow the reach a little, so a few fewer apply at some intakes, and the endowments end lower (the daily player's $138M against $182M). Checked 2026-11-15: the viral pull is capped on the total, and at the long run's visits it is mostly nothing, dipping to about −1% for two weeks after a bad one (a year's mean −0.4% to +0.2%); the $138M is the small campus's once-a-day player (seed 1) on an unlucky path, which lost about 130 students at its third intake, built later and filled its land with a smaller campus (8,572 students against 9,052). Run again with the pull at half strength it ends at $181.7M, 2% stronger at $176.5M, without it at $182.2M; seeds 2 and 3 lose 2% and 7% to it. Rumours run only in weeks the app lives, so the long run, which grows its web again, does not see them; a few land a week of 46,000 students, too few to show in what ties do.
 
 **Tested**: `tests/quadlineReach.test.ts` (rumours told by those who like to talk, about someone they know; they land and are told by name; never the Main Character's romances; two viral a week at most, 30 kept, once each in the feed; the reach moved only by those seen beyond campus, good up and bad down, each a little; applicants at most 3% either way, fading over two game weeks, an answered bad one half; the paper's headline never names a student; the feed's mood; the official account's five kinds, three a day, about the campus, in tune or off-key, replies, the mood it sets, speaking up and its two weeks; kept through a save and a bad post let go; picking on someone posted by the one doing it, joiners, defenders, the RA and the Counselling Center with the program, fewer shown with the levers), and the tests of stop 9, the hard lines (every new line), the web and the social view updated.
 
@@ -8048,4 +8048,72 @@ Most of the cost is drawing: each figure or thing costs about the same as a walk
 | A won point comes by the clock | The game keeps no score of a pickup game |
 | Mood and plan are read for the first of a group only | A card for each would cost more |
 | The morning rush at High runs about 2 ms over main on the slowed phone | Main was already over 16.7 ms there; the frame budget steps the crowd down by itself when it must |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 64.3 L2 as built: feelings you can see
+
+Built 2026-11-15 on the branch `life-2`. Before it, a student's feeling (63.7) showed on the map only over the one whose card was open or who was followed. Now every student walking out shows it, in four ways, all worked out from stop 3's feeling (`feelingOf`) and the sim as it stands, and kept for the hour (`src/app/feelingShow.ts` for the rules, `src/game/Walkers.ts` to draw them). A look sheet went to the owner first (`docs/handoff/life-2-look-sheet.html`).
+
+**How they move**, drawn over the pack's own walk:
+
+| Feeling | Motion | Pace |
+|---|---|---|
+| Happy, Flirty | A spring in the step: two small lifts a stride | 5% brisker |
+| Excited, and every fan on the way to a home game | A jump now and then, walking or not | 8% brisker |
+| Sad, Lonely | Slumped: a little shorter, a pixel lower | 22% slower |
+| Tense about someone (a rival, not speaking, a fight) | Hard steps; stopped, quick turns one way and back | 12% brisker |
+| Tense about exams only | Stopped, turning about every second, as if pacing | As usual |
+| Embarrassed | Stopped, shifting from foot to foot | As usual |
+| Laughing (while a laugh shows) | Bouncing and shaking | |
+| Cheering (a home win, a bid) | A jump a second while it lasts | |
+| Dancing on a lawn (64.2) | Swaying side to side and bobbing | |
+
+**The mood ring**: a flat ring on the ground at their feet in their feeling's colour (Happy green, Excited gold, Flirty pink, Tense orange, Embarrassed coral, Sad blue, Lonely violet); Fine has none. Our own mark, not a sign over the head. "Mood rings: on/off" in Settings hides them all; it is on to begin with. At most 36, 60 or 96 show at once by crowd step: on a crowded path the first to come keep theirs. The student whose card is open keeps the yellow ring of 13.8 instead.
+
+**Things in hand** (`heldOf`), steady for a student and a day: in the rain an umbrella over the head (6 in 10); on the way to class a bag on the back (2 in 10) or a book (1 in 12); on the way to play a ball (4 in 10 of those who like sports); from a place to eat an apple (15 in 100), beside 64.2's cups and trays; a guitar now and then for those who like music; a phone by the face for 1 in 10. About a quarter carry something in fine weather, and at most 24, 40 or 64 walkers at once by crowd step (Low, Normal, High). The bag and the umbrella are ours (`tools/make_props.py`); the apple, book, ball, lute and cup are the packs' own, shrunk to the map.
+
+**Big moments**: a bigger bubble, about twice an everyday emote, popped in and held for 2.6 seconds, at most two on screen (one at the Low crowd step, none at the step kept for short frames); each student's once a day. Ours (`tools/make_emotes.py`).
+
+| Moment | When |
+|---|---|
+| A break-up (a broken heart) | A student Sad from a split (63.7) coming into view |
+| A kiss on the cheek, at most (16.1) | A couple out together, now and then instead of a heart |
+| A win (a trophy) | From a home win's kickoff to six hours after, a quarter of students; they jump while it shows |
+| An argument (a lightning bolt) | Two who are angry with each other meeting on a path (63.8) |
+| A bid (an envelope with a seal) | In the hours after rush week, first- and second-year chapter members; they jump |
+| A failed exam (a test with an F) | In midterm or finals week, half of those with a GPA under 2.0 |
+
+Each adds a line to the student's day on their card ("Celebrated the home win", "Got a bid from a chapter"). A couple out together shows a small heart between them every six seconds or so; about one in five of those is the kiss.
+
+**Cut by the settings**: Reduce effects stills every motion and leaves out the big bubbles, the hearts and the new things in hand; the crowd step kept for short frames leaves out the rings, the things in hand and the big bubbles.
+
+| Decisions made here | Instead |
+|---|---|
+| A ring at the feet in the feeling's colour | A dot or an icon over the head, which would crowd the emotes |
+| Rings on to begin with | Off until the player turns them on, which few would find |
+| Motion over the pack's walk (lift, shake, squash, a turn) | New drawn frames for each feeling, 30 looks each |
+| Tense read as angry when it is about someone, stressed when it is only exams | One motion for both |
+| A quarter carry something in fine weather | More, which costs frames |
+| A feeling worked out as a student comes into view and kept for the hour | Every frame, which would cost a card each |
+
+**Measured.** On a fresh model campus on a fine fall afternoon at Normal: 75 students walking, every one with a feeling worked out, 36 to 43 rings, 16 to 22 carrying something; in the rain at 10 AM about 140 walkers, 72 umbrellas before the caps. A feeling as a student sets out takes about 1.1 ms on the slowed phone, about 7 a second, 0.2 ms a frame on average; kept for the hour after that. Measured in one page with each part switched off and on in turn, on the slowed phone: the rings cost 0.6 to 1.2 ms a frame (91 of them), the motion 0.4 to 0.8 ms.
+
+Frames on the slowed phone (47.2), back to back with main (bb0e9cf), 16 frames each, median frame work. The PC was busier than for 64.2 (main itself read 18 to 21 ms where it read 14 to 17), so the differences are what count:
+
+| | Main | L2 |
+|---|---|---|
+| Normal, a fine afternoon | 19.5 ms | 20.1 ms |
+| High, the morning rush | 20.9 ms | 22.4 ms |
+| Rain at 10 AM, Normal (no one on the lawns, so the most walkers) | 18.1 ms | 19.4 ms, with the caps (22.4 before them) |
+
+The caps on things in hand and on rings were set after the first rain readings (3.6 to 4 ms over main). The frame budget of 28.5 still steps the crowd down when frames stay short, and the lowest step drops the rings, things in hand and big bubbles. The long run was not run again: the simulator reads only `src/sim` and `scripts`, and L2 changes neither.
+
+**Tested**: `tests/feelingShow.test.ts` (15): each feeling's motion, tense read as angry about someone or stressed about exams; pace within 25% either way; every pose near where they stand and the same at the same moment; jumps now and then, turns when stopped, fidgets only when stopped; laughing, cheering and dancing; a ring for every feeling but Fine, each its own; the setting; an umbrella in the rain, a bag or a book to class, a ball to play, a phone for some, most hands empty in fine weather; each big moment when it is due and a quiet day quiet; our drawings in the built-in atlas and the packs' paid parts never.
+
+| Rough | Why |
+|---|---|
+| Moving with feeling is drawn over the pack's walk | New frames would be 30 looks for each feeling |
+| A new campus is mostly Happy, so most rings are green | The feelings are stop 3's; tense and blue show in exam weeks and after break-ups |
+| The things in hand are small at street zoom | The pack's people are small; zoomed in they read |
+| The PC was busy for the frames | Each pair was measured back to back, so both saw the same |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

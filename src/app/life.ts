@@ -65,6 +65,33 @@ export function setEffectsSetting(value: Effects): void {
   }
 }
 
+// ------------------------------------------------------------ mood rings --
+
+const RINGS_KEY = 'campus-tycoon.moodRings';
+let rings: boolean | null = null;
+
+/** The mood rings at students' feet (DESIGN.md 64.3): on unless the player has hidden them. */
+export function moodRingsSetting(): boolean {
+  if (rings === null) {
+    rings = true;
+    try {
+      if (localStorage.getItem(RINGS_KEY) === 'off') rings = false;
+    } catch {
+      // Storage is blocked: shown, until the page closes.
+    }
+  }
+  return rings;
+}
+
+export function setMoodRingsSetting(on: boolean): void {
+  rings = on;
+  try {
+    localStorage.setItem(RINGS_KEY, on ? 'on' : 'off');
+  } catch {
+    // Private browsing: the choice lasts until the page closes.
+  }
+}
+
 // ----------------------------------------------------------------- scenes --
 
 export interface LifeFacts {
