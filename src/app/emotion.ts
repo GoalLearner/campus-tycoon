@@ -175,8 +175,9 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
   if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.over21 ? 'partycup' : 'sodacup');
   // Their birthday (R2, DESIGN.md 66.2): a cake over their head all day, the 21st most of all.
-  if (card.turned21Today) add('excited', 'Turned 21 today', 3.5, 'cake');
-  else if (card.birthdayToday) add('happy', `Birthday today, ${card.age}`, 3, 'cake');
+  // Happy, and heavy enough to lead what they feel today, so the cake is what floats over them.
+  if (card.turned21Today) add('happy', 'Turned 21 today', 5, 'cake');
+  else if (card.birthdayToday) add('happy', `Birthday today, ${card.age}`, 4, 'cake');
 
   // How they find the campus.
   if (card.mood >= 4) add('happy', 'Loves it here', 1.5);

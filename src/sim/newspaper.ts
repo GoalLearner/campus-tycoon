@@ -290,6 +290,11 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
           deck: entry.text,
         });
         break;
+      case 'calendar':
+        // Welcome week and parents' weekend (R2, DESIGN.md 66.1). The rest of the calendar stays in the list below.
+        if (entry.data?.id === 'welcomeWeek' && entry.data?.begins === 1) out.push({ weight: 45, headline: 'Welcome Week: New Students Move In; Boxes Briefly Outnumber People', deck: entry.text });
+        if (entry.data?.id === 'parentsWeekend' && entry.data?.begins === 1) out.push({ weight: 45, headline: "Parents' Weekend: Families Fill the Dining Halls; Rooms Tidied for the First Time", deck: entry.text });
+        break;
       case 'housing':
         // Moving off campus (R2, DESIGN.md 66.3).
         out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });
