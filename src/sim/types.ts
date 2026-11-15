@@ -57,6 +57,8 @@ export type PlacedType =
   | 'bench'
   | 'table'
   | 'yard'
+  /** A bike rack (DESIGN.md 64.6): somewhere to park a bike or a scooter. It costs its price and changes nothing else. */
+  | 'rack'
   | 'admin'
   // The football layer: the plot of two cells by three that the stadium is built on.
   | 'stadium'

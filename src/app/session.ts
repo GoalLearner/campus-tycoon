@@ -79,6 +79,8 @@ class Session {
   quad: { page: 'feed' | 'trending' | 'profile' | 'official'; ref: StudentRef | null; tag: string | null } | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
   doing: string | null = null;
+  /** What they ride, as a card says it ("on a bike"), or null on foot (DESIGN.md 64.6). */
+  riding: string | null = null;
   /**
    * A cell the map should glide to. A new `seq` means a new request. `aim` is how far down the screen it should come
    * to rest, as a share of its height: a little above the middle unless a card asks for higher.
@@ -345,10 +347,11 @@ class Session {
   }
 
   /** Told by the map, which is where the student is: what they are doing, and the figure they are drawn as if not their everyday one. */
-  setDoing(doing: string | null, look: number | null = null): void {
-    if (this.doing === doing && this.studentLook === look) return;
+  setDoing(doing: string | null, look: number | null = null, riding: string | null = null): void {
+    if (this.doing === doing && this.studentLook === look && this.riding === riding) return;
     this.doing = doing;
     this.studentLook = look;
+    this.riding = riding;
     this.emit();
   }
 

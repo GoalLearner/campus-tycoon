@@ -311,6 +311,9 @@ function baseSummary(state: GameState, placed: Placed): string {
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
+    case 'rack':
+      // For show (DESIGN.md 64.6): riders who come within reach park here, and fewer bikes lean on trees and walls.
+      return `Riders park here within ${spec.radius} cells. Without enough racks, bikes lean on trees and walls, and students say so on Quadline.`;
     case 'decor': {
       // What a decoration does, in its own numbers (DESIGN.md 42.5).
       const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');

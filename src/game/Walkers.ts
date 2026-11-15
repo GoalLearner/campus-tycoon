@@ -3,6 +3,7 @@ import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
+import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
 import { BIG_KEY, bigMomentOf, cheeringAt, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
@@ -169,6 +170,16 @@ const BIGS_AT_ONCE = [0, 1, 2, 2];
 const RING_SCALE = 0.86;
 /** The followed student's depth in the close-up: over the buildings, under the emote over their head. */
 const ON_TOP_DEPTH = 900_000;
+/** Riders (DESIGN.md 64.6): how high each stands on what they ride; a trick and a wipeout; where they park. */
+const RIDE_LIFT: Record<Wheel, number> = { bike: 9, skateboard: 3, longboard: 3, kick: 4, escooter: 5, skates: 1 };
+const TRICK_MS = 450;
+const WIPEOUT_MS = 1700;
+const RACK_REACH = 4;
+const RACK_HOLDS = 4;
+const LEANING_MOST = 10;
+const PARKED_MS: readonly [number, number] = [45_000, 90_000];
+/** A step one way on the map, for each way a walker faces. */
+const STEP_OF: Record<WalkDirection, readonly [number, number]> = { se: [1, 0], nw: [-1, 0], sw: [0, 1], ne: [0, -1] };
 /** Where the canopy's lower edge is on the umbrella picture, from its top. */
 const UMBRELLA_RIM = 0.55;
 /** The most walkers carrying something at once, by crowd step (DESIGN.md 64.3): each is one more thing to draw. */
@@ -323,6 +334,15 @@ interface Walker {
   fallUntil: number;
   fallOnArrive: boolean;
   cropped: boolean;
+  /** On wheels (DESIGN.md 64.6): what they ride and its picture, their small moment on the trip and when, the sideways
+   * step they take round someone in the way, and until when they are down after a wipeout. */
+  wheel: Wheel | null;
+  wheelSprite: Phaser.GameObjects.Image | null;
+  ride: RideMoment | null;
+  rideAt: number;
+  rideDone: boolean;
+  weave: number;
+  downUntil: number;
   key: string | null;
   look: number;
   /** Where this trip began. */
@@ -411,6 +431,7 @@ interface Known {
   chapter: string | null;
   classYear: number;
   gpa: number;
+  quirk: string;
 }
 
 /** One end of a trip, as what a student carries reads it. */
@@ -515,6 +536,9 @@ export class Walkers {
   private ringPool: Phaser.GameObjects.Image[] = [];
   private ringsShown = 0;
   private markedOnTop = false;
+  /** Bike racks on the map (DESIGN.md 64.6), and the bikes parked at them or leaning on walls. */
+  private racks: Array<{ id: number; x: number; y: number }> = [];
+  private parked: Array<{ image: Phaser.GameObjects.Image; rack: number; until: number; from: number }> = [];
   private bigShown = new Set<string>();
   private today: Today = { homeWin: false, bids: false, exams: false };
   private weather: Weather = 'clear';
@@ -615,6 +639,8 @@ export class Walkers {
 
   /** Read the paths, buildings, quads and the town again. Called whenever the map changes. */
   setMap(state: GameState): void {
+    this.racks = [];
+    for (const placed of state.map.placed) if (placed && placed.type === 'rack') this.racks.push({ id: placed.id, x: placed.x + 0.5, y: placed.y + 0.5 });
     const { width, height, cells, buildings } = state.map;
     this.width = width;
     this.height = height;
@@ -1045,6 +1071,13 @@ export class Walkers {
       fallUntil: 0,
       fallOnArrive: false,
       cropped: false,
+      wheel: null,
+      wheelSprite: null,
+      ride: null,
+      rideAt: 0,
+      rideDone: false,
+      weave: 0,
+      downUntil: 0,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
       look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
@@ -1088,9 +1121,23 @@ export class Walkers {
     if (!known) return;
     walker.feel = { motion: known.motion, ring: RING[known.emotion] };
     walker.pace *= MOTION_PACE[known.motion];
-    // Something in hand, when they carry nothing yet and the frames allow it.
     const reduced = effectsSetting() === 'reduced';
-    if (!walker.prop && this.step > 0 && !reduced && this.carrying() < HELD_AT_STEP[this.step]!) {
+    // On wheels (DESIGN.md 64.6): by who they are, how far, the sky and the hour; not in a party, nor with a tray.
+    if (!walker.prop && !walker.party && this.step > 0) {
+      const wheel = wheelOf({
+        weather: this.weather,
+        period: this.period,
+        quirk: known.quirk,
+        likes: this.likesOf(student),
+        commuter: walker.kind === 'commuter',
+        distance: walker.route.length - walker.leg,
+        roll: this.rollFor(student, 6431),
+        pick: this.rollFor(student, 6433),
+      });
+      if (wheel) this.mount(walker, wheel, reduced);
+    }
+    // Something in hand, when they carry nothing yet and the frames allow it.
+    if (!walker.prop && !walker.wheel && this.step > 0 && !reduced && this.carrying() < HELD_AT_STEP[this.step]!) {
       const held = heldOf({ weather: this.weather, period: this.period, from: tripEnd(from), to: tripEnd(to), likes: this.likesOf(student), roll: this.rollFor(student, 6403) });
       if (held) this.hand(walker, held);
     }
@@ -1117,7 +1164,7 @@ export class Walkers {
     if (kept !== undefined) return kept;
     const card = studentCard(state, student);
     const feeling = card ? feelingOf(web, state, student, card, hour) : null;
-    const known: Known | null = card && feeling ? { emotion: feeling.emotion, reasons: feeling.reasons, motion: motionOf(feeling.emotion, feeling.reasons), chapter: card.chapter, classYear: card.classYear, gpa: card.gpa } : null;
+    const known: Known | null = card && feeling ? { emotion: feeling.emotion, reasons: feeling.reasons, motion: motionOf(feeling.emotion, feeling.reasons), chapter: card.chapter, classYear: card.classYear, gpa: card.gpa, quirk: card.quirk } : null;
     this.felt.set(key, known);
     return known;
   }
@@ -1218,6 +1265,7 @@ export class Walkers {
     walker.sprite.setScale(1).setRotation(0);
     if (walker.cropped) walker.sprite.setCrop();
     walker.prop?.destroy();
+    walker.wheelSprite?.destroy();
     if (walker.ring) {
       walker.ring.setVisible(false);
       this.ringPool.push(walker.ring);
@@ -1234,8 +1282,12 @@ export class Walkers {
     const direction = this.iso.face(walker.direction);
     const flipFrom = people.flip?.[direction];
     const facing = flipFrom ?? direction;
-    const frame = walker.lingerMs > 0 || walker.talkMs > 0 ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
+    // A rider stands still on what they ride; skaters stride (DESIGN.md 64.6).
+    const rolling = walker.wheel !== null && walker.wheel !== 'skates';
+    const frame = walker.lingerMs > 0 || walker.talkMs > 0 || rolling ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
     let key = `person.${walker.look}.${facing}.${frame}`;
+    const down = this.scene.time.now < walker.downUntil;
+    if (down && this.art.has(`person.${walker.look}.pose.lie`)) key = `person.${walker.look}.pose.lie`;
     // On one knee to propose (DESIGN.md 64.4): the sitting pose, facing the way they face.
     const kneeling = this.scene.time.now < walker.kneelUntil;
     if (kneeling) {
@@ -1247,6 +1299,12 @@ export class Walkers {
       walker.shownKey = key;
     }
     const spot = this.placeOf(walker);
+    // A rider steps sideways round someone in the way (DESIGN.md 64.6).
+    if (walker.wheel && walker.weave !== 0) {
+      const [dx, dy] = STEP_OF[walker.direction];
+      spot.x += -dy * walker.weave;
+      spot.y += dx * walker.weave;
+    }
     const at = this.iso.toWorld(spot.x, spot.y);
     // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
     const pose = this.poseOf(walker);
@@ -1260,11 +1318,13 @@ export class Walkers {
       if (inWater) walker.sprite.setCrop(0, 0, walker.sprite.frame.width, walker.sprite.frame.height * 0.62);
       else walker.sprite.setCrop();
     }
-    walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
+    const ride = walker.wheel ? this.rideLift(walker) : 0;
+    walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
     // Followed close up (DESIGN.md 64.5): over everything on the map but the floating icons.
     if (this.markedOnTop && walker.key !== null && walker.key === this.marked) walker.sprite.setDepth(ON_TOP_DEPTH);
+    if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
     const hidden = this.scene.time.now < walker.hiddenUntil;
     walker.sprite.setAlpha(hidden ? 0 : walker.alpha);
@@ -1328,6 +1388,160 @@ export class Walkers {
       ring.setSize(this.iso.halfWidth * 0.62, this.iso.halfHeight * 0.62);
       ring.setPosition(at.x, at.y).setDepth(walker.sprite.depth - 0.2).setVisible(true).setAlpha(walker.alpha);
     }
+  }
+
+  // ----------------------------------------------------------- wheels --
+
+  /** Put them on wheels (DESIGN.md 64.6): faster, the picture under them, and their small moment for the trip. */
+  private mount(walker: Walker, wheel: Wheel, reduced: boolean): void {
+    if (!this.art.has(`wheel.${wheel}.sw`)) return;
+    walker.wheel = wheel;
+    walker.pace *= WHEEL_SPEED[wheel];
+    const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
+    this.art.apply(sprite, `wheel.${wheel}.sw`);
+    sprite.setOrigin(0.5, 1);
+    walker.wheelSprite = sprite;
+    walker.ride = reduced || !walker.student ? null : rideMomentOf(wheel, this.rollFor(walker.student, 6437));
+    walker.rideAt = this.scene.time.now + 1200 + this.rollFor(walker.student!, 6439) * 7000;
+  }
+
+  /** How high the rider stands: on a saddle, a deck or a board, and up off a kerb for a trick. */
+  private rideLift(walker: Walker): number {
+    if (this.scene.time.now < walker.downUntil) return 0;
+    const base = RIDE_LIFT[walker.wheel!];
+    if (walker.ride !== 'trick' || !walker.rideDone) return base;
+    const t = (this.scene.time.now - walker.rideAt) / TRICK_MS;
+    return t >= 0 && t < 1 ? base + Math.sin(t * Math.PI) * 7 : base;
+  }
+
+  /** The picture under them, the way they face: in front of them going towards the viewer, behind going away. */
+  private drawWheel(walker: Walker, direction: WalkDirection, at: { x: number; y: number }, down: boolean): void {
+    const sprite = walker.wheelSprite!;
+    const away = direction === 'nw' || direction === 'ne';
+    const key = `wheel.${walker.wheel}.${away ? 'nw' : 'sw'}`;
+    if (sprite.getData('key') !== key) {
+      this.art.apply(sprite, key);
+      sprite.setOrigin(0.5, 1).setData('key', key);
+    }
+    const flat = walker.wheel === 'skateboard' || walker.wheel === 'longboard';
+    const trick = walker.ride === 'trick' && walker.rideDone ? (this.scene.time.now - walker.rideAt) / TRICK_MS : -1;
+    const lift = trick >= 0 && trick < 1 ? Math.sin(trick * Math.PI) * 7 : 0;
+    sprite
+      .setFlipX(direction === 'se' || direction === 'ne')
+      // Down after a wipeout, it lies beside them, tipped over.
+      .setPosition(at.x + (down ? 8 : 0), at.y - lift)
+      .setRotation(down ? 0.9 : trick >= 0 && trick < 1 ? Math.sin(trick * Math.PI * 2) * 0.35 : 0)
+      .setDepth(walker.sprite.depth + (flat || (away && walker.wheel !== 'skates') ? -0.03 : 0.03))
+      .setAlpha(walker.sprite.alpha);
+  }
+
+  /**
+   * A rider's moment on the trip (DESIGN.md 64.6), and their sideways step round anyone in the way: a bell or a near
+   * miss as they pass someone, a trick off a kerb, or now and then a wipeout, after which they get up and ride on.
+   */
+  private rideTick(walker: Walker, dt: number): void {
+    const now = this.scene.time.now;
+    // Someone just ahead and in line: step round them on the side they are not.
+    let target = 0;
+    let passing: Walker | null = null;
+    if (walker.lingerMs <= 0 && walker.talkMs <= 0) {
+      const [dx, dy] = STEP_OF[walker.direction];
+      for (const other of this.walkers) {
+        if (other === walker || other.fading === 'out') continue;
+        const ox = other.x - walker.x;
+        const oy = other.y - walker.y;
+        const ahead = ox * dx + oy * dy;
+        if (ahead <= 0 || ahead > 0.8) continue;
+        const side = -ox * dy + oy * dx;
+        if (Math.abs(side) > 0.32) continue;
+        target = side > 0 ? -0.3 : 0.3;
+        passing = other;
+        break;
+      }
+    }
+    walker.weave += (target - walker.weave) * Math.min(1, dt / 220);
+    if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
+    if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;
+    if ((walker.ride === 'bell' || walker.ride === 'nearMiss') && !passing) return;
+    walker.rideDone = true;
+    const name = walker.wheel ? WHEEL_NAMES[walker.wheel].replace(/^on (a |an )?/, '') : '';
+    if (walker.ride === 'bell') {
+      this.showIcon(walker, 'bell');
+      if (passing) this.showIcon(passing, 'exclaim', 250);
+    } else if (walker.ride === 'nearMiss' && passing) {
+      this.showIcon(passing, 'exclaim');
+      this.showIcon(walker, 'sweat', 200);
+      if (this.onMemory && walker.student) this.onMemory(walker.student, `Nearly ran into someone on their ${name}`);
+      if (this.onMemory && passing.student) this.onMemory(passing.student, 'Nearly got run over by a bike');
+    } else if (walker.ride === 'trick') {
+      this.showIcon(walker, 'sparkle', 150);
+      if (this.onMemory && walker.student) this.onMemory(walker.student, `Landed a trick on their ${name}`);
+    } else if (walker.ride === 'wipeout') {
+      // Down for a moment with a sweat drop; those near laugh or gasp; then up and on.
+      walker.downUntil = now + WIPEOUT_MS;
+      walker.talkMs = Math.max(walker.talkMs, WIPEOUT_MS);
+      this.showIcon(walker, 'sweat', 300);
+      let told = 0;
+      for (const other of this.walkers) {
+        if (told >= 2 || other === walker || !other.student || Math.hypot(other.x - walker.x, other.y - walker.y) > 2) continue;
+        this.showIcon(other, told === 0 ? 'exclaim' : 'laugh', 200 + told * 300);
+        told += 1;
+      }
+      if (this.onMemory && walker.student) this.onMemory(walker.student, `Wiped out on their ${name} and got right back up`);
+    }
+  }
+
+  /**
+   * Where a rider leaves what they ride (DESIGN.md 64.6): a bike or an e-scooter at a rack within reach of where they
+   * stop, else against the wall there, for a while; a board, a scooter or skates go in with them.
+   */
+  private park(walker: Walker): void {
+    const wheel = walker.wheel;
+    if (!wheel || !PARKS[wheel] || !this.art.has(`wheel.${wheel}.sw`)) return;
+    const now = this.scene.time.now;
+    const rack = this.racks.find((one) => Math.hypot(one.x - walker.x, one.y - walker.y) <= RACK_REACH && this.parked.filter((p) => p.rack === one.id).length < RACK_HOLDS);
+    let x = walker.x;
+    let y = walker.y;
+    let tilt = 0;
+    let rackId = -1;
+    if (rack) {
+      const slot = this.parked.filter((p) => p.rack === rack.id).length;
+      x = rack.x - 0.3 + slot * 0.16;
+      y = rack.y - 0.15 + slot * 0.08;
+      rackId = rack.id;
+    } else {
+      if (this.parked.filter((p) => p.rack < 0).length >= LEANING_MOST) return;
+      // Against the wall by the door, tipped a little.
+      x += 0.25;
+      y -= 0.1;
+      tilt = -0.22;
+    }
+    const image = this.scene.add.image(0, 0, '__DEFAULT');
+    this.art.apply(image, `wheel.${wheel}.sw`);
+    const at = this.iso.toWorld(x, y);
+    image.setOrigin(0.5, 1).setPosition(at.x, at.y).setRotation(tilt).setDepth((this.iso.sum(x, y) - 1) * 4 + 2.45 + (rackId >= 0 ? 0.6 : 0)).setAlpha(0);
+    this.parked.push({ image, rack: rackId, until: now + PARKED_MS[0] + Math.random() * (PARKED_MS[1] - PARKED_MS[0]), from: now });
+  }
+
+  /** The bikes parked and leaning fade in, stay a while, and go. */
+  private drawParked(): void {
+    const now = this.scene.time.now;
+    for (let i = this.parked.length - 1; i >= 0; i--) {
+      const one = this.parked[i]!;
+      const left = one.until - now;
+      if (left <= 0) {
+        one.image.destroy();
+        this.parked.splice(i, 1);
+        continue;
+      }
+      one.image.setAlpha(Math.min(1, (now - one.from) / 400, left / 600));
+    }
+  }
+
+  /** What they ride, as a card says it, or null on foot. */
+  ridingWords(key: string): string | null {
+    const walker = this.walkerOf(key);
+    return walker?.wheel ? WHEEL_NAMES[walker.wheel] : null;
   }
 
   // ---------------------------------------------------- crowd moments --
@@ -1936,7 +2150,9 @@ export class Walkers {
           }
         } else if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
-          const stays = walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play');
+          // A rider parks (a bike or an e-scooter at a rack, or against a wall) and goes on in (DESIGN.md 64.6).
+          if (walker.wheel) this.park(walker);
+          const stays = !walker.wheel && (walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play'));
           // A party stays as long as each other: the same while for all of them, from who they are together.
           if (stays && walker.kind === 'student') {
             const scene = walker.party ? this.partyScene.get(walker.party) : undefined;
@@ -1969,8 +2185,10 @@ export class Walkers {
           continue;
         }
       }
+      if (walker.wheel) this.rideTick(walker, dt);
       this.draw(walker, people);
     }
+    this.drawParked();
 
     // Top the view up. More students, a wider view and a higher crowd setting all mean more people.
     this.spawnClock += dt;
@@ -2478,6 +2696,9 @@ export class Walkers {
     for (const walker of this.walkers) walker.sprite.destroy();
     for (const sprite of this.pool) sprite.destroy();
     for (const ring of this.ringPool) ring.destroy();
+    for (const walker of this.walkers) walker.wheelSprite?.destroy();
+    for (const one of this.parked) one.image.destroy();
+    this.parked = [];
     this.ringPool = [];
     this.ringsShown = 0;
     this.felt.clear();

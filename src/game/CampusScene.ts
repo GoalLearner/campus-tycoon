@@ -1558,7 +1558,7 @@ export class CampusScene extends Phaser.Scene {
     const walking = key ? this.walkers.doing(key) : null;
     // Not out walking: they may be standing in a game, a line or a small scene, which the card says in its own words.
     const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key)) : null;
-    session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null);
+    session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null, walking ? this.walkers.ridingWords(key!) : null);
     // A ring on the ground under them, as under a walker whose card is open.
     if (there) {
       const ring = this.stayRing ?? this.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
@@ -1582,8 +1582,9 @@ export class CampusScene extends Phaser.Scene {
     const wantY = target.y - cam.height / 2 + (cam.height * (0.5 - aim)) / cam.zoom;
     const fromX = cam.scrollX;
     const fromY = cam.scrollY;
-    // Close up, the camera glides a little softer, so a walk does not judder at that size.
-    const glide = at && session.closeUp ? 1 - Math.pow(0.02, delta / 1000) : ease;
+    // Close up, the camera glides a little softer, so a walk does not judder at that size; a rider is too quick for
+    // that (DESIGN.md 64.6), so the camera keeps up with them as it does at any zoom.
+    const glide = at && session.closeUp && !session.riding ? 1 - Math.pow(0.02, delta / 1000) : ease;
     cam.setScroll(fromX + (wantX - fromX) * glide, fromY + (wantY - fromY) * glide);
     this.clampCamera();
     // A glide ends when it arrives, or when the edge of the map stops it.
@@ -1657,7 +1658,9 @@ export class CampusScene extends Phaser.Scene {
       this.art.apply(icon, emote);
     }
     const bob = Math.sin(this.time.now / 380) * 1.5;
-    icon.setScale(0.55).setPosition(at.x, at.y - 42 + bob).setDepth(EMOTE_DEPTH).setVisible(true);
+    // A rider sits higher (DESIGN.md 64.6), so their emote goes up with them.
+    const higher = key && this.walkers.ridingWords(key) ? 9 : 0;
+    icon.setScale(0.55).setPosition(at.x, at.y - 42 - higher + bob).setDepth(EMOTE_DEPTH).setVisible(true);
   }
 
   private ringHall(): void {

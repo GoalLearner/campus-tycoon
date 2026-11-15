@@ -477,6 +477,7 @@ export const TOPIC_HEADLINE: Record<CauseTopic, string> = {
   safety: 'Campus Safety',
   beds: 'Housing',
   seats: 'Crowded Lectures',
+  racks: 'Bike Parking',
 };
 
 /**
@@ -524,6 +525,7 @@ export const OFFICIAL_LINES = {
     safety: 'Campus safety comes first. More help is on the way.',
     beds: 'We know rooms are tight. More beds are coming.',
     seats: 'Lectures are too full. We are adding seats.',
+    racks: 'More bike racks are on the way.',
   },
   welcome: {
     fall: 'Welcome to campus, new students! We are so glad you are here.',
@@ -551,6 +553,7 @@ export const OFFICIAL_REPLIES = {
     safety: 'cool. the paths are still dark at night',
     beds: 'where are the beds tho',
     seats: 'and the seats?',
+    racks: 'cool. a bike rack would be nice',
   },
 } as const;
 
@@ -587,7 +590,9 @@ export const TEAM_POSTS: Record<(typeof TEAM_NEWS)[number], readonly string[]> =
 };
 
 /** What a complaint or praise is about: each part of Happiness, and beds and seats. */
-export const CAUSE_TOPICS = ['walk', 'green', 'clean', 'seating', 'noise', 'dining', 'recreation', 'safety', 'beds', 'seats'] as const;
+// 'racks' (DESIGN.md 64.6) is the app's own: no cause leads to it, so the web never posts it; the app shows bike-parking
+// complaints from it while racks are short, and they move nothing.
+export const CAUSE_TOPICS = ['walk', 'green', 'clean', 'seating', 'noise', 'dining', 'recreation', 'safety', 'beds', 'seats', 'racks'] as const;
 export type CauseTopic = (typeof CAUSE_TOPICS)[number];
 
 /** A complaint (rough) and praise (good) for each, aimed at the place itself, never at a person. */
@@ -648,6 +653,20 @@ export const CAUSE_POSTS: Record<CauseTopic, { tag: string; good: readonly strin
     tag: 'HousingWoes',
     good: ['got a single in {place}. a whole closet to myself [sparkle]', 'my room in {place} has space for a plant. living the dream'],
     rough: ['three to a room in {place}. we have one closet', 'still on the waitlist for a room. couch life [sweat]', 'my room in {place} is a closet with a window'],
+  },
+  racks: {
+    tag: 'BikeRacks',
+    good: ['new bike rack outside my hall. my bike says thank you', 'parked my bike in an actual rack today. growth'],
+    rough: [
+      'where am i meant to lock my bike. a tree?? [sweat]',
+      'bike rack count on this campus: basically zero',
+      'my bike has been leaning on the wall of my hall all week. we need racks',
+      'locked my scooter to a lamp post again. please build bike racks',
+      'there are more bikes leaning on trees here than leaves on them',
+      'bike parking here is a free for all. one rack would change my life',
+      'tripped over three bikes on the way to class. racks please',
+      'my bike lives against a wall now. it deserves better',
+    ],
   },
   seats: {
     tag: 'NoSeats',
