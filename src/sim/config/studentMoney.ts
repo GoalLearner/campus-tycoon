@@ -41,15 +41,24 @@ export const HOURS_20_PLUS = [20, 30] as const;
 export const CAMPUS_JOBS = ['the library desk', 'a dining hall', 'the rec center front desk', 'the mailroom', 'a lab', 'the campus store', 'the tutoring center'] as const;
 export const TOWN_JOBS = ['a coffee shop in town', 'a pizza place in town', 'a grocery store', 'a clothing store', 'a restaurant in town', 'a delivery app'] as const;
 export const ON_CAMPUS_SHARE = 0.45;
+/** [T] Pay an hour, in today's dollars: about $15 on average, a little less on campus. */
+export const PAY_ON_CAMPUS = [13, 16] as const;
+export const PAY_IN_TOWN = [14, 18] as const;
 export const CAMPUS_JOBS_TIMES = 1.5;
 
-/** Running short of food money in a month (GAO 2024: 23% food insecure). Each policy multiplies the chance. */
+/**
+ * Running short of food money in a month (GAO 2024: 23% food insecure). The policies that ease leaving for money ease it
+ * by the same measure (their `moneyLeaving` effect), and one that gives students work on campus puts more of the jobs
+ * there (its `storyOdds` lever for jobs).
+ */
 export const RUNNING_SHORT = 0.23;
-export const SHORT_EASE = { campusJobs: 0.8, needScholarships: 0.6 } as const;
 /** The weeks after spring break, when a trip has emptied the account: this much more likely, for those who went. */
 export const AFTER_SPRING_BREAK = 1.5;
 /** Of students, the share who travel at spring break: the rest go home, stay, or work. */
 export const SPRING_TRIP = 0.3;
+/** [T] What a spring break trip costs a student, about this much, from this share of it to this share. */
+export const SPRING_TRIP_COST = 620;
+export const SPRING_TRIP_SPREAD = [0.6, 1.4] as const;
 
 /** Course materials for a year, on average (NACS 2025-26), by field: the sciences and engineering more, the arts less. */
 export const TEXTBOOKS_PER_YEAR = 338;

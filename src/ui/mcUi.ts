@@ -9,7 +9,7 @@ import {
   NEEDS,
   studentCard,
   suggestMain,
-  dollars,
+  studentDollars,
   type GameState,
 } from '../sim';
 
@@ -61,7 +61,7 @@ export function mcView(state: GameState): McView {
     ['Happiness', `${mcHappiness(state, mc)} of 100`],
     ['Stress', `${mcStress(state, mc)} of 100`],
     ['GPA', mc.gpa === null ? 'No grades yet' : mc.gpa.toFixed(2)],
-    ['Money', dollars(mc.money)],
+    ['Money', studentDollars(mc.money)],
   ];
   if (mc.club) rows.push(['Club', mc.club]);
   if (mc.job) rows.push(['Job', mc.job]);

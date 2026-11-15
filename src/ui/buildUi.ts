@@ -1,3 +1,4 @@
+import { perHundred } from '../sim/format';
 import { friendsKeep, projectedPath } from '../sim/systems/population';
 import { fluShare } from '../sim/systems/wellbeing';
 import { whyWords } from '../sim/systems/admissions';
@@ -657,9 +658,9 @@ export function moneyView(state: GameState): MoneyView {
   const kept = Math.round(b.kept);
   let lead: string;
   if (b.incomeTotal <= 0) lead = 'No money comes in until the first class arrives.';
-  else if (b.kept >= 1) lead = `You keep $${kept} of every $100 that comes in.`;
-  else if (b.kept >= 0) lead = 'You keep less than $1 of every $100 that comes in.';
-  else lead = `You spend $${Math.max(1, Math.round(-b.kept))} more than every $100 that comes in.`;
+  else if (b.kept >= 1) lead = `You keep ${perHundred(kept)} of every $100 that comes in.`;
+  else if (b.kept >= 0) lead = `You keep less than ${perHundred(1)} of every $100 that comes in.`;
+  else lead = `You spend ${perHundred(Math.max(1, Math.round(-b.kept)))} more than every $100 that comes in.`;
 
   const phase = b.phase
     ? `New running costs are coming in over ${b.phase.of} days. This is step ${b.phase.step} of ${b.phase.of}: you pay ${dollarsShort(b.spending)} this year, and about ${dollarsShort(b.fullSpending)} once they are all in.`

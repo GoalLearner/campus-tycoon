@@ -1,3 +1,4 @@
+import { dollarsShort } from '../sim/format';
 import { advance, applyAction, newGame, rowBetween, type GameState, type Point, type Tool } from '../sim';
 import type { PlacedItem } from '../game/Placed';
 import type { BuildEntry } from '../ui/buildMenu';
@@ -290,16 +291,16 @@ export function lookItems(roles: Record<string, number>): LookScene {
  * judge the layout by. The real numbers are tuning targets and come with the rules.
  */
 export const LOOK_MENU: BuildEntry[] = [
-  { key: 'build.library', name: 'Library', category: 'Academics', cost: '$60K', footprint: '2 x 2', upkeep: 'Upkeep $4K a year', effect: 'Lifts nearby Academic lots' },
-  { key: 'build.dining', name: 'Dining hall', category: 'Campus life', cost: '$45K', footprint: '2 x 1', upkeep: 'Upkeep $6K a year', effect: 'Feeds Housing within 6 cells' },
-  { key: 'build.store', name: 'Campus store', category: 'Campus life', cost: '$35K', footprint: '2 x 1', upkeep: 'Pays for itself', effect: 'Earns more on a busy path' },
-  { key: 'build.parking', name: 'Parking lot', category: 'Campus life', cost: '$20K', footprint: '2 x 1', upkeep: 'Upkeep $1K a year', effect: 'Fewer beds needed. Neighbours like it less' },
-  { key: 'build.gym', name: 'Gym', category: 'Recreation', cost: '$55K', footprint: '2 x 1', upkeep: 'Upkeep $5K a year', effect: 'Raises student happiness' },
-  { key: 'build.track', name: 'Track and field', category: 'Recreation', cost: '$120K', footprint: '2 x 2', upkeep: 'Upkeep $8K a year', effect: 'Raises happiness for nearby Housing' },
-  { key: 'build.courts', name: 'Outdoor courts', category: 'Recreation', cost: '$18K', footprint: '1 x 2', upkeep: 'Upkeep $1K a year', effect: 'Raises happiness nearby. Students play here' },
-  { key: 'pond.medium', name: 'Pond', category: 'Recreation', cost: 'From $8K', footprint: '3 sizes', upkeep: 'No upkeep', effect: 'Every zone likes being near water' },
-  { key: 'build.medical', name: 'Medical Center', category: 'Safety & health', cost: '$90K', footprint: '2 x 2', upkeep: 'Upkeep $9K a year', effect: 'Treats injuries within 8 cells' },
-  { key: 'build.safety', name: 'Campus Safety', category: 'Safety & health', cost: '$80K', footprint: '2 x 2', upkeep: 'Upkeep $8K a year', effect: 'Handles mischief within 8 cells' },
+  { key: 'build.library', name: 'Library', category: 'Academics', cost: dollarsShort(60_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(4_000)} a year`, effect: 'Lifts nearby Academic lots' },
+  { key: 'build.dining', name: 'Dining hall', category: 'Campus life', cost: dollarsShort(45_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(6_000)} a year`, effect: 'Feeds Housing within 6 cells' },
+  { key: 'build.store', name: 'Campus store', category: 'Campus life', cost: dollarsShort(35_000), footprint: '2 x 1', upkeep: 'Pays for itself', effect: 'Earns more on a busy path' },
+  { key: 'build.parking', name: 'Parking lot', category: 'Campus life', cost: dollarsShort(20_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(1_000)} a year`, effect: 'Fewer beds needed. Neighbours like it less' },
+  { key: 'build.gym', name: 'Gym', category: 'Recreation', cost: dollarsShort(55_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(5_000)} a year`, effect: 'Raises student happiness' },
+  { key: 'build.track', name: 'Track and field', category: 'Recreation', cost: dollarsShort(120_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(8_000)} a year`, effect: 'Raises happiness for nearby Housing' },
+  { key: 'build.courts', name: 'Outdoor courts', category: 'Recreation', cost: dollarsShort(18_000), footprint: '1 x 2', upkeep: `Upkeep ${dollarsShort(1_000)} a year`, effect: 'Raises happiness nearby. Students play here' },
+  { key: 'pond.medium', name: 'Pond', category: 'Recreation', cost: `From ${dollarsShort(8_000)}`, footprint: '3 sizes', upkeep: 'No upkeep', effect: 'Every zone likes being near water' },
+  { key: 'build.medical', name: 'Medical Center', category: 'Safety & health', cost: dollarsShort(90_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(9_000)} a year`, effect: 'Treats injuries within 8 cells' },
+  { key: 'build.safety', name: 'Campus Safety', category: 'Safety & health', cost: dollarsShort(80_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(8_000)} a year`, effect: 'Handles mischief within 8 cells' },
   { key: 'build.stadium', name: 'Stadium', category: 'On the way', cost: '', footprint: '', upkeep: '', effect: 'Home games and a football team', locked: 'Coming with football' },
   { key: 'build.studentlife', name: 'Student Life', category: 'On the way', cost: '', footprint: '', upkeep: '', effect: 'A zone for clubs and events', locked: 'Coming later' },
 ];

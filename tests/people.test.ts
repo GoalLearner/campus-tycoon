@@ -1,3 +1,4 @@
+import { dollars } from '../src/sim/format';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -240,7 +241,7 @@ describe('the last line of every card quotes a number the simulation reports', (
     expect(passers).toBeGreaterThan(0);
     expect(c.quotes).toEqual({ what: 'storePassers', value: passers });
     expect(c.line).toContain(said(passers));
-    expect(c.line).toContain(`$${said(storeIncomePerYear(state, store))}`);
+    expect(c.line).toContain(dollars(storeIncomePerYear(state, store)));
   });
 
   it('maintenance worker: their yard, in the yard\'s own words', () => {

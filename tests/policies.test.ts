@@ -1,3 +1,4 @@
+import { dollars } from '../src/sim/format';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { SEASON_CURVE } from '../src/sim/config/season';
 import { join, relative } from 'node:path';
@@ -286,14 +287,14 @@ describe('a switch', () => {
     }
     const row = (id: string) => view.rows.find((one) => one.id === id)!;
     const state = legacy();
-    expect(row('parkingFees').gainLines).toEqual([`$${(driversNow(state) * 450).toLocaleString('en-US')} a year: ${driversNow(state).toLocaleString('en-US')} students who drive at $450`]);
+    expect(row('parkingFees').gainLines).toEqual([`${dollars(driversNow(state) * 450)} a year: ${driversNow(state).toLocaleString('en-US')} students who drive at ${dollars(450)}`]);
     expect(row('parkingFees').costLines).toEqual([`Food & fun −18 for the ${driversNow(state).toLocaleString('en-US')} students who drive`]);
     expect(row('readingDays').gainLines).toEqual(['Stress −20 in finals week']);
     expect(row('readingDays').costLines).toEqual(['Class size −1 in the academic rating: fewer teaching days']);
     expect(row('toughGrading').gainLines).toEqual(['Reputation +6 in the academic rating: a degree here is harder to earn']);
     expect(row('toughGrading').costLines[0]).toMatch(/^0\.4% more of each class leaves each semester: about \d+ students\. Fewer of each class graduate, and the rating remembers$/);
     expect(row('quietHours').gainLines).toEqual(['75% less mischief in the dorms']);
-    expect(row('namingRights').gainLines).toEqual([`$3,500,000 a year: from the ${donorName(state)} family, every year their name is up`]);
+    expect(row('namingRights').gainLines).toEqual([`${dollars(3_500_000)} a year: from the ${donorName(state)} family, every year their name is up`]);
     expect(row('freeStudentSection').gainLines).toEqual(['20% more fans want a seat', 'Food & fun +3']);
   });
 
@@ -482,7 +483,7 @@ describe('each policy, in its own numbers', () => {
 
     const libraries = off.map.placed.filter((placed) => placed && (placed.type === 'library' || placed.type === 'computerLab')).length;
     expect(libraries).toBeGreaterThan(0);
-    expect(upkeepMore(on)).toEqual({ amount: libraries * 4_000 * 28, notes: [`All-night library: $${(libraries * 112_000).toLocaleString('en-US')} more`] });
+    expect(upkeepMore(on)).toEqual({ amount: libraries * 4_000 * 28, notes: [`All-night library: ${dollars(libraries * 112_000)} more`] });
     expect(budget(on).spending).toBeCloseTo(budget(off).spending + libraries * 112_000, 2);
     const line = budget(on).groups.flatMap((group) => group.lines).find((one) => one.id === 'upkeep')!;
     expect(line.detail).toContain('All-night library: $');
@@ -581,7 +582,7 @@ describe('each policy, in its own numbers', () => {
     const on = turnOn(off, 'parkingFees');
     const drivers = driversNow(off);
     expect(drivers).toBeGreaterThan(1000);
-    expect(policyIncome(on)).toEqual([{ id: 'policy.parkingFees', name: 'Parking fees', amount: drivers * 450, detail: `${drivers.toLocaleString('en-US')} students who drive at $450` }]);
+    expect(policyIncome(on)).toEqual([{ id: 'policy.parkingFees', name: 'Parking fees', amount: drivers * 450, detail: `${drivers.toLocaleString('en-US')} students who drive at ${dollars(450)}` }]);
     expect(policyIncome(off)).toEqual([]);
     expect(budget(on).incomeTotal).toBe(budget(off).incomeTotal + drivers * 450);
     expect(budget(on).income.find((line) => line.id === 'policy.parkingFees')!.name).toBe('Parking fees');
@@ -769,7 +770,8 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(15);
+    // And R3's price level (DESIGN.md 67.1).
+    expect(notes).toHaveLength(16);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

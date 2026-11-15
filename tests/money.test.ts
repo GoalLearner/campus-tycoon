@@ -1,3 +1,4 @@
+import { dollars, dollarsShort } from '../src/sim/format';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -113,7 +114,7 @@ describe('what the money buys', () => {
     expect(b.kept).toBeCloseTo((100 * (b.incomeTotal - b.spending)) / b.incomeTotal, 9);
     // The count behind a line can be read off it.
     const faculty = b.groups.find((g) => g.id === 'payroll')!.lines.find((item) => item.id === 'faculty')!;
-    expect(faculty.detail).toMatch(/^50 members at \$58,000/);
+    expect(faculty.detail.startsWith(`50 members at ${dollars(58_000)}`)).toBe(true);
     // Payroll is the largest group, and more than half of everything spent.
     expect(group(b, 'payroll')).toBeGreaterThan(b.fullSpending / 2);
   });
@@ -167,7 +168,7 @@ describe('what the money buys', () => {
     expect(careStaffAt(early, medical)).toBe(0);
     expect(careStaffCount(early)).toBe(0);
     expect(line(budget(early), 'care')).toBe(0);
-    expect(placedFacts(early, medical)).toBe('No staff to pay until the first class arrives · Upkeep and utilities $15,000 a year · The Clear tool removes it');
+    expect(placedFacts(early, medical)).toBe(`No staff to pay until the first class arrives · Upkeep and utilities ${dollars(15_000)} a year · The Clear tool removes it`);
     // Their upkeep and utilities are paid from the day they are built, as any building's are.
     expect(line(budget(early), 'upkeep')).toBeGreaterThan(line(budget(freshGame()), 'upkeep'));
 
@@ -295,7 +296,7 @@ describe('the endowment', () => {
     expect(state.money.cash).toBe(0);
     expect(state.money.endowment).toBe(300_000);
     expect(state.money.grants).toBe(0);
-    expect(log.map((entry) => entry.text)).toEqual(['The endowment covered a shortfall of $200,000.']);
+    expect(log.map((entry) => entry.text)).toEqual([`The endowment covered a shortfall of ${dollars(200_000)}.`]);
     // When it runs out the state covers the rest, as before.
     state.money.cash = -450_000;
     dailyCashCheck(state, log);
@@ -303,7 +304,7 @@ describe('the endowment', () => {
     expect(state.money.cash).toBe(0);
     expect(state.money.grants).toBe(150_000);
     expect(summarizeAway(log, { minutes: 60, cashBefore: 0, cashAfter: 0, studentsBefore: 0, studentsAfter: 0 }).lines).toEqual(
-      expect.arrayContaining(['The endowment covered $500,000 in shortfalls.', 'The state covered $150,000 in shortfalls.']),
+      expect.arrayContaining([`The endowment covered ${dollars(500_000)} in shortfalls.`, `The state covered ${dollars(150_000)} in shortfalls.`]),
     );
   });
 });
@@ -419,8 +420,8 @@ describe('the Money panel, in words', () => {
   it('lists income, then spending in groups that open to their lines, largest first', () => {
     const state = act(campus(1000), { type: 'place', building: 'medical', x: 14, y: 10 });
     const view = moneyView(state);
-    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room fees', 'Food places', 'Football tickets and stands']);
-    expect(view.income[0]).toEqual({ name: 'Tuition', detail: '1,000 students at $8,200', amount: '$8.2M' });
+    expect(view.income.map((row) => row.name)).toEqual(['Tuition', 'Room and board', 'Food places', 'Football tickets and stands']);
+    expect(view.income[0]).toEqual({ name: 'Tuition', detail: `1,000 students at ${dollars(8_200)}`, amount: dollarsShort(8_200_000) });
     expect(view.groups[0]!.name).toBe('Payroll');
     expect(view.groups.map((group) => group.name).sort()).toEqual(['Buildings and utilities', 'Other', 'Payroll']);
     for (const group of view.groups) {
@@ -429,7 +430,7 @@ describe('the Money panel, in words', () => {
     }
     const payroll = view.groups[0]!.lines.map((row) => row.name);
     expect(payroll).toEqual(expect.arrayContaining(['Faculty', 'Staff', 'Safety and medical staff', 'Benefits']));
-    expect(view.groups[0]!.lines.find((row) => row.name === 'Faculty')!.detail).toBe('50 members at $58,000, funded at one for every 20 students');
+    expect(view.groups[0]!.lines.find((row) => row.name === 'Faculty')!.detail).toBe(`50 members at ${dollars(58_000)}, funded at one for every 20 students`);
     expect(view.phase).toBeNull();
   });
 
@@ -437,12 +438,12 @@ describe('the Money panel, in words', () => {
     const state = campus(1000);
     expect(moneyView(state).marketing).toEqual({ step: 0, max: 4, line: 'Off. Each step brings more applications: 5, 9, 12, then 14%.' });
     const on = act(state, { type: 'marketing', step: 2 });
-    expect(moneyView(on).marketing.line).toBe('Step 2 of 4 · 9% more applications · $120K a year');
+    expect(moneyView(on).marketing.line).toBe(`Step 2 of 4 · 9% more applications · ${dollarsShort(120_000)} a year`);
     expect(moneyView(state).endowment.line).toBe('Nothing yet. Cash paid in earns 2% a year for good.');
     // $10M in hand: a tenth and a quarter are offered, never all of it.
     expect(moneyView(state).endowment.payIn).toEqual([1_000_000, 2_500_000]);
     const paid = act(state, { type: 'endow', amount: 2_500_000 });
-    expect(moneyView(paid).endowment.line).toBe('$2.5M · earns $50K a year');
+    expect(moneyView(paid).endowment.line).toBe(`${dollarsShort(2_500_000)} · earns ${dollarsShort(50_000)} a year`);
     // With almost nothing in hand there is nothing to offer.
     const broke = structuredClone(state);
     broke.money.cash = 30_000;
@@ -464,9 +465,9 @@ describe('what a building costs to run, on its card', () => {
     const medical = state.map.placed.find((p) => p?.type === 'medical')!;
     const staff = careStaffAt(state, medical);
     const pay = (staff * CARE_STAFF_PAY * (1 + BENEFITS_SHARE)).toLocaleString('en-US');
-    expect(placedFacts(state, medical)).toBe('Staff of ' + staff + ': $' + pay + ' a year with benefits · Upkeep and utilities $15,000 a year · The Clear tool removes it');
+    expect(placedFacts(state, medical)).toBe(`Staff of ${staff}: ${dollars(staff * CARE_STAFF_PAY * (1 + BENEFITS_SHARE))} a year with benefits · Upkeep and utilities ${dollars(15_000)} a year · The Clear tool removes it`);
     const dining = state.map.placed.find((p) => p?.type === 'dining')!;
-    expect(placedFacts(state, dining)).toBe('Upkeep and utilities $9,000 a year · The Clear tool removes it');
+    expect(placedFacts(state, dining)).toBe(`Upkeep and utilities ${dollars(9_000)} a year · The Clear tool removes it`);
     const bin = state.map.placed.find((p) => p?.type === 'bin')!;
     expect(placedFacts(state, bin)).toBe('Costs nothing to run · The Clear tool removes it');
   });
@@ -474,16 +475,17 @@ describe('what a building costs to run, on its card', () => {
   it('shows a yard what its workers cost with benefits', () => {
     const state = act(campus(500), { type: 'place', building: 'yard', x: 6, y: 11 });
     const yard = state.map.placed.find((p) => p?.type === 'yard')!;
-    expect(placedSummary(state, yard)).toMatch(/^1 of 6 workers\. .* Wages and benefits \$62,400 a year\.$/);
+    expect(placedSummary(state, yard)).toMatch(/^1 of 6 workers\. /);
+    expect(placedSummary(state, yard).endsWith(` Wages and benefits ${dollars(62_400)} a year.`)).toBe(true);
   });
 
   it('says on the Build menu what a building will cost to run before it is bought', () => {
     const cards = buildEntries();
     const line = (name: string): string => cards.find((card) => card.name === name)!.upkeep;
-    expect(line('Medical Center')).toBe('Runs at $15K a year. Staff from $55K once students arrive');
-    expect(line('Campus Safety')).toBe('Runs at $14K a year. Staff from $55K once students arrive');
-    expect(line('Facilities Yard')).toBe('Runs at $3.0K a year, plus $62K a worker');
-    expect(line('Gym')).toBe('Runs at $8.0K a year');
+    expect(line('Medical Center')).toBe(`Runs at ${dollarsShort(15_000)} a year. Staff from ${dollarsShort(54_600)} once students arrive`);
+    expect(line('Campus Safety')).toBe(`Runs at ${dollarsShort(14_000)} a year. Staff from ${dollarsShort(54_600)} once students arrive`);
+    expect(line('Facilities Yard')).toBe(`Runs at ${dollarsShort(3_000)} a year, plus ${dollarsShort(62_400)} a worker`);
+    expect(line('Gym')).toBe(`Runs at ${dollarsShort(8_000)} a year`);
     expect(line('Small pond')).toBe('Costs nothing to run');
   });
 });

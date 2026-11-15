@@ -18,6 +18,7 @@ import {
   PHASE_STEPS,
   PROGRAMS_PER_STUDENT,
   ROOM_FEE_PER_BED_PER_YEAR,
+  ROOM_AND_BOARD_TODAY,
   STAFF_PAY,
   STUDENTS_PER_CARE_STAFF,
   SUPPLIES_PER_STUDENT,
@@ -25,7 +26,7 @@ import {
 } from '../config/money';
 import { FOOD_INCOME_PER_STUDENT, PLACED, utilitiesOf } from '../config/placed';
 import { ROAD_UPKEEP_PER_YEAR } from '../config/town';
-import { dollars } from '../format';
+import { dollars, PRICE_LEVEL } from '../format';
 import { enrollment, openCapacity, upkeepPerYear } from '../selectors';
 import type { GameState, Placed } from '../types';
 import { foodIncomePerYear, foodPlaces } from './food';
@@ -171,7 +172,10 @@ export function budget(state: GameState): Budget {
   income.push({ id: 'tuition', name: 'Tuition', amount: students * tuitionRate(state), detail: `${people(students, 'student', 'students')} at ${dollars(tuitionRate(state))}` });
   // Freshmen from town a policy has put in spare beds are in the count, and named with their policy.
   const spare = housedNote(state);
-  income.push({ id: 'rooms', name: 'Room fees', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(ROOM_FEE_PER_BED_PER_YEAR)}${spare.housed > 0 ? `. ${spare.by}: ${people(spare.housed, 'of them is a freshman', 'of them are freshmen')} from town` : ''}` });
+  // Room and board at its real price (DESIGN.md 67.1). Housing and dining operations take most of it, as at a real
+  // university, and what comes in is the room fee, as it always was: one line, so no share or ratio moves.
+  const roomAndBoard = ROOM_AND_BOARD_TODAY / PRICE_LEVEL;
+  income.push({ id: 'rooms', name: 'Room and board', amount: beds * ROOM_FEE_PER_BED_PER_YEAR, detail: `${people(beds, 'bed', 'beds')} in use at ${dollars(roomAndBoard)} a year. Housing and dining operations take ${dollars(roomAndBoard - ROOM_FEE_PER_BED_PER_YEAR)} of each, so ${dollars(ROOM_FEE_PER_BED_PER_YEAR)} a bed comes in${spare.housed > 0 ? `. ${spare.by}: ${people(spare.housed, 'of them is a freshman', 'of them are freshmen')} from town` : ''}` });
   // Food and the stores earn by who is on campus: a quarter of students in a break, fewer in the summer term.
   const day = dayRead(state.clock);
   const away = day.presence < 1 ? ` ${day.name ?? 'This week'}: ${Math.round(day.presence * 100)}% of students are here` : '';

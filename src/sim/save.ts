@@ -36,7 +36,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 31;
+export const SAVE_VERSION = 32;
 
 export interface SaveFile {
   v: number;
@@ -415,6 +415,9 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 32: the realism pass, R3 (DESIGN.md 67.1). Money is shown at today's prices, and a save keeps every number
+  // it has: nothing changes but the version, so the player is told once why their cash reads about 40% higher.
+  31: (state) => state,
 };
 
 /**

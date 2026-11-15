@@ -40,7 +40,7 @@ import { RECENT_FADE, STORY_FADE, STORY_STEP } from '../config/stories';
 import { stepStory } from './storyteller';
 import { FIRST_NAMES, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
 import { ANCHOR_AFTER_WAKE_TICKS, DEFAULT_WAKE_HOUR, TICK_MS } from '../config/time';
-import { dollars } from '../format';
+import { studentDollars } from '../format';
 import { hashInts } from '../rng';
 import type { CastMember, FameEntry, GameState, LogEntry, MainCharacter, MainPeople, MainPerson, MemoryEntry, PlanItem, Story } from '../types';
 import { partiesInTown, partiesOn } from './parties';
@@ -548,7 +548,7 @@ export function goalStatus(mc: MainCharacter): Array<{ name: string; status: str
       case 'fit':
         return { name: GOALS.fit.name, status: `Fitness ${Math.round(mc.needs.fitness)} of 100` };
       case 'savings':
-        return { name: GOALS.savings.name, status: `${dollars(mc.money)} in the bank` };
+        return { name: GOALS.savings.name, status: `${studentDollars(mc.money)} in the bank` };
       case 'onTime':
         return { name: GOALS.onTime.name, status: `Class of Year ${mc.ref.entryYear + 3}` };
       case 'fun':

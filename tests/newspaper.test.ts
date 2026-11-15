@@ -1,3 +1,4 @@
+import { dollars } from '../src/sim/format';
 import { describe, expect, it } from 'vitest';
 import {
   admissionsStory,
@@ -110,7 +111,7 @@ describe('the ranking', () => {
     ];
     const paper = edition(state, log, { minutes: 1440, cashBefore: 1000, cashAfter: 51_000, studentsBefore: 1200, studentsAfter: 1600 });
     expect(paper.top.map((item) => item.kind)).toEqual(['decisions', 'defaults', 'intake', 'game']);
-    expect(paper.more.join(' ')).toMatch(/The campus earned \$50,000/);
+    expect(paper.more.join(' ')).toContain(`The campus earned ${dollars(50_000)}`);
     expect(paper.more.join(' ')).toMatch(/A clean-up day/);
     // The class is the headline: it outranks an ordinary game.
     expect(paper.headline).toMatch(/400 Move In/);

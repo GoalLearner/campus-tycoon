@@ -1,3 +1,4 @@
+import { studentDollars } from '../sim/format';
 import { moneyFigures } from '../sim/systems/studentMoney';
 import { campusHappiness } from '../sim';
 import { friendsKeep } from '../sim/systems/population';
@@ -99,8 +100,8 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       stat('Aid', `${pct(wallet.grant)} have a grant, ${pct(wallet.loan)} a federal loan, ${pct(wallet.workStudy)} work-study`),
       stat('Working', `about ${count(Math.round(students * wallet.working))}, ${pct(wallet.longHours)} of students 20 hours a week or more; ${pct(wallet.onCampus)} of jobs on campus`),
       stat('Running short this month', `about ${count(Math.round(students * wallet.short))} (${pct(wallet.short)})`),
-      stat('Graduates owing', `${pct(wallet.borrowed)} borrowed, about $${wallet.debt.toLocaleString('en-US')} on average`),
-      stat('Rent in town', `about $${wallet.rent.toLocaleString('en-US')} a bed a month; books about $${wallet.textbooks} a year`),
+      stat('Graduates owing', `${pct(wallet.borrowed)} borrowed, about ${studentDollars(wallet.debt)} on average`),
+      stat('Rent in town', `about ${studentDollars(wallet.rent)} a bed a month; books about ${studentDollars(wallet.textbooks)} a year`),
     );
   }
 

@@ -7,7 +7,7 @@ import { ERAS, RANK_GOALS } from './config/goals';
 import { PAPER_NAMES, TOP_ITEMS, TOP_WEIGHTS } from './config/inbox';
 import type { DriverId } from './config/students';
 import { awayLines, datedDays, type AwayDay, type AwayFacts } from './digest';
-import { dollars, duration, headCount, shortName } from './format';
+import { dollars, duration, headCount, shortName, perHundred } from './format';
 import { hashInts } from './rng';
 import { buildings, enrollment, openCapacity } from './selectors';
 import { applicantsLift } from './systems/boosts';
@@ -561,7 +561,7 @@ export function welcomeEdition(state: GameState): Edition {
   }
 
   const books = budget(state);
-  if (books.incomeTotal > 0) top.push({ kind: 'money', text: `The campus keeps $${Math.round(books.kept)} of every $100 that comes in.` });
+  if (books.incomeTotal > 0) top.push({ kind: 'money', text: `The campus keeps ${perHundred(books.kept)} of every $100 that comes in.` });
 
   const poll = studentPoll(state);
   return {

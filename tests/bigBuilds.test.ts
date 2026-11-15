@@ -335,7 +335,8 @@ describe('saves', () => {
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
-      expect(notes).toHaveLength(10);
+      // And R3's price level (DESIGN.md 67.1).
+      expect(notes).toHaveLength(11);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

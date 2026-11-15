@@ -24,6 +24,12 @@ export const TUITION_ESTABLISHED_PER_YEAR = 8_750;
  */
 export const MARKETING_PRICED_FOR_STUDENTS = 46_000;
 export const ROOM_FEE_PER_BED_PER_YEAR = 3_000;
+/**
+ * Room and board as a student pays it, in today's dollars (NCES Digest table 330.10: about $13,300 a year at public
+ * four-year schools; DESIGN.md 67.1). A university's halls and dining take most of it to run, as real ones do: what is
+ * left is the room fee above, which is all the campus counts. The Money panel says both.
+ */
+export const ROOM_AND_BOARD_TODAY = 13_300;
 
 /**
  * What the money buys (DESIGN.md section 31). Every line is at full funding:

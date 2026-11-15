@@ -15,8 +15,11 @@ import {
   RENT_PER_BED_MONTH,
   RENT_SPREAD,
   RUNNING_SHORT,
-  SHORT_EASE,
   SPRING_TRIP,
+  SPRING_TRIP_SPREAD,
+  SPRING_TRIP_COST,
+  PAY_ON_CAMPUS,
+  PAY_IN_TOWN,
   TEXTBOOK_TILT,
   TEXTBOOKS_PER_YEAR,
   TOWN_JOBS,
@@ -24,9 +27,10 @@ import {
   WORKING_20_PLUS,
 } from '../config/studentMoney';
 import { hashInts } from '../rng';
-import { headCount } from '../format';
+import { headCount, studentDollars } from '../format';
 import type { Clock, GameState, LogEntry } from '../types';
-import { policyOn } from './policies';
+import { POLICIES } from '../config/policies';
+import { moneyLeavingEase } from './policies';
 
 /**
  * A student's own money, R3 of the realism pass (DESIGN.md 67): their aid package, their loans so far, a job and its
@@ -43,10 +47,10 @@ export interface StudentMoney {
   /** Loans so far, this year's included; and what they will have borrowed by the end of a fourth year. */
   owes: number;
   owesAtFour: number;
-  /** A job this term, or null: where, and hours a week. */
-  job: { where: string; hours: number; onCampus: boolean } | null;
+  /** A job this term, or null: where, hours a week, and pay an hour in today's dollars. */
+  job: { where: string; hours: number; onCampus: boolean; pay: number } | null;
   /** The job they hold in term, whether or not term is on now. */
-  work: { where: string; hours: number; onCampus: boolean } | null;
+  work: { where: string; hours: number; onCampus: boolean; pay: number } | null;
   /** Rent a month for a bed in town, or null for a student in a hall or living with family. */
   rent: number | null;
   /** Books and course materials for this year. */
@@ -63,7 +67,9 @@ const SALT = 6721;
 const unit = (seed: number, ref: { entryYear: number; index: number }, salt: number): number => (hashInts(seed, SALT, ref.entryYear, ref.index, salt) >>> 0) / 4294967296;
 const lerp = (range: readonly [number, number], at: number): number => range[0] + (range[1] - range[0]) * at;
 const round = (value: number, step: number): number => Math.round(value / step) * step;
-const money = (value: number): string => `$${value.toLocaleString('en-US')}`;
+const money = studentDollars;
+/** Pay an hour: "$15", "$14.50". */
+const hourly = (pay: number): string => studentDollars(pay, true);
 
 /** The share of a borrower's years after the first in which they borrow again: so 44% borrow in any one year. */
 const BORROW_AGAIN = (4 * AID_SHARE.loan) / BORROWED_BY_GRADUATION / 3 - 1 / 3;
@@ -88,12 +94,15 @@ const brokeShare = (): number => {
 };
 const SHORT_MEAN = 1 + (BROKE_TIMES - 1) * brokeShare();
 
-/** How each policy that helps eases running short, together (DESIGN.md 67.3). */
+/** How the policies that help ease running short, together: as they ease leaving for money (DESIGN.md 67.3). */
 export function shortEase(state: GameState): number {
-  let times = 1;
-  if (policyOn(state, 'campusJobs')) times *= SHORT_EASE.campusJobs;
-  if (policyOn(state, 'needScholarships')) times *= SHORT_EASE.needScholarships;
-  return times;
+  return moneyLeavingEase(state);
+}
+
+/** True when a policy that gives students work on campus is on: its lever for jobs (DESIGN.md 53.3). */
+function workOnCampus(state: GameState): boolean {
+  const on = state.policies?.on;
+  return !!on && POLICIES.some((spec) => on.includes(spec.id) && spec.gains.some((effect) => effect.kind === 'storyOdds' && effect.lever === 'jobs'));
 }
 
 /** A student's chance of running short in a month, before the policies. */
@@ -155,13 +164,13 @@ export function moneyOf(state: GameState, ref: { entryYear: number; index: numbe
 
   // A job: work-study on campus, or one of their own, on campus or in town; the Campus jobs program puts more on campus.
   let work: StudentMoney['job'] = null;
-  if (workStudy) work = { where: CAMPUS_JOBS[Math.floor(roll(20) * CAMPUS_JOBS.length)]!, hours: Math.round(lerp([8, 15], roll(21))), onCampus: true };
+  if (workStudy) work = { where: CAMPUS_JOBS[Math.floor(roll(20) * CAMPUS_JOBS.length)]!, hours: Math.round(lerp([8, 15], roll(21))), onCampus: true, pay: Math.round(lerp(PAY_ON_CAMPUS, roll(27)) * 4) / 4 };
   else if (roll(22) < WORKING_OTHERWISE) {
     const long = roll(23) < LONG_HOURS;
     const hours = Math.round(lerp(long ? HOURS_20_PLUS : HOURS_UNDER_20, roll(24)));
-    const onCampus = roll(25) < Math.min(0.95, ON_CAMPUS_SHARE * (policyOn(state, 'campusJobs') ? CAMPUS_JOBS_TIMES : 1));
+    const onCampus = roll(25) < Math.min(0.95, ON_CAMPUS_SHARE * (workOnCampus(state) ? CAMPUS_JOBS_TIMES : 1));
     const list = onCampus ? CAMPUS_JOBS : TOWN_JOBS;
-    work = { where: list[Math.floor(roll(26) * list.length)]!, hours, onCampus };
+    work = { where: list[Math.floor(roll(26) * list.length)]!, hours, onCampus, pay: Math.round(lerp(onCampus ? PAY_ON_CAMPUS : PAY_IN_TOWN, roll(27)) * 4) / 4 };
   }
   // Shifts are worked in term; out of it the job waits for them.
   const job = facts.term ? work : null;
@@ -172,14 +181,15 @@ export function moneyOf(state: GameState, ref: { entryYear: number; index: numbe
   // Running short: a tight budget for some, short in about half of their months; the policies ease it; a spring trip
   // empties the account for a couple of weeks.
   const trip = roll(40) < SPRING_TRIP ? springTripNow(state.clock) : null;
+  const tripCost = round(SPRING_TRIP_COST * lerp(SPRING_TRIP_SPREAD, roll(42)), 10);
   const chance = shortChance(facts.nature) * shortEase(state) * (trip === 'back' ? AFTER_SPRING_BREAK : 1);
   const tight = roll(41) < Math.min(1, 2 * chance);
   const short = tight && (hashInts(seed, SALT + 1, ref.entryYear, ref.index, monthOf(state.clock)) >>> 0) / 4294967296 < Math.min(1, chance / Math.min(1, 2 * chance));
 
   if (short) lines.push(trip === 'back' ? 'Back from a spring break trip, and running short until payday' : 'Running short of money this month');
-  else if (trip === 'saving') lines.push('Saving up for a spring break trip');
+  else if (trip === 'saving') lines.push(`Saving up ${money(tripCost)} for a spring break trip`);
   else if (trip === 'back') lines.push('Back from a spring break trip');
-  if (job) lines.push(workStudy ? `Work-study, ${job.hours} hours a week at ${job.where}` : `Works ${job.hours} hours a week at ${job.where}`);
+  if (job) lines.push(`${workStudy ? 'Work-study, ' : 'Works '}${job.hours} hours a week at ${job.where}, ${hourly(job.pay)} an hour`);
   const aid: string[] = [];
   if (grant > 0) aid.push(`a ${money(grant)} grant`);
   if (loan > 0) aid.push(`a ${money(loan)} loan`);
@@ -236,7 +246,7 @@ export function moneyFigures(state: GameState): MoneyFigures {
     workStudy: AID_SHARE.workStudy,
     working: WORKING,
     longHours: WORKING_20_PLUS,
-    onCampus: Math.min(0.95, ON_CAMPUS_SHARE * (policyOn(state, 'campusJobs') ? CAMPUS_JOBS_TIMES : 1)),
+    onCampus: Math.min(0.95, ON_CAMPUS_SHARE * (workOnCampus(state) ? CAMPUS_JOBS_TIMES : 1)),
     short: Math.min(1, RUNNING_SHORT * shortEase(state) * (1 + trip)),
     borrowed: BORROWED_BY_GRADUATION,
     debt: round(debtAverageAtFour(), 100),

@@ -74,7 +74,7 @@ export const YEAR_KINDS: readonly YearKind[] = [
   { id: 'levels', words: 'Reach level {n}', measure: { kind: 'level' }, steps: [2, 4, 7], more: true, when: 'always' },
   { id: 'homeWins', words: 'Win {n} home games', one: 'Win {n} home game', measure: { kind: 'counted', what: 'homeWins' }, steps: [1, 2, 4], more: true, when: 'always' },
   { id: 'happiness', words: 'End the year with Happiness of {n} or more', measure: { kind: 'happiness' }, steps: [-2, 0, 2], more: true, when: 'always' },
-  { id: 'kept', words: 'Keep ${n} of every $100 at commencement', measure: { kind: 'kept' }, steps: [12, 13.5, 15], more: false, when: 'always' },
+  { id: 'kept', words: 'Keep {n} of every $100 at commencement', measure: { kind: 'kept' }, steps: [12, 13.5, 15], more: false, when: 'always' },
   { id: 'decor', words: 'Set out {n} decorations', one: 'Set out {n} decoration', measure: { kind: 'counted', what: 'decorPlaced' }, steps: [3, 6, 10], more: true, when: 'decorShelf' },
   { id: 'crafts', words: 'Make {n} things at the Workshop', one: 'Make {n} thing at the Workshop', measure: { kind: 'counted', what: 'crafts' }, steps: [2, 4, 6], more: true, when: 'workshop' },
 ];

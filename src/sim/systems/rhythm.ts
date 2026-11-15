@@ -22,7 +22,7 @@ import {
   type YearLevel,
 } from '../config/rhythm';
 import { TICKS_PER_DAY, TICKS_PER_HOUR } from '../config/time';
-import { dollars } from '../format';
+import { dollars, perHundred } from '../format';
 import { hashInts } from '../rng';
 import { scaleOf } from '../scale';
 import { addTimer } from '../timers';
@@ -209,7 +209,7 @@ export function yearWords(goal: YearGoal): string {
   const kind = kindOf(goal.kind);
   if (!kind) return '';
   // A count is how many to do this year. Money is in dollars and cents. Anything else is the number to reach.
-  const n = kind.measure.kind === 'counted' ? String(goal.target - goal.from) : kind.measure.kind === 'kept' ? goal.target.toFixed(2).replace(/\.00$/, '') : String(goal.target);
+  const n = kind.measure.kind === 'counted' ? String(goal.target - goal.from) : kind.measure.kind === 'kept' ? (Number.isInteger(goal.target) ? perHundred(goal.target) : perHundred(goal.target, 2)) : String(goal.target);
   return (n === '1' && kind.one ? kind.one : kind.words).replace('{n}', n);
 }
 
@@ -547,7 +547,7 @@ export function yearView(state: GameState, left: (ticks: number) => string): Yea
       progress = `Happiness now ${at.value}`;
       share = Math.min(1, at.value / Math.max(1, goal.target));
     } else {
-      progress = `$${at.value.toFixed(2)} kept now`;
+      progress = `${perHundred(at.value, 2)} kept now`;
       share = Math.min(1, at.value / Math.max(1, goal.target));
     }
     const paysWords = [`${pay.xp} experience`, pay.seals > 0 ? `${pay.seals} Gold ${pay.seals === 1 ? 'Seal' : 'Seals'}` : ''].filter(Boolean).join(' and ');
