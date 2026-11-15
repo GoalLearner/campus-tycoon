@@ -18,18 +18,22 @@ export const HOLIDAY_WALKERS = 0.35;
 // --------------------------------------------------------------- stress --
 
 /**
- * The calendar's curve, from 0.1 on a break to 1.0 in finals week. An
+ * The calendar's curve, from 0.15 on a break to 1.0 in finals week. An
  * ordinary week of term sits at TERM and climbs by RAMP over the game days
  * before the next exams begin.
+ *
+ * Since R1 (DESIGN.md 65.5, his decision 6) an ordinary week is a real one: about a third of students say stress or
+ * anxiety hurt their studies (ACHA-NCHA 2024), and first-years rate an ordinary week of term not far below finals
+ * (3.4, then 3.57 at midterms and 3.95 at finals, out of 5: a survey of first-years, 2015). The shape is the same; the hum is higher.
  */
 export const SEASON_CURVE = {
-  break: 0.1,
-  summer: 0.15,
-  graduation: 0.12,
-  founding: 0.2,
-  term: 0.3,
-  ramp: 0.3,
-  midterms: 0.75,
+  break: 0.15,
+  summer: 0.2,
+  graduation: 0.15,
+  founding: 0.4,
+  term: 0.65,
+  ramp: 0.15,
+  midterms: 0.85,
   finals: 1,
 } as const;
 /** The climb toward exams begins this many ticks before them: about two game weeks of a fall. */
@@ -47,19 +51,23 @@ export const TEACHING_NEUTRAL = 0.5;
 /** Classes feel crowded from this share of seats taken, and as crowded as they get when every seat is. */
 export const CROWDING_FROM = 0.7;
 
-/** [T] Stress below this costs no Happiness. From here to 100 it costs up to STRESS_HAPPINESS points. */
-export const STRESS_CALM = 30;
+/**
+ * [T] Stress below this costs no Happiness. From here to 100 it costs up to STRESS_HAPPINESS points. Raised with the
+ * everyday level in R1 (DESIGN.md 65.5), so a campus keeps its Happiness: what a year of Stress costs is as before.
+ */
+export const STRESS_CALM = 36;
 export const STRESS_HAPPINESS = 10;
 /** [T] The most a grade point average falls at Stress 100. */
 export const STRESS_GPA = 0.2;
 /**
  * [T] A semester's average Stress, from SUSTAINED up to WORST, loses up to
  * this share more of its students. A whole semester averages far below its
- * exam peak, because breaks and ordinary weeks are most of it: the worst
- * campus averages about 36.
+ * exam peak, because breaks and ordinary weeks are most of it: a well-run model
+ * campus averages about 38 in the fall and 22 in the spring since R1's higher
+ * everyday level (DESIGN.md 65.5), and the worst about 63.
  */
-export const STRESS_SUSTAINED = 20;
-export const STRESS_WORST = 36;
+export const STRESS_SUSTAINED = 35;
+export const STRESS_WORST = 63;
 export const STRESS_RETENTION = 0.01;
 /** [T] How hard each kind of student takes Stress, against 1 for most. */
 export const STRESS_TILT: Partial<Record<string, number>> = { stressed: 1.6, scholar: 1.4, allNighter: 1.5, slacker: 0.3 };
@@ -110,6 +118,12 @@ export const CALENDAR_LINES: Partial<Record<CalendarEventKind, { begins?: string
   finals: { begins: '{name} begins. Stress is at its highest of the semester.' },
   classes: { begins: '{name}.' },
 };
+/**
+ * A point of the curve at or above this is term: below it are the breaks, the summer, commencement and move-in week.
+ * Parties and their late nights happen only in term (DESIGN.md 55).
+ */
+export const IN_TERM_FROM = 0.5;
+
 /** A term beginning already has its intake in the list. Only the summer term gets a line of its own. */
 export const SUMMER_START_LINE = 'The summer term begins. About {share}% of students stay on campus.';
 

@@ -1,12 +1,11 @@
 import { AFFINITY_PARTS } from '../config/alumni';
-import { CAUSE_NAMES } from '../config/students';
+import { LEAVE_FIX, LEAVE_WHYS, LEAVE_WORDS } from '../config/population';
 import { dollars, headCount } from '../format';
 import type { GameState } from '../types';
 import { alumniClasses, alumniOn, classNumbers } from './alumni';
 import { yearAcceptance } from './admissions';
 import { fallApplicants } from './demand';
-import { academicInputs } from './field';
-import { campusHappiness, retentionRate } from './happiness';
+import { campusRates } from './field';
 import { classSizeNow, ratioTarget } from './staffing';
 
 /**
@@ -46,12 +45,19 @@ const APPLICANT_FIX: Record<string, string> = {
   rank: 'the academic rank adds the least: a better rank draws more',
 };
 
-/** The share of the classes that have had their years that finished, or null before any has. The rating's graduation rate. */
-function graduationShare(state: GameState): number | null {
-  const input = academicInputs(state).find((one) => one.id === 'graduation');
-  if (!input || input.level === null) return null;
-  const match = /^(\d+)% of a class finishes/.exec(input.detail);
-  return match ? Number(match[1]) / 100 : null;
+/**
+ * Who left last academic year (this one's, before a year has closed), and why, in plain words: the biggest group, and
+ * what would keep more of them (DESIGN.md 65.2).
+ */
+function leavingLine(state: GameState): string {
+  const tally = state.admissions.whyLastYear ?? state.admissions.whyYear;
+  const total = tally ? tally.why.reduce((sum, n) => sum + n, 0) : 0;
+  if (!tally || total <= 0) return 'Nobody has left yet: a happier campus and a better rank keep students';
+  let most = 0;
+  for (let i = 1; i < LEAVE_WHYS.length; i++) if ((tally.why[i] ?? 0) > (tally.why[most] ?? 0)) most = i;
+  const why = LEAVE_WHYS[most]!;
+  const back = tally.returned > 0 ? `. ${headCount(tally.returned)} who had stopped out came back` : '';
+  return `${state.admissions.whyLastYear ? 'Last year' : 'This year'} ${headCount(total)} left; the biggest group ${LEAVE_WORDS[why].verb} (${headCount(tally.why[most] ?? 0)}). ${capital(LEAVE_FIX[why])}${back}`;
 }
 
 /** The seven numbers, in the order of the rows, as they stand now. */
@@ -60,7 +66,8 @@ function numbersNow(state: GameState): Array<number | null> {
   const accept = yearAcceptance(state);
   const latest = alumniClasses(state).slice(-1)[0];
   const success = latest?.success ?? state.alumni.opening?.success ?? null;
-  return [applicants, accept, 1, retentionRate(state), graduationShare(state), success, state.alumni.last?.raised ?? null];
+  const rates = campusRates(state);
+  return [applicants, accept, 1, rates.second, rates.graduation, success, state.alumni.last?.raised ?? null];
 }
 
 /** The year's end: the numbers are kept, so next year's arrows have something to point from. */
@@ -91,8 +98,8 @@ export function scorecard(state: GameState): ScoreRow[] | null {
   const last = state.alumni.scorecard?.values ?? null;
   const applicants = fallApplicants(state);
   const least = [...applicants.causes].sort((a, b) => a.factor - b.factor)[0];
-  const mood = campusHappiness(state);
   const intake = state.admissions.lastIntake;
+  const rates = campusRates(state);
   const latest = alumniClasses(state).slice(-1)[0];
   const rows: Record<ScoreId, Omit<ScoreRow, 'id' | 'number' | 'trend'>> = {
     applications: { name: 'Applications', value: headCount(applicants.total), limit: least ? capital(APPLICANT_FIX[least.id] ?? `${least.name} adds the least`) : 'Nothing yet' },
@@ -102,10 +109,10 @@ export function scorecard(state: GameState): ScoreRow[] | null {
       limit: intake?.capped ? 'The campus is full: the rest are turned away, and it is the more selective for it' : intake?.bottleneck ? `Room: ${intake.bottleneck === 'housing' ? 'beds' : 'classroom seats'} decide how many get a place` : 'Room for everyone who applied: more applicants would make it more selective',
     },
     yield: { name: 'Yield', value: 'Every student offered a place comes', limit: 'Nothing yet: no other school competes for them in this version' },
-    retention: { name: 'Retention', value: `${(retentionRate(state) * 100).toFixed(1)}% stay each semester`, limit: mood.worst ? `${CAUSE_NAMES[mood.worst]} is the weakest cause of Happiness` : 'Happiness keeps them' },
+    retention: { name: 'Retention', value: now[3] === null ? 'No class has begun a second year yet' : `${percent(now[3]!)} of freshmen come back for a second year`, limit: leavingLine(state) },
     graduation: {
       name: 'Graduation rate',
-      value: now[4] === null ? 'No class has had its years' : `${percent(now[4]!)} of a class finishes`,
+      value: now[4] === null ? 'No class has had six years yet' : `${percent(now[4]!)} finish within six years${rates.four !== null ? `, ${percent(rates.four)} in four` : ''}`,
       limit: `Class size: one member of faculty to every ${Math.round(classSizeNow(state))} students, where ${ratioTarget(state)} is funded`,
     },
     success: {

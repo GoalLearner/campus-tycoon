@@ -1,4 +1,5 @@
 import { storySpec } from '../src/sim/systems/storyteller';
+import { realismLines } from './realism';
 import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { catchUp, census, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { effectsSound, friendsEffectsOf } from '../src/sim/systems/friends';
@@ -642,7 +643,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
           probation: count('probation'),
           drag: greekDrag(state).points,
           happiness: mood.base,
-          retention: mood.retention,
+          retention: retentionRate(state),
         });
       }
       lostThisYear = 0;
@@ -846,7 +847,8 @@ function assertLayerZero(runs: Run[]): void {
     // has one, and since staff are paid it ends up with half its dorms outside any Campus Safety circle.
     const tended = campusHappiness(casual.final);
     const safe = (mood: typeof bare): number => mood.causes.find((c) => c.id === 'safety')?.level ?? 0;
-    const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && bare.retention >= 0.95;
+    // Never spirals: the share who stay each semester holds at a weak campus's or better (DESIGN.md 65.2).
+    const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && retentionRate(absent.final) >= 0.94;
     check('an uncovered campus loses happiness but never spirals', ok, `happiness ${bare.score.toFixed(0)} uncovered against ${tended.score.toFixed(0)} covered, after five years and twenty`);
   }
 
@@ -2151,6 +2153,8 @@ function assertModelCampus(seed: number): void {
       /** Chapter-days with their lift: chapters neither on probation nor suspended, counted each day, a day's average. */
       lifted: number;
       kept: number;
+      /** Football tickets and stands, a day's average of the yearly line. */
+      tickets: number;
       happy: number;
       stress: number;
       /** Calls from parties a year, and hazing reports in all (DESIGN.md 55). */
@@ -2173,6 +2177,7 @@ function assertModelCampus(seed: number): void {
       let happy = 0;
       let students = 0;
       let income = 0;
+      let tickets = 0;
       let spending = 0;
       let days = 0;
       let left = 0;
@@ -2197,13 +2202,14 @@ function assertModelCampus(seed: number): void {
         const books = budget(state);
         kept += books.kept;
         income += books.incomeTotal;
+        tickets += books.income.find((line) => line.id === 'tickets')?.amount ?? 0;
         spending += books.spending;
         happy += campusHappiness(state).base;
         students += enrollment(state);
         lifted += chapters(state).filter((chapter) => { const status = chapterStatus(state, chapter); return status !== 'probation' && status !== 'suspended'; }).length;
         days += 1;
       }
-      return { lifted: lifted / Math.max(1, days), calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
+      return { tickets: tickets / Math.max(1, days), lifted: lifted / Math.max(1, days), calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
     };
     const campuses: Array<[string, GameState]> = [
       ['the once-a-day campus', eras(of('daily')[0]!.final)],
@@ -2232,7 +2238,7 @@ function assertModelCampus(seed: number): void {
         }
         const words = policyWords(base, spec);
         const on = sixYears(result.state);
-        const d = { calls: on.calls - off.calls, reports: on.reports - off.reports, kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
+        const d = { tickets: on.tickets - off.tickets, calls: on.calls - off.calls, reports: on.reports - off.reports, kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
         console.log(`  ${spec.name}`);
         console.log(`      + ${spec.gives}: ${words.gain.join('; ')}`);
         console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
@@ -2245,7 +2251,9 @@ function assertModelCampus(seed: number): void {
           readingDays: d.stress < 0,
           toughGrading: d.left > 0,
           freshmenOnCampus: d.income >= 0 && d.happy <= 0.01,
-          freeStudentSection: d.happy > 0 && d.income <= 0,
+          // Its cost is ticket income, read on its own line: since R1 a happier campus keeps a few more students, whose
+          // tuition can cover the lost tickets on a campus nobody tends (DESIGN.md 65.10).
+          freeStudentSection: d.happy > 0 && d.tickets < 0,
           allNightLibrary: d.stress <= 0 && d.spending > 0,
           parkingFees: d.income > 0 && d.happy < 0,
           quietHours: d.happy < 0.5,
@@ -2390,8 +2398,8 @@ function assertModelCampus(seed: number): void {
     const mood = campusHappiness(state);
     check(
       'a campus that grows fast without building ahead ends short and unhappy, and never spirals',
-      students[2]! >= started * 2 && stretched >= 1 && short.length >= 3 && happy[11]! < tended - 5 && happy[11]! >= 25 && steady && mood.retention >= 0.95 && state.money.grants === 0 && state.money.incomePerYear > state.money.spendingPerYear && validate(state) === null,
-      `${started} students to begin with, ${students[2]} by its third fall and ${students[11]} at its twelfth, the last four within ${Math.max(...last) - Math.min(...last)} of each other; faculty a tenth or more short in ${stretched} of twelve falls; at the end: ${short.join(', ')}; Happiness ${happy[11]!.toFixed(0)} against ${tended.toFixed(0)} on a tended campus; ${(mood.retention * 100).toFixed(1)}% stay each semester; it nets ${dollarsShort(state.money.incomePerYear - state.money.spendingPerYear)} a year and took ${dollarsShort(state.money.grants)} from the state`,
+      students[2]! >= started * 2 && stretched >= 1 && short.length >= 3 && happy[11]! < tended - 5 && happy[11]! >= 25 && steady && retentionRate(state) >= 0.94 && state.money.grants === 0 && state.money.incomePerYear > state.money.spendingPerYear && validate(state) === null,
+      `${started} students to begin with, ${students[2]} by its third fall and ${students[11]} at its twelfth, the last four within ${Math.max(...last) - Math.min(...last)} of each other; faculty a tenth or more short in ${stretched} of twelve falls; at the end: ${short.join(', ')}; Happiness ${happy[11]!.toFixed(0)} against ${tended.toFixed(0)} on a tended campus; ${(retentionRate(state) * 100).toFixed(1)}% stay each semester; it nets ${dollarsShort(state.money.incomePerYear - state.money.spendingPerYear)} a year and took ${dollarsShort(state.money.grants)} from the state`,
     );
   }
 
@@ -2496,6 +2504,11 @@ function assertModelCampus(seed: number): void {
   }
 
   check('the model campus validates when it opens and after its longest run', validate(opening) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
+
+  // The realism pass (DESIGN.md 65.10): every campus played, and the one left alone, read against the real figures.
+  console.log('');
+  console.log('THE REAL FIGURES (DESIGN.md 65)');
+  for (const one of realismLines(runs.map((run) => run.final), alone.final)) check(one.name, one.ok, one.detail);
 }
 
 // ------------------------------------------------------------------- main --

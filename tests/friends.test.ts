@@ -17,6 +17,7 @@ import {
 import { FEEL, KIND, SLOTS } from '../src/sim/config/web';
 import { INTEREST } from '../src/sim/systems/identity';
 import { effectsSound, friendsEffectsOf, friendsStay, friendsStress, studentFriends, type Ties } from '../src/sim/systems/friends';
+import { friendsKeep } from '../src/sim/systems/population';
 import { semesterEnd } from '../src/sim/systems/admissions';
 import { seasonLine, stressRead } from '../src/sim/systems/season';
 import { campusLevels } from '../src/sim/systems/happiness';
@@ -139,14 +140,14 @@ describe('the campus’s share', () => {
     expect(read.score).toBe(Math.max(0, plain.score + read.friends));
   });
 
-  it('keeps a few more each semester, never more than 0.3 points, and the rank and the Scorecard count it', () => {
+  it('keeps a few more each semester, never more than 0.3 points, and who stays counts it', () => {
     const state = withEffects(MODEL, EFFECTS);
-    const retention = campusHappiness(state).retention;
-    const stay = friendsStay(state, retention);
+    const stay = friendsKeep(state, campusHappiness(state).base);
     expect(stay).toBeGreaterThan(0);
     expect(stay).toBeLessThanOrEqual(FRIENDS_STAY_MOST);
-    expect(stay).toBeCloseTo((1 - retention) * (1 - EFFECTS.leave), 9);
-    expect(retentionRate(state)).toBeCloseTo(retention + stay, 12);
+    // Read for each class year (DESIGN.md 65.2): a share of those who would leave.
+    expect(friendsStay(state, 0.99)).toBeCloseTo(Math.min(FRIENDS_STAY_MOST, 0.01 * (1 - EFFECTS.leave)), 9);
+    expect(retentionRate(state)).toBeGreaterThan(retentionRate(MODEL));
     // At the most and the least: within 0.3 points either way, whatever is read.
     expect(friendsStay(withEffects(MODEL, { ...EFFECTS, leave: 0 }), 0.5)).toBe(FRIENDS_STAY_MOST);
     expect(friendsStay(withEffects(MODEL, { ...EFFECTS, leave: 2 }), 0.5)).toBe(-FRIENDS_STAY_MOST);
@@ -156,10 +157,9 @@ describe('the campus’s share', () => {
     semesterEnd(a);
     semesterEnd(b);
     expect(b.cohorts.reduce((x, y) => x + y, 0)).toBeGreaterThan(a.cohorts.reduce((x, y) => x + y, 0));
-    expect(b.admissions.lastSemester!.friends).toBeCloseTo(stay, 12);
+    expect(b.admissions.lastSemester!.friends!).toBeGreaterThan(0);
+    expect(b.admissions.lastSemester!.friends!).toBeLessThanOrEqual(FRIENDS_STAY_MOST);
     expect(a.admissions.lastSemester!.friends).toBeUndefined();
-    const level = (s: GameState): number => academicInputs(s).find((one) => one.id === 'retention')!.level!;
-    expect(level(b)).toBeGreaterThan(level(a));
   });
 });
 

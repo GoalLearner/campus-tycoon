@@ -21,7 +21,11 @@ export const OPENING_AGE = 12;
  * have a job, and so many more for each point of the rating. Centred on the rating, so a class that does as well as
  * its school neither lifts nor drags the input it feeds.
  */
-export const SUCCESS_PARTS = { onTime: 20, onTimeMiddle: 0.95, placement: 20, placementMiddle: 0.85 } as const;
+/**
+ * The middling on-time share is a four-year rate between a flagship's and the most selective's since R1 (DESIGN.md
+ * 65.2, NCES Digest 326.10): 57 to 80 in a hundred finish in four years, where before nearly everyone did.
+ */
+export const SUCCESS_PARTS = { onTime: 20, onTimeMiddle: 0.65, placement: 20, placementMiddle: 0.85 } as const;
 export const PLACEMENT = { floor: 0.55, span: 0.4 } as const;
 
 /**

@@ -1,4 +1,5 @@
 import { enrollment, type GameState, type StudentRef } from '../sim';
+import { RINGS } from '../sim/systems/web';
 import {
   CAUSE_POSTS,
   CAUSE_TOPICS,
@@ -434,7 +435,7 @@ export function officialReplies(view: WebView, state: GameState, post: OfficialP
   };
   const repliers: StudentRef[] = [];
   for (let t = 0; repliers.length < 4 && t < 60; t++) {
-    const id = hashInts(view.seed, 8201, post.tick, t) % (view.classSlot * 4);
+    const id = hashInts(view.seed, 8201, post.tick, t) % (view.classSlot * RINGS);
     const ref = refIn(view, id);
     if (enrolled(state, ref) && !repliers.some((one) => same(one, ref))) repliers.push(ref);
   }

@@ -208,7 +208,7 @@ function groundsCampus(): GameState {
     lay('bench', beside(shop, 3));
   }
   state = structuredClone(state);
-  state.cohorts = [1400, 0, 0, 0];
+  state.cohorts = [1400, 0, 0, 0, 0, 0];
   // Let a day of litter fall, then leave the store's corner as a neglected one looks.
   state = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 60_000).state;
   state = structuredClone(state);

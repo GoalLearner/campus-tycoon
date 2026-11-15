@@ -1,5 +1,6 @@
 import { EX_START } from '../config/social';
-import { calendarAt } from '../calendar';
+import { CLASS_YEARS } from '../config/population';
+import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { CLUBS, MAJORS } from '../config/students';
 import {
   BACK_TOGETHER,
@@ -42,14 +43,17 @@ import {
   TABLE_SIZE,
   WEB_WEEK_TICKS,
   WHERE,
+  DATE_CHANCE,
+  ROOM_SWITCH,
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
 import { bullyingTimes } from './policies';
 import type { GameState } from '../types';
 import { TICKS_PER_YEAR } from '../config/time';
-import { athleteShare } from './football';
+import { rostersOf } from './teams';
+import { ATHLETE_WHERE } from '../config/teams';
 import { chemistry, gender, identityOf, likes, TRAIT, traitOf } from './identity';
-import { placeIndex, socialProfile, studentHome, type PlaceIndex, type StudentRef } from './students';
+import { classPlaces, placeIndex, socialProfile, studentHome, type PlaceIndex, type StudentRef } from './students';
 import { offCampusNow } from './town';
 import { newPosts, postContext, postWeek } from './quadline';
 import { POST_FIELDS, POSTS_KEPT, VIRAL_KEPT } from '../config/quadline';
@@ -170,12 +174,18 @@ export function webWeekOf(state: GameState): number {
   return Math.floor(state.clock.tick / WEB_WEEK_TICKS);
 }
 
-export function newWeb(seed: number, classSlot: number): Web {
-  const n = classSlot * 4;
+/**
+ * One ring of places for each class year the campus holds: freshman to sixth-year senior (DESIGN.md 65.2). A class
+ * keeps its ring from the day it enters to the day its last student leaves.
+ */
+export const RINGS = CLASS_YEARS;
+
+export function newWeb(seed: number, classSlot: number, rings: number = RINGS): Web {
+  const n = classSlot * rings;
   return {
     seed,
     classSlot,
-    ring: [-1, -1, -1, -1],
+    ring: new Array<number>(rings).fill(-1),
     week: -1,
     n,
     other: new Int32Array(n * SLOTS).fill(-1),
@@ -211,7 +221,7 @@ export function newWeb(seed: number, classSlot: number): Web {
   };
 }
 
-const ringOf = (entryYear: number): number => ((entryYear % 4) + 4) % 4;
+const ringOf = (entryYear: number): number => ((entryYear % RINGS) + RINGS) % RINGS;
 
 /** A student's place in the web, or -1 when the web does not hold them. */
 export function idOf(web: Web, ref: StudentRef): number {
@@ -288,11 +298,12 @@ function grow(web: Web, classSlot: number): void {
  * with none; students who have left the school leave it. A class too big for the web grows it.
  */
 export function fitClasses(web: Web, state: GameState): void {
-  const year = calendarAt(state.clock).year;
-  const most = Math.max(1, ...state.cohorts);
+  const classes = Array.from({ length: CLASS_YEARS }, (_, classYear) => classPlaces(state, classYear));
+  // A class's places run to the end of its fifth- and sixth-year seniors' run.
+  const most = Math.max(1, ...classes.map((one) => one.from + one.size));
   if (most > web.classSlot) grow(web, Math.ceil((most * 1.25) / 512) * 512);
-  for (let classYear = 0; classYear < 4; classYear++) {
-    const entryYear = year - classYear;
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
+    const { entryYear, from, size } = classes[classYear]!;
     const r = ringOf(entryYear);
     if (web.ring[r] !== entryYear) {
       for (let id = r * web.classSlot; id < (r + 1) * web.classSlot; id++) {
@@ -302,10 +313,10 @@ export function fitClasses(web: Web, state: GameState): void {
       }
       web.ring[r] = entryYear;
     }
-    const size = state.cohorts[classYear] ?? 0;
     for (let index = 0; index < web.classSlot; index++) {
       const id = r * web.classSlot + index;
-      if (index < size) web.year[id] = classYear;
+      // Fifth- and sixth-year seniors are seniors to everyone they meet.
+      if (index >= from && index < from + size) web.year[id] = Math.min(classYear, 3);
       else if (web.year[id]! >= 0 || web.identity[id] !== 0) {
         dropAll(web, id);
         web.year[id] = -1;
@@ -341,9 +352,11 @@ export function place(web: Web, state: GameState): void {
   const semester = `${calYear}:${calendarAt(state.clock).tickInYear >= 4 * 1440 ? 1 : 0}`;
   const key = `${semester}|${housing.cells.join(',')}|${housing.upTo.join(',')}`;
   const full = key !== web.placedFor;
-  const athletes = athleteShare(state);
+  const rosters = rostersOf(state);
   const sizes = capacities(housing);
   const majors = new Map(MAJORS.map((m, i) => [m.name, i]));
+  // A major's sections are as many as its students fill, at its share of the class (DESIGN.md 65.3).
+  const shares = new Map(MAJORS.map((m) => [m.name, m.share / 100]));
   const clubs = new Map(CLUBS.map((c, i) => [c.name, i]));
   // Kept on the web: a placing for new students only must number their chapter as the full placing did (63.12).
   const chapters = web.chapterIndex;
@@ -353,7 +366,7 @@ export function place(web: Web, state: GameState): void {
     if (classYear < 0) continue;
     if (!full && web.identity[id] !== 0) continue;
     const ref = refAt(web, id);
-    const p = socialProfile(state, ref, housing, athletes);
+    const p = socialProfile(state, ref, housing, rosters);
     if (!p) continue;
     if (web.identity[id] === 0) web.identity[id] = (identityOf(web.seed, ref, p.nature) | 0x80000000) >>> 0;
     const h = hash5(web.seed, 9911, ref.entryYear, ref.index, 0);
@@ -361,11 +374,12 @@ export function place(web: Web, state: GameState): void {
     const floors = home === null ? 1 : Math.max(1, Math.round((sizes.get(home) ?? FLOOR_SIZE) / FLOOR_SIZE));
     web.place[0]![id] = home === null ? -1 : home * 64 + (h % Math.min(64, floors));
     const cohort = state.cohorts[classYear] ?? 1;
-    const sections = Math.max(1, Math.min(64, Math.round(cohort / MAJORS.length / SECTION_SIZE)));
+    const sections = Math.max(1, Math.min(64, Math.round((cohort * (shares.get(p.major) ?? 1 / MAJORS.length)) / SECTION_SIZE)));
     web.place[1]![id] = ((majors.get(p.major) ?? 0) * 4 + classYear) * 64 + ((h >>> 6) % sections);
     const tables = Math.max(1, Math.min(256, Math.round((cohort * 4) / CLUBS.length / TABLE_SIZE)));
     web.place[2]![id] = p.club ? (clubs.get(p.club) ?? 0) * 256 + ((h >>> 12) % tables) : -1;
-    web.place[3]![id] = p.team ? (h >>> 20) % 8 : -1;
+    // A team of their own: teammates practise together most days (DESIGN.md 65.7).
+    web.place[3]![id] = p.team;
     if (p.chapter && !chapters.has(p.chapter)) chapters.set(p.chapter, chapters.size);
     web.place[4]![id] = p.chapter ? chapters.get(p.chapter)! : -1;
     const spot = p.home ?? 0;
@@ -474,8 +488,13 @@ const pairChem = (web: Web, a: number, b: number): number => {
  * longer shared, or who no longer share a floor, are roommates no more.
  */
 function placeRoommates(web: Web, state: GameState, calYear: number): void {
-  const newYear = web.roomsFor !== calYear;
-  web.roomsFor = calYear;
+  // The year and its half (DESIGN.md 65.6): pairs are made each fall, and at the spring semester the pairs at odds may
+  // move apart, once.
+  const spring = calendarAt(state.clock).tickInYear >= SPRING_INTAKE_TICK_IN_YEAR ? 1 : 0;
+  const newYear = web.roomsFor < 0 || Math.floor(web.roomsFor / 2) !== calYear;
+  const switching = !newYear && spring === 1 && web.roomsFor % 2 === 0;
+  web.roomsFor = calYear * 2 + spring;
+  const apart = new Set<number>();
   const floor = web.place[0]!;
   const shared = new Map<number, boolean>();
   const isShared = (key: number): boolean => {
@@ -494,7 +513,16 @@ function placeRoommates(web: Web, state: GameState, calYear: number): void {
     const b = web.other[s]!;
     if (b < a) continue;
     const ok = !newYear && web.year[a]! >= 0 && web.year[b]! >= 0 && floor[a] === floor[b] && floor[a]! >= 0 && isShared(floor[a]!) && gender(web.identity[a]!) === gender(web.identity[b]!);
-    if (!ok) setBoth(web, s, web.back[s]!, web.strength[s]! >= FRIEND_AT ? KIND.friend : KIND.met, FEEL.warm);
+    if (!ok) {
+      setBoth(web, s, web.back[s]!, web.strength[s]! >= FRIEND_AT ? KIND.friend : KIND.met, FEEL.warm);
+      continue;
+    }
+    // A pair at odds may move apart at the spring semester: each to another room, never back together this year.
+    if (switching && web.feeling[s] === FEEL.tense && a !== web.mainId && b !== web.mainId && share(hash5(web.seed, 9960, a, b, calYear)) < ROOM_SWITCH) {
+      setBoth(web, s, web.back[s]!, KIND.met, FEEL.tense);
+      apart.add(a * web.n + b);
+      count(web, EVENT.roomSwitch);
+    }
   }
   const group = web.groups[0];
   if (!group) return;
@@ -513,6 +541,8 @@ function placeRoommates(web: Web, state: GameState, calYear: number): void {
         continue;
       }
       const a = waiting[g]!;
+      // Two who have just moved apart are not paired again: the next one waits instead.
+      if (apart.has(Math.min(a, one) * web.n + Math.max(a, one))) continue;
       waiting[g] = -1;
       const chem = pairChem(web, a, one);
       const s = slotOf(web, a, one);
@@ -682,7 +712,7 @@ function meet(web: Web, a: number, b: number, h: number): void {
     count(web, web.kind[sa] === KIND.crush ? 4 : 3);
   }
   // Both with a crush, close enough, a good evening: they start dating, if both are free, or one cheats.
-  if (web.kind[sa] === KIND.crush && web.kind[sb] === KIND.crush && st >= DATE_FROM && share(h >>> 5) < 0.35) {
+  if (web.kind[sa] === KIND.crush && web.kind[sb] === KIND.crush && st >= DATE_FROM && share(h >>> 5) < DATE_CHANCE) {
     // Both must be free, or ready to cheat; only then does anything end.
     const fa = freeToDate(web, a, h);
     const fb = freeToDate(web, b, h >>> 2);
@@ -787,8 +817,10 @@ export function stepWeek(web: Web): void {
       if (b < 0) {
         let r = share(hash5(seed, 9961, week, a, e));
         let p = 0;
-        while (p < PLACES - 1 && r >= WHERE[p]!) {
-          r -= WHERE[p]!;
+        // A varsity athlete meets most of their new people at practice (DESIGN.md 65.7).
+        const where = web.place[3]![a]! >= 0 ? ATHLETE_WHERE : WHERE;
+        while (p < PLACES - 1 && r >= where[p]!) {
+          r -= where[p]!;
           p += 1;
         }
         const key = web.place[p]![a]!;
@@ -1005,6 +1037,19 @@ export function holdMain(web: Web, state: GameState): void {
  * (decision 2). Each student is tied to the floor-mates, section-mates and club-mates they get on with, closer the
  * older they both are; a few single pairs who are each other's type are couples. Roommates are paired again.
  */
+/** Where a regrown campus finds each student's people, and how many tries at each: floor, section and club, or for a varsity athlete their team first. */
+const TIERS: ReadonlyArray<readonly [number, number]> = [
+  [0, 6],
+  [1, 5],
+  [2, 4],
+];
+const ATHLETE_TIERS: ReadonlyArray<readonly [number, number]> = [
+  [3, 7],
+  [0, 4],
+  [1, 3],
+  [2, 2],
+];
+
 export function regrow(web: Web, state: GameState): void {
   // What happened by name belongs to the ties as they were: a new history begins. The week's heavy pick is kept.
   web.happenings.fill(-1);
@@ -1023,7 +1068,9 @@ export function regrow(web: Web, state: GameState): void {
   for (let a = 0; a < n; a++) {
     const years = web.year[a]!;
     if (years < 0) continue;
-    for (const [p, tries] of [[0, 6], [1, 5], [2, 4]] as const) {
+    // A varsity athlete's team is where most of their people are, as on a lived campus (DESIGN.md 65.7).
+    const tiers = web.place[3]![a]! >= 0 ? ATHLETE_TIERS : TIERS;
+    for (const [p, tries] of tiers) {
       const key = web.place[p]![a]!;
       const group = web.groups[p];
       if (key < 0 || !group || key + 1 >= group.start.length) continue;
@@ -1225,9 +1272,10 @@ const MAGIC = 0x43545731; // CTW1
 const HEADER = 16; // int32s
 
 /**
- * The web as its save record, version 3 (DESIGN.md 63.6, 63.13): a header, what has happened since it began, the kept
- * weeks' counts and happenings, each slot's other end, week together, kind, strength and feeling, then Quadline's
- * posts. Version 2 had no posts and version 1 (stop 1) no weeks kept: both are still read.
+ * The web as its save record, version 4 (DESIGN.md 63.6, 63.13, 65.2): a header, what has happened since it began, the
+ * kept weeks' counts and happenings, each slot's other end, week together, kind, strength and feeling, then Quadline's
+ * posts. Version 4 has six rings, one for each class year; version 3 had four, version 2 no posts and version 1
+ * (stop 1) no weeks kept: all are still read, every place moved to its class's ring here.
  */
 export function encodeWeb(web: Web): Uint8Array {
   const slots = web.n * SLOTS;
@@ -1235,7 +1283,8 @@ export function encodeWeb(web: Web): Uint8Array {
   const posts = web.posts.length + web.viral.length;
   const bytes = new Uint8Array(HEADER * 4 + EVENTS.length * 8 + web.weekly.length * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 + slots * (4 + 2 + 1 + 1 + 1) + POSTS_HEAD * 4 + posts * 4);
   const head = new Int32Array(bytes.buffer, 0, HEADER);
-  head.set([MAGIC, 3, web.seed | 0, web.week, web.classSlot, ...web.ring, web.roomsFor, EVENTS.length, kept, HAPPENING_WEEKS, web.rationFor, 0, 0]);
+  const ring = web.ring;
+  head.set([MAGIC, 4, web.seed | 0, web.week, web.classSlot, ring[0]!, ring[1]!, ring[2]!, ring[3]!, web.roomsFor, EVENTS.length, kept, HAPPENING_WEEKS, web.rationFor, ring[4]!, ring[5]!]);
   let at = HEADER * 4;
   new Float64Array(bytes.buffer, at, EVENTS.length).set(web.events);
   at += EVENTS.length * 8;
@@ -1277,11 +1326,13 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   const copy = new Uint8Array(bytes);
   const head = new Int32Array(copy.buffer, 0, HEADER);
   const version = head[1];
-  if (head[0] !== MAGIC || (version !== 1 && version !== 2 && version !== 3) || head[2] !== (state.seed | 0)) return null;
+  if (head[0] !== MAGIC || (version !== 1 && version !== 2 && version !== 3 && version !== 4) || head[2] !== (state.seed | 0)) return null;
   const classSlot = head[4]!;
   if (classSlot <= 0 || classSlot > 200_000) return null;
   const web = newWeb(state.seed, classSlot);
-  const slots = web.n * SLOTS;
+  // Before version 4 the web had four rings, one for each of four class years (DESIGN.md 65.2).
+  const ringsThen = version >= 4 ? RINGS : 4;
+  const slots = classSlot * ringsThen * SLOTS;
   // A record from before 63.11 holds fewer kinds of event and of happening: it is read into the first of each.
   const kinds = head[10]!;
   const kept = version >= 2 ? head[11]! : web.happenings.length;
@@ -1290,9 +1341,9 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   const weeklyThen = HAPPENING_WEEKS * kinds;
   const weeks = version >= 2 ? weeklyThen * 8 + kept * 4 + HAPPENING_WEEKS * 8 + HAPPENING_FIELDS * 4 : 0;
   const before = HEADER * 4 + kinds * 8 + weeks + slots * 9;
-  // Version 3 holds Quadline's posts after the slots, in a shape its own head says.
+  // Version 3 on holds Quadline's posts after the slots, in a shape its own head says.
   let postsShape: number[] | null = null;
-  if (version === 3) {
+  if (version >= 3) {
     if (copy.byteLength < before + POSTS_HEAD * 4) return null;
     postsShape = [...new Int32Array(copy.buffer, before, POSTS_HEAD)];
     const [fields, keptPosts, keptViral] = postsShape as [number, number, number, number];
@@ -1301,8 +1352,18 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
   } else if (copy.byteLength !== before) return null;
   if (version >= 2 && head[12] !== HAPPENING_WEEKS) return null;
   web.week = head[3]!;
-  web.ring = [head[5]!, head[6]!, head[7]!, head[8]!];
-  web.roomsFor = head[9]!;
+  const ringThen = version >= 4 ? [head[5]!, head[6]!, head[7]!, head[8]!, head[14]!, head[15]!] : [head[5]!, head[6]!, head[7]!, head[8]!];
+  // A place in the record, as a place in this web: the same class, in the ring its entry year has now. Entry year -1
+  // is a real class (a founding junior) as well as an empty ring's mark, so a ring of the record counts only when
+  // someone in it has a tie: an empty one is left for the classes to fill.
+  const held = new Array<boolean>(ringsThen).fill(ringsThen === RINGS);
+  const moveId = (id: number): number => {
+    if (id < 0) return -1;
+    const r = Math.floor(id / classSlot);
+    return held[r] ? ringOf(ringThen[r]!) * classSlot + (id % classSlot) : -1;
+  };
+  // Before version 4 it was the year alone; since, the year and its half (DESIGN.md 65.6).
+  web.roomsFor = version >= 4 || head[9]! < 0 ? head[9]! : head[9]! * 2;
   let at = HEADER * 4;
   web.events.set(new Float64Array(copy.buffer, at, kinds));
   at += kinds * 8;
@@ -1322,16 +1383,43 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
     at += HAPPENING_FIELDS * 4;
     web.rationFor = head[13]!;
   }
-  web.other.set(new Int32Array(copy.buffer, at, slots));
+  const other = new Int32Array(copy.buffer, at, slots);
   at += slots * 4;
-  web.seen.set(new Uint16Array(copy.buffer, at, slots));
+  if (ringsThen === RINGS) web.ring = ringThen;
+  else {
+    for (let s = 0; s < slots; s++) if (other[s]! >= 0) held[Math.floor(s / SLOTS / classSlot)] = true;
+    for (let r = 0; r < ringsThen; r++) if (held[r]) web.ring[ringOf(ringThen[r]!)] = ringThen[r]!;
+  }
+  const seen = new Uint16Array(copy.buffer, at, slots);
   at += slots * 2;
-  web.kind.set(copy.subarray(at, at + slots));
+  const kind = copy.subarray(at, at + slots);
   at += slots;
-  web.strength.set(copy.subarray(at, at + slots));
+  const strength = copy.subarray(at, at + slots);
   at += slots;
-  web.feeling.set(copy.subarray(at, at + slots));
+  const feeling = copy.subarray(at, at + slots);
   at += slots;
+  if (ringsThen === RINGS) {
+    web.other.set(other);
+    web.seen.set(seen);
+    web.kind.set(kind);
+    web.strength.set(strength);
+    web.feeling.set(feeling);
+  } else {
+    // A record from four rings: every place moved to its class's ring here, and every tie's other end with it.
+    for (let id = 0; id < classSlot * ringsThen; id++) {
+      const to = moveId(id);
+      if (to < 0) continue;
+      for (let k = 0; k < SLOTS; k++) {
+        const s = id * SLOTS + k;
+        const t = to * SLOTS + k;
+        web.other[t] = moveId(other[s]!);
+        web.seen[t] = seen[s]!;
+        web.kind[t] = kind[s]!;
+        web.strength[t] = strength[s]!;
+        web.feeling[t] = feeling[s]!;
+      }
+    }
+  }
   if (postsShape) {
     const [, keptPosts, keptViral, written] = postsShape as [number, number, number, number];
     at += POSTS_HEAD * 4;
@@ -1353,12 +1441,11 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
     web.viral.set(viral.subarray(0, Math.min(viral.length, VIRAL_KEPT * POST_FIELDS)));
   }
   // Who is enrolled, then the other ends and the pairs' chemistry, worked out again.
-  const year = calendarAt(state.clock).year;
-  for (let classYear = 0; classYear < 4; classYear++) {
-    const r = ringOf(year - classYear);
-    if (web.ring[r] !== year - classYear) continue;
-    const size = Math.min(web.classSlot, state.cohorts[classYear] ?? 0);
-    for (let index = 0; index < size; index++) web.year[r * web.classSlot + index] = classYear;
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
+    const { entryYear, from, size } = classPlaces(state, classYear);
+    const r = ringOf(entryYear);
+    if (web.ring[r] !== entryYear) continue;
+    for (let index = from; index < Math.min(web.classSlot, from + size); index++) web.year[r * web.classSlot + index] = Math.min(classYear, 3);
   }
   web.placedFor = '';
   const keepRooms = web.roomsFor;
@@ -1369,7 +1456,7 @@ export function decodeWeb(bytes: Uint8Array, state: GameState): Web | null {
     const p = socialProfile(state, ref);
     if (p) web.identity[id] = (identityOf(web.seed, ref, p.nature) | 0x80000000) >>> 0;
   }
-  for (let s = 0; s < slots; s++) {
+  for (let s = 0; s < web.n * SLOTS; s++) {
     const b = web.other[s]!;
     if (b < 0) continue;
     const a = (s / SLOTS) | 0;

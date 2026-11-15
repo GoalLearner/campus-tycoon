@@ -51,7 +51,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { footballStat, inboxStat, policyStat, shortLeft } from '../src/ui/chips';
 import { ordersChip, ordersView, paidWords } from '../src/ui/ordersUi';
-import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor } from './helpers';
+import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * The orders board (DESIGN.md 42.3, as built from 42.16). Things to do, where
@@ -832,6 +832,7 @@ describe('saves', () => {
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Money, students and Happiness are to the cent what they were.
@@ -854,7 +855,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(12);
+      expect(notes).toHaveLength(13);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

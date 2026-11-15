@@ -1,4 +1,5 @@
 import { facultyStress } from './season';
+import { FINAL } from './majors';
 import {
   ADVISOR_DOING,
   CHEF_DOING,
@@ -28,6 +29,16 @@ import { incidentText } from './incidents';
 import { storeIncomePerYear, storePassers } from './placed';
 import { townLiving } from './town';
 
+
+/** A major by a number in [0, 1), weighed by its share of degrees. */
+function pickShare(at: number): number {
+  let left = at;
+  for (let i = 0; i < FINAL.length; i++) {
+    left -= FINAL[i]!;
+    if (left < 0) return i;
+  }
+  return FINAL.length - 1;
+}
 /**
  * People who are not students (DESIGN.md section 32.2): professors, staff,
  * maintenance workers, Campus Safety officers, medics and visitors.
@@ -180,7 +191,8 @@ export function personCard(state: GameState, ref: PersonRef): PersonCard | null 
       return {
         ref,
         name,
-        title: `Professor of ${pickFrom(MAJORS, roll(seed, ref, SALT.subject)).name}`,
+        // A department as big as its share of the majors (DESIGN.md 65.3).
+        title: `Professor of ${MAJORS[pickShare(roll(seed, ref, SALT.subject))]!.name}`,
         doing: doing.replace('{hall}', where),
         // In exam season the faculty are stretched too, more so with crowded classes (DESIGN.md 27.1).
         line: say('professor', state, ref, { n: count(size) }) + funded + (facultyStress(state) >= 60 ? ` It is exam season, and faculty Stress is at ${facultyStress(state)}.` : ''),

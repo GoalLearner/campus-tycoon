@@ -1,4 +1,6 @@
 import { BULLIED_REASON } from '../sim/config/bullying';
+import { lonelyOf } from '../sim/systems/wellbeing';
+import { semesterOf } from '../sim/systems/students';
 import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
 import { DRINKING_YEAR } from '../sim/config/parties';
@@ -120,12 +122,15 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
     }
     if (friends === 0 && !partnered) add('lonely', 'Nobody close yet', 3);
     else if (view.groupOf[id]! >= 0) add('happy', 'Has a group of friends', 0.8);
+    // Lonely is common, friends or not (DESIGN.md 65.5): about half feel it, more in the first year or living in town.
+    if (lonelyOf(state.seed, ref, semesterOf(state), { close: friends, partnered, group: view.groupOf[id]! >= 0, firstYear: card.classYear === 0, commuter: card.residence === 'offCampus' })) add('lonely', 'Feeling lonely', 1);
   }
 
   // The week.
   const day = dayRead(state.clock);
   if (day.kind === 'finals' || day.kind === 'midterms') add('tense', day.name ?? 'Exams', 1 + card.stress / 30);
-  else if (card.stress >= 50) add('tense', 'Exams ahead', card.stress / 35);
+  // An everyday hum of Stress is real (DESIGN.md 65.5): only the high end of it reads as exams ahead.
+  else if (card.stress >= 65) add('tense', 'Exams ahead', card.stress / 45);
   if (day.kind === 'break' || day.kind === 'summer') add('happy', day.kind === 'summer' ? 'Summer' : (day.name ?? 'A break'), 1.5);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
@@ -135,7 +140,10 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   if (card.mood >= 4) add('happy', 'Loves it here', 1.5);
   else if (card.mood <= 0) add('sad', 'Unhappy here', 2);
   else if (card.mood === 1) add('sad', 'Not happy here', 1);
-  if (card.archetype === 'homesick') add('sad', 'Misses home', 1.5);
+  // Most first-years who moved away miss home at first, and those who feel it most read as Homesick (DESIGN.md 65.5).
+  if (card.missesHome) add('sad', 'Misses home', card.archetype === 'homesick' ? 1.5 : 0.7);
+  // Flu season: down with it for a few days.
+  if (card.sick) add('sad', 'Down with the flu', 4, 'thermometer');
   return out;
 }
 

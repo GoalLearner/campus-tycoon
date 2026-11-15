@@ -127,6 +127,7 @@ function awayText(state: GameState, card: StudentCard): string {
   const home = homeName(state, card);
   if (doing === 'asleep') return town ? 'Asleep at home in town' : `Asleep in ${home}`;
   if (doing === 'ready') return town ? 'Getting ready at home in town' : `Getting ready in ${home}`;
+  if (doing === 'sick') return town ? 'In bed with the flu, at home in town' : `In bed with the flu, in ${home}`;
   return town ? 'At home in town' : `In ${home}`;
 }
 
@@ -413,7 +414,11 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
           : card.street
             ? `Lives off campus on ${card.street}`
             : 'Lives off campus';
-    setText(aboutText, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
+    // An undeclared student's leaning, or the major they left, beside the major (DESIGN.md 65.3).
+    const major = card.majorNote ? `${card.major} (${card.majorNote.charAt(0).toLowerCase()}${card.majorNote.slice(1)})` : card.major;
+    // A varsity athlete's team beside what they are (DESIGN.md 65.7).
+    const nature = card.team ? `${card.archetypeName} (${card.team})` : card.archetypeName;
+    setText(aboutText, `${card.classYearName} · ${major} · ${nature} · ${card.quirk} · ${lives}`);
     hallLink.hidden = hall === null;
     setText(hallLink, hall ?? '');
     setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');
@@ -474,7 +479,10 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
     // The ratio as this student meets it: how many of them there are to a member of faculty (DESIGN.md 38).
     const classes = card.classSize > 0 ? ` · classes of ${card.classSize}` : '';
-    setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${classes}`);
+    // The Dean's list or probation, and this week's classes they went to (DESIGN.md 65.4).
+    const standing = card.deansList ? " · Dean's list" : card.probation ? ' · on academic probation' : '';
+    const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
+    setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);

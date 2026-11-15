@@ -10,8 +10,11 @@ import type { CalDate } from './academicCalendar';
 /** A chapter house's price and upkeep, on the small campus's count: the campus scale multiplies both. */
 export const CHAPTER_COST = 20_000;
 export const CHAPTER_UPKEEP = 1_500;
-/** The most chapters a campus may have. */
-export const GREEK_HOUSES_MOST = 8;
+/**
+ * The most chapters a campus may have: room for a big Greek Row since R1 (DESIGN.md 65.8), which at large public
+ * flagships is 8% to 54% of students (Common Data Sets of 25 schools); here up to about a fifth.
+ */
+export const GREEK_HOUSES_MOST = 40;
 
 /** Rush week: early in the fall, after the first day of classes. Each chapter's philanthropy: in the spring. */
 export const RUSH_DATE: CalDate = [8, 31, 0];
@@ -38,8 +41,12 @@ export const CHAPTER_WORDS: readonly string[] = ['Llama', 'Teapot', 'Waffle', 'P
 export const CHAPTER_BEDS = 10;
 /** At most so many members a chapter takes at rush, as a share of its beds: past its beds, the house is overfull. */
 export const RUSH_MOST = 1.25;
-/** The share of the students who live in dorms who would join a chapter, given room. */
+/**
+ * The share of the students who live in dorms who would join a chapter, given room. A bigger row draws more to rush
+ * (DESIGN.md 65.8): from the ninth chapter on, this share for each chapter, so forty reach about a fifth of students.
+ */
 export const GREEK_INTEREST = 0.06;
+export const GREEK_INTEREST_PER_CHAPTER = 0.0075;
 
 /** What a house's members gain in Food & fun, in points of that cause for them: a house of their own, and more. */
 export const GREEK_LIFE = 12;

@@ -39,7 +39,7 @@ function act(state: GameState, action: Action): GameState {
 function campus(students: number): GameState {
   const state = structuredClone(advance(freshGame(), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   state.admissions.waitlist = 0;
   return state;
 }

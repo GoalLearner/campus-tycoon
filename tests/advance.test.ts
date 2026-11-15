@@ -15,7 +15,7 @@ import { advanceInSteps, badNumbers, DAY, freshGame, HOUR, MIN, T0 } from './hel
 /** A game with students enrolled and several builds under way, so plenty happens. */
 function busyGame(seed = 42): GameState {
   const state = freshGame(seed);
-  state.cohorts = [120, 100, 80, 60];
+  state.cohorts = [120, 100, 80, 60, 0, 0];
   markRatesDirty(state);
   const all = buildings(state.map);
   all.forEach((b, i) => {

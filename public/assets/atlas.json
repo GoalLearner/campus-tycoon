@@ -122,7 +122,7 @@
   },
   "emote.anger": {
    "frame": {
-    "x": 1586,
+    "x": 1746,
     "y": 525,
     "w": 22,
     "h": 22
@@ -142,7 +142,7 @@
   },
   "emote.bell": {
    "frame": {
-    "x": 1667,
+    "x": 1858,
     "y": 525,
     "w": 28,
     "h": 21
@@ -298,6 +298,46 @@
    "sourceSize": {
     "w": 60,
     "h": 64
+   }
+  },
+  "emote.briefcase": {
+   "frame": {
+    "x": 1716,
+    "y": 525,
+    "w": 27,
+    "h": 23
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 27,
+    "h": 23
+   },
+   "sourceSize": {
+    "w": 27,
+    "h": 23
+   }
+  },
+  "emote.cake": {
+   "frame": {
+    "x": 1222,
+    "y": 525,
+    "w": 25,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 25,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 25,
+    "h": 28
    }
   },
   "emote.chat-art": {
@@ -522,7 +562,7 @@
   },
   "emote.fistbump": {
    "frame": {
-    "x": 1611,
+    "x": 1771,
     "y": 525,
     "w": 28,
     "h": 22
@@ -542,7 +582,7 @@
   },
   "emote.heart": {
    "frame": {
-    "x": 1421,
+    "x": 1493,
     "y": 525,
     "w": 28,
     "h": 26
@@ -562,7 +602,7 @@
   },
   "emote.heartbreak": {
    "frame": {
-    "x": 1334,
+    "x": 1406,
     "y": 525,
     "w": 30,
     "h": 27
@@ -582,7 +622,7 @@
   },
   "emote.highfive": {
    "frame": {
-    "x": 1222,
+    "x": 1250,
     "y": 525,
     "w": 26,
     "h": 28
@@ -602,7 +642,7 @@
   },
   "emote.hug": {
    "frame": {
-    "x": 1452,
+    "x": 1524,
     "y": 525,
     "w": 27,
     "h": 26
@@ -622,7 +662,7 @@
   },
   "emote.laugh": {
    "frame": {
-    "x": 1367,
+    "x": 1439,
     "y": 525,
     "w": 27,
     "h": 27
@@ -642,7 +682,7 @@
   },
   "emote.mood-embarrassed": {
    "frame": {
-    "x": 1798,
+    "x": 1989,
     "y": 525,
     "w": 21,
     "h": 12
@@ -662,7 +702,7 @@
   },
   "emote.mood-excited": {
    "frame": {
-    "x": 1822,
+    "x": 2013,
     "y": 525,
     "w": 21,
     "h": 12
@@ -682,8 +722,8 @@
   },
   "emote.mood-flirty": {
    "frame": {
-    "x": 1846,
-    "y": 525,
+    "x": 3,
+    "y": 571,
     "w": 21,
     "h": 12
    },
@@ -702,8 +742,8 @@
   },
   "emote.mood-happy": {
    "frame": {
-    "x": 1870,
-    "y": 525,
+    "x": 27,
+    "y": 571,
     "w": 21,
     "h": 12
    },
@@ -722,8 +762,8 @@
   },
   "emote.mood-lonely": {
    "frame": {
-    "x": 1894,
-    "y": 525,
+    "x": 51,
+    "y": 571,
     "w": 21,
     "h": 12
    },
@@ -742,8 +782,8 @@
   },
   "emote.mood-sad": {
    "frame": {
-    "x": 1918,
-    "y": 525,
+    "x": 75,
+    "y": 571,
     "w": 21,
     "h": 12
    },
@@ -762,8 +802,8 @@
   },
   "emote.mood-tense": {
    "frame": {
-    "x": 1942,
-    "y": 525,
+    "x": 99,
+    "y": 571,
     "w": 21,
     "h": 12
    },
@@ -778,11 +818,31 @@
    "sourceSize": {
     "w": 21,
     "h": 12
+   }
+  },
+  "emote.mortarboard": {
+   "frame": {
+    "x": 1802,
+    "y": 525,
+    "w": 28,
+    "h": 22
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 28,
+    "h": 22
+   },
+   "sourceSize": {
+    "w": 28,
+    "h": 22
    }
   },
   "emote.music": {
    "frame": {
-    "x": 1506,
+    "x": 1607,
     "y": 525,
     "w": 24,
     "h": 25
@@ -798,11 +858,31 @@
    "sourceSize": {
     "w": 24,
     "h": 25
+   }
+  },
+  "emote.package": {
+   "frame": {
+    "x": 1554,
+    "y": 525,
+    "w": 26,
+    "h": 26
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 26
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 26
    }
   },
   "emote.partycup": {
    "frame": {
-    "x": 1482,
+    "x": 1583,
     "y": 525,
     "w": 21,
     "h": 26
@@ -820,9 +900,29 @@
     "h": 26
    }
   },
+  "emote.phone": {
+   "frame": {
+    "x": 1279,
+    "y": 525,
+    "w": 22,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 22,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 22,
+    "h": 28
+   }
+  },
   "emote.sadcloud": {
    "frame": {
-    "x": 1251,
+    "x": 1304,
     "y": 525,
     "w": 28,
     "h": 28
@@ -882,7 +982,7 @@
   },
   "emote.speech": {
    "frame": {
-    "x": 1533,
+    "x": 1634,
     "y": 525,
     "w": 27,
     "h": 25
@@ -902,7 +1002,7 @@
   },
   "emote.splash": {
    "frame": {
-    "x": 1698,
+    "x": 1889,
     "y": 525,
     "w": 22,
     "h": 19
@@ -920,9 +1020,29 @@
     "h": 19
    }
   },
+  "emote.suitcase": {
+   "frame": {
+    "x": 1664,
+    "y": 525,
+    "w": 26,
+    "h": 25
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 25
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 25
+   }
+  },
   "emote.sweat": {
    "frame": {
-    "x": 1282,
+    "x": 1335,
     "y": 525,
     "w": 18,
     "h": 28
@@ -937,12 +1057,32 @@
    },
    "sourceSize": {
     "w": 18,
+    "h": 28
+   }
+  },
+  "emote.thermometer": {
+   "frame": {
+    "x": 1356,
+    "y": 525,
+    "w": 16,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 16,
     "h": 28
    }
   },
   "emote.thought": {
    "frame": {
-    "x": 1303,
+    "x": 1375,
     "y": 525,
     "w": 28,
     "h": 28
@@ -962,7 +1102,7 @@
   },
   "emote.wave": {
    "frame": {
-    "x": 1642,
+    "x": 1833,
     "y": 525,
     "w": 22,
     "h": 22
@@ -5682,8 +5822,8 @@
   },
   "prop.bag": {
    "frame": {
-    "x": 2039,
-    "y": 525,
+    "x": 196,
+    "y": 571,
     "w": 6,
     "h": 8
    },
@@ -5702,8 +5842,8 @@
   },
   "prop.dog": {
    "frame": {
-    "x": 2008,
-    "y": 525,
+    "x": 165,
+    "y": 571,
     "w": 13,
     "h": 10
    },
@@ -5722,7 +5862,7 @@
   },
   "prop.frisbee": {
    "frame": {
-    "x": 41,
+    "x": 243,
     "y": 571,
     "w": 8,
     "h": 4
@@ -5742,7 +5882,7 @@
   },
   "prop.phone": {
    "frame": {
-    "x": 3,
+    "x": 205,
     "y": 571,
     "w": 5,
     "h": 8
@@ -5762,7 +5902,7 @@
   },
   "prop.tray": {
    "frame": {
-    "x": 26,
+    "x": 228,
     "y": 571,
     "w": 12,
     "h": 7
@@ -5782,7 +5922,7 @@
   },
   "prop.umbrella": {
    "frame": {
-    "x": 1723,
+    "x": 1914,
     "y": 525,
     "w": 20,
     "h": 19
@@ -6082,7 +6222,7 @@
   },
   "wheel.escooter.sw": {
    "frame": {
-    "x": 1397,
+    "x": 1469,
     "y": 525,
     "w": 21,
     "h": 27
@@ -6122,7 +6262,7 @@
   },
   "wheel.kick.sw": {
    "frame": {
-    "x": 1563,
+    "x": 1693,
     "y": 525,
     "w": 20,
     "h": 25
@@ -6142,7 +6282,7 @@
   },
   "wheel.longboard.nw": {
    "frame": {
-    "x": 1746,
+    "x": 1937,
     "y": 525,
     "w": 23,
     "h": 14
@@ -6162,7 +6302,7 @@
   },
   "wheel.longboard.sw": {
    "frame": {
-    "x": 1772,
+    "x": 1963,
     "y": 525,
     "w": 23,
     "h": 14
@@ -6182,8 +6322,8 @@
   },
   "wheel.skateboard.nw": {
    "frame": {
-    "x": 1966,
-    "y": 525,
+    "x": 123,
+    "y": 571,
     "w": 18,
     "h": 12
    },
@@ -6202,8 +6342,8 @@
   },
   "wheel.skateboard.sw": {
    "frame": {
-    "x": 1987,
-    "y": 525,
+    "x": 144,
+    "y": 571,
     "w": 18,
     "h": 12
    },
@@ -6222,7 +6362,7 @@
   },
   "wheel.skates.nw": {
    "frame": {
-    "x": 11,
+    "x": 213,
     "y": 571,
     "w": 12,
     "h": 8
@@ -6242,8 +6382,8 @@
   },
   "wheel.skates.sw": {
    "frame": {
-    "x": 2024,
-    "y": 525,
+    "x": 181,
+    "y": 571,
     "w": 12,
     "h": 9
    },

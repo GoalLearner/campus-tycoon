@@ -1,5 +1,8 @@
 import { calendarAt } from '../calendar';
+import { deansListShare, probationShare } from './grades';
+import { teachingQuality } from './students';
 import { FOUNDING_SHARES } from '../config/demand';
+import { CLASS_YEARS, LATE_FROM, LEAVE_WHYS, LEAVE_WORDS, RETURN_SHARE, type LeaveWhy } from '../config/population';
 import { FIRST_INTAKE_TICK, WAITLIST_TICKS } from '../config/time';
 import { headCount } from '../format';
 import { enrollment, openCapacity } from '../selectors';
@@ -20,6 +23,7 @@ import { friendsStay } from './friends';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 import { closeSemester, stressLoss } from './season';
+import { addWhy, anchorAt, lateFrom, leaveShares, semesterStays, splitCount, standingOf, survivalTo } from './population';
 
 /**
  * Intakes, the waitlist, retention, graduation and promotion.
@@ -79,6 +83,8 @@ export function classRecord(state: GameState, entryYear: number): ClassRecord {
   let record = state.classes.find((r) => r.entryYear === entryYear);
   if (!record) {
     record = { entryYear, entered: 0, finishedOnTime: 0, finishedLate: 0, left: 0 };
+    // Fifth- and sixth-year seniors who opened with the campus are a run from LATE_FROM (DESIGN.md 65.2).
+    if (calendarAt(state.clock).year - entryYear >= 4) record.from = LATE_FROM;
     state.classes.push(record);
     state.classes.sort((a, b) => a.entryYear - b.entryYear);
   }
@@ -105,10 +111,10 @@ export function begunHere(state: GameState, record: ClassRecord): boolean {
  * at a time, so the mix is right however the founders trickle in.
  */
 function nextFounderYear(have: readonly number[], limit?: readonly number[]): number {
-  const total = have[0]! + have[1]! + have[2]! + have[3]! + 1;
+  const total = have.reduce((sum, n) => sum + n, 0) + 1;
   let best = -1;
   let most = -Infinity;
-  for (let classYear = 0; classYear < 4; classYear++) {
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
     if (limit && have[classYear]! >= limit[classYear]!) continue;
     const short = FOUNDING_SHARES[classYear]! * total - have[classYear]!;
     if (short > most + 1e-9) {
@@ -148,6 +154,9 @@ function enrol(state: GameState, count: number, offCampus: number, founders: boo
   markRatesDirty(state);
 }
 
+/** The founding shares of four class years, as they were when saves from before them were spread (2026-11-11). */
+const SPREAD_SHARES = [0.27, 0.26, 0.25, 0.22] as const;
+
 /**
  * A save from before campuses opened with all four class years. At its next
  * fall intake, once classes have moved up, its continuing students are spread
@@ -164,10 +173,10 @@ export function spreadClassYears(state: GameState, log: LogEntry[]): void {
   const continuing = c[1] + c[2] + c[3];
   if (continuing <= 0 || (c[1] > 0 && c[2] > 0 && c[3] > 0)) return;
 
-  // What each upper class would hold at the founding shares, to the nearest student.
-  const upper = FOUNDING_SHARES[1] + FOUNDING_SHARES[2] + FOUNDING_SHARES[3];
-  const seniors = Math.round((continuing * FOUNDING_SHARES[3]) / upper);
-  const juniors = Math.round((continuing * FOUNDING_SHARES[2]) / upper);
+  // What each upper class would hold at the founding shares of the day this was written, to the nearest student.
+  const upper = SPREAD_SHARES[1] + SPREAD_SHARES[2] + SPREAD_SHARES[3];
+  const seniors = Math.round((continuing * SPREAD_SHARES[3]) / upper);
+  const juniors = Math.round((continuing * SPREAD_SHARES[2]) / upper);
 
   let moved = 0;
   /** Move students up from one class year to another, with their share of those living in town and of their record. */
@@ -321,11 +330,31 @@ export function closeWaitlist(state: GameState, log: LogEntry[]): void {
   }
 }
 
+/** Index of a reason in LEAVE_WHYS. */
+const WHY = (why: LeaveWhy): number => LEAVE_WHYS.indexOf(why);
+
+/** Add leavers by reason, and those who came back, to this academic year's tally (DESIGN.md 65.2). */
+function tallyYear(state: GameState, why: readonly number[], returned = 0): void {
+  const year = (state.admissions.whyYear ??= { why: LEAVE_WHYS.map(() => 0), returned: 0 });
+  for (let i = 0; i < LEAVE_WHYS.length; i++) year.why[i] = (year.why[i] ?? 0) + (why[i] ?? 0);
+  year.returned += returned;
+}
+
+/** Stop-outs who will come back next fall, to their own class (DESIGN.md 65.2). */
+function goAway(state: GameState, entryYear: number, count: number): void {
+  if (count <= 0) return;
+  const away = (state.admissions.away ??= []);
+  const entry = away.find((one) => one.entryYear === entryYear);
+  if (entry) entry.count += count;
+  else away.push({ entryYear, count });
+}
+
 /**
- * The end of a semester: a few students from every class do not come back.
- * How many follows happiness, and the log says so.
+ * The end of a semester (DESIGN.md 65.2): some of every class year do not come back. How many follows the campus's
+ * standing, its rank and its Happiness, read for each class year: first-years leave most. Each leaver has a reason,
+ * and the log says them. `fall` is true at the end of the fall, false at the end of the spring.
  */
-export function semesterEnd(state: GameState, log?: LogEntry[]): void {
+export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): void {
   const before = enrollment(state);
   const mood = campusHappiness(state);
   // A semester of sustained high Stress costs a few more students: a hundredth at the very worst.
@@ -333,34 +362,73 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   ordersMark(state, 'semesterStress', stress);
   // A policy may ask a few more to leave: tough grading does (DESIGN.md 41.7).
   const harder = leavingMore(state);
-  // Friends keep a few more, and having nobody close sends a few more home (DESIGN.md 63.10): within 0.3 points.
-  const friends = friendsStay(state, mood.retention);
-  const stays = (mood.retention + friends) * (1 - stressLoss(stress)) * (1 - harder.share);
+  const standing = standingOf(state.field.rank, mood.base);
+  const shares = anchorAt(standing.q);
+  const loss = stressLoss(stress);
   const c = state.cohorts;
   const { year } = calendarAt(state.clock);
-  const next: [number, number, number, number] = [0, 0, 0, 0];
-  for (let classYear = 0; classYear < 4; classYear++) {
+  const why = LEAVE_WHYS.map(() => 0);
+  let byPolicy = 0;
+  let friendsKept = 0;
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
     const was = c[classYear]!;
-    next[classYear] = Math.round(was * stays);
+    if (was <= 0) continue;
+    const plain = semesterStays(shares, classYear, fall);
+    // Friends keep a few more, and having nobody close sends a few more home (DESIGN.md 63.10): within 0.3 points.
+    const friends = friendsStay(state, plain);
+    const base = Math.min(1, plain + friends);
+    const stays = base * (1 - loss) * (1 - harder.share);
+    const now = Math.round(was * stays);
+    const left = was - now;
+    c[classYear] = now;
     // Those living in town leave at the same rate as everyone else.
-    state.offCampus[classYear] = Math.min(next[classYear]!, Math.round(state.offCampus[classYear]! * stays));
-    if (was > next[classYear]!) classRecord(state, year - classYear).left += was - next[classYear]!;
+    state.offCampus[classYear] = Math.min(now, Math.round(state.offCampus[classYear]! * stays));
+    friendsKept += friends * was;
+    if (left <= 0) continue;
+    // A policy's extra leavers leave for grades, Stress's stop out, and the rest go for the campus's reasons.
+    const policy = Math.min(left, Math.round(was * base * (1 - loss) * harder.share));
+    const stressed = Math.min(left - policy, Math.round(was * base * loss));
+    const counts = splitCount(left - policy - stressed, leaveShares(state, standing, classYear));
+    counts[WHY('grades')]! += policy;
+    counts[WHY('stoppedOut')]! += stressed;
+    const record = classRecord(state, year - classYear);
+    record.left += left;
+    addWhy(record, counts);
+    for (let i = 0; i < why.length; i++) why[i]! += counts[i]!;
+    byPolicy += policy;
+    // Some of those who stop out come back next fall (BPS:12/17): not from a sixth year, which has no year after it.
+    if (classYear < CLASS_YEARS - 1) goAway(state, year - classYear, Math.round(counts[WHY('stoppedOut')]! * RETURN_SHARE));
   }
-  state.cohorts = next;
 
   // Dorm students with no bed do not come back. Room only limits who is admitted, so this is what
   // stops a full dorm being cleared and its students kept. Those living in town are not affected.
   let homeless = dormStudents(state) - openCapacity(state, 'housing');
-  for (let classYear = 0; classYear < 4 && homeless > 0; classYear++) {
+  for (let classYear = 0; classYear < CLASS_YEARS && homeless > 0; classYear++) {
     const go = Math.min(homeless, state.cohorts[classYear]! - state.offCampus[classYear]!);
     if (go <= 0) continue;
     state.cohorts[classYear]! -= go;
-    classRecord(state, year - classYear).left += go;
+    const record = classRecord(state, year - classYear);
+    record.left += go;
+    const counts = LEAVE_WHYS.map(() => 0);
+    counts[WHY('housing')] = go;
+    addWhy(record, counts);
+    why[WHY('housing')]! += go;
     homeless -= go;
   }
+  tallyYear(state, why);
   const stayed = enrollment(state);
   const left = before - stayed;
-  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base), ...(friends !== 0 ? { friends } : {}) };
+  const friends = before > 0 ? friendsKept / before : 0;
+  const returned = state.admissions.lastSemester?.returned;
+  state.admissions.lastSemester = {
+    tick: state.clock.tick,
+    stayed,
+    left,
+    happiness: Math.round(mood.base),
+    ...(Math.abs(friends) > 1e-9 ? { friends } : {}),
+    why,
+    ...(fall && returned ? { returned } : {}),
+  };
   // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
   alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
   // The Main Character's grades for the semester (DESIGN.md 53.2).
@@ -368,8 +436,6 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   ordersMark(state, 'semesterLeft', left);
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
-  // How many of those who left a policy sent: the share it asks, of those who would otherwise have stayed.
-  const byPolicy = Math.min(left, Math.round(before * (mood.retention + friends) * (1 - stressLoss(stress)) * harder.share));
   if (log && before > 0) {
     log.push({
       tick: state.clock.tick,
@@ -377,47 +443,190 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
       text:
         left === 0
           ? 'The semester ended and every student is staying on.'
-          : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back. Happiness was ${Math.round(mood.base)}.${byPolicy > 0 ? ` ${harder.by.join(' and ')}: ${headCount(byPolicy)} of them.` : ''}`,
-      data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress), policy: byPolicy },
+          : `The semester ended. ${headCount(left)} ${left === 1 ? 'student' : 'students'} did not come back: ${whyWords(why)}. Happiness was ${Math.round(mood.base)}.${byPolicy > 0 ? ` ${harder.by.join(' and ')}: ${headCount(byPolicy)} of them.` : ''}`,
+      data: { left, stayed, happiness: Math.round(mood.base), worst: mood.worst ?? '', stress: Math.round(stress), policy: byPolicy, ...Object.fromEntries(LEAVE_WHYS.map((one, i) => [one, why[i]!])) },
+    });
+  }
+  // Then the grades are in (DESIGN.md 65.4): the Dean's list and probation at the campus's teaching, and who was suspended.
+  if (log && stayed > 0) {
+    const teaching = teachingQuality(state);
+    const deans = Math.round(stayed * deansListShare(teaching));
+    const probation = Math.round(stayed * probationShare(teaching));
+    const suspended = why[WHY('grades')]!;
+    log.push({
+      tick: state.clock.tick,
+      kind: 'grades',
+      text: `Grades are in: ${headCount(deans)} on the Dean's list and ${headCount(probation)} on academic probation${suspended > 0 ? `; ${headCount(suspended)} were suspended for grades` : ''}.`,
+      data: { deans, probation, suspended },
     });
   }
 }
 
-/** Day 6: the spring semester ends and the seniors graduate. */
+/** Leavers by reason in words, the most first: "412 transferred to other schools, 96 left for money and 40 more". */
+export function whyWords(why: readonly number[]): string {
+  const parts = LEAVE_WHYS.map((one, i) => ({ one, n: why[i] ?? 0 })).filter((part) => part.n > 0).sort((a, b) => b.n - a.n);
+  const said = parts.slice(0, 2).map((part) => `${headCount(part.n)} ${LEAVE_WORDS[part.one].verb}`);
+  const rest = parts.slice(2).reduce((sum, part) => sum + part.n, 0);
+  if (rest > 0) said.push(`${headCount(rest)} for other reasons`);
+  return said.length <= 1 ? (said[0] ?? '') : `${said.slice(0, -1).join(', ')} and ${said[said.length - 1]}`;
+}
+
+/**
+ * Day 6: the spring semester ends and commencement is held (DESIGN.md 65.2). Most seniors finish; the rest stay on as
+ * fifth-year seniors, as do some of those, as sixth-year seniors. A sixth year is the last: who has not finished by
+ * its end stops out.
+ */
 export function graduate(state: GameState, log: LogEntry[]): void {
-  semesterEnd(state, log);
-  const seniors = state.cohorts[3];
-  state.cohorts[3] = 0;
-  state.offCampus[3] = 0;
-  if (seniors > 0) classRecord(state, calendarAt(state.clock).year - 3).finishedOnTime += seniors;
-  state.stats.graduates += seniors;
+  semesterEnd(state, log, false);
+  const { year } = calendarAt(state.clock);
+  const mood = campusHappiness(state);
+  const shares = anchorAt(standingOf(state.field.rank, mood.base).q);
+  const c = state.cohorts;
+  let finished = 0;
+  let onTime = 0;
+  for (const classYear of [3, 4, 5] as const) {
+    const was = c[classYear];
+    if (was <= 0) continue;
+    const record = classRecord(state, year - classYear);
+    const done = classYear === 5 ? was : Math.round(was * shares.finish[classYear - 3]!);
+    const finishing = classYear === 5 ? Math.round(was * shares.finish[2]) : done;
+    const late = was - done;
+    // Those living in town go with the rest, in proportion.
+    const off = state.offCampus[classYear]!;
+    state.offCampus[classYear] = Math.min(late, Math.round(off * (late / was)));
+    c[classYear] = late;
+    if (classYear === 3) {
+      record.finishedOnTime += finishing;
+      onTime += finishing;
+      // Those who stay on are a run of the class, after its first LATE_FROM: the named regulars finish on time.
+      record.from = lateFrom(was, late);
+    } else {
+      record.finishedLate += finishing;
+      if (classYear === 4) record.inFive = (record.inFive ?? 0) + finishing;
+    }
+    finished += finishing;
+    // A sixth year that ends unfinished: they stop out, and the class's record counts them as leaving.
+    const unfinished = classYear === 5 ? was - finishing : 0;
+    if (unfinished > 0) {
+      record.left += unfinished;
+      const counts = LEAVE_WHYS.map(() => 0);
+      counts[WHY('stoppedOut')] = unfinished;
+      addWhy(record, counts);
+      tallyYear(state, counts);
+    }
+  }
+  state.stats.graduates += finished;
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
-  if (seniors > 0) {
+  if (finished > 0) {
+    const later = finished - onTime;
     log.push({
       tick: state.clock.tick,
       kind: 'graduation',
-      text: `${headCount(seniors)} seniors graduated. ${headCount(state.stats.graduates)} alumni so far.`,
-      data: { seniors, alumni: state.stats.graduates },
+      text: `${headCount(finished)} seniors graduated${later > 0 ? `, ${headCount(later)} of them in their fifth or sixth year` : ''}. ${c[3] > 0 ? `${headCount(c[3])} stay on for a fifth year. ` : ''}${headCount(state.stats.graduates)} alumni so far.`,
+      data: { seniors: finished, late: later, staying: c[3], alumni: state.stats.graduates },
     });
     earn(state, 'graduation', log);
   }
-  ordersMark(state, 'graduation', seniors);
+  ordersMark(state, 'graduation', finished);
   // Commencement is a moment of the calendar, and the goals for the year are paid (DESIGN.md 44).
-  rhythmOnGraduation(state, seniors, log);
+  rhythmOnGraduation(state, finished, log);
   traditionsOnGraduation(state);
   // The class's numbers are fixed and the yearly drive is held, before its chapter members leave (DESIGN.md 54).
-  alumniOnGraduation(state, calendarAt(state.clock).year, seniors, log);
+  alumniOnGraduation(state, year, finished, log);
   // The seniors among Greek Row's members graduate with the rest (DESIGN.md 51).
   greekOnGraduation(state);
 }
 
-/** A new year begins: every class moves up one year. */
+/**
+ * A new year begins: every class moves up one year. Those still enrolled at the end of their first year began a
+ * second, which is where first-year retention is read (DESIGN.md 65.2).
+ */
 export function promote(state: GameState): void {
   const c = state.cohorts;
-  state.cohorts = [0, c[0], c[1], c[2] + c[3]];
+  const year = calendarAt(state.clock).year;
+  if (c[0] > 0) {
+    const record = classRecord(state, year - 1);
+    record.second = (record.second ?? 0) + c[0];
+  }
+  state.cohorts = [0, c[0], c[1], c[2], c[3], c[4]];
+  // A new academic year: last year's leavers are kept for the Scorecard, and this year's count starts again.
+  if (state.admissions.whyYear) state.admissions.whyLastYear = state.admissions.whyYear;
+  state.admissions.whyYear = { why: LEAVE_WHYS.map(() => 0), returned: 0 };
   const o = state.offCampus;
-  state.offCampus = [0, o[0], o[1], o[2] + o[3]];
+  state.offCampus = [0, o[0], o[1], o[2], o[3], o[4]];
+}
+
+/**
+ * Stop-outs come back at the fall intake, to their own class, as far as room allows (DESIGN.md 65.2). They are the
+ * class's last places, as those who leave are, so the students who left are the ones who return.
+ */
+export function returnStopOuts(state: GameState, log: LogEntry[]): void {
+  const away = state.admissions.away ?? [];
+  state.admissions.away = [];
+  const year = calendarAt(state.clock).year;
+  let returned = 0;
+  for (const entry of away) {
+    const classYear = year - entry.entryYear;
+    if (classYear < 1 || classYear >= CLASS_YEARS || state.cohorts[classYear]! <= 0) continue;
+    const room = roomForNewStudents(state).room;
+    const back = Math.min(entry.count, room);
+    if (back <= 0) continue;
+    state.cohorts[classYear]! += back;
+    const record = classRecord(state, entry.entryYear);
+    record.returned = (record.returned ?? 0) + back;
+    returned += back;
+  }
+  if (returned <= 0) return;
+  tallyYear(state, [], returned);
+  state.admissions.lastSemester = state.admissions.lastSemester ? { ...state.admissions.lastSemester, returned } : null;
+  markRatesDirty(state);
+  log.push({
+    tick: state.clock.tick,
+    kind: 'returned',
+    text: `${headCount(returned)} ${returned === 1 ? 'student who had stopped out is' : 'students who had stopped out are'} back for the fall.`,
+    data: { returned },
+  });
+}
+
+/**
+ * A model campus is a school that was already standing (DESIGN.md 37.4): the classes it opens with had years here
+ * before the player came. Each is given its history at the shares of the campus's opening standing, so its rates are
+ * a standing school's from the first day: how many entered, how many have left and why, and how many finished.
+ */
+export function openingHistory(state: GameState): void {
+  const year = calendarAt(state.clock).year;
+  const standing = standingOf(state.field.rank, campusHappiness(state).base);
+  const shares = anchorAt(standing.q);
+  for (let classYear = 1; classYear < CLASS_YEARS; classYear++) {
+    const now = state.cohorts[classYear]!;
+    if (now <= 0) continue;
+    const record = classRecord(state, year - classYear);
+    const path = survivalTo(shares, classYear);
+    const entered = Math.round(now / path.enrolled);
+    const onTime = Math.round(entered * path.onTime);
+    const inFive = Math.round(entered * path.inFive);
+    record.entered = entered;
+    record.second = Math.round(entered * (1 - shares.leave[0]));
+    if (onTime + inFive > 0) record.history = { onTime, inFive };
+    const left = Math.max(0, entered - now - onTime - inFive);
+    record.left = left;
+    // Who left, at the reasons of each year they were in, weighed by how many left that year.
+    const counts = LEAVE_WHYS.map(() => 0);
+    let sum = 0;
+    const each: number[] = [];
+    for (let y = 0; y < classYear; y++) {
+      const at = survivalTo(shares, y).enrolled * shares.leave[y]!;
+      each.push(at);
+      sum += at;
+    }
+    // Whole counts each year that add up to everyone who left, then each year's by reason.
+    splitCount(left, each.map((at) => at / Math.max(1e-9, sum))).forEach((inYear, y) => {
+      const part = splitCount(inYear, leaveShares(state, standing, y));
+      for (let i = 0; i < counts.length; i++) counts[i]! += part[i]!;
+    });
+    record.why = counts;
+  }
 }
 
 /**

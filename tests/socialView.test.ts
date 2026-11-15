@@ -6,7 +6,7 @@ import { DRINK_WORDS, HEAVY_WORDS } from '../src/sim/config/tone';
 import { EVENT, EVENTS, FRIEND_AT, HAPPENING_KINDS, HAPPENINGS_KEPT, HEAVY_EVENTS, KIND, SLOTS, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { classYearOf } from '../src/sim/systems/students';
 import { catchUp, census, decodeWeb, encodeWeb, findGroups, HAPPENING_FIELDS, idOf, newWeb, pickRation, refAt, regrow, webWeekOf, type Web } from '../src/sim/systems/web';
-import { DAY, T0 } from './helpers';
+import { DAY, T0, olderWebRecord } from './helpers';
 
 /**
  * The social campus, stop 2 (DESIGN.md 63.6): every card's people from the web, the Campus social page, the drama of
@@ -45,8 +45,8 @@ describe('happenings', () => {
       expect(one.people.length).toBe(one.event === EVENT.cheating || one.event === EVENT.triangle || one.event === EVENT.pileOn ? 3 : 2);
     }
     expect(Math.max(...perWeek.values())).toBeLessThanOrEqual(HAPPENINGS_KEPT);
-    // Chosen by the pair's luck: from every class, not the first ring the web holds.
-    expect(new Set(all.flatMap((one) => one.people.map((ref) => ref.entryYear))).size).toBe(4);
+    // Chosen by the pair's luck: from every class, not the first ring the web holds. A model campus has six (65.2).
+    expect(new Set(all.flatMap((one) => one.people.map((ref) => ref.entryYear))).size).toBe(6);
   });
 
   it('are none from a regrowing: a campus grown again tells no couple as new, and news begins with the next week lived', () => {
@@ -306,22 +306,22 @@ describe('the record, version 2', () => {
     expect([...read.weekly]).toEqual([...WEB.weekly]);
     expect([...read.ration]).toEqual([...WEB.ration]);
     expect(read.rationFor).toBe(WEB.rationFor);
-    // Version 1, as stop 1 wrote it: the header, the counts, then the slots (since 63.13 followed by the posts).
-    const slots = WEB.n * SLOTS;
-    const head = 64 + EVENTS.length * 8;
-    const slotsEnd = bytes.byteLength - 16 - (WEB.posts.length + WEB.viral.length) * 4;
-    const v1 = new Uint8Array(head + slots * 9);
-    v1.set(bytes.subarray(0, head));
-    new Int32Array(v1.buffer, 0, 16).set([1], 1);
-    v1.set(bytes.subarray(slotsEnd - slots * 9, slotsEnd), head);
-    const old = decodeWeb(v1, MODEL)!;
+    // Version 1, as stop 1 wrote it: the header, the counts, then the slots, in four rings as it was then (65.2). A
+    // campus from then had four class years.
+    const four = structuredClone(MODEL);
+    four.cohorts[4] = 0;
+    four.cohorts[5] = 0;
+    const then = newWeb(four.seed, 1024);
+    catchUp(then, four, WEEK0);
+    catchUp(then, four, WEEK0 + 2);
+    const old = decodeWeb(olderWebRecord(encodeWeb(then), 1), four)!;
     expect(old).not.toBeNull();
-    expect(Buffer.from(old.other.buffer).equals(Buffer.from(WEB.other.buffer))).toBe(true);
+    expect(Buffer.from(old.other.buffer).equals(Buffer.from(then.other.buffer))).toBe(true);
     expect(old.happenings.every((v) => v === -1)).toBe(true);
     // Read back, it carries on a week at a time, as stop 1's did.
-    expect(catchUp(old, MODEL, WEB.week + 1)).toEqual({ lived: 1, regrown: false });
+    expect(catchUp(old, four, then.week + 1)).toEqual({ lived: 1, regrown: false });
     expect(happeningsOf(viewOf(old, false)).length).toBeGreaterThan(0);
-    expect(refAt(old, 0)).toEqual(refAt(WEB, 0));
+    expect(refAt(old, 0)).toEqual(refAt(then, 0));
     expect(HAPPENING_FIELDS).toBe(10);
   });
 });

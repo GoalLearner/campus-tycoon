@@ -175,6 +175,28 @@
     1
    ]
   },
+  "emote.briefcase": {
+   "frame": "emote.briefcase",
+   "anchor": [
+    14,
+    -10
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.cake": {
+   "frame": "emote.cake",
+   "anchor": [
+    12,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.chat-art": {
    "frame": "emote.chat-art",
    "anchor": [
@@ -439,6 +461,17 @@
     1
    ]
   },
+  "emote.mortarboard": {
+   "frame": "emote.mortarboard",
+   "anchor": [
+    14,
+    -11
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.music": {
    "frame": "emote.music",
    "anchor": [
@@ -450,11 +483,33 @@
     1
    ]
   },
+  "emote.package": {
+   "frame": "emote.package",
+   "anchor": [
+    13,
+    -7
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.partycup": {
    "frame": "emote.partycup",
    "anchor": [
     10,
     -7
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.phone": {
+   "frame": "emote.phone",
+   "anchor": [
+    11,
+    -5
    ],
    "footprint": [
     1,
@@ -516,10 +571,32 @@
     1
    ]
   },
+  "emote.suitcase": {
+   "frame": "emote.suitcase",
+   "anchor": [
+    13,
+    -8
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.sweat": {
    "frame": "emote.sweat",
    "anchor": [
     9,
+    -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.thermometer": {
+   "frame": "emote.thermometer",
+   "anchor": [
+    8,
     -5
    ],
    "footprint": [

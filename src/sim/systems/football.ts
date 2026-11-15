@@ -51,7 +51,6 @@ import {
   QUARTER_TICKS,
   RATING_WEIGHTS,
   RIVALRY_SLOT,
-  ROSTER_SIZE,
   SCRIMMAGE_AFTER_TICKS,
   SCRIMMAGE_MIN_FOUNDING_TICKS,
   SEASON_STANDING,
@@ -373,12 +372,8 @@ export function superfanShare(state: GameState): number {
   return lit ? base * 2 : base;
 }
 
-/** The share of students who are Varsity Athletes: the roster. */
-export function athleteShare(state: GameState): number {
-  const students = enrollment(state);
-  if (!hasSeason(state) || students <= 0) return 0;
-  return Math.min(0.15, ROSTER_SIZE / students);
-}
+/** The share of students who are Varsity Athletes: every team's roster, football's and the others' (DESIGN.md 65.7). */
+export { athleteShare } from './teams';
 
 /** How many people want a ticket to a home game at today's price. `big` is Homecoming or the rivalry. */
 export function fanDemand(state: GameState, big = false): number {

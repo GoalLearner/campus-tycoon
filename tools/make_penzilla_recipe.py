@@ -420,6 +420,10 @@ sprites['ui.level'] = {'layers': [standing(ICONS + 'LaurelWreath.png', 0.5, 0.5,
 EMOTES = ('bell', 'speech', 'thought', 'heart', 'heartbreak', 'sparkle', 'laugh', 'sadcloud', 'anger', 'music', 'partycup', 'sodacup', 'exclaim', 'sweat', 'wave', 'highfive', 'fistbump', 'hug', 'chat-sports', 'chat-gaming', 'chat-music', 'chat-fitness', 'chat-partying', 'chat-studying', 'chat-art', 'chat-fashion', 'chat-love')
 for emote in EMOTES:
     sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
+# The realism pass (DESIGN.md 65.9): seven small icons, ours, for being sick, a birthday, going away, work,
+# graduation, the mail room and a call home.
+for emote in ('thermometer', 'cake', 'suitcase', 'briefcase', 'mortarboard', 'package', 'phone'):
+    sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
 # The living campus, L2 (DESIGN.md 64.3): big bubbles for big moments, twice an emote's size, and the mood rings at a
 # student's feet. Ours, by tools/make_emotes.py.
 BIG_MOMENTS = ('heartbreak', 'kiss', 'win', 'argue', 'bid', 'fail', 'ring')

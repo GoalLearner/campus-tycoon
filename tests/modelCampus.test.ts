@@ -164,14 +164,17 @@ describe('the model campus follows the game\'s own rules', () => {
 });
 
 describe('the model campus opens balanced', () => {
-  it('opens about nine tenths full, with all four class years and locals who walk and drive in', () => {
+  it('opens about nine tenths full, with all six class years and locals who walk and drive in', () => {
     const state = model();
     const seats = openCapacity(state, 'academic');
     const beds = openCapacity(state, 'housing');
     const students = enrollment(state);
     expect(students).toBe(MODEL_STUDENTS);
     expect(Math.abs(students / seats - MODEL_FULL)).toBeLessThan(0.02);
-    for (const year of state.cohorts) expect(year).toBeGreaterThan(students / 6);
+    // Four full class years, and the fifth- and sixth-year seniors a standing school has (DESIGN.md 65.2).
+    for (const year of state.cohorts.slice(0, 4)) expect(year).toBeGreaterThan(students / 6);
+    expect(state.cohorts[4]).toBeGreaterThan(state.cohorts[5]);
+    expect(state.cohorts[5]).toBeGreaterThan(0);
     const inTown = state.offCampus.reduce((a, b) => a + b, 0);
     const inDorms = students - inTown;
     expect(inDorms / beds).toBeGreaterThan(0.85);
@@ -180,7 +183,7 @@ describe('the model campus opens balanced', () => {
     expect(town.walk).toBeGreaterThan(0);
     expect(town.drive).toBeGreaterThan(0);
     expect(inTown).toBeGreaterThan(town.walk);
-    expect(state.classes.length).toBe(4);
+    expect(state.classes.length).toBe(6);
     expect(state.admissions.lastIntake?.admitted).toBe(students);
     expect(state.admissions.waitlist).toBe(0);
   });

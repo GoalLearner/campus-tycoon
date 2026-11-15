@@ -1,5 +1,5 @@
 import { campusHappiness } from '../sim';
-import { friendsStay } from '../sim/systems/friends';
+import { friendsKeep } from '../sim/systems/population';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
 import { feedOf, moodLine } from '../app/quadline';
@@ -57,14 +57,20 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
   const effects = state.web.effects;
   if (effects) {
     const signed = (n: number, places: number): string => `${n > 0 ? '+' : n < 0 ? '\u2212' : ''}${Math.abs(n).toFixed(places)}`;
-    const retention = campusHappiness(state).retention;
-    const stay = friendsStay(state, retention);
+    const stay = friendsKeep(state, campusHappiness(state).base);
     body.append(
       el('div', 'money-head', 'What friends do'),
       stat('Happiness', `${signed(effects.happiness, 1)} across the campus`),
       stat('Stress in finals', `${signed(effects.examStress, 0)}`),
       stat('Each semester', `${(Math.abs(stay) * 100).toFixed(2)} points ${stay >= 0 ? 'more' : 'fewer'} stay`),
       stat('Nobody close yet', `${Math.round(effects.alone * 100)}% of students`),
+      // Lonely, and missing home (DESIGN.md 65.5): common feelings, counted from everyone's ties.
+      stat('Lonely', `${Math.round(social.lonely * 100)}% of students`),
+      ...(social.homesick !== null ? [stat('Missing home', `${Math.round(social.homesick * 100)}% of first-years who moved away`)] : []),
+      // Roommates (DESIGN.md 65.6): about half have some friction, and a few move apart each spring.
+      ...(social.roommates
+        ? [stat('Roommates', `${Math.round(social.roommates.friction * 100)}% with some friction, ${Math.round(social.roommates.atOdds * 100)}% at odds${social.roommates.switched > 0 ? `; ${social.roommates.switched.toLocaleString('en-US')} moved rooms this year` : ''}`)]
+        : []),
       // Picking on someone (DESIGN.md 63.11).
       ...(effects.bullied !== undefined ? [stat('Picked on', `${(effects.bullied * 100).toFixed(1)}% of students`)] : []),
     );

@@ -3,6 +3,7 @@ import { sleepHours } from './regularDay';
 import { roomsShared } from '../sim/systems/web';
 import { genderOf } from '../sim/systems/identity';
 import {
+  dateAt,
   dayRead,
   dormName,
   hashInts,
@@ -35,7 +36,7 @@ import { periodAt } from './daylight';
  */
 
 /** What a student is doing in their room. */
-export type RoomActivity = 'study' | 'finals' | 'asleep' | 'ready' | 'music' | 'call' | 'game' | 'relax' | 'workout';
+export type RoomActivity = 'study' | 'finals' | 'asleep' | 'ready' | 'music' | 'call' | 'game' | 'relax' | 'workout' | 'sick';
 
 /** How a figure moves where it stands. Small: a breath, a nod, a word, a squat. */
 export type RoomMotion = 'breathe' | 'nod' | 'talk' | 'still' | 'reps';
@@ -261,8 +262,11 @@ export const ROOM_PLANS: readonly Plan[] = [
 /** How high the desk's top stands, in atlas pixels: what is on it is raised this much. */
 const DESK_TOP = 13;
 
-/** The two hours a student is asleep between: the same hours as their day (src/app/regularDay.ts). */
-const sleeps = sleepHours;
+/** The two hours a student is asleep between: the same hours as their day (src/app/regularDay.ts), later at the weekend. */
+const sleeps = (state: GameState, card: StudentCard): [number, number] => {
+  const weekday = dateAt(state.clock).weekday;
+  return sleepHours(card, weekday === 0 || weekday === 6);
+};
 
 const between = (hour: number, from: number, to: number): boolean => {
   const h = ((hour % 24) + 24) % 24;
@@ -315,13 +319,15 @@ export function homeName(state: GameState, card: StudentCard): string {
 
 /** What they are doing, from the card and the hour. The same for the same student in the same hour. */
 export function roomActivity(state: GameState, card: StudentCard, hour: number, shared: boolean): RoomActivity {
-  const [sleep, wake] = sleeps(card);
+  const [sleep, wake] = sleeps(state, card);
   if (between(hour, sleep, wake)) return 'asleep';
+  // Down with the flu (DESIGN.md 65.5): in bed, awake, all day.
+  if (card.sick) return 'sick';
   if (between(hour, wake, wake + 1.5)) return 'ready';
   // Finals week and high Stress fill the desks.
   if (dayRead(state.clock).kind === 'finals') return 'finals';
   const at = roll(state, card.ref, 2, Math.floor(hour));
-  if (card.stress >= 60 && at < 0.7) return 'study';
+  if (card.stress >= 75 && at < 0.7) return 'study';
   const weights: Array<[RoomActivity, number]> = [
     ['study', card.archetype === 'scholar' || card.archetype === 'stressed' ? 4 : card.archetype === 'slacker' ? 0.5 : 1.5],
     ['music', musical(card) ? 3 : 0.4],
@@ -348,7 +354,7 @@ export function homeActivity(state: GameState, card: StudentCard, hour: number):
   if (!housed(card)) return null;
   // A game needs the roommate, which is not worth finding here: it is never asleep or getting ready either way.
   const activity = roomActivity(state, card, hour, false);
-  if (activity === 'asleep' || activity === 'ready') return activity;
+  if (activity === 'asleep' || activity === 'ready' || activity === 'sick') return activity;
   const period = periodAt(((hour % 24) + 24) % 24);
   return period === 'evening' || period === 'night' ? activity : null;
 }
@@ -416,6 +422,8 @@ function belongings(card: StudentCard): string[] {
 /** The line under the room, in the card's voice. */
 function lineOf(activity: RoomActivity, card: StudentCard, mate: { name: string; asleep: boolean; in: boolean } | null, night: boolean): string {
   switch (activity) {
+    case 'sick':
+      return 'In bed with the flu';
     case 'asleep':
       if (!mate) return 'Asleep for the night';
       return mate.asleep ? `Asleep. ${mate.name} is asleep too.` : `Asleep. ${mate.name} is still out.`;
@@ -425,7 +433,7 @@ function lineOf(activity: RoomActivity, card: StudentCard, mate: { name: string;
       return 'Studying for finals at the desk';
     case 'study':
       if (night && mate?.asleep) return `Studying late by the lamp while ${mate.name} sleeps`;
-      return night ? 'Studying late by the desk lamp' : card.stress >= 60 ? 'Catching up on reading at the desk' : 'Studying at the desk';
+      return night ? 'Studying late by the desk lamp' : card.stress >= 75 ? 'Catching up on reading at the desk' : 'Studying at the desk';
     case 'music':
       return 'Playing music';
     case 'call':
@@ -469,6 +477,7 @@ function round(activity: RoomActivity, plan: Plan, r: (salt: number) => number, 
         ? [stop(plan.onSofa, 'sofa', 'breathe', 16 + 8 * r(2)), stop(plan.atWindow, 'stand', 'breathe', 5), stop(plan.atShelf, 'stand', 'breathe', 4)]
         : [stop(plan.onRug[0], 'floor', 'breathe', 12 + 6 * r(2)), stop(plan.atWindow, 'stand', 'breathe', 5), stop(plan.atShelf, 'stand', 'breathe', 4)];
     case 'asleep':
+    case 'sick':
       return [];
   }
 }
@@ -534,10 +543,11 @@ export function roomFor(state: GameState, ref: StudentRef, hour: number, figures
   if (sofa) pieces.push({ key: 'decoration.sofa', x: plan.sofa.x, y: plan.sofa.y, flip: plan.sofa.flip });
 
   // Their things: what goes on a desk goes on the desk, food and a cup first, and the rest on the floor. Food and a cup
-  // never go on the floor: a crowded desk leaves them out.
+  // never go on the floor: a crowded desk leaves them out. The cup and the apple are a quirk's own, so they come before
+  // a club's bread.
   const things = belongings(card);
   const atDesk = activity === 'study' || activity === 'finals';
-  const onDesk = [atDesk ? 'room.book' : null, ...things.filter((key) => FOOD.includes(key)), ...things.filter((key) => DESK_THINGS.includes(key))].filter((key): key is string => key !== null);
+  const onDesk = [atDesk ? 'room.book' : null, ...FOOD.filter((key) => things.includes(key)), ...things.filter((key) => DESK_THINGS.includes(key))].filter((key): key is string => key !== null);
   const deskShown = [...new Set(onDesk)].slice(0, plan.onDesk.length);
   deskShown.forEach((key, n) => pieces.push({ key, x: plan.onDesk[n]![0], y: plan.onDesk[n]![1], lift: DESK_TOP, pages: key === 'room.book' && atDesk }));
   // Playing music: what they play it on stands beside them, and notes drift up from it.
@@ -557,7 +567,7 @@ export function roomFor(state: GameState, ref: StudentRef, hour: number, figures
 
   const people: RoomFigure[] = [];
   const look = figures.look(ref);
-  if (activity === 'asleep') people.push({ look, roommate: false, bed: 0, stops: [], via: plan.via, offset: 0 });
+  if (activity === 'asleep' || activity === 'sick') people.push({ look, roommate: false, bed: 0, stops: [], via: plan.via, offset: 0 });
   else people.push({ look, roommate: false, bed: null, stops: round(activity, plan, r, sofa), via: plan.via, offset: r(9) * 20 });
   if (mate && mateCard && mateIn) {
     const mateLook = figures.look(mate);

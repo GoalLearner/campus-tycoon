@@ -36,7 +36,7 @@ import { bullyingTimes } from './policies';
 import { hashInts } from '../rng';
 import type { GameState, Week } from '../types';
 import { capacity } from './capacity';
-import { athleteShare } from './football';
+import { rostersOf, type Rosters } from './teams';
 import { chapterStatus, nextGreekDay } from './greek';
 import { campusHappiness } from './happiness';
 import { INTEREST, TRAIT, traitOf } from './identity';
@@ -98,7 +98,7 @@ export interface PostContext {
   state: GameState;
   seed: number;
   housing: PlaceIndex;
-  athletes: number;
+  athletes: Rosters;
   /** The Main Character, followed students and named regulars, by place in the web. */
   featured: Array<{ id: number; most: number }>;
   /** The campus's weakest and strongest parts of Happiness, by level (0 to 1), and beds and seats when short. */
@@ -137,7 +137,7 @@ export interface PostContext {
 export function postContext(web: Web, state: GameState, toWeek: number): PostContext {
   const housing = placeIndex(state, 'housing');
   const idOf = (ref: StudentRef): number => {
-    const r = ((ref.entryYear % 4) + 4) % 4;
+    const r = ((ref.entryYear % web.ring.length) + web.ring.length) % web.ring.length;
     return web.ring[r] === ref.entryYear && ref.index >= 0 && ref.index < web.classSlot ? r * web.classSlot + ref.index : -1;
   };
   const featured: PostContext['featured'] = [];
@@ -218,7 +218,7 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
     bullyShown: (1 / Math.max(1, bullyingTimes(state).reported)) * (speakingUp(state) ? 0.6 : 1),
     seed: web.seed,
     housing,
-    athletes: athleteShare(state),
+    athletes: rostersOf(state),
     featured,
     weak,
     strong,
@@ -375,7 +375,7 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
   if (read.kinds.has('finals')) add(POST.finals, 4 + (has(bits, INTEREST.studying) ? 2 : 0), hall);
   if (read.kinds.has('midterms') || read.kinds.has('finals')) add(POST.studyGroup, 1.5, hall);
   if (read.kinds.has('break')) add(POST.breakHome, 3);
-  if (read.kinds.has('commencement')) add(POST.commencement, year === 3 ? 6 : 0.3);
+  if (read.kinds.has('commencement')) add(POST.commencement, year >= 3 ? 6 : 0.3);
   if (inClass) add(POST.eightAm, 0.8);
   if (read.weather === 'snow') add(POST.snow, 3, home);
   if (read.weather === 'rain') add(POST.rain, 1.2);
@@ -383,7 +383,7 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
   // A home game this week, or one just played.
   const from = postWeekStart(week);
   const to = from + WEB_WEEK_TICKS;
-  const fan = has(bits, INTEREST.sports) || profile.team || profile.nature === 'superfan';
+  const fan = has(bits, INTEREST.sports) || profile.team >= 0 || profile.nature === 'superfan';
   for (const game of ctx.games) {
     if (game.kick < from || game.kick >= to) continue;
     const kind = !game.played ? POST.gameDay : game.us > game.them ? POST.gameWon : POST.gameLost;
@@ -433,7 +433,7 @@ function greekNewsOf(ctx: PostContext, profile: SocialProfile, week: number): { 
 
 /** A varsity athlete's news: a game away this week, else practice, now and then the new recruits. */
 function teamNewsOf(ctx: PostContext, profile: SocialProfile, week: number, h: number): { a: number; b: number; weight: number } | null {
-  if (!profile.team) return null;
+  if (profile.team < 0) return null;
   const from = postWeekStart(week);
   const away = ctx.games.find((game) => !game.home && game.kick >= from && game.kick < from + WEB_WEEK_TICKS);
   if (away) return { a: 1, b: away.opp, weight: 2.5 };
@@ -486,7 +486,7 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
       const kind = HAPPENING_POST[h[f + 1]!];
       if (kind === undefined) continue;
       const idOfRef = (entryYear: number, index: number): number => {
-        const r = ((entryYear % 4) + 4) % 4;
+        const r = ((entryYear % web.ring.length) + web.ring.length) % web.ring.length;
         return web.ring[r] === entryYear && index >= 0 && index < web.classSlot ? r * web.classSlot + index : -1;
       };
       const a = idOfRef(h[f + 4]!, h[f + 5]!);
@@ -586,7 +586,7 @@ function bullyPosts(web: Web, ctx: PostContext, posting: Posting, week: number):
 }
 
 function idOfRef(web: Web, entryYear: number, index: number): number {
-  const r = ((entryYear % 4) + 4) % 4;
+  const r = ((entryYear % web.ring.length) + web.ring.length) % web.ring.length;
   return web.ring[r] === entryYear && index >= 0 && index < web.classSlot ? r * web.classSlot + index : -1;
 }
 

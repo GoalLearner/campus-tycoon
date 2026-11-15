@@ -1,4 +1,6 @@
 import { policiesAt } from './systems/policies';
+import { VARSITY_TEAMS } from './config/teams';
+import { LEAVE_WHYS, type LeaveWhy } from './config/population';
 import { dateAt, formatDate } from './calendar';
 import { DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from './config/demand';
 import { ERAS, RANK_GOALS } from './config/goals';
@@ -19,6 +21,16 @@ import { roomPlan } from './systems/plan';
 import { sampleStudents, studentCard } from './systems/students';
 import type { GameState, LogEntry, PlacedType } from './types';
 
+
+/** The paper's headline for a semester's leavers, by their most common reason (DESIGN.md 65.2). */
+const LEFT_HEADLINE: Record<LeaveWhy, string> = {
+  transfer: 'Some Students Transfer Out; Admissions Office Takes It Personally',
+  stoppedOut: 'Some Students Stop Out for a While; Several Promise to Be Back',
+  money: 'Money Sends Some Students Home; Financial Aid Office Extends Its Hours',
+  grades: 'Grades Catch Up With Some; Library Reports a Rush on Study Rooms',
+  homesick: 'Homesick First-Years Head Home; Parents Quietly Delighted',
+  housing: 'Students With No Bed Go Elsewhere; Housing Office Counts Again',
+};
 /**
  * The campus newspaper (DESIGN.md 12.5 and section 36). It is the front of
  * the away list: a headline for the largest change, then the three or four
@@ -239,7 +251,33 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         out.push({ weight: 60, headline: `Year ${Number(entry.data?.year ?? 0)} Is in the Books; Accountants Seen Smiling`, deck: entry.text });
         break;
       case 'graduation':
-        out.push({ weight: 62, headline: 'Seniors Graduate; Parents Find Parking, Eventually', deck: entry.text });
+        out.push({ weight: 62, headline: Number(entry.data?.late ?? 0) > 0 ? 'Seniors Graduate, Some in Their Fifth Year; Parents Find Parking, Eventually' : 'Seniors Graduate; Parents Find Parking, Eventually', deck: entry.text });
+        break;
+      case 'semester': {
+        // Who did not come back, and the most common reason why (DESIGN.md 65.2).
+        const left = Number(entry.data?.left ?? 0);
+        if (left <= 0) break;
+        const most = LEAVE_WHYS.reduce((best, why) => (Number(entry.data?.[why] ?? 0) > Number(entry.data?.[best] ?? 0) ? why : best), LEAVE_WHYS[0]!);
+        out.push({ weight: 57, headline: LEFT_HEADLINE[most], deck: entry.text });
+        break;
+      }
+      case 'teams': {
+        // In the headline's own capitals: "Swimming and Diving".
+        const name = (VARSITY_TEAMS[Number(entry.data?.best ?? 0)]?.name ?? 'A team')
+          .split(' ')
+          .map((word) => (word === 'and' ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+          .join(' ');
+        out.push({ weight: 52, headline: entry.data?.title === 1 ? `${name} Wins the Conference; Trophy Case Rearranged` : `${name} Has the Best Season; Coaches Promise More Next Year`, deck: entry.text });
+        break;
+      }
+      case 'flu':
+        out.push({ weight: 54, headline: 'Flu Season Arrives; Campus Store Sells Out of Tissues', deck: entry.text });
+        break;
+      case 'grades':
+        out.push({ weight: 55, headline: `Dean's List Runs to ${Number(entry.data?.deans ?? 0).toLocaleString('en-US')} Names; Probation Letters Go Out Too`, deck: entry.text });
+        break;
+      case 'returned':
+        out.push({ weight: 56, headline: 'Stop-Outs Return for the Fall; Registrar Finds Their Files', deck: entry.text });
         break;
       case 'waitlistClosed':
         if (Number(entry.data?.lost ?? 0) > 0) {

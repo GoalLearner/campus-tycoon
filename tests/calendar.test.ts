@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STRESS_WORST } from '../src/sim/config/season';
 import {
   ACADEMIC_CALENDAR,
   activeEntries,
@@ -49,6 +50,7 @@ import {
   type GameState,
   type LogEntry,
   type Week,
+  retentionRate,
 } from '../src/sim';
 
 /**
@@ -331,9 +333,9 @@ describe('Stress, breaks and weather', () => {
     expect(curve('springFinals')).toBe(1);
     expect(curve('fallMidterms')).toBeLessThan(1);
     expect(curve('fallMidterms')).toBeGreaterThan(0.6);
-    expect(curve('thanksgiving')).toBeLessThanOrEqual(0.1);
-    expect(curve('winterBreak', 300)).toBeLessThanOrEqual(0.1);
-    expect(curve('summerStart', 300)).toBeLessThan(0.2);
+    expect(curve('thanksgiving')).toBeLessThanOrEqual(0.15);
+    expect(curve('winterBreak', 300)).toBeLessThanOrEqual(0.15);
+    expect(curve('summerStart', 300)).toBeLessThanOrEqual(0.2);
     // An ordinary week, and then the climb in the days before midterms.
     const ordinary = seasonCurve(at(PLAIN, PLAIN.start + 200));
     const before = seasonCurve(at(PLAIN, entrySpan(PLAIN, entry('fallMidterms')).from - 20));
@@ -374,7 +376,7 @@ describe('Stress, breaks and weather', () => {
     const finals = stressRead(during(state, 'fallFinals'), campusLevels(state)).score;
     const rest = stressRead(during(state, 'winterBreak', 60), campusLevels(state)).score;
     expect(rest).toBeLessThan(finals / 5);
-    expect(rest).toBeLessThan(12);
+    expect(rest).toBeLessThan(16);
     // And across a whole year the semester's average is far below its peak.
     let year = state;
     let peak = 0;
@@ -388,7 +390,8 @@ describe('Stress, breaks and weather', () => {
     expect(year.term.lastAverage).toBeLessThan(peak * 0.7);
     expect(stressLoss(year.term.lastAverage)).toBeLessThanOrEqual(0.01);
     expect(stressLoss(10)).toBe(0);
-    expect(stressLoss(36)).toBeCloseTo(0.01, 6);
+    // The worst a semester averages since R1's everyday level (DESIGN.md 65.5).
+    expect(stressLoss(STRESS_WORST)).toBeCloseTo(0.01, 6);
   });
 
   it('a break lifts Happiness and empties the campus, and the first day back dips a little', () => {
@@ -400,9 +403,9 @@ describe('Stress, breaks and weather', () => {
     const back = structuredClone(state);
     back.clock.tick = entrySpan(back.clock.week, entry('thanksgiving')).to + 3;
     expect(campusHappiness(back).season.parts.find((part) => part.id === 'back')!.points).toBeLessThan(0);
-    // The four causes are untouched by any of it, and retention follows them alone.
+    // The four causes are untouched by any of it, and retention follows them alone (with the rank: DESIGN.md 65.2).
     expect(happy.base).toBe(campusHappiness(state).base);
-    expect(happy.retention).toBe(campusHappiness(state).retention);
+    expect(retentionRate(onBreak)).toBe(retentionRate(state));
     expect(happy.score).toBeCloseTo(Math.max(0, Math.min(100, happy.base + happy.season.delta)), 9);
   });
 

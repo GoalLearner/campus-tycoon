@@ -53,12 +53,13 @@ const BEFORE_SCALE = 12;
 const model = (scale?: number): GameState => newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model', ...(scale === undefined ? {} : { scale }) });
 
 describe('the model campus at its own size', () => {
-  it('opens with exactly 46,000 students, in all four class years, in about nine tenths of its seats', () => {
+  it('opens with exactly 46,000 students, in all six class years, in about nine tenths of its seats', () => {
     const state = model();
     expect(MODEL_STUDENTS).toBe(46_000);
     expect(enrollment(state)).toBe(46_000);
     expect(state.cohorts.reduce((a, b) => a + b, 0)).toBe(46_000);
-    for (const year of state.cohorts) expect(year).toBeGreaterThan(9_000);
+    for (const year of state.cohorts.slice(0, 4)) expect(year).toBeGreaterThan(9_000);
+    expect(state.cohorts[4] + state.cohorts[5]).toBeGreaterThan(2_000);
     const full = enrollment(state) / openCapacity(state, 'academic');
     expect(full).toBeGreaterThan(0.88);
     expect(full).toBeLessThan(0.92);

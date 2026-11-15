@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentsFor, feedOf, postWords } from '../src/app/quadline';
+import { commentsFor, feedOf, postSubject, postWords } from '../src/app/quadline';
 import { happeningLine, happeningsOf, viewOf } from '../src/app/socialView';
 import { advance, newGame, toneProblem } from '../src/sim';
 import { BULLYING_LINES, bullyingTemplates } from '../src/sim/config/bullying';
@@ -109,7 +109,9 @@ describe('the hard lines', () => {
     const mask = (text: string, names: string[]): string => names.reduce((line, name) => line.split(name).join('{name}'), text);
     const names = (refs: Array<{ entryYear: number; index: number }>): string[] => refs.flatMap((ref) => studentName(model, ref).split(' '));
     for (const post of posts) {
-      const subject = post.kind <= 6 ? [{ entryYear: post.a, index: post.b }] : [];
+      // Whoever the post is about, whatever its kind: a post picking on someone names them too (a name such as Beatrice).
+      const about = postSubject(post);
+      const subject = about ? [about] : [];
       const { text, tag } = postWords(model, post);
       // Buildings are named from the game's own name pools, as students are: masked too.
       const line = mask(text, names([post.author, ...subject])).replace(/[A-Z][a-z]+ Hall/g, '{place}');

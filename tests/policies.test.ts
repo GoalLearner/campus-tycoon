@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { SEASON_CURVE } from '../src/sim/config/season';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -71,7 +72,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -167,7 +168,7 @@ describe('the list of policies', () => {
       }
     }
     // Every kind of effect there is has a policy that uses it.
-    expect([...kinds].sort()).toEqual(['bullying', 'cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
+    expect([...kinds].sort()).toEqual(['bullying', 'cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'moneyLeaving', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
   });
 });
 
@@ -390,10 +391,8 @@ describe('no fifth cause', () => {
       expect(cause(on, id).level).toBeCloseTo(cause(off, id).level + moved, 2);
     }
     expect(cause(on, 'walk').level).toBeCloseTo(cause(off, 'walk').level, 9);
-    // The four causes alone are what the share who stay follows, so a policy's cost reaches it.
+    // The four causes alone, with the rank, are what the share who stay follows, so a policy's cost reaches it (65.2).
     expect(after.base).toBeLessThan(before.base);
-    expect(after.retention).toBeLessThan(before.retention);
-    expect(after.retention).toBeCloseTo(0.95 + 0.045 * (after.base / 100), 9);
   });
 
   it('reads the same on a student\'s lot as on the campus panel, and is named on the panel\'s line', () => {
@@ -434,7 +433,7 @@ describe('no fifth cause', () => {
     expect(finals.cause).toBe(finalsOff.cause);
     expect(finals.factor).toBe(finalsOff.factor);
     // A share of it at midterms, and nothing in an ordinary week or on a break.
-    expect(stressRead(on, levels, 0.75).score).toBe(stressRead(off, levels, 0.75).score - 20 * EXAMS_AT_MIDTERMS);
+    expect(stressRead(on, levels, SEASON_CURVE.midterms).score).toBe(stressRead(off, levels, SEASON_CURVE.midterms).score - 20 * EXAMS_AT_MIDTERMS);
     for (const season of [0.6, 0.3, 0.1]) {
       expect(stressRead(on, levels, season).score).toBe(stressRead(off, levels, season).score);
       expect(stressRead(on, levels, season).policy).toBe(0);
@@ -724,6 +723,7 @@ describe('a save from version 16', () => {
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
     expected.web = webMetaFor(expected);
+    sixClassYears(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
@@ -769,7 +769,7 @@ describe('a save from version 16', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
-    expect(notes).toHaveLength(14);
+    expect(notes).toHaveLength(15);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

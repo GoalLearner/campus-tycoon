@@ -65,3 +65,74 @@ export function badNumbers(value: unknown, path = 'state'): string[] {
 export function webMetaFor(state: GameState): GameState['web'] {
   return { namesFrom: { entryYear: calendarAt(state.clock).year, index: state.cohorts[0] ?? 0 } };
 }
+
+/**
+ * A web record (version 4, six rings) written again as an older version wrote it (DESIGN.md 65.2): four rings, each
+ * class in the ring its entry year had then, and every tie's other end with it. `version` 3 keeps the posts, 2 drops
+ * them, and 1 drops the kept weeks too. Rings with nobody in them are left out; a web of more than four classes has
+ * no older record.
+ */
+export function olderWebRecord(bytes: Uint8Array, version: 1 | 2 | 3): Uint8Array {
+  const SLOTS = 12;
+  const head = new Int32Array(bytes.slice(0, 64).buffer);
+  const slot = head[4]!;
+  const ring6 = [head[5]!, head[6]!, head[7]!, head[8]!, head[14]!, head[15]!];
+  const kinds = head[10]!;
+  const kept = head[11]!;
+  const weeksKept = head[12]!;
+  const fields = 10;
+  const counts = 64 + kinds * 8;
+  const weeks = weeksKept * kinds * 8 + kept * 4 + weeksKept * 8 + fields * 4;
+  const n6 = slot * 6;
+  const slots6 = n6 * SLOTS;
+  const at = counts + weeks;
+  const other6 = new Int32Array(bytes.slice(at, at + slots6 * 4).buffer);
+  const rest6 = bytes.subarray(at + slots6 * 4, at + slots6 * 9);
+  const posts = bytes.subarray(at + slots6 * 9);
+  // Which rings hold anyone, and where each goes among four.
+  const used = new Set<number>();
+  for (let id = 0; id < n6; id++) {
+    for (let k = 0; k < SLOTS; k++) {
+      if (other6[id * SLOTS + k]! >= 0) used.add(Math.floor(id / slot));
+    }
+  }
+  const ring4 = [-1, -1, -1, -1];
+  for (const r of used) ring4[((ring6[r]! % 4) + 4) % 4] = ring6[r]!;
+  const move = (id: number): number => (id < 0 ? -1 : ((((ring6[Math.floor(id / slot)]! % 4) + 4) % 4) * slot + (id % slot)));
+  const n4 = slot * 4;
+  const slots4 = n4 * SLOTS;
+  const other4 = new Int32Array(slots4).fill(-1);
+  const seen4 = new Uint16Array(slots4);
+  const bytes4 = [new Uint8Array(slots4), new Uint8Array(slots4), new Uint8Array(slots4)];
+  const seen6 = new Uint16Array(rest6.slice(0, slots6 * 2).buffer);
+  for (let id = 0; id < n6; id++) {
+    if (!used.has(Math.floor(id / slot))) continue;
+    const to = move(id);
+    for (let k = 0; k < SLOTS; k++) {
+      const s = id * SLOTS + k;
+      const t = to * SLOTS + k;
+      other4[t] = move(other6[s]!);
+      seen4[t] = seen6[s]!;
+      for (let b = 0; b < 3; b++) bytes4[b]![t] = rest6[slots6 * 2 + b * slots6 + s]!;
+    }
+  }
+  const head4 = new Int32Array(16);
+  head4.set([head[0]!, version, head[2]!, head[3]!, slot, ...ring4, head[9]!, kinds, kept, weeksKept, head[13]!, 0, 0]);
+  const parts: Uint8Array[] = [new Uint8Array(head4.buffer), bytes.subarray(64, counts)];
+  if (version >= 2) parts.push(bytes.subarray(counts, at));
+  parts.push(new Uint8Array(other4.buffer), new Uint8Array(seen4.buffer), ...bytes4);
+  if (version === 3) parts.push(posts);
+  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.byteLength, 0));
+  let to = 0;
+  for (const part of parts) {
+    out.set(part, to);
+    to += part.byteLength;
+  }
+  return out;
+}
+
+/** What the version 31 upgrade (DESIGN.md 65.2) does to a save: two more class years, empty. */
+export function sixClassYears(state: GameState): void {
+  state.cohorts = [0, 1, 2, 3, 4, 5].map((classYear) => Number(state.cohorts[classYear] ?? 0)) as GameState['cohorts'];
+  state.offCampus = [0, 1, 2, 3, 4, 5].map((classYear) => Number(state.offCampus[classYear] ?? 0)) as GameState['offCampus'];
+}

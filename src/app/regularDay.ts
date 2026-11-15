@@ -12,13 +12,32 @@ import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socia
  * says where it happens, so the map can send a followed student there (src/game/Walkers.ts). Nothing is stored.
  */
 
-/** The two hours a student is asleep between, by the 24-hour clock: a night owl later, a scholar a little earlier. */
-export function sleepHours(card: StudentCard): [number, number] {
-  if (card.archetype === 'allNighter') return [4, 9];
-  if (card.quirk === 'Night owl') return [2, 10];
-  if (card.archetype === 'scholar') return [23, 7];
-  return [24, 8];
+/**
+ * The two hours a student is asleep between, by the 24-hour clock, as real students sleep (DESIGN.md 65.5): about 6 h
+ * 37 min a night on average, two nights in three under seven hours, and half an hour more at the weekend, to bed later
+ * and up later still (Creswell and others, PNAS 2023, by wristband). Each student keeps their own hours: a night owl
+ * later, a scholar a little earlier. In finals week the all-nighters sleep a few hours from dawn, and now and then not
+ * at all. Hours past midnight count on: 25 is 1 AM.
+ */
+export function sleepHours(card: StudentCard, weekend = false): [number, number] {
+  const z = (salt: number): number => {
+    // Two uniform numbers make a bell, so the hours cluster as real ones do.
+    const a = (hashInts(card.ref.entryYear, card.ref.index, 9650 + salt) >>> 0) / 4294967296;
+    const b = (hashInts(card.ref.entryYear, card.ref.index, 9660 + salt) >>> 0) / 4294967296;
+    return (a + b - 1) * 2.45;
+  };
+  if (card.archetype === 'allNighter') return [29, 33];
+  let bed = SLEEP.bed + SLEEP.bedSpread * z(1);
+  if (card.quirk === 'Night owl') bed += 1.5;
+  if (card.archetype === 'scholar') bed -= 0.5;
+  bed = Math.max(22.5, Math.min(27.5, bed));
+  const length = Math.max(4.5, Math.min(9, SLEEP.hours + SLEEP.hoursSpread * z(2)));
+  if (weekend) return [bed + SLEEP.weekendLater, bed + SLEEP.weekendLater + length + SLEEP.weekendMore];
+  return [bed, bed + length];
 }
+
+/** [T] Hours of sleep (DESIGN.md 65.5): to bed about 0:45, a school night about 6 h 27 min, a weekend 36 minutes more. */
+export const SLEEP = { bed: 24.75, bedSpread: 0.75, hours: 6.45, hoursSpread: 0.8, weekendLater: 1, weekendMore: 0.6 } as const;
 
 /** Where an item happens, as the map knows places: a dorm, a lecture hall, somewhere to eat, to play, to sit, a lawn. */
 export type Where = 'home' | 'class' | 'food' | 'play' | 'seat' | 'quad' | 'away';
@@ -64,16 +83,23 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   const read = dayRead(state.clock);
   const weekday = dateAt(state.clock).weekday;
   const weekend = weekday === 0 || weekday === 6;
-  const [sleepAt, wakeAt] = sleepHours(card);
-  // Wake to sleep in one run of hours: a student asleep at 2 AM is up until 26 on this count.
-  const wake = wakeAt + (weekend ? 1.5 : 0);
-  const sleep = sleepAt <= wakeAt ? sleepAt + 24 : sleepAt;
+  const [sleepAt, wakeAt] = sleepHours(card, weekend);
+  // Wake to sleep in one run of hours: the hours they woke this morning, and those they go to bed tonight.
+  const wake = wakeAt % 24;
+  const sleep = sleepAt % 24 <= wake ? (sleepAt % 24) + 24 : sleepAt % 24;
   const items: DayItem[] = [];
   const put = (from: number, to: number, where: Where, words: string, people: Person[] = []): void => {
     if (to - from < 0.25 || from >= sleep) return;
     items.push({ from, to: Math.min(to, sleep), where, words, with: people.map((one) => one.ref) });
   };
 
+  // Down with the flu (DESIGN.md 65.5): in bed, out once for soup.
+  if (card.sick && read.kind !== 'break' && read.kind !== 'summer') {
+    put(wake, wake + 4, 'home', 'In bed with the flu');
+    put(wake + 4, wake + 5, 'food', 'Out for soup and tea');
+    put(wake + 5, sleep, 'home', 'Back in bed with the flu');
+    return items;
+  }
   // Away on a break or for the summer: home, off the campus.
   if (read.kind === 'break' || read.kind === 'summer') {
     put(wake, sleep, 'away', read.kind === 'summer' ? 'Home for the summer' : `Home for ${read.name ?? 'the break'}`);
@@ -101,17 +127,17 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     // Classes in the morning, lunch with friends, a class after for the first two years.
     const classFrom = Math.max(9, t);
     if (classFrom > t) put(t, classFrom, 'food', 'Coffee before class');
-    put(classFrom, classFrom + 1.25, 'class', `${card.major} lecture`);
+    put(classFrom, classFrom + 1.25, 'class', `${card.subject} lecture`);
     t = classFrom + 1.5;
     if (t < 12) {
-      put(t, Math.min(12, t + 1.25), 'class', `A ${card.major} seminar`);
+      put(t, Math.min(12, t + 1.25), 'class', `A ${card.subject} seminar`);
       t = Math.max(t + 1.25, 12);
     }
     const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
     put(t, t + 1, 'food', `Lunch${withWords(state, lunch)}`, lunch);
     t += 1;
     if (card.classYear < 2) {
-      put(t + 0.5, t + 2, 'class', `A ${card.major} class`);
+      put(t + 0.5, t + 2, 'class', `A ${card.subject} class`);
       t += 2;
     }
   } else {

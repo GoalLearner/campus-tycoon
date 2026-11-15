@@ -34,7 +34,7 @@ function busy(students = 3000): GameState {
   let state = advance(freshGame(), T0, T0 + 20 * MIN).state;
   state = structuredClone(state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   return place(state, 'courts', 8, 10);
 }
 

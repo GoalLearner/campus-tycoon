@@ -18,8 +18,6 @@ import {
   previewPlace,
   recreationAt,
   retentionRate,
-  RETENTION_FLOOR,
-  RETENTION_SPAN,
   sampleStudents,
   SAVE_VERSION,
   scoreParts,
@@ -178,7 +176,7 @@ describe('happiness', () => {
 
   it('is the average of what the student cards read', () => {
     const state = structuredClone(campus());
-    state.cohorts = [900, 0, 0, 0];
+    state.cohorts = [900, 0, 0, 0, 0, 0];
     let sum = 0;
     const students = sampleStudents(state, 900);
     for (const ref of students) {
@@ -213,8 +211,9 @@ describe('happiness', () => {
   it('sets how many students stay', () => {
     const state = rich(campus());
     const dull = retentionRate(state);
-    expect(dull).toBeGreaterThanOrEqual(RETENTION_FLOOR);
-    expect(dull).toBeLessThanOrEqual(RETENTION_FLOOR + RETENTION_SPAN);
+    // Between a weak campus's share and the best's (DESIGN.md 65.2).
+    expect(dull).toBeGreaterThan(0.9);
+    expect(dull).toBeLessThan(1);
     const lively = retentionRate(place(place(state, 'gym', 11, 11), 'track', 17, 19));
     expect(lively).toBeGreaterThan(dull);
   });
@@ -244,14 +243,18 @@ describe('the metrics pieces', () => {
       for (const record of state.classes) {
         const year = Math.floor((state.clock.tick - 15) / (7 * 24 * 60)) + 1;
         const classYear = year - record.entryYear;
-        const here = classYear >= 0 && classYear <= 3 ? state.cohorts[classYear]! : 0;
-        // Everyone who entered is still here, has left, or has finished.
-        expect(record.entered).toBe(here + record.left + record.finishedOnTime + record.finishedLate);
+        const here = classYear >= 0 && classYear <= 5 ? state.cohorts[classYear]! : 0;
+        // Everyone who entered is still here, has left, or has finished; those who stopped out and came back were
+        // counted leaving and are here again (DESIGN.md 65.2). Who left is told by reason, and adds up too.
+        expect(record.entered + (record.returned ?? 0)).toBe(here + record.left + record.finishedOnTime + record.finishedLate);
+        expect((record.why ?? []).reduce((a, b) => a + b, 0)).toBe(record.left);
       }
     }
     expect(state.classes.length).toBeGreaterThanOrEqual(4);
-    expect(state.classes[0]!.finishedOnTime).toBeGreaterThan(0);
-    expect(state.classes[0]!.left).toBeGreaterThan(0);
+    // The oldest record is the founding sixth-year class: it finished late, or left (DESIGN.md 65.2).
+    expect(state.classes[0]!.finishedLate).toBeGreaterThan(0);
+    expect(state.classes.some((record) => record.finishedOnTime > 0)).toBe(true);
+    expect(state.classes.some((record) => record.left > 0)).toBe(true);
   });
 
   it('says how the last semester ended', () => {

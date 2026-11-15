@@ -9,7 +9,7 @@ import { classYearOf, firstNameOf, socialProfile } from '../src/sim/systems/stud
 import { TRAIT, traitOf } from '../src/sim/systems/identity';
 import { nextGreekDay } from '../src/sim/systems/greek';
 import { catchUp, decodeWeb, encodeWeb, HAPPENING_FIELDS, idOf, newWeb, webWeekOf, type Web } from '../src/sim/systems/web';
-import { DAY, MIN, T0 } from './helpers';
+import { DAY, MIN, T0, olderWebRecord } from './helpers';
 
 /**
  * Quadline, the campus app (DESIGN.md 63.13, social stop 9): posts made as the web lives each game week, from what
@@ -146,7 +146,8 @@ describe('posts', () => {
     for (const post of professor) expect(postWords(MODEL, post).text).toMatch(/professor|class|lecture/);
     const team = all.filter((post) => post.kind === POST.teamNews);
     expect(team.length).toBeGreaterThan(0);
-    for (const post of team) expect(socialProfile(MODEL, post.author)?.team).toBe(true);
+    // From an athlete on a team (DESIGN.md 65.7).
+    for (const post of team) expect(socialProfile(MODEL, post.author)!.team).toBeGreaterThanOrEqual(0);
   });
 
   it('bring Greek Row news from its members: house life, and philanthropy day when it is near', () => {
@@ -209,11 +210,8 @@ describe('posts', () => {
     expect([...read.posts]).toEqual([...WEB.posts]);
     expect([...read.viral]).toEqual([...WEB.viral]);
     expect(read.postNext).toBe(WEB.postNext);
-    // Version 2: the same record with no posts after the slots.
-    const bytes = encodeWeb(WEB);
-    const v2 = bytes.slice(0, bytes.byteLength - 16 - (WEB.posts.length + WEB.viral.length) * 4);
-    new Int32Array(v2.buffer, 0, 16).set([2], 1);
-    const old = decodeWeb(v2, MODEL)!;
+    // Version 2: the same record with no posts after the slots, in four rings as it was then.
+    const old = decodeWeb(olderWebRecord(encodeWeb(WEB), 2), MODEL)!;
     expect(old).not.toBeNull();
     expect(postsOf(old.posts, old.viral)).toHaveLength(0);
     expect(old.postNext).toBe(0);

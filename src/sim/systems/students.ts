@@ -1,4 +1,12 @@
 import { scaleOf, smallCount } from '../scale';
+import { rostersOf, teamAt, teamFor, type Rosters } from './teams';
+import type { VarsityTeam } from '../config/teams';
+import { fluOf, homesickOf } from './wellbeing';
+import { gradesOf, weekInClass } from './grades';
+import { GPA_FLOOR } from '../config/grades';
+import { WEB_WEEK_TICKS } from '../config/web';
+import { majorAt, majorPath, semestersIn, type MajorPath } from './majors';
+import { CLASS_YEARS } from '../config/population';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
@@ -16,14 +24,6 @@ import {
   COMMUTER_WEIGHT,
   CONTENT_MOOD,
   FIRST_NAMES,
-  GPA_BY_CLASS_YEAR,
-  GPA_FLOOR,
-  GPA_MAX,
-  GPA_MIN,
-  GPA_SPAN,
-  GPA_SPREAD,
-  GPA_TILT,
-  HOMESICK_SHARE,
   KIND_AT_ENTRY,
   KIND_LEAN,
   KIND_MOVES,
@@ -45,7 +45,6 @@ import {
   SOCIAL_SWING,
   SOCIAL_THIN,
   STUDENTS_PER_SOCIAL_SPOT,
-  SUPER_SENIOR_SHARE,
   SURNAME_ENDS,
   SURNAME_STARTS,
   TEACHING_WEIGHTS,
@@ -64,7 +63,7 @@ import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
 import { athleteShare, superfanShare } from './football';
-import { dayRead, seasonLine, type SeasonLine } from './season';
+import { dayRead, seasonLine, weatherAt, type SeasonLine } from './season';
 import { STRESS_GPA, STRESS_HAPPINESS, STRESS_TILT } from '../config/season';
 import { townLiving } from './town';
 import { socialTables } from './grounds';
@@ -125,20 +124,43 @@ function pickWeighted<T>(items: ReadonlyArray<readonly [T, number]>, at: number)
   return items[items.length - 1]![0];
 }
 
-/** 0 for a freshman to 3 for a senior, or null when no such student is enrolled now. */
+/**
+ * Where a class's enrolled places start: 0, until its commencement leaves only its fifth- and sixth-year seniors,
+ * who are a run from there (DESIGN.md 65.2). The newest records are at the end, so the search is short.
+ */
+export function classFrom(state: GameState, entryYear: number): number {
+  const classes = state.classes;
+  for (let i = classes.length - 1; i >= 0; i--) {
+    const record = classes[i]!;
+    if (record.entryYear === entryYear) return record.from ?? 0;
+    if (record.entryYear < entryYear) break;
+  }
+  return 0;
+}
+
+/** The places of one class year that are enrolled now: its entry year, and the run of places from `from`. */
+export function classPlaces(state: GameState, classYear: number): { entryYear: number; from: number; size: number } {
+  const entryYear = calendarAt(state.clock).year - classYear;
+  return { entryYear, from: classYear >= 3 ? classFrom(state, entryYear) : 0, size: state.cohorts[classYear] ?? 0 };
+}
+
+/** 0 for a freshman to 3 for a senior, 4 and 5 for fifth- and sixth-year seniors, or null when not enrolled now. */
 export function classYearOf(state: GameState, ref: StudentRef): number | null {
   const classYear = calendarAt(state.clock).year - ref.entryYear;
-  if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear > 3) return null;
-  return ref.index < state.cohorts[classYear]! ? classYear : null;
+  if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear >= CLASS_YEARS) return null;
+  const size = state.cohorts[classYear]!;
+  if (size <= 0) return null;
+  const from = classYear >= 3 ? classFrom(state, ref.entryYear) : 0;
+  return ref.index >= from && ref.index < from + size ? classYear : null;
 }
 
 /** Students to draw walkers from: up to `perClass` from each class year. */
 export function sampleStudents(state: GameState, perClass = 400): StudentRef[] {
-  const year = calendarAt(state.clock).year;
   const out: StudentRef[] = [];
-  for (let classYear = 0; classYear < 4; classYear++) {
-    const size = Math.min(perClass, state.cohorts[classYear]!);
-    for (let index = 0; index < size; index++) out.push({ entryYear: year - classYear, index });
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
+    const { entryYear, from, size } = classPlaces(state, classYear);
+    const take = Math.min(perClass, size);
+    for (let index = from; index < from + take; index++) out.push({ entryYear, index });
   }
   return out;
 }
@@ -184,6 +206,11 @@ function livesOnCampus(seed: number, ref: StudentRef): boolean {
   return roll(seed, ref, SALT.lives) < BED_NEED;
 }
 
+/** True for a student who moved away to live on campus: a commuter lives at home or in town. Cheap: no map is read. */
+export function movedAway(seed: number, ref: StudentRef): boolean {
+  return livesOnCampus(seed, ref);
+}
+
 /**
  * The cell of the dorm a student lives in, or null for a commuter. Pass the
  * housing index when asking for many students at once.
@@ -214,7 +241,12 @@ export function studentFigure(state: GameState, ref: StudentRef, crowd: number, 
  * so the map can draw them in the pack's athlete figures and their cards agree.
  */
 export function isVarsity(state: GameState, ref: StudentRef): boolean {
-  return roll(state.seed, ref, SALT.sport) < athleteShare(state);
+  return teamOf(state, ref) !== null;
+}
+
+/** The varsity team a student is on, or null for most (DESIGN.md 65.7). */
+export function teamOf(state: GameState, ref: StudentRef, rosters: Rosters = rostersOf(state)): VarsityTeam | null {
+  return teamAt(teamFor(rosters, roll(state.seed, ref, SALT.sport), genderOf(state.seed, ref) === 1));
 }
 
 // ------------------------------------------------------------ happiness --
@@ -330,14 +362,15 @@ export interface SocialProfile {
   major: string;
   field: string;
   club: string | null;
-  team: boolean;
+  /** Their varsity team, by its place in VARSITY_TEAMS, or -1 (DESIGN.md 65.7). */
+  team: number;
   nature: ArchetypeId;
 }
 
 /** What never changes about a student, from the seed alone: kept, since the social campus reads it every week. */
 interface FixedTraits {
-  major: string;
-  field: string;
+  /** Their path through majors (DESIGN.md 65.3): where it stands depends on the semester. */
+  path: MajorPath;
   nature: ArchetypeId;
   club: string | null;
 }
@@ -348,30 +381,36 @@ function fixedOf(seed: number, ref: StudentRef): FixedTraits {
   let fixed = fixedTraits.get(key);
   if (!fixed) {
     if (fixedTraits.size > 120_000) fixedTraits.clear();
-    const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+    const path = majorPath(seed, ref);
     const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
     const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
-    fixed = { major: major.name, field: major.group, nature, club: clubOf(seed, ref, nature, major.group, quirk) };
+    // A club leans toward the subject they came for: a later change of major leaves their club as it was.
+    fixed = { path, nature, club: clubOf(seed, ref, nature, MAJORS[path.intended]!.group, quirk) };
     fixedTraits.set(key, fixed);
   }
   return fixed;
 }
 
-/** `athletes` is `athleteShare(state)`, which a caller reading many students works out once. */
-export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), athletes: number = athleteShare(state)): SocialProfile | null {
+/** `rosters` is `rostersOf(state)`, which a caller reading many students works out once. */
+export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceIndex = placeIndex(state, 'housing'), rosters: Rosters = rostersOf(state)): SocialProfile | null {
   const classYear = classYearOf(state, ref);
   if (classYear === null) return null;
   const seed = state.seed;
   const fixed = fixedOf(seed, ref);
   const home = studentHome(state, ref, housing);
   const member = home !== null ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
+  // Their class sections follow the major they study now, or the one they intend while undeclared (DESIGN.md 65.3).
+  const subject = MAJORS[majorAt(fixed.path, semestersIn(ref.entryYear, semesterOf(state))).subject]!;
   return {
-    ...fixed,
+    major: subject.name,
+    field: subject.group,
+    nature: fixed.nature,
+    club: fixed.club,
     classYear,
     home,
     chapter: member?.chapter.name ?? null,
     housed: member?.housed ?? false,
-    team: roll(seed, ref, SALT.sport) < athletes,
+    team: teamFor(rosters, roll(seed, ref, SALT.sport), genderOf(seed, ref) === 1),
   };
 }
 
@@ -444,7 +483,12 @@ export interface StudentCard {
   /** 0 for a freshman to 3 for a senior. */
   classYear: number;
   classYearName: string;
+  /** As shown (DESIGN.md 65.3): "Undeclared", "Biology", or "Biology and Economics". */
   major: string;
+  /** The major they study: the one they intend while undeclared. A lecture, a story or a professor names it. */
+  subject: string;
+  /** A short note beside the major: what an undeclared student leans toward, or what they changed from. null for most. */
+  majorNote: string | null;
   archetype: ArchetypeId;
   archetypeName: string;
   quirk: string;
@@ -456,8 +500,19 @@ export interface StudentCard {
   chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
   street: string | null;
-  /** On a 4.0 scale, to one decimal. */
+  /** On a 4.0 scale, to one decimal: at the real spread (DESIGN.md 65.4). */
   gpa: number;
+  /** On the Dean's list for last semester's grades, and on academic probation for their average below 2.0. */
+  deansList: boolean;
+  probation: boolean;
+  /** This week's classes they went to, of how many: null out of term. */
+  classes: { went: number; of: number } | null;
+  /** Down with the flu now (DESIGN.md 65.5). */
+  sick: boolean;
+  /** A first-year who moved away and misses home now: most do at first. Those who feel it most read as Homesick. */
+  missesHome: boolean;
+  /** The varsity team they are on (DESIGN.md 65.7), or null for most. */
+  team: string | null;
   /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
   tutored: boolean;
   /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
@@ -511,8 +566,10 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
   // Football's two: the roster, and the fans, who swell on a home game day and after a big win.
   const sport = roll(state.seed, ref, SALT.sport);
   const roster = athleteShare(state);
-  if (sport < roster) return 'athlete';
-  if (sport < roster + superfanShare(state)) return 'superfan';
+  // On a team, if one is fielded for them (DESIGN.md 65.7): football's roster is men's.
+  if (sport < roster) {
+    if (teamOf(state, ref) !== null) return 'athlete';
+  } else if (sport < roster + superfanShare(state)) return 'superfan';
   // A chapter's members (DESIGN.md 51): a pledge in their first year, a loyalist after.
   if (member) return classYear === 0 ? 'pledge' : 'greekLoyalist';
   // In finals week some of everyone is up all night. It passes with the exams.
@@ -521,16 +578,14 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
   if (classYear === 0) {
     const fall = calendarAt(state.clock).phase === 'fall';
     const lost = fall ? LOST_SHARE.fall : LOST_SHARE.later;
-    const homesick = resident ? (fall ? HOMESICK_SHARE.fall : HOMESICK_SHARE.later) : 0;
     if (at < lost) return 'lost';
-    if (at < lost + homesick) return 'homesick';
+    // Homesick: those who moved away, most at move-in and fading over the fall, more before Thanksgiving (65.5).
+    if (resident && homesickOf(state.seed, ref, state.clock).strong) return 'homesick';
     // Nobody runs a dorm floor in their first year.
     if (nature === 'ra') return 'butterfly';
   }
-  if (classYear === 3) {
-    const seatsShort = state.admissions.lastIntake?.bottleneck === 'academic';
-    if (at < (seatsShort ? SUPER_SENIOR_SHARE.seatsShort : SUPER_SENIOR_SHARE.normal)) return 'superSenior';
-  }
+  // A fifth- or sixth-year senior is a Super Senior: the real ones (DESIGN.md 65.2).
+  if (classYear >= 4) return 'superSenior';
   return nature;
 }
 
@@ -658,7 +713,8 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
 
   const first = firstNameOf(state, ref);
   const last = pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start)) + pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end));
-  const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+  const fixed = fixedOf(seed, ref);
+  const majorNow = majorAt(fixed.path, semestersIn(ref.entryYear, semesterOf(state)));
   const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
 
   const home = studentHome(state, ref);
@@ -713,28 +769,35 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
   }
 
-  // Tutoring: a study center in reach of where they spend their days. A stand-in until layer 2: only the card reads it.
+  // Tutoring: a study center in reach of where they spend their days.
   let tutoring = 0;
   for (const spot of spots) tutoring = Math.max(tutoring, tutoringLift(state.map, spot % state.map.width, Math.floor(spot / state.map.width)));
-  const raw =
-    tutoring +
-    GPA_FLOOR +
-    GPA_SPAN * teachingQuality(state) +
-    (roll(seed, ref, SALT.grade) * 2 - 1) * GPA_SPREAD +
-    (GPA_TILT[phase] ?? 0) +
-    (GPA_BY_CLASS_YEAR[classYear] ?? 0) -
-    // Exam Stress nudges grades down a little, and lifts when the exams end.
-    STRESS_GPA * (stress / 100);
+  // Grades at the real spread (DESIGN.md 65.4): who they are, how often they go to class, how well the campus teaches,
+  // and a study center in reach. Exam Stress nudges them down a little, and lifts when the exams end.
+  const grades = gradesOf(seed, ref, { archetype: phase, classYear, teaching: teachingQuality(state), tutoring }, semesterOf(state));
   // A study partner lifts grades a little; a messy breakup in an exam week takes some off (DESIGN.md 63.10).
   const ownGpa = friends ? (exams > 0 ? friends.gpaInExams : friends.gpa) : 0;
-  const gpa = Math.round(Math.max(GPA_MIN, Math.min(GPA_MAX, raw + ownGpa)) * 10) / 10;
+  const gpa = Math.round(Math.max(GPA_FLOOR, Math.min(4, grades.gpa - STRESS_GPA * (stress / 100) + ownGpa)) * 10) / 10;
+  // Flu season (DESIGN.md 65.5): down with it for a few days, December to February.
+  const flu = fluOf(seed, ref, state.clock);
+  // This week's classes, in a week of term: Fridays, wet weather and the morning after a party keep some away, and
+  // the flu keeps them in bed.
+  const term = !['break', 'summer', 'moveIn', 'founding', 'commencement'].includes(week.day.kind);
+  const weather = weatherAt(seed, state.clock);
+  const classes = term
+    ? weekInClass(seed, ref, phase, Math.floor(state.clock.tick / WEB_WEEK_TICKS), { wet: weather === 'rain' || weather === 'snow', partied: phase === 'party' && partiesOn(state), sickDays: flu.sick ? Math.min(5, flu.daysLeft) : 0 })
+    : null;
+  // A first-year who moved away may miss home (DESIGN.md 65.5).
+  const missesHome = classYear === 0 && resident && homesickOf(seed, ref, state.clock).missesHome;
 
   return {
     ref,
     name: `${first} ${last}`,
     classYear,
     classYearName: CLASS_YEAR_NAMES[classYear]!,
-    major: major.name,
+    major: majorNow.shown,
+    subject: MAJORS[majorNow.subject]!.name,
+    majorNote: majorNow.undeclared ? `Leaning toward ${MAJORS[majorNow.subject]!.name}` : majorNow.switchedFrom !== null ? `Switched from ${MAJORS[majorNow.switchedFrom]!.name}` : null,
     archetype,
     archetypeName: ARCHETYPE_NAMES[archetype],
     quirk,
@@ -743,16 +806,22 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,
+    deansList: grades.deansList,
+    probation: grades.probation,
+    classes,
+    sick: flu.sick,
+    missesHome,
+    team: teamOf(state, ref)?.name ?? null,
     tutored: tutoring > 0,
     classSize: Math.round(classSizeNow(state)),
-    club: clubOf(seed, ref, nature, major.group, quirk),
+    club: fixed.club,
     relationship,
     happiness,
     mood: moodOf(happiness),
     reason,
     stress,
     // What the week is doing to them: the calendar and the sky. Their ties have a row of their own (DESIGN.md 63.10).
-    week: weekLabel(week.parts.filter((part) => part.id !== 'friends')),
+    week: flu.sick ? 'Down with the flu' : weekLabel(week.parts.filter((part) => part.id !== 'friends')),
     party: phase === 'party' && partiesOn(state) ? (classYear >= DRINKING_YEAR ? PARTY_CARD.over21 : PARTY_CARD.under21) : null,
     friends: friends ? { happiness: ownHappiness, stress: ownStress, gpa: ownGpa } : null,
   };

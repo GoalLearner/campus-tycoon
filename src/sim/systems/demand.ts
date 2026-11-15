@@ -1,4 +1,5 @@
 import { viralReach } from './buzz';
+import { commencementLeavers } from './population';
 import { applicantsLift } from './boosts';
 import { scaleOf } from '../scale';
 import { calendarAt, GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
@@ -179,10 +180,10 @@ function seniorsLeaveFirst(state: GameState): boolean {
   return tickInYear >= SPRING_INTAKE_TICK_IN_YEAR && tickInYear < GRADUATION_TICK_IN_YEAR;
 }
 
-/** Students who will still be enrolled when the next intake arrives. */
+/** Students who will still be enrolled when the next intake arrives. Commencement takes its finishers (DESIGN.md 65.2). */
 export function continuingStudents(state: GameState): number {
   if (state.clock.tick < FIRST_INTAKE_TICK) return 0;
-  return enrollment(state) - (seniorsLeaveFirst(state) ? state.cohorts[3] : 0);
+  return enrollment(state) - (seniorsLeaveFirst(state) ? commencementLeavers(state).students : 0);
 }
 
 /** Everyone the campus would hold right after the next intake, waitlist included. */
@@ -197,7 +198,7 @@ export function studentsWanted(state: GameState): number {
  */
 export function bedsWanted(state: GameState): number {
   const leaving = seniorsLeaveFirst(state);
-  const offStaying = offCampusNow(state) - (leaving ? state.offCampus[3] : 0);
+  const offStaying = offCampusNow(state) - (leaving ? commencementLeavers(state).offCampus : 0);
   const dormStaying = continuingStudents(state) - offStaying;
   const free = Math.max(0, townPlaces(state.map).total - offStaying);
   const expected = expectedClass(state);
@@ -269,7 +270,7 @@ export function bottleneck(state: GameState): Zone | null {
 /** Locals among the students wanted who have no place in town and so need a bed. 0 when the town takes them all. */
 export function localsNeedingBeds(state: GameState): number {
   const leaving = seniorsLeaveFirst(state);
-  const offStaying = offCampusNow(state) - (leaving ? state.offCampus[3] : 0);
+  const offStaying = offCampusNow(state) - (leaving ? commencementLeavers(state).offCampus : 0);
   const free = Math.max(0, townPlaces(state.map).total - offStaying);
   const newLocals = localsAmong(expectedClass(state)) + state.admissions.waitlistLocals;
   return Math.max(0, newLocals - free);

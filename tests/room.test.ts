@@ -1,4 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { sleepHours } from '../src/app/regularDay';
+import { dateAt } from '../src/sim/calendar';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -36,10 +38,17 @@ const RESIDENTS = sampleStudents(STATE, 60).filter((ref) => {
 });
 
 const room = (ref: StudentRef, hour: number, state = STATE): Room => roomFor(state, ref, hour, looks)!;
-const asleepAt = (ref: StudentRef): boolean => {
-  const card = studentCard(STATE, ref)!;
-  return card.quirk !== 'Night owl' && card.archetype !== 'allNighter';
+/** Their own hours (DESIGN.md 65.5), later at the weekend: asleep at 4 AM unless a night owl or up all night. */
+const hours = (ref: StudentRef): [number, number] => {
+  const weekday = dateAt(STATE.clock).weekday;
+  return sleepHours(studentCard(STATE, ref)!, weekday === 0 || weekday === 6);
 };
+const asleepAt = (ref: StudentRef): boolean => {
+  const [bed, up] = hours(ref);
+  return bed <= 28 && up > 28;
+};
+/** Just after they wake: getting ready. */
+const readyAt = (ref: StudentRef): number => (hours(ref)[1] % 24) + 0.2;
 
 describe('a room', () => {
   it('is for a student at home, in their dorm, their chapter house or their house in town', () => {
@@ -78,7 +87,7 @@ describe('a room', () => {
     expect(canLookInside(STATE, ref, null, false, 13)).toBe(false);
     const card = studentCard(STATE, ref)!;
     expect(homeActivity(STATE, card, 3)).toBe('asleep');
-    expect(homeActivity(STATE, card, card.archetype === 'scholar' ? 7.2 : 8.2)).toBe('ready');
+    expect(homeActivity(STATE, card, readyAt(ref))).toBe('ready');
     expect(homeActivity(STATE, card, 13)).toBeNull();
     expect(homeActivity(STATE, card, 19.5)).not.toBeNull();
   });
@@ -169,9 +178,10 @@ describe('what they are doing', () => {
         expect(mate.bed).toBe(1);
       }
       expect(night.line.startsWith('Asleep')).toBe(true);
-      expect(room(ref, card.archetype === 'scholar' ? 7.2 : 8.2).activity).toBe('ready');
+      expect(room(ref, readyAt(ref)).activity).toBe('ready');
     }
-    expect(owls).toBeGreaterThan(0);
+    // Some keep late hours: night owls, and the latest of everyone's own (DESIGN.md 65.5).
+    expect(owls + RESIDENTS.filter((one) => hours(one)[0] > 26).length).toBeGreaterThan(0);
     expect(shared).toBeGreaterThan(0);
   });
 

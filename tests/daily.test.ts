@@ -64,7 +64,7 @@ import { ticksToIntake } from '../src/sim/calendar';
 import { addTimer } from '../src/sim/timers';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { COLLECT_ALL_FROM, collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from '../src/ui/levelUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -258,7 +258,7 @@ describe('the University Level', () => {
     expect(big.log[0]!.text).toContain(`They bring ${3 * SEALS_RANK_GOAL + SEALS_ERA} Gold Seals. The Growth era begins.`);
     // A full campus.
     const full = structuredClone(model());
-    full.cohorts = [15_000, 14_500, 14_500, 14_000];
+    full.cohorts = [15_000, 14_500, 14_500, 14_000, 0, 0];
     const said: LogEntry[] = [];
     landSizeGoals(full, said);
     expect(full.daily.xp).toBe(XP_SOURCES.sizeGoal.xp);
@@ -686,6 +686,7 @@ describe('a save from version 17', () => {
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
     expected.web = webMetaFor(expected);
+    sixClassYears(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // Its money is what it was the moment before.
@@ -754,7 +755,7 @@ describe('a save from version 17', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(13);
+    expect(notes).toHaveLength(14);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

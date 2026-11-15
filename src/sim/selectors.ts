@@ -11,7 +11,7 @@ import type { Building, Cell, CellKind, GameState, MapState, Zone } from './type
 
 export function enrollment(state: GameState): number {
   const c = state.cohorts;
-  return c[0] + c[1] + c[2] + c[3];
+  return c[0] + c[1] + c[2] + c[3] + c[4] + c[5];
 }
 
 export function cellIndex(map: MapState, x: number, y: number): number {

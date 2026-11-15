@@ -1,4 +1,5 @@
 import { CLUBS } from '../sim/config/students';
+import { VARSITY_TEAMS } from '../sim/config/teams';
 import { FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { dormName } from '../sim/systems/people';
 import type { Web } from '../sim/systems/web';
@@ -45,7 +46,9 @@ export function tightKnit(web: Web, state: GameState): TightGroup[] {
     if (table >= 0) add(`c${table >> 8}`, 'club', () => CLUBS[table >> 8]?.name ?? 'A club', id);
     const chapter = web.place[4]![id]!;
     if (chapter >= 0) add(`p${chapter}`, 'chapter', () => chapterNames[chapter] ?? 'A chapter', id);
-    if (web.place[3]![id]! >= 0) add('t', 'team', () => 'The varsity teams', id);
+    // Each varsity team its own (DESIGN.md 65.7): teammates are as close as real ones.
+    const team = web.place[3]![id]!;
+    if (team >= 0) add(`t${team}`, 'team', () => VARSITY_TEAMS[team]?.name ?? 'A varsity team', id);
   }
   const mark = new Int32Array(web.n).fill(-1);
   const out: TightGroup[] = [];

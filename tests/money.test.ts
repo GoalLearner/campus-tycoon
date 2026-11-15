@@ -62,7 +62,7 @@ function act(state: GameState, action: Action): GameState {
 function campus(students: number): GameState {
   const state = structuredClone(freshGame());
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   if (students > 0) state.admissions.lastIntake = { tick: 15, season: 'fall', expected: students, admitted: students, turnedAway: 0, bottleneck: null };
   recomputeRates(state);
   return state;
@@ -146,7 +146,7 @@ describe('what the money buys', () => {
     expect(line(budget(state), 'care')).toBe(careStaffAt(state, medical) * CARE_STAFF_PAY);
     // A quiet campus still staffs it.
     const quiet = structuredClone(state);
-    quiet.cohorts = [40, 0, 0, 0];
+    quiet.cohorts = [40, 0, 0, 0, 0, 0];
     expect(careStaffAt(quiet, medical)).toBe(1);
     // One with nobody in reach has its one member of staff, and a dining hall has none of this kind.
     state = act(state, { type: 'place', building: 'safety', x: 2, y: 28 });
@@ -180,7 +180,7 @@ describe('what the money buys', () => {
     expect(arrived.money.spendingPerYear).toBeGreaterThan(before + 2 * CARE_STAFF_PAY);
     // And they stay on it through every summer after: it is the first arrival that counts, not who is enrolled.
     const empty = structuredClone(arrived);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(careStaffCount(empty)).toBe(2);
   });
 
@@ -245,7 +245,7 @@ describe('recruiting and marketing', () => {
       expect(line(budget(on), 'marketing')).toBe(1000 * MARKETING_COST_PER_STUDENT[step]!);
       expect(on.money.spendingPerYear - off.money.spendingPerYear).toBe(1000 * MARKETING_COST_PER_STUDENT[step]!);
       const bigger = structuredClone(on);
-      bigger.cohorts = [2500, 0, 0, 0];
+      bigger.cohorts = [2500, 0, 0, 0, 0, 0];
       expect(line(budget(bigger), 'marketing')).toBe(2500 * MARKETING_COST_PER_STUDENT[step]!);
     }
     expect(line(budget(off), 'marketing')).toBe(0);

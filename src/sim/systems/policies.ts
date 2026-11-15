@@ -246,6 +246,11 @@ export function leavingMore(state: GameState): { share: number; by: string[] } {
   return { share: Math.min(0.05, found.reduce((sum, { effect }) => sum + effect.share, 0)), by: found.map(({ spec }) => spec.name) };
 }
 
+/** How many of those who would leave for money still do: 1 with no policy that helps (DESIGN.md 65.2). */
+export function moneyLeavingEase(state: GameState): number {
+  return effects(state, 'moneyLeaving').reduce((times, { effect }) => times * effect.times, 1);
+}
+
 // -------------------------------------------------------------- football --
 
 /** How much more of a crowd wants a seat at a home game. */

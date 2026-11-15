@@ -39,11 +39,21 @@ export const RIVAL_AT = 35;
 export const ENEMY_AT = 80;
 /** A pair this clashing grows sore, not close. */
 export const CLASH_BELOW = -0.2;
-/** Sparks: only pairs this lucky ever have a crush, and the second of them only this lucky. */
-export const SPARK = 0.92;
-export const SPARK_BACK = 0.945;
-/** Weekly chances a couple ends, by how long they have lasted; exes who keep meeting may get back together. */
-export const BREAKUP = { dating: 0.02, exclusive: 0.01, longterm: 0.004 } as const;
+/**
+ * Sparks: only pairs this lucky ever have a crush, and the second of them only this lucky. Since R1 (DESIGN.md 65.6)
+ * more pairs spark and more mutual crushes start dating, so about a fifth of students have a partner on campus and,
+ * with the hometown partners on the cards, about a third are in a relationship (Online College Social Life Survey).
+ */
+export const SPARK = 0.84;
+export const SPARK_BACK = 0.885;
+/** Two with a crush on each other, close enough, start dating on a good evening: this share of such evenings. */
+export const DATE_CHANCE = 0.5;
+/**
+ * Weekly chances a couple ends, by how long they have lasted; exes who keep meeting may get back together. Since R1
+ * (DESIGN.md 65.6) couples last a little longer, so about a fifth of students have a partner on campus. No national
+ * figure for how often students break up: judgement.
+ */
+export const BREAKUP = { dating: 0.012, exclusive: 0.006, longterm: 0.003 } as const;
 export const BACK_TOGETHER = 0.03;
 /**
  * Points lost each week apart, by kind. Roommates do not drift: they share a room. A crush is one end of a friendship,
@@ -56,8 +66,8 @@ export const CATCHUP_FULL_WEEKS = 12;
 export const REGROW_LIVED_WEEKS = 8;
 /**
  * Couples grown again (DESIGN.md 63.7), set from game years lived a week at a time on the model campus: played every
- * day, couples hold level from year to year, about 50 to a thousand students as the fall begins (the first-years have
- * no one yet), 63 by spring and 60 at commencement. Of the pairs who would be a couple, the share kept grows with the
+ * day, couples hold level from year to year, about 85 to a thousand students as the fall begins (the first-years have
+ * no one yet), 109 by spring and 103 at commencement since R1 (DESIGN.md 65.6); before it, 50, 63 and 60. Of the pairs who would be a couple, the share kept grows with the
  * years both have been here, up to the most; a couple's closeness starts higher the longer, so most that have lasted
  * are long-term, as lived ones are. Set so a long absence comes back within a few couples a thousand of the campus
  * played every day: grown pairs still meet new people for months after, and pair up more than settled ones do.
@@ -70,7 +80,7 @@ export const REGROW_COUPLE_PER_YEAR = 25;
 export const REGROW_EX_AT = 22;
 
 /** What happened, counted for the cards and the paper later. */
-export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle', 'picked on', 'left out', 'roommate pettiness', 'pile-on', 'stood up for', 'reported', 'rumour'] as const;
+export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle', 'picked on', 'left out', 'roommate pettiness', 'pile-on', 'stood up for', 'reported', 'rumour', 'room switch'] as const;
 export const EVENT = {
   met: 0,
   friends: 1,
@@ -101,7 +111,17 @@ export const EVENT = {
   reported: 20,
   /** A rumour on Quadline that reached someone close to the one it was about (DESIGN.md 63.14). */
   rumour: 21,
+  /** Roommates who could not get on, moved apart at the spring semester (DESIGN.md 65.6). */
+  roomSwitch: 22,
 } as const;
+
+/**
+ * Roommates (DESIGN.md 65.6): about half report some conflict with a roommate, and about 3% change rooms in a year
+ * (HERI data, as cited 2024; weaker). [T] A pair this short of good chemistry has some friction; at the spring
+ * semester, this share of the pairs at odds (tense) move apart, each to another room.
+ */
+export const ROOM_FRICTION_BELOW = 0.15;
+export const ROOM_SWITCH = 0.18;
 
 /**
  * What the web remembers by name for the cards, the Campus social view and the paper (DESIGN.md 63.6): of each of

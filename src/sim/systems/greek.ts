@@ -34,6 +34,7 @@ import {
   RUSH_DATE,
   RUSH_MOST,
   SENIOR_SHARE,
+  GREEK_INTEREST_PER_CHAPTER,
 } from '../config/greek';
 import { PLACED } from '../config/placed';
 import { POLICIES, type PolicyEffect, type PolicySpec } from '../config/policies';
@@ -345,7 +346,8 @@ export function greekDue(state: GameState, ref: number, log: LogEntry[]): void {
 
 /** Those who would join a chapter now, across the campus: a share of the students living on campus, less with a grade standard. */
 function interested(state: GameState): number {
-  return residents(state) * GREEK_INTEREST * policyTimes(state, 'greekMembers').times;
+  const share = Math.max(GREEK_INTEREST, GREEK_INTEREST_PER_CHAPTER * chapters(state).length);
+  return residents(state) * share * policyTimes(state, 'greekMembers').times;
 }
 
 const housedIn = (state: GameState, members: number): number => Math.min(members, chapterBeds(state));

@@ -325,10 +325,14 @@ describe('the save', () => {
 
   it('tells the owner, once, in the game’s voice', () => {
     const notes = upgradeNotes(29);
-    expect(notes).toHaveLength(1);
+    expect(notes).toHaveLength(2);
     expect(notes[0]).toMatch(/social campus/);
     expect(notes[0]).toMatch(/first names/);
     expect(toneProblem(notes[0]!)).toBeNull();
-    expect(upgradeNotes(30)).toEqual([]);
+    // Since R1 a save from version 30 is told what the realism pass changed (DESIGN.md 65).
+    expect(upgradeNotes(30)).toHaveLength(1);
+    expect(upgradeNotes(30)[0]).toMatch(/real ones/);
+    expect(toneProblem(upgradeNotes(30)[0]!)).toBeNull();
+    expect(upgradeNotes(31)).toEqual([]);
   });
 });

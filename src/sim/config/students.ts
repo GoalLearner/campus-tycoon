@@ -31,33 +31,114 @@ export const SURNAME_ENDS: readonly string[] = [
   'ley', 'ham', 'worth', 'dale', 'combe', 'shaw', 'stead', 'more', 'bank', 'gate',
 ];
 
-export const CLASS_YEAR_NAMES = ['Freshman', 'Sophomore', 'Junior', 'Senior'] as const;
+/** Fifth- and sixth-year seniors (DESIGN.md 65.2) are the real Super Seniors: no longer a passing phase of seniors. */
+export const CLASS_YEAR_NAMES = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Fifth-year senior', 'Sixth-year senior'] as const;
 
 /** The eight departments of the building catalog (section 23). A club leans toward some of them. */
 export type MajorGroup = 'engineering' | 'sciences' | 'letters' | 'business' | 'education' | 'music' | 'arts' | 'health';
 
-export const MAJORS: ReadonlyArray<{ name: string; group: MajorGroup }> = [
-  { name: 'Mechanical Engineering', group: 'engineering' },
-  { name: 'Civil Engineering', group: 'engineering' },
-  { name: 'Computer Science', group: 'engineering' },
-  { name: 'Biology', group: 'sciences' },
-  { name: 'Chemistry', group: 'sciences' },
-  { name: 'Physics', group: 'sciences' },
-  { name: 'Mathematics', group: 'sciences' },
-  { name: 'English', group: 'letters' },
-  { name: 'History', group: 'letters' },
-  { name: 'Psychology', group: 'letters' },
-  { name: 'Political Science', group: 'letters' },
-  { name: 'Business', group: 'business' },
-  { name: 'Economics', group: 'business' },
-  { name: 'Marketing', group: 'business' },
-  { name: 'Education', group: 'education' },
-  { name: 'Music', group: 'music' },
-  { name: 'Studio Art', group: 'arts' },
-  { name: 'Film', group: 'arts' },
-  { name: 'Nursing', group: 'health' },
-  { name: 'Kinesiology', group: 'health' },
+/**
+ * The fields the real figures are counted in (DESIGN.md 65.3): the degree shares of NCES Digest table 322.10 and the
+ * rates of changing major of NCES 2018-434.
+ */
+export type MajorField =
+  | 'business'
+  | 'health'
+  | 'socialSciences'
+  | 'biology'
+  | 'psychology'
+  | 'engineering'
+  | 'computerScience'
+  | 'arts'
+  | 'education'
+  | 'communication'
+  | 'math'
+  | 'physicalSciences'
+  | 'languages'
+  | 'other';
+
+/**
+ * Majors (DESIGN.md 65.3), each with its building department, its field, and its share of bachelor's degrees, in
+ * percent: NCES Digest of Education Statistics table 322.10, degrees conferred 2021-22. Business 18.6, health 13.1,
+ * social sciences and history 7.5, biology 6.5, psychology 6.4, engineering 6.1, computer science 5.4, the arts 4.5,
+ * education 4.4, communication 4.3; within a field the split is by judgement. Liberal Studies, for general and
+ * combined studies, takes what is left, so the shares sum to 100.
+ */
+const MAJOR_LIST: ReadonlyArray<{ name: string; group: MajorGroup; field: MajorField; share: number }> = [
+  { name: 'Business', group: 'business', field: 'business', share: 11.5 },
+  { name: 'Accounting', group: 'business', field: 'business', share: 3.5 },
+  { name: 'Marketing', group: 'business', field: 'business', share: 3.6 },
+  { name: 'Nursing', group: 'health', field: 'health', share: 6.3 },
+  { name: 'Health Sciences', group: 'health', field: 'health', share: 3.4 },
+  { name: 'Public Health', group: 'health', field: 'health', share: 2.2 },
+  { name: 'Nutrition', group: 'health', field: 'health', share: 1.2 },
+  { name: 'Economics', group: 'business', field: 'socialSciences', share: 2.2 },
+  { name: 'Political Science', group: 'letters', field: 'socialSciences', share: 2.0 },
+  { name: 'Sociology', group: 'letters', field: 'socialSciences', share: 1.8 },
+  { name: 'History', group: 'letters', field: 'socialSciences', share: 1.5 },
+  { name: 'Biology', group: 'sciences', field: 'biology', share: 6.5 },
+  { name: 'Psychology', group: 'letters', field: 'psychology', share: 6.4 },
+  { name: 'Mechanical Engineering', group: 'engineering', field: 'engineering', share: 2.4 },
+  { name: 'Electrical Engineering', group: 'engineering', field: 'engineering', share: 1.9 },
+  { name: 'Civil Engineering', group: 'engineering', field: 'engineering', share: 1.8 },
+  { name: 'Computer Science', group: 'engineering', field: 'computerScience', share: 5.4 },
+  { name: 'Studio Art', group: 'arts', field: 'arts', share: 1.9 },
+  { name: 'Film', group: 'arts', field: 'arts', share: 1.4 },
+  { name: 'Music', group: 'music', field: 'arts', share: 1.2 },
+  { name: 'Education', group: 'education', field: 'education', share: 4.4 },
+  { name: 'Communication', group: 'letters', field: 'communication', share: 4.3 },
+  { name: 'Mathematics', group: 'sciences', field: 'math', share: 1.4 },
+  { name: 'Chemistry', group: 'sciences', field: 'physicalSciences', share: 1.0 },
+  { name: 'Physics', group: 'sciences', field: 'physicalSciences', share: 0.4 },
+  { name: 'English', group: 'letters', field: 'languages', share: 1.8 },
+  { name: 'Spanish', group: 'letters', field: 'languages', share: 0.8 },
+  { name: 'Philosophy', group: 'letters', field: 'languages', share: 0.6 },
+  { name: 'Kinesiology', group: 'health', field: 'other', share: 2.6 },
+  { name: 'Criminal Justice', group: 'letters', field: 'other', share: 2.7 },
+  { name: 'Social Work', group: 'letters', field: 'other', share: 1.6 },
+  { name: 'Environmental Science', group: 'sciences', field: 'other', share: 2.2 },
+  { name: 'Architecture', group: 'arts', field: 'other', share: 0.4 },
 ];
+const LISTED = MAJOR_LIST.reduce((sum, major) => sum + major.share, 0);
+export const MAJORS: ReadonlyArray<{ name: string; group: MajorGroup; field: MajorField; share: number }> = [
+  ...MAJOR_LIST,
+  { name: 'Liberal Studies', group: 'letters', field: 'other', share: Math.round((100 - LISTED) * 10) / 10 },
+];
+
+/**
+ * [T] The share of students who change major within their first three years, by the field they began in: NCES
+ * 2018-434 (about a third of all, mathematics 52%, the natural sciences 40%, health 26%); the other fields are near the
+ * report's figures for them.
+ */
+export const SWITCH_RATE: Record<MajorField, number> = {
+  math: 0.52,
+  biology: 0.4,
+  physicalSciences: 0.4,
+  engineering: 0.32,
+  computerScience: 0.28,
+  health: 0.26,
+  business: 0.28,
+  education: 0.35,
+  languages: 0.33,
+  socialSciences: 0.29,
+  psychology: 0.29,
+  communication: 0.3,
+  arts: 0.3,
+  other: 0.3,
+};
+
+/**
+ * [T] The share of a class still undeclared at each of its first four semesters (DESIGN.md 65.3): most declare in their
+ * first year, and everyone by the spring of their second, as most large publics ask. No national figure: judgement.
+ */
+export const UNDECLARED: readonly number[] = [0.35, 0.22, 0.08, 0];
+
+/** [T] The share with a second major, from the junior year: about 5% (American Academy of Arts and Sciences; an undercount). */
+export const DOUBLE_SHARE = 0.05;
+/** The semester a second major is shown from, counted from entry: the junior year. */
+export const DOUBLE_FROM = 4;
+/** A change of major comes in one of these semesters, counted from entry: the sophomore and junior years. */
+export const SWITCH_SEMESTERS: readonly number[] = [2, 3, 4, 5];
 
 /**
  * The archetypes whose campus stat exists today. Superfan and Varsity Athlete
@@ -131,11 +212,8 @@ export const COMMUTER_WEIGHT = 40;
 
 /** [T] In finals week this share of students reads as All-Nighter, a passing phase like Lost Freshman. */
 export const ALL_NIGHTER_SHARE = 0.18;
-/** [T] Share of freshmen who read as Lost Freshman or Homesick: first in the fall, then for the rest of the year. */
+/** [T] Share of freshmen who read as Lost Freshman: first in the fall, then for the rest of the year. Homesick: config/wellbeing.ts. */
 export const LOST_SHARE = { fall: 0.3, later: 0.12 };
-export const HOMESICK_SHARE = { fall: 0.12, later: 0.05 };
-/** [T] Share of seniors who read as Super Senior: normally, and when Academic seats capped the last class. */
-export const SUPER_SENIOR_SHARE = { normal: 0.1, seatsShort: 0.3 };
 
 export const QUIRKS: readonly string[] = [
   'Night owl',
@@ -182,32 +260,10 @@ export const NO_CLUB_SHARE: Partial<Record<ArchetypeId, number>> & { default: nu
   ra: 0.15,
 };
 
-/**
- * [T] Grades. The campus average sits between these two, by how good the
- * teaching side of campus is. A student sits within SPREAD of that average,
- * and some natures study more than others.
- */
-export const GPA_FLOOR = 2.3;
-export const GPA_SPAN = 1.1;
-export const GPA_SPREAD = 0.6;
-export const GPA_TILT: Partial<Record<ArchetypeId, number>> = {
-  superfan: -0.1,
-  scholar: 0.5,
-  stressed: 0.2,
-  lost: -0.1,
-  clown: -0.2,
-  party: -0.3,
-  superSenior: -0.3,
-  slacker: -0.5,
-};
 /** Classes feel crowded once this share of seats is taken. A full campus loses the whole crowding share. */
 export const SEATS_COMFORTABLE = 0.7;
 export const TEACHING_WEIGHTS = { lots: 0.55, room: 0.45 };
-/** GPA is on a 4.0 scale and shown to one decimal. Nobody on a card is failing. */
-export const GPA_MIN = 1.5;
-export const GPA_MAX = 4.0;
-/** [T] A little lower in the first year, a little higher by the last. */
-export const GPA_BY_CLASS_YEAR: readonly number[] = [-0.1, 0, 0.05, 0.1];
+/** Grades are at the real spread since R1: config/grades.ts (DESIGN.md 65.4). */
 
 /**
  * Happiness is approval, read at one student's spot: the dorm for a resident,
@@ -276,18 +332,22 @@ export const RELATIONSHIP_NAMES: Record<RelationshipId, string> = {
   distanceHappy: 'Happy long-distance',
   distanceStruggling: 'Struggling long-distance',
 };
-/** [T] How a new student arrives: plenty still have someone back home. */
+/**
+ * [T] How a new student arrives: a quarter still have someone back home, a hometown partner (DESIGN.md 65.6), and
+ * fewer as the years go on. On the cards a student with a partner on campus shows the web's; "together" here is read
+ * only without the web.
+ */
 export const KIND_AT_ENTRY: ReadonlyArray<readonly [RelationshipKind, number]> = [
-  ['single', 55],
+  ['single', 60],
   ['together', 12],
-  ['distance', 33],
+  ['distance', 28],
 ];
 /** [T] At each intake most students stay as they are. */
 export const KIND_STAYS = 0.6;
 /** [T] Where the others go. */
 export const KIND_MOVES: Record<RelationshipKind, ReadonlyArray<readonly [RelationshipKind, number]>> = {
-  single: [['together', 85], ['distance', 15]],
-  together: [['single', 70], ['distance', 30]],
+  single: [['together', 95], ['distance', 5]],
+  together: [['single', 85], ['distance', 15]],
   distance: [['single', 60], ['together', 40]],
 };
 /**

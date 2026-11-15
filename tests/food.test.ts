@@ -38,6 +38,7 @@ import {
   type GameState,
   type Placed,
   type PlacedType,
+  retentionRate,
 } from '../src/sim';
 import { FAVOURITES, THOUGHTS } from '../src/sim/config/students';
 import { upgradeNotes } from '../src/app/upgradeNotes';
@@ -63,7 +64,7 @@ const place = (state: GameState, building: PlacedType, x: number, y: number): Ga
 function campus(students: number): GameState {
   const state = structuredClone(advance(freshGame(), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   state.admissions.waitlist = 0;
   return state;
 }
@@ -201,7 +202,7 @@ describe('variety', () => {
     state = place(state, 'pool', 11, 15);
     state = place(state, 'track', 4, 15);
     state = structuredClone(state);
-    state.cohorts = [40, 0, 0, 0];
+    state.cohorts = [40, 0, 0, 0, 0, 0];
     expect(recreationAt(state, ...DORM)).toBe(1);
     expect(life(state, ...DORM).level).toBe(1);
     state = place(state, 'coffee', 9, 13);
@@ -247,7 +248,7 @@ describe('food income', () => {
     expect(foodTrade(state, first(state, 'admin'))).toBeNull();
     // Nobody enrolled, nothing earned.
     const empty = structuredClone(state);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(foodIncomePerYear(empty)).toBe(0);
   });
 
@@ -396,7 +397,7 @@ describe('the three Academics buildings', () => {
     expect(use.capacity).toBe(PLACED.makerspace.capacity);
     expect(use.demand).toBeCloseTo(15, 6);
     const crowded = structuredClone(state);
-    crowded.cohorts = [2400, 0, 0, 0];
+    crowded.cohorts = [2400, 0, 0, 0, 0, 0];
     expect(playUse(crowded, first(crowded, 'makerspace'))!.waiting).toBeGreaterThan(0);
     expect(placedSummary(crowded, first(crowded, 'makerspace'))).toMatch(/waiting at peak/);
   });
@@ -425,18 +426,18 @@ describe('the three Academics buildings', () => {
       expect(now.tutored).toBe(true);
       expect(now.gpa).toBeGreaterThanOrEqual(was.gpa);
       expect(now.gpa).toBeLessThanOrEqual(4);
-      // Three tenths better, unless they were already near the top of the scale, or held up by its floor of 1.5.
-      if (was.gpa <= 4 - TUTORING_GPA && was.gpa > 1.5) expect(now.gpa).toBeCloseTo(was.gpa + TUTORING_GPA, 6);
+      // Better, by about a quarter of a point: a step up the real spread is worth more where it is steep (DESIGN.md 65.4).
+      expect(now.gpa - was.gpa).toBeLessThanOrEqual(TUTORING_GPA + 0.15);
       if (now.gpa > was.gpa) lifted += 1;
-      // The card is otherwise the same student.
-      expect({ ...now, gpa: 0, tutored: false }).toEqual({ ...was, gpa: 0, tutored: false });
+      // The card is otherwise the same student, whose better grades may put them on the Dean's list or off probation.
+      expect({ ...now, gpa: 0, tutored: false, deansList: false, probation: false }).toEqual({ ...was, gpa: 0, tutored: false, deansList: false, probation: false });
     }
     expect(residents).toBeGreaterThan(10);
     expect(lifted).toBeGreaterThan(residents * 0.8);
 
     // Nothing reads GPA yet: Happiness, who stays, and what comes in are untouched.
     expect(campusHappiness(after).score).toBe(campusHappiness(before).score);
-    expect(campusHappiness(after).retention).toBe(campusHappiness(before).retention);
+    expect(retentionRate(after)).toBe(retentionRate(before));
     expect(budget(after).incomeTotal).toBe(budget(before).incomeTotal);
   });
 
