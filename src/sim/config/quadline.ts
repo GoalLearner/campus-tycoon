@@ -33,6 +33,11 @@ export const HAPPENING_POSTS: Partial<Record<number, number>> = { 0: 0.5, 1: 0.4
 export const SHADE_POSTS = 0.3;
 /** How many posts a featured student makes a game week, at most: the Main Character, the followed, named regulars. */
 export const FEATURED_POSTS = { main: 3, followed: 2, named: 1 } as const;
+/**
+ * How likely each kind of student posts when their turn comes (decision: personality sets how often), before how
+ * outgoing they are: the shy post rarely, the game's Wallflowers (the owner's spec), the most outgoing a little more.
+ */
+export const OUTGOING_POSTS = [0.3, 0.8, 1, 1.15] as const;
 /** How likely each kind of student posts when their turn comes (decision: personality sets how often). */
 export const POST_RATE: Record<string, number> = {
   attention: 1,
@@ -92,6 +97,12 @@ export const POST = {
   club: 28,
   food: 29,
   gym: 30,
+  /** A meme about a class or a kind of professor: never a named one (the owner's spec, 2026-11-14). */
+  professor: 31,
+  /** Greek Row news: philanthropy day, probation, house life (63.13). */
+  greekNews: 32,
+  /** Team news from varsity athletes: practice, a trip away, new recruits. */
+  teamNews: 33,
 } as const;
 export type PostKind = (typeof POST)[keyof typeof POST];
 
@@ -321,6 +332,56 @@ export const POST_WORDS: Record<PostKind, PostWords> = {
     tags: ['GymTime'],
     good: ['leg day done. the stairs and I are not friends now', 'new personal best at the rec center [ball]', 'gym at 6 AM. who even am I [sweat]'],
   },
+  [POST.professor]: {
+    tags: ['LectureLife', 'ProfessorMoments'],
+    good: [
+      'my professor ends every lecture with one more thing. it is never one thing [laugh]',
+      'the professor who posts the slides ten minutes before class. a hero',
+      'the professor who knows everyone by name in week one. how [wow]',
+      'professor said this will not be on the exam. writing it down anyway [book]',
+    ],
+    rough: [
+      'the professor who says we are almost done with forty slides to go [sweat]',
+      'my professor answered a question with another question. now I have two questions',
+      'the reading list for this class is longer than the class [sweat]',
+    ],
+  },
+  // Greek Row news: the lines come from `GREEK_POSTS` by what is going on at the chapter.
+  [POST.greekNews]: { tags: ['GreekRow'], good: ['house dinner tonight. best cooks on Greek Row [heart]'], scene: SCENE.friends, sceneShare: 0.3 },
+  // Team news: the lines come from `TEAM_POSTS` by what the team is doing.
+  [POST.teamNews]: { tags: ['TeamLife', 'Go{nick}'], good: ['practice at 6 AM. the coach does not believe in sleep [sweat]'] },
+};
+
+/** Greek Row news by what is going on at the chapter: its philanthropy day, probation, or everyday house life. */
+export const GREEK_NEWS = ['philanthropy', 'probation', 'house'] as const;
+export const GREEK_POSTS: Record<(typeof GREEK_NEWS)[number], readonly string[]> = {
+  philanthropy: [
+    'philanthropy day at {chapter}. every dollar goes to a good cause [heart]',
+    'pancakes for charity at the {chapter} house this weekend [sparkle]',
+    'we raised more than last year. so proud of {chapter} [heart]',
+  ],
+  probation: [
+    'on probation. no socials until further notice [sad]',
+    'quiet weekend at the {chapter} house. the dean says hi',
+    'probation means study nights now. {chapter} has never been so organised [book]',
+  ],
+  house: [
+    'house dinner at {chapter}. best cooks on Greek Row [heart]',
+    'chapter meeting ran long. we planned three socials and a car wash',
+    'new letters, same campus. {chapter} forever [sparkle]',
+  ],
+};
+
+/** Team news by what the team is doing: practice, a game away, new recruits. {opp} is the school they go to. */
+export const TEAM_NEWS = ['practice', 'away', 'recruits'] as const;
+export const TEAM_POSTS: Record<(typeof TEAM_NEWS)[number], readonly string[]> = {
+  practice: [
+    'practice at 6 AM. the coach does not believe in sleep [sweat]',
+    'film session ran two hours. we watched one play forty times',
+    'early practice, ice bath, lecture. student athlete life [ball]',
+  ],
+  away: ['bus to {opp} this weekend. ready [ball]', 'road trip to {opp}. study notes packed, cleats packed [book]'],
+  recruits: ['new recruits on campus today. the future is bright [sparkle]', 'showed the new recruits around. they are fast. really fast [wow]'],
 };
 
 /** What a complaint or praise is about: each part of Happiness, and beds and seats. */
@@ -423,6 +484,8 @@ export function postLines(kind: PostKind, tone: number, a: number): readonly str
     const lines = FAVOURITES[kinds[((a % kinds.length) + kinds.length) % kinds.length]!];
     if (lines) return lines;
   }
+  if (kind === POST.greekNews) return GREEK_POSTS[GREEK_NEWS[a] ?? 'house'];
+  if (kind === POST.teamNews) return TEAM_POSTS[TEAM_NEWS[a] ?? 'practice'];
   const words = POST_WORDS[kind] ?? POST_WORDS[POST.praise];
   return tone === TONE.rough && words.rough ? words.rough : words.good;
 }
@@ -432,6 +495,7 @@ export function quadlineTemplates(): string[] {
   const out: string[] = [];
   for (const words of Object.values(POST_WORDS)) out.push(...words.tags, ...words.good, ...(words.rough ?? []));
   for (const topic of Object.values(CAUSE_POSTS)) out.push(topic.tag, ...topic.good, ...topic.rough);
+  for (const lines of [...Object.values(GREEK_POSTS), ...Object.values(TEAM_POSTS)]) out.push(...lines);
   for (const lines of Object.values(COMMENT_LINES)) out.push(...lines);
   return out;
 }

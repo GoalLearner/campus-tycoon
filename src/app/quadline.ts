@@ -77,7 +77,7 @@ export function postWords(state: GameState, post: Post): PostWordsShown {
     name: () => (subject ? firstNameOf(state, subject) : 'someone'),
     place: () => placeName(state, post.kind === POST.complaint || post.kind === POST.praise ? post.b : post.a),
     team: () => nick,
-    opp: () => teamName(state, post.a),
+    opp: () => teamName(state, post.kind === POST.teamNews ? post.b : post.a),
     us: () => String(Math.floor(post.b / 1000)),
     them: () => String(post.b % 1000),
     tradition: () => TRADITIONS[post.a]?.name ?? 'the big night',
@@ -189,6 +189,7 @@ const COMMENT_OF: Partial<Record<PostKind, CommentKind>> = {
   [POST.food]: 'laugh',
   [POST.breakHome]: 'laugh',
   [POST.moveIn]: 'laugh',
+  [POST.professor]: 'relate',
 };
 /** Good news an ex or a rival may answer. */
 const SHADED: ReadonlySet<number> = new Set([POST.couple, POST.best, POST.longterm, POST.backTogether, POST.praise, POST.party, POST.newBuilding, POST.commencement, POST.club, POST.gym]);

@@ -5,6 +5,7 @@ import {
   CAUSE_TOPICS,
   FEATURED_POSTS,
   HAPPENING_POSTS,
+  OUTGOING_POSTS,
   postLines,
   POST,
   POST_FIELDS,
@@ -25,7 +26,7 @@ import { hashInts } from '../rng';
 import type { GameState, Week } from '../types';
 import { capacity } from './capacity';
 import { athleteShare } from './football';
-import { nextGreekDay } from './greek';
+import { chapterStatus, nextGreekDay } from './greek';
 import { campusHappiness } from './happiness';
 import { INTEREST, TRAIT, traitOf } from './identity';
 import { regularsNow } from './regulars';
@@ -99,8 +100,13 @@ export interface PostContext {
   games: Array<{ kick: number; opp: number; us: number; them: number; played: boolean; home: boolean }>;
   /** Traditions coming up soon: the tick and the tradition's place in TRADITIONS. */
   traditions: Array<{ at: number; index: number }>;
-  /** Rush week, if it is near: its tick. */
+  /** Rush week, if it is near: its tick; and the chapters' philanthropy day, and each chapter's standing by name. */
   rush: number | null;
+  philanthropy: number | null;
+  chapterTrouble: Set<string>;
+  /** The varsity athletes and the chapters' members, by place in the web: each week one of each gives their news. */
+  athletesIn: number[];
+  membersIn: number[];
   /** Buildings opened since the last read: their cells. Told in the newest week lived only. */
   opened: number[];
   /** The clock's week, for reading the calendar of a week lived. */
@@ -163,7 +169,21 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
     const next = nextDay(state, spec.day);
     if (next) traditions.push({ at: next.at, index });
   }
-  const rush = (state.greek?.chapters.length ?? 0) > 0 ? nextGreekDay(state, 0) : null;
+  const athletesIn: number[] = [];
+  const membersIn: number[] = [];
+  for (let id = 0; id < web.n; id++) {
+    if (web.year[id]! < 0) continue;
+    if (web.place[3]![id]! >= 0) athletesIn.push(id);
+    if (web.place[4]![id]! >= 0) membersIn.push(id);
+  }
+  const greek = (state.greek?.chapters.length ?? 0) > 0;
+  const rush = greek ? nextGreekDay(state, 0) : null;
+  const philanthropy = greek ? nextGreekDay(state, 1) : null;
+  const chapterTrouble = new Set<string>();
+  for (const chapter of state.greek?.chapters ?? []) {
+    const status = chapterStatus(state, chapter);
+    if (status === 'probation' || status === 'suspended') chapterTrouble.add(chapter.name);
+  }
   // A building that has opened since the web last read the campus: told once, by those who live or study near it.
   const opened: number[] = [];
   const seen = web.postSeen;
@@ -187,6 +207,10 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
     games,
     traditions,
     rush,
+    philanthropy,
+    chapterTrouble,
+    athletesIn,
+    membersIn,
     opened,
     week: state.clock.week,
     now: state.clock.tick,
@@ -242,7 +266,7 @@ function sceneFor(kind: PostKind, luck: number): number {
 /** How likely a student posts when their turn comes, from who they are (decision: personality sets how often). */
 function rateOf(profile: SocialProfile | null, bits: number): number {
   const base = profile ? (POST_RATE[profile.nature] ?? 0.3) : 0.3;
-  return Math.min(1, base * (0.7 + 0.15 * traitOf(bits, TRAIT.outgoing)));
+  return Math.min(1, base * (OUTGOING_POSTS[traitOf(bits, TRAIT.outgoing)] ?? 1));
 }
 
 /** Their mood, for the tone (decision: mood colours it): rough when life is hard, by who they are and their ties. */
@@ -342,6 +366,13 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
     const kind = !game.played ? POST.gameDay : game.us > game.them ? POST.gameWon : POST.gameLost;
     add(kind, (fan ? 5 : 1) * (game.home ? 1.5 : 1), game.opp, game.us * 1000 + game.them);
   }
+  // A class or a kind of professor, in a week of classes; never a named one.
+  if (inClass) add(POST.professor, 1 + (has(bits, INTEREST.studying) ? 0.5 : 0));
+  // Greek Row news from its members, and team news from the varsity athletes.
+  const greekNews = greekNewsOf(ctx, profile, week);
+  if (greekNews) add(POST.greekNews, greekNews.weight, greekNews.a);
+  const teamNews = teamNewsOf(ctx, profile, week, h);
+  if (teamNews) add(POST.teamNews, teamNews.weight, teamNews.a, teamNews.b);
   if (week === ctx.last) {
     for (const tradition of ctx.traditions) if (tradition.at - ctx.now < 2 * WEB_WEEK_TICKS) add(POST.tradition, 3, tradition.index);
     if (ctx.rush !== null && ctx.rush - ctx.now < 2 * WEB_WEEK_TICKS && profile.chapter) add(POST.bidDay, 5, -1);
@@ -366,6 +397,24 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
     if (roll < 0) return { kind: one.kind, a: one.a ?? -1, b: one.b ?? -1 };
   }
   return null;
+}
+
+/** A chapter member's news: philanthropy day near, probation, or house life. */
+function greekNewsOf(ctx: PostContext, profile: SocialProfile, week: number): { a: number; weight: number } | null {
+  if (!profile.chapter) return null;
+  const near = ctx.philanthropy !== null && week === ctx.last && ctx.philanthropy - ctx.now < 2 * WEB_WEEK_TICKS;
+  if (near) return { a: 0, weight: 4 };
+  if (ctx.chapterTrouble.has(profile.chapter)) return { a: 1, weight: 3 };
+  return { a: 2, weight: 0.6 };
+}
+
+/** A varsity athlete's news: a game away this week, else practice, now and then the new recruits. */
+function teamNewsOf(ctx: PostContext, profile: SocialProfile, week: number, h: number): { a: number; b: number; weight: number } | null {
+  if (!profile.team) return null;
+  const from = postWeekStart(week);
+  const away = ctx.games.find((game) => !game.home && game.kick >= from && game.kick < from + WEB_WEEK_TICKS);
+  if (away) return { a: 1, b: away.opp, weight: 2.5 };
+  return { a: (h >>> 15) % 5 === 0 ? 2 : 0, b: -1, weight: 1.5 };
 }
 
 /** What one author posts about the campus this week. */
@@ -449,6 +498,22 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
     if (share(hashInts(h, 1)) >= rateOf(profile, web.identity[id]!)) continue;
     campusPost(web, ctx, posting, id, profile, read, week, h);
     made += 1;
+  }
+  // The teams and Greek Row each give their news once a week, from one of theirs, at that student's own rate: a
+  // random sample of the whole campus would hardly ever reach the few hundred who are on a team or in a chapter.
+  for (const [list, salt] of [[ctx.athletesIn, 7151], [ctx.membersIn, 7153]] as const) {
+    if (list.length === 0) continue;
+    const h = hashInts(ctx.seed, salt, week);
+    const id = list[h % list.length]!;
+    if (featured.has(id)) continue;
+    const profile = profileOf(id);
+    if (!profile || share(hashInts(h, 1)) >= Math.max(0.5, rateOf(profile, web.identity[id]!))) continue;
+    const team = salt === 7151;
+    const news: { a: number; b?: number } | null = team ? teamNewsOf(ctx, profile, week, h) : greekNewsOf(ctx, profile, week);
+    if (!news) continue;
+    const kind = team ? POST.teamNews : POST.greekNews;
+    const luck = hashInts(h, 41);
+    put(web, ctx, posting, hashInts(h, 43) % WEB_WEEK_TICKS, id, kind, luck, news.a, news.b ?? -1, TONE.good, sceneFor(kind, luck));
   }
   // Every post of the featured: the Main Character, followed students and named regulars.
   for (const [id, most] of featured) {
