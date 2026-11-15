@@ -334,13 +334,16 @@ export function happeningLine(state: GameState, one: Happening): string | null {
       const line = lines[Math.abs(one.luck) % lines.length]!;
       return line.replace('{a}', a).replace('{b}', b).replace('{c}', c ?? '');
     }
+    // A rumour on Quadline that reached someone close to the one it was about (DESIGN.md 63.14).
+    case EVENT.rumour:
+      return `A rumour about ${a} on Quadline reached ${b}.`;
     default:
       return null;
   }
 }
 
 /** Light kinds, in the order the paper reaches for them. */
-const LIGHT_ORDER = [EVENT.dating, EVENT.backTogether, EVENT.splitMutual, EVENT.best, EVENT.longterm, EVENT.enemies, EVENT.stoodUp, EVENT.pettiness, EVENT.reported];
+const LIGHT_ORDER = [EVENT.dating, EVENT.backTogether, EVENT.splitMutual, EVENT.best, EVENT.longterm, EVENT.enemies, EVENT.stoodUp, EVENT.pettiness, EVENT.reported, EVENT.rumour];
 
 /** Each happening of picking on someone, to its lines (63.11). */
 const BULLYING_KEY: Partial<Record<number, keyof typeof BULLYING_LINES>> = {

@@ -1,3 +1,5 @@
+import type { OfficialKind } from './config/quadline';
+import { postOfficial } from './systems/official';
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { makeMain, setAsideMain } from './systems/mc';
 import { promoteRegular, rememberRegular } from './systems/regulars';
@@ -87,6 +89,8 @@ export type Action =
   | { type: 'promoteRegular'; ref: { entryYear: number; index: number } }
   /** The web's reading of what ties do to the campus, once a game week (DESIGN.md 63.10). Not the player's. */
   | { type: 'socialEffects'; effects: SocialEffects }
+  /** Post as the university on Quadline (DESIGN.md 63.14): one of the five kinds, about what the campus has. */
+  | { type: 'officialPost'; kind: OfficialKind }
   | { type: 'rememberRegular'; ref: { entryYear: number; index: number }; text: string }
   | { type: 'setAsideMain' }
   /** Choose a tradition for an open place (DESIGN.md 50). */
@@ -698,6 +702,11 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       const next = structuredClone(state);
       next.story.mc!.webPeople = structuredClone(people);
       return { ok: true, state: next, cost: 0, changed: 0 };
+    }
+    case 'officialPost': {
+      const next = structuredClone(state);
+      const error = postOfficial(next, action.kind);
+      return error ? { ok: false, state, error } : { ok: true, state: next, cost: 0, changed: 1 };
     }
     case 'socialEffects': {
       if (!effectsSound(action.effects)) return { ok: false, state, error: 'Those effects are out of range.' };

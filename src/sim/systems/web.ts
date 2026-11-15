@@ -6,6 +6,7 @@ import {
   BEST_AT,
   BREAKUP,
   BULLY,
+  RUMOUR,
   CATCHUP_FULL_WEEKS,
   CLASH_BELOW,
   CRUSH_FROM,
@@ -1074,12 +1075,15 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
     regrow(web, state);
     holdMain(web, state);
     regrown = true;
-    // After a long time away the feed starts again with the last two weeks (63.13): older posts are of another campus.
+    // After a long time away the feed starts again with the last two weeks (63.13): older posts are of another campus,
+    // and so are the viral ones (63.14).
     web.posts.fill(-1);
+    web.viral.fill(-1);
     web.postNext = 0;
   }
-  // What the campus holds for Quadline's posts, read once for every week lived (63.13).
+  // What the campus holds for Quadline's posts, read once for every week lived (63.13), and what a rumour does (63.14).
   const posting = postContext(web, state, toWeek);
+  posting.lands = rumourLands;
   let lived = 0;
   while (web.week < toWeek) {
     stepWeek(web);
@@ -1098,6 +1102,40 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
   findGroups(web);
   pickRation(web);
   return { lived, regrown };
+}
+
+/**
+ * A rumour on Quadline landing (DESIGN.md 63.14): on the partner of the one it says was seen with someone, or on the
+ * closest friend of the one it says took the credit. The tie turns tense and loses a little; a couple it reaches now and
+ * then ends, messily. Never the Main Character's, whose romances are their story's (63.11). Returns what it did.
+ */
+export function rumourLands(web: Web, about: number, kind: 'seen' | 'credit', h: number): 'tense' | 'split' | null {
+  let s = -1;
+  for (let k = 0; k < SLOTS; k++) {
+    const at = about * SLOTS + k;
+    const b = web.other[at]!;
+    if (b < 0 || web.year[b]! < 0) continue;
+    const tie = web.kind[at]!;
+    const fits = kind === 'seen' ? tie >= KIND.dating && tie <= KIND.longterm : tie === KIND.best || tie === KIND.friend;
+    if (fits && (s < 0 || web.strength[at]! > web.strength[s]!)) s = at;
+  }
+  if (s < 0) return null;
+  const b = web.other[s]!;
+  if (about === web.mainId || b === web.mainId) return null;
+  const back = web.back[s]!;
+  if (back < 0) return null;
+  web.feeling[s] = web.feeling[back] = FEEL.tense;
+  web.strength[s] = web.strength[back] = Math.max(0, web.strength[s]! - RUMOUR.sting);
+  if (kind === 'seen' && share(h) < RUMOUR.split) {
+    web.kind[s] = web.kind[back] = KIND.ex;
+    web.strength[s] = web.strength[back] = EX_START;
+    count(web, EVENT.splitMessy);
+    note(web, EVENT.splitMessy, about, b);
+    return 'split';
+  }
+  count(web, EVENT.rumour);
+  note(web, EVENT.rumour, about, b);
+  return 'tense';
 }
 
 /** The week's heavy happening, once there is one: the earliest of the campus year, then the least luck. Never changed after. */

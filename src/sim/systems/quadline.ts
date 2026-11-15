@@ -15,13 +15,24 @@ import {
   SCENE,
   SHADE_POSTS,
   TONE,
+  VIRAL_A_WEEK,
+  VIRAL_BEYOND,
+  VIRAL_FADE_WEEKS,
   VIRAL_KEPT,
+  VIRAL_REACH_EACH,
+  VIRAL_SHARES_MOST,
+  VIRAL_SIGN,
+  POST_ENGAGE,
+  BULLY_POSTS,
+  rumourLines,
   type CauseTopic,
   type PostKind,
 } from '../config/quadline';
 import { FAVOURITES } from '../config/students';
 import { TRADITIONS } from '../config/traditions';
-import { EVENT, FEEL, HAPPENING_KINDS, HAPPENING_WEEKS, HAPPENINGS_KEPT, KIND, SLOTS, WEB_WEEK_TICKS } from '../config/web';
+import { EVENT, FEEL, HAPPENING_KINDS, HAPPENING_WEEKS, HAPPENINGS_KEPT, KIND, RUMOUR, SLOTS, WEB_WEEK_TICKS } from '../config/web';
+import { officialMood, speakingUp } from './buzz';
+import { bullyingTimes } from './policies';
 import { hashInts } from '../rng';
 import type { GameState, Week } from '../types';
 import { capacity } from './capacity';
@@ -67,7 +78,7 @@ export interface Post {
 }
 
 /** The numbers 6 and 7 hold, by kind: another student, or a topic and a cell, or a game's numbers. */
-const ABOUT_STUDENT: ReadonlySet<number> = new Set([POST.couple, POST.best, POST.longterm, POST.backTogether, POST.shade]);
+const ABOUT_STUDENT: ReadonlySet<number> = new Set([POST.couple, POST.best, POST.longterm, POST.backTogether, POST.shade, POST.rumour, POST.bullyPost]);
 export const aboutStudent = (kind: number): boolean => ABOUT_STUDENT.has(kind);
 
 const share = (h: number): number => (h >>> 0) / 4294967296;
@@ -114,6 +125,12 @@ export interface PostContext {
   now: number;
   /** The newest week this catch-up lives, so the things of now (a new building, a tradition coming) post once. */
   last: number;
+  /** How the official account has set the feed's mood (63.14): above 0 warmer, below 0 sourer. */
+  moodBias: number;
+  /** How much picking on someone shows on the app: the anti-bullying program and the account speaking up cut it. */
+  bullyShown: number;
+  /** What a rumour does when it lands: set by the web, which holds the ties (63.14). Missing: rumours change nothing. */
+  lands?: (web: Web, about: number, kind: 'seen' | 'credit', h: number) => 'tense' | 'split' | null;
 }
 
 /** Read what the campus is doing once, for every week this catch-up lives. */
@@ -196,6 +213,9 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
   web.postSeen = nowSeen;
   return {
     state,
+    moodBias: officialMood(state),
+    // What is reported more is taken down more: the share left showing is one over how much more is reported.
+    bullyShown: (1 / Math.max(1, bullyingTimes(state).reported)) * (speakingUp(state) ? 0.6 : 1),
     seed: web.seed,
     housing,
     athletes: athleteShare(state),
@@ -224,15 +244,18 @@ export function postContext(web: Web, state: GameState, toWeek: number): PostCon
 interface Posting {
   week: number;
   counts: Map<number, number>;
+  /** The ring's places written this week, for choosing the week's viral posts. */
+  made: number[];
 }
 
-function put(web: Web, ctx: PostContext, posting: Posting, minute: number, author: number, kind: PostKind, luck: number, a: number, b: number, tone: number, scene: number): void {
+function put(web: Web, ctx: PostContext, posting: Posting, minute: number, author: number, kind: PostKind, luck: number, a: number, b: number, tone: number, scene: number, forceLine = -1): void {
   const week = posting.week;
   // Its line: the kind's lines in turn this week from a start of the week's own, so two posts of a kind differ.
   const lines = postLines(kind, tone, a).length;
   const made = posting.counts.get(kind) ?? 0;
   posting.counts.set(kind, made + 1);
-  const line = (hashInts(ctx.seed, 7301, week, kind) + made) % Math.max(1, lines);
+  const line = forceLine >= 0 ? forceLine : (hashInts(ctx.seed, 7301, week, kind) + made) % Math.max(1, lines);
+  posting.made.push(web.postNext % POSTS_KEPT);
   const at = (web.postNext % POSTS_KEPT) * POST_FIELDS;
   web.postNext += 1;
   const r = Math.floor(author / web.classSlot);
@@ -252,9 +275,9 @@ function put(web: Web, ctx: PostContext, posting: Posting, minute: number, autho
 const refOf = (web: Web, id: number): StudentRef => ({ entryYear: web.ring[Math.floor(id / web.classSlot)]!, index: id % web.classSlot });
 
 /** A post about another student: their entry year and index in a and b. */
-function putAbout(web: Web, ctx: PostContext, posting: Posting, minute: number, author: number, kind: PostKind, luck: number, other: number, tone: number): void {
+function putAbout(web: Web, ctx: PostContext, posting: Posting, minute: number, author: number, kind: PostKind, luck: number, other: number, tone: number, forceLine = -1): void {
   const ref = refOf(web, other);
-  put(web, ctx, posting, minute, author, kind, luck, ref.entryYear, ref.index, tone, sceneFor(kind, luck));
+  put(web, ctx, posting, minute, author, kind, luck, ref.entryYear, ref.index, tone, sceneFor(kind, luck), forceLine);
 }
 
 function sceneFor(kind: PostKind, luck: number): number {
@@ -270,7 +293,7 @@ function rateOf(profile: SocialProfile | null, bits: number): number {
 }
 
 /** Their mood, for the tone (decision: mood colours it): rough when life is hard, by who they are and their ties. */
-function moodOf(web: Web, id: number, profile: SocialProfile | null, h: number): number {
+function moodOf(web: Web, id: number, profile: SocialProfile | null, h: number, bias = 0): number {
   const nature = profile?.nature;
   let close = 0;
   let sore = 0;
@@ -284,7 +307,7 @@ function moodOf(web: Web, id: number, profile: SocialProfile | null, h: number):
   let rough = 0.4 - 0.12 * close + 0.12 * sore;
   if (nature === 'stressed' || nature === 'heartbroken' || nature === 'homesick' || nature === 'allNighter') rough += 0.3;
   if (nature === 'slacker' || nature === 'party' || nature === 'clown' || traitOf(web.identity[id]!, TRAIT.laidBack) >= 2) rough -= 0.2;
-  return share(h) < rough ? TONE.rough : TONE.good;
+  return share(h) < rough - bias ? TONE.rough : TONE.good;
 }
 
 /** Whether the tie between them is still as the post says: a couple, best friends, or no longer a couple. */
@@ -423,7 +446,7 @@ function campusPost(web: Web, ctx: PostContext, posting: Posting, id: number, pr
   if (!topic) return;
   const luck = hashInts(h, 41);
   const minute = hashInts(h, 43) % WEB_WEEK_TICKS;
-  let tone = moodOf(web, id, profile, hashInts(h, 47));
+  let tone = moodOf(web, id, profile, hashInts(h, 47), ctx.moodBias);
   if (topic.kind === POST.complaint) tone = TONE.rough;
   if (topic.kind === POST.praise) tone = TONE.good;
   put(web, ctx, posting, minute, id, topic.kind, luck, topic.a, topic.b, tone, sceneFor(topic.kind, luck));
@@ -452,7 +475,7 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
     return profiles.get(id)!;
   };
   const featured = new Map(ctx.featured.map((one) => [one.id, one.most]));
-  const posting: Posting = { week, counts: new Map() };
+  const posting: Posting = { week, counts: new Map(), made: [] };
   // What happened by name this week: one of the two posts about it, the more outgoing; an ex or a rival may answer.
   if (!campusOnly) {
     const row = ((week % HAPPENING_WEEKS) + HAPPENING_WEEKS) % HAPPENING_WEEKS;
@@ -515,6 +538,10 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
     const luck = hashInts(h, 41);
     put(web, ctx, posting, hashInts(h, 43) % WEB_WEEK_TICKS, id, kind, luck, news.a, news.b ?? -1, TONE.good, sceneFor(kind, luck));
   }
+  if (!campusOnly) {
+    bullyPosts(web, ctx, posting, week);
+    rumours(web, ctx, posting, week, profileOf);
+  }
   // Every post of the featured: the Main Character, followed students and named regulars.
   for (const [id, most] of featured) {
     if (web.year[id]! < 0) continue;
@@ -527,6 +554,152 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
       campusPost(web, ctx, posting, id, profile, read, week, h);
     }
   }
+  // The week's viral posts, once the week is posted (63.14). In the weeks a regrow lives only the campus is posted
+  // about, so only the campus's posts can go viral: none of the regrowing's happenings is news (63.12).
+  chooseViral(web, posting);
+}
+
+// ------------------------------------------------- the app's reach (63.14) --
+
+/**
+ * Picking on someone on the app (DESIGN.md 63.11, 63.14): of the week's acts by name, a share are posted by the one
+ * doing it, naming the one picked on, in one of the mild names allowed. Fewer show with the anti-bullying program
+ * (reported and taken down), and fewer again for two weeks after the official account speaks up.
+ */
+function bullyPosts(web: Web, ctx: PostContext, posting: Posting, week: number): void {
+  const row = ((week % HAPPENING_WEEKS) + HAPPENING_WEEKS) % HAPPENING_WEEKS;
+  const per = HAPPENING_KINDS.length * HAPPENINGS_KEPT;
+  for (let f = row * per * FIELDS; f < (row + 1) * per * FIELDS; f += FIELDS) {
+    const h = web.happenings;
+    if (h[f] !== week) continue;
+    const event = h[f + 1]!;
+    if (event !== EVENT.bullying && event !== EVENT.shutOut && event !== EVENT.pileOn) continue;
+    const ida = idOfRef(web, h[f + 4]!, h[f + 5]!);
+    const idb = idOfRef(web, h[f + 6]!, h[f + 7]!);
+    // A pile-on is posted by the one who joined in.
+    const author = event === EVENT.pileOn ? idOfRef(web, h[f + 8]!, h[f + 9]!) : ida;
+    if (author < 0 || idb < 0 || web.year[author]! < 0 || web.year[idb]! < 0 || author === web.mainId) continue;
+    const hh = hashInts(ctx.seed, 7401, week, author, idb);
+    if (share(hh) >= BULLY_POSTS * ctx.bullyShown) continue;
+    putAbout(web, ctx, posting, hashInts(hh, 3) % WEB_WEEK_TICKS, author, POST.bullyPost, hashInts(hh, 5), idb, TONE.rough);
+  }
+}
+
+function idOfRef(web: Web, entryYear: number, index: number): number {
+  const r = ((entryYear % 4) + 4) % 4;
+  return web.ring[r] === entryYear && index >= 0 && index < web.classSlot ? r * web.classSlot + index : -1;
+}
+
+/** How many a student knows, and those know: how far something they say goes. */
+function reachOf(web: Web, id: number): number {
+  const seen = new Set<number>([id]);
+  for (let k = 0; k < SLOTS; k++) {
+    const b = web.other[id * SLOTS + k]!;
+    if (b < 0) continue;
+    seen.add(b);
+    for (let j = 0; j < SLOTS; j++) {
+      const c = web.other[b * SLOTS + j]!;
+      if (c >= 0) seen.add(c);
+    }
+  }
+  return seen.size - 1;
+}
+
+/**
+ * Rumours (DESIGN.md 63.14, decision 6, "Drama"): a few students who like to talk (outgoing, not kind) each week say
+ * something about someone they know: seen with someone (about someone in a couple), took the credit (about someone with
+ * a close friend), or loose talk. It is posted, and spreads as far as its teller is known: it may land on the partner or
+ * the friend, and change their tie (the web's `rumourLands`), or end a couple. Named, within the hard lines.
+ */
+function rumours(web: Web, ctx: PostContext, posting: Posting, week: number, profileOf: (id: number) => SocialProfile | null): void {
+  for (let t = 0; t < RUMOUR.tries; t++) {
+    const h = hashInts(ctx.seed, 7501, week, t);
+    const teller = h % web.n;
+    if (web.year[teller]! < 0 || teller === web.mainId) continue;
+    const bits = web.identity[teller]!;
+    if (traitOf(bits, TRAIT.outgoing) < 2 || traitOf(bits, TRAIT.kind) > 1) continue;
+    if (share(hashInts(h, 1)) >= RUMOUR.starts) continue;
+    // Someone they know, and what can be said about them.
+    const slot = teller * SLOTS + (hashInts(h, 2) % SLOTS);
+    const about = web.other[slot]!;
+    if (about < 0 || web.year[about]! < 0 || about === web.mainId) continue;
+    let coupled = false;
+    let friended = false;
+    for (let k = 0; k < SLOTS; k++) {
+      const s = about * SLOTS + k;
+      if (web.other[s]! < 0) continue;
+      const tie = web.kind[s]!;
+      if (tie >= KIND.dating && tie <= KIND.longterm) coupled = web.other[s] !== teller;
+      if (tie === KIND.best || tie === KIND.friend) friended = true;
+    }
+    const kind = coupled && share(hashInts(h, 3)) < 0.6 ? 'seen' : friended && share(hashInts(h, 4)) < 0.5 ? 'credit' : 'talk';
+    const { from, count } = rumourLines(kind);
+    const line = from + (hashInts(h, 5) % count);
+    if (!profileOf(teller)) continue;
+    putAbout(web, ctx, posting, hashInts(h, 6) % WEB_WEEK_TICKS, teller, POST.rumour, hashInts(h, 7), about, TONE.rough, line);
+    // How far it goes: a teller who knows many carries it all the way to the one it would hurt.
+    if (kind === 'talk' || !ctx.lands) continue;
+    const lands = RUMOUR.lands * Math.min(1, reachOf(web, teller) / RUMOUR.reach);
+    if (share(hashInts(h, 8)) < lands) ctx.lands(web, about, kind, hashInts(h, 9));
+  }
+}
+
+/** A post going viral (DESIGN.md 63.14): how many share it, whether it leaves the campus, and which way it moves the school's reach. */
+export function viralOf(kind: PostKind, luck: number): { shares: number; beyond: boolean; sign: number } {
+  const shares = 1500 + (hashInts(luck, 71) % (VIRAL_SHARES_MOST - 1500));
+  const sign = VIRAL_SIGN[kind] ?? 0;
+  return { shares, beyond: shares >= VIRAL_BEYOND, sign };
+}
+
+/**
+ * The week's viral posts (decision 7, "Light"): of the posts made this week, the few that would spread furthest (how
+ * much a kind draws, how far its author is known, its own luck) are kept among the viral ones, the oldest giving way.
+ */
+function chooseViral(web: Web, posting: Posting): void {
+  const scored: Array<{ slot: number; score: number }> = [];
+  for (const slot of posting.made) {
+    const at = slot * POST_FIELDS;
+    const kind = web.posts[at + 4]! as PostKind;
+    const author = idOfRef(web, web.posts[at + 2]!, web.posts[at + 3]!);
+    if (author < 0) continue;
+    const luck = web.posts[at + 5]! >>> 0;
+    const score = (POST_ENGAGE[kind] ?? 0.15) * (reachOf(web, author) + 10) * (0.3 + share(hashInts(luck, 73)));
+    scored.push({ slot, score });
+  }
+  scored.sort((x, y) => y.score - x.score || x.slot - y.slot);
+  for (const { slot, score } of scored.slice(0, VIRAL_A_WEEK)) {
+    if (score < 6) break;
+    // The oldest viral post gives way, or an empty place.
+    let into = 0;
+    for (let v = 0; v < VIRAL_KEPT; v++) {
+      const week = web.viral[v * POST_FIELDS]!;
+      if (week === -1) {
+        into = v;
+        break;
+      }
+      if (week < web.viral[into * POST_FIELDS]!) into = v;
+    }
+    web.viral.set(web.posts.subarray(slot * POST_FIELDS, (slot + 1) * POST_FIELDS), into * POST_FIELDS);
+  }
+}
+
+/**
+ * What the viral posts seen beyond campus do to the school's reach (63.14), for the web's weekly reading: each with
+ * when it went up and how much it widens (above 0) or narrows the reach. The campus fades them over two game weeks.
+ */
+export function viralReachOf(web: Web): Array<{ at: number; size: number }> {
+  const out: Array<{ at: number; size: number }> = [];
+  const since = postWeekStart(web.week - VIRAL_FADE_WEEKS);
+  for (let v = 0; v < VIRAL_KEPT; v++) {
+    const f = v * POST_FIELDS;
+    if (web.viral[f] === -1) continue;
+    const at = postWeekStart(web.viral[f]!) + web.viral[f + 1]!;
+    if (at < since) continue;
+    const { shares, beyond, sign } = viralOf(web.viral[f + 4]! as PostKind, web.viral[f + 5]! >>> 0);
+    if (!beyond || sign === 0) continue;
+    out.push({ at, size: sign * VIRAL_REACH_EACH * (0.5 + (0.5 * shares) / VIRAL_SHARES_MOST) });
+  }
+  return out.sort((x, y) => x.at - y.at);
 }
 
 /** Every post kept, then the viral ones, as their numbers say; empty slots left out. */
@@ -551,9 +724,13 @@ export function postsOf(posts: Int32Array, viral: Int32Array): Post[] {
       });
     }
   };
-  read(posts, Math.floor(posts.length / POST_FIELDS), false);
   read(viral, Math.floor(viral.length / POST_FIELDS), true);
-  return out.sort((x, y) => y.week - x.week || y.minute - x.minute);
+  // A post kept among the viral ones is that post: the copy among the newest gives way to it.
+  const viralKeys = new Set(out.map((post) => `${post.week}:${post.minute}:${post.author.entryYear}:${post.author.index}:${post.kind}`));
+  const before = out.length;
+  read(posts, Math.floor(posts.length / POST_FIELDS), false);
+  const kept = out.filter((post, i) => i < before || !viralKeys.has(`${post.week}:${post.minute}:${post.author.entryYear}:${post.author.index}:${post.kind}`));
+  return kept.sort((x, y) => y.week - x.week || y.minute - x.minute);
 }
 
 /** A fresh, empty feed. */

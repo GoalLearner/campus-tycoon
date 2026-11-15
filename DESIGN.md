@@ -7909,3 +7909,67 @@ Followers are everyone a student knows and everyone those know, times seven and 
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
 
 **Checked against the owner's spec** for the network view and the app, word for word (relayed 2026-11-14 after stop 9 was merged), with three things added at once: memes about a class or a kind of professor (never a named one), Greek Row and team news, and the shy posting rarely. Its "13+" is the owner's later 16+ (16.3), with bullying among students allowed within the hard lines; "no bullying targeted at a real person" stands, as no real person is ever in the game. Still to come, in stop 10: gossip and rumours spreading through the web and starting drama, going viral campus-wide and beyond (good or bad), the paper picking up big viral moments, the feed's mood as a signal of Happiness and its causes, viral posts on reputation and applications, and the official account with students' replies. The teammates' weight in the web (63.12) waits for the realism pass (R1), where teams are to be as tight-knit as real ones.
+
+### 63.14 Stop 10 as built: the app's reach
+
+Built 2026-11-14 on the branch `social-sim-10`, the owner's decisions of that day: 6 Drama (rumours change ties, no ration), 7 Light (at most 3% of applicants, fading over two game weeks), 8 Templates (five kinds, up to three posts a day), and main's decision of that evening on 7: viral posts move applicants only, through the school's reach (the "how well known" part of reputation); the academic rating and the published rank do not move, as they are the long climb the rank goals are paced on. The save version is unchanged: the official account's posts and the viral readings are optional fields.
+
+**Rumours** (`rumours` in `src/sim/systems/quadline.ts`, `rumourLands` in `src/sim/systems/web.ts`, sizes in `RUMOUR` in `src/sim/config/web.ts`):
+
+| | As built |
+|---|---|
+| Who tells them | Students who like to talk: outgoing and not kind. 40 are tried a week and 12 in 100 of those who would start one do: about one a week on the model campus |
+| What is said | About someone they know, by name (`RUMOUR_POSTS`): seen with someone (about someone in a couple: "saw Max at the movies with someone who is very much not their partner. just saying"), took the credit (about someone with a close friend), or loose talk. Never sexual, never about who anyone is |
+| How far it goes | As far as its teller is known: it lands, at most 55 times in 100, on the one it would hurt, the more the further its teller reaches (all the way at 40 people within two steps) |
+| What it does | Seen with someone: their partner's tie turns tense and loses 8, and 15 times in 100 the couple ends, messily. Took the credit: their closest friend's tie turns tense and loses 8. Loose talk only gets around. A rumour that lands is a new happening by name ("A rumour about Max on Quadline reached Ari."), light; one that ends a couple is told as a messy split. Never the Main Character's romances (63.11). Measured: 29 posted in 30 weeks, 9 landed |
+
+**Going viral** (`chooseViral`, `viralOf`, `viralReachOf` in `src/sim/systems/quadline.ts`; `viralReach` in `src/sim/systems/buzz.ts`):
+
+| | As built |
+|---|---|
+| Which | Of each week's posts, the two that would spread furthest (how much a kind draws, how far its author is known, its luck), if far enough: about two a week. The newest 30 are kept apart from the 400, and shown with how far they went: "Shared 4,474 times · seen beyond campus" |
+| Beyond campus | Those shared 4,000 times or more (shares 1,500 to 12,000, from the post's luck) |
+| Which way | Good news widens the school's reach: a new building, a home win, a tradition, commencement, praise. Bad narrows it: a complaint (the dining hall, beds, the walk, campus safety: "crime" stays out of the words, as the tone guide has it), picking on someone. A couple's post or a party can go viral and moves nothing |
+| How much | Each seen beyond campus, 1 to 1.5 in 100 of the reach, fading to nothing over two game weeks; all together at most 3% either way (decision 7). The web's weekly reading carries them to the campus (`SocialEffects.viral`), and applicants (37.3) are the reach so moved, times the four causes. The long run applies them as the app does |
+| Answered | A bad one the official account answers narrows the reach half as much from then |
+| Alternative, not built | Viral posts also nudge the academic rating: that would need a fresh check of the rank goals' pace (the Top 10 not before week 24) |
+
+On a campus with a weak spot, its complaints are what goes viral and narrows the reach; on one without, praise widens it: the app turns the campus's weak spot into a small, fading cost in applicants.
+
+**The paper** picks up the biggest viral moment since the last visit, one at most, at the head of its gossip column, "On Quadline" (`VIRAL_HEADLINES`): what went around, never who ("Student Thread on Places to Play Spreads Beyond Campus"). The paper's own voice never mocks a student.
+
+**The feed's mood** (`moodLine` in `src/app/quadline.ts`, read only): of the last game week's posts, the share in a good mood, and the campus's most posted worry: "Campus mood: 63% upbeat · most worried about places to play", at the top of the feed and on the Social tab. The complaints are written from the campus's weak spots as each week is lived, so it moves with them, often before Happiness itself does.
+
+**The official account** (`src/sim/systems/official.ts`, `src/sim/systems/buzz.ts`; action `officialPost`; kept in the save as `web.official`, the newest 20):
+
+| Kind | What it says, from the campus | In tune when |
+|---|---|---|
+| Announce an event | Kindness week, when students are being picked on (2 in 100 or more); else a tradition in the next two weeks; else a home game this week; else the club fair | Anything but the club fair |
+| Celebrate a win | A home win this past week; commencement; else the semester | A win, commencement, or the semester when Happiness is 70 or more and nothing is short; the semester otherwise is off-key |
+| Apologise for a problem | The campus's weakest spot ("You need more places to play. We are on it.") | When there is one |
+| Welcome a new class | The fall or spring class | Within a game week of move-in |
+| Respond to a viral post | The newest viral post seen beyond campus not yet answered ("We hear you, and we are on it.") | Always; only when there is one |
+
+Three a real day. No free text: the player picks the kind and sees what it will say. Students reply to it and to the campus as it is now (`officialReplies`): in tune, they cheer or thank it; off-key, the first says what is still wrong ("cool. a court would be nice too", "where are the beds tho"); an apology for something since fixed is met with credit ("okay it really is better now"). Each in-tune post warms the feed for two game weeks (6 in 100 fewer students post in a rough mood, fading) and each off-key one sours it; together at most 15 in 100.
+
+**Picking on someone on the app** (`bullyPosts`; comments in `bullyComments`): of the week's acts by name (picked on, shut out, piled on), 15 in 100 are posted by the one doing it (the one who joined, for a pile-on), naming the one picked on in one of the six mild names of 63.11 ("imagine being Lane and thinking everyone wants your opinion. such a show-off"). Friends of the poster who are not kind and are outgoing join in; friends of the one picked on who are kind or loyal stand up for them. The levers: the anti-bullying program, read by what it does (twice as much reported): half as many show, taken down, and an RA among their people and the Counselling Center answer under the post (the program's own words: RAs trained to spot it, someone who answers); the official account speaking up (kindness week): for two game weeks, 6 in 10 as many show, and picking on someone starts 8 in 10 as often in the web.
+
+| Decisions made here | Instead |
+|---|---|
+| Viral posts through the reach only (main's decision on 7) | Also the rating, which would need a fresh pace check |
+| The account's topic chosen from the campus, the kind by the player | A topic to choose as well, more to read for one tap |
+| Speaking up as an announcement (kindness week), so the account stays five kinds | A sixth kind |
+| Counselling as the anti-bullying program's answer under the post | A counselling building, which the game does not have |
+| An answered bad viral at half | No lever on it, or the whole of it |
+| A rumour lands as far as its teller is known | Every rumour landing, which would make couples brittle |
+
+**Measured.** Posts: 320 a real day on the model campus over 30 weeks (43 a game week): rumours about 1 a week, picking on someone about 2, two viral a week. Frames, as in 63.10, on a quiet PC, back to back with main (0ed1364), 16 frames each: the crowd at Normal 13.9 ms median against main's 14.3; the morning rush at High 17.9 against 20.2; an evening 15.9 against 17.4. Nothing that shows. The long run: all 91 checks pass in 1,725 s. Its web is grown again at each reading, and a grown web's weeks post only about the campus, so at first none of them went viral and the long run never read the pull on applicants; a grown web's campus posts may go viral now (none of the regrowing's happenings is news), so the long run reads it as the app does. Against stop 9 (63.13), 28 of the 91 checks moved in their numbers and pass, 143 table lines moved: money kept of every $100 in years 3 to 8 casual 13.7% to 15.2% (as before), daily 13.0% to 15.0% (as before), striver 12.4% to 14.4% (was 14.3%); the small campus's mid-game margin 12.2% to 16.9% (was 13.5% to 17.8%, within 10 to 20%); the Top 10 no sooner than week 24 (unchanged); levels a week 5.64 at the least for one player (was 5.61), under 7.00; the Friends line 1.64 to 2.00 points of Happiness (was 1.68). On the model campus the weak spot's complaints go viral and narrow the reach a little, so a few fewer apply at some intakes, and the endowments end lower (the daily player's $138M against $182M). Rumours run only in weeks the app lives, so the long run, which grows its web again, does not see them; a few land a week of 46,000 students, too few to show in what ties do.
+
+**Tested**: `tests/quadlineReach.test.ts` (rumours told by those who like to talk, about someone they know; they land and are told by name; never the Main Character's romances; two viral a week at most, 30 kept, once each in the feed; the reach moved only by those seen beyond campus, good up and bad down, each a little; applicants at most 3% either way, fading over two game weeks, an answered bad one half; the paper's headline never names a student; the feed's mood; the official account's five kinds, three a day, about the campus, in tune or off-key, replies, the mood it sets, speaking up and its two weeks; kept through a save and a bad post let go; picking on someone posted by the one doing it, joiners, defenders, the RA and the Counselling Center with the program, fewer shown with the levers), and the tests of stop 9, the hard lines (every new line), the web and the social view updated.
+
+| Rough | Why |
+|---|---|
+| The paper's viral headline is tested, not pictured | A headless picture of the paper after time away could not be made in time |
+| The official account's replies come from students picked by its post | Not those it would reach first |
+| A rumour about someone with no partner and no close friend is only talk | By design: there is no one for it to land on |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

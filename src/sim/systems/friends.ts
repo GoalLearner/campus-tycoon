@@ -1,3 +1,5 @@
+import { VIRAL_KEPT, VIRAL_REACH_EACH } from '../config/quadline';
+import { viralReachOf } from './quadline';
 import {
   FRESH_EX_FROM,
   FRIENDS_CAMPUS_HAPPY,
@@ -197,6 +199,8 @@ export function friendsEffectsOf(web: Web): SocialEffects | null {
     rival: rival / n,
     study: study / n,
     bullied: bullied / n,
+    // Quadline's viral posts seen beyond campus, for the school's reach (63.14).
+    viral: viralReachOf(web),
   };
 }
 
@@ -224,7 +228,11 @@ export function friendsStay(state: GameState, retention: number): number {
 /** True when what the save keeps is a set of effects this version can use: every number where it may be. */
 export function effectsSound(effects: SocialEffects): boolean {
   const shares = [effects.alone, effects.group, effects.partnered, effects.split, effects.rival, effects.study, effects.bullied ?? 0];
+  const viral = effects.viral ?? [];
   return (
+    Array.isArray(viral) &&
+    viral.length <= VIRAL_KEPT &&
+    viral.every((one) => Number.isInteger(one.at) && Number.isFinite(one.size) && Math.abs(one.size) <= VIRAL_REACH_EACH + 1e-9) &&
     Number.isInteger(effects.week) &&
     Math.abs(effects.happiness) <= FRIENDS_CAMPUS_HAPPY + 1e-9 &&
     Math.abs(effects.examStress) <= FRIENDS_CAMPUS_STRESS + 1e-9 &&

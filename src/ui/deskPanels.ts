@@ -1,3 +1,5 @@
+import { feedOf, viralHeadline } from '../app/quadline';
+import { viralOf } from '../sim/systems/quadline';
 import type { AwayReport } from '../app/away';
 import { session } from '../app/session';
 import { sound } from '../app/sound';
@@ -303,6 +305,19 @@ export function openAwayScreen(openModal: OpenModal, report: AwayReport | null, 
           const web = socialWeb.view;
           if (!web) return;
           const since = webWeekOf(store.state) - Math.ceil(report.minutes / WEB_WEEK_TICKS);
+          // A big viral moment since the last visit, at most one (DESIGN.md 63.14): what went around, never who.
+          const viral = feedOf(web, store.state)
+            .filter((post) => post.viral && post.week >= since)
+            .sort((x, y) => viralOf(y.kind, y.luck).shares - viralOf(x.kind, x.luck).shares)[0];
+          if (viral) {
+            column.append(el('div', 'paper-section', 'On Quadline'));
+            const row = button('', 'paper-item go', () => {
+              leave();
+              session.openQuad('feed');
+            });
+            row.append(el('span', 'paper-text', viralHeadline(store.state, viral)));
+            column.append(row);
+          }
           const told = gossip(web, store.state, since, 3);
           if (told.length === 0) return;
           column.append(el('div', 'paper-section', 'Gossip'));

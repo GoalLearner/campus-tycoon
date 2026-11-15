@@ -16,7 +16,11 @@ import { FEEL, KIND, SLOTS, WEB_WEEK_TICKS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
 import { teamName } from '../sim/systems/football';
 import { dormName, hallName } from '../sim/systems/people';
-import { aboutStudent, postsOf, postWeekStart, type Post } from '../sim/systems/quadline';
+import { aboutStudent, postsOf, postWeekStart, viralOf, type Post } from '../sim/systems/quadline';
+import { BULLY_COMMENTS, OFFICIAL_LINES, OFFICIAL_REPLIES, TOPIC_HEADLINE, VIRAL_HEADLINES, type CauseTopic } from '../sim/config/quadline';
+import { TRAIT, traitOf } from '../sim/systems/identity';
+import { bullyingTimes } from '../sim/systems/policies';
+import type { OfficialPost } from '../sim/types';
 import { classYearOf, firstNameOf, socialProfile, studentName } from '../sim/systems/students';
 import { idIn, refIn, type WebView } from './socialView';
 
@@ -157,16 +161,23 @@ const ENGAGE: Partial<Record<PostKind, number>> = {
 export function postCounts(view: WebView, post: Post): { likes: number; comments: number } {
   const followers = followersOf(view, post.author);
   const engage = ENGAGE[post.kind as PostKind] ?? 0.15;
-  const likes = Math.round(followers * engage * (0.35 + 1.1 * share(hashInts(post.luck, 17)))) + 1;
+  let likes = Math.round(followers * engage * (0.35 + 1.1 * share(hashInts(post.luck, 17)))) + 1;
+  // A viral post is liked by many more than follow its author: about as many again as shared it (63.14).
+  if (post.viral) likes = Math.max(likes, Math.round(viralOf(post.kind, post.luck).shares * (1.3 + 0.7 * share(hashInts(post.luck, 21)))));
   const comments = Math.max(commentsFor0(view, post), Math.round(likes * (0.06 + 0.12 * share(hashInts(post.luck, 19)))));
   return { likes, comments };
 }
 
 export interface Comment {
-  who: StudentRef;
+  /** The student who wrote it, or null for an account that is not a student (the counselling center). */
+  who: StudentRef | null;
+  /** The account's name, when it is not a student. */
+  from?: string;
   text: string;
   /** An ex or a rival throwing shade, naming the author (decision 5). */
   shade: boolean;
+  /** Joining in on picking on someone (63.14). */
+  joins?: boolean;
 }
 
 /** Which comments a kind of post draws from friends. */
@@ -199,6 +210,8 @@ const COMMENTS_SHOWN = 6;
 export function commentsFor(view: WebView, state: GameState, post: Post): Comment[] {
   const id = idIn(view, post.author);
   if (id < 0) return [];
+  if (post.kind === POST.bullyPost) return bullyComments(view, state, post, id);
+  if (post.kind === POST.rumour) return rumourComments(view, state, post, id);
   const out: Comment[] = [];
   // No two comments on a post say the same: the next line of the kind is taken when one is used.
   const used = new Set<string>();
@@ -279,4 +292,180 @@ export function postsBy(posts: readonly Post[], ref: StudentRef): Post[] {
 /** Their handle, as the app shows it: their name, lower case, with a dot. */
 export function handleOf(state: GameState, ref: StudentRef): string {
   return studentName(state, ref).toLowerCase().replace(/[^a-z ]/g, '').trim().replace(/\s+/g, '.');
+}
+
+// ------------------------------------------------- the app's reach (63.14) --
+
+/** A viral post's line under it: how many shared it, and whether it went beyond the campus. */
+export function viralLine(post: Post): string {
+  const { shares, beyond } = viralOf(post.kind, post.luck);
+  return `Shared ${shares.toLocaleString('en-US')} times · ${beyond ? 'seen beyond campus' : 'all over campus'}`;
+}
+
+const traitIn = (view: WebView, id: number, trait: number): number => traitOf(view.identity[id]!, trait);
+
+/**
+ * Comments on picking on someone (DESIGN.md 63.14): friends of the one doing it who join in, friends of the one picked on
+ * who are kind or loyal standing up for them, and with the anti-bullying program an RA among their people and the
+ * counselling center saying where help is.
+ */
+function bullyComments(view: WebView, state: GameState, post: Post, id: number): Comment[] {
+  const target = postSubject(post)!;
+  const targetName = firstNameOf(state, target);
+  const out: Comment[] = [];
+  const line = (kind: keyof typeof BULLY_COMMENTS, h: number): string => {
+    const lines = BULLY_COMMENTS[kind];
+    return lines[h % lines.length]!.replace('{name}', targetName);
+  };
+  // Those who join in: the author's friends who are not kind and are outgoing.
+  for (const tie of tiesIn(view, id)) {
+    if (out.length >= 2) break;
+    if (tie.kind !== KIND.friend && tie.kind !== KIND.best) continue;
+    if (traitIn(view, tie.id, TRAIT.kind) > 1 || traitIn(view, tie.id, TRAIT.outgoing) < 2) continue;
+    const ref = refIn(view, tie.id);
+    if (enrolled(state, ref) && !same(ref, target)) out.push({ who: ref, text: line('join', hashInts(post.luck, tie.id)), shade: false, joins: true });
+  }
+  // Those who stand up for them: their friends who are kind or loyal.
+  const tid = idIn(view, target);
+  let ra: StudentRef | null = null;
+  if (tid >= 0) {
+    for (const tie of tiesIn(view, tid)) {
+      if (tie.kind !== KIND.friend && tie.kind !== KIND.best && tie.kind !== KIND.roommate) continue;
+      const ref = refIn(view, tie.id);
+      if (!enrolled(state, ref) || same(ref, post.author)) continue;
+      if (!ra && socialProfile(state, ref)?.nature === 'ra') ra = ref;
+      if (out.filter((one) => !one.joins).length >= 2) continue;
+      if (traitIn(view, tie.id, TRAIT.kind) >= 2 || traitIn(view, tie.id, TRAIT.loyal) >= 2) out.push({ who: ref, text: line('defend', hashInts(post.luck, 41, tie.id)), shade: false });
+    }
+  }
+  // With a program that has it reported more (the anti-bullying program's own words: RAs trained to spot it, someone
+  // who answers), an RA they know and the counselling center answer.
+  if (bullyingTimes(state).reported > 1) {
+    if (ra) out.push({ who: ra, text: BULLY_COMMENTS.ra[0], shade: false });
+    out.push({ who: null, from: 'Counselling Center', text: BULLY_COMMENTS.ra[1], shade: false });
+  }
+  return out;
+}
+
+/** Comments on a rumour: anyone wondering, and friends of the one it is about covering for them. */
+function rumourComments(view: WebView, state: GameState, post: Post, id: number): Comment[] {
+  const about = postSubject(post)!;
+  const aboutName = firstNameOf(state, about);
+  const out: Comment[] = [];
+  const pick = (kind: 'rumour' | 'cover', h: number): string => {
+    const lines = COMMENT_LINES[kind];
+    return lines[h % lines.length]!.replace('{name}', aboutName);
+  };
+  for (const [i, tie] of tiesIn(view, id).entries()) {
+    if (out.length >= 3) break;
+    const ref = refIn(view, tie.id);
+    if (!enrolled(state, ref) || same(ref, about)) continue;
+    out.push({ who: ref, text: pick('rumour', hashInts(post.luck, 47, i)), shade: false });
+  }
+  const aid = idIn(view, about);
+  if (aid >= 0) {
+    const friend = tiesIn(view, aid).find((tie) => (tie.kind === KIND.best || tie.kind === KIND.friend) && tie.id !== id);
+    if (friend) {
+      const ref = refIn(view, friend.id);
+      if (enrolled(state, ref)) out.push({ who: ref, text: pick('cover', hashInts(post.luck, 53)), shade: false });
+    }
+  }
+  return out;
+}
+
+/** What the official account's post says, its slots filled from the campus. */
+export function officialWords(state: GameState, post: OfficialPost): string {
+  const [what, rest] = post.about.split(':');
+  const nick = state.football?.nick ?? state.school.name;
+  let line: string;
+  switch (post.kind) {
+    case 'announce':
+      line = what === 'tradition' ? OFFICIAL_LINES.announce.tradition : OFFICIAL_LINES.announce[(what as keyof typeof OFFICIAL_LINES.announce) ?? 'fair'] ?? OFFICIAL_LINES.announce.fair;
+      break;
+    case 'celebrate':
+      line = OFFICIAL_LINES.celebrate[what as keyof typeof OFFICIAL_LINES.celebrate] ?? OFFICIAL_LINES.celebrate.semester;
+      break;
+    case 'apologise':
+      line = OFFICIAL_LINES.apologise[what as CauseTopic] ?? OFFICIAL_LINES.apologise.dining;
+      break;
+    case 'welcome':
+      line = OFFICIAL_LINES.welcome[what as keyof typeof OFFICIAL_LINES.welcome] ?? OFFICIAL_LINES.welcome.fall;
+      break;
+    default:
+      line = what === 'bad' ? OFFICIAL_LINES.respond.bad : OFFICIAL_LINES.respond.good;
+  }
+  return line
+    .replace('{tradition}', TRADITIONS[Number(rest)]?.name ?? 'big night')
+    .replace('{nick}', nick);
+}
+
+/**
+ * Students' replies to the official account (63.14): in tune with the campus, they cheer or thank it; off-key, they
+ * say what is still wrong ("where are the beds tho"). An apology for something since fixed is met with credit.
+ */
+export function officialReplies(view: WebView, state: GameState, post: OfficialPost, weakNow: readonly CauseTopic[]): Comment[] {
+  const out: Comment[] = [];
+  // No two replies alike: the next line is taken when one is used.
+  const used = new Set<string>();
+  const pick = (lines: readonly string[], h: number): string => {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[(h + i) % lines.length]!;
+      if (!used.has(line)) {
+        used.add(line);
+        return line;
+      }
+    }
+    return lines[h % lines.length]!;
+  };
+  const repliers: StudentRef[] = [];
+  for (let t = 0; repliers.length < 4 && t < 60; t++) {
+    const id = hashInts(view.seed, 8201, post.tick, t) % (view.classSlot * 4);
+    const ref = refIn(view, id);
+    if (enrolled(state, ref) && !repliers.some((one) => same(one, ref))) repliers.push(ref);
+  }
+  const [what] = post.about.split(':');
+  repliers.forEach((who, i) => {
+    const h = hashInts(post.tick, 8203, i);
+    let text: string;
+    if (post.fit < 0 && weakNow[i] && i < 2) text = OFFICIAL_REPLIES.offKey[weakNow[i]!];
+    else if (post.fit < 0 && i === 1) text = pick(['we will see', 'about time'], h);
+    else if (post.kind === 'apologise') text = weakNow.includes(what as CauseTopic) ? pick(OFFICIAL_REPLIES.thanks, h) : pick(OFFICIAL_REPLIES.fixed, h);
+    else if (post.kind === 'welcome') text = pick(OFFICIAL_REPLIES.welcome, h);
+    else if (post.kind === 'respond' && what === 'bad') text = pick(OFFICIAL_REPLIES.thanks, h);
+    else if (post.fit === 0 && weakNow[0] && i === 0) text = OFFICIAL_REPLIES.offKey[weakNow[0]];
+    else text = pick(OFFICIAL_REPLIES.cheer, h);
+    out.push({ who, text, shade: false });
+  });
+  return out;
+}
+
+/**
+ * The feed's mood (63.14, read only): of the last game week's posts, the share in a good mood, and what the campus is
+ * most worried about (the most posted complaint): often before Happiness itself moves.
+ */
+export function moodLine(state: GameState, view: WebView, posts: readonly Post[]): { upbeat: number; worry: string | null; worryTag: string | null } {
+  let good = 0;
+  let all = 0;
+  const worries = new Map<number, number>();
+  for (const post of posts) {
+    if (post.week < view.week - 1 || post.viral) continue;
+    all += 1;
+    if (post.tone === 0 && post.kind !== POST.complaint && post.kind !== POST.shade && post.kind !== POST.rumour && post.kind !== POST.bullyPost) good += 1;
+    if (post.kind === POST.complaint) worries.set(post.a, (worries.get(post.a) ?? 0) + 1);
+  }
+  const top = [...worries.entries()].sort((x, y) => y[1] - x[1] || x[0] - y[0])[0];
+  const topic = top ? CAUSE_TOPICS[top[0]] : undefined;
+  return { upbeat: all > 0 ? good / all : 0, worry: topic ? TOPIC_HEADLINE[topic] : null, worryTag: topic ? CAUSE_POSTS[topic].tag : null };
+}
+
+/** The paper's headline for a big viral moment: what went around, never who. */
+export function viralHeadline(state: GameState, post: Post): string {
+  const kind = Object.entries(POST).find(([, v]) => v === post.kind)?.[0] ?? 'other';
+  const lines = VIRAL_HEADLINES[kind] ?? VIRAL_HEADLINES.other!;
+  const topic = post.kind === POST.complaint || post.kind === POST.praise ? CAUSE_TOPICS[post.a] : undefined;
+  return lines[post.luck % lines.length]!
+    .replace('{topic}', topic ? TOPIC_HEADLINE[topic] : 'Campus Life')
+    .replace('{place}', post.kind === POST.newBuilding ? placeName(state, post.a) : 'Building')
+    .replace('{opp}', post.kind === POST.gameWon ? teamName(state, post.a) : 'a Rival')
+    .replace('{tradition}', post.kind === POST.tradition ? (TRADITIONS[post.a]?.name ?? 'Tradition') : 'Tradition');
 }

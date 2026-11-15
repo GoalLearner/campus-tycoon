@@ -1,3 +1,4 @@
+import { speakingUp } from './buzz';
 import { PLACED } from '../config/placed';
 import { EXAMS_AT_MIDTERMS, EXAMS_MOST, POLICIES, type PolicyEffect, type PolicySpec, type RatingInputId } from '../config/policies';
 import { SEASON_CURVE } from '../config/season';
@@ -60,6 +61,9 @@ export function policiesOpen(state: GameState): PolicySpec[] {
 }
 
 /** What the policies do to picking on someone (DESIGN.md 63.11): how often it starts, and how often it is reported. */
+/** What the official account speaking up does to how often picking on someone starts, for two game weeks (63.14). */
+export const SPEAKING_UP_STARTS = 0.8;
+
 export function bullyingTimes(state: GameState): { start: number; reported: number } {
   let start = 1;
   let reported = 1;
@@ -67,6 +71,8 @@ export function bullyingTimes(state: GameState): { start: number; reported: numb
     start *= effect.starts;
     reported *= effect.reports;
   }
+  // The official account speaking up (DESIGN.md 63.14): for two game weeks a little less is started.
+  if (speakingUp(state)) start *= SPEAKING_UP_STARTS;
   return { start, reported };
 }
 
