@@ -282,6 +282,8 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
           weight: 46,
           headline: entry.data?.graduates
             ? 'Graduates Leave With Offers in Hand, or Plans for More School; Résumés Updated Accordingly'
+            : entry.data?.springTrips
+              ? 'Spring Break Begins: Trips, Trains and Extra Shifts; Campus Store Restocks Sunscreen'
             : entry.data?.packages
               ? 'Care Packages Pour In for Finals; Mail Room Runs Out of Shelf'
             : entry.data?.interns

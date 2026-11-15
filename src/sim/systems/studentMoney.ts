@@ -24,7 +24,8 @@ import {
   WORKING_20_PLUS,
 } from '../config/studentMoney';
 import { hashInts } from '../rng';
-import type { Clock, GameState } from '../types';
+import { headCount } from '../format';
+import type { Clock, GameState, LogEntry } from '../types';
 import { policyOn } from './policies';
 
 /**
@@ -199,4 +200,69 @@ export function debtAverageAtFour(): number {
 export function termNow(clock: Clock): boolean {
   const phase = calendarAt(clock).phase;
   return phase === 'fall' || phase === 'spring';
+}
+
+// ------------------------------------------------------------- the campus --
+
+export interface MoneyFigures {
+  /** Shares of all students: a grant, a federal loan, work-study; a job, 20 hours or more; running short this month. */
+  grant: number;
+  loan: number;
+  workStudy: number;
+  working: number;
+  longHours: number;
+  /** Of jobs that are not work-study, the share on campus. */
+  onCampus: number;
+  short: number;
+  /** Of a class at commencement: the share who borrowed, and what the borrowers owe on average. */
+  borrowed: number;
+  debt: number;
+  rent: number;
+  textbooks: number;
+}
+
+/**
+ * The campus's money figures (DESIGN.md 67.3), for the Social tab and the long run: what each student's draws come to
+ * across the campus, worked out from the shares themselves, so no sample is needed. Running short follows the
+ * policies, and the weeks after spring break.
+ */
+export function moneyFigures(state: GameState): MoneyFigures {
+  const trip = springTripNow(state.clock) === 'back' ? SPRING_TRIP * (AFTER_SPRING_BREAK - 1) : 0;
+  return {
+    grant: AID_SHARE.grant,
+    loan: AID_SHARE.loan,
+    workStudy: AID_SHARE.workStudy,
+    working: WORKING,
+    longHours: WORKING_20_PLUS,
+    onCampus: Math.min(0.95, ON_CAMPUS_SHARE * (policyOn(state, 'campusJobs') ? CAMPUS_JOBS_TIMES : 1)),
+    short: Math.min(1, RUNNING_SHORT * shortEase(state) * (1 + trip)),
+    borrowed: BORROWED_BY_GRADUATION,
+    debt: round(debtAverageAtFour(), 100),
+    rent: RENT_PER_BED_MONTH,
+    textbooks: TEXTBOOKS_PER_YEAR,
+  };
+}
+
+/** What the class leaves owing, for commencement's line in the paper (DESIGN.md 67.2). */
+export function debtWords(): string {
+  return `About ${Math.round(BORROWED_BY_GRADUATION * 100)}% of them borrowed for college, and those who did leave owing about ${money(round(debtAverageAtFour(), 100))} on average.`;
+}
+
+/**
+ * Spring break (DESIGN.md 67.3): who heads off on a trip and who stays, told in the paper as it begins. Returns how many
+ * went on a trip.
+ */
+export function tellSpringBreak(state: GameState, log: LogEntry[]): number {
+  let students = 0;
+  for (const n of state.cohorts) students += n;
+  const trips = Math.round(students * SPRING_TRIP);
+  if (trips > 0) {
+    log.push({
+      tick: state.clock.tick,
+      kind: 'milestones',
+      text: `Spring break: about ${headCount(trips)} students head off on trips they saved for since February; the rest go home, stay on campus, or pick up extra shifts. Some come back running short until payday.`,
+      data: { springTrips: trips },
+    });
+  }
+  return trips;
 }

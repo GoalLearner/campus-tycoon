@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { advance, newGame, type GameState } from '../src/sim';
+import { advance, edition, newGame, toneProblem, type GameState, type LogEntry } from '../src/sim';
+import { moodletsOf } from '../src/app/emotion';
 import { AID_SHARE, BORROWED_BY_GRADUATION, DEBT_AVERAGE, RENT_PER_BED_MONTH, RUNNING_SHORT, TEXTBOOKS_PER_YEAR, WORKING, WORKING_20_PLUS } from '../src/sim/config/studentMoney';
 import { MAJORS, NATURE_WEIGHTS, type ArchetypeId, type MajorGroup } from '../src/sim/config/students';
-import { debtAverageAtFour, moneyOf, shortEase } from '../src/sim/systems/studentMoney';
+import { debtAverageAtFour, debtWords, moneyFigures, moneyOf, shortEase, tellSpringBreak } from '../src/sim/systems/studentMoney';
 import { sampleStudents, studentCard } from '../src/sim/systems/students';
 import { DAY, T0 } from './helpers';
 
@@ -130,5 +131,46 @@ describe('money, R3', () => {
       for (const text of [card.name, card.archetypeName, card.quirk, card.major, card.majorNote ?? '', card.club ?? '', card.week ?? '', card.party ?? '', ...card.milestones.lines, card.outcome?.line ?? '']) expect(text).not.toMatch(weight);
     }
     expect(cards).toBeGreaterThan(300);
+  });
+});
+
+describe('money in the paper, on the Social tab and in how students feel, R3', () => {
+  it("tells spring break's trips and the class's debt, in lines inside the tone guide", () => {
+    const state = inTerm();
+    const log: LogEntry[] = [];
+    const trips = tellSpringBreak(state, log);
+    expect(trips).toBeGreaterThan(0);
+    expect(log[0]!.data?.springTrips).toBe(trips);
+    expect(debtWords()).toMatch(/About 47% of them borrowed for college, and those who did leave owing about \$30,[0-9]00 on average\./);
+    const paper = edition(state, log, { minutes: 600, cashBefore: state.money.cash, cashAfter: state.money.cash, studentsBefore: 1, studentsAfter: 1 });
+    const words = [paper.headline, paper.deck, ...paper.top.map((item) => item.text), ...paper.more];
+    expect(words.some((line) => /Spring Break Begins/.test(line))).toBe(true);
+    for (const line of [...words, debtWords()]) expect(toneProblem(line)).toBeNull();
+  });
+
+  it('counts the money on the Social tab, running short following the policies', () => {
+    const state = inTerm();
+    const plain = moneyFigures(state);
+    expect(plain.short).toBeCloseTo(RUNNING_SHORT, 6);
+    expect(Math.abs(plain.debt - DEBT_AVERAGE)).toBeLessThan(200);
+    const helped = moneyFigures({ ...state, policies: { ...state.policies, on: ['campusJobs', 'needScholarships'] } });
+    expect(helped.short).toBeCloseTo(RUNNING_SHORT * 0.48, 6);
+    expect(helped.onCampus).toBeGreaterThan(plain.onCampus);
+  });
+
+  it('makes a student running short tense about it, and every money feeling stays inside the tone guide', () => {
+    const state = inTerm();
+    let short = 0;
+    for (const ref of sampleStudents(state, 600)) {
+      const card = studentCard(state, ref);
+      if (!card) continue;
+      const reasons = moodletsOf(null, state, ref, card, 14).map((one) => one.reason);
+      if (card.money.short) {
+        short += 1;
+        expect(reasons).toContain('Running short of money');
+      } else expect(reasons).not.toContain('Running short of money');
+      for (const line of [...reasons, ...card.money.lines]) expect(toneProblem(line)).toBeNull();
+    }
+    expect(short).toBeGreaterThan(40);
   });
 });

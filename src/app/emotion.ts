@@ -169,6 +169,12 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   else if (outcome?.plan === 'job' && outcome.line === 'Job hunting' && day.kind !== 'break' && day.kind !== 'summer') add('tense', 'Job hunting', 1.1, 'briefcase');
   if (outcome?.admitted) add('happy', 'Into graduate school', 1.3);
   if (day.kind === 'commencement' && card.classYear >= 3) add('excited', 'Graduating', 3.5, 'mortarboard');
+  // Money (R3, DESIGN.md 67): running short this month, long hours at a job, and a spring break trip ahead or behind.
+  const wallet = card.money;
+  if (wallet.short) add('tense', 'Running short of money', 1.3);
+  if (wallet.job && wallet.job.hours >= 20 && day.kind !== 'break' && day.kind !== 'summer') add('tense', 'Working long hours', 0.6);
+  if (wallet.springTrip === 'saving' && date.month === 3) add('excited', 'Spring break trip soon', 1.2);
+  else if (wallet.springTrip === 'back' && !wallet.short) add('happy', 'Back from a spring break trip', 0.9);
   // Moving off campus (R2): a place of their own in town, felt through the fall's first weeks.
   if (card.movedOut && (day.special === 'welcome' || day.rhythmId === 'fallStartWeeks')) add('happy', 'Own place in town', 1.2);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
