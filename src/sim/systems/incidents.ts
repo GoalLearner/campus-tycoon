@@ -137,7 +137,7 @@ function partyCall(state: GameState, scale: number, students: number): void {
   const roll = nextFloat(state.rng, 'events');
   const which = nextFloat(state.rng, 'events');
   const pick = nextFloat(state.rng, 'events');
-  if (state.incidents.active.length >= MAX_ACTIVE_INCIDENTS) return;
+  if (ordinary(state) >= MAX_ACTIVE_INCIDENTS) return;
   const call = partyCallChance(state, scale, seasonCurve(state.clock), callsLift(state));
   if (roll >= call.chance) return;
   const kind: IncidentKind = which < call.medical ? 'injury' : 'mischief';

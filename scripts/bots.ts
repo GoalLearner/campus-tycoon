@@ -783,10 +783,13 @@ function placeRewards(state: GameState): { state: GameState; placed: number } {
     const map = current.map;
     const lots = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0);
     let best: Point | null = null;
+    // Where it lifts nothing more, it still goes on the first free ground it fits: a player would not leave it waiting.
+    let anywhere: Point | null = null;
     let most = 0;
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (!freeAt(current, x, y) || previewPlace(current, type, x, y).problem !== null) continue;
+        anywhere ??= [x, y];
         let gain = 0;
         for (const lot of lots) {
           const far = Math.max(Math.max(x - lot.x, 0, lot.x - (x + spec.w - 1)), Math.max(y - lot.y, 0, lot.y - (y + spec.h - 1)));
@@ -801,6 +804,7 @@ function placeRewards(state: GameState): { state: GameState; placed: number } {
         }
       }
     }
+    best ??= anywhere;
     if (!best) continue;
     const result = applyAction(current, { type: 'place', building: type, x: best[0], y: best[1] });
     if (!result.ok) continue;

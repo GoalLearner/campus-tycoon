@@ -73,7 +73,8 @@ export const REACH_FADE_WEEKS = 3;
 export const SPIRIT = { chance: 0.12, happiness: 2, days: 2, least: 65 } as const;
 
 /**
- * The trustees' letters (the owner's answer 6): one ask, to bring the meter below Rowdy within two real days. Met, a
- * small reward; ignored, a small dip in Reputation for some game weeks. One letter at a time, and a rest between.
+ * The trustees' letters (the owner's answer 6): after two Rowdy readings in a row, one ask, to bring the meter below
+ * Rowdy within two real days. Met, a small reward; ignored, a small dip in Reputation for some game weeks. One letter
+ * at a time, and a rest between.
  */
 export const LETTER = { days: 2, rest: 1, reward: 40_000, dip: 2, dipWeeks: 10 } as const;
