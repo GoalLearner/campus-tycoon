@@ -1,4 +1,5 @@
 import { happyParts, stressOff } from './boosts';
+import { friendsHappiness, friendsStress } from './friends';
 import { examsOff } from './policies';
 import { lateNightStress } from './parties';
 import { activeEntries, calendarAt, dateAt, marksAt, spanOf, type CalendarMark } from '../calendar';
@@ -199,6 +200,8 @@ export interface StressRead {
   /** The part of that which a policy takes off in an exam week, and which policies. 0 and none outside one. */
   policy: number;
   policyBy: string[];
+  /** Points the students' ties add in an exam week (DESIGN.md 63.10), already in the score: below 0 when friends help. 0 outside one. */
+  friends: number;
   /** 0 to 100. */
   score: number;
   /** The calendar's part, 0.1 to 1. */
@@ -272,10 +275,12 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
   const policy = examsOff(state, season, () => libraryShare(state));
   // Late nights after parties add a little, in term only (DESIGN.md 55).
   const late = Math.round(lateNightStress(state, season));
-  const raw = Math.round(100 * season * factor) + late;
+  // Friends see each other through exams, and a breakup or a fight makes them harder (DESIGN.md 63.10).
+  const friends = friendsStress(state, season);
+  const raw = Math.max(0, Math.round(100 * season * factor) + late + friends);
   const off = help.points + Math.round(policy.points);
   const by = [help.label, ...policy.by].filter((label) => label !== '').join(', ');
-  return { late, score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };
+  return { late, friends, score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };
 }
 
 /** Faculty Stress, 0 to 100: their own calendar, and how large classes are. */
@@ -320,7 +325,7 @@ export function shelter(state: GameState, levels: CampusLevels): number {
 // ---------------------------------------------------------- "this week" --
 
 export interface SeasonPart {
-  id: 'exams' | 'break' | 'back' | 'weather' | 'desk';
+  id: 'exams' | 'break' | 'back' | 'weather' | 'desk' | 'friends';
   label: string;
   /** Points of Happiness, signed. */
   points: number;
@@ -370,6 +375,9 @@ export function seasonLine(state: GameState, levels: CampusLevels): SeasonLine {
   }
   // What the desk has set going: a concert, guests in the dorms. Small, dated, and capped together.
   for (const part of happyParts(state)) parts.push({ id: 'desk', label: part.label, points: part.points });
+  // What the students' ties add or take, on average and within the cap (DESIGN.md 63.10). A card reads its own.
+  const friends = friendsHappiness(state);
+  if (Math.abs(friends) >= 0.05) parts.push({ id: 'friends', label: friends >= 0 ? 'Friends' : 'Few friends', points: friends });
   const delta = parts.reduce((sum, part) => sum + part.points, 0);
   return { delta, parts, stress, faculty: facultyStress(state), weather, day };
 }

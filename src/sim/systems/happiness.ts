@@ -7,6 +7,7 @@ import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
 import { diningAt, foodKindsAt } from './food';
 import { noiseAt } from './football';
+import { friendsStay } from './friends';
 import { causeShifts, type CauseShift } from './policies';
 import { chapterNoiseAt } from './greek';
 import { cleanAt, seatingAt } from './grounds';
@@ -355,7 +356,8 @@ export function campusLevels(state: GameState): CampusLevels {
   return { recreation: level('recreation'), green: level('green'), safety: level('safety'), dining: level('dining') };
 }
 
-/** The share of every class that returns after a semester. It follows happiness. */
+/** The share of every class that returns after a semester. It follows happiness, and what friends add (DESIGN.md 63.10). */
 export function retentionRate(state: GameState): number {
-  return campusHappiness(state).retention;
+  const retention = campusHappiness(state).retention;
+  return retention + friendsStay(state, retention);
 }

@@ -7359,7 +7359,7 @@ All ten as recommended, his answer of 2026-11-14 ("Yes, all ten"):
 | 4 | Roommates | Same gender, everywhere (a nonbinary student rooms with another nonbinary student on their floor, otherwise has a room of their own) | Any |
 | 5 | Attraction rates | Gallup | Simpler |
 | 6 | Heavy drama shown | Rationed (13+) | Open (16+) |
-| 7 | Effects | Light | None, or strong |
+| 7 | Effects | Light (as built: 63.10) | None, or strong |
 | 8 | Emote art | Draw | Wait to buy |
 | 9 | A dog | Skip | Draw |
 | 10 | social-1 | Reuse: its parts are taken by hand into the stops | Drop |
@@ -7649,4 +7649,71 @@ The web and its record are unchanged: the old pick is still kept in the record, 
 | A named regular who is not followed walks as anyone else does, so the map and their Today can differ until they are followed | Only the followed student's walk is planned, to keep the crowd's cost where it was |
 | Nothing is kept about a regular while the game is closed | The memory is what the map showed; the web's own weeks show in Lately |
 | The day has no part-time job, sport practice or office hours | Kept to what the card already knows; stop 7 adds scenes |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 63.10 Stop 6 as built: what ties change
+
+Built 2026-11-14 on the branch `social-sim-6`. The first stop that changes the campus itself: decision 7, light.
+
+**A student's ties** (`src/sim/systems/friends.ts`, sizes in `src/sim/config/social.ts`). Read from their twelve ties and their friend group:
+
+| What | Happiness | Stress in an exam week | GPA | Leaving |
+|---|---|---|---|---|
+| Close friends (a friend, a best friend, a crush who is a friend, a roommate they get on with), or a friend group | +2 | −5 with a group or two close friends | | ×0.85 in a group |
+| A partner they are happy with | +2 | | | |
+| A partner it is not going well with (tense, on and off, drifting) | −2 | | | |
+| An ex who still stings: split in the last two weeks, or one they keep running into and getting on with | −5, −7 when it was messy | +10 | −0.1 when messy, in an exam week | |
+| A rival or an enemy | −2 | +10 for an enemy, or a roommate they do not get on with | | |
+| A close tie who likes studying, as they do | | | +0.05 | |
+| Nobody close and no partner | −4 | | | ×1.3 |
+
+A student's points stay between −8 and +4, their GPA within 0.15 either way. Proposed at +3 for friends and for a good partner (63.2): most students have friends, so the campus came to +3.1 against its cap of 2, and both were turned down to +2, as the proposal said ("the effects are turned down, not the checks"), rather than shrinking every card to fit.
+
+**The campus's share.** Once a game week the web reads every student and the save keeps the averages (`web.effects`, optional, no new save version): the app's worker reads it after each week it steps (22 ms on the model campus) and the campus uses it until the next. Without a reading (a new game for its first seconds, a save from before, a run nobody opens) nothing moves.
+
+| Where | What | The cap |
+|---|---|---|
+| Happiness | A line "Friends" beside the season's (exams, a break, the weather): the students' average | 2 points either way; past it, each card's points are scaled to fit, so the cards still average to the line |
+| Stress | In finals the students' average, a share at midterms (as the policies' exam help), named in the Stress note | 4 points either way |
+| Who stays | At a semester's end, those who would leave are fewer by the students' average of how likely they are to leave | 0.3 points of students either way |
+| The rank | Its Retention input counts what friends kept, in the same steps as Happiness's | as above |
+
+The base Happiness that retention, alumni affinity and the rank read stays the four causes alone: the Friends line moves the score shown, year goals and the desk's thoughts on Happiness, and only its own capped part reaches who stays.
+
+Measured over a campus year lived a week at a time: the model campus's Friends line runs from +1.1 (the fall's first weeks, when 9% of first-years have nobody yet) to +2.0, the small campus's +0.3 to +1.5; Stress in finals −2.4 to −3.8; students 0.87 to 0.92 times as likely to leave, so about 0.2 points more stay a semester. Over 80% of students are in a friend group.
+
+**On a card**, with the web answered: a row "Friends" with what their ties do to their Happiness, their Stress in an exam week and their GPA, and why, by name ("close friends +2 · Toni, their partner +2 · studies with Robin"). Their own points stand where the old guess at their relationship's effect stood (13.8's ±4 from the seed), so a single student's relationship line no longer says "a little happier": their ties say it. The Main Character's ties are their story's (57.1) until stop 7. The Happiness panel lists Friends under This week and says what friends keep each semester; the Social tab has "What friends do": Happiness, Stress in finals, who stays, and the share with nobody close yet.
+
+**One change in the web.** A cheating split kept the couple's old strength on the ex, often 90, so a cheated-on student would have read as freshly heartbroken for months; it now starts at 40, as every split does.
+
+**The long run** reads the web at a player's visit once its last reading is eight game weeks old (about a real day): a web grown and its last eight weeks lived, as the app does after a long absence, shared by players of one seed. Living every week of every run would add about an hour. In the long run that was 646 readings, about six minutes of its 29 on a busy PC, every one inside its caps: the Friends line +1.76 to +2.00, Stress in finals −3.3 to −4.0, students 0.877 to 0.890 times as likely to leave, and 2,288 semesters each keeping 0.08 to 0.29 points more.
+
+**What moved in the long run**, against main's (every line of a played run moves a little, as decision 7 allowed from this stop; a run nobody opens reads no web and moves not at all):
+
+| Line | Before | Now | Why |
+|---|---|---|---|
+| Students on the small campus, year 12 on | 9,190 | 9,232 | A few more stay each semester |
+| Money kept, years 3 to 8 (model campus, casual and once-a-day) | 13.0% to 15.2% | 13.0% to 15.2% (once-a-day's highest 15.0, was 15.1) | Within $12 to $17 |
+| Level pace, weeks 4 to 44, each player | 5.7 to 6.9 a week | 5.5 to 6.3 a week | Under 7.00; the players' days go a little differently |
+| The Top 10 | weeks 24 to 29 | weeks 24 to 29 | Never before week 24 |
+| Desirability, the small campus | 53.1 | 51.9 | How the map is built: the players' building choices drift with their cash |
+| The season's line on Happiness, at its highest | +8.5 | +10.5 | Friends +2 now sits in it: its check counts the Friends cap (2 more either way) |
+| Greek life oversight's six years on the once-a-day campus | Happiness −0.02 | Happiness +0.07 | Its cost shows the moment it is on (−0.011 on that campus) and its hazing reports still fall (−1 over six years). Over six years two histories of one campus drift apart by more than its cost to a few members: friends do not touch Greek Row, and both histories hold the same reading of them, so the drift is the campus's history, which stop 6 changed. Its check now asks for what its switch says, fewer reports and the cost at once, and prints its six-year Happiness without asking for it |
+
+Sixty of the 91 checks moved in their numbers and still pass; the tables that moved are each player's years, the orders, decorations and Seals, the policies' six years, the level and Seals, alumni giving, the big builds, the eras and the labs. One check is new: what ties change stays light.
+
+| Decisions made here | Instead |
+|---|---|
+| The campus keeps one reading a game week, in the save | Reading the web inside every step of the game, which the game cannot do: the web lives in a worker |
+| Friends and a good partner +2 | +3 as proposed, with every card scaled by about two thirds |
+| The Friends line is not in base Happiness | In the base, where retention would follow it too and the 0.3-point cap would not hold |
+| GPA only on the card | The campus has no average GPA yet: the graduation rate comes from the classes themselves |
+
+**Tested** (`tests/friends.test.ts`): each kind of tie reads as the table has it; a student's caps; the campus's share within its caps on a lived model campus, and every card averaging to the campus's line; Happiness moves by the line and not the base; Stress only in exam weeks; a semester keeps more, within 0.3 points, recorded and counted by the rank and the Scorecard; a card counts its own ties in place of the old guess; the reading kept through a save and a load, one out of range refused or dropped, a save without one unchanged; every ex starts at 40.
+
+| Rough | Why |
+|---|---|
+| A long absence uses the last reading until the game is opened | The web is stepped only while the game is open; the campus keeps what it last knew |
+| The long run reads the web once a real day, not each game week | As above: the average moves slowly, and every week of every run would take an hour |
+| GPA is not yet a campus number | Nothing the campus does reads an average GPA |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |

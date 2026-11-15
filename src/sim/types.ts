@@ -343,7 +343,8 @@ export interface Admissions {
   waitlistLocals: number;
   lastIntake: IntakeResult | null;
   /** How the last semester ended: who stayed, who left, and how happy the campus was. */
-  lastSemester: { tick: number; stayed: number; left: number; happiness: number } | null;
+  /** `friends` (DESIGN.md 63.10): what the students' ties added to the share who stayed, 0.002 for two tenths of a point. */
+  lastSemester: { tick: number; stayed: number; left: number; happiness: number; friends?: number } | null;
   /**
    * This year's applicants and how many of them got a place, the fall class and the spring class together. It
    * starts again at each fall intake. Selectivity is read from it, so one small spring class cannot speak for a
@@ -653,6 +654,34 @@ export interface WebMeta {
    * save from before, which is the same as none.
    */
   regulars?: Regular[];
+  /**
+   * What the students' ties do to the campus (DESIGN.md 63.10), as the web last read them: the app writes it each game
+   * week the web is stepped, and the campus uses it until the next. Missing until then, and in a save from before,
+   * which is the same as nothing.
+   */
+  effects?: SocialEffects;
+}
+
+/** What the students' ties do to the campus, read from the web once a game week (DESIGN.md 63.10). */
+export interface SocialEffects {
+  /** The game week of the web it was read from. */
+  week: number;
+  /** Points added to the campus's Happiness: the students' average, within the cap. */
+  happiness: number;
+  /** What each student's own points are multiplied by, so the cards average to `happiness`. 1 when within the cap. */
+  scale: number;
+  /** Points added to Stress in a finals week (a share at midterms): the average, within the cap. */
+  examStress: number;
+  stressScale: number;
+  /** The students' average of how likely they are to leave, against the campus's rate: below 1 keeps more. */
+  leave: number;
+  /** Shares of students, 0 to 1: with nobody close, in a friend group, with a partner, freshly split, with a rival, with a study partner. */
+  alone: number;
+  group: number;
+  partnered: number;
+  split: number;
+  rival: number;
+  study: number;
 }
 
 /** A regular as the save keeps them: who, since when they were followed, and what the map showed happening to them. */

@@ -1,6 +1,7 @@
 import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBuild } from './systems/bigBuilds';
 import { makeMain, setAsideMain } from './systems/mc';
 import { promoteRegular, rememberRegular } from './systems/regulars';
+import { effectsSound } from './systems/friends';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
@@ -36,7 +37,7 @@ import { buyBench, collectCraft, moveDecor, placeDecor, setRecipe, storeDecor, t
 import { claimMoment, takeGift, type GiftPaid } from './systems/rhythm';
 import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
-import type { CellKind, GameState, MapState, Zone } from './types';
+import type { CellKind, GameState, MapState, SocialEffects, Zone } from './types';
 
 /**
  * Everything the player can do. Each action is a pure function from one state
@@ -80,6 +81,8 @@ export type Action =
   | { type: 'makeMain'; ref: { entryYear: number; index: number } }
   // Regulars (DESIGN.md 63.9): following a student makes them one; what the map shows happening to them is remembered.
   | { type: 'promoteRegular'; ref: { entryYear: number; index: number } }
+  /** The web's reading of what ties do to the campus, once a game week (DESIGN.md 63.10). Not the player's. */
+  | { type: 'socialEffects'; effects: SocialEffects }
   | { type: 'rememberRegular'; ref: { entryYear: number; index: number }; text: string }
   | { type: 'setAsideMain' }
   /** Choose a tradition for an open place (DESIGN.md 50). */
@@ -683,6 +686,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return collect(state, action.key);
     case 'collectAll':
       return collect(state, null);
+    case 'socialEffects': {
+      if (!effectsSound(action.effects)) return { ok: false, state, error: 'Those effects are out of range.' };
+      const next = structuredClone(state);
+      next.web.effects = { ...action.effects };
+      return { ok: true, state: next, cost: 0, changed: 0 };
+    }
     case 'promoteRegular':
     case 'rememberRegular': {
       const next = structuredClone(state);

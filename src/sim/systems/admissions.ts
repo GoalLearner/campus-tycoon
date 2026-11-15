@@ -16,6 +16,7 @@ import { alumniOnGraduation, alumniOnSemester } from './alumni';
 import { mcOnSemester } from './mc';
 import { hiresBehind as hiresBehindNow, planStaff, staffSemester } from './staffing';
 import { freeTownPlaces } from './town';
+import { friendsStay } from './friends';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 import { closeSemester, stressLoss } from './season';
@@ -332,7 +333,9 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   ordersMark(state, 'semesterStress', stress);
   // A policy may ask a few more to leave: tough grading does (DESIGN.md 41.7).
   const harder = leavingMore(state);
-  const stays = mood.retention * (1 - stressLoss(stress)) * (1 - harder.share);
+  // Friends keep a few more, and having nobody close sends a few more home (DESIGN.md 63.10): within 0.3 points.
+  const friends = friendsStay(state, mood.retention);
+  const stays = (mood.retention + friends) * (1 - stressLoss(stress)) * (1 - harder.share);
   const c = state.cohorts;
   const { year } = calendarAt(state.clock);
   const next: [number, number, number, number] = [0, 0, 0, 0];
@@ -357,7 +360,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   }
   const stayed = enrollment(state);
   const left = before - stayed;
-  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base) };
+  state.admissions.lastSemester = { tick: state.clock.tick, stayed, left, happiness: Math.round(mood.base), ...(friends !== 0 ? { friends } : {}) };
   // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
   alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
   // The Main Character's grades for the semester (DESIGN.md 53.2).
@@ -366,7 +369,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[]): void {
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);
   // How many of those who left a policy sent: the share it asks, of those who would otherwise have stayed.
-  const byPolicy = Math.min(left, Math.round(before * mood.retention * (1 - stressLoss(stress)) * harder.share));
+  const byPolicy = Math.min(left, Math.round(before * (mood.retention + friends) * (1 - stressLoss(stress)) * harder.share));
   if (log && before > 0) {
     log.push({
       tick: state.clock.tick,

@@ -2,10 +2,11 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { isMain, peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { isMain, isMain as isMainCharacter, peopleOf, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
 import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
-import { firstNamesOf, happenedTo } from '../app/socialView';
+import { firstNamesOf, happenedTo, idIn, refIn } from '../app/socialView';
+import { studentFriends, type StudentFriends } from '../sim/systems/friends';
 import { regularRecord, regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { store } from '../app/store';
@@ -284,6 +285,11 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const latelyList = el('div', 'student-day');
   latelyRow.value.replaceWith(latelyList);
 
+  // What their ties do (DESIGN.md 63.10): to their Happiness, their Stress in an exam week and their grades, and why.
+  const friendsRow = row('Friends');
+  const friendsNote = el('span', 'student-note');
+  friendsRow.value.after(friendsNote);
+
   // 6. Happiness: a face and the biggest reason. Tapping it goes to the building it is about.
   const reason = el('button', 'student-row student-reason');
   reason.type = 'button';
@@ -309,7 +315,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -333,7 +339,11 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       shownKey = '';
       return;
     }
-    const card = studentCard(state, ref);
+    // Their own ties, once the web has answered: the Main Character's are their story's (57.1) until stop 7.
+    const web = socialWeb.view;
+    const tieId = web && !isMainCharacter(state, ref) ? idIn(web, ref) : -1;
+    const ties = web && tieId >= 0 ? studentFriends(web, tieId) : null;
+    const card = studentCard(state, ref, ties);
     if (!card) {
       // They graduated or left while the card was open.
       session.closeStudent();
@@ -420,7 +430,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     setText(club.value, card.club ?? 'None');
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);
-    setText(relationshipNote, status.note);
+    // Single, with their ties known: the old note said what their status did to Happiness, and their ties say it now.
+    setText(relationshipNote, card.friends && ties && ties.partner < 0 ? '' : status.note);
+    showFriends(state, card, ties);
     showPeople(state, ref);
     setText(stress.value, `${card.stress < 30 ? 'Low' : card.stress < 60 ? 'Some' : 'High'}, ${card.stress} of 100${card.week ? ` · ${card.week}` : ''}`);
     weekends.line.hidden = card.party === null;
@@ -496,6 +508,35 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     });
     latelyList.textContent = '';
     for (const text of lately) latelyList.append(el('div', 'student-day-line', text));
+  }
+
+  // ------------------------------------------------------------ their ties --
+
+  /** "+3", "−2", "+0.05": a signed number as the card says it. */
+  const signed = (n: number, places = 0): string => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(places)}`;
+
+  function showFriends(state: GameState, card: StudentCard, ties: StudentFriends | null): void {
+    friendsRow.line.hidden = !card.friends || !ties;
+    if (!card.friends || !ties) return;
+    const web = socialWeb.view!;
+    // Told apart from the student themself too: "studies with Phoenix W." on Phoenix's card.
+    const name = (id: number): string => (id >= 0 ? firstNamesOf(state, [card.ref, refIn(web, id)])[1]! : '');
+    const words: Record<string, (who: number) => string> = {
+      close: () => 'close friends',
+      partner: (who) => `${name(who)}, their partner`,
+      strained: (who) => `things with ${name(who)}`,
+      split: (who) => `${name(who)}, their ex`,
+      splitMessy: (who) => `a bad split with ${name(who)}`,
+      rival: (who) => `${name(who)}, a rival`,
+      alone: () => 'nobody close yet',
+    };
+    const parts = [`Happiness ${signed(card.friends.happiness)}`];
+    if (card.friends.stress !== 0) parts.push(`Stress ${signed(card.friends.stress)}`);
+    if (card.friends.gpa !== 0) parts.push(`GPA ${signed(card.friends.gpa, 2)}`);
+    setText(friendsRow.value, parts.join(' · '));
+    const why = ties.reasons.map((one) => `${words[one.id]!(one.who)} ${signed(one.points)}`);
+    if (card.friends.gpa > 0 && ties.study >= 0) why.push(`studies with ${name(ties.study)}`);
+    setText(friendsNote, why.join(' · '));
   }
 
   // ---------------------------------------------------------- their people --

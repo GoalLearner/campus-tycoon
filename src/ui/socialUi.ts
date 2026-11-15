@@ -1,3 +1,5 @@
+import { campusHappiness } from '../sim';
+import { friendsStay } from '../sim/systems/friends';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
 import { regularsNow } from '../sim/systems/regulars';
@@ -46,6 +48,21 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     stat('Friend groups', `${count(social.groups)} · ${share}% of students`),
     stat('This week', `${count(social.week.couples)} new couples · ${count(social.week.splits)} split up`),
   );
+
+  // What friends do (DESIGN.md 63.10), as the campus last read them: Happiness, exam Stress and who stays.
+  const effects = state.web.effects;
+  if (effects) {
+    const signed = (n: number, places: number): string => `${n > 0 ? '+' : n < 0 ? '\u2212' : ''}${Math.abs(n).toFixed(places)}`;
+    const retention = campusHappiness(state).retention;
+    const stay = friendsStay(state, retention);
+    body.append(
+      el('div', 'money-head', 'What friends do'),
+      stat('Happiness', `${signed(effects.happiness, 1)} across the campus`),
+      stat('Stress in finals', `${signed(effects.examStress, 0)}`),
+      stat('Each semester', `${(Math.abs(stay) * 100).toFixed(2)} points ${stay >= 0 ? 'more' : 'fewer'} stay`),
+      stat('Nobody close yet', `${Math.round(effects.alone * 100)}% of students`),
+    );
+  }
 
   if (social.drama.length > 0) body.append(el('div', 'money-head', 'Drama of the week'), ...social.drama.map((told) => toldLine(told, open)));
 
