@@ -45,6 +45,8 @@ export interface StudentMoney {
   owesAtFour: number;
   /** A job this term, or null: where, and hours a week. */
   job: { where: string; hours: number; onCampus: boolean } | null;
+  /** The job they hold in term, whether or not term is on now. */
+  work: { where: string; hours: number; onCampus: boolean } | null;
   /** Rent a month for a bed in town, or null for a student in a hall or living with family. */
   rent: number | null;
   /** Books and course materials for this year. */
@@ -152,17 +154,17 @@ export function moneyOf(state: GameState, ref: { entryYear: number; index: numbe
   for (let y = 0; y < 4; y++) owesAtFour += loanIn(y);
 
   // A job: work-study on campus, or one of their own, on campus or in town; the Campus jobs program puts more on campus.
-  let job: StudentMoney['job'] = null;
-  if (facts.term) {
-    if (workStudy) job = { where: CAMPUS_JOBS[Math.floor(roll(20) * CAMPUS_JOBS.length)]!, hours: Math.round(lerp([8, 15], roll(21))), onCampus: true };
-    else if (roll(22) < WORKING_OTHERWISE) {
-      const long = roll(23) < LONG_HOURS;
-      const hours = Math.round(lerp(long ? HOURS_20_PLUS : HOURS_UNDER_20, roll(24)));
-      const onCampus = roll(25) < Math.min(0.95, ON_CAMPUS_SHARE * (policyOn(state, 'campusJobs') ? CAMPUS_JOBS_TIMES : 1));
-      const list = onCampus ? CAMPUS_JOBS : TOWN_JOBS;
-      job = { where: list[Math.floor(roll(26) * list.length)]!, hours, onCampus };
-    }
+  let work: StudentMoney['job'] = null;
+  if (workStudy) work = { where: CAMPUS_JOBS[Math.floor(roll(20) * CAMPUS_JOBS.length)]!, hours: Math.round(lerp([8, 15], roll(21))), onCampus: true };
+  else if (roll(22) < WORKING_OTHERWISE) {
+    const long = roll(23) < LONG_HOURS;
+    const hours = Math.round(lerp(long ? HOURS_20_PLUS : HOURS_UNDER_20, roll(24)));
+    const onCampus = roll(25) < Math.min(0.95, ON_CAMPUS_SHARE * (policyOn(state, 'campusJobs') ? CAMPUS_JOBS_TIMES : 1));
+    const list = onCampus ? CAMPUS_JOBS : TOWN_JOBS;
+    work = { where: list[Math.floor(roll(26) * list.length)]!, hours, onCampus };
   }
+  // Shifts are worked in term; out of it the job waits for them.
+  const job = facts.term ? work : null;
 
   const rent = facts.inTown && !facts.atHome ? round(RENT_PER_BED_MONTH * lerp(RENT_SPREAD, roll(30)), 5) : null;
   const textbooks = round((TEXTBOOKS_PER_YEAR * TEXTBOOK_TILT[facts.group] * lerp([0.55, 1.45], roll(31))) / TEXTBOOK_MEAN, 5);
@@ -187,7 +189,7 @@ export function moneyOf(state: GameState, ref: { entryYear: number; index: numbe
   else if (owes > 0) lines.push(`Owes ${money(owes)} in loans so far`);
   if (rent !== null) lines.push(`Rent ${money(rent)} a month in town`);
   if (facts.term) lines.push(`Books and course materials: ${money(textbooks)} this year`);
-  return { grant, loan, workStudy, owes, owesAtFour, job, rent, textbooks, short, springTrip: trip, lines };
+  return { grant, loan, workStudy, owes, owesAtFour, job, work, rent, textbooks, short, springTrip: trip, lines };
 }
 
 /** Of borrowers who finish in four years, what they owe on average: the real figure, by construction (for the tests). */
