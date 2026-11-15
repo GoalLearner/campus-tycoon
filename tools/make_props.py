@@ -8,6 +8,8 @@ room.speaker) are used as they are; these are only what they do not have.
     phone     a phone in a case, held up
     tray      a dining tray with a plate and a cup
     dog       a small dog, side on, facing left (south-west); mirrored for the other way
+    bag       a backpack, side on, carried on one shoulder (DESIGN.md 64.3)
+    umbrella  an open umbrella on its handle, held over the head in the rain (DESIGN.md 64.3)
 
     art/source/_rendered/ours/props/<name>.png    256 by 256, the thing standing on the bottom middle
 
@@ -92,9 +94,43 @@ def dog():
     return c
 
 
+def bag():
+    c = canvas()
+    d = ImageDraw.Draw(c)
+    cloth = (60, 120, 196, 255)
+    dark = (36, 78, 140, 255)
+    # The body, the loop on its top, a front pocket and its zip.
+    outlined_round(d, (290, 260, 734, 860), 150, cloth)
+    d.arc((410, 120, 614, 330), 180, 360, fill=PLUM, width=90)
+    d.arc((410, 120, 614, 330), 180, 360, fill=cloth, width=36)
+    outlined_round(d, (360, 560, 664, 820), 70, dark, 30)
+    d.line([(400, 600), (624, 600)], fill=PLUM, width=24)
+    d.ellipse((330, 330, 410, 410), fill=(130, 180, 240, 255))
+    return c
+
+
+def umbrella():
+    c = canvas()
+    d = ImageDraw.Draw(c)
+    wood = (120, 96, 80, 255)
+    # The canopy: a dome in panels of two colours over a flat lower edge, then the shaft and its hooked handle.
+    colours = [(236, 72, 92, 255), (255, 228, 120, 255)]
+    d.pieslice((60 - LINE, 120 - LINE, 964 + LINE, 1000 + LINE), 180, 360, fill=PLUM)
+    for k in range(6):
+        d.pieslice((60, 120, 964, 1000), 180 + k * 30, 180 + (k + 1) * 30, fill=colours[k % 2])
+    for x in range(60, 964, 151):
+        d.arc((x, 500, x + 151, 620), 0, 180, fill=PLUM, width=LINE // 2)
+    d.line([(512, 560), (512, 900)], fill=PLUM, width=70)
+    d.line([(512, 560), (512, 900)], fill=wood, width=26)
+    d.arc((512, 840, 640, 990), 0, 180, fill=PLUM, width=70)
+    d.arc((512, 840, 640, 990), 0, 180, fill=wood, width=26)
+    outlined_ellipse(d, (487, 70, 537, 120), PLUM, 0)
+    return c
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog)):
+    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog), ('bag', bag), ('umbrella', umbrella)):
         im = draw()
         box = im.getbbox()
         # Standing on the bottom middle of the picture, as the art build expects a prop to.

@@ -87,6 +87,72 @@
     1
    ]
   },
+  "emote.big-argue": {
+   "frame": "emote.big-argue",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.big-bid": {
+   "frame": "emote.big-bid",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.big-fail": {
+   "frame": "emote.big-fail",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.big-heartbreak": {
+   "frame": "emote.big-heartbreak",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.big-kiss": {
+   "frame": "emote.big-kiss",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.big-win": {
+   "frame": "emote.big-win",
+   "anchor": [
+    30,
+    31
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.chat-art": {
    "frame": "emote.chat-art",
    "anchor": [
@@ -257,6 +323,83 @@
    "anchor": [
     14,
     -6
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-embarrassed": {
+   "frame": "emote.mood-embarrassed",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-excited": {
+   "frame": "emote.mood-excited",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-flirty": {
+   "frame": "emote.mood-flirty",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-happy": {
+   "frame": "emote.mood-happy",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-lonely": {
+   "frame": "emote.mood-lonely",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-sad": {
+   "frame": "emote.mood-sad",
+   "anchor": [
+    10,
+    -21
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.mood-tense": {
+   "frame": "emote.mood-tense",
+   "anchor": [
+    10,
+    -21
    ],
    "footprint": [
     1,
@@ -2936,6 +3079,17 @@
     1
    ]
   },
+  "prop.bag": {
+   "frame": "prop.bag",
+   "anchor": [
+    3,
+    -25
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "prop.dog": {
    "frame": "prop.dog",
    "anchor": [
@@ -2974,6 +3128,17 @@
    "anchor": [
     6,
     -26
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.umbrella": {
+   "frame": "prop.umbrella",
+   "anchor": [
+    10,
+    -14
    ],
    "footprint": [
     1,
