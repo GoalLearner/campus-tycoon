@@ -72,6 +72,12 @@ const SEATS: Record<string, { a: string; at: Record<DayPeriod, string> }> = {
   },
 };
 
+/** A magnifying glass with a plus (to close up) or a minus (to back out), drawn in the strip's colours. */
+function magnifier(out: boolean): string {
+  const bar = out ? '' : '<path d="M10 7.2v5.6"/>';
+  return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6.2"/><path d="M14.6 14.6 20 20"/><path d="M7.2 10h5.6"/>${bar}</svg>`;
+}
+
 /** A walker on the way to, or at, a named place such as the Dining hall. */
 function doingText(doing: string): string {
   // Standing in a game, a line or a small scene: the map has the words already.
@@ -232,11 +238,15 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   stripText.append(stripName, stripDoing);
   stripOpen.append(stripFace, stripText, el('span', 'student-go', '›'));
   stripOpen.addEventListener('click', () => session.untuckStudent());
+  // The close-up while following (DESIGN.md 64.5): in and out again, a magnifying glass with a plus or a minus.
+  const stripClose = el('button', 'follow-strip-close');
+  stripClose.type = 'button';
+  stripClose.addEventListener('click', () => session.setCloseUp(!session.closeUp));
   const stripStop = el('button', 'follow-strip-stop', '×');
   stripStop.type = 'button';
   stripStop.setAttribute('aria-label', 'Stop following');
   stripStop.addEventListener('click', () => session.closeStudent());
-  strip.append(stripOpen, stripStop);
+  strip.append(stripOpen, stripClose, stripStop);
   const stripFirst = document.createTextNode('');
   stripName.prepend(stripFirst);
 
@@ -254,7 +264,12 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   inside.type = 'button';
   inside.hidden = true;
   inside.addEventListener('click', () => session.openRoom());
-  doing.line.append(follow, inside);
+  // While following, Close up beside it (DESIGN.md 64.5).
+  const closeUp = el('button', 'student-follow student-closeup', 'Close up');
+  closeUp.type = 'button';
+  closeUp.hidden = true;
+  closeUp.addEventListener('click', () => session.setCloseUp(!session.closeUp));
+  doing.line.append(follow, closeUp, inside);
 
   // What they feel right now (DESIGN.md 63.7): the emotion's emote, its name, and the top two reasons behind it.
   const feelingRow = row('Feeling');
@@ -445,6 +460,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     follow.hidden = stayingWords(session.doing) !== null;
     follow.classList.toggle('active', session.following);
     setText(follow, session.following ? 'Following' : 'Follow');
+    closeUp.hidden = !session.following;
+    closeUp.classList.toggle('active', session.closeUp);
+    setText(closeUp, session.closeUp ? 'Close up: on' : 'Close up');
     setText(close, session.following ? 'Hide' : 'Close');
     // Followed home, gone indoors at their hall, or at home by their hours, asleep or in for the evening: the room can
     // be looked into (DESIGN.md 60). Look inside then stands where Follow was.
@@ -493,6 +511,12 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const fresh = latest && state.clock.tick - latest.tick <= FEED_FRESH_TICKS ? latest.text : null;
     setText(stripDoing, fresh ?? doing.value.textContent ?? '');
     strip.classList.toggle('following', session.following);
+    // The close-up's caption reads what the card says they are doing (DESIGN.md 64.5).
+    session.doingWords = doing.value.textContent ?? '';
+    stripClose.hidden = !session.following;
+    stripClose.classList.toggle('active', session.closeUp);
+    stripClose.setAttribute('aria-label', session.closeUp ? 'Back out from the close-up' : 'Close up on them');
+    stripClose.innerHTML = magnifier(session.closeUp);
 
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
     // So does it behind their network (63.12).

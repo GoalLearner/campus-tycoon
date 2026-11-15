@@ -1026,6 +1026,24 @@ button.student-row {
   line-height: 1;
 }
 
+/* The close-up while following (DESIGN.md 64.5): a 44-point tap, lit while it is on. */
+.follow-strip-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.follow-strip-close.active,
+.student-closeup.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #16201b;
+}
+
 /* The hall's name on a card: a link that glides the map to the hall (DESIGN.md 60). */
 .student-hall {
   display: inline;
