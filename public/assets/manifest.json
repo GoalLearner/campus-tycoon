@@ -3244,6 +3244,39 @@
     1
    ]
   },
+  "prop.partyhat.0": {
+   "frame": "prop.partyhat.0",
+   "anchor": [
+    4,
+    -22
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.partyhat.1": {
+   "frame": "prop.partyhat.1",
+   "anchor": [
+    4,
+    -22
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.partyhat.2": {
+   "frame": "prop.partyhat.2",
+   "anchor": [
+    4,
+    -22
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "prop.phone": {
    "frame": "prop.phone",
    "anchor": [
