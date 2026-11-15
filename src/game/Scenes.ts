@@ -614,6 +614,12 @@ export class Scenes {
     return false;
   }
 
+  /** Where a busker is playing on screen, for a crowd moment (DESIGN.md 64.4), or null. */
+  buskerAt(): { x: number; y: number } | null {
+    for (const scene of this.scenes.values()) if (scene.kind === 'busker' && !scene.leaving && scene.seen) return { x: scene.x + scene.w / 2, y: scene.y + scene.h / 2 };
+    return null;
+  }
+
   /** The cell of the first scene of a kind, for a dev screenshot to look at. */
   where(kind: Kind): { x: number; y: number } | null {
     for (const scene of this.scenes.values()) if (scene.kind === kind && !scene.leaving) return { x: scene.x + scene.w / 2, y: scene.y + scene.h / 2 };

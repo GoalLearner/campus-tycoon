@@ -157,7 +157,7 @@ export function heldOf(trip: Trip): Held | null {
 }
 
 /** The big moments that get a big bubble (DESIGN.md 64.3). */
-export type BigMoment = 'heartbreak' | 'kiss' | 'win' | 'argue' | 'bid' | 'fail';
+export type BigMoment = 'heartbreak' | 'kiss' | 'win' | 'argue' | 'bid' | 'fail' | 'ring';
 export const BIG_KEY: Record<BigMoment, string> = {
   heartbreak: 'emote.big-heartbreak',
   kiss: 'emote.big-kiss',
@@ -165,6 +165,7 @@ export const BIG_KEY: Record<BigMoment, string> = {
   argue: 'emote.big-argue',
   bid: 'emote.big-bid',
   fail: 'emote.big-fail',
+  ring: 'emote.big-ring',
 };
 
 /** What is going on campus today that a student might have a big moment about. */

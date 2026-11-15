@@ -422,9 +422,12 @@ for emote in EMOTES:
     sprites[f'emote.{emote}'] = {'layers': [standing(f'_rendered/ours/emotes/{emote}.png', 0.5, 0.5, scale=0.485)]}
 # The living campus, L2 (DESIGN.md 64.3): big bubbles for big moments, twice an emote's size, and the mood rings at a
 # student's feet. Ours, by tools/make_emotes.py.
-BIG_MOMENTS = ('heartbreak', 'kiss', 'win', 'argue', 'bid', 'fail')
+BIG_MOMENTS = ('heartbreak', 'kiss', 'win', 'argue', 'bid', 'fail', 'ring')
 for moment in BIG_MOMENTS:
     sprites[f'emote.big-{moment}'] = {'layers': [standing(f'_rendered/ours/emotes/big-{moment}.png', 0.5, 0.5, scale=0.97)]}
+# L3 (DESIGN.md 64.4): the dust cloud of a scuffle, about two figures wide, and the splash of a fall into a fountain.
+sprites['emote.dustup'] = {'layers': [standing('_rendered/ours/emotes/dustup.png', 0.5, 0.5, scale=1.25)]}
+sprites['emote.splash'] = {'layers': [standing('_rendered/ours/emotes/splash.png', 0.5, 0.5, scale=0.485)]}
 MOOD_RINGS = ('happy', 'excited', 'flirty', 'tense', 'embarrassed', 'sad', 'lonely')
 for mood in MOOD_RINGS:
     sprites[f'emote.mood-{mood}'] = {'layers': [standing(f'_rendered/ours/emotes/mood-{mood}.png', 0.5, 0.5, scale=0.33)]}

@@ -18,6 +18,7 @@ import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
 import { Lawns } from './Lawns';
+import { Moments } from './Moments';
 import { lawnShare, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
 import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
@@ -170,6 +171,7 @@ export class CampusScene extends Phaser.Scene {
   /** Small scenes that come and go: club tables, pickup games, a busker, the boxes of move-in day. */
   private scenes!: Scenes;
   private lawns!: Lawns;
+  private moments!: Moments;
   /** Students standing in an activity or a small scene, by key. Shared with the walkers, so nobody is in two places. */
   private readonly staying = new Set<string>();
   /** The ring under such a student while their card is open. */
@@ -287,6 +289,8 @@ export class CampusScene extends Phaser.Scene {
     this.scenes = new Scenes(this, this.art, this.iso, this.staying, walking);
     // People doing things on the lawns and quads (DESIGN.md 64), clear of the small scenes.
     this.lawns = new Lawns(this, this.art, this.iso, this.staying, walking, () => this.scenes.takenCells());
+    // Moments the crowd gathers round (DESIGN.md 64.4), made of the people the other layers have out.
+    this.moments = new Moments(this, this.art, this.iso, this.walkers, this.lawns, this.scenes, this.activity);
     this.walkers.setElsewhere(this.staying);
     this.ambient = new Ambient(this, this.art, this.iso);
     this.windows = new Windows(this, this.art, this.iso, LIGHT_DEPTH + 1);
@@ -403,6 +407,7 @@ export class CampusScene extends Phaser.Scene {
       this.activity.setMap(state);
       this.scenes.setMap(state);
       this.lawns.setMap(state);
+      this.moments.setMap(state);
       this.ambient.setMap(state);
       this.windows.setMap(state);
       this.nextLifeAt = 0;
@@ -432,6 +437,7 @@ export class CampusScene extends Phaser.Scene {
     this.activity.update(time, delta);
     this.scenes.update(time, delta);
     this.lawns.update(time, delta);
+    this.moments.update(time);
     this.ambient.update(time);
     this.sway(time);
     this.showHintTexts();
@@ -464,6 +470,7 @@ export class CampusScene extends Phaser.Scene {
     this.crew.clear();
     this.activity.clear();
     this.lawns.clear();
+    this.moments.clear();
     this.scenes.clear();
     this.staying.clear();
     this.stayRing?.setVisible(false);
@@ -625,6 +632,8 @@ export class CampusScene extends Phaser.Scene {
     // What students may have a big moment about today (DESIGN.md 64.3), and the sky for what they carry.
     this.walkers.setWeather(this.weather);
     this.walkers.setToday({ homeWin: homeWinLately(state), bids: pledgeSeason(state) && chapters(state).length > 0, exams: day.kind === 'midterms' || day.kind === 'finals' });
+    // Moments the crowd gathers round (DESIGN.md 64.4): a party night is Thursday to Saturday (63.11).
+    this.moments.setLife({ period: this.light.period, weather: this.weather, partyNight: date.weekday >= 4 && date.weekday <= 6, commencement: day.kind === 'commencement', reduced });
     this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
     this.ambient.setWeather(this.weather, reduced);
     this.life = life;
@@ -682,6 +691,7 @@ export class CampusScene extends Phaser.Scene {
   private applyStep(step: number): void {
     this.scenes.setStep(step);
     this.lawns.setStep(step);
+    this.moments.setStep(step);
     this.walkers.setStep(step);
     this.cars.setStep(step);
     this.activity.setStep(step);

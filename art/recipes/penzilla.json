@@ -5499,6 +5499,42 @@
     }
    ]
   },
+  "emote.big-ring": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/big-ring.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.97
+    }
+   ]
+  },
+  "emote.dustup": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/dustup.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 1.25
+    }
+   ]
+  },
+  "emote.splash": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/splash.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
   "emote.mood-happy": {
    "layers": [
     {
