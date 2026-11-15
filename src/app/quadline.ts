@@ -304,6 +304,21 @@ export function viralLine(post: Post): string {
 
 const traitIn = (view: WebView, id: number, trait: number): number => traitOf(view.identity[id]!, trait);
 
+/** Lines drawn without putting back: no two comments on one post alike (the next of the pool is taken instead). */
+function drawer(): (lines: readonly string[], h: number) => string {
+  const used = new Set<string>();
+  return (lines, h) => {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[(h + i) % lines.length]!;
+      if (!used.has(line)) {
+        used.add(line);
+        return line;
+      }
+    }
+    return lines[h % lines.length]!;
+  };
+}
+
 /**
  * Comments on picking on someone (DESIGN.md 63.14): friends of the one doing it who join in, friends of the one picked on
  * who are kind or loyal standing up for them, and with the anti-bullying program an RA among their people and the
@@ -313,10 +328,8 @@ function bullyComments(view: WebView, state: GameState, post: Post, id: number):
   const target = postSubject(post)!;
   const targetName = firstNameOf(state, target);
   const out: Comment[] = [];
-  const line = (kind: keyof typeof BULLY_COMMENTS, h: number): string => {
-    const lines = BULLY_COMMENTS[kind];
-    return lines[h % lines.length]!.replace('{name}', targetName);
-  };
+  const draw = drawer();
+  const line = (kind: keyof typeof BULLY_COMMENTS, h: number): string => draw(BULLY_COMMENTS[kind], h).replace('{name}', targetName);
   // Those who join in: the author's friends who are not kind and are outgoing.
   for (const tie of tiesIn(view, id)) {
     if (out.length >= 2) break;
@@ -352,10 +365,8 @@ function rumourComments(view: WebView, state: GameState, post: Post, id: number)
   const about = postSubject(post)!;
   const aboutName = firstNameOf(state, about);
   const out: Comment[] = [];
-  const pick = (kind: 'rumour' | 'cover', h: number): string => {
-    const lines = COMMENT_LINES[kind];
-    return lines[h % lines.length]!.replace('{name}', aboutName);
-  };
+  const draw = drawer();
+  const pick = (kind: 'rumour' | 'cover', h: number): string => draw(COMMENT_LINES[kind], h).replace('{name}', aboutName);
   for (const [i, tie] of tiesIn(view, id).entries()) {
     if (out.length >= 3) break;
     const ref = refIn(view, tie.id);

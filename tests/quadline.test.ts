@@ -242,6 +242,8 @@ describe('the feed', () => {
       expect(likes).toBeGreaterThan(0);
       const list = commentsFor(VIEW, MODEL, post);
       expect(comments).toBeGreaterThanOrEqual(list.length);
+      // No two comments on a post alike: drawn without putting back (main's note on the stop 9 pictures).
+      expect(new Set(list.map((one) => one.text)).size).toBe(list.length);
       for (const comment of list) {
         if (!comment.who) continue;
         expect(enrolled(comment.who)).toBe(true);
