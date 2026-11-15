@@ -24,6 +24,8 @@ export const FRIENDS_HAPPY = {
   rival: -2,
   /** Nobody close and no partner. */
   alone: -4,
+  /** Picked on by someone (DESIGN.md 63.11). */
+  bullied: -4,
 } as const;
 /** The most and the least a student's ties add to their Happiness. */
 export const FRIENDS_HAPPY_MOST = 4;
@@ -42,11 +44,14 @@ export const FRIENDS_EXAM_STRESS = {
 export const FRIENDS_CAMPUS_STRESS = 4;
 
 /** Grades: a study partner (a close tie who likes studying, as they do), and a messy breakup in an exam week. */
-export const FRIENDS_GPA = { study: 0.05, messyInExams: -0.1 } as const;
+export const FRIENDS_GPA = { study: 0.05, messyInExams: -0.1, bullied: -0.05 } as const;
 /** A student's GPA moves at most this much either way. */
 export const FRIENDS_GPA_MOST = 0.15;
 
-/** How likely a student is to leave at the end of a semester, against the campus's rate: alone more, in a group less. */
+/**
+ * How likely a student is to leave at the end of a semester, against the campus's rate: alone more, in a group less.
+ * Someone picked on is as likely to leave as someone alone, unless a friend group stands behind them (63.11).
+ */
 export const FRIENDS_LEAVE = { alone: 1.3, group: 0.85 } as const;
 /** The share who stay each semester moves at most this much either way: 0.3 points. */
 export const FRIENDS_STAY_MOST = 0.003;

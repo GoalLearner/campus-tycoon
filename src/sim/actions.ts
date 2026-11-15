@@ -2,6 +2,7 @@ import { bigBuildCleared, buySecondBuilder, cannotStart, isBigBuild, startBigBui
 import { makeMain, setAsideMain } from './systems/mc';
 import { promoteRegular, rememberRegular } from './systems/regulars';
 import { effectsSound } from './systems/friends';
+import { mainPeopleSound } from './systems/mainWeb';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
@@ -37,7 +38,7 @@ import { buyBench, collectCraft, moveDecor, placeDecor, setRecipe, storeDecor, t
 import { claimMoment, takeGift, type GiftPaid } from './systems/rhythm';
 import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
-import type { CellKind, GameState, MapState, SocialEffects, Zone } from './types';
+import type { CellKind, GameState, MainPeople, MapState, SocialEffects, Zone } from './types';
 
 /**
  * Everything the player can do. Each action is a pure function from one state
@@ -78,7 +79,10 @@ export type Action =
   | { type: 'collect'; key: string }
   | { type: 'collectAll' }
   /** The Main Character (DESIGN.md 53.2): choose one from a student's card, or set the one there is aside. */
-  | { type: 'makeMain'; ref: { entryYear: number; index: number } }
+  /** `people`: who the social web has around them, so their people are their real ties (DESIGN.md 63.11). */
+  | { type: 'makeMain'; ref: { entryYear: number; index: number }; people?: MainPeople }
+  /** The web's weekly reading of who is around the Main Character, for the story to cast (63.11). Not the player's. */
+  | { type: 'mainPeople'; people: MainPeople }
   // Regulars (DESIGN.md 63.9): following a student makes them one; what the map shows happening to them is remembered.
   | { type: 'promoteRegular'; ref: { entryYear: number; index: number } }
   /** The web's reading of what ties do to the campus, once a game week (DESIGN.md 63.10). Not the player's. */
@@ -686,6 +690,15 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       return collect(state, action.key);
     case 'collectAll':
       return collect(state, null);
+    case 'mainPeople': {
+      const mc = state.story?.mc;
+      const people = action.people;
+      if (!mc || people.for.entryYear !== mc.ref.entryYear || people.for.index !== mc.ref.index) return { ok: false, state, error: 'That reading is not for the main character.' };
+      if (!mainPeopleSound(state, people)) return { ok: false, state, error: 'That reading names someone who is not here.' };
+      const next = structuredClone(state);
+      next.story.mc!.webPeople = structuredClone(people);
+      return { ok: true, state: next, cost: 0, changed: 0 };
+    }
     case 'socialEffects': {
       if (!effectsSound(action.effects)) return { ok: false, state, error: 'Those effects are out of range.' };
       const next = structuredClone(state);
@@ -701,7 +714,7 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'makeMain':
     case 'setAsideMain': {
       const next = structuredClone(state);
-      const error = action.type === 'makeMain' ? makeMain(next, action.ref) : setAsideMain(next);
+      const error = action.type === 'makeMain' ? makeMain(next, action.ref, action.people ?? null) : setAsideMain(next);
       return error ? { ok: false, state, error } : { ok: true, state: next, cost: 0, changed: 1 };
     }
     case 'finish':

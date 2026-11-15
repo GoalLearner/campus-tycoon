@@ -39,7 +39,7 @@ describe('the crowd from real ties', () => {
     if (tieOf(VIEW, a, stranger) === null) expect(tieOf(VIEW, stranger, a)).toBeNull();
   });
 
-  it('brings a partner first, then the friend group, and never the main character', () => {
+  it('brings a partner first, then the friend group, the main character’s too', () => {
     let partnered = 0;
     for (const [a, b] of pairsOf(KIND.longterm, 30)) {
       const with_ = companionsOf(VIEW, MODEL, a);
@@ -53,11 +53,11 @@ describe('the crowd from real ties', () => {
     const first = members[0]!;
     const others = companionsOf(VIEW, MODEL, first);
     for (const one of members.slice(1)) expect(others).toContainEqual(one);
-    // The main character walks out alone, and nobody brings them.
+    // The main character walks out with their friends too, and is brought: their people are on the web (DESIGN.md 63.11).
     const withMain = structuredClone(MODEL) as GameState;
     (withMain.story as { mc: unknown }).mc = { ...(MODEL.story.mc ?? {}), ref: members[1] };
-    expect(companionsOf(VIEW, withMain, members[1]!)).toEqual([]);
-    expect(companionsOf(VIEW, withMain, first)).not.toContainEqual(members[1]);
+    expect(companionsOf(VIEW, withMain, members[1]!)).toContainEqual(first);
+    expect(companionsOf(VIEW, withMain, first)).toContainEqual(members[1]);
   });
 
   it('greets as they know each other: a wave, a high five or a fist bump, a hug; rivals, enemies and exes do not', () => {

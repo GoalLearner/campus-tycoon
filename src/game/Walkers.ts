@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction } from '../app/crowdTies';
+import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting } from '../app/life';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
@@ -7,6 +7,9 @@ import { itemAt, regularDay } from '../app/regularDay';
 import { shownHour } from '../app/daylight';
 import { KIND, SLOTS } from '../sim/config/web';
 import { firstNameOf } from '../sim/systems/students';
+import { dateAt } from '../sim/calendar';
+import { INTEREST } from '../sim/systems/identity';
+import { BULLYING_PASSING } from '../sim/config/bullying';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
 import { avenueCrossing, avenueCrossingBack, KERB_MIDDLE, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
@@ -60,7 +63,7 @@ import type { Iso } from './iso';
  */
 
 /** What a walker is doing, for the student card. */
-export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn' | 'walkingIn' | 'walkingHome' | `toPlace:${string}` | `atPlace:${string}` | `chatting:${string}`;
+export type Doing = 'toClass' | 'nextClass' | 'toDorm' | 'toQuad' | 'onQuad' | 'movingIn' | 'walkingIn' | 'walkingHome' | `toPlace:${string}` | `atPlace:${string}` | `chatting:${string}` | `date:${string}` | `party:${string}`;
 
 /**
  * The crowd from real ties (DESIGN.md 63.8). A student setting out may bring their partner or some of their friend
@@ -77,7 +80,23 @@ const PARTY_PLACES: ReadonlyArray<readonly [number, number]> = [
   [0.12, 0],
   [-0.12, 0.3],
   [0.12, 0.3],
+  [-0.12, 0.6],
+  [0.12, 0.6],
 ];
+/**
+ * Scenes (DESIGN.md 63.11): fun beyond school. A couple out in the evening is more often out together, to eat or to a
+ * lawn: a date, which lasts twice as long, with hearts. On a party night (Thursday to Saturday, from the evening) a
+ * friend group who like parties goes out bigger, up to six, to a lawn, stays three times as long, and talks about the
+ * party and the music. A friend who passes a group lingering on a lawn joins it on the spot, and meets whoever there
+ * they did not know.
+ */
+const DATE_WITH_PARTNER = 0.8;
+const DATE_LINGER = 2;
+const PARTY_NIGHT_GROUP = 0.6;
+const PARTY_NIGHT_MAX = 6;
+const PARTY_NIGHT_LINGER = 3;
+const PARTY_NIGHT_CHAT = ['chat-partying', 'music', 'laugh'] as const;
+const DATE_CHAT = ['heart', 'chat-love'] as const;
 /**
  * Of 46,000 students, two who pass on a path almost never know each other. So a share of those setting out are someone
  * a walker on screen knows, coming the other way along the same path: friends meet, an acquaintance waves, a crush or
@@ -118,6 +137,19 @@ const PASSING_WORDS: Record<Reaction, (name: string) => string> = {
   anger: (name) => `Passed ${name}, their rival`,
   sparkle: (name) => `Caught the eye of ${name}`,
 };
+
+/** What a regular remembers passing someone (63.9): in the words for someone who picks on them, or whom they pick on (63.11). */
+function passingWords(tie: TieSeen | null, reaction: Reaction, name: string): string {
+  if (tie?.kind === KIND.bullied) return BULLYING_PASSING.bullied.replace('{name}', name);
+  if (tie?.kind === KIND.bully) return BULLYING_PASSING.bully.replace('{name}', name);
+  return PASSING_WORDS[reaction](name);
+}
+
+/** Does this student like parties, as the web has their interests? */
+function likesParties(view: WebView, ref: StudentRef): boolean {
+  const id = idIn(view, ref);
+  return id >= 0 && ((view.identity[id]! >>> (18 + INTEREST.partying)) & 1) === 1;
+}
 
 /** Cells walked per second, before each walker's own pace. */
 const PACE = 0.85;
@@ -309,6 +341,8 @@ export class Walkers {
   private spawnClock = 0;
   private socialClock = 0;
   private partySeq = 0;
+  /** A party that is a scene (DESIGN.md 63.11): a date, or a party night. */
+  private partyScene = new Map<number, 'date' | 'party'>();
   /** Where a party goes next, chosen by the first of them to leave, so the rest go too. */
   private partyNext = new Map<number, { from: Stop; goal: Stop; route: Spot[] }>();
   /** When each party lingering together next has something to say. */
@@ -958,6 +992,13 @@ export class Walkers {
     const walker = this.walkerOf(key);
     if (walker && walker.talkMs > 0 && walker.talkWith && this.state) return `chatting:${firstNameOf(this.state, walker.talkWith)}`;
     if (!walker || !walker.goal) return null;
+    // A scene (63.11): on a date with someone, out at a party.
+    const scene = walker.party ? this.partyScene.get(walker.party) : undefined;
+    if (scene && this.state) {
+      const other = this.walkers.find((one) => one !== walker && one.party === walker.party && one.student);
+      if (scene === 'date' && other?.student) return `date:${firstNameOf(this.state, other.student)}`;
+      if (scene === 'party') return `party:${walker.goal.kind === 'quad' ? 'the lawn' : (walker.goal.name ?? 'campus')}`;
+    }
     if (walker.goal.kind === 'house') return 'walkingHome';
     if (walker.from.kind === 'house') return 'walkingIn';
     if (walker.goal.kind === 'place') return walker.lingerMs > 0 ? `atPlace:${walker.goal.name ?? ''}` : `toPlace:${walker.goal.name ?? ''}`;
@@ -1287,7 +1328,11 @@ export class Walkers {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           const stays = walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play');
           // A party stays as long as each other: the same while for all of them, from who they are together.
-          if (stays && walker.kind === 'student') walker.lingerMs = walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000;
+          if (stays && walker.kind === 'student') {
+            const scene = walker.party ? this.partyScene.get(walker.party) : undefined;
+            const longer = scene === 'date' ? DATE_LINGER : scene === 'party' ? PARTY_NIGHT_LINGER : 1;
+            walker.lingerMs = (walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000) * longer;
+          }
           else walker.fading = 'out';
         }
       }
@@ -1440,16 +1485,58 @@ export class Walkers {
     const first = tieOf(view, leader.student, all[0]!);
     const couple = first !== null && first.kind >= KIND.dating && first.kind <= KIND.longterm;
     const roll = Math.random();
-    const want = couple ? (roll < WITH_PARTNER ? 1 : 0) : roll < WITH_GROUP ? 1 + Math.floor(Math.random() * 3) : 0;
-    const take = all.filter((ref) => this.free(ref)).slice(0, Math.min(want, PARTY_MAX - 1));
+    const evening = this.period === 'evening' || this.period === 'night';
+    // On a party night someone who likes parties, out with their friend group, makes for a lawn (63.11).
+    const partyMood = !couple && evening && roll < PARTY_NIGHT_GROUP && this.partyNight() && likesParties(view, leader.student);
+    if (partyMood && leader.goal.kind !== 'quad') {
+      const lawns = this.stops.filter((stop) => stop.kind === 'quad' && stop !== leader.from);
+      const lawn = lawns[Math.floor(Math.random() * lawns.length)];
+      const route = lawn ? this.routeBetween(leader.from, lawn) : null;
+      if (lawn && route) {
+        route[0] = { x: leader.x, y: leader.y };
+        leader.route = route;
+        leader.leg = 1;
+        leader.goal = lawn;
+      }
+    }
+    // A couple out together in the evening make it a date: somewhere to eat, a bench or a lawn (63.11).
+    const suitsDate = (stop: Stop): boolean => stop.kind === 'quad' || (stop.kind === 'place' && (stop.use === 'food' || stop.use === 'seat'));
+    const dateMood = couple && evening && roll < DATE_WITH_PARTNER;
+    if (dateMood && !suitsDate(leader.goal)) {
+      const spots = this.stops.filter((stop) => stop !== leader.from && stop.kind === 'place' && stop.use === 'food');
+      const spot = spots[Math.floor(Math.random() * spots.length)];
+      const route = spot ? this.routeBetween(leader.from, spot) : null;
+      if (spot && route) {
+        route[0] = { x: leader.x, y: leader.y };
+        leader.route = route;
+        leader.leg = 1;
+        leader.goal = spot;
+      }
+    }
+    const goal = leader.goal;
+    const date = dateMood && suitsDate(goal);
+    const partyNight = partyMood && goal.kind === 'quad';
+    const want = couple
+      ? date || roll < WITH_PARTNER
+        ? 1
+        : 0
+      : partyNight
+        ? 2 + Math.floor(Math.random() * 4)
+        : roll < WITH_GROUP
+          ? 1 + Math.floor(Math.random() * 3)
+          : 0;
+    const take = all.filter((ref) => this.free(ref)).slice(0, Math.min(want, (partyNight ? PARTY_NIGHT_MAX : PARTY_MAX) - 1));
     if (take.length === 0) return;
     const party = ++this.partySeq;
     leader.party = party;
     leader.place = PARTY_PLACES[0]!;
+    const scene = date ? 'date' : partyNight && take.length >= 2 ? 'party' : null;
+    if (scene) this.partyScene.set(party, scene);
     const all3 = [leader.student, ...take];
     for (const ref of all3) {
       const rest = firstNamesOf(this.state!, all3.filter((one) => one !== ref));
-      if (this.onMemory) this.onMemory(ref, `Walked out with ${rest.length <= 1 ? rest[0] : `${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`}`);
+      const names = rest.length <= 1 ? rest[0] : `${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`;
+      if (this.onMemory) this.onMemory(ref, scene === 'date' ? `On a date with ${names}` : scene === 'party' ? `Out at a party on the lawn with ${names}` : `Walked out with ${names}`);
     }
     take.forEach((ref, i) => {
       this.start(leader.from, leader.goal!, false, ref, 'student', {
@@ -1608,11 +1695,14 @@ export class Walkers {
       this.partyChatAt.set(party, now + PARTY_CHAT_MS * (0.7 + Math.random() * 0.6));
       const speaker = members[Math.floor(Math.random() * members.length)]!;
       const listener = members.find((one) => one !== speaker)!;
-      this.showIcon(speaker, topicFor(web, speaker.student!, listener.student!, Math.random()));
+      const scene = this.partyScene.get(party);
+      const say = scene === 'date' ? DATE_CHAT[Math.floor(Math.random() * DATE_CHAT.length)]! : scene === 'party' ? PARTY_NIGHT_CHAT[Math.floor(Math.random() * PARTY_NIGHT_CHAT.length)]! : topicFor(web, speaker.student!, listener.student!, Math.random());
+      this.showIcon(speaker, say);
     }
     // Parties that have gone: forget where they were going.
     if (this.partyNext.size > 200) this.partyNext.clear();
     if (this.partyChatAt.size > 200) this.partyChatAt.clear();
+    if (this.partyScene.size > 200) this.partyScene.clear();
   }
 
   private meet(web: WebView, a: Walker, b: Walker, now: number): void {
@@ -1620,6 +1710,11 @@ export class Walkers {
     const tb = tieOf(web, b.student!, a.student!);
     a.socialAt = now + SOCIAL_REST_MS;
     b.socialAt = now + SOCIAL_REST_MS;
+    // A small moment (63.11): a friend passing a group lingering together joins it there, and meets the rest.
+    if (!a.party && a.lingerMs <= 0 && b.party && b.lingerMs > 0 && b.goal && stopsToTalk(ta) && stopsToTalk(tb)) {
+      this.join(web, a, b);
+      return;
+    }
     // Friends, a partner, a roommate: they stop, face each other, greet, and talk about something they share.
     if (stopsToTalk(ta) && stopsToTalk(tb) && !a.party && !b.party) {
       const greeting = greetingFor(ta!, Math.random()) ?? 'wave';
@@ -1661,12 +1756,40 @@ export class Walkers {
     }
     if (ra) {
       this.showIcon(a, ra);
-      this.remember(a, PASSING_WORDS[ra](this.first(b)));
+      this.remember(a, passingWords(ta, ra, this.first(b)));
     }
     if (rb) {
       this.showIcon(b, rb, 200);
-      this.remember(b, PASSING_WORDS[rb](this.first(a)));
+      this.remember(b, passingWords(tb, rb, this.first(a)));
     }
+  }
+
+  /** A walker joins a party lingering together on the spot (63.11): beside them, for as long as they stay, and on with them. */
+  private join(web: WebView, a: Walker, b: Walker): void {
+    const party = b.party!;
+    const members = this.walkers.filter((one) => one.party === party);
+    a.party = party;
+    a.place = PARTY_PLACES[members.length % PARTY_PLACES.length]!;
+    a.goal = b.goal;
+    a.route = [{ x: a.x, y: a.y }];
+    a.leg = 1;
+    a.lingerMs = b.lingerMs;
+    this.showIcon(a, greetingFor(tieOf(web, a.student!, b.student!)!, Math.random()) ?? 'wave');
+    const where = b.goal?.kind === 'quad' ? 'on the lawn' : b.goal?.name ? `at the ${b.goal.name}` : 'there';
+    this.remember(a, `Joined ${this.first(b)} and friends ${where}`);
+    // Anyone there they did not know, they meet through the friend who was there.
+    for (const one of members) {
+      if (one === b || !one.student || tieOf(web, a.student!, one.student) !== null) continue;
+      this.remember(a, `Met ${this.first(one)} through ${this.first(b)}`);
+      this.remember(one, `Met ${this.first(a)} through ${this.first(b)}`);
+    }
+  }
+
+  /** A party night: Thursday to Saturday on the game's calendar (as a regular's day has it, 63.9). */
+  private partyNight(): boolean {
+    if (!this.state) return false;
+    const weekday = dateAt(this.state.clock).weekday;
+    return weekday === 4 || weekday === 5 || weekday === 6;
   }
 
   private wantedInView(view: Phaser.Geom.Rectangle): number {

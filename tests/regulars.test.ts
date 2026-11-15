@@ -223,6 +223,6 @@ describe('what happened to them', () => {
     }
     expect(told).toBeGreaterThan(0);
     expect(heavy).toBeGreaterThan(0);
-    expect(HEAVY_EVENTS.length).toBe(3);
+    expect(HEAVY_EVENTS.length).toBe(6);
   });
 });

@@ -1,3 +1,4 @@
+import { castFromWeb, castable } from './mainWeb';
 import { POLICIES } from '../config/policies';
 import {
   CLIFF_HOURS,
@@ -21,10 +22,10 @@ import {
 import { LIBRARY } from '../config/storyLibrary';
 import { TICKS_PER_HOUR } from '../config/time';
 import { hashInts } from '../rng';
-import type { ActiveArc, GameState, LogEntry, MainCharacter, Scene } from '../types';
+import type { ActiveArc, CastMember, GameState, LogEntry, MainCharacter, MainPerson, Scene } from '../types';
 import { chapters, nextGreekDay, pledgeSeason } from './greek';
 import { approvalAt } from './happiness';
-import { castMember, placesFor, remember } from './mc';
+import { castMember, placesFor, remember, traitsFor } from './mc';
 import { callTimes } from './parties';
 import { classPressure, dayRead, seasonCurve } from './season';
 import { classYearOf, studentCard, teachingQuality } from './students';
@@ -222,7 +223,8 @@ function onCalendar(state: GameState, spec: StorySpec): boolean {
 
 // ----------------------------------------------------------- the effects --
 
-function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
+/** One effect of an outcome on the Main Character. Exported for the tests of what a story does (DESIGN.md 63.11). */
+export function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
   switch (effect.t) {
     case 'need':
       mc.needs[effect.need] = clamp(mc.needs[effect.need] + effect.by, 0, 100);
@@ -255,20 +257,35 @@ function apply(state: GameState, mc: MainCharacter, effect: StoryEffect): void {
       return;
     case 'cast': {
       const avoid = [mc.name, ...mc.cast.map((one) => one.name)];
-      if (effect.change === 'newFriend') mc.cast.push(castMember(state, 'friend', 55, avoid));
-      else if (effect.change === 'crushToPartner') {
+      // Someone new is a real student when the web has been read for them (DESIGN.md 63.11): someone they have met for
+      // a friend or a roommate, someone single who is their type for a crush. Otherwise they are made up, as before.
+      const web = mc.webPeople && mc.webPeople.for.entryYear === mc.ref.entryYear && mc.webPeople.for.index === mc.ref.index ? mc.webPeople : null;
+      const luck = hashInts(state.seed, 8100, state.clock.tick, mc.ref.index) >>> 0;
+      const real = (role: CastMember['role'], pool: readonly MainPerson[], closeness: number): boolean => {
+        const one = web ? castable(state, pool, luck) : null;
+        if (!one) return false;
+        mc.cast.push(castFromWeb(state, role, one.ref, closeness, traitsFor(state, state.story.nextCast)));
+        return true;
+      };
+      if (effect.change === 'newFriend') {
+        if (!real('friend', web?.met ?? [], 55)) mc.cast.push(castMember(state, 'friend', 55, avoid));
+      } else if (effect.change === 'crushToPartner') {
         const crush = mc.cast.find((one) => one.role === 'crush');
         if (crush) {
           crush.role = 'partner';
           crush.closeness = Math.max(crush.closeness, 60);
         }
-      } else if (effect.change === 'breakup') mc.cast = mc.cast.filter((one) => one.role !== 'partner');
-      else if (effect.change === 'newCrush') {
+      } else if (effect.change === 'breakup') {
+        // A real partner is an ex in the web from now on: the story ended it, so the web holds to it.
+        const ended = mc.cast.find((one) => one.role === 'partner')?.ref;
+        if (ended) mc.exes = [...(mc.exes ?? []).filter((one) => one.entryYear !== ended.entryYear || one.index !== ended.index), ended].slice(-6);
+        mc.cast = mc.cast.filter((one) => one.role !== 'partner');
+      } else if (effect.change === 'newCrush') {
         mc.cast = mc.cast.filter((one) => one.role !== 'crush');
-        if (!mc.cast.some((one) => one.role === 'partner')) mc.cast.push(castMember(state, 'crush', 15, avoid));
+        if (!mc.cast.some((one) => one.role === 'partner') && !real('crush', web?.crushable ?? [], 15)) mc.cast.push(castMember(state, 'crush', 15, avoid));
       } else if (effect.change === 'newRoommate') {
         mc.cast = mc.cast.filter((one) => one.role !== 'roommate');
-        mc.cast.push(castMember(state, 'roommate', 40, avoid));
+        if (!real('roommate', web?.met ?? [], 40)) mc.cast.push(castMember(state, 'roommate', 40, avoid));
       }
       return;
     }

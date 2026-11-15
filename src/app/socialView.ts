@@ -1,3 +1,6 @@
+import { peopleForMain } from '../sim/systems/mainWeb';
+import type { MainPeople } from '../sim/types';
+import { BULLYING_LINES, BULLYING_ROLES } from '../sim/config/bullying';
 import type { GameState } from '../sim';
 import { calendarAt } from '../sim/calendar';
 import { EVENT, FEEL, FRIEND_AT, HEAVY_EVENTS, KIND, SLOTS } from '../sim/config/web';
@@ -132,11 +135,16 @@ export function peopleOf(view: WebView, state: GameState, ref: StudentRef, max =
     else if (kind === KIND.ex) add('ex', 'Ex');
     else if (kind === KIND.enemy) add('rival', 'Arch-rival');
     else if (kind === KIND.rival) add('rival', 'Rival');
+    // Picking on someone (63.11): shown as a rival is, each end in its own words.
+    else if (kind === KIND.bully) add('rival', BULLYING_ROLES.bully);
+    else if (kind === KIND.bullied) add('rival', BULLYING_ROLES.bullied);
   }
   const closest = (a: Person, b: Person): number => b.strength - a.strength;
   by.friend.sort(closest);
   by.ex.sort(closest);
-  by.rival.sort((a, b) => (a.label === b.label ? closest(a, b) : a.label === 'Arch-rival' ? -1 : 1));
+  // Who picks on them first, then an arch-rival, then the rest.
+  const rank = (one: Person): number => (one.label === BULLYING_ROLES.bullied ? 0 : one.label === 'Arch-rival' ? 1 : 2);
+  by.rival.sort((a, b) => rank(a) - rank(b) || closest(a, b));
   const fixed = [...by.partner, ...by.best, ...by.roommate];
   const after = [...by.ex.slice(0, 1), ...by.rival.slice(0, 1)];
   const room = Math.max(0, max - fixed.length - after.length);
@@ -224,13 +232,35 @@ export function happeningLine(state: GameState, one: Happening): string | null {
       return `${a} and ${b} are no longer speaking.`;
     case EVENT.triangle:
       return c ? `${a} and ${c} both have a crush on ${b}.` : null;
+    // Picking on someone (DESIGN.md 63.11): a line of its kind, picked by the happening's own luck.
+    case EVENT.bullying:
+    case EVENT.shutOut:
+    case EVENT.pettiness:
+    case EVENT.pileOn:
+    case EVENT.stoodUp:
+    case EVENT.reported: {
+      const lines = BULLYING_LINES[BULLYING_KEY[one.event]!];
+      if (one.event === EVENT.pileOn && !c) return null;
+      const line = lines[Math.abs(one.luck) % lines.length]!;
+      return line.replace('{a}', a).replace('{b}', b).replace('{c}', c ?? '');
+    }
     default:
       return null;
   }
 }
 
 /** Light kinds, in the order the paper reaches for them. */
-const LIGHT_ORDER = [EVENT.dating, EVENT.backTogether, EVENT.splitMutual, EVENT.best, EVENT.longterm, EVENT.enemies];
+const LIGHT_ORDER = [EVENT.dating, EVENT.backTogether, EVENT.splitMutual, EVENT.best, EVENT.longterm, EVENT.enemies, EVENT.stoodUp, EVENT.pettiness, EVENT.reported];
+
+/** Each happening of picking on someone, to its lines (63.11). */
+const BULLYING_KEY: Partial<Record<number, keyof typeof BULLYING_LINES>> = {
+  [EVENT.bullying]: 'bullying',
+  [EVENT.shutOut]: 'shutOut',
+  [EVENT.pettiness]: 'pettiness',
+  [EVENT.pileOn]: 'pileOn',
+  [EVENT.stoodUp]: 'stoodUp',
+  [EVENT.reported]: 'reported',
+};
 
 export interface Told {
   line: string;
@@ -346,6 +376,13 @@ export function firstNamesOf(state: GameState, refs: StudentRef[]): string[] {
   const twice = (list: string[], at: number): boolean => list.indexOf(list[at]!) !== list.lastIndexOf(list[at]!);
   const lettered = firsts.map((name, i) => (twice(firsts, i) ? `${name} ${surnames[i]!.charAt(0)}.` : name));
   return lettered.map((name, i) => (twice(lettered, i) && surnames[i] ? `${firsts[i]} ${surnames[i]}` : name));
+}
+
+/** Who the web has around a student, for making them the Main Character (DESIGN.md 63.11); null before the web answers. */
+export function mainPeopleOf(view: WebView | null, ref: StudentRef): MainPeople | null {
+  if (!view) return null;
+  const id = idIn(view, ref);
+  return id < 0 ? null : peopleForMain(view, id, (b) => refIn(view, b), view.week);
 }
 
 // ------------------------------------------------------- campus social --

@@ -42,7 +42,7 @@ describe('happenings', () => {
       expect(HAPPENING_KINDS as readonly number[]).toContain(one.event);
       const k = `${one.week}:${one.event}`;
       perWeek.set(k, (perWeek.get(k) ?? 0) + 1);
-      expect(one.people.length).toBe(one.event === EVENT.cheating || one.event === EVENT.triangle ? 3 : 2);
+      expect(one.people.length).toBe(one.event === EVENT.cheating || one.event === EVENT.triangle || one.event === EVENT.pileOn ? 3 : 2);
     }
     expect(Math.max(...perWeek.values())).toBeLessThanOrEqual(HAPPENINGS_KEPT);
     // Chosen by the pair's luck: from every class, not the first ring the web holds.

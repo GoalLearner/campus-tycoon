@@ -9,9 +9,12 @@ export const WEB_WEEK_TICKS = Math.round(TICKS_PER_YEAR / 52);
 /** Tie slots each student holds. Both ends hold a tie. */
 export const SLOTS = 12;
 
-/** The kinds of tie, by number, as the slots keep them. A crush is one's own: the other end may say friend. */
-export const KIND = { none: 0, met: 1, friend: 2, best: 3, crush: 4, dating: 5, exclusive: 6, longterm: 7, ex: 8, rival: 9, enemy: 10, roommate: 11 } as const;
-export const KIND_NAMES = ['', 'acquaintance', 'friend', 'best friend', 'crush', 'dating', 'exclusive', 'long-term', 'ex', 'rival', 'enemy', 'roommate'] as const;
+/**
+ * The kinds of tie, by number, as the slots keep them. A crush is one's own: the other end may say friend. Picking on
+ * someone (DESIGN.md 63.11) has two ends too: the one who does it holds `bully`, the one it is done to `bullied`.
+ */
+export const KIND = { none: 0, met: 1, friend: 2, best: 3, crush: 4, dating: 5, exclusive: 6, longterm: 7, ex: 8, rival: 9, enemy: 10, roommate: 11, bully: 12, bullied: 13 } as const;
+export const KIND_NAMES = ['', 'acquaintance', 'friend', 'best friend', 'crush', 'dating', 'exclusive', 'long-term', 'ex', 'rival', 'enemy', 'roommate', 'picks on', 'picked on by'] as const;
 export const FEEL = { warm: 0, tense: 1, complicated: 2 } as const;
 export const FEEL_NAMES = ['warm', 'tense', 'complicated'] as const;
 
@@ -46,7 +49,7 @@ export const BACK_TOGETHER = 0.03;
  * Points lost each week apart, by kind. Roommates do not drift: they share a room. A crush is one end of a friendship,
  * and fades as the friendship at the other end does, so both ends keep one strength.
  */
-export const FADE = [0, 3, 1, 1, 1, 1, 1, 1, 2, 2, 1, 0] as const;
+export const FADE = [0, 3, 1, 1, 1, 1, 1, 1, 2, 2, 1, 0, 3, 3] as const;
 
 /** A short absence is lived week by week; a longer one is regrown and its last weeks lived. */
 export const CATCHUP_FULL_WEEKS = 12;
@@ -67,7 +70,7 @@ export const REGROW_COUPLE_PER_YEAR = 25;
 export const REGROW_EX_AT = 22;
 
 /** What happened, counted for the cards and the paper later. */
-export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle'] as const;
+export const EVENTS = ['met', 'friends', 'best friends', 'crush', 'mutual crush', 'started dating', 'exclusive', 'long-term', 'breakup, mutual', 'breakup, messy', 'cheating', 'back together', 'rivals', 'enemies', 'love triangle', 'picked on', 'left out', 'roommate pettiness', 'pile-on', 'stood up for', 'reported'] as const;
 export const EVENT = {
   met: 0,
   friends: 1,
@@ -84,20 +87,60 @@ export const EVENT = {
   rivals: 12,
   enemies: 13,
   triangle: 14,
+  /** Picking on someone (DESIGN.md 63.11): a mean comment, name-calling, a rumour, naming and shaming, a feud. */
+  bullying: 15,
+  /** A clique shutting someone out. */
+  shutOut: 16,
+  /** Roommates being petty with each other. */
+  pettiness: 17,
+  /** Someone joining in. */
+  pileOn: 18,
+  /** A friend standing up for the one picked on. */
+  stoodUp: 19,
+  /** Reported to the conduct office. */
+  reported: 20,
 } as const;
 
 /**
  * What the web remembers by name for the cards, the Campus social view and the paper (DESIGN.md 63.6): of each of
  * these kinds, a few each week, chosen by the pair's own luck so no class or hall is favoured, for the last 64 weeks.
  */
-export const HAPPENING_KINDS = [EVENT.best, EVENT.dating, EVENT.longterm, EVENT.splitMutual, EVENT.splitMessy, EVENT.cheating, EVENT.backTogether, EVENT.enemies, EVENT.triangle] as const;
+export const HAPPENING_KINDS = [EVENT.best, EVENT.dating, EVENT.longterm, EVENT.splitMutual, EVENT.splitMessy, EVENT.cheating, EVENT.backTogether, EVENT.enemies, EVENT.triangle, EVENT.bullying, EVENT.shutOut, EVENT.pettiness, EVENT.pileOn, EVENT.stoodUp, EVENT.reported] as const;
 export const HAPPENINGS_KEPT = 6;
 export const HAPPENING_WEEKS = 64;
 /**
- * The heavy ones (63.3, decision 6): a messy breakup, cheating, a love triangle. At most one of them is shown in a
- * campus week, in the paper and the Campus social view together, so the game stays 13+.
+ * The heavy ones: a messy breakup, cheating, a love triangle, and since 63.11 someone picked on, shut out or piled on.
+ * Shown as they happen since the owner's 16+ (63.9); they lead the paper's gossip and make the drama of the week.
  */
-export const HEAVY_EVENTS: readonly number[] = [EVENT.splitMessy, EVENT.cheating, EVENT.triangle];
+export const HEAVY_EVENTS: readonly number[] = [EVENT.splitMessy, EVENT.cheating, EVENT.triangle, EVENT.bullying, EVENT.shutOut, EVENT.pileOn];
+
+/**
+ * Picking on someone (DESIGN.md 63.11): from who they are, at the owner's word ("allow bullying and drama"). A student
+ * who is not kind and is jealous (not loyal) or short-tempered (not calm) may start on someone they clash with: a rival,
+ * an enemy, an acquaintance whose ways grate, or a roommate they do not get on with (that one stays petty). Friends of
+ * theirs who are not kind and are outgoing may join in; friends of the one picked on who are kind or loyal stand up
+ * for them. Kind friends of the one doing it drift away, and some of it is reported to the conduct office, which ends
+ * it. Every size is [T].
+ */
+export const BULLY = {
+  /** The weekly chance a student who would start on someone does, with someone they clash with to start on. */
+  start: 0.02,
+  /** How strong the tie begins, and how much it grows each week it goes on; it fades by 3 a week once it stops. */
+  from: 40,
+  grows: 8,
+  /** The chance a friend who would join in does, and how many at most. */
+  join: 0.5,
+  joinMost: 2,
+  /** The chance a kind or loyal friend stands up for the one picked on, and what it adds to their friendship. */
+  defend: 0.4,
+  rally: 6,
+  /** What it costs the one doing it with each kind friend: a little closeness each week. */
+  drift: 6,
+  /** The weekly chance it is reported to the conduct office, which ends it. */
+  reported: 0.12,
+} as const;
+/** A tie of picking on this strong or more is felt (the effects of 63.10 read it). */
+export const BULLIED_FROM = 20;
 
 /** A friend group: three to six friends who are friends with one another. */
 export const GROUP_MIN = 3;

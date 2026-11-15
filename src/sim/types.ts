@@ -682,6 +682,8 @@ export interface SocialEffects {
   split: number;
   rival: number;
   study: number;
+  /** The share picked on by someone (DESIGN.md 63.11). Missing in a reading from before. */
+  bullied?: number;
 }
 
 /** A regular as the save keeps them: who, since when they were followed, and what the map showed happening to them. */
@@ -702,6 +704,33 @@ export interface CastMember {
   closeness: number;
   /** The tick they came into the Main Character's life. */
   since: number;
+  /**
+   * The student they are, when the story cast a real one from the social web (DESIGN.md 63.11): their name is that
+   * student's. Missing for the people made up before, who keep their names, and for a partner from home.
+   */
+  ref?: { entryYear: number; index: number };
+}
+
+/** One person the social web has around the Main Character, and how strong their tie is, 0 to 100. */
+export interface MainPerson {
+  ref: { entryYear: number; index: number };
+  strength: number;
+}
+
+/**
+ * Who the social web says is around the Main Character (DESIGN.md 63.11), read once a game week, for the story to cast:
+ * their roommate, partner and crush there, their friends closest first, people they have met, and single people they
+ * have met who are each other's type. `for` is the Main Character it was read for.
+ */
+export interface MainPeople {
+  week: number;
+  for: { entryYear: number; index: number };
+  roommate: MainPerson | null;
+  partner: MainPerson | null;
+  crush: MainPerson | null;
+  friends: MainPerson[];
+  met: MainPerson[];
+  crushable: MainPerson[];
 }
 
 /** One thing the Main Character did, decided or went through, for their timeline. `big` ones are key moments. */
@@ -736,6 +765,10 @@ export interface MainCharacter {
   /** What they are doing now, since when, and why. */
   doing: { activity: ActivityId; since: number; why: string };
   cast: CastMember[];
+  /** Real students the story ended a romance with: exes in the web (DESIGN.md 63.11). Missing is none. */
+  exes?: Array<{ entryYear: number; index: number }>;
+  /** Who the web says is around them, for the story to cast (63.11). Missing until the web first reads them. */
+  webPeople?: MainPeople;
   /** Their timeline, oldest first. */
   memory: MemoryEntry[];
   /** Dollars in the bank. */

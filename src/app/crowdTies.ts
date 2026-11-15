@@ -2,7 +2,7 @@ import type { GameState, StudentRef } from '../sim';
 import { FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { chemistry, INTEREST } from '../sim/systems/identity';
 import { pairLuck } from '../sim/systems/web';
-import { idIn, isMain, refIn, type WebView } from './socialView';
+import { idIn, refIn, type WebView } from './socialView';
 
 /**
  * The crowd from real ties (DESIGN.md 63.8): who walks out together, what two students who pass on a path are to each
@@ -35,11 +35,11 @@ const isPartner = (kind: number): boolean => kind === KIND.dating || kind === KI
 
 /**
  * Who might walk out with a student: their partner first, then the others in their friend group, closest first. The
- * Main Character's people are their story's (stop 7), so they walk out alone.
+ * Main Character too, whose story's people are on the web since stop 7 (DESIGN.md 63.11).
  */
 export function companionsOf(view: WebView, state: GameState, ref: StudentRef): StudentRef[] {
   const id = idIn(view, ref);
-  if (id < 0 || isMain(state, ref)) return [];
+  if (id < 0) return [];
   const partner: StudentRef[] = [];
   for (let k = 0; k < SLOTS; k++) {
     const s = id * SLOTS + k;
@@ -53,7 +53,7 @@ export function companionsOf(view: WebView, state: GameState, ref: StudentRef): 
       if (other !== id) group.push(refIn(view, other));
     }
   }
-  return [...partner, ...group].filter((one) => !isMain(state, one));
+  return [...partner, ...group];
 }
 
 /**
@@ -75,7 +75,9 @@ export function reactionFor(tie: TieSeen | null, chem: number): Reaction | null 
   if (!tie) return chem > SPARKLE_CHEMISTRY ? 'sparkle' : null;
   if (tie.kind === KIND.crush) return 'heart';
   if (tie.kind === KIND.ex) return 'sweat';
-  if (tie.kind === KIND.rival || tie.kind === KIND.enemy) return 'anger';
+  if (tie.kind === KIND.rival || tie.kind === KIND.enemy || tie.kind === KIND.bully) return 'anger';
+  // Passing the one who picks on them (DESIGN.md 63.11).
+  if (tie.kind === KIND.bullied) return 'sweat';
   return null;
 }
 

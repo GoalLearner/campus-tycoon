@@ -2264,6 +2264,8 @@ function assertModelCampus(seed: number): void {
           campusJobs: d.spending > 0,
           needScholarships: d.spending > 0,
           cheaperDining: d.spending > 0,
+          // Picking on someone (DESIGN.md 63.11): its gain is in the social web, which tests/bullying.test.ts reads; its cost is money.
+          antiBullying: d.spending > 0,
         };
         if (ok[spec.id] === false) {
           moved = false;

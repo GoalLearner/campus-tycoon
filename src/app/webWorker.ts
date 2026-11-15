@@ -1,7 +1,9 @@
 /// <reference lib="webworker" />
 import type { GameState, SocialEffects } from '../sim';
 import { friendsEffectsOf } from '../sim/systems/friends';
-import { catchUp, decodeWeb, encodeWeb, newWeb, type Web } from '../sim/systems/web';
+import { peopleForMain } from '../sim/systems/mainWeb';
+import type { MainPeople } from '../sim/types';
+import { catchUp, decodeWeb, encodeWeb, idOf, newWeb, refAt, type Web } from '../sim/systems/web';
 import { packRecord, unpackRecord } from './webRecord';
 import { viewBuffers, viewOf, type WebView } from './socialView';
 
@@ -24,6 +26,8 @@ export interface WebReply {
   view: WebView;
   /** What the ties do to the campus this week (DESIGN.md 63.10), for the save. null on an empty web. */
   effects: SocialEffects | null;
+  /** Who the web has around the Main Character this week, for their story (DESIGN.md 63.11). null with none. */
+  mainPeople: MainPeople | null;
   /** `ms` for the web's work, `packMs` for squeezing the record, `recordBytes` before it is squeezed. */
   stats: { ms: number; packMs: number; recordBytes: number; lived: number; regrown: boolean; fromRecord: boolean };
 }
@@ -48,7 +52,11 @@ self.onmessage = async (event: MessageEvent<WebRequest>) => {
   const record = await packRecord(bytes);
   const view = viewOf(web, true);
   const effects = friendsEffectsOf(web);
+  const mc = message.state.story?.mc;
+  const mainId = mc ? idOf(web, mc.ref) : -1;
+  const live = web;
+  const mainPeople = mainId >= 0 ? peopleForMain(live, mainId, (b) => refAt(live, b), live.week) : null;
   const stats = { ms, packMs: Math.round(performance.now() - packed), recordBytes: bytes.byteLength, ...done, fromRecord };
-  const reply: WebReply = { type: 'web', record, view, effects, stats };
+  const reply: WebReply = { type: 'web', record, view, effects, mainPeople, stats };
   (self as unknown as Worker).postMessage(reply, viewBuffers(view) as ArrayBuffer[]);
 };

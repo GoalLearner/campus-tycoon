@@ -11,7 +11,7 @@ import {
   FRIENDS_LEAVE,
   FRIENDS_STAY_MOST,
 } from '../config/social';
-import { FEEL, FRIEND_AT, KIND, SLOTS } from '../config/web';
+import { BULLIED_FROM, FEEL, FRIEND_AT, KIND, SLOTS } from '../config/web';
 import type { GameState, SocialEffects } from '../types';
 import { INTEREST } from './identity';
 import { examPart } from './policies';
@@ -52,6 +52,8 @@ export interface StudentFriends {
   fight: boolean;
   /** A close tie who likes studying, as they do, or -1. */
   study: number;
+  /** Whoever picks on them most (DESIGN.md 63.11), or -1. */
+  bullied: number;
   alone: boolean;
   /** What moved their Happiness, each with its points and who it is about (-1 for nobody in particular). */
   reasons: Array<{ id: FriendsReason; points: number; who: number }>;
@@ -78,6 +80,8 @@ export function studentFriends(ties: Ties, id: number): StudentFriends {
   let rival = -1;
   let fight = false;
   let study = -1;
+  let bullied = -1;
+  let bulliedMost = 0;
   const studies = likesStudying(ties.identity[id]!);
   for (let k = 0; k < SLOTS; k++) {
     const s = id * SLOTS + k;
@@ -108,6 +112,15 @@ export function studentFriends(ties: Ties, id: number): StudentFriends {
       fight = true;
       continue;
     }
+    // Picked on (63.11): whoever does it most.
+    if (kind === KIND.bullied) {
+      if (strength >= BULLIED_FROM && strength > bulliedMost) {
+        bullied = b;
+        bulliedMost = strength;
+      }
+      continue;
+    }
+    if (kind === KIND.bully) continue;
     const near = kind === KIND.friend || kind === KIND.best || kind === KIND.crush || kind === KIND.roommate;
     if (near && strength >= FRIEND_AT) {
       close += 1;
@@ -122,13 +135,14 @@ export function studentFriends(ties: Ties, id: number): StudentFriends {
   if (split >= 0) reasons.push(messy ? { id: 'splitMessy', points: FRIENDS_HAPPY.splitMessy, who: split } : { id: 'split', points: FRIENDS_HAPPY.split, who: split });
   if (rival >= 0) reasons.push({ id: 'rival', points: FRIENDS_HAPPY.rival, who: rival });
   if (alone) reasons.push({ id: 'alone', points: FRIENDS_HAPPY.alone, who: -1 });
+  if (bullied >= 0) reasons.push({ id: 'bullied', points: FRIENDS_HAPPY.bullied, who: bullied });
   const sum = reasons.reduce((total, one) => total + one.points, 0);
   const happiness = Math.max(FRIENDS_HAPPY_LEAST, Math.min(FRIENDS_HAPPY_MOST, sum));
-  const examStress = (split >= 0 || fight ? FRIENDS_EXAM_STRESS.upset : 0) + (group || close >= 2 ? FRIENDS_EXAM_STRESS.supported : 0);
-  const gpa = study >= 0 ? FRIENDS_GPA.study : 0;
+  const examStress = (split >= 0 || fight || bullied >= 0 ? FRIENDS_EXAM_STRESS.upset : 0) + (group || close >= 2 ? FRIENDS_EXAM_STRESS.supported : 0);
+  const gpa = (study >= 0 ? FRIENDS_GPA.study : 0) + (bullied >= 0 ? FRIENDS_GPA.bullied : 0);
   const gpaInExams = Math.max(-FRIENDS_GPA_MOST, Math.min(FRIENDS_GPA_MOST, gpa + (split >= 0 && messy ? FRIENDS_GPA.messyInExams : 0)));
-  const leave = alone ? FRIENDS_LEAVE.alone : group ? FRIENDS_LEAVE.group : 1;
-  return { close, group, partner, strained, split, messy, rival, fight, study, alone, reasons, happiness, examStress, gpa, gpaInExams, leave };
+  const leave = alone || (bullied >= 0 && !group) ? FRIENDS_LEAVE.alone : group && bullied < 0 ? FRIENDS_LEAVE.group : 1;
+  return { close, group, partner, strained, split, messy, rival, fight, study, bullied, alone, reasons, happiness, examStress, gpa, gpaInExams, leave };
 }
 
 /** A number within plus or minus `most`, and the factor that brought it there (1 when it was already). */
@@ -150,6 +164,7 @@ export function friendsEffectsOf(web: Web): SocialEffects | null {
   let split = 0;
   let rival = 0;
   let study = 0;
+  let bullied = 0;
   for (let id = 0; id < web.n; id++) {
     if (web.year[id]! < 0) continue;
     const one = studentFriends(web, id);
@@ -163,6 +178,7 @@ export function friendsEffectsOf(web: Web): SocialEffects | null {
     if (one.split >= 0) split += 1;
     if (one.rival >= 0) rival += 1;
     if (one.study >= 0) study += 1;
+    if (one.bullied >= 0) bullied += 1;
   }
   if (n === 0) return null;
   const h = capped(happy / n, FRIENDS_CAMPUS_HAPPY);
@@ -180,6 +196,7 @@ export function friendsEffectsOf(web: Web): SocialEffects | null {
     split: split / n,
     rival: rival / n,
     study: study / n,
+    bullied: bullied / n,
   };
 }
 
@@ -206,7 +223,7 @@ export function friendsStay(state: GameState, retention: number): number {
 
 /** True when what the save keeps is a set of effects this version can use: every number where it may be. */
 export function effectsSound(effects: SocialEffects): boolean {
-  const shares = [effects.alone, effects.group, effects.partnered, effects.split, effects.rival, effects.study];
+  const shares = [effects.alone, effects.group, effects.partnered, effects.split, effects.rival, effects.study, effects.bullied ?? 0];
   return (
     Number.isInteger(effects.week) &&
     Math.abs(effects.happiness) <= FRIENDS_CAMPUS_HAPPY + 1e-9 &&

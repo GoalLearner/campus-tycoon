@@ -1,3 +1,4 @@
+import { castFromWeb, mainPeopleSound } from './mainWeb';
 import {
   ACTIVITIES,
   ALLOWANCE,
@@ -40,7 +41,7 @@ import { FIRST_NAMES, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
 import { ANCHOR_AFTER_WAKE_TICKS, DEFAULT_WAKE_HOUR, TICK_MS } from '../config/time';
 import { dollars } from '../format';
 import { hashInts } from '../rng';
-import type { CastMember, FameEntry, GameState, LogEntry, MainCharacter, MemoryEntry, PlanItem, Story } from '../types';
+import type { CastMember, FameEntry, GameState, LogEntry, MainCharacter, MainPeople, MainPerson, MemoryEntry, PlanItem, Story } from '../types';
 import { partiesInTown, partiesOn } from './parties';
 import { dayRead, libraryShare } from './season';
 import { classYearOf, sampleStudents, socialLife, studentCard, type StudentRef } from './students';
@@ -95,7 +96,7 @@ function personName(state: GameState, salt: number): string {
   return `${FIRST_NAMES[h(1) % FIRST_NAMES.length]} ${SURNAME_STARTS[h(2) % SURNAME_STARTS.length]}${SURNAME_ENDS[h(3) % SURNAME_ENDS.length]}`;
 }
 
-function traitsFor(state: GameState, salt: number): CastTrait[] {
+export function traitsFor(state: GameState, salt: number): CastTrait[] {
   const first = CAST_TRAIT_IDS[hashInts(state.seed, 7005, salt, 1) % CAST_TRAIT_IDS.length]!;
   let second = CAST_TRAIT_IDS[hashInts(state.seed, 7005, salt, 2) % CAST_TRAIT_IDS.length]!;
   if (second === first) second = CAST_TRAIT_IDS[(CAST_TRAIT_IDS.indexOf(first) + 5) % CAST_TRAIT_IDS.length]!;
@@ -147,9 +148,11 @@ export function tellMain(state: GameState, log: LogEntry[]): void {
 
 /**
  * Make a student the Main Character. One at a time: the one before goes to the hall of fame, set aside. Their name,
- * major and nature come from their card; the people around them are made now and stored.
+ * major and nature come from their card. The people around them are their real ties when the social web has been read
+ * for them (`people`, DESIGN.md 63.11): their roommate, their two closest friends, and their partner or crush there; a
+ * partner far away is from home. Without the web they are made up, as before. Either way they are stored.
  */
-export function makeMain(state: GameState, ref: StudentRef): string | null {
+export function makeMain(state: GameState, ref: StudentRef, people: MainPeople | null = null): string | null {
   const why = cannotMakeMain(state, ref);
   if (why) return why;
   const card = studentCard(state, ref);
@@ -164,11 +167,29 @@ export function makeMain(state: GameState, ref: StudentRef): string | null {
     avoid.push(one.name);
     cast.push(one);
   };
-  if (card.residence !== 'offCampus') add('roommate', 45);
-  add('friend', 40);
-  add('friend', 25);
-  if (card.relationship.id === 'togetherHappy' || card.relationship.id === 'togetherUnhappy' || card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling') add('partner', card.relationship.id.endsWith('Happy') ? 70 : 45);
-  else if (card.relationship.id === 'singleLooking') add('crush', 20);
+  const web = people && people.for.entryYear === ref.entryYear && people.for.index === ref.index && mainPeopleSound(state, people) ? people : null;
+  const far = card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling';
+  if (web) {
+    // Their real people (63.11): each as close as their tie, within what a story starts from.
+    const real = (role: CastMember['role'], one: MainPerson | null, low: number, high: number): void => {
+      if (!one) return;
+      const member = castFromWeb(state, role, one.ref, Math.max(low, Math.min(high, one.strength)), traitsFor(state, state.story.nextCast));
+      avoid.push(member.name);
+      cast.push(member);
+    };
+    real('roommate', web.roommate, 25, 85);
+    for (const one of web.friends.slice(0, 2)) real('friend', one, 25, 85);
+    if (web.partner) real('partner', web.partner, 45, 95);
+    else if (far) add('partner', card.relationship.id === 'distanceHappy' ? 70 : 45);
+    else if (web.crush) real('crush', web.crush, 15, 40);
+    else if (card.relationship.id === 'singleLooking') real('crush', web.crushable[0] ?? null, 20, 20);
+  } else {
+    if (card.residence !== 'offCampus') add('roommate', 45);
+    add('friend', 40);
+    add('friend', 25);
+    if (card.relationship.id === 'togetherHappy' || card.relationship.id === 'togetherUnhappy' || far) add('partner', card.relationship.id.endsWith('Happy') ? 70 : 45);
+    else if (card.relationship.id === 'singleLooking') add('crush', 20);
+  }
   const mc: MainCharacter = {
     ref: { entryYear: ref.entryYear, index: ref.index },
     name: card.name,
@@ -197,6 +218,7 @@ export function makeMain(state: GameState, ref: StudentRef): string | null {
     gpaBonus: 0,
     member: null,
     team: false,
+    ...(web ? { webPeople: web } : {}),
   };
   state.story.mc = mc;
   remember(state, mc, `${mc.name} is your main character: a ${card.classYearName.toLowerCase()} in ${mc.major}, ${articled(card.archetypeName)}. Their goals: ${goals.map((goal) => GOALS[goal].name.toLowerCase()).join(' and ')}.`);

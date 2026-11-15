@@ -79,12 +79,12 @@ describe('a feeling', () => {
     }
   });
 
-  it('leaves the Main Character’s people to their story, and still reads their week and campus', () => {
-    const ref = SAMPLE[0]!;
+  it('reads the Main Character’s people too, whose story’s people are on the web since stop 7 (DESIGN.md 63.11)', () => {
+    const ref = SAMPLE.find((one) => moodletsOf(VIEW, MODEL, one, studentCard(MODEL, one)!, 14).some((m) => /with |group|Nobody close/.test(m.reason)))!;
     const withMain = structuredClone(MODEL) as GameState;
     (withMain.story as { mc: unknown }).mc = { ...(MODEL.story.mc ?? {}), ref };
     const moodlets = moodletsOf(VIEW, withMain, ref, studentCard(withMain, ref)!, 14);
-    expect(moodlets.some((one) => /with |on |Nobody close|group/.test(one.reason))).toBe(false);
+    expect(moodlets.some((one) => /with |group|Nobody close/.test(one.reason))).toBe(true);
   });
 
   it('works before the web has answered, from the week and the campus alone', () => {
