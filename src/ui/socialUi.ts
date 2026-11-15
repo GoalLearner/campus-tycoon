@@ -1,14 +1,15 @@
 import { campusHappiness } from '../sim';
 import { friendsStay } from '../sim/systems/friends';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
+import { socialWeb } from '../app/socialWeb';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
 import { regularsNow } from '../sim/systems/regulars';
 import { drawSprite, loadAtlas } from './atlas';
 
 /**
  * The Campus social page (DESIGN.md 63.6), behind the student count: how many couples and friend groups, this week's
- * new couples and splits, the drama of the week, the most popular students as faces, this week's news by name, and
- * the biggest friend groups. Every name opens that student's card.
+ * new couples and splits, the drama of the week, the most popular students as faces, this week's news by name, the
+ * biggest dozen friend groups as clusters and the most tight-knit places (63.12). Every name opens that student's card.
  */
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {
@@ -35,11 +36,6 @@ function toldLine(told: Told, open: (ref: StudentRef) => void): HTMLElement {
   return line;
 }
 
-function names(state: GameState, refs: StudentRef[]): string {
-  const first = firstNamesOf(state, refs);
-  return first.length <= 1 ? (first[0] ?? '') : `${first.slice(0, -1).join(', ')} and ${first[first.length - 1]}`;
-}
-
 export function drawSocialPage(body: HTMLElement, state: GameState, view: WebView, open: (ref: StudentRef) => void): void {
   const social = campusSocial(view, state);
   const share = Math.round(social.inGroups * 100);
@@ -47,6 +43,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     stat('Couples', count(social.couples)),
     stat('Friend groups', `${count(social.groups)} · ${share}% of students`),
     stat('This week', `${count(social.week.couples)} new couples · ${count(social.week.splits)} split up`),
+    stat('New friendships', `${count(social.week.friends)} this week`),
   );
 
   // What friends do (DESIGN.md 63.10), as the campus last read them: Happiness, exam Stress and who stays.
@@ -129,11 +126,82 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     for (const told of social.lines) body.append(toldLine(told, open));
   }
 
-  if (social.groups3.length > 0) {
+  // The biggest dozen friend groups as clusters (DESIGN.md 63.12): their faces in a ring and their vibe; tapped, their
+  // members, each opening their card.
+  if (social.clusters.length > 0) {
     body.append(el('div', 'money-head', 'Friend groups'));
-    for (const group of social.groups3) {
+    const grid = el('div', 'social-clusters');
+    const canvases: Array<{ canvas: HTMLCanvasElement; ref: StudentRef }> = [];
+    for (const group of social.clusters) {
+      const box = el('details', 'social-cluster');
+      const summary = el('summary', '');
+      const ring = el('div', 'cluster-faces');
+      const shown = group.members.slice(0, CLUSTER_FACES);
+      const svg = document.createElementNS(SVG, 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('class', 'cluster-lines');
+      const at = shown.map((_, i) => {
+        const angle = -Math.PI / 2 + (2 * Math.PI * i) / shown.length;
+        return { x: 50 + 34 * Math.cos(angle), y: 50 + 34 * Math.sin(angle) };
+      });
+      for (let i = 0; i < at.length; i++) {
+        for (let j = i + 1; j < at.length; j++) {
+          const line = document.createElementNS(SVG, 'line');
+          line.setAttribute('x1', at[i]!.x.toFixed(1));
+          line.setAttribute('y1', at[i]!.y.toFixed(1));
+          line.setAttribute('x2', at[j]!.x.toFixed(1));
+          line.setAttribute('y2', at[j]!.y.toFixed(1));
+          svg.append(line);
+        }
+      }
+      ring.append(svg);
+      for (const [i, ref] of shown.entries()) {
+        const canvas = el('canvas', '');
+        canvas.width = 96;
+        canvas.height = 112;
+        canvas.style.left = `${at[i]!.x}%`;
+        canvas.style.top = `${at[i]!.y}%`;
+        canvases.push({ canvas, ref });
+        ring.append(canvas);
+      }
       const vibe = group.vibe.charAt(0).toUpperCase() + group.vibe.slice(1);
-      body.append(toldLine({ line: `${vibe}: ${names(state, group.members)}`, people: group.members, heavy: false }, open));
+      summary.append(ring, el('div', 'cluster-vibe', vibe), el('div', 'cluster-size', `${group.members.length} friends`));
+      const members = el('div', 'cluster-members');
+      const firsts = firstNamesOf(state, group.members);
+      for (const [i, ref] of group.members.entries()) {
+        const button = el('button', '', firsts[i]!);
+        button.type = 'button';
+        button.addEventListener('click', () => open(ref));
+        members.append(button);
+      }
+      box.append(summary, members);
+      grid.append(box);
+    }
+    body.append(grid);
+    void loadAtlas().then((atlas) => {
+      const pack = atlas?.people;
+      if (!atlas || !pack) return;
+      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
+      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+    });
+  }
+
+  // The most tight-knit dorms, clubs, chapters and teams (63.12): how much of their friendships stay inside.
+  const tight = socialWeb.tight;
+  if (tight.length > 0) {
+    body.append(el('div', 'money-head', 'Most tight-knit'));
+    for (const group of tight) {
+      const line = el('div', 'size-row tight-row');
+      const who = el('span', '');
+      who.append(el('span', '', group.name), el('span', 'tight-kind', ` · ${TIGHT_KIND[group.kind]}`));
+      line.append(who, el('span', 'size-value', `${Math.round(group.share * 100)}% of friendships inside`));
+      body.append(line);
     }
   }
 }
+
+const SVG = 'http://www.w3.org/2000/svg';
+/** The faces drawn for a friend group's cluster; the rest are in its list. */
+const CLUSTER_FACES = 6;
+const TIGHT_KIND = { hall: 'hall', club: 'club', chapter: 'chapter', team: 'team' } as const;

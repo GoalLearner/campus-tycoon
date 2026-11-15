@@ -151,6 +151,91 @@ export function peopleOf(view: WebView, state: GameState, ref: StudentRef, max =
   return [...fixed, ...by.friend.slice(0, room), ...after].slice(0, max);
 }
 
+// ----------------------------------------------------------- the network --
+
+/** How a tie feels from this end, as the network view draws it: warm solid green, tense dashed red, complicated dotted purple. */
+export type TieFeeling = 'warm' | 'tense' | 'complicated';
+
+export interface NetworkPerson {
+  ref: StudentRef;
+  /** 0 nearest (a partner, a best friend), 1 (a roommate, their friend group, friends), 2 (crushes, exes, rivals). */
+  ring: 0 | 1 | 2;
+  /** The tie in a word or two: "best friend", "ex", "picks on them". */
+  label: string;
+  feeling: TieFeeling;
+  /** A tie of their own, or only that they are in one friend group. */
+  line: 'tie' | 'group';
+  strength: number;
+}
+
+/** The most faces round a student in the network view. */
+export const NETWORK_MOST = 16;
+
+const FEELING: Record<number, TieFeeling> = { [FEEL.warm]: 'warm', [FEEL.tense]: 'tense', [FEEL.complicated]: 'complicated' };
+
+/**
+ * A student's network (DESIGN.md 63.12): their people round them, nearest first. Partner and best friend sit closest,
+ * then roommate, friend group and friends, then crushes, exes, rivals and anyone picking on them, each tie with its kind
+ * and how it feels from this end. Acquaintances are left out. At most `NETWORK_MOST`, the weakest friends cut first.
+ */
+export function networkFor(view: WebView, state: GameState, ref: StudentRef): NetworkPerson[] {
+  const id = idIn(view, ref);
+  if (id < 0) return [];
+  const out: NetworkPerson[] = [];
+  const seen = new Set<number>([id]);
+  for (let k = 0; k < SLOTS; k++) {
+    const s = id * SLOTS + k;
+    const b = view.other[s]!;
+    if (b < 0) continue;
+    const other = refIn(view, b);
+    if (!enrolled(state, other)) continue;
+    const kind = view.kind[s]!;
+    const back = theirEnd(view, b, id);
+    const strength = view.strength[s]!;
+    const feeling = FEELING[view.feeling[s]!] ?? 'warm';
+    const put = (ring: 0 | 1 | 2, label: string): void => {
+      out.push({ ref: other, ring, label, feeling, line: 'tie', strength });
+      seen.add(b);
+    };
+    if (PARTNER_LABEL[kind]) put(0, kind === KIND.dating ? 'dating' : kind === KIND.exclusive ? 'exclusive' : 'long-term');
+    else if (kind === KIND.best) put(0, 'best friend');
+    else if (kind === KIND.roommate) put(1, 'roommate');
+    else if (kind === KIND.friend) put(1, back === KIND.crush ? 'friend, has a crush on them' : 'friend');
+    else if (kind === KIND.crush) put(2, 'their crush');
+    else if (kind === KIND.ex) put(2, 'ex');
+    else if (kind === KIND.enemy) put(2, 'arch-rival');
+    else if (kind === KIND.rival) put(2, 'rival');
+    else if (kind === KIND.bully) put(2, BULLYING_ROLES.bully.toLowerCase());
+    else if (kind === KIND.bullied) put(2, BULLYING_ROLES.bullied.toLowerCase());
+  }
+  // Their friend group: those in it they are not tied to themselves, on the friends' ring.
+  const g = view.groupOf[id]!;
+  if (g >= 0) {
+    for (let i = view.groupStart[g]!; i < view.groupStart[g + 1]!; i++) {
+      const b = view.groupMembers[i]!;
+      if (seen.has(b)) continue;
+      const other = refIn(view, b);
+      if (!enrolled(state, other)) continue;
+      out.push({ ref: other, ring: 1, label: 'in their group', feeling: 'warm', line: 'group', strength: 0 });
+      seen.add(b);
+    }
+  }
+  // Too many: the faintest of the friends' ring give way, so the nearest and the troubled always show.
+  const order = (a: NetworkPerson, b: NetworkPerson): number => a.ring - b.ring || b.strength - a.strength;
+  const kept = out.sort(order);
+  while (kept.length > NETWORK_MOST) {
+    const at = kept.map((one, i) => (one.ring === 1 ? i : -1)).filter((i) => i >= 0).pop();
+    kept.splice(at ?? kept.length - 1, 1);
+  }
+  return kept;
+}
+
+/** The kind of tie at the other end, from b back to a, or -1. */
+function theirEnd(view: WebView, b: number, a: number): number {
+  for (let k = 0; k < SLOTS; k++) if (view.other[b * SLOTS + k] === a) return view.kind[b * SLOTS + k]!;
+  return -1;
+}
+
 /** Who they are dating, in the card's words, or null for nobody on campus. */
 export function partnerLine(view: WebView, state: GameState, ref: StudentRef): { text: string; note: string; ref: StudentRef } | null {
   const partner = peopleOf(view, state, ref).find((one) => one.role === 'partner');
@@ -395,14 +480,14 @@ export interface CampusSocial {
   /** The share of students in a friend group, 0 to 1. */
   inGroups: number;
   /** This campus week: new couples (and couples back together), splits and new best friends. */
-  week: { couples: number; splits: number; best: number };
+  week: { couples: number; splits: number; best: number; friends: number };
   /**
    * The five most popular (DESIGN.md 63.7): by how many students they reach, their friends and their friends'
    * friends, each counted once. A student holds twelve ties at most, so a count of friends alone stops at twelve.
    */
   popular: Array<{ ref: StudentRef; friends: number; known: number }>;
-  /** The three biggest friend groups: their vibe and their members. */
-  groups3: Array<{ vibe: string; members: StudentRef[] }>;
+  /** The biggest dozen friend groups, as clusters on the Social tab (DESIGN.md 63.12). */
+  clusters: Array<{ vibe: string; members: StudentRef[] }>;
   /** The drama of the week: up to `DRAMA_MOST` heavy items, or one light one, or none. */
   drama: Told[];
   /** This week's light happenings, a kind at a time. */
@@ -470,7 +555,7 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     })
     .sort((x, y) => y.known - x.known || y.close - x.close || x.id - y.id)
     .slice(0, 5);
-  const week = { couples: 0, splits: 0, best: 0 };
+  const week = { couples: 0, splits: 0, best: 0, friends: 0 };
   for (let row = 0; row < view.weeklyWeek.length; row++) {
     if (view.weeklyWeek[row]! < 0 || view.weeklyYear[row] !== year) continue;
     const at = (event: number): number => view.weekly[row * (view.weekly.length / view.weeklyWeek.length) + event]!;
@@ -478,18 +563,20 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     week.couples += at(EVENT.dating) + at(EVENT.backTogether);
     week.splits += at(EVENT.splitMutual) + at(EVENT.splitMessy);
     week.best += at(EVENT.best);
+    week.friends += at(EVENT.friends);
   }
   const groups = view.groupStart.length - 1;
   const sizes: Array<{ g: number; size: number }> = [];
   for (let g = 0; g < groups; g++) sizes.push({ g, size: view.groupStart[g + 1]! - view.groupStart[g]! });
   sizes.sort((x, y) => y.size - x.size || x.g - y.g);
-  const groups3: CampusSocial['groups3'] = [];
+  // The biggest dozen, the Main Character's among them since their people are the web's (63.11).
+  const clusters: CampusSocial['clusters'] = [];
   for (const { g } of sizes) {
-    if (groups3.length >= 3) break;
+    if (clusters.length >= 12) break;
     const members: StudentRef[] = [];
     for (let i = view.groupStart[g]!; i < view.groupStart[g + 1]!; i++) members.push(refIn(view, view.groupMembers[i]!));
-    if (members.some((ref) => !enrolled(state, ref) || isMain(state, ref))) continue;
-    groups3.push({ vibe: VIBES[view.groupVibe[g]!] ?? 'a group of friends', members });
+    if (members.some((ref) => !enrolled(state, ref))) continue;
+    clusters.push({ vibe: VIBES[view.groupVibe[g]!] ?? 'a group of friends', members });
   }
   return {
     couples,
@@ -497,7 +584,7 @@ export function campusSocial(view: WebView, state: GameState): CampusSocial {
     inGroups: students > 0 ? view.groupMembers.length / students : 0,
     week,
     popular: top.map((one) => ({ ref: refIn(view, one.id), friends: one.friends, known: one.known })),
-    groups3,
+    clusters,
     drama: dramaOfTheWeek(view, state),
     lines: lightSince(view, state, -1, year, 4),
   };

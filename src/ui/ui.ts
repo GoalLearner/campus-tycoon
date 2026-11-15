@@ -101,6 +101,7 @@ import { face, mountStudentCard } from './studentCard';
 import { drawSocialPage } from './socialUi';
 import { socialWeb } from '../app/socialWeb';
 import { mainPeopleOf } from '../app/socialView';
+import { mountNetworkView } from './networkView';
 import { mountRoomView } from './roomView';
 
 /**
@@ -536,6 +537,7 @@ export function mountUi(root: HTMLElement): void {
 
   const studentPanel = mountStudentCard();
   const roomPanel = mountRoomView();
+  const networkPanel = mountNetworkView();
   const personPanel = mountPersonCard();
 
   // ---------------------------------------------------------------- build --
@@ -676,7 +678,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
+  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2580,6 +2582,7 @@ export function mountUi(root: HTMLElement): void {
       inspector.classList.remove('show');
       studentPanel.render(null);
       roomPanel.render(null);
+      networkPanel.render(null);
       personPanel.render(null);
       if (!modalOpen) openSetup();
       return;
@@ -2591,6 +2594,7 @@ export function mountUi(root: HTMLElement): void {
     renderInspector(state);
     studentPanel.render(state);
     roomPanel.render(state);
+    networkPanel.render(state);
     personPanel.render(state);
     renderModeBar();
     renderPlacer(state);

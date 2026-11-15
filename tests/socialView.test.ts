@@ -49,6 +49,21 @@ describe('happenings', () => {
     expect(new Set(all.flatMap((one) => one.people.map((ref) => ref.entryYear))).size).toBe(4);
   });
 
+  it('are none from a regrowing: a campus grown again tells no couple as new, and news begins with the next week lived', () => {
+    const grown = newWeb(MODEL.seed, 1024);
+    expect(catchUp(grown, MODEL, WEEK0).regrown).toBe(true);
+    const view = viewOf(grown, false);
+    expect(happeningsOf(view)).toEqual([]);
+    expect(campusSocial(view, MODEL).week).toEqual({ couples: 0, splits: 0, best: 0, friends: 0 });
+    expect(gossip(view, MODEL, -1)).toEqual([]);
+    catchUp(grown, MODEL, WEEK0 + 1);
+    const after = viewOf(grown, false);
+    expect(happeningsOf(after).length).toBeGreaterThan(0);
+    // One week of news: about a week's couples, not the burst a campus grown again makes in its first weeks.
+    expect(campusSocial(after, MODEL).week.couples).toBeGreaterThan(0);
+    expect(campusSocial(after, MODEL).week.couples).toBeLessThan(200);
+  });
+
   it('are the same twice from the seed', () => {
     const again = newWeb(MODEL.seed, 1024);
     catchUp(again, MODEL, WEEK0);
@@ -261,11 +276,15 @@ describe('the Campus social page', () => {
       expect(told.heavy).toBe(false);
       expect(told.people.every(enrolled)).toBe(true);
     }
-    expect(social.groups3).toHaveLength(3);
-    for (const group of social.groups3) {
+    // The biggest dozen friend groups as clusters (63.12), the biggest first.
+    expect(social.clusters).toHaveLength(12);
+    for (const [i, group] of social.clusters.entries()) {
       expect(group.members.length).toBeGreaterThanOrEqual(3);
+      expect(group.members.every(enrolled)).toBe(true);
       expect(group.vibe).toMatch(/^(the |a group)/);
+      if (i > 0) expect(social.clusters[i - 1]!.members.length).toBeGreaterThanOrEqual(group.members.length);
     }
+    expect(social.week.friends).toBeGreaterThan(social.week.couples);
     expect(social.drama.length).toBeGreaterThan(0);
   });
 });
