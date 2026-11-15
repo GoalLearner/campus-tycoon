@@ -4,6 +4,7 @@ import { semesterOf } from '../sim/systems/students';
 import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
 import { DRINKING_YEAR } from '../sim/config/parties';
+import { PARENTS_VISITING, RHYTHM_FEELINGS } from '../sim/config/fourYears';
 import { FEEL, FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
 import { homeGameNow } from '../sim/systems/football';
@@ -132,6 +133,14 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   // An everyday hum of Stress is real (DESIGN.md 65.5): only the high end of it reads as exams ahead.
   else if (card.stress >= 65) add('tense', 'Exams ahead', card.stress / 45);
   if (day.kind === 'break' || day.kind === 'summer') add('happy', day.kind === 'summer' ? 'Summer' : (day.name ?? 'A break'), 1.5);
+  // The year's rhythm (R2, DESIGN.md 66): welcome week, a family's visit, and the stretches of the year, each felt by
+  // most students but not all, each student their own way; and seniors' last weeks.
+  const feels = (hashInts(state.seed, 4801, ref.entryYear, ref.index, day.rhythmId ? day.rhythmId.length : 0) >>> 0) / 4294967296;
+  if (day.special === 'welcome') add(card.classYear === 0 ? 'excited' : 'happy', card.classYear === 0 ? 'Welcome week' : 'Back on campus', card.classYear === 0 ? 1.6 : 0.9);
+  else if (day.special === 'parents' && feels < PARENTS_VISITING) add('happy', 'Family visiting', 1.4);
+  const stretch = day.rhythmId ? RHYTHM_FEELINGS[day.rhythmId] : undefined;
+  if (stretch && feels < stretch.share) add(stretch.emotion, stretch.label, stretch.weight + (stretch.emotion === 'tense' ? card.stress / 60 : 0));
+  if (day.seniors && card.classYear >= 3) add('sad', 'Senior goodbyes', 1.6);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
   if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup');

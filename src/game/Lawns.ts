@@ -180,7 +180,7 @@ interface Group {
   glow: Phaser.GameObjects.Image | null;
 }
 
-/** A party night as the scene reads it (L6): the game day, its weekday, and the shown hour, whole. */
+/** A party night as the scene reads it (L6): the game date as a number, its weekday, and the shown hour, whole. */
 export interface PartyNight {
   night: number;
   weekday: number;

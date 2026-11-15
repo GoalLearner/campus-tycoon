@@ -117,6 +117,9 @@ export const CALENDAR_LINES: Partial<Record<CalendarEventKind, { begins?: string
   midterms: { begins: '{name} begins. The library and the coffee stands fill up.' },
   finals: { begins: '{name} begins. Stress is at its highest of the semester.' },
   classes: { begins: '{name}.' },
+  // R2 (DESIGN.md 66): move-in and orientation every fall, and families on campus.
+  welcome: { begins: '{name} begins: the new students move in, and orientation runs until classes start.' },
+  visit: { begins: "{name}: families are on campus, at the games, the halls and the dining halls." },
 };
 /**
  * A point of the curve at or above this is term: below it are the breaks, the summer, commencement and move-in week.

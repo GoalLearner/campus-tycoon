@@ -240,6 +240,8 @@ const FAN_SHARE = 0.65;
 const GAME_DAY_CROWD = 1.5;
 /** How far behind the one in front each member of a tour walks, in milliseconds. */
 const TOUR_GAP_MS = 750;
+/** An orientation group in welcome week: a leader and this many in all (R2). */
+const ORIENTATION_SIZE = 8;
 
 type StopKind = 'building' | 'quad' | 'gate' | 'place' | 'house';
 /** What a place is for, which decides when people go there. */
@@ -534,6 +536,8 @@ export class Walkers {
   private ringPool: Phaser.GameObjects.Image[] = [];
   private ringsShown = 0;
   private markedOnTop = false;
+  /** Welcome week or parents' weekend (R2), when it is one. */
+  private week: 'welcome' | 'parents' | null = null;
   /** Tonight's parties (L6), from the lawns. */
   private partySpots: ReadonlyArray<{ x: number; y: number }> = [];
   private markedParty = 0;
@@ -791,7 +795,7 @@ export class Walkers {
   }
 
   /** New students moving in: a group walks in from the edge of campus to the dorms. */
-  arrive(count: number): Array<{ x: number; y: number }> {
+  arrive(count: number, banner = true): Array<{ x: number; y: number }> {
     if (!this.people || count <= 0) return [];
     const homes = this.stops.filter((stop) => stop.zone === 'housing');
     if (homes.length === 0) return [];
@@ -835,6 +839,8 @@ export class Walkers {
       }
     }
 
+    // Welcome week's steady arrivals (R2) come without the banner: it is for a class arriving all at once.
+    if (!banner) return near.map((stop) => ({ x: stop.cell.x, y: stop.cell.y }));
     const at = this.iso.toWorld(gate.cell.x + 0.5, gate.cell.y + 0.5);
     const text = this.scene.add
       .text(at.x, at.y - 40, `+${count} moving in`, {
@@ -850,6 +856,38 @@ export class Walkers {
     this.banners.push({ text, ageMs: 0 });
     // The dorms they are walking to, where the boxes are stacked.
     return near.map((stop) => ({ x: stop.cell.x, y: stop.cell.y }));
+  }
+
+  /**
+   * Parents' weekend (R2, DESIGN.md 66): students show their families round, a parent a step behind them, from where
+   * they live to somewhere to eat, a lawn or a sight of the campus, near where the player is looking.
+   */
+  visit(count: number): void {
+    const parent = this.people?.roles?.parent;
+    if (parent === undefined || count <= 0) return;
+    const view = this.scene.cameras.main.worldView;
+    const near = (stop: Stop): boolean => {
+      const at = this.iso.toWorld(stop.cell.x + 0.5, stop.cell.y + 0.5);
+      return at.x > view.x - 200 && at.x < view.right + 200 && at.y > view.y - 200 && at.y < view.bottom + 200;
+    };
+    const homes = this.stops.filter((stop) => stop.zone === 'housing' && near(stop));
+    const sights = this.stops.filter((stop) => near(stop) && (stop.kind === 'quad' || (stop.kind === 'place' && (stop.use === 'food' || stop.use === 'seat'))));
+    if (homes.length === 0 || sights.length === 0) return;
+    for (let n = 0; n < count; n++) {
+      const from = pick(homes)!;
+      const to = pick(sights)!;
+      const student = pick((this.residents.get(from.cell.y * this.width + from.cell.x) ?? []).filter((ref) => this.free(ref)));
+      if (!student) continue;
+      this.queue.push({ from, to, inMs: n * 900, student });
+      const who = Math.floor(Math.random() * 100_000);
+      this.queue.push({ from, to, inMs: n * 900 + 420, student: null, kind: 'parent', extra: { person: { role: 'parent', n: who }, look: parent + (who % 2) } });
+      if (this.onMemory) this.onMemory(student, "Showed their family round on parents' weekend");
+    }
+  }
+
+  /** The week's own events (R2): welcome week's orientation groups, or none. */
+  setWeek(week: 'welcome' | 'parents' | null): void {
+    this.week = week;
   }
 
   // -------------------------------------------------------------- routes --
@@ -1954,7 +1992,7 @@ export class Walkers {
   }
 
   /** A guide with a pennant and two parents behind, on a walk round the campus and back to where they came in. */
-  private startTour(here: readonly Stop[]): boolean {
+  private startTour(here: readonly Stop[], orientation = false): boolean {
     const roles = this.people?.roles;
     if (!roles || roles.guide === undefined || roles.parent === undefined) return false;
     // They set out where the player is looking: from a way onto campus when one is in view, or from any door.
@@ -1986,6 +2024,17 @@ export class Walkers {
       prop: 'people.pennant',
     });
     if (!led) return false;
+    // Orientation (R2): new students behind a leader with the pennant, in welcome week, in place of visitors.
+    if (orientation) {
+      const year = this.everyone[0]?.entryYear ?? 0;
+      const fresh = this.everyone.filter((ref) => ref.entryYear === year && this.free(ref));
+      for (let k = 1; k < ORIENTATION_SIZE && fresh.length > 0; k++) {
+        const student = fresh.splice(Math.floor(Math.random() * fresh.length), 1)[0]!;
+        this.queue.push({ from: begin, to: begin, inMs: k * TOUR_GAP_MS, student, extra: { route: route.map((spot) => ({ ...spot })), pace: PACE * TOUR_PACE } });
+        if (this.onMemory) this.onMemory(student, 'Went round campus with an orientation group');
+      }
+      return true;
+    }
     for (let k = 1; k < TOUR_SIZE; k++) {
       const n = tour * 2 + k;
       this.queue.push({
@@ -2051,6 +2100,8 @@ export class Walkers {
       }
       if (origin && to && look !== undefined && this.start(origin, to, staff < want.staff * 0.6, null, 'staff', { person, look })) return;
     }
+    // Welcome week (R2): orientation groups any day of it, as many as a weekend's tours.
+    if (this.week === 'welcome' && tours < Math.max(2, want.tours) && room >= 2 && this.startTour(here, true)) return;
     if (tours < want.tours && room >= TOUR_SIZE && this.startTour(here)) return;
     if (boosters < want.boosters && roles.booster !== undefined) {
       const from = pick(here.filter((stop) => stop.kind !== 'quad'));

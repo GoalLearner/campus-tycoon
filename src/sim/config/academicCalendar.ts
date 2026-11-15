@@ -19,7 +19,11 @@ export type CalendarEventKind =
   | 'midterms'
   | 'finals'
   | 'commencement'
-  | 'grades'; // a term closes and grades are due
+  | 'grades' // a term closes and grades are due
+  | 'welcome' // move-in and orientation before the fall's first classes (R2, DESIGN.md 66)
+  | 'visit' // families visit campus (R2)
+  | 'rhythm' // a stretch of the year with a feel of its own, for the day line and how students feel (R2)
+  | 'senior'; // the last weeks before commencement, for seniors (R2)
 
 export interface CalendarEntry {
   id: string;
@@ -62,12 +66,19 @@ export const ACADEMIC_CALENDAR: AcademicCalendar = {
   events: [
     // Fall
     { id: 'fallStart', name: 'Fall semester begins', kind: 'start', from: [8, 19, 0] },
+    // Move-in and orientation every year, the days before the first classes (R2).
+    { id: 'welcomeWeek', name: 'Welcome week', kind: 'welcome', from: [8, 19, 0], to: [8, 23, 0] },
     { id: 'fallClasses', name: 'First day of classes', kind: 'classes', from: [8, 24, 0] },
+    { id: 'fallStartWeeks', name: 'First weeks of fall', kind: 'rhythm', from: [8, 24, 0], to: [9, 13, 0] },
     { id: 'laborDay', name: 'Labor Day', kind: 'holiday', from: [9, 7, 0] },
+    // A Friday to a Sunday, early in October, as large publics hold it (R2).
+    { id: 'parentsWeekend', name: "Parents' weekend", kind: 'visit', from: [10, 2, 0], to: [10, 4, 0] },
     // The reference calendar lists no midterms. A week at the middle of each semester is added.
     { id: 'fallMidterms', name: 'Midterm week', kind: 'midterms', from: [10, 12, 0], to: [10, 16, 0] },
+    { id: 'midtermSlump', name: 'Midterm slump', kind: 'rhythm', from: [10, 19, 0], to: [11, 8, 0] },
     { id: 'veteransDay', name: 'Veterans Day', kind: 'holiday', from: [11, 11, 0] },
     { id: 'thanksgiving', name: 'Thanksgiving break', kind: 'break', from: [11, 25, 0], to: [11, 29, 0] },
+    { id: 'fallCrunch', name: 'Finals crunch', kind: 'rhythm', from: [12, 4, 0], to: [12, 11, 0] },
     { id: 'fallLastClasses', name: 'Last day of classes', kind: 'classes', from: [12, 11, 0] },
     { id: 'fallFinals', name: 'Finals week', kind: 'finals', from: [12, 12, 0], to: [12, 18, 0] },
     { id: 'winterBreak', name: 'Winter break', kind: 'break', from: [12, 19, 0], to: [1, 18, 1] },
@@ -77,8 +88,14 @@ export const ACADEMIC_CALENDAR: AcademicCalendar = {
     { id: 'mlkDay', name: 'Martin Luther King Jr. Day', kind: 'holiday', from: [1, 18, 1] },
     { id: 'springStart', name: 'Spring semester begins', kind: 'start', from: [1, 19, 1] },
     { id: 'springClasses', name: 'First day of classes', kind: 'classes', from: [1, 21, 1] },
-    { id: 'springMidterms', name: 'Midterm week', kind: 'midterms', from: [3, 15, 1], to: [3, 19, 1] },
-    { id: 'springBreak', name: 'Spring break', kind: 'break', from: [3, 29, 1], to: [4, 2, 1] },
+    { id: 'springStartWeeks', name: 'First weeks of spring', kind: 'rhythm', from: [1, 21, 1], to: [2, 7, 1] },
+    { id: 'springFatigue', name: 'Spring fatigue', kind: 'rhythm', from: [2, 8, 1], to: [2, 26, 1] },
+    // Midterms, then spring break in the middle of March, as at most large publics (R2: two weeks earlier than before).
+    { id: 'springMidterms', name: 'Midterm week', kind: 'midterms', from: [3, 1, 1], to: [3, 5, 1] },
+    { id: 'springBreak', name: 'Spring break', kind: 'break', from: [3, 15, 1], to: [3, 19, 1] },
+    { id: 'springFatigueLate', name: 'Spring fatigue', kind: 'rhythm', from: [3, 29, 1], to: [4, 28, 1] },
+    { id: 'springCrunch', name: 'Finals crunch', kind: 'rhythm', from: [4, 29, 1], to: [5, 5, 1] },
+    { id: 'seniorWeeks', name: 'Senior goodbyes', kind: 'senior', from: [4, 26, 1], to: [5, 16, 1] },
     { id: 'springLastClasses', name: 'Last day of classes', kind: 'classes', from: [5, 5, 1] },
     { id: 'springFinals', name: 'Finals week', kind: 'finals', from: [5, 6, 1], to: [5, 12, 1] },
     // Graduation

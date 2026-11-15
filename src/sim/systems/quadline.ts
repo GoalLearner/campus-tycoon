@@ -367,7 +367,9 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
   const add = (kind: PostKind, weight: number, a = -1, b = -1): void => {
     if (weight > 0) options.push({ kind, weight: weight / (1 + 0.8 * (posting.counts.get(kind) ?? 0)), a, b });
   };
-  const inClass = read.kinds.has('classes') || read.kinds.has('midterms') || read.kinds.has('finals') || (!read.kinds.has('break') && !read.kinds.has('commencement') && read.kinds.size === 0);
+  // A week with only the year's stretches or a family weekend in it is an ordinary week of classes (R2).
+  const ordinary = [...read.kinds].every((kind) => kind === 'rhythm' || kind === 'senior' || kind === 'visit');
+  const inClass = read.kinds.has('classes') || read.kinds.has('midterms') || read.kinds.has('finals') || (!read.kinds.has('break') && !read.kinds.has('commencement') && ordinary);
   const home = profile.home ?? (ctx.dorms[(h >>> 4) % Math.max(1, ctx.dorms.length)] ?? -1);
   const hall = ctx.halls[(h >>> 6) % Math.max(1, ctx.halls.length)] ?? -1;
   if (read.ids.has('fallStart') || read.ids.has('springStart')) add(year === 0 && read.ids.has('fallStart') ? POST.moveIn : POST.firstWeek, 3, home);
