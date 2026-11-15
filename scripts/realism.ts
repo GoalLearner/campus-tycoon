@@ -92,7 +92,7 @@ export function realismLines(tended: GameState[], alone: GameState): RealismLine
     `tended ${span(of('second'))}; left alone ${neglected.second === null ? 'none' : pct(neglected.second)}`,
   );
   line(
-    'graduation in four years and in six sits between all publics and the most selective (46% to 80%, 63% to 91%)',
+    'graduation in four years and in six sits between all publics and the most selective (46% to 80%, 63% to 91%, a few points more with the Honors College)',
     all.every((one) => one.four !== null && one.six !== null && within(one.four, 0.44, 0.84) && within(one.six, 0.6, 0.95)),
     `four years ${span(of('four', all))}; six years ${span(of('six', all))}`,
   );

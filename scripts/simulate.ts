@@ -2153,6 +2153,8 @@ function assertModelCampus(seed: number): void {
       /** Chapter-days with their lift: chapters neither on probation nor suspended, counted each day, a day's average. */
       lifted: number;
       kept: number;
+      /** Football tickets and stands, a day's average of the yearly line. */
+      tickets: number;
       happy: number;
       stress: number;
       /** Calls from parties a year, and hazing reports in all (DESIGN.md 55). */
@@ -2175,6 +2177,7 @@ function assertModelCampus(seed: number): void {
       let happy = 0;
       let students = 0;
       let income = 0;
+      let tickets = 0;
       let spending = 0;
       let days = 0;
       let left = 0;
@@ -2199,13 +2202,14 @@ function assertModelCampus(seed: number): void {
         const books = budget(state);
         kept += books.kept;
         income += books.incomeTotal;
+        tickets += books.income.find((line) => line.id === 'tickets')?.amount ?? 0;
         spending += books.spending;
         happy += campusHappiness(state).base;
         students += enrollment(state);
         lifted += chapters(state).filter((chapter) => { const status = chapterStatus(state, chapter); return status !== 'probation' && status !== 'suspended'; }).length;
         days += 1;
       }
-      return { lifted: lifted / Math.max(1, days), calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
+      return { tickets: tickets / Math.max(1, days), lifted: lifted / Math.max(1, days), calls: calls / SIX, reports: state.greek.totals.reports - start.greek.totals.reports, kept: kept / days, happy: happy / days, stress: stress / Math.max(1, semesters), students: students / days, left: left / SIX, incidents: incidents / SIX, rating: academicRating(state), published: state.field.academic, rank: state.field.rank, income: income / days, spending: spending / days };
     };
     const campuses: Array<[string, GameState]> = [
       ['the once-a-day campus', eras(of('daily')[0]!.final)],
@@ -2234,7 +2238,7 @@ function assertModelCampus(seed: number): void {
         }
         const words = policyWords(base, spec);
         const on = sixYears(result.state);
-        const d = { calls: on.calls - off.calls, reports: on.reports - off.reports, kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
+        const d = { tickets: on.tickets - off.tickets, calls: on.calls - off.calls, reports: on.reports - off.reports, kept: on.kept - off.kept, happy: on.happy - off.happy, stress: on.stress - off.stress, left: on.left - off.left, incidents: on.incidents - off.incidents, rating: on.rating - off.rating, published: on.published - off.published, rank: on.rank - off.rank, income: on.income - off.income, spending: on.spending - off.spending };
         console.log(`  ${spec.name}`);
         console.log(`      + ${spec.gives}: ${words.gain.join('; ')}`);
         console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
@@ -2247,7 +2251,9 @@ function assertModelCampus(seed: number): void {
           readingDays: d.stress < 0,
           toughGrading: d.left > 0,
           freshmenOnCampus: d.income >= 0 && d.happy <= 0.01,
-          freeStudentSection: d.happy > 0 && d.income <= 0,
+          // Its cost is ticket income, read on its own line: since R1 a happier campus keeps a few more students, whose
+          // tuition can cover the lost tickets on a campus nobody tends (DESIGN.md 65.10).
+          freeStudentSection: d.happy > 0 && d.tickets < 0,
           allNightLibrary: d.stress <= 0 && d.spending > 0,
           parkingFees: d.income > 0 && d.happy < 0,
           quietHours: d.happy < 0.5,
