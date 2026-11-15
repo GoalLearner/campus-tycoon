@@ -3,7 +3,8 @@ import type Phaser from 'phaser';
 /**
  * How big a room's things are when they are out on the map (DESIGN.md 64): the longest side in pixels, beside a
  * figure 36 high. The rooms draw them close up, so a book or a speaker cut for a room would be the size of a person
- * on the lawn. Things drawn for the map (scene.*, prop.*) are left as they are.
+ * on the lawn. Things drawn for the map (scene.*, prop.*) are left as they are, but for the frisbee, drawn larger to
+ * be seen in flight.
  */
 const ON_MAP: Readonly<Record<string, number>> = {
   'room.rug': 40,
@@ -14,8 +15,9 @@ const ON_MAP: Readonly<Record<string, number>> = {
   'room.book': 7,
   'room.notes': 7,
   'room.lute': 15,
-  'room.ball': 6,
-  'room.soccerBall': 7,
+  'room.ball': 8,
+  'prop.frisbee': 12,
+  'room.soccerBall': 9,
   'room.speaker': 10,
   'room.cup': 6,
 };
