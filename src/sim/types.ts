@@ -1437,6 +1437,7 @@ export type LogKind =
   | 'grades'
   | 'writeUps'
   | 'housing'
+  | 'milestones'
   | 'flu'
   | 'teams'
   | 'incident'

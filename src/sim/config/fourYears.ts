@@ -1,3 +1,5 @@
+import type { MajorGroup } from './students';
+
 /**
  * Four years, R2 of the realism pass (DESIGN.md 66, approved 2026-11-14, "Yes, all ten"): the figures for move-in and
  * welcome week, parents' weekend, the year's rhythm, birthdays and turning 21, where students live by class year, the
@@ -55,3 +57,58 @@ export const UNDER_21_DRINKING = 0.35;
  * are counted by (BED_NEED), which are as before: the balance does not move.
  */
 export const ON_CAMPUS_BY_YEAR: readonly [number, number, number, number, number, number] = [0.88, 0.7, 0.45, 0.38, 0.3, 0.25];
+
+// ------------------------------------------------- the milestones of four years --
+
+
+/**
+ * By senior year, the share who did each (NSSE 2025's high-impact practices for seniors: an internship or field
+ * placement about half, research with faculty 22-24%, a culminating senior experience 42-43%; Open Doors 2025: about one
+ * graduate in nine studied abroad, most of them for a summer or less).
+ */
+export const BY_SENIOR_YEAR = { internship: 0.5, research: 0.23, capstone: 0.42, abroad: 0.12 } as const;
+export type Practice = keyof typeof BY_SENIOR_YEAR;
+
+/** How much more or less often a field's students do each, against the campus as a whole. [T, the shape from NSSE by field] */
+export const PRACTICE_TILT: Readonly<Record<MajorGroup, Readonly<Record<Practice, number>>>> = {
+  engineering: { internship: 1.3, research: 1.4, capstone: 1.6, abroad: 0.6 },
+  sciences: { internship: 0.8, research: 1.8, capstone: 1.1, abroad: 0.9 },
+  letters: { internship: 0.9, research: 0.8, capstone: 1, abroad: 1.4 },
+  business: { internship: 1.4, research: 0.4, capstone: 0.8, abroad: 1.1 },
+  education: { internship: 1.3, research: 0.5, capstone: 1.1, abroad: 0.6 },
+  music: { internship: 0.6, research: 0.5, capstone: 1.4, abroad: 1.1 },
+  arts: { internship: 0.8, research: 0.5, capstone: 1.4, abroad: 1.3 },
+  health: { internship: 1.2, research: 0.9, capstone: 0.8, abroad: 0.5 },
+};
+
+/** Of those who study abroad, the share away for a semester (spring of their third year); the rest go for a summer. */
+export const ABROAD_SEMESTER = 0.4;
+/** Of interns, the share whose internship is the summer after their second year; the rest after their third. */
+export const INTERN_EARLY = 0.3;
+
+/** Where students study abroad: the most chosen places (Open Doors 2025). */
+export const ABROAD_PLACES: readonly string[] = ['the United Kingdom', 'Italy', 'Spain', 'France', 'Germany', 'Ireland', 'Japan', 'Costa Rica', 'Australia', 'South Korea', 'Mexico', 'Greece'];
+
+/** Where a field's students intern, in plain words, never a real company. */
+export const INTERN_PLACES: Readonly<Record<MajorGroup, readonly string[]>> = {
+  engineering: ['an engineering firm', 'a power company', 'a robotics startup'],
+  sciences: ['a research lab in the city', 'a biotech company', 'the state parks service'],
+  letters: ['a nonprofit', 'a newspaper', 'the state legislature'],
+  business: ['a bank in the city', 'an accounting firm', 'a marketing agency'],
+  education: ['a school district', 'an after-school program'],
+  music: ['a recording studio', 'the city orchestra'],
+  arts: ['a design studio', 'a museum'],
+  health: ['a hospital', 'a clinic', 'the county health department'],
+};
+
+/** What a field's culminating senior work is called. */
+export const CAPSTONE_NAME: Readonly<Record<MajorGroup, string>> = {
+  engineering: 'a senior design project',
+  sciences: 'a senior thesis',
+  letters: 'a senior thesis',
+  business: 'a capstone project',
+  education: 'student teaching',
+  music: 'a senior recital',
+  arts: 'a senior show',
+  health: 'a capstone placement',
+};

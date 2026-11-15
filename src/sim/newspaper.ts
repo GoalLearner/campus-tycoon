@@ -276,6 +276,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'grades':
         out.push({ weight: 55, headline: `Dean's List Runs to ${Number(entry.data?.deans ?? 0).toLocaleString('en-US')} Names; Probation Letters Go Out Too`, deck: entry.text });
         break;
+      case 'milestones':
+        // Study abroad and summer internships (R2, DESIGN.md 66.4).
+        out.push({ weight: 46, headline: entry.data?.interns ? 'Summer Internships Begin; Business Casual Spotted on Campus' : 'Third-Years Head Abroad for the Spring; Passport Office Briefly Overwhelmed', deck: entry.text });
+        break;
       case 'housing':
         // Moving off campus (R2, DESIGN.md 66.3).
         out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });

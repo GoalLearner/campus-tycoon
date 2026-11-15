@@ -74,6 +74,7 @@ import type { StudentFriends } from './friends';
 import { chapterLift, memberOf } from './greek';
 import { partiesOn } from './parties';
 import { ageOf } from './birthdays';
+import { practicesOf, type Practices } from './fourYears';
 
 /**
  * The student card. Students are cohorts in the simulation and nothing is
@@ -157,12 +158,27 @@ export function classYearOf(state: GameState, ref: StudentRef): number | null {
 /** Students to draw walkers from: up to `perClass` from each class year. */
 export function sampleStudents(state: GameState, perClass = 400): StudentRef[] {
   const out: StudentRef[] = [];
+  // A third-year spending the spring abroad is not on the map that semester (R2, DESIGN.md 66.4).
+  const spring = calendarAt(state.clock).phase === 'spring';
   for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
     const { entryYear, from, size } = classPlaces(state, classYear);
     const take = Math.min(perClass, size);
-    for (let index = from; index < from + take; index++) out.push({ entryYear, index });
+    for (let index = from; index < from + take; index++) {
+      const ref = { entryYear, index };
+      if (spring && classYear === 2 && awayAbroad(state, ref, classYear)) continue;
+      out.push(ref);
+    }
   }
   return out;
+}
+
+/** True for a student abroad for this semester (R2, DESIGN.md 66.4). Only third-years in the spring are. */
+export function awayAbroad(state: GameState, ref: StudentRef, classYear: number): boolean {
+  if (classYear !== 2) return false;
+  const phase = calendarAt(state.clock).phase;
+  if (phase !== 'spring') return false;
+  const subject = majorAt(fixedOf(state.seed, ref).path, semestersIn(ref.entryYear, semesterOf(state))).subject;
+  return practicesOf(state.seed, ref, classYear, MAJORS[subject]!.group, phase).away;
 }
 
 /** Open buildings of one zone, with a running total of their beds or seats, so a number picks a building. */
@@ -515,6 +531,8 @@ export interface StudentCard {
   residence: 'dorm' | 'offCampus' | 'chapter';
   /** Moved out of the halls into town at the start of this class year (R2, DESIGN.md 66.3). */
   movedOut: boolean;
+  /** Their milestones of four years (R2, DESIGN.md 66.4): internships, study abroad, research, senior work. */
+  milestones: Practices;
   /** The chapter a member belongs to (DESIGN.md 51). null for everyone else. */
   chapter: string | null;
   /** The street a student living off campus lives on. null in a dorm, or when nobody lives in town yet. */
@@ -829,6 +847,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     home,
     residence: member?.housed ? 'chapter' : resident ? 'dorm' : 'offCampus',
     movedOut: !resident && movedOutThisYear(seed, ref, classYear),
+    milestones: practicesOf(seed, ref, classYear, MAJORS[majorNow.subject]!.group, calendarAt(state.clock).phase),
     chapter: member?.chapter.name ?? null,
     street: resident ? null : streetOf(state, ref),
     gpa,

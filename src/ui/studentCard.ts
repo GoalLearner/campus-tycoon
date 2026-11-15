@@ -286,6 +286,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   // 3 and 4.
   const grades = row('GPA');
   const club = row('Club');
+  // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
+  const milestones = row('Four years');
 
   // 5. Relationship: the status, and a short note on what it does for this one student.
   const relationship = row('Relationship');
@@ -360,7 +362,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, milestones.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -486,6 +488,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
     setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
+    milestones.line.hidden = card.milestones.lines.length === 0;
+    setText(milestones.value, card.milestones.lines.join(' · '));
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);
     // Single, with their ties known: the old note said what their status did to Happiness, and their ties say it now.

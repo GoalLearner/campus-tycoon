@@ -1,5 +1,6 @@
 import { happyParts, stressOff } from './boosts';
 import { fluShare } from './wellbeing';
+import { tellPractices } from './fourYears';
 import { headCount } from '../format';
 import { friendsHappiness, friendsStress } from './friends';
 import { examsOff } from './policies';
@@ -451,6 +452,8 @@ function onMark(state: GameState, mark: CalendarMark, log: LogEntry[], levels: (
   const words = CALENDAR_LINES[entry.kind];
   const text = begins ? words?.begins : words?.ends;
   if (text) log.push({ tick, kind: 'calendar', text: line(text, entry.name), data: { id: entry.id, begins: begins ? 1 : 0 } });
+  // The milestones of four years (R2, DESIGN.md 66.4): who goes abroad for the spring, and the summer's internships.
+  if (begins && (entry.id === 'springStart' || entry.id === 'summerStart')) tellPractices(state, entry.id, log);
   if (entry.id === 'summerStart' && begins) {
     log.push({ tick, kind: 'calendar', text: SUMMER_START_LINE.replace('{share}', String(Math.round(SUMMER_PRESENCE * 100))), data: { id: entry.id, begins: 1 } });
   }

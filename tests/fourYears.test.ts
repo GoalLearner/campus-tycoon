@@ -6,8 +6,11 @@ import { DAY, T0 } from './helpers';
 import { SEASON_CURVE } from '../src/sim/config/season';
 import type { CalDate } from '../src/sim/config/academicCalendar';
 import { ageOf, birthdayOf, over21Share } from '../src/sim/systems/birthdays';
-import { movedOutThisYear } from '../src/sim/systems/students';
-import { tellMovingOut } from '../src/sim/systems/fourYears';
+import { practicesOf, practiceShares, tellMovingOut } from '../src/sim/systems/fourYears';
+import { awayAbroad, classYearOf, movedOutThisYear, sampleStudents, studentCard } from '../src/sim/systems/students';
+import { MAJORS, type MajorGroup } from '../src/sim/config/students';
+import { BY_SENIOR_YEAR } from '../src/sim/config/fourYears';
+import { calendarAt } from '../src/sim/calendar';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
 
@@ -154,5 +157,52 @@ describe('moving off campus, R2', () => {
     expect(log[0]!.kind).toBe('housing');
     expect(toneProblem(log[0]!.text)).toBeNull();
     expect(JSON.stringify(model.offCampus)).toBe(before);
+  });
+});
+
+describe('internships, study abroad, research and senior work, R2', () => {
+  const SEED = 20261115;
+  const many = Array.from({ length: 6000 }, (_, index) => ({ entryYear: 1, index }));
+  const groups = MAJORS.flatMap((major) => new Array<MajorGroup>(Math.max(1, Math.round(major.share * 10))).fill(major.group));
+  const groupOf = (index: number): MajorGroup => groups[index % groups.length]!;
+
+  it('lands the campus on the real shares by senior year: half an internship, a fifth research, two in five senior work, one in nine abroad', () => {
+    const shares = practiceShares();
+    for (const practice of Object.keys(BY_SENIOR_YEAR) as Array<keyof typeof BY_SENIOR_YEAR>) expect(Math.abs(shares[practice] - BY_SENIOR_YEAR[practice])).toBeLessThan(0.015);
+    const seniors = many.map((ref) => practicesOf(SEED, ref, 3, groupOf(ref.index), 'spring'));
+    const did = (practice: keyof typeof BY_SENIOR_YEAR): number => seniors.filter((one) => one.did[practice]).length / seniors.length;
+    expect(Math.abs(did('internship') - 0.5)).toBeLessThan(0.05);
+    expect(Math.abs(did('research') - 0.23)).toBeLessThan(0.04);
+    expect(Math.abs(did('capstone') - 0.42)).toBeLessThan(0.05);
+    expect(Math.abs(did('abroad') - 0.12)).toBeLessThan(0.03);
+  });
+
+  it('times them: internships in the summers after the second and third years, a semester abroad in the third spring, senior work in the last year', () => {
+    const first = many.map((ref) => practicesOf(SEED, ref, 0, groupOf(ref.index), 'fall'));
+    expect(first.every((one) => one.lines.length === 0 && !one.away)).toBe(true);
+    const summer2 = many.map((ref) => practicesOf(SEED, ref, 1, groupOf(ref.index), 'summer'));
+    const interning = summer2.filter((one) => one.interning).length / many.length;
+    expect(Math.abs(interning - 0.5 * 0.3)).toBeLessThan(0.03);
+    const spring3 = many.map((ref) => practicesOf(SEED, ref, 2, groupOf(ref.index), 'spring'));
+    const away = spring3.filter((one) => one.away).length / many.length;
+    expect(Math.abs(away - 0.12 * 0.4)).toBeLessThan(0.015);
+    expect(many.every((ref) => !practicesOf(SEED, ref, 2, groupOf(ref.index), 'fall').away)).toBe(true);
+    const senior = many.map((ref) => practicesOf(SEED, ref, 3, groupOf(ref.index), 'fall'));
+    expect(senior.some((one) => one.capstone)).toBe(true);
+    expect(many.every((ref) => !practicesOf(SEED, ref, 2, groupOf(ref.index), 'fall').capstone)).toBe(true);
+    for (const one of [...summer2, ...spring3, ...senior].slice(0, 3000)) for (const line of one.lines) expect(toneProblem(line), line).toBeNull();
+  });
+
+  it('leaves a student abroad for the spring off the map that semester, and only then', () => {
+    const model = newGame({ seed: SEED, name: 'Test University', now: T0, campus: 'model' });
+    const spring = advance(model, model.clock.lastSimulatedAt, T0 + 4 * DAY).state;
+    expect(calendarAt(spring.clock).phase).toBe('spring');
+    const sample = sampleStudents(spring);
+    expect(sample.some((ref) => awayAbroad(spring, ref, classYearOf(spring, ref) ?? -1))).toBe(false);
+    const juniors = sample.filter((ref) => classYearOf(spring, ref) === 2).length;
+    expect(juniors).toBeLessThan(400);
+    expect(juniors).toBeGreaterThan(400 * 0.9);
+    const card = studentCard(spring, sample[0]!)!;
+    expect(Array.isArray(card.milestones.lines)).toBe(true);
   });
 });
