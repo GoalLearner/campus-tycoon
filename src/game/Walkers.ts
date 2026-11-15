@@ -1205,7 +1205,7 @@ export class Walkers {
     // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
     const pose = this.poseOf(walker);
     walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
-    walker.sprite.setScale(1, pose.squash);
+    if (walker.sprite.scaleY !== pose.squash) walker.sprite.setScale(1, pose.squash);
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift);
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
@@ -1254,7 +1254,12 @@ export class Walkers {
     }
     // Over the ground of every cell it can reach (a ring is wider than a walker's feet, and the next tile is drawn
     // later), centred where they stand.
-    if (walker.ring) walker.ring.setPosition(at.x, at.y + 0.5).setDepth(Math.ceil(this.iso.sum(walker.x, walker.y)) * 4 + 0.5).setAlpha(walker.alpha * 0.95);
+    if (walker.ring) {
+      const depth = Math.ceil(this.iso.sum(walker.x, walker.y)) * 4 + 0.5;
+      walker.ring.setPosition(at.x, at.y + 0.5);
+      if (walker.ring.depth !== depth) walker.ring.setDepth(depth);
+      if (walker.ring.alpha !== walker.alpha * 0.95) walker.ring.setAlpha(walker.alpha * 0.95);
+    }
     if (walker.key !== null && walker.key === this.marked) {
       // A ring on the ground under the student whose card is open.
       const ring = this.ring ?? this.scene.add.ellipse(0, 0, 10, 10).setStrokeStyle(3, 0xffd24a, 1);
