@@ -335,7 +335,7 @@ describe('saves', () => {
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

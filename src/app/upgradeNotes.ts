@@ -108,5 +108,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 30) {
     notes.push('New: a social campus. Every student now meets people, makes friends, dates, breaks up and clashes, week by week, all 46,000 of them if you have that many. Students who arrive from now on have a wider choice of first names. More of it comes to the cards and the map in the next updates.');
   }
+  if (fromVersion < 31) {
+    notes.push('New: the numbers are real ones. First-years leave more than seniors, and every student who leaves has a reason, on the Scorecard and in the paper. Some seniors take a fifth or sixth year. Majors, grades, sleep, Stress, homesickness, loneliness and flu season follow real figures, and the Dean’s list and probation are on the cards. Your rank and Happiness keep more of them.');
+  }
   return notes;
 }

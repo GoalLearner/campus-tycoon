@@ -715,7 +715,7 @@ describe('saves', () => {
 
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
-      expect(notes).toHaveLength(11);
+      expect(notes).toHaveLength(12);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

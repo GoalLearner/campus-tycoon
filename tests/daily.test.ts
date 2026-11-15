@@ -755,7 +755,7 @@ describe('a save from version 17', () => {
   it('is told what is new, once', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
-    expect(notes).toHaveLength(13);
+    expect(notes).toHaveLength(14);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

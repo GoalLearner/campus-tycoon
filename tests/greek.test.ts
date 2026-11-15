@@ -356,7 +356,7 @@ describe('saves', () => {
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
-      expect(notes).toHaveLength(6);
+      expect(notes).toHaveLength(7);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

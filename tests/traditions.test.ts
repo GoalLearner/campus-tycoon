@@ -253,7 +253,7 @@ describe('saves', () => {
       expect(validate(week)).toBeNull();
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
-      expect(notes).toHaveLength(7);
+      expect(notes).toHaveLength(8);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

@@ -1,4 +1,5 @@
 import { storySpec } from '../src/sim/systems/storyteller';
+import { realismLines } from './realism';
 import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { catchUp, census, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { effectsSound, friendsEffectsOf } from '../src/sim/systems/friends';
@@ -2497,6 +2498,11 @@ function assertModelCampus(seed: number): void {
   }
 
   check('the model campus validates when it opens and after its longest run', validate(opening) === null && runs.every((run) => validate(run.final) === null), `checked by the validation every save goes through, at opening and after ${PACE_WEEKS} weeks with each player`);
+
+  // The realism pass (DESIGN.md 65.10): every campus played, and the one left alone, read against the real figures.
+  console.log('');
+  console.log('THE REAL FIGURES (DESIGN.md 65)');
+  for (const one of realismLines(runs.map((run) => run.final), alone.final)) check(one.name, one.ok, one.detail);
 }
 
 // ------------------------------------------------------------------- main --

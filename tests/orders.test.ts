@@ -855,7 +855,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
-      expect(notes).toHaveLength(12);
+      expect(notes).toHaveLength(13);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

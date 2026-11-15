@@ -24,7 +24,7 @@ export const HOLIDAY_WALKERS = 0.35;
  *
  * Since R1 (DESIGN.md 65.5, his decision 6) an ordinary week is a real one: about a third of students say stress or
  * anxiety hurt their studies (ACHA-NCHA 2024), and first-years rate an ordinary week of term not far below finals
- * (3.4, then 3.57 at midterms and 3.95 at finals, out of 5: UCLA, 2015). The shape is the same; the hum is higher.
+ * (3.4, then 3.57 at midterms and 3.95 at finals, out of 5: a survey of first-years, 2015). The shape is the same; the hum is higher.
  */
 export const SEASON_CURVE = {
   break: 0.15,

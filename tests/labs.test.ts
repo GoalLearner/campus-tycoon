@@ -303,7 +303,7 @@ describe('saves', () => {
       day.money.cash = 2_000_000_000;
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
-      expect(notes).toHaveLength(8);
+      expect(notes).toHaveLength(9);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });

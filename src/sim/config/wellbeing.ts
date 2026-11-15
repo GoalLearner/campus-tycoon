@@ -37,7 +37,7 @@ export const LONELY = {
 export const LONELY_CLOSE_AT = 30;
 
 /**
- * Flu season: in one season 37% of a university cohort had a flu-like illness (a University of Minnesota cohort), and
+ * Flu season: in one season 37% of a university cohort had a flu-like illness (a cohort study), and
  * the season runs from December to February, at its height late in January and February (CDC). [T] The share who
  * fall ill in a year's season; the season's first day (December 1) and its length in days; where in it most fall ill
  * (a share of the way through); and how long a bout lasts, from fewest days to most.

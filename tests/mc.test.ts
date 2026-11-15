@@ -275,7 +275,7 @@ describe('saves', () => {
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
-      expect(notes).toHaveLength(3);
+      expect(notes).toHaveLength(4);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

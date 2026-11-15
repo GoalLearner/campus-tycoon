@@ -369,7 +369,7 @@ describe('sleep, Stress, homesickness, loneliness and the flu', () => {
       most = Math.max(most, share);
       for (let index = 0; index < 600; index++) if (fluOf(state.seed, { entryYear: 1, index }, state.clock).sick) ill.add(index);
     }
-    // A University of Minnesota cohort: 37% in one season; a few in a hundred at once at its height.
+    // A university cohort study: 37% in one season; a few in a hundred at once at its height.
     expect(ill.size / 600).toBeGreaterThan(0.3);
     expect(ill.size / 600).toBeLessThan(0.44);
     expect(most).toBeGreaterThan(0.015);

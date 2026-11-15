@@ -351,7 +351,7 @@ describe('saves', () => {
       const day = to(state, file.savedAt + DAY).state;
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
-      expect(notes).toHaveLength(10);
+      expect(notes).toHaveLength(11);
       expect(notes[0]).toMatch(/gift each day/);
     });
 
