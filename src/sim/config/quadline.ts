@@ -1,0 +1,437 @@
+/**
+ * Quadline, the campus app (DESIGN.md 63.13): its sizes and every word it writes. Students post about what really
+ * happens to them in the game, written from these templates on the phone: no AI service and no free text anywhere.
+ * A post is kept as a few numbers (who, which kind, which line, about whom or what, when) and its words are rebuilt
+ * from here when it is shown, so every line the app can ever say is in this file, and `tests/hardLines.test.ts`
+ * reads all of it against the hard lines and the tone guide.
+ *
+ * Slots in a line: {name} the other student's first name; {place} a building's name; {team}
+ * the school's team, {opp} the other school, {us} and {them} the score; {tradition}, {club}, {chapter} by name.
+ * Tokens in square brackets are the game's own emotes (decision 9, "Ours"): [heart] is drawn as the heart emote.
+ * No line names a real brand or a real person; none is about drinking; none mocks anyone for who they are.
+ */
+
+import { FAVOURITES } from './students';
+
+/** The newest posts kept, and room for the viral ones the campus remembers longer (stop 10). */
+export const POSTS_KEPT = 400;
+export const VIRAL_KEPT = 30;
+/** A post's numbers: week, minute, author (entry year, index), kind, line luck, about (two numbers), tone, picture. */
+export const POST_FIELDS = 10;
+
+/**
+ * How busy the feed is (decision 4, "Normal"): posts from across the campus each game week, sampled, about 250 to 350
+ * a real day; the Main Character, followed students and named regulars post on top of these, every post of theirs.
+ */
+export const CAMPUS_POSTS_A_WEEK = 22;
+/**
+ * The share of the week's named happenings that one of the two posts about, by kind: news of a new couple or a new
+ * best friend often, an ending now and then, so the feed is mostly the campus's life and not its breakups.
+ */
+export const HAPPENING_POSTS: Partial<Record<number, number>> = { 0: 0.5, 1: 0.4, 2: 0.2, 3: 0.15, 4: 0.15, 5: 0.25 }; // by POST kind: couple, best, long-term, split, messy split, back together
+/** How often an ex or a rival answers a couple's post with a post of their own, naming them (decision 5, "Named"). */
+export const SHADE_POSTS = 0.3;
+/** How many posts a featured student makes a game week, at most: the Main Character, the followed, named regulars. */
+export const FEATURED_POSTS = { main: 3, followed: 2, named: 1 } as const;
+/** How likely each kind of student posts when their turn comes (decision: personality sets how often). */
+export const POST_RATE: Record<string, number> = {
+  attention: 1,
+  party: 0.75,
+  clown: 0.75,
+  charmer: 0.6,
+  superfan: 0.6,
+  butterfly: 0.35,
+  athlete: 0.5,
+  pledge: 0.55,
+  greekLoyalist: 0.55,
+  ra: 0.4,
+  slacker: 0.35,
+  broke: 0.35,
+  superSenior: 0.35,
+  commuter: 0.25,
+  scholar: 0.25,
+  stressed: 0.4,
+  allNighter: 0.4,
+  heartbroken: 0.3,
+  homesick: 0.15,
+  lost: 0.15,
+};
+/** A Social Butterfly mostly comments: how much likelier they are to be among a post's commenters. */
+export const COMMENTER_LEAN: Record<string, number> = { butterfly: 3, charmer: 2, attention: 2, clown: 2 };
+
+/** The kinds of post, by number, as a post keeps them. */
+export const POST = {
+  couple: 0,
+  best: 1,
+  longterm: 2,
+  split: 3,
+  splitMessy: 4,
+  backTogether: 5,
+  shade: 6,
+  roommate: 7,
+  moveIn: 8,
+  firstWeek: 9,
+  midterms: 10,
+  finals: 11,
+  studyGroup: 12,
+  breakHome: 13,
+  commencement: 14,
+  eightAm: 15,
+  snow: 16,
+  rain: 17,
+  warm: 18,
+  gameDay: 19,
+  gameWon: 20,
+  gameLost: 21,
+  tradition: 22,
+  bidDay: 23,
+  newBuilding: 24,
+  complaint: 25,
+  praise: 26,
+  party: 27,
+  club: 28,
+  food: 29,
+  gym: 30,
+} as const;
+export type PostKind = (typeof POST)[keyof typeof POST];
+
+/** A post's mood (decision: mood colours the tone): the good lines or the rough ones, where a kind has both. */
+export const TONE = { good: 0, rough: 1 } as const;
+
+/** The small pictures some posts carry, drawn from the game's own sprites (decision 3, "Scenes"). 0 is none. */
+export const SCENE = { none: 0, couple: 1, friends: 2, party: 3, game: 4, building: 5, snow: 6, study: 7, tradition: 8, grad: 9 } as const;
+export type SceneKind = (typeof SCENE)[keyof typeof SCENE];
+
+/** The game's emotes a line may use, each an `emote.` sprite. */
+export const POST_EMOTES: Record<string, string> = {
+  heart: 'emote.heart',
+  sparkle: 'emote.sparkle',
+  laugh: 'emote.laugh',
+  sad: 'emote.sadcloud',
+  music: 'emote.music',
+  sweat: 'emote.sweat',
+  wow: 'emote.exclaim',
+  party: 'emote.chat-partying',
+  book: 'emote.chat-studying',
+  ball: 'emote.chat-sports',
+  wave: 'emote.wave',
+  hug: 'emote.hug',
+  high: 'emote.highfive',
+};
+
+export interface PostWords {
+  /** The hashtags it may carry, one chosen. `{nick}` is the team's name. */
+  tags: readonly string[];
+  /** Its lines when the author is in a good mood, or its only lines. */
+  good: readonly string[];
+  /** Its lines when the author is having a rough time, where the kind has both. */
+  rough?: readonly string[];
+  /** The picture it may carry, and how often. */
+  scene?: SceneKind;
+  sceneShare?: number;
+}
+
+/** Every post, kind by kind. */
+export const POST_WORDS: Record<PostKind, PostWords> = {
+  [POST.couple]: {
+    tags: ['NewCouple'],
+    good: [
+      'officially off the market [heart]',
+      '{name} and me. that is the post [heart]',
+      '{name} asked me to the dining hall and now we are a thing [heart]',
+      'not me smiling at my phone through a whole lecture. thanks {name} [heart]',
+      'took us a whole semester but here we are [sparkle]',
+    ],
+    scene: SCENE.couple,
+    sceneShare: 0.6,
+  },
+  [POST.best]: {
+    tags: ['BestFriends'],
+    good: [
+      'found my person. {name} is stuck with me now [sparkle]',
+      'shout out to {name} for answering every 2 AM text [hug]',
+      '{name} knows my coffee order and my whole timetable. best friend status [sparkle]',
+      'me and {name}, the duo nobody asked for [laugh]',
+    ],
+    scene: SCENE.friends,
+    sceneShare: 0.5,
+  },
+  [POST.longterm]: {
+    tags: ['Couple'],
+    good: ['still my favourite person. {name} [heart]', 'another semester with {name}. lucky me [heart]', '{name} made me soup during midterms. keeper [heart]'],
+    scene: SCENE.couple,
+    sceneShare: 0.5,
+  },
+  [POST.split]: {
+    tags: ['NewChapter', 'SingleAgain'],
+    good: [
+      'we were good for a while. that counts for something',
+      'some chapters end kindly. this one did',
+      'single again. the dining hall and I are going steady [laugh]',
+      'quiet night, slow songs, it is fine, it is fine [music]',
+    ],
+  },
+  [POST.splitMessy]: {
+    tags: ['MovingOn'],
+    good: ['deleting the photos. all of them', 'well. that happened [sad]', 'new semester energy starts now. do not text me', 'phone off for a week [sad]'],
+  },
+  [POST.backTogether]: {
+    tags: ['BackTogether'],
+    good: ['okay so {name} and I are trying again. do not say it [heart]', 'yes we are back. yes I know what I said [laugh]'],
+    scene: SCENE.couple,
+    sceneShare: 0.4,
+  },
+  [POST.shade]: {
+    tags: ['JustSaying'],
+    good: [
+      '{name} moved on fast. good for them I guess',
+      'funny how {name} has time to post but not to text back',
+      'saw {name} in the dining hall acting brand new',
+      '{name} really thinks the whole campus is watching. we are not',
+      'not naming names but {name} knows',
+      'classic {name}. such a show-off',
+    ],
+  },
+  [POST.roommate]: {
+    tags: ['RoommateRants'],
+    good: [
+      'roommate microwaved fish at 2 AM. we need to talk',
+      'roommate set the thermostat to arctic again [sweat]',
+      'whose dishes are these. asking for a friend. the friend is me',
+      'roommate alarm went off six times. I was awake for all six',
+      'roommate has a group call at midnight every night. every. night.',
+    ],
+  },
+  [POST.moveIn]: {
+    tags: ['MoveInDay', 'NewHere'],
+    good: [
+      'move-in day. carried a mini fridge up four flights [sweat]',
+      'first night in {place}. it smells like new paint and nerves',
+      'my parents just left and I already miss the car snacks',
+      'met my whole floor in one afternoon [wave]',
+    ],
+  },
+  [POST.firstWeek]: {
+    tags: ['FirstWeek', 'BackOnCampus'],
+    good: ['back on campus. same bench, new semester [sparkle]', 'bought every textbook. read zero. classic start [laugh]', 'new semester, new planner, new me. for about a week'],
+    rough: ['first week of classes and I already lost my timetable [sweat]', 'syllabus week said four essays. four. [sweat]'],
+  },
+  [POST.midterms]: {
+    tags: ['MidtermWeek'],
+    good: ['midterms? so ready. probably [book]', 'study playlist on, snacks out, let us go [music]', 'one midterm down. we are so back [sparkle]'],
+    rough: ['midterm week. my sleep schedule has left the building [sweat]', 'read the same page four times. it did not help [sweat]', 'my notes from week two are written in a language I no longer speak'],
+  },
+  [POST.finals]: {
+    tags: ['FinalsWeek'],
+    good: ['last final done. I am free [sparkle]', 'flashcards finished. we ride at dawn [book]', 'finals week but make it organised [book]'],
+    rough: ['4 hours of sleep and a 9 AM final [sweat]', 'the library at 3 AM has a whole crowd. we are a community now', 'if you see me in {place} talking to my notes, no you did not [sweat]'],
+    scene: SCENE.study,
+    sceneShare: 0.25,
+  },
+  [POST.studyGroup]: {
+    tags: ['StudyGroup'],
+    good: [
+      'study group in {place} tonight. bring snacks [book]',
+      'whoever left the colour-coded notes in {place}, thank you [sparkle]',
+      'study group became snack group within an hour. no regrets [laugh]',
+    ],
+    scene: SCENE.study,
+    sceneShare: 0.4,
+  },
+  [POST.breakHome]: {
+    tags: ['BreakTime', 'HomeForBreak'],
+    good: ['home for the break. my old room is a guest room now [laugh]', 'break mode on. alarm off', 'my family asked what my major is for. I said vibes [laugh]'],
+  },
+  [POST.commencement]: {
+    tags: ['Commencement', 'Graduated'],
+    good: ['walked across that stage. we did it [sparkle]', 'four years, one diploma, a hundred dining hall dinners [heart]', 'cap decorated, tissues ready. thank you for everything [heart]'],
+    scene: SCENE.grad,
+    sceneShare: 0.6,
+  },
+  [POST.eightAm]: {
+    tags: ['EightAM'],
+    good: ['8 AM lecture and I made it. on time. somebody tell my family [sparkle]', 'early class, sunrise walk, honestly not bad'],
+    rough: ['who decided 8 AM lectures were a good idea [sweat]', 'the 8 AM lecture hall is so quiet you can hear us all yawning', 'my 8 AM and I are not on speaking terms'],
+  },
+  [POST.snow]: {
+    tags: ['SnowDay'],
+    good: ['snow on the quad! [sparkle]', 'walked to class in the snow. both ways. uphill [laugh]', 'snowball match outside {place} after class. be there'],
+    scene: SCENE.snow,
+    sceneShare: 0.6,
+  },
+  [POST.rain]: {
+    tags: ['RainyDay'],
+    good: ['rain on the windows and a mug of tea. study mood [music]'],
+    rough: ['forgot my umbrella. again [sweat]', 'my shoes are still wet from this morning [sweat]'],
+  },
+  [POST.warm]: {
+    tags: ['FirstWarmDay'],
+    good: ['first warm day and the whole campus is on the quad [sparkle]', 'sunglasses weather. finally', 'class outside today. best professor ever [sparkle]'],
+  },
+  [POST.gameDay]: {
+    tags: ['GameDay', 'Go{nick}'],
+    good: ['game day. {team} all the way [ball]', 'who is going to the game against {opp}? [wow]', 'game day outfit: ready. voice: ready [ball]'],
+    scene: SCENE.game,
+    sceneShare: 0.5,
+  },
+  [POST.gameWon]: {
+    tags: ['Go{nick}', 'GameDay'],
+    good: ['WE WON. {us} to {them} [wow]', 'still shaking from that last quarter. what a game [sparkle]', '{opp} came all this way for that? [laugh]'],
+    scene: SCENE.game,
+    sceneShare: 0.5,
+  },
+  [POST.gameLost]: {
+    tags: ['NextTime'],
+    good: ['tough one against {opp}. we go again next week', '{them} to {us}. still proud of this team [heart]'],
+  },
+  [POST.tradition]: {
+    tags: ['Tradition'],
+    good: ['who is going to the {tradition}? [sparkle]', '{tradition} tonight. best night of the year [heart]', 'first {tradition} and I finally get it [sparkle]'],
+    scene: SCENE.tradition,
+    sceneShare: 0.5,
+  },
+  [POST.bidDay]: {
+    tags: ['BidDay'],
+    good: ['bid day! {chapter}, here I come [sparkle]', 'new family, same campus. {chapter} [heart]'],
+    scene: SCENE.friends,
+    sceneShare: 0.4,
+  },
+  [POST.newBuilding]: {
+    tags: ['NewOnCampus'],
+    good: ['the new {place} is open and honestly it is beautiful [sparkle]', 'checked out the new {place}. ten out of ten [wow]', 'new building smell at {place}. I live here now'],
+    scene: SCENE.building,
+    sceneShare: 0.85,
+  },
+  // A complaint or praise: the lines come from `CAUSE_POSTS` by what it is about; these are the general ones.
+  [POST.complaint]: { tags: ['CampusLife'], good: ['this campus needs a little work, honestly'] },
+  [POST.praise]: { tags: ['CampusLife'], good: ['love this campus more every week [heart]'] },
+  [POST.party]: {
+    tags: ['WeekendVibes', 'PartyNight'],
+    good: ['best night of the semester [party]', 'the playlist tonight was perfect [music]', 'danced until they turned the lights on [music]', 'party on the lawn. bring snacks [party]'],
+    scene: SCENE.party,
+    sceneShare: 0.6,
+  },
+  [POST.club]: {
+    tags: ['ClubLife'],
+    good: ['{club} meeting tonight. new members welcome [wave]', 'joined {club} and I already have six new friends [sparkle]', '{club} is the best part of my week'],
+  },
+  // A favourite place to eat: the lines are the cards' own favourites (FAVOURITES in config/students.ts).
+  [POST.food]: { tags: ['FoodReview'], good: ['lunch was actually good today [sparkle]'] },
+  [POST.gym]: {
+    tags: ['GymTime'],
+    good: ['leg day done. the stairs and I are not friends now', 'new personal best at the rec center [ball]', 'gym at 6 AM. who even am I [sweat]'],
+  },
+};
+
+/** What a complaint or praise is about: each part of Happiness, and beds and seats. */
+export const CAUSE_TOPICS = ['walk', 'green', 'clean', 'seating', 'noise', 'dining', 'recreation', 'safety', 'beds', 'seats'] as const;
+export type CauseTopic = (typeof CAUSE_TOPICS)[number];
+
+/** A complaint (rough) and praise (good) for each, aimed at the place itself, never at a person. */
+export const CAUSE_POSTS: Record<CauseTopic, { tag: string; good: readonly string[]; rough: readonly string[] }> = {
+  walk: {
+    tag: 'LongWalk',
+    good: ['class is right outside my door. best thing about this place [sparkle]', 'rolled out of my room and into my seat in four minutes. elite'],
+    rough: [
+      'the walk from my door to class is a whole workout [sweat]',
+      'my step count is up and my mood is down. the walk to class is so long',
+      'left early and still late. this campus needs a shortcut',
+    ],
+  },
+  green: {
+    tag: 'NeedSomeGreen',
+    good: ['the lawn outside {place} in the afternoon. that is the post [sparkle]', 'read on the grass by {place} today. ten out of ten'],
+    rough: [
+      'not one tree near {place}. I would settle for one patch of grass',
+      'all I can see from my window is more buildings',
+      'is there grass on this campus? asking from {place}',
+    ],
+  },
+  clean: {
+    tag: 'CleanUp',
+    good: ['campus is so tidy today. whoever does this, thank you [heart]', 'the paths by {place} are spotless. who is the hero'],
+    rough: ['the litter by {place} has its own postcode at this point', 'someone please empty the bins by {place}', 'stepped over three cups on the way to class. come on, everyone'],
+  },
+  seating: {
+    tag: 'NoBenches',
+    good: ['found the best bench on campus. not telling anyone where', 'lunch on a bench by {place}. small joys'],
+    rough: ['nowhere to sit outside {place}. ate lunch standing up again', 'we need a bench by {place}. even one. I am begging', 'sat on the steps of {place} because there is nowhere else'],
+  },
+  noise: {
+    tag: 'TooLoud',
+    good: ['so quiet by {place} I can hear the birds', 'quiet hours at {place} actually work. thank you'],
+    rough: ['studied with a pillow over my ears again. so loud by {place}', 'the stadium crowd made my notes vibrate', 'game night noise reached my room in {place}. again'],
+  },
+  dining: {
+    tag: 'DiningDrama',
+    good: ['the dining hall is so close I go in my slippers', 'the food near {place} is actually good now. who did this [wow]'],
+    rough: ['nowhere to eat near {place}. it has been cereal for three days', 'mystery casserole is back. it knows what it did', 'the line for lunch near {place} went out the door'],
+  },
+  recreation: {
+    tag: 'NothingToDo',
+    good: ['pickup game by {place} every night. come through [ball]', 'the rec center is so close I have no excuses left'],
+    rough: [
+      'nothing to do near {place} but homework. please give us a court',
+      'tried to find a game by {place}. found a parking space and a sad bin',
+      'bored in {place} on a Friday. the campus needs somewhere to play',
+    ],
+  },
+  safety: {
+    tag: 'CampusSafety',
+    good: ['walked home late and felt totally fine. campus feels safe [heart]', 'campus safety walked me back to {place}. legends'],
+    rough: ['nobody came when the lights went out by {place}. a little help?', 'the path by {place} is so gloomy at night. more help nearby please'],
+  },
+  beds: {
+    tag: 'HousingWoes',
+    good: ['got a single in {place}. a whole closet to myself [sparkle]', 'my room in {place} has space for a plant. living the dream'],
+    rough: ['three to a room in {place}. we have one closet', 'still on the waitlist for a room. couch life [sweat]', 'my room in {place} is a closet with a window'],
+  },
+  seats: {
+    tag: 'NoSeats',
+    good: ['actual seats in every lecture this semester. spoiled', 'got my favourite seat in {place} again [sparkle]'],
+    rough: ['no seats in {place} again. sat on the floor the whole lecture', 'lecture so full people were standing in the doorway', 'arrived ten minutes early to {place}. still no seat'],
+  },
+};
+
+/** Comments, made when a post is opened, by who writes them. {name} in shade is the post's author. */
+export const COMMENT_LINES = {
+  /** A friend or partner on good news about a couple or a friendship. */
+  cheer: ['FINALLY. told you so', 'you two [heart]', 'love this for you', 'called it [laugh]', 'my favourite pair on campus'],
+  /** The one the post is about, answering. */
+  reply: ['stuck with you forever [heart]', 'the duo [sparkle]', 'okay this is so sweet'],
+  /** A friend on sad news. */
+  comfort: ['here if you need me [hug]', 'dinner on me this week', 'you deserve better days [heart]', 'sending a hug [hug]'],
+  /** Anyone on a complaint, exams, the 8 AM, the weather, a roommate. */
+  relate: ['so real', 'same [sweat]', 'this is my whole week', 'saving this', 'felt this'],
+  /** Anyone on a game, a party, a tradition, a club, a new building. */
+  hype: ['lets go [wow]', 'see you there', 'save me a spot', 'best night [sparkle]', 'I am in'],
+  /** Anyone, on anything light. */
+  laugh: ['[laugh] [laugh]', 'not you posting this', 'okay this one got me [laugh]'],
+  /** An ex or a rival, naming the author (decision 5, "Named"): petty, never an insult beyond the mild names allowed. */
+  shade: ['sure, {name}. sure.', 'bold post, {name}', '{name} said the same thing last semester', 'classic {name}', 'okay show-off', 'okay try-hard', 'we get it, {name}'],
+} as const;
+export type CommentKind = keyof typeof COMMENT_LINES;
+
+/** A kind's lines as a post of it reads them: by its mood, and for a complaint, praise or meal by what it is about. */
+export function postLines(kind: PostKind, tone: number, a: number): readonly string[] {
+  if (kind === POST.complaint || kind === POST.praise) {
+    const topic = CAUSE_POSTS[CAUSE_TOPICS[a] ?? 'walk'];
+    return kind === POST.complaint ? topic.rough : topic.good;
+  }
+  if (kind === POST.food) {
+    const kinds = Object.keys(FAVOURITES);
+    const lines = FAVOURITES[kinds[((a % kinds.length) + kinds.length) % kinds.length]!];
+    if (lines) return lines;
+  }
+  const words = POST_WORDS[kind] ?? POST_WORDS[POST.praise];
+  return tone === TONE.rough && words.rough ? words.rough : words.good;
+}
+
+/** Every line Quadline can write, for the hard-lines scan. */
+export function quadlineTemplates(): string[] {
+  const out: string[] = [];
+  for (const words of Object.values(POST_WORDS)) out.push(...words.tags, ...words.good, ...(words.rough ?? []));
+  for (const topic of Object.values(CAUSE_POSTS)) out.push(topic.tag, ...topic.good, ...topic.rough);
+  for (const lines of Object.values(COMMENT_LINES)) out.push(...lines);
+  return out;
+}
