@@ -1,4 +1,4 @@
-import type { GameState, StudentRef } from '../sim';
+import { enrollment, type GameState, type StudentRef } from '../sim';
 import {
   CAUSE_POSTS,
   CAUSE_TOPICS,
@@ -23,6 +23,7 @@ import { bullyingTimes } from '../sim/systems/policies';
 import type { OfficialPost } from '../sim/types';
 import { classYearOf, firstNameOf, socialProfile, studentName } from '../sim/systems/students';
 import { idIn, refIn, type WebView } from './socialView';
+import { rackPosts } from './wheels';
 
 /**
  * Quadline on the phone (DESIGN.md 63.13): a post's words rebuilt from its numbers and the templates, when it went up,
@@ -38,7 +39,10 @@ const enrolled = (state: GameState, ref: StudentRef): boolean => classYearOf(sta
 
 /** The feed, newest first: every kept post whose author is still a student. */
 export function feedOf(view: WebView, state: GameState): Post[] {
-  return postsOf(view.posts, view.viral).filter((post) => enrolled(state, post.author));
+  const kept = postsOf(view.posts, view.viral).filter((post) => enrolled(state, post.author));
+  // Bike parking (DESIGN.md 64.6): the app's own complaints while racks are short, among the rest by when they went up.
+  const racks = rackPosts(view, state, enrollment(state));
+  return racks.length === 0 ? kept : [...kept, ...racks].sort((x, y) => y.week - x.week || y.minute - x.minute);
 }
 
 /** The other student a post is about, if it is about one. */

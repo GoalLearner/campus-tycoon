@@ -111,7 +111,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     addPlaced(map, type, x, y, -1);
     if (counted) {
       seen(x, y, spec.w, spec.h);
-      if (spec.family !== 'bin' && spec.family !== 'seat') buildings += 1;
+      if (spec.family !== 'bin' && spec.family !== 'seat' && spec.family !== 'rack') buildings += 1;
     }
   };
   const small = (type: 'bin' | 'bench' | 'table', cells: readonly Point[]): void => {

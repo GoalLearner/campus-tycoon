@@ -454,7 +454,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const homeWord = hall ?? (card.residence === 'chapter' ? `the ${card.chapter} house` : null);
     const today = regularToday(state, ref, card);
     const unseen = today?.now ? plannedText(state, card, today.now) : lastDoing ? indoorsText(lastDoing) : awayText(state, card);
-    setText(doing.value, named(outside ? doingText(session.doing!) : unseen, homeWord));
+    // On wheels (DESIGN.md 64.6): "Heading to the Library, on a bike".
+    setText(doing.value, named(outside ? `${doingText(session.doing!)}${session.riding ? `, ${session.riding}` : ''}` : unseen, homeWord));
     follow.disabled = !outside;
     // Someone staying put has nowhere to be followed to.
     follow.hidden = stayingWords(session.doing) !== null;

@@ -5115,6 +5115,18 @@
     }
    ]
   },
+  "emote.bell": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/bell.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
   "emote.speech": {
    "layers": [
     {
@@ -5532,6 +5544,162 @@
       0.5
      ],
      "scale": 0.485
+    }
+   ]
+  },
+  "wheel.bike.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/bike-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.74
+    }
+   ]
+  },
+  "wheel.bike.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/bike-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.74
+    }
+   ]
+  },
+  "wheel.skateboard.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/skateboard-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.64
+    }
+   ]
+  },
+  "wheel.skateboard.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/skateboard-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.64
+    }
+   ]
+  },
+  "wheel.longboard.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/longboard-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.64
+    }
+   ]
+  },
+  "wheel.longboard.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/longboard-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.64
+    }
+   ]
+  },
+  "wheel.kick.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/kick-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.62
+    }
+   ]
+  },
+  "wheel.kick.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/kick-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.62
+    }
+   ]
+  },
+  "wheel.escooter.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/escooter-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.66
+    }
+   ]
+  },
+  "wheel.escooter.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/escooter-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.66
+    }
+   ]
+  },
+  "wheel.skates.sw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/skates-sw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.47
+    }
+   ]
+  },
+  "wheel.skates.nw": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/skates-nw.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.47
+    }
+   ]
+  },
+  "grounds.rack": {
+   "layers": [
+    {
+     "file": "_rendered/ours/wheels/rack.png",
+     "stand": [
+      0.5,
+      0.62
+     ],
+     "scale": 1.1
     }
    ]
   },

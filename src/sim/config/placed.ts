@@ -16,7 +16,7 @@ const LAB_EFFECT = `Findings to collect, and discoveries of its own. Faster near
  * Every number is a tuning target [T].
  */
 
-export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era' | 'lab' | 'chapter';
+export type PlacedFamily = 'library' | 'dining' | 'store' | 'recreation' | 'tutoring' | 'water' | 'medical' | 'safety' | 'parking' | 'bin' | 'seat' | 'rack' | 'yard' | 'landmark' | 'athletics' | 'reward' | 'decor' | 'era' | 'lab' | 'chapter';
 
 export interface PlacedSpec {
   name: string;
@@ -189,6 +189,12 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Picnic table', category: 'Grounds', family: 'seat', w: 1, h: 1, cost: 4_000, upkeepPerYear: 0,
     radius: 3, strength: 0, effect: 'Seating, and more social life near dining or Academic lots', sprite: 'grounds.table', flat: false, buildable: true,
   },
+  // The living campus, L5 (DESIGN.md 64.6): riders park at it. It is for show and costs only its price: no upkeep, no
+  // utilities, no opening, nothing in any sum. Without enough of them bikes lean on trees and walls.
+  rack: {
+    name: 'Bike rack', category: 'Grounds', family: 'rack', w: 1, h: 1, cost: 1_200, upkeepPerYear: 0,
+    radius: 4, strength: 0, effect: 'Somewhere to park bikes and scooters within 4 cells', sprite: 'grounds.rack', flat: false, buildable: true, utilitiesPerYear: 0,
+  },
   yard: {
     name: 'Facilities Yard', category: 'Grounds', family: 'yard', w: 2, h: 1, cost: 60_000, upkeepPerYear: 0,
     radius: 16, strength: 0, effect: 'Its workers empty bins, sweep and fix within 16 cells', sprite: 'build.yard', flat: false, buildable: true,
@@ -322,7 +328,7 @@ export function placedCars(type: PlacedType, scale: number): number {
 export const BUILD_ORDER: readonly PlacedType[] = [
   'library', 'computerLab', 'studyCenter', 'makerspace',
   'dining', 'foodcourt', 'diner', 'burger', 'pizza', 'taco', 'coffee', 'smoothie', 'convenience', 'truck',
-  'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard',
+  'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard', 'rack',
   'stadium',
 ];
 
@@ -380,6 +386,6 @@ export function utilitiesOf(type: PlacedType, scale = 1): number {
   const spec = PLACED[type];
   const own = placedUtilities(type, scale);
   if (own !== undefined) return own;
-  if (spec.family === 'water' || spec.family === 'bin' || spec.family === 'seat' || spec.family === 'landmark') return 0;
+  if (spec.family === 'water' || spec.family === 'bin' || spec.family === 'seat' || spec.family === 'rack' || spec.family === 'landmark') return 0;
   return spec.w * spec.h * (spec.flat ? UTILITIES_PER_OPEN_CELL : UTILITIES_PER_CELL) * scale;
 }

@@ -54,7 +54,7 @@ Campus Tycoon uses the art below. This file is written by `tools/build_art.py` f
 
 - **By:** Made for this game.
 - **Licence:** None needed.
-- **From:** `tools/make_emotes.py`, drawn in code in the people pack's way: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop; four greetings (a wave, a high five, a fist bump, a hug); and chat bubbles with what students talk about inside (sports, gaming, music, fitness, parties, studying, art, fashion, and a heart); big bubbles for big moments (a broken heart, a kiss on the cheek, a trophy, an argument, a bid in its envelope, a failed test, a ring for a proposal); a cartoon dust cloud for a scuffle and a splash for a fall into a fountain; and the mood rings at a student's feet, one colour for each feeling.
+- **From:** `tools/make_emotes.py`, drawn in code in the people pack's way: a speech bubble, a thought cloud, a heart, a broken heart, a sparkle, a laugh, a sad cloud, an anger mark, a music note, a party cup, a soda cup, an exclamation mark and a sweat drop; four greetings (a wave, a high five, a fist bump, a hug); and chat bubbles with what students talk about inside (sports, gaming, music, fitness, parties, studying, art, fashion, and a heart); big bubbles for big moments (a broken heart, a kiss on the cheek, a trophy, an argument, a bid in its envelope, a failed test, a ring for a proposal); a cartoon dust cloud for a scuffle and a splash for a fall into a fountain; a bike bell; and the mood rings at a student's feet, one colour for each feeling.
 - **Changes made:** None. Each is one file named in the art recipes, so it can be swapped for a drawn one.
 - **Where:** Every build.
 
@@ -62,7 +62,7 @@ Campus Tycoon uses the art below. This file is written by `tools/build_art.py` f
 
 - **By:** Made for this game.
 - **Licence:** None needed.
-- **From:** `tools/make_props.py`, drawn in code in the people pack's way, with its plum outline: a frisbee, a phone, a tray, a dog, a backpack and an umbrella.
+- **From:** `tools/make_props.py`, drawn in code in the people pack's way, with its plum outline: a frisbee, a phone, a tray, a dog, a backpack and an umbrella; and from `tools/make_wheels.py` what students ride (a bicycle, a skateboard, a longboard, a kick scooter, an electric scooter, inline skates), each facing two ways, and the bike rack.
 - **Changes made:** None. Each is one file named in the art recipes, so it can be swapped for a drawn one.
 - **Where:** Every build.
 
