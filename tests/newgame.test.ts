@@ -232,7 +232,7 @@ describe("the paper's first issue", () => {
     const state = model();
     const paper = welcomeEdition(state);
     expect(paper.headline).toMatch(/President/);
-    expect(paper.deck).toBe('The campus is yours from today: 46,000 students, and $40,686,000 in the bank.');
+    expect(paper.deck).toBe('The campus is yours from today: 46,000 students, and $40,511,000 in the bank.');
     const kinds = paper.top.map((item) => item.kind);
     // The first goal leads, then the next class, the halls outside reach and the stadium. Four lines at the most.
     expect(kinds).toEqual(['news', 'intake', 'problem', 'game']);

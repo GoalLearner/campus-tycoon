@@ -210,6 +210,36 @@ describe('workers', () => {
     expect(yardLine({ ...room, beyond: true })).toBe('Understaffed: hire 1 more, and build another yard.');
   });
 
+  it('count a bin only where a yard reaches it, and emptying it at the yard whose crew empties it', () => {
+    const state = withYard(busy());
+    const before = yardStatus(state, yard(state));
+    // The hall's bins just outside every circle (DESIGN.md 66.7): nobody empties them, so they fill and catch
+    // nothing, and the yard over the hall sweeps all it drops, as if it had no bin at all.
+    const outside = structuredClone(state);
+    for (const bin of ofType(outside, 'bin')) outside.map.care.yard[bin.id] = -1;
+    const bare = withYard(act(busy(), { type: 'paint', tool: 'clear', cells: [[9, 12], [12, 12]] }));
+    const now = yardStatus(outside, yard(outside));
+    expect(now.need).toBeCloseTo(yardStatus(bare, yard(bare)).need, 9);
+    expect(now.need).toBeGreaterThan(before.need * 2);
+    expect(now.hire).toBeGreaterThan(0);
+    // Hired as it says, the hall stays clean, its full bins and all.
+    outside.grounds.workers[yard(outside).id] = now.workers + now.hire;
+    const kept = run(outside, 2 * 24 * 60).state;
+    for (const bin of ofType(kept, 'bin')) expect(binState(kept, bin.id)).toBe('full');
+    expect(spotClean(kept, dining(kept))).toBeGreaterThan(0.9);
+
+    // The bins inside another yard's circle: that yard's crew empties them, so that is where the work is counted.
+    const other = { ...yard(state), id: 9999 };
+    const split = structuredClone(state);
+    split.grounds.workers[other.id] = 1;
+    for (const bin of ofType(split, 'bin')) split.map.care.yard[bin.id] = other.id;
+    const mine = yardStatus(split, yard(split)).need;
+    const theirs = yardStatus(split, other).need;
+    expect(mine).toBeGreaterThan(0);
+    expect(theirs).toBeGreaterThan(0);
+    expect(mine + theirs).toBeCloseTo(before.need, 9);
+  });
+
   it('are paid a wage with benefits on top, and a yard holds no more than six', () => {
     let state = withYard(busy());
     expect(state.grounds.workers[yard(state).id]).toBe(1);
