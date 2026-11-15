@@ -29,6 +29,8 @@ export const socialWeb = {
   stats: null as WebReply['stats'] | null,
   /** The stored record's length, as text. */
   recordBytes: 0,
+  /** The most tight-knit dorms, clubs, chapters and teams, as the worker last read them (DESIGN.md 63.12). */
+  tight: [] as WebReply['tight'],
   onChange(listener: () => void): () => void {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -62,6 +64,7 @@ export function startSocialWeb(host: Host): void {
     socialWeb.view = reply.view;
     socialWeb.stats = reply.stats;
     socialWeb.recordBytes = reply.record.length;
+    socialWeb.tight = reply.tight;
     // What the ties do to the campus goes into the save, for the campus to use until the next week (DESIGN.md 63.10).
     const kept = host.state.web.effects;
     if (reply.effects && host.hasGame && reply.view.seed === host.state.seed && kept?.week !== reply.effects.week) host.dispatch({ type: 'socialEffects', effects: reply.effects });

@@ -3219,3 +3219,212 @@ button.students {
 .main-button + .hud-chip.level-chip {
   margin-left: 4px;
 }
+
+/* A student's network (DESIGN.md 63.12): their face in the middle, their people round them, a line for each tie. */
+.network-sheet {
+  /* Above the toolbar: it scrolls on the smallest phones. */
+  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 64px - 100px);
+  overflow-y: auto;
+}
+.network-back[hidden] {
+  visibility: hidden;
+  display: inline-block;
+}
+.network-trail {
+  font-size: 12px;
+  color: var(--muted);
+  margin: -2px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.network-stage {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+.network-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.network-face {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 66px;
+  padding: 2px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.network-art {
+  width: 28px;
+  height: 33px;
+  border-radius: 8px;
+  background: #a6ad36;
+  border: 2px solid var(--panel-solid);
+}
+.network-art.big {
+  width: 44px;
+  height: 51px;
+  border-color: var(--accent, #ffd34d);
+}
+.network-name,
+.network-label {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--panel-solid);
+}
+.network-name {
+  font-size: 11px;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.network-face.centre .network-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.network-label {
+  font-size: 9.5px;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #5bd17c;
+}
+.network-label.tense {
+  color: #ff8a8a;
+}
+.network-label.complicated {
+  color: #c7a8ff;
+}
+.network-label.group {
+  color: var(--muted);
+}
+.network-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 0 8px;
+}
+.network-key i {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-top: 2px solid #5bd17c;
+}
+.network-key.tense i {
+  border-top: 2px dashed #ff6b6b;
+}
+.network-key.complicated i {
+  border-top: 2px dotted #b48cff;
+}
+.network-card {
+  width: 100%;
+}
+.student-network {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 58px;
+  min-height: 44px;
+  padding: 3px 2px;
+  background: rgba(255, 211, 77, 0.12);
+  border: 1px solid rgba(255, 211, 77, 0.45);
+  color: #ffd34d;
+}
+.student-network svg {
+  width: 26px;
+  height: 26px;
+}
+.student-network-word {
+  font-size: 11px;
+}
+/* Friend groups as clusters on the Social tab (63.12). */
+.social-clusters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.social-cluster {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.social-cluster summary {
+  list-style: none;
+  cursor: pointer;
+}
+.social-cluster summary::-webkit-details-marker {
+  display: none;
+}
+.cluster-faces {
+  position: relative;
+  height: 84px;
+}
+.cluster-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: rgba(91, 209, 124, 0.45);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+.cluster-lines line {
+  vector-effect: non-scaling-stroke;
+}
+.tight-kind {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cluster-faces canvas {
+  position: absolute;
+  width: 22px;
+  height: 26px;
+  border-radius: 6px;
+  background: #a6ad36;
+  transform: translate(-50%, -50%);
+}
+.cluster-vibe {
+  font-size: 12px;
+  font-weight: 600;
+}
+.cluster-size {
+  font-size: 11px;
+  color: var(--muted);
+}
+.cluster-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.cluster-members button {
+  font-size: 11px;
+  padding: 3px 6px;
+}

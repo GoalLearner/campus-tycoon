@@ -115,5 +115,6 @@ describe('picking on someone', () => {
     const started = (c: number[]): number => c[EVENT.bullying]! + c[EVENT.shutOut]!;
     expect(started(withIt)).toBeLessThan(started(without) * 0.75);
     expect(withIt[EVENT.reported]! / Math.max(1, started(withIt))).toBeGreaterThan(without[EVENT.reported]! / Math.max(1, started(without)));
-  });
+    // Two campuses of 46,000 lived twelve weeks each: about 10 s on a quiet PC, more than twice that when it is busy.
+  }, 90_000);
 });

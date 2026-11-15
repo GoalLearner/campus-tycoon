@@ -4,6 +4,7 @@ import { friendsEffectsOf } from '../sim/systems/friends';
 import { peopleForMain } from '../sim/systems/mainWeb';
 import type { MainPeople } from '../sim/types';
 import { catchUp, decodeWeb, encodeWeb, idOf, newWeb, refAt, type Web } from '../sim/systems/web';
+import { tightKnit, type TightGroup } from './tightKnit';
 import { packRecord, unpackRecord } from './webRecord';
 import { viewBuffers, viewOf, type WebView } from './socialView';
 
@@ -28,6 +29,8 @@ export interface WebReply {
   effects: SocialEffects | null;
   /** Who the web has around the Main Character this week, for their story (DESIGN.md 63.11). null with none. */
   mainPeople: MainPeople | null;
+  /** The most tight-knit dorms, clubs, chapters and teams this week (DESIGN.md 63.12). */
+  tight: TightGroup[];
   /** `ms` for the web's work, `packMs` for squeezing the record, `recordBytes` before it is squeezed. */
   stats: { ms: number; packMs: number; recordBytes: number; lived: number; regrown: boolean; fromRecord: boolean };
 }
@@ -57,6 +60,7 @@ self.onmessage = async (event: MessageEvent<WebRequest>) => {
   const live = web;
   const mainPeople = mainId >= 0 ? peopleForMain(live, mainId, (b) => refAt(live, b), live.week) : null;
   const stats = { ms, packMs: Math.round(performance.now() - packed), recordBytes: bytes.byteLength, ...done, fromRecord };
-  const reply: WebReply = { type: 'web', record, view, effects, mainPeople, stats };
+  const tight = tightKnit(live, message.state);
+  const reply: WebReply = { type: 'web', record, view, effects, mainPeople, tight, stats };
   (self as unknown as Worker).postMessage(reply, viewBuffers(view) as ArrayBuffer[]);
 };

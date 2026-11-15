@@ -211,10 +211,15 @@ describe('first names said together', () => {
 
 describe('what happened to them', () => {
   it('is what the web knows about them, heavy as well as light since the owner’s 16+, said plainly', () => {
+    // A campus grown again has no news of its own (63.12): a few weeks lived after it do.
+    const lived = newWeb(MODEL.seed, 1024);
+    catchUp(lived, MODEL, webWeekOf(MODEL));
+    for (let w = 1; w <= 4; w++) catchUp(lived, MODEL, webWeekOf(MODEL) + w);
+    const view = viewOf(lived, false);
     let told = 0;
     let heavy = 0;
     for (const ref of sampleStudents(MODEL, 2000)) {
-      for (const one of happenedTo(VIEW, MODEL, ref, 6)) {
+      for (const one of happenedTo(view, MODEL, ref, 6)) {
         expect(one.people.some((p) => key(p) === key(ref))).toBe(true);
         expect(toneProblem(one.line), one.line).toBeNull();
         told += 1;

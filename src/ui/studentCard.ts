@@ -280,6 +280,17 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   const peopleRow = row('People');
   const faces = el('div', 'student-friends');
   peopleRow.value.replaceWith(faces);
+  // Their whole network (DESIGN.md 63.12): faces round them, a line for each tie, a face to tap to hop to theirs.
+  const network = el('button', 'student-network');
+  network.type = 'button';
+  network.setAttribute('aria-label', 'See their network');
+  network.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor" stroke-width="1.6" fill="none"><line x1="12" y1="12" x2="5" y2="6"/><line x1="12" y1="12" x2="19" y2="7"/><line x1="12" y1="12" x2="7" y2="19"/><line x1="12" y1="12" x2="18" y2="18" stroke-dasharray="2 2"/></g><g fill="currentColor"><circle cx="12" cy="12" r="3.2"/><circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="7" r="2.2"/><circle cx="7" cy="19" r="2.2"/><circle cx="18" cy="18" r="2.2"/></g></svg>';
+  network.append(el('span', 'student-network-word', 'Network'));
+  network.addEventListener('click', () => {
+    if (session.student) session.openNetwork(session.student);
+  });
+  peopleRow.line.append(network);
 
   // A regular's day and what has happened to them lately (DESIGN.md 63.9). Following a student makes them one.
   const todayRow = row('Today');
@@ -471,8 +482,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     strip.classList.toggle('following', session.following);
 
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
-    node.classList.toggle('show', session.room === null && !session.tucked);
-    strip.classList.toggle('show', session.room === null && session.tucked);
+    // So does it behind their network (63.12).
+    node.classList.toggle('show', session.room === null && session.network === null && !session.tucked);
+    strip.classList.toggle('show', session.room === null && session.network === null && session.tucked);
   }
 
   // ------------------------------------------------------------ their day --

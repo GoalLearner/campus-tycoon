@@ -66,6 +66,8 @@ class Session {
   tucked = false;
   /** The student whose room is open (DESIGN.md 46). Only ever the student whose card is open. */
   room: StudentRef | null = null;
+  /** The student whose network is open (DESIGN.md 63.12), or null. */
+  network: StudentRef | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
   doing: string | null = null;
   /**
@@ -219,6 +221,7 @@ class Session {
     this.student = ref;
     this.studentLook = look;
     this.person = null;
+    this.network = null;
     this.following = false;
     this.tucked = false;
     this.doing = null;
@@ -230,6 +233,7 @@ class Session {
   openPerson(ref: PersonRef): void {
     this.person = ref;
     this.student = null;
+    this.network = null;
     this.following = false;
     this.tucked = false;
     this.doing = null;
@@ -242,6 +246,7 @@ class Session {
     if (!this.student && !this.person) return;
     this.student = null;
     this.person = null;
+    this.network = null;
     this.following = false;
     this.tucked = false;
     this.room = null;
@@ -262,6 +267,19 @@ class Session {
   untuckStudent(): void {
     if (!this.tucked) return;
     this.tucked = false;
+    this.emit();
+  }
+
+  /** Open a student's network (DESIGN.md 63.12): their people round them, a face to tap to hop to theirs. */
+  openNetwork(ref: StudentRef): void {
+    this.network = { entryYear: ref.entryYear, index: ref.index };
+    this.following = false;
+    this.emit();
+  }
+
+  closeNetwork(): void {
+    if (!this.network) return;
+    this.network = null;
     this.emit();
   }
 

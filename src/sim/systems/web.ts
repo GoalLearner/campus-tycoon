@@ -123,6 +123,8 @@ export interface Web {
   mainId: number;
   /** What the campus's policies do to picking on someone: how often it starts, how often it is reported. Not saved. */
   bullyTimes: { start: number; reported: number };
+  /** Each chapter's number among the places, kept between placings so a student new mid-semester joins the right one (63.12). Not saved. */
+  chapterIndex: Map<string, number>;
 }
 
 /** A happening's numbers: its week, its event, its campus year, its luck, then up to three students as entry year and index. */
@@ -190,6 +192,7 @@ export function newWeb(seed: number, classSlot: number): Web {
     groupVibe: new Uint8Array(0),
     mainId: -1,
     bullyTimes: { start: 1, reported: 1 },
+    chapterIndex: new Map(),
   };
 }
 
@@ -327,7 +330,8 @@ export function place(web: Web, state: GameState): void {
   const sizes = capacities(housing);
   const majors = new Map(MAJORS.map((m, i) => [m.name, i]));
   const clubs = new Map(CLUBS.map((c, i) => [c.name, i]));
-  const chapters = new Map<string, number>();
+  // Kept on the web: a placing for new students only must number their chapter as the full placing did (63.12).
+  const chapters = web.chapterIndex;
   const width = state.map.width;
   for (let id = 0; id < web.n; id++) {
     const classYear = web.year[id]!;
@@ -1063,6 +1067,14 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
     lived += 1;
   }
   holdMain(web, state);
+  // A regrown web's weeks are part of the regrowing (63.12): a campus grown again pairs off fast for a while, and none
+  // of it is news. What happened by name and this week's counts begin with the first week lived after it, so a long
+  // absence or a new game shows no couples as new, and none reach the paper's gossip.
+  if (regrown) {
+    web.happenings.fill(-1);
+    web.weekly.fill(0);
+    web.weeklyWeek.fill(-1);
+  }
   findGroups(web);
   pickRation(web);
   return { lived, regrown };
