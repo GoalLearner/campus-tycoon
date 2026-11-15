@@ -39,12 +39,14 @@ function toldLine(told: Told, open: (ref: StudentRef) => void): HTMLElement {
 export function drawSocialPage(body: HTMLElement, state: GameState, view: WebView, open: (ref: StudentRef) => void): void {
   const social = campusSocial(view, state);
   const share = Math.round(social.inGroups * 100);
-  body.append(
-    stat('Couples', count(social.couples)),
-    stat('Friend groups', `${count(social.groups)} · ${share}% of students`),
-    stat('This week', `${count(social.week.couples)} new couples · ${count(social.week.splits)} split up`),
-    stat('New friendships', `${count(social.week.friends)} this week`),
-  );
+  body.append(stat('Couples', count(social.couples)), stat('Friend groups', `${count(social.groups)} · ${share}% of students`));
+  // This week's news, once a week has been lived: a campus grown again tells none of its own (63.12).
+  if (social.week.friends + social.week.couples + social.week.splits > 0) {
+    body.append(
+      stat('This week', `${count(social.week.couples)} new couples · ${count(social.week.splits)} split up`),
+      stat('New friendships', `${count(social.week.friends)} this week`),
+    );
+  }
 
   // What friends do (DESIGN.md 63.10), as the campus last read them: Happiness, exam Stress and who stays.
   const effects = state.web.effects;
@@ -141,9 +143,10 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
       svg.setAttribute('viewBox', '0 0 100 100');
       svg.setAttribute('preserveAspectRatio', 'none');
       svg.setAttribute('class', 'cluster-lines');
+      // Round a ring as wide as the box is tall, so the faces keep apart.
       const at = shown.map((_, i) => {
         const angle = -Math.PI / 2 + (2 * Math.PI * i) / shown.length;
-        return { x: 50 + 34 * Math.cos(angle), y: 50 + 34 * Math.sin(angle) };
+        return { x: 50 + 22 * Math.cos(angle), y: 50 + 36 * Math.sin(angle) };
       });
       for (let i = 0; i < at.length; i++) {
         for (let j = i + 1; j < at.length; j++) {
@@ -190,12 +193,12 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
   // The most tight-knit dorms, clubs, chapters and teams (63.12): how much of their friendships stay inside.
   const tight = socialWeb.tight;
   if (tight.length > 0) {
-    body.append(el('div', 'money-head', 'Most tight-knit'));
+    body.append(el('div', 'money-head', 'Most tight-knit'), el('p', 'fine', 'How much of their friendships stay among themselves.'));
     for (const group of tight) {
       const line = el('div', 'size-row tight-row');
       const who = el('span', '');
       who.append(el('span', '', group.name), el('span', 'tight-kind', ` · ${TIGHT_KIND[group.kind]}`));
-      line.append(who, el('span', 'size-value', `${Math.round(group.share * 100)}% of friendships inside`));
+      line.append(who, el('span', 'size-value', `${Math.round(group.share * 100)}% inside`));
       body.append(line);
     }
   }

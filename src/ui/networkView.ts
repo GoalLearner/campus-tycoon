@@ -21,7 +21,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text 
 }
 
 /** Where each ring sits, as a share of the stage's width from its middle. */
-const RING = [0.2, 0.32, 0.43] as const;
+const RING = [0.26, 0.35, 0.44] as const;
+/** A face's room on the stage in pixels: the picture, the name and the label under it; the middle one's. */
+const FACE_PX = { w: 66, h: 60, middleW: 70, middleH: 86 } as const;
 const STROKE: Record<TieFeeling, { colour: string; dash: string }> = {
   warm: { colour: '#5bd17c', dash: '' },
   tense: { colour: '#ff6b6b', dash: '3 2' },
@@ -29,16 +31,89 @@ const STROKE: Record<TieFeeling, { colour: string; dash: string }> = {
 };
 const SVG = 'http://www.w3.org/2000/svg';
 
-/** Where a face goes: round its ring, the rings turned a little against each other so faces do not line up. */
-export function networkPlaces(people: readonly NetworkPerson[]): Array<{ x: number; y: number }> {
-  const counts = [0, 0, 0];
-  for (const one of people) counts[one.ring]! += 1;
-  const seen = [0, 0, 0];
-  return people.map((one) => {
-    const i = seen[one.ring]!++;
-    const angle = -Math.PI / 2 + (one.ring * Math.PI) / 7 + (2 * Math.PI * i) / Math.max(1, counts[one.ring]!);
+/**
+ * Where a face goes: round its ring, everyone spread round the whole circle so no two share a direction, then nudged
+ * apart where two would still cover each other, each kept near its ring. The same people always land in the same places.
+ */
+export function networkPlaces(people: readonly NetworkPerson[], stageWidth = 340): Array<{ x: number; y: number }> {
+  const n = people.length;
+  // Each face's room in hundredths of the stage: a narrow phone's faces take more of it.
+  const FACE_W = (100 * FACE_PX.w) / Math.max(200, stageWidth);
+  const FACE_H = (100 * FACE_PX.h) / Math.max(200, stageWidth);
+  const MIDDLE_W = (100 * FACE_PX.middleW) / Math.max(200, stageWidth);
+  const MIDDLE_H = (100 * FACE_PX.middleH) / Math.max(200, stageWidth);
+  // A direction each: the nearest spaced evenly from the top, the friends' ring beside them, the outer ring farthest
+  // from them, so no line to the outer ring crosses a face nearer in.
+  const slotOf = new Array<number>(n).fill(-1);
+  const near = people.flatMap((one, i) => (one.ring === 0 ? [i] : []));
+  const taken = new Set<number>();
+  near.forEach((i, k) => {
+    let slot = Math.round((k * n) / near.length) % Math.max(1, n);
+    while (taken.has(slot)) slot = (slot + 1) % n;
+    slotOf[i] = slot;
+    taken.add(slot);
+  });
+  const free: Array<{ slot: number; gap: number }> = [];
+  for (let slot = 0; slot < n; slot++) {
+    if (taken.has(slot)) continue;
+    let gap = n;
+    for (const t of taken) gap = Math.min(gap, Math.abs(slot - t), n - Math.abs(slot - t));
+    free.push({ slot, gap });
+  }
+  free.sort((a, b) => a.gap - b.gap || a.slot - b.slot);
+  let next = 0;
+  people.forEach((one, i) => {
+    if (one.ring !== 0) slotOf[i] = free[next++]!.slot;
+  });
+  const at = people.map((one, i) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * slotOf[i]!) / Math.max(1, n);
     return { x: 50 + 100 * RING[one.ring]! * Math.cos(angle), y: 50 + 100 * RING[one.ring]! * Math.sin(angle) };
   });
+  for (let round = 0; round < 120; round++) {
+    let moved = false;
+    for (let i = 0; i < n; i++) {
+      const a = at[i]!;
+      // Off the middle face.
+      const mx = a.x - 50;
+      const my = a.y - 50;
+      if (Math.abs(mx) < (MIDDLE_W + FACE_W) / 2 && Math.abs(my - 2) < (MIDDLE_H + FACE_H) / 2) {
+        const d = Math.hypot(mx, my) || 1;
+        a.x += (mx / d) * 1.5;
+        a.y += (my / d) * 1.5;
+        moved = true;
+      }
+      for (let j = i + 1; j < n; j++) {
+        const b = at[j]!;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const ox = FACE_W - Math.abs(dx);
+        const oy = FACE_H - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        // Apart along the shorter way out, half each.
+        if (ox < oy) {
+          const push = (ox / 2 + 0.2) * (dx < 0 ? -1 : 1);
+          a.x -= push;
+          b.x += push;
+        } else {
+          const push = (oy / 2 + 0.2) * (dy < 0 ? -1 : 1);
+          a.y -= push;
+          b.y += push;
+        }
+      }
+    }
+    // Back towards each one's ring, a little, and inside the stage.
+    for (let i = 0; i < n; i++) {
+      const a = at[i]!;
+      const d = Math.hypot(a.x - 50, a.y - 50) || 1;
+      const want = 100 * RING[people[i]!.ring]!;
+      const r = d + (want - d) * 0.08;
+      a.x = Math.min(100 - FACE_W / 2, Math.max(FACE_W / 2, 50 + ((a.x - 50) / d) * r));
+      a.y = Math.min(100 - FACE_H / 2, Math.max(FACE_H / 2 - 2, 50 + ((a.y - 50) / d) * r));
+    }
+    if (!moved) break;
+  }
+  return at;
 }
 
 export function mountNetworkView(): { node: HTMLElement; render: (state: GameState | null) => void } {
@@ -111,7 +186,7 @@ export function mountNetworkView(): { node: HTMLElement; render: (state: GameSta
     const svg = document.createElementNS(SVG, 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('class', 'network-lines');
-    const places = networkPlaces(people);
+    const places = networkPlaces(people, stage.clientWidth || 340);
     people.forEach((one, i) => {
       const at = places[i]!;
       const line = document.createElementNS(SVG, 'line');

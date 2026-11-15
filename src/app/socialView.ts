@@ -216,7 +216,7 @@ export function networkFor(view: WebView, state: GameState, ref: StudentRef): Ne
       if (seen.has(b)) continue;
       const other = refIn(view, b);
       if (!enrolled(state, other)) continue;
-      out.push({ ref: other, ring: 1, label: 'in their group', feeling: 'warm', line: 'group', strength: 0 });
+      out.push({ ref: other, ring: 1, label: 'same group', feeling: 'warm', line: 'group', strength: 0 });
       seen.add(b);
     }
   }

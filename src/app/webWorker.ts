@@ -3,7 +3,8 @@ import type { GameState, SocialEffects } from '../sim';
 import { friendsEffectsOf } from '../sim/systems/friends';
 import { peopleForMain } from '../sim/systems/mainWeb';
 import type { MainPeople } from '../sim/types';
-import { catchUp, decodeWeb, encodeWeb, idOf, newWeb, refAt, tightKnit, type TightGroup, type Web } from '../sim/systems/web';
+import { catchUp, decodeWeb, encodeWeb, idOf, newWeb, refAt, type Web } from '../sim/systems/web';
+import { tightKnit, type TightGroup } from './tightKnit';
 import { packRecord, unpackRecord } from './webRecord';
 import { viewBuffers, viewOf, type WebView } from './socialView';
 

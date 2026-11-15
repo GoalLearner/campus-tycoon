@@ -3222,7 +3222,8 @@ button.students {
 
 /* A student's network (DESIGN.md 63.12): their face in the middle, their people round them, a line for each tie. */
 .network-sheet {
-  max-height: calc(100% - var(--safe-top) - 150px);
+  /* Above the toolbar: it scrolls on the smallest phones. */
+  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 64px - 100px);
   overflow-y: auto;
 }
 .network-back[hidden] {
@@ -3257,7 +3258,7 @@ button.students {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  width: 64px;
+  width: 66px;
   padding: 2px;
   background: none;
   border: 0;
@@ -3266,8 +3267,8 @@ button.students {
   cursor: pointer;
 }
 .network-art {
-  width: 30px;
-  height: 35px;
+  width: 28px;
+  height: 33px;
   border-radius: 8px;
   background: #a6ad36;
   border: 2px solid var(--panel-solid);
@@ -3277,9 +3278,15 @@ button.students {
   height: 51px;
   border-color: var(--accent, #ffd34d);
 }
+.network-name,
+.network-label {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--panel-solid);
+}
 .network-name {
   font-size: 11px;
-  line-height: 1.15;
+  line-height: 1.25;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -3292,7 +3299,7 @@ button.students {
 }
 .network-label {
   font-size: 9.5px;
-  line-height: 1.1;
+  line-height: 1.3;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -3358,6 +3365,7 @@ button.students {
 .social-clusters {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  align-items: start;
   gap: 8px;
   margin-bottom: 6px;
 }
@@ -3376,7 +3384,7 @@ button.students {
 }
 .cluster-faces {
   position: relative;
-  height: 58px;
+  height: 84px;
 }
 .cluster-lines {
   position: absolute;
