@@ -78,9 +78,9 @@ const likes = (view: WebView | null, ref: StudentRef, interest: number): boolean
 };
 
 /**
- * [T] Daily details (R3, DESIGN.md 67.5), as shares of days: a package at the mailroom, keys left inside, sleeping
+ * [T] Daily details (R3, DESIGN.md 67.4), as shares of days: a package at the mailroom, keys left inside, sleeping
  * through the alarm (twice as often for a night owl, and only in a week they missed a class), a late-night food run on a
- *  school night and at the weekend or in exams; of students, those with 8 AM classes this term; and a gym phase, a
+ * school night and at the weekend or in exams; of students, those with 8 AM classes this term; and a gym phase, a
  * run of workouts, more in January. A hall's meal plan has this many swipes a week.
  */
 export const DETAILS = { package: 0.08, lockedOut: 0.015, alarm: 0.06, foodRun: 0.1, foodRunWeekend: 0.3, eightAm: 0.4, gym: 0.15, gymJanuary: 0.35 } as const;
@@ -156,7 +156,7 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   const gamer = likes(view, ref, INTEREST.gaming);
   const studious = card.archetype === 'scholar' || card.archetype === 'stressed' || exams;
 
-  // Daily details (R3, DESIGN.md 67.5): a meal plan's swipes for a student in a hall, a job's shifts, laundry once a
+  // Daily details (R3, DESIGN.md 67.4): a meal plan's swipes for a student in a hall, a job's shifts, laundry once a
   // week, a package at the mailroom, keys left inside, the alarm slept through, an 8 AM class and its coffee, a
   // late-night food run, and a gym phase that comes and goes. Each from the seed and the day, the same every time.
   const owl = card.quirk === 'Night owl';
