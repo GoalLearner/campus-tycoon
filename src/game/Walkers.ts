@@ -1294,7 +1294,7 @@ export class Walkers {
     }
     // The ring at their feet in their feeling's colour (DESIGN.md 64.3), unless hidden or the frames are short.
     const ringKey = walker.feel?.ring ?? null;
-    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked && (walker.ring !== null || this.ringsShown < RINGS_AT_STEP[this.step]!);
+    const showRing = ringKey !== null && this.rings && this.step > 0 && walker.key !== this.marked && !inWater && (walker.ring !== null || this.ringsShown < RINGS_AT_STEP[this.step]!);
     if (showRing && !walker.ring) {
       this.ringsShown += 1;
       walker.ring = this.ringPool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');

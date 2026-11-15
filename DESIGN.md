@@ -8117,3 +8117,41 @@ The caps on things in hand and on rings were set after the first rain readings (
 | The things in hand are small at street zoom | The pack's people are small; zoomed in they read |
 | The PC was busy for the frames | Each pair was measured back to back, so both saw the same |
 | Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
+
+### 64.4 L3 as built: moments the crowd gathers round
+
+Built 2026-11-15 on the branch `life-3`. Now and then, where the player is looking, something happens, and the people nearby stop, turn to watch and react (`src/app/crowdMoments.ts` for the rule, `src/game/Moments.ts` to stage it with the walkers, the lawns, the courts and the small scenes). One at a time, 20 to 45 seconds apart; none with Reduce effects or at the crowd step kept for short frames. Which one is chosen by weight from what is on screen, the hour, the sky and the calendar, with a roll from the seed and the game clock.
+
+| Moment | When it can happen (weight) | What happens |
+|---|---|---|
+| A scuffle | Evening or night, two students walking close on open ground, not in snow (0.4; 1.2 on a party night). Those who do not get on first (a rival, not speaking), then where the most are about | A big argument bubble and a scowl; a moment later a cartoon dust cloud with stars and a sneaker flying out covers both for 2.8 seconds; they come out with a sweat drop and a scowl and walk off their own ways. No one is hurt (cartoon violence as 52's rating plan has it) |
+| A couple arguing | A couple out together, or one sitting on a lawn (0.8) | A big argument bubble over one, a scowl and then a sad cloud over the other |
+| A busker playing to a crowd | The busker of 33.4 on screen (2) | The crowd gathers round the music |
+| A dance-off | A dance on a lawn (64.2), evening or night (2.5) | The crowd gathers round the dancers and cheers |
+| A proposal | Commencement day, a couple out together or on a lawn (4: the likeliest that day) | One goes down on one knee (the sitting pose) under a big ring bubble; then a kiss on the cheek over the other (at most that, 16.1), who jumps for joy; the crowd cheers with hearts |
+| Someone falls in a fountain | A fountain on screen (a one-cell quad's showpiece, the reward fountain, the stone fountain) with a student walking within three cells, a fine day, not at night (1) | They walk to it and stand in it up to the waist, as a swimmer is drawn, with a splash and a sweat drop, then climb out and walk on; the crowd laughs |
+| A game-winning shot | A game on a court or the field with four or more playing (1.5) | The winning side jumps twice as high for three seconds under a big trophy bubble |
+
+**The crowd.** Students within 3.2 cells who are on screen take it in: the nearest few (4, 7 or 10 at the Low, Normal and High crowd steps) walk over and stand in a ring round it, facing it, then go on along the way they were going; anyone else near stops where they are and turns to look. Each shows a reaction in turn (a scuffle: an exclamation, a sweat drop, a laugh; a busker: music and sparkles; a fall into a fountain: laughs), and at a win, a proposal or a dance-off every other one jumps. Each adds a line to their day on their card ("Saw a scuffle break out", "Cheered on a dance-off", "Laughed when someone fell in the fountain"), and those in it theirs ("Got into a scuffle with Sasha", "Proposed to Sasha at commencement", "Said yes to Sasha at commencement", "Fell in the fountain", "Made the game-winning shot").
+
+**The art**, ours (`tools/make_emotes.py`): the dust cloud (puffs, three stars, motion lines and a red sneaker), drawn about 60 pixels wide on the map and churning as it shows; a ring in a big bubble; a splash of drops. Both atlases.
+
+| Decisions made here | Instead |
+|---|---|
+| Moments only on open ground, where most can see them | Anywhere, where a building may hide them |
+| A proposal or an argument can be a couple sitting on a lawn as well as one out walking | Walking couples only, which are rare |
+| The nearest few walk over and stand in a ring; others near stop and turn | Everyone near walking over, which empties the paths |
+| One moment at a time, 20 to 45 seconds apart | More often, which would make them weather rather than events |
+| A fall into a fountain is drawn as a swimmer is, up to the waist | A new splashing pose |
+
+**Measured.** Frames on the slowed phone (47.2), back to back with main (e3bf1c5), 16 frames each, median frame work: Normal 16.6 ms against L3's 16.0; High, the morning rush, 18.6 and 18.6; an evening 18.2 and 14.8; rain 14.6 and 16.3. A moment is a few emotes and one cloud for a few seconds every half a minute or so, and the frames move with the PC more than with it. In the pictures a moment drew 2 to 4 walkers over to watch at Normal on the model campus. The long run was not run again: the simulator reads only `src/sim` and `scripts`, and L3 changes neither.
+
+**Tested**: `tests/crowdMoments.test.ts` (8): nothing staged when nothing on screen could make one; each moment kept to its time and place (a scuffle only late and never in snow, a proposal only at commencement, a dance-off only late, a fountain only on a fine day); a scuffle likelier on a party night and a proposal the likeliest at commencement; the same for the same roll; a few seconds each, a good while between; more watchers at a higher crowd step and none at the lowest; cheers for a win, a proposal and a dance-off, none for a scuffle or an argument; every card line inside the tone guide and its hard lines (which caught "Hit the game-winning shot": now "Made").
+
+| Rough | Why |
+|---|---|
+| The dance-off reads as a crowd by the dancers more than a contest | The dancers are 64.2's; the crowd and its cheers are what is new |
+| A walking couple is rare, so most proposals and arguments are on a lawn | Couples walk together only now and then (63.8) |
+| Watchers walk straight over the grass to their place in the ring | A path to it would often be longer than the moment |
+| Pictures were staged on demand, each kind where it could happen | In play a moment comes every 20 to 45 seconds, chosen as above |
+| Not tried on a phone | Checked in pictures at 375, 390, 430 and 530 wide |
