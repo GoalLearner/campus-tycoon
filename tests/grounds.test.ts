@@ -68,7 +68,7 @@ function act(state: GameState, action: Action): GameState {
 function busy(students = 3000): GameState {
   const state = structuredClone(advance(freshGame(), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   // An empty campus stays empty: nobody is waiting to move in.
   if (students === 0) state.admissions.waitlist = 0;
   return state;
@@ -304,7 +304,7 @@ describe('breakage', () => {
     // A clean campus breaks nothing.
     const clean = filthy(40, false);
     clean.grounds.litter = {};
-    clean.cohorts = [0, 0, 0, 0];
+    clean.cohorts = [0, 0, 0, 0, 0, 0];
     clean.admissions.waitlist = 0;
     expect(broken(clean)).toBe(0);
   });
@@ -601,7 +601,8 @@ describe('upgrading a version 6 save, from before grounds', () => {
     const state = load();
     expect(state.version).toBe(SAVE_VERSION);
     expect(state.money.cash).toBe(old.money.cash);
-    expect(state.cohorts).toEqual(old.cohorts);
+    // Two more class years, empty (DESIGN.md 65.2).
+    expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.map.placed).toEqual(old.map.placed);
     expect(state.map.cells).toEqual(old.map.cells);
     expect(state.map.buildings).toEqual(old.map.buildings);
@@ -641,7 +642,8 @@ describe('upgrading a version 7 save, from when a yard reached eight cells', () 
     const state = load();
     expect(state.version).toBe(SAVE_VERSION);
     expect(state.money.cash).toBe(old.money.cash);
-    expect(state.cohorts).toEqual(old.cohorts);
+    // Two more class years, empty (DESIGN.md 65.2).
+    expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.map.placed).toEqual(old.map.placed);
     expect(state.map.cells).toEqual(old.map.cells);
     expect(state.grounds.litter).toEqual(old.grounds.litter);

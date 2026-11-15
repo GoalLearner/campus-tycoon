@@ -156,7 +156,7 @@ describe('a goal reached', () => {
 
   it('gives nothing for the size goal: a full campus is a headline and no building', () => {
     const state = structuredClone(model());
-    state.cohorts = [14_000, 13_000, 12_000, 11_000];
+    state.cohorts = [14_000, 13_000, 12_000, 11_000, 0, 0];
     const log: LogEntry[] = [];
     landSizeGoals(state, log);
     expect(state.goals!.size).toBe(1);

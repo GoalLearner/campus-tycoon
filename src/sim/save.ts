@@ -36,7 +36,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 30;
+export const SAVE_VERSION = 31;
 
 export interface SaveFile {
   v: number;
@@ -405,6 +405,16 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return state;
   },
+  // Version 31: the realism pass, R1 (DESIGN.md 65). Fifth- and sixth-year seniors are class years of their own: a
+  // save gains them empty, and its seniors go on as they were. Its records keep what they had; first-year retention is
+  // read from the classes that begin a second year from here on.
+  30: (state) => {
+    for (const key of ['cohorts', 'offCampus'] as const) {
+      const list = Array.isArray(state[key]) ? (state[key] as number[]) : [];
+      state[key] = [0, 1, 2, 3, 4, 5].map((classYear) => Number(list[classYear] ?? 0));
+    }
+    return state;
+  },
 };
 
 /**
@@ -487,12 +497,12 @@ export function validate(state: unknown): string | null {
   if (!Array.isArray(map.parcels)) return 'The map has no land records.';
   if (!isObject(map.care)) return 'The map has no grounds records.';
   if (!isObject(map.town) || !Array.isArray(map.town.neighbourhoods) || !isObject(map.town.access)) return 'The map has no town.';
-  if ((state.offCampus as unknown[]).length !== 4) return 'The save has the wrong number of class years living off campus.';
+  if ((state.offCampus as unknown[]).length !== 6) return 'The save has the wrong number of class years living off campus.';
   if (!Array.isArray(state.classes)) return 'The save has no class records.';
   if (typeof state.fourYears !== 'boolean') return 'The save does not say whether it has all four class years.';
   if (!Array.isArray(score) || score.length !== cells.length) return 'The map has no desirability.';
   if (!Array.isArray(walkMinutes) || walkMinutes.length !== cells.length) return 'The map has no walk times.';
-  if ((state.cohorts as unknown[]).length !== 4) return 'The save has the wrong number of class years.';
+  if ((state.cohorts as unknown[]).length !== 6) return 'The save has the wrong number of class years.';
   if (!isObject((state.admissions as Record<string, unknown>).year)) return 'The save has no record of the year\'s applicants.';
 
   const bad = firstBadNumber(state, 'state');

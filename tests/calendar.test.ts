@@ -49,6 +49,7 @@ import {
   type GameState,
   type LogEntry,
   type Week,
+  retentionRate,
 } from '../src/sim';
 
 /**
@@ -400,9 +401,9 @@ describe('Stress, breaks and weather', () => {
     const back = structuredClone(state);
     back.clock.tick = entrySpan(back.clock.week, entry('thanksgiving')).to + 3;
     expect(campusHappiness(back).season.parts.find((part) => part.id === 'back')!.points).toBeLessThan(0);
-    // The four causes are untouched by any of it, and retention follows them alone.
+    // The four causes are untouched by any of it, and retention follows them alone (with the rank: DESIGN.md 65.2).
     expect(happy.base).toBe(campusHappiness(state).base);
-    expect(happy.retention).toBe(campusHappiness(state).retention);
+    expect(retentionRate(onBreak)).toBe(retentionRate(state));
     expect(happy.score).toBeCloseTo(Math.max(0, Math.min(100, happy.base + happy.season.delta)), 9);
   });
 

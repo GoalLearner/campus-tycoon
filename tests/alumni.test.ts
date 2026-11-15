@@ -28,7 +28,7 @@ import { academicInputs } from '../src/sim/systems/field';
 import { edition } from '../src/sim/newspaper';
 import { moneyView } from '../src/ui/buildUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * Alumni giving (DESIGN.md 54, as built in section 56): the pool, the drive
@@ -78,7 +78,9 @@ describe('the alumni pool', () => {
 
   it('fixes each graduating class’s success and affinity on its record, for good', () => {
     const classes = alumniClasses(THREE.state);
-    expect(classes.length).toBe(3);
+    // Three commencements: three senior classes, and the two the campus opened with as fifth- and sixth-year seniors,
+    // whose late finishers join the alumni too (DESIGN.md 65.2).
+    expect(classes.length).toBe(5);
     for (const record of classes) {
       expect(record.success).toBeGreaterThan(0);
       expect(record.success).toBeLessThanOrEqual(100);
@@ -88,7 +90,7 @@ describe('the alumni pool', () => {
     // A week later, the old classes' numbers have not moved.
     const before = classes.map((record) => [record.entryYear, record.success, record.affinity]);
     const next = later(THREE.state, WEEK).state;
-    const after = alumniClasses(next).slice(0, 3).map((record) => [record.entryYear, record.success, record.affinity]);
+    const after = alumniClasses(next).slice(0, 5).map((record) => [record.entryYear, record.success, record.affinity]);
     expect(after).toEqual(before);
   });
 });
@@ -223,6 +225,7 @@ describe('saves', () => {
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY);

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { LEAVE_WHYS } from '../src/sim/config/population';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -370,7 +371,8 @@ describe('upgrading a version 5 save, from before the town', () => {
     const state = load();
     expect(state.version).toBe(SAVE_VERSION);
     expect(old.map.width).toBe(32);
-    expect(state.cohorts).toEqual(old.cohorts);
+    // Two more class years, empty (DESIGN.md 65.2).
+    expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.money.cash).toBe(old.money.cash);
     expect(state.map.buildings).toEqual(old.map.buildings);
     expect(state.map.placed).toEqual(old.map.placed);
@@ -392,7 +394,7 @@ describe('upgrading a version 5 save, from before the town', () => {
   it('changes neither the income nor the beds that are wanted', () => {
     const state = load();
     // Four in ten of each class already lived off campus under the old rule.
-    expect(state.offCampus).toEqual(old.cohorts.map((count) => Math.round(count * LOCAL_SHARE)));
+    expect(state.offCampus).toEqual([...old.cohorts.map((count) => Math.round(count * LOCAL_SHARE)), 0, 0]);
     expect(state.admissions.waitlistLocals).toBe(Math.round(old.admissions.waitlist * LOCAL_SHARE));
     recomputeRates(state);
     expect(Math.abs(state.money.incomePerYear - old.money.incomePerYear)).toBeLessThan(old.money.incomePerYear * 0.01);
@@ -405,11 +407,13 @@ describe('upgrading a version 5 save, from before the town', () => {
     expect(townPlaces(state.map).total).toBe(0);
     const before = enrollment(state);
     const dorm = dormStudents(state);
-    // Through the next semester end and beyond. The only students lost are the few who leave any semester.
+    // Through the next semester end and beyond. The only students lost are those who leave any semester, for their
+    // own reasons: nobody for want of a bed (DESIGN.md 65.2).
     const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 2 * DAY).state;
     const last = later.admissions.lastSemester!;
     expect(last.tick).toBeGreaterThan(state.clock.tick);
-    expect(last.left).toBeLessThanOrEqual(Math.ceil(before * 0.06));
+    expect(last.left).toBeLessThanOrEqual(Math.ceil(before * 0.1));
+    expect(last.why![LEAVE_WHYS.indexOf('housing')]).toBe(0);
     expect(offCampusNow(later)).toBeGreaterThan(0);
     expect(dormStudents(later)).toBeLessThanOrEqual(Math.max(dorm, openCapacity(later, 'housing')));
   });
@@ -476,7 +480,7 @@ describe('the three fixes for a shortage of beds', () => {
     const beds = openCapacity(state, 'housing');
     for (const building of state.map.buildings) if (building && building.zone === 'housing') building.stage = 2;
     const roomy = structuredClone(state);
-    roomy.cohorts = [0, 0, 0, 0];
+    roomy.cohorts = [0, 0, 0, 0, 0, 0];
     roomy.admissions.waitlist = 0;
     expect(openCapacity(roomy, 'housing')).toBeGreaterThan(beds);
     // Make the next class small enough for the beds there are.

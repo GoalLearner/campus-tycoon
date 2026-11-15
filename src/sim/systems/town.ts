@@ -247,7 +247,7 @@ export function townPlaces(map: MapState): TownPlaces {
 /** Students living off campus now, across every class. */
 export function offCampusNow(state: GameState): number {
   const o = state.offCampus;
-  return o[0] + o[1] + o[2] + o[3];
+  return o[0] + o[1] + o[2] + o[3] + o[4] + o[5];
 }
 
 /** Places in town not yet taken by a student already enrolled. */

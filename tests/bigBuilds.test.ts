@@ -46,7 +46,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * The big builds of the eras (DESIGN.md 41.3, 41.4, as built in section 45):
@@ -260,7 +260,7 @@ describe('each moves one number the game already has', () => {
     const state = opened(spring, 'honorsCollege');
     const after = read(state);
     expect(after.level!).toBeGreaterThan(before.level!);
-    expect(after.detail).toMatch(new RegExp(`${Math.round(HONORS_RATE * 100)} of them with the Honors College`));
+    expect(after.detail).toMatch(new RegExp(`${Math.round(HONORS_RATE * 100)} points of it with the Honors College`));
   });
 
   it('the Welcome Center: a share more from each step of marketing, and nothing with marketing off', () => {
@@ -328,6 +328,7 @@ describe('saves', () => {
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.

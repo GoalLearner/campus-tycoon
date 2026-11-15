@@ -32,6 +32,8 @@ export type PolicyEffect =
   | { kind: 'rating'; input: RatingInputId; points: number; why?: string }
   /** This much more of every class leaves at the end of a semester. */
   | { kind: 'leaving'; share: number }
+  /** This many times as many of those who would leave for money do (DESIGN.md 65.2). */
+  | { kind: 'moneyLeaving'; times: number }
   /** Freshmen from town take the beds nobody is in, and pay for them. */
   | { kind: 'spareBeds' }
   /** This much more of a crowd wants a seat at a home game. */
@@ -283,7 +285,7 @@ export const POLICIES: readonly PolicySpec[] = [
     era: 2,
     gives: 'Students who need work find it on campus',
     takes: 'It costs a little for every student',
-    gains: [{ kind: 'storyOdds', lever: 'jobs', words: 'Your main character\u2019s odds of finding work when money is short, up to 18 in 100 better' }],
+    gains: [{ kind: 'storyOdds', lever: 'jobs', words: 'Your main character\u2019s odds of finding work when money is short, up to 18 in 100 better' }, { kind: 'moneyLeaving', times: 0.8 }],
     costs: [{ kind: 'perStudent', amount: 40 }],
     begins: 'A campus jobs program begins: the library, the dining halls and the offices hire students first.',
     ends: 'The campus jobs program ends.',
@@ -294,7 +296,7 @@ export const POLICIES: readonly PolicySpec[] = [
     era: 2,
     gives: 'Help for students short of money',
     takes: 'It costs more for every student',
-    gains: [{ kind: 'storyOdds', lever: 'aid', words: 'Your main character\u2019s odds when money or a scholarship is on the line, up to 20 in 100 better' }],
+    gains: [{ kind: 'storyOdds', lever: 'aid', words: 'Your main character\u2019s odds when money or a scholarship is on the line, up to 20 in 100 better' }, { kind: 'moneyLeaving', times: 0.6 }],
     costs: [{ kind: 'perStudent', amount: 120 }],
     begins: 'Need-based scholarships begin: students short of money may apply each semester.',
     ends: 'The need-based scholarships end.',

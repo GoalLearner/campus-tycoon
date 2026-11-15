@@ -346,7 +346,16 @@ export interface Admissions {
   lastIntake: IntakeResult | null;
   /** How the last semester ended: who stayed, who left, and how happy the campus was. */
   /** `friends` (DESIGN.md 63.10): what the students' ties added to the share who stayed, 0.002 for two tenths of a point. */
-  lastSemester: { tick: number; stayed: number; left: number; happiness: number; friends?: number } | null;
+  /**
+   * `why` (DESIGN.md 65.2): how many left for each reason, in the order of LEAVE_WHYS; `returned`, stop-outs who came
+   * back at the intake before it.
+   */
+  lastSemester: { tick: number; stayed: number; left: number; happiness: number; friends?: number; why?: number[]; returned?: number } | null;
+  /** Students who stopped out and will come back at the next fall intake, to their own class (DESIGN.md 65.2). */
+  away?: Array<{ entryYear: number; count: number }>;
+  /** Who left this academic year by reason (LEAVE_WHYS order), and the stop-outs who came back; and last year's. */
+  whyYear?: { why: number[]; returned: number };
+  whyLastYear?: { why: number[]; returned: number };
   /**
    * This year's applicants and how many of them got a place, the fall class and the spring class together. It
    * starts again at each fall intake. Selectivity is read from it, so one small spring class cannot speak for a
@@ -541,12 +550,31 @@ export interface Staffing {
  * What became of one entering class. Kept for good, because the history
  * cannot be rebuilt later. Graduation rates are read from it (DESIGN.md 24.8).
  */
+/** One number for each class year: freshman to senior, then fifth- and sixth-year seniors. */
+export type ClassYears = [number, number, number, number, number, number];
+
 export interface ClassRecord {
   entryYear: number;
   entered: number;
   finishedOnTime: number;
   finishedLate: number;
   left: number;
+  /**
+   * Since R1 (DESIGN.md 65.2). `from`: where the class's fifth- and sixth-year seniors start among its places, once it
+   * has had its commencement. `second`: how many began a second year, which first-year retention is read from.
+   * `inFive`: of those who finished late, how many took five years (the rest took six). `why`: who left, by reason,
+   * in the order of LEAVE_WHYS. `returned`: stop-outs who came back.
+   */
+  from?: number;
+  second?: number;
+  /**
+   * On a model campus, a class it opened with: who finished before the player came, on time and in five years. The
+   * rates count them; the alumni count them in the classes before the player's time, not here.
+   */
+  history?: { onTime: number; inFive: number };
+  inFive?: number;
+  why?: number[];
+  returned?: number;
   /** Fixed the day it graduates, on a game with goals (DESIGN.md 54.1): its success and its affinity, 0 to 100, and its share in chapters. */
   success?: number;
   affinity?: number;
@@ -588,14 +616,14 @@ export interface GameState {
   school: { name: string };
   money: Money;
   map: MapState;
-  /** Headcount by class year: freshmen, sophomores, juniors, seniors. */
-  cohorts: [number, number, number, number];
+  /** Headcount by class year: freshmen, sophomores, juniors, seniors, fifth- and sixth-year seniors (DESIGN.md 65.2). */
+  cohorts: ClassYears;
   /**
    * How many of each class year live off campus, in town. They found a way to
    * class when they enrolled and keep it until they graduate. Everyone else
    * needs a bed.
    */
-  offCampus: [number, number, number, number];
+  offCampus: ClassYears;
   /**
    * One record per entering class, oldest first. A campus opens with all four
    * class years, so its founding sophomores, juniors and seniors have entry
@@ -1398,6 +1426,7 @@ export type LogKind =
   | 'graduation'
   | 'classes'
   | 'semester'
+  | 'returned'
   | 'incident'
   | 'grounds'
   | 'yearEnd'

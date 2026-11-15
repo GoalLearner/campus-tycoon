@@ -16,11 +16,12 @@ import {
   RATING_MIN,
   SCHOOL_PATTERNS,
 } from '../config/football';
-import { RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
+import { GRADUATION_LEVEL, RETENTION_LEVEL } from '../config/population';
 import { nextFloat, nextInt } from '../rng';
 import type { Field, GameState, LogEntry, RngState, School } from '../types';
 import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
 import { begunHere, yearAcceptance } from './admissions';
+import { ratesOf } from './population';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
 import { alumniDetail, alumniSuccess } from './alumni';
@@ -186,23 +187,34 @@ export interface AcademicInput {
  * Alumni success and money per student do not exist yet, and an input with
  * nothing to read shares its weight among the ones that have.
  */
-export function academicInputs(state: GameState): AcademicInput[] {
-  // Graduation: of the classes that began here and have had four years, the share that finished.
-  let entered = 0;
-  let finished = 0;
-  for (const record of state.classes) {
-    if (!begunHere(state, record)) continue;
-    // A class counts once it has had its four years. On a model campus that is from its commencement, so the
-    // classes it opened with give a rate from the first spring (DESIGN.md 37.4).
-    const done = record.entryYear <= state.clock.week.year - 4 || (state.goals !== null && record.finishedOnTime + record.finishedLate > 0);
-    if (!done) continue;
-    entered += record.entered;
-    finished += record.finishedOnTime + record.finishedLate;
-  }
-  const finishing = entered > 0 ? finished / entered : null;
+export interface CampusRates {
+  /** Back for a second year, of those who entered. null before any class has begun its second. */
+  second: number | null;
+  /** Finished in four years, and within six with the Honors College's lift. null before any class has had its years. */
+  four: number | null;
+  graduation: number | null;
+  /** What the Honors College adds to the six-year rate. */
+  honors: number;
+}
+
+/**
+ * The rates the rating and the Scorecard read (DESIGN.md 65.2): first-year retention, and graduation in four years
+ * and within six, each over the latest classes that have had their years, as the real figures are measured. A model
+ * campus's opening classes count: it is a school that was already standing (37.4).
+ */
+export function campusRates(state: GameState): CampusRates {
+  const rates = ratesOf(state, (record) => begunHere(state, record));
   // The Honors College (DESIGN.md 45) lifts the rate a little, across the campus, never past all of a class.
-  const honors = finishing === null ? 0 : Math.min(1 - finishing, honorsRate(state));
-  const graduation = finishing === null ? null : finishing + honors;
+  const honors = rates.six === null ? 0 : Math.min(1 - rates.six, honorsRate(state));
+  return { second: rates.second, four: rates.four, graduation: rates.six === null ? null : rates.six + honors, honors };
+}
+
+const percentOf = (share: number): string => `${Math.round(share * 100)}%`;
+const levelIn = (x: number, band: { none: number; all: number }): number => 100 * Math.max(0, Math.min(1, (x - band.none) / (band.all - band.none)));
+
+export function academicInputs(state: GameState): AcademicInput[] {
+  const rates = campusRates(state);
+  const { graduation, honors } = rates;
   // Selectivity is the year's: its fall class and its spring class together.
   const accept = yearAcceptance(state);
   // Class size has two named causes, in equal parts: how full the seats are, and how many students there are
@@ -213,15 +225,23 @@ export function academicInputs(state: GameState): AcademicInput[] {
   const seats = crowd <= 0 ? 'classes have room' : `classes are ${Math.round(crowd * 100)}% of the way to full`;
   const first = facultyStretched(state) && classPressure(state) - crowd / 2 > crowd / 2 ? `there is ${taught}, where ${ratioTarget(state)} is funded, and ${seats}` : `${seats}, with ${taught}`;
   const classes = first.charAt(0).toUpperCase() + first.slice(1);
-  // Retention as the four causes of Happiness give it, between its floor and its ceiling, and what the students'
-  // ties added to it (DESIGN.md 63.10), counted in the same steps.
-  const last = state.admissions.lastSemester;
-  const retention = last ? Math.max(0, Math.min(1, last.happiness / 100 + (last.friends ?? 0) / RETENTION_SPAN)) : null;
+  // Retention as the real figure is read: the share of freshmen back for a second year (DESIGN.md 65.2). What the
+  // students' ties keep (63.10) is in it.
+  const retention = rates.second;
   const inputs: AcademicInput[] = [
-    { id: 'graduation', name: 'Graduation rate', weight: 25, level: graduation === null ? null : 100 * Math.max(0, Math.min(1, (graduation - 0.4) / 0.55)), detail: graduation === null ? 'No class has had four years yet' : `${Math.round(graduation * 100)}% of a class finishes${honors > 0 ? `, ${Math.round(honors * 100)} of them with the Honors College` : ''}` },
+    {
+      id: 'graduation',
+      name: 'Graduation rate',
+      weight: 25,
+      level: graduation === null ? null : levelIn(graduation, GRADUATION_LEVEL),
+      detail:
+        graduation === null
+          ? 'No class has had six years yet'
+          : `${percentOf(graduation)} of a class finishes within six years${rates.four !== null ? `, ${percentOf(rates.four)} in four` : ''}${honors > 0 ? `; ${Math.round(honors * 100)} points of it with the Honors College` : ''}`,
+    },
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
-    { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : 100 * retention, detail: retention === null ? 'No semester has ended yet' : `${(100 * (RETENTION_FLOOR + RETENTION_SPAN * retention)).toFixed(1)}% return each semester` },
+    { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : levelIn(retention, RETENTION_LEVEL), detail: retention === null ? 'No class has begun a second year yet' : `${percentOf(retention)} of freshmen come back for a second year` },
     { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
   ];
   // Alumni success (DESIGN.md 24.4, switched on with alumni giving in section 56): the latest classes' success, on a

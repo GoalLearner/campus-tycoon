@@ -67,7 +67,7 @@ const first = (state: GameState, type: PlacedType): Placed => state.map.placed.f
 function campus(students = 1200, seed = 42): GameState {
   let state = structuredClone(advance(freshGame(seed), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   state.admissions.waitlist = 0;
   state = place(state, 'taco', 8, 15);
   state = place(state, 'store', 11, 15);
@@ -228,7 +228,7 @@ describe('the last line of every card quotes a number the simulation reports', (
     expect(c.cell).toBe(first(state, 'taco').y * state.map.width + first(state, 'taco').x);
     // With nobody enrolled the kitchen feeds nobody, and says so.
     const empty = structuredClone(state);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(personCard(empty, of('chef'))!.quotes.value).toBe(0);
     expect(PERSON_LINES.chefNobody).toContain(personCard(empty, of('chef'))!.line);
   });
@@ -280,7 +280,7 @@ describe('the last line of every card quotes a number the simulation reports', (
     expect(state.map.cells[c.cell!]!.zone).toBe('housing');
     // A campus with room for everyone hears about the class to come.
     const roomy = structuredClone(advance(freshGame(), T0, T0 + 5 * MIN).state);
-    roomy.cohorts = [10, 0, 0, 0];
+    roomy.cohorts = [10, 0, 0, 0, 0, 0];
     roomy.admissions.waitlist = 0;
     if (shortage(roomy, 'housing') <= 0) {
       const calm = personCard(roomy, { role: 'parent', n: 7 })!;
@@ -328,7 +328,7 @@ describe('a card goes when the job does', () => {
     expect(personCard(state, { role: 'advisor', n: staff })).toBeNull();
     // Before anyone is enrolled there is no faculty to meet.
     const empty = structuredClone(state);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(personCard(empty, { role: 'professor', n: 0 })).toBeNull();
   });
 

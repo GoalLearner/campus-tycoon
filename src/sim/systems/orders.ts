@@ -1,4 +1,5 @@
 import { GRADUATION_TICK_IN_YEAR, SPRING_INTAKE_TICK_IN_YEAR, yearLength } from '../calendar';
+import { expectedGraduates } from './population';
 import { LEVEL_UNLOCKS } from '../config/daily';
 import { ADVISORS } from '../config/inbox';
 import {
@@ -439,7 +440,8 @@ function begin(state: GameState, order: Order, seen: Look, today = false): void 
     order.target = t.n ?? 1;
   } else if (kind.metric === 'graduates') {
     order.from = 0;
-    order.target = Math.max(1, Math.floor((state.cohorts[3] * (t.share ?? 1)) / 100) * 100);
+    // Those expected to finish this spring (DESIGN.md 65.2).
+    order.target = Math.max(1, Math.floor((expectedGraduates(state) * (t.share ?? 1)) / 100) * 100);
   } else if (kind.metric === 'semesterLeft') {
     order.from = 0;
     // No more than left last semester, with a little room, or two in a hundred on a campus with no semester behind it.

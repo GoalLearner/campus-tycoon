@@ -56,7 +56,7 @@ export function playCampus(students = 1500): GameState {
   if (students > 0) {
     state = structuredClone(state);
     const year = Math.round(students / 4);
-    state.cohorts = [students - year * 3, year, year, year];
+    state.cohorts = [students - year * 3, year, year, year, 0, 0];
   }
   return state;
 }
@@ -113,7 +113,7 @@ export function foodCampus(students = 1200): GameState {
   if (students > 0) {
     state = structuredClone(state);
     const year = Math.round(students / 4);
-    state.cohorts = [students - year * 3, year, year, year];
+    state.cohorts = [students - year * 3, year, year, year, 0, 0];
   }
   return state;
 }
@@ -149,7 +149,7 @@ export function lifeCampus(students = 1200): GameState {
   if (students > 0) {
     state = structuredClone(state);
     const year = Math.round(students / 4);
-    state.cohorts = [students - year * 3, year, year, year];
+    state.cohorts = [students - year * 3, year, year, year, 0, 0];
   }
   return state;
 }
@@ -198,7 +198,7 @@ export function footballCampus(at = 'live', students = 2400, tier = 2): GameStat
   state = structuredClone(state);
   const year = Math.round(students / 4);
   const fill = (): void => {
-    state.cohorts = [students - year * 3, year, year, year];
+    state.cohorts = [students - year * 3, year, year, year, 0, 0];
   };
   fill();
   state.football.standing = 55;

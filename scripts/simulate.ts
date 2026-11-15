@@ -642,7 +642,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
           probation: count('probation'),
           drag: greekDrag(state).points,
           happiness: mood.base,
-          retention: mood.retention,
+          retention: retentionRate(state),
         });
       }
       lostThisYear = 0;
@@ -846,7 +846,8 @@ function assertLayerZero(runs: Run[]): void {
     // has one, and since staff are paid it ends up with half its dorms outside any Campus Safety circle.
     const tended = campusHappiness(casual.final);
     const safe = (mood: typeof bare): number => mood.causes.find((c) => c.id === 'safety')?.level ?? 0;
-    const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && bare.retention >= 0.95;
+    // Never spirals: the share who stay each semester holds at a weak campus's or better (DESIGN.md 65.2).
+    const ok = bare.score >= 25 && safe(bare) > 0 && safe(bare) < safe(tended) && retentionRate(absent.final) >= 0.94;
     check('an uncovered campus loses happiness but never spirals', ok, `happiness ${bare.score.toFixed(0)} uncovered against ${tended.score.toFixed(0)} covered, after five years and twenty`);
   }
 
@@ -2390,8 +2391,8 @@ function assertModelCampus(seed: number): void {
     const mood = campusHappiness(state);
     check(
       'a campus that grows fast without building ahead ends short and unhappy, and never spirals',
-      students[2]! >= started * 2 && stretched >= 1 && short.length >= 3 && happy[11]! < tended - 5 && happy[11]! >= 25 && steady && mood.retention >= 0.95 && state.money.grants === 0 && state.money.incomePerYear > state.money.spendingPerYear && validate(state) === null,
-      `${started} students to begin with, ${students[2]} by its third fall and ${students[11]} at its twelfth, the last four within ${Math.max(...last) - Math.min(...last)} of each other; faculty a tenth or more short in ${stretched} of twelve falls; at the end: ${short.join(', ')}; Happiness ${happy[11]!.toFixed(0)} against ${tended.toFixed(0)} on a tended campus; ${(mood.retention * 100).toFixed(1)}% stay each semester; it nets ${dollarsShort(state.money.incomePerYear - state.money.spendingPerYear)} a year and took ${dollarsShort(state.money.grants)} from the state`,
+      students[2]! >= started * 2 && stretched >= 1 && short.length >= 3 && happy[11]! < tended - 5 && happy[11]! >= 25 && steady && retentionRate(state) >= 0.94 && state.money.grants === 0 && state.money.incomePerYear > state.money.spendingPerYear && validate(state) === null,
+      `${started} students to begin with, ${students[2]} by its third fall and ${students[11]} at its twelfth, the last four within ${Math.max(...last) - Math.min(...last)} of each other; faculty a tenth or more short in ${stretched} of twelve falls; at the end: ${short.join(', ')}; Happiness ${happy[11]!.toFixed(0)} against ${tended.toFixed(0)} on a tended campus; ${(retentionRate(state) * 100).toFixed(1)}% stay each semester; it nets ${dollarsShort(state.money.incomePerYear - state.money.spendingPerYear)} a year and took ${dollarsShort(state.money.grants)} from the state`,
     );
   }
 

@@ -1,4 +1,5 @@
 import { calendarAt, dateAt, eventsAt, formatDate, GRADUATION_TICK_IN_YEAR, spanOf, tickOfDate, yearLength } from '../calendar';
+import { expectedGraduates } from './population';
 import { HOMECOMING_SLOT, RIVALRY_SLOT, SLOTS } from '../config/football';
 import { SELL_OUT_SHARE } from '../config/orders';
 import {
@@ -313,7 +314,8 @@ function openMoment(state: GameState, time: MomentTime, log: LogEntry[]): boolea
     moment.param = time.which;
     line = `Finals week ends ${when}. The state asks for Stress of ${moment.target} or lower as the last exams are sat.`;
   } else {
-    const seniors = state.cohorts[3] ?? 0;
+    // Those expected to finish: seniors, and fifth- and sixth-year seniors (DESIGN.md 65.2).
+    const seniors = expectedGraduates(state);
     if (seniors <= 0) return false;
     moment.target = Math.max(1, Math.floor(seniors * COMMENCEMENT_SHARE));
     line = `Commencement is ${when}. ${moment.target.toLocaleString('en-US')} seniors graduating would fill the lawn.`;

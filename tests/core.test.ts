@@ -178,7 +178,7 @@ describe('new game', () => {
 describe('money', () => {
   it('accrues yearly rates one minute at a time', () => {
     const state = freshGame();
-    state.cohorts = [100, 100, 100, 100];
+    state.cohorts = [100, 100, 100, 100, 0, 0];
     markRatesDirty(state);
     // Fourteen minutes ends before the first intake, so nothing but money changes.
     const end = advance(state, T0, T0 + (FIRST_INTAKE_TICK - 1) * 60_000).state;

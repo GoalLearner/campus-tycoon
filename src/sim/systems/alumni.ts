@@ -114,7 +114,8 @@ export function placement(rating: number): number {
  */
 export function classNumbers(state: GameState, record: ClassRecord, greekShare: number, graduating: number): ClassNumbers {
   const rating = clamp01(academicRating(state) / 100);
-  const onTime = record.entered > 0 ? clamp01(record.finishedOnTime / record.entered) : SUCCESS_PARTS.onTimeMiddle;
+  // Finished in four years, counting those of a class the campus opened with who finished before (DESIGN.md 65.2).
+  const onTime = record.entered > 0 ? clamp01((record.finishedOnTime + (record.history?.onTime ?? 0)) / record.entered) : SUCCESS_PARTS.onTimeMiddle;
   const placed = placement(rating * 100);
   const success = Math.max(0, Math.min(100, 100 * rating + SUCCESS_PARTS.onTime * (onTime - SUCCESS_PARTS.onTimeMiddle) + SUCCESS_PARTS.placement * (placed - SUCCESS_PARTS.placementMiddle)));
   const years = state.alumni.years.filter((one) => one.year >= graduating - 3 && one.year <= graduating);
@@ -190,8 +191,11 @@ export function alumniOnGraduation(state: GameState, year: number, seniors: numb
     now.wins = last.w;
     now.games = last.w + last.l;
   }
-  const record = state.classes.find((one) => one.entryYear === year - 3);
-  if (record && seniors > 0 && record.success === undefined) {
+  // The seniors' class has its numbers fixed; so does a class the campus opened with, as its fifth- and sixth-year
+  // seniors finish, so they join the alumni like everyone else (DESIGN.md 65.2).
+  for (const entryYear of [year - 3, year - 4, year - 5]) {
+    const record = state.classes.find((one) => one.entryYear === entryYear);
+    if (!record || seniors <= 0 || record.success !== undefined || record.finishedOnTime + record.finishedLate <= 0) continue;
     const greek = Math.min(1, (greekMembers(state) * SENIOR_SHARE) / seniors);
     const numbers = classNumbers(state, record, greek, year);
     record.success = numbers.success;
@@ -200,7 +204,7 @@ export function alumniOnGraduation(state: GameState, year: number, seniors: numb
   }
   const drive = driveNow(state, year);
   if (drive.raised <= 0) return;
-  const endowed = Math.round(drive.raised * ENDOWED_SHARE);
+  const endowed = Math.round(Math.round(drive.raised) * ENDOWED_SHARE);
   const cash = Math.round(drive.raised) - endowed;
   const ranked = drive.classes.filter((one) => one.size > 0).sort((a, b) => b.rate - a.rate);
   const best = ranked[0] ?? null;

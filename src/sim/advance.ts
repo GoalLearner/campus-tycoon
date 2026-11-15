@@ -13,15 +13,7 @@ import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
-import {
-  closeWaitlist,
-  fillFromWaitlist,
-  graduate,
-  promote,
-  runIntake,
-  semesterEnd,
-  spreadClassYears,
-} from './systems/admissions';
+import { closeWaitlist, fillFromWaitlist, graduate, promote, returnStopOuts, runIntake, semesterEnd, spreadClassYears } from './systems/admissions';
 import { finishBuild } from './systems/construction';
 import { evaluateGrowth } from './systems/growth';
 import { campusLevels } from './systems/happiness';
@@ -228,6 +220,8 @@ function onCalendarEvent(state: GameState, event: CalendarEvent, log: LogEntry[]
       if (calendarAt(state.clock).year > 1) {
         promote(state);
         spreadClassYears(state, log);
+        // Some who stopped out come back to their class (DESIGN.md 65.2).
+        returnStopOuts(state, log);
       }
       runIntake(state, 'fall', log);
       evaluateGrowth(state);

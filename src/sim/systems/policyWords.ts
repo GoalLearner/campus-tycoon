@@ -44,6 +44,8 @@ export function effectWords(state: GameState, effect: PolicyEffect): string {
     case 'leaving':
       // Those who leave do not graduate, and the rating counts every class that ever finished here.
       return `${percent(effect.share)} more of each class leaves each semester: about ${plural(Math.round(enrollment(state) * effect.share), 'student', 'students')}. Fewer of each class graduate, and the rating remembers`;
+    case 'moneyLeaving':
+      return `${percent(1 - effect.times)} fewer students leave for want of money`;
     case 'spareBeds': {
       const housed = housedIfOn(state);
       const waiting = state.offCampus[0] - housed;

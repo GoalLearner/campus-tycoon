@@ -46,7 +46,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * The research labs (DESIGN.md 42.6, as built in section 49): one for each
@@ -294,6 +294,7 @@ describe('saves', () => {
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on, and can build a lab.

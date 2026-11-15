@@ -68,7 +68,7 @@ const STATUSES = Object.values(RELATIONSHIP_NAMES);
 /** The same campus with four full classes, for averages that need many students. */
 function bigCampus(): GameState {
   const state = structuredClone(withStudents());
-  state.cohorts = [300, 300, 300, 300];
+  state.cohorts = [300, 300, 300, 300, 0, 0];
   return state;
 }
 
@@ -87,7 +87,7 @@ describe('the student card', () => {
       const card = studentCard(state, ref)!;
       expect(card).not.toBeNull();
       expect(card.name).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
-      expect(['Freshman', 'Sophomore', 'Junior', 'Senior']).toContain(card.classYearName);
+      expect(['Freshman', 'Sophomore', 'Junior', 'Senior', 'Fifth-year senior', 'Sixth-year senior']).toContain(card.classYearName);
       expect(card.major.length).toBeGreaterThan(0);
       expect(QUIRKS).toContain(card.quirk);
       expect(card.gpa).toBeGreaterThanOrEqual(GPA_MIN);

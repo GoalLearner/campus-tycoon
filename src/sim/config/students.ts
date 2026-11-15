@@ -31,7 +31,8 @@ export const SURNAME_ENDS: readonly string[] = [
   'ley', 'ham', 'worth', 'dale', 'combe', 'shaw', 'stead', 'more', 'bank', 'gate',
 ];
 
-export const CLASS_YEAR_NAMES = ['Freshman', 'Sophomore', 'Junior', 'Senior'] as const;
+/** Fifth- and sixth-year seniors (DESIGN.md 65.2) are the real Super Seniors: no longer a passing phase of seniors. */
+export const CLASS_YEAR_NAMES = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Fifth-year senior', 'Sixth-year senior'] as const;
 
 /** The eight departments of the building catalog (section 23). A club leans toward some of them. */
 export type MajorGroup = 'engineering' | 'sciences' | 'letters' | 'business' | 'education' | 'music' | 'arts' | 'health';
@@ -134,8 +135,6 @@ export const ALL_NIGHTER_SHARE = 0.18;
 /** [T] Share of freshmen who read as Lost Freshman or Homesick: first in the fall, then for the rest of the year. */
 export const LOST_SHARE = { fall: 0.3, later: 0.12 };
 export const HOMESICK_SHARE = { fall: 0.12, later: 0.05 };
-/** [T] Share of seniors who read as Super Senior: normally, and when Academic seats capped the last class. */
-export const SUPER_SENIOR_SHARE = { normal: 0.1, seatsShort: 0.3 };
 
 export const QUIRKS: readonly string[] = [
   'Night owl',

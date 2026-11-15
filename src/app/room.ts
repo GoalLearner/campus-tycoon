@@ -534,10 +534,11 @@ export function roomFor(state: GameState, ref: StudentRef, hour: number, figures
   if (sofa) pieces.push({ key: 'decoration.sofa', x: plan.sofa.x, y: plan.sofa.y, flip: plan.sofa.flip });
 
   // Their things: what goes on a desk goes on the desk, food and a cup first, and the rest on the floor. Food and a cup
-  // never go on the floor: a crowded desk leaves them out.
+  // never go on the floor: a crowded desk leaves them out. The cup and the apple are a quirk's own, so they come before
+  // a club's bread.
   const things = belongings(card);
   const atDesk = activity === 'study' || activity === 'finals';
-  const onDesk = [atDesk ? 'room.book' : null, ...things.filter((key) => FOOD.includes(key)), ...things.filter((key) => DESK_THINGS.includes(key))].filter((key): key is string => key !== null);
+  const onDesk = [atDesk ? 'room.book' : null, ...FOOD.filter((key) => things.includes(key)), ...things.filter((key) => DESK_THINGS.includes(key))].filter((key): key is string => key !== null);
   const deskShown = [...new Set(onDesk)].slice(0, plan.onDesk.length);
   deskShown.forEach((key, n) => pieces.push({ key, x: plan.onDesk[n]![0], y: plan.onDesk[n]![1], lift: DESK_TOP, pages: key === 'room.book' && atDesk }));
   // Playing music: what they play it on stands beside them, and notes drift up from it.

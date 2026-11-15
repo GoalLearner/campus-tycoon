@@ -49,7 +49,7 @@ import { marketingLift } from '../src/sim/systems/budget';
 import { athleticLift } from '../src/sim/systems/football';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, T0, webMetaFor, sixClassYears } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -112,7 +112,7 @@ describe('size goals', () => {
   it('land at an intake and nowhere else', () => {
     // Enough students for the goal, in the middle of a term: nothing lands while no class moves in.
     const state = structuredClone(model());
-    state.cohorts = [14_000, 13_000, 12_000, 11_000];
+    state.cohorts = [14_000, 13_000, 12_000, 11_000, 0, 0];
     const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + DAY);
     expect(enrollment(later.state)).toBe(50_000);
     expect(later.state.goals!.size).toBe(0);
@@ -144,7 +144,7 @@ describe('size goals', () => {
 
   it('are one goal and no more: a campus above the cap from before it reaches nothing new by its size', () => {
     const state = structuredClone(model());
-    state.cohorts = [15_000, 14_500, 14_500, 14_000];
+    state.cohorts = [15_000, 14_500, 14_500, 14_000, 0, 0];
     const log: LogEntry[] = [];
     landSizeGoals(state, log);
     expect(state.goals!.size).toBe(1);
@@ -448,6 +448,7 @@ describe('the main street', () => {
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
     expected.web = webMetaFor(expected);
+    sixClassYears(expected);
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

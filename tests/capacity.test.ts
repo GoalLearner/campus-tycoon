@@ -1,4 +1,5 @@
 import { newGreek } from '../src/sim/systems/greek';
+import { commencementLeavers } from '../src/sim/systems/population';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -78,7 +79,7 @@ import {
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, HOUR, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -414,7 +415,8 @@ describe('the cap on enrollment', () => {
     expect(shortage(state, 'academic')).toBeLessThanOrEqual(0);
     expect(shortage(state, 'housing')).toBeLessThanOrEqual(0);
     const fall = nextFall(state);
-    expect(fall.staying).toBe(50_000 - state.cohorts[3]);
+    // Those who finish at commencement will be gone (DESIGN.md 65.2).
+    expect(fall.staying).toBe(50_000 - commencementLeavers(state).students);
     expect(fall.admitted).toBe(Math.min(fall.applicants, 50_000 - fall.staying));
     expect(fall.students).toBeLessThanOrEqual(50_000);
     expect(fall.turnedAway).toBe(fall.applicants - fall.admitted);
@@ -422,11 +424,12 @@ describe('the cap on enrollment', () => {
 
   it('lets a game above it keep every student and every goal, and admits nobody until commencement brings it under', () => {
     const over = structuredClone(at(model(), T0 + DAY).state);
-    over.cohorts = [13_000, 13_000, 12_500, 12_500];
-    over.offCampus = [5600, 5600, 5400, 5400];
+    // Far enough above that the fall's leavers (DESIGN.md 65.2) do not bring it under.
+    over.cohorts = [13_500, 13_500, 13_000, 13_000, 0, 0];
+    over.offCampus = [5600, 5600, 5400, 5400, 0, 0];
     over.goals = { size: 3, rank: 0, rewards: 0, reached: [{ ladder: 'size', n: 0, year: 1 }, { ladder: 'size', n: 1, year: 1 }, { ladder: 'era', n: 1, year: 1 }, { ladder: 'size', n: 2, year: 1 }] };
     over.money.ratesDirty = true;
-    expect(enrollment(over)).toBe(51_000);
+    expect(enrollment(over)).toBe(53_000);
     expect(roomUnderCap(over)).toBe(0);
     expect(sizeView(over).cap!.line).toBe('Above the cap of 50,000');
 
@@ -435,7 +438,7 @@ describe('the cap on enrollment', () => {
     expect(intake.data).toMatchObject({ season: 'spring', admitted: 0 });
     expect(Number(intake.data?.capped)).toBe(Number(intake.data?.expected));
     // The only students gone are those who chose not to come back at the end of the semester.
-    expect(enrollment(spring.state)).toBe(51_000 - spring.state.admissions.lastSemester!.left);
+    expect(enrollment(spring.state)).toBe(53_000 - spring.state.admissions.lastSemester!.left);
     expect(enrollment(spring.state)).toBeGreaterThan(50_000);
     expect(spring.state.goals!.size).toBe(3);
     expect(eraOf(spring.state.goals)).toBe(1);
@@ -540,7 +543,7 @@ describe('the Capacity page', () => {
   it("scales every row from one enrollment number, and shows next fall's", () => {
     const state = model();
     const fall = nextFall(state);
-    expect(fall.staying).toBe(46_000 - state.cohorts[3]);
+    expect(fall.staying).toBe(46_000 - commencementLeavers(state).students);
     expect(capacity(state).nextFall).toBe(fall.students);
     expect(need(state, 'faculty').forecast).toBe(`Next fall's students need ${headCount(facultyNeed(state, fall.students))}.`);
     expect(need(state, 'staff').forecast).toBe(`Next fall's students need ${headCount(staffNeed(state, fall.students))}.`);
@@ -685,6 +688,7 @@ describe('a save from version 15', () => {
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
     expected.web = webMetaFor(expected);
+    sixClassYears(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -698,13 +702,13 @@ describe('a save from version 15', () => {
 
   it('keeps every student and every goal of a game that had passed 50,000 before the cap', () => {
     const file = JSON.parse(text) as { v: number; state: GameState };
-    file.state.cohorts = [14_000, 13_000, 12_500, 12_000];
-    file.state.offCampus = [5700, 5500, 5400, 5300];
+    file.state.cohorts = [14_000, 13_000, 12_500, 12_000, 0, 0];
+    file.state.offCampus = [5700, 5500, 5400, 5300, 0, 0];
     file.state.goals = { size: 2, rank: 0, rewards: 0, reached: [{ ladder: 'size', n: 0, year: 1 }, { ladder: 'size', n: 1, year: 1 }, { ladder: 'era', n: 1, year: 1 }] };
     const loaded = parseSave(JSON.stringify(file));
     if (!loaded.ok) throw new Error(loaded.reason);
     expect(enrollment(loaded.state)).toBe(51_500);
-    expect(loaded.state.cohorts).toEqual([14_000, 13_000, 12_500, 12_000]);
+    expect(loaded.state.cohorts).toEqual([14_000, 13_000, 12_500, 12_000, 0, 0]);
     expect(loaded.state.goals).toEqual(file.state.goals);
     expect(eraOf(loaded.state.goals)).toBe(1);
     expect(loaded.state.staffing.faculty).toBe(2575);

@@ -1,4 +1,5 @@
 import { calendarAt, GRADUATION_TICK_IN_YEAR } from '../calendar';
+import { commencementLeavers } from './population';
 import { MAX_STAGE, stageSpec } from '../config/buildings';
 import { WORK_PER_WORKER, YARD_MAX_WORKERS } from '../config/grounds';
 import { STUDENTS_PER_STAFF } from '../config/money';
@@ -94,8 +95,8 @@ export interface NextFall {
 /** Next fall, on today's campus: who stays, who applies, and how many of those the cap leaves room for. */
 export function nextFall(state: GameState): NextFall {
   const applicants = fallApplicants(state).total;
-  // Seniors still to graduate this year will be gone by then.
-  const staying = state.clock.tick < FIRST_INTAKE_TICK ? 0 : enrollment(state) - (calendarAt(state.clock).tickInYear < GRADUATION_TICK_IN_YEAR ? state.cohorts[3] : 0);
+  // Those still to finish this year will be gone by then (DESIGN.md 65.2).
+  const staying = state.clock.tick < FIRST_INTAKE_TICK ? 0 : enrollment(state) - (calendarAt(state.clock).tickInYear < GRADUATION_TICK_IN_YEAR ? commencementLeavers(state).students : 0);
   const admitted = Math.min(applicants, roomUnderCap(state, staying));
   return { staying, applicants, admitted, turnedAway: applicants - admitted, students: staying + admitted };
 }

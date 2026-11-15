@@ -1,4 +1,5 @@
-import { BED_NEED, RETENTION_FLOOR, RETENTION_SPAN } from '../config/demand';
+import { BED_NEED } from '../config/demand';
+import { semesterStay } from './population';
 import { GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
 import { VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
 import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } from '../config/students';
@@ -7,7 +8,6 @@ import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
 import { diningAt, foodKindsAt } from './food';
 import { noiseAt } from './football';
-import { friendsStay } from './friends';
 import { causeShifts, type CauseShift } from './policies';
 import { chapterNoiseAt } from './greek';
 import { cleanAt, seatingAt } from './grounds';
@@ -180,8 +180,6 @@ export interface CampusHappiness {
   worst: CauseId | null;
   /** The weakest part of that cause: the thing to build or change. */
   worstPart: DriverId | null;
-  /** The share of students who will stay at the end of this semester, on today's happiness. */
-  retention: number;
 }
 
 /** The average of a zone's lots, each counted by how many students it holds. */
@@ -235,7 +233,7 @@ export function campusHappiness(state: GameState): CampusHappiness {
   const total = residents + others;
   if (total === 0) {
     const season = seasonLine(state, { recreation: 0, green: 0, safety: 0, dining: 0 });
-    return { score: 50, base: 50, season, causes: [], worst: null, worstPart: null, retention: RETENTION_FLOOR + RETENTION_SPAN * 0.5 };
+    return { score: 50, base: 50, season, causes: [], worst: null, worstPart: null };
   }
   residents /= total;
   others /= total;
@@ -303,7 +301,6 @@ export function campusHappiness(state: GameState): CampusHappiness {
     causes,
     worst: worst?.id ?? null,
     worstPart,
-    retention: RETENTION_FLOOR + RETENTION_SPAN * (score / 100),
   };
 }
 
@@ -356,8 +353,10 @@ export function campusLevels(state: GameState): CampusLevels {
   return { recreation: level('recreation'), green: level('green'), safety: level('safety'), dining: level('dining') };
 }
 
-/** The share of every class that returns after a semester. It follows happiness, and what friends add (DESIGN.md 63.10). */
+/**
+ * The share of the campus that stays on through a semester. It follows the campus's standing, its rank and its
+ * Happiness, read for each class year, and what friends add (DESIGN.md 63.10, 65.2).
+ */
 export function retentionRate(state: GameState): number {
-  const retention = campusHappiness(state).retention;
-  return retention + friendsStay(state, retention);
+  return semesterStay(state, campusHappiness(state).base);
 }

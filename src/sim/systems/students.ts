@@ -1,4 +1,5 @@
 import { scaleOf, smallCount } from '../scale';
+import { CLASS_YEARS } from '../config/population';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
 import { BED_NEED } from '../config/demand';
@@ -45,7 +46,6 @@ import {
   SOCIAL_SWING,
   SOCIAL_THIN,
   STUDENTS_PER_SOCIAL_SPOT,
-  SUPER_SENIOR_SHARE,
   SURNAME_ENDS,
   SURNAME_STARTS,
   TEACHING_WEIGHTS,
@@ -125,20 +125,43 @@ function pickWeighted<T>(items: ReadonlyArray<readonly [T, number]>, at: number)
   return items[items.length - 1]![0];
 }
 
-/** 0 for a freshman to 3 for a senior, or null when no such student is enrolled now. */
+/**
+ * Where a class's enrolled places start: 0, until its commencement leaves only its fifth- and sixth-year seniors,
+ * who are a run from there (DESIGN.md 65.2). The newest records are at the end, so the search is short.
+ */
+export function classFrom(state: GameState, entryYear: number): number {
+  const classes = state.classes;
+  for (let i = classes.length - 1; i >= 0; i--) {
+    const record = classes[i]!;
+    if (record.entryYear === entryYear) return record.from ?? 0;
+    if (record.entryYear < entryYear) break;
+  }
+  return 0;
+}
+
+/** The places of one class year that are enrolled now: its entry year, and the run of places from `from`. */
+export function classPlaces(state: GameState, classYear: number): { entryYear: number; from: number; size: number } {
+  const entryYear = calendarAt(state.clock).year - classYear;
+  return { entryYear, from: classYear >= 3 ? classFrom(state, entryYear) : 0, size: state.cohorts[classYear] ?? 0 };
+}
+
+/** 0 for a freshman to 3 for a senior, 4 and 5 for fifth- and sixth-year seniors, or null when not enrolled now. */
 export function classYearOf(state: GameState, ref: StudentRef): number | null {
   const classYear = calendarAt(state.clock).year - ref.entryYear;
-  if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear > 3) return null;
-  return ref.index < state.cohorts[classYear]! ? classYear : null;
+  if (!Number.isInteger(ref.index) || ref.index < 0 || classYear < 0 || classYear >= CLASS_YEARS) return null;
+  const size = state.cohorts[classYear]!;
+  if (size <= 0) return null;
+  const from = classYear >= 3 ? classFrom(state, ref.entryYear) : 0;
+  return ref.index >= from && ref.index < from + size ? classYear : null;
 }
 
 /** Students to draw walkers from: up to `perClass` from each class year. */
 export function sampleStudents(state: GameState, perClass = 400): StudentRef[] {
-  const year = calendarAt(state.clock).year;
   const out: StudentRef[] = [];
-  for (let classYear = 0; classYear < 4; classYear++) {
-    const size = Math.min(perClass, state.cohorts[classYear]!);
-    for (let index = 0; index < size; index++) out.push({ entryYear: year - classYear, index });
+  for (let classYear = 0; classYear < CLASS_YEARS; classYear++) {
+    const { entryYear, from, size } = classPlaces(state, classYear);
+    const take = Math.min(perClass, size);
+    for (let index = from; index < from + take; index++) out.push({ entryYear, index });
   }
   return out;
 }
@@ -527,10 +550,8 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
     // Nobody runs a dorm floor in their first year.
     if (nature === 'ra') return 'butterfly';
   }
-  if (classYear === 3) {
-    const seatsShort = state.admissions.lastIntake?.bottleneck === 'academic';
-    if (at < (seatsShort ? SUPER_SENIOR_SHARE.seatsShort : SUPER_SENIOR_SHARE.normal)) return 'superSenior';
-  }
+  // A fifth- or sixth-year senior is a Super Senior: the real ones (DESIGN.md 65.2).
+  if (classYear >= 4) return 'superSenior';
   return nature;
 }
 

@@ -71,7 +71,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -167,7 +167,7 @@ describe('the list of policies', () => {
       }
     }
     // Every kind of effect there is has a policy that uses it.
-    expect([...kinds].sort()).toEqual(['bullying', 'cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
+    expect([...kinds].sort()).toEqual(['bullying', 'cause', 'exams', 'fans', 'freeSeats', 'greekDrag', 'greekMembers', 'hazing', 'income', 'lateNights', 'leaving', 'mischief', 'moneyLeaving', 'partyCalls', 'perStudent', 'rating', 'spareBeds', 'storyOdds', 'upkeep']);
   });
 });
 
@@ -390,10 +390,8 @@ describe('no fifth cause', () => {
       expect(cause(on, id).level).toBeCloseTo(cause(off, id).level + moved, 2);
     }
     expect(cause(on, 'walk').level).toBeCloseTo(cause(off, 'walk').level, 9);
-    // The four causes alone are what the share who stay follows, so a policy's cost reaches it.
+    // The four causes alone, with the rank, are what the share who stay follows, so a policy's cost reaches it (65.2).
     expect(after.base).toBeLessThan(before.base);
-    expect(after.retention).toBeLessThan(before.retention);
-    expect(after.retention).toBeCloseTo(0.95 + 0.045 * (after.base / 100), 9);
   });
 
   it('reads the same on a student\'s lot as on the campus panel, and is named on the panel\'s line', () => {
@@ -724,6 +722,7 @@ describe('a save from version 16', () => {
     // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
     expected.story = newStory();
     expected.web = webMetaFor(expected);
+    sixClassYears(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.

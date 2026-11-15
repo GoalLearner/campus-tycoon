@@ -137,7 +137,7 @@ export interface PostContext {
 export function postContext(web: Web, state: GameState, toWeek: number): PostContext {
   const housing = placeIndex(state, 'housing');
   const idOf = (ref: StudentRef): number => {
-    const r = ((ref.entryYear % 4) + 4) % 4;
+    const r = ((ref.entryYear % web.ring.length) + web.ring.length) % web.ring.length;
     return web.ring[r] === ref.entryYear && ref.index >= 0 && ref.index < web.classSlot ? r * web.classSlot + ref.index : -1;
   };
   const featured: PostContext['featured'] = [];
@@ -375,7 +375,7 @@ function campusTopic(web: Web, ctx: PostContext, posting: Posting, id: number, p
   if (read.kinds.has('finals')) add(POST.finals, 4 + (has(bits, INTEREST.studying) ? 2 : 0), hall);
   if (read.kinds.has('midterms') || read.kinds.has('finals')) add(POST.studyGroup, 1.5, hall);
   if (read.kinds.has('break')) add(POST.breakHome, 3);
-  if (read.kinds.has('commencement')) add(POST.commencement, year === 3 ? 6 : 0.3);
+  if (read.kinds.has('commencement')) add(POST.commencement, year >= 3 ? 6 : 0.3);
   if (inClass) add(POST.eightAm, 0.8);
   if (read.weather === 'snow') add(POST.snow, 3, home);
   if (read.weather === 'rain') add(POST.rain, 1.2);
@@ -486,7 +486,7 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
       const kind = HAPPENING_POST[h[f + 1]!];
       if (kind === undefined) continue;
       const idOfRef = (entryYear: number, index: number): number => {
-        const r = ((entryYear % 4) + 4) % 4;
+        const r = ((entryYear % web.ring.length) + web.ring.length) % web.ring.length;
         return web.ring[r] === entryYear && index >= 0 && index < web.classSlot ? r * web.classSlot + index : -1;
       };
       const a = idOfRef(h[f + 4]!, h[f + 5]!);
@@ -586,7 +586,7 @@ function bullyPosts(web: Web, ctx: PostContext, posting: Posting, week: number):
 }
 
 function idOfRef(web: Web, entryYear: number, index: number): number {
-  const r = ((entryYear % 4) + 4) % 4;
+  const r = ((entryYear % web.ring.length) + web.ring.length) % web.ring.length;
   return web.ring[r] === entryYear && index >= 0 && index < web.classSlot ? r * web.classSlot + index : -1;
 }
 

@@ -77,7 +77,7 @@ const fresh = (seed = 31): GameState => newGame({ seed, name: 'Larkspur Universi
 const campus = (students: number, seed = 31): GameState => {
   const state = run(fresh(seed), FIRST_INTAKE_TICK).state;
   const year = Math.round(students / 4);
-  state.cohorts = [students - 3 * year, year, year, year];
+  state.cohorts = [students - 3 * year, year, year, year, 0, 0];
   state.money.cash = 50_000_000;
   recomputeRates(state);
   return state;
@@ -439,7 +439,7 @@ describe('the annual decisions', () => {
       const step = run(state, TICKS_PER_DAY);
       state = step.state;
       // Keep a healthy campus through the years: this is about football, not admissions.
-      state.cohorts = [750, 750, 750, 750];
+      state.cohorts = [750, 750, 750, 750, 0, 0];
       log.push(...step.log);
       for (const item of state.decisions.open) {
         if (seen.has(item.id)) continue;
@@ -556,7 +556,7 @@ describe("football's money", () => {
     const none = { tickets: 0, tv: 0, pay: 0, coach: 0, staff: 0, operations: 0, upkeep: 0, utilities: 0, crowd: 0 };
     expect(footballBooks(fresh())).toEqual(none);
     const empty = campus(400);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(footballBooks(empty)).toEqual(none);
   });
 

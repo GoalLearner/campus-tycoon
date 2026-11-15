@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { RINGS } from '../sim/systems/web';
 import { fitOnMap } from './propSize';
 import { swayAt } from '../app/feelingShow';
 import { findStudent, type Stander } from '../app/activityPeople';
@@ -253,7 +254,7 @@ export class Lawns {
     if (web && roll < 0.28) {
       // A couple: a student from the seed and their partner, both free.
       for (let tries = 0; tries < 6; tries++) {
-        const id = hashInts(h, tries, 1) % (web.classSlot * 4);
+        const id = hashInts(h, tries, 1) % (web.classSlot * RINGS);
         if (web.ring[Math.floor(id / web.classSlot)]! < 0) continue;
         for (let k = 0; k < SLOTS; k++) {
           const s = id * SLOTS + k;

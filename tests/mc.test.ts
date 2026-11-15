@@ -25,7 +25,7 @@ import {
 import { edition } from '../src/sim/newspaper';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * The Main Character (DESIGN.md 53.2, as built in section 57): chosen from a
@@ -271,6 +271,7 @@ describe('saves', () => {
       expected.version = SAVE_VERSION;
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);

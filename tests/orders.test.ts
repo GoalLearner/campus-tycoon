@@ -51,7 +51,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { footballStat, inboxStat, policyStat, shortLeft } from '../src/ui/chips';
 import { ordersChip, ordersView, paidWords } from '../src/ui/ordersUi';
-import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor } from './helpers';
+import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears } from './helpers';
 
 /**
  * The orders board (DESIGN.md 42.3, as built from 42.16). Things to do, where
@@ -832,6 +832,7 @@ describe('saves', () => {
       // Version 28 adds the Main Character's story (tests/mc.test.ts has it).
       expected.story = newStory();
       expected.web = webMetaFor(expected);
+      sixClassYears(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Money, students and Happiness are to the cent what they were.

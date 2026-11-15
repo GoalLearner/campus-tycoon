@@ -38,6 +38,7 @@ import {
   type GameState,
   type Placed,
   type PlacedType,
+  retentionRate,
 } from '../src/sim';
 import { FAVOURITES, THOUGHTS } from '../src/sim/config/students';
 import { upgradeNotes } from '../src/app/upgradeNotes';
@@ -63,7 +64,7 @@ const place = (state: GameState, building: PlacedType, x: number, y: number): Ga
 function campus(students: number): GameState {
   const state = structuredClone(advance(freshGame(), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
-  state.cohorts = [students, 0, 0, 0];
+  state.cohorts = [students, 0, 0, 0, 0, 0];
   state.admissions.waitlist = 0;
   return state;
 }
@@ -201,7 +202,7 @@ describe('variety', () => {
     state = place(state, 'pool', 11, 15);
     state = place(state, 'track', 4, 15);
     state = structuredClone(state);
-    state.cohorts = [40, 0, 0, 0];
+    state.cohorts = [40, 0, 0, 0, 0, 0];
     expect(recreationAt(state, ...DORM)).toBe(1);
     expect(life(state, ...DORM).level).toBe(1);
     state = place(state, 'coffee', 9, 13);
@@ -247,7 +248,7 @@ describe('food income', () => {
     expect(foodTrade(state, first(state, 'admin'))).toBeNull();
     // Nobody enrolled, nothing earned.
     const empty = structuredClone(state);
-    empty.cohorts = [0, 0, 0, 0];
+    empty.cohorts = [0, 0, 0, 0, 0, 0];
     expect(foodIncomePerYear(empty)).toBe(0);
   });
 
@@ -396,7 +397,7 @@ describe('the three Academics buildings', () => {
     expect(use.capacity).toBe(PLACED.makerspace.capacity);
     expect(use.demand).toBeCloseTo(15, 6);
     const crowded = structuredClone(state);
-    crowded.cohorts = [2400, 0, 0, 0];
+    crowded.cohorts = [2400, 0, 0, 0, 0, 0];
     expect(playUse(crowded, first(crowded, 'makerspace'))!.waiting).toBeGreaterThan(0);
     expect(placedSummary(crowded, first(crowded, 'makerspace'))).toMatch(/waiting at peak/);
   });
@@ -436,7 +437,7 @@ describe('the three Academics buildings', () => {
 
     // Nothing reads GPA yet: Happiness, who stays, and what comes in are untouched.
     expect(campusHappiness(after).score).toBe(campusHappiness(before).score);
-    expect(campusHappiness(after).retention).toBe(campusHappiness(before).retention);
+    expect(retentionRate(after)).toBe(retentionRate(before));
     expect(budget(after).incomeTotal).toBe(budget(before).incomeTotal);
   });
 

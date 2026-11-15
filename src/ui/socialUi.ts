@@ -1,5 +1,5 @@
 import { campusHappiness } from '../sim';
-import { friendsStay } from '../sim/systems/friends';
+import { friendsKeep } from '../sim/systems/population';
 import { campusSocial, firstNamesOf, type Told, type WebView } from '../app/socialView';
 import { socialWeb } from '../app/socialWeb';
 import { feedOf, moodLine } from '../app/quadline';
@@ -57,8 +57,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
   const effects = state.web.effects;
   if (effects) {
     const signed = (n: number, places: number): string => `${n > 0 ? '+' : n < 0 ? '\u2212' : ''}${Math.abs(n).toFixed(places)}`;
-    const retention = campusHappiness(state).retention;
-    const stay = friendsStay(state, retention);
+    const stay = friendsKeep(state, campusHappiness(state).base);
     body.append(
       el('div', 'money-head', 'What friends do'),
       stat('Happiness', `${signed(effects.happiness, 1)} across the campus`),

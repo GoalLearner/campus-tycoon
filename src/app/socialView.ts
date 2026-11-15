@@ -83,7 +83,8 @@ export function viewBuffers(view: WebView): ArrayBufferLike[] {
 
 /** A student's place in the view, or -1. */
 export function idIn(view: WebView, ref: StudentRef): number {
-  const r = ((ref.entryYear % 4) + 4) % 4;
+  // One ring for each class year, as the web has them (DESIGN.md 65.2).
+  const r = ((ref.entryYear % view.ring.length) + view.ring.length) % view.ring.length;
   if (view.ring[r] !== ref.entryYear || ref.index < 0 || ref.index >= view.classSlot) return -1;
   return r * view.classSlot + ref.index;
 }

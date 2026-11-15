@@ -7,7 +7,7 @@ import { newStory } from './systems/mc';
 import { newInbox } from './systems/inbox';
 import { stageSpec } from './config/buildings';
 import { layModelCampus, type ModelDistrict } from './modelCampus';
-import { openWithStudents } from './systems/admissions';
+import { openingHistory, openWithStudents } from './systems/admissions';
 import { yardStatus } from './systems/grounds';
 import { openCapacity } from './selectors';
 import { WORK_PER_WORKER, YARD_MAX_WORKERS } from './config/grounds';
@@ -190,8 +190,8 @@ export function newGame(opts: NewGameOptions): GameState {
       phase: PHASE_STEPS,
     },
     map,
-    cohorts: [0, 0, 0, 0],
-    offCampus: [0, 0, 0, 0],
+    cohorts: [0, 0, 0, 0, 0, 0],
+    offCampus: [0, 0, 0, 0, 0, 0],
     classes: [],
     fourYears: true,
     admissions: { waitlist: 0, waitlistUntilTick: 0, waitlistAdmitted: 0, waitlistLocals: 0, lastIntake: null, lastSemester: null, year: { applied: 0, admitted: 0 } },
@@ -250,6 +250,8 @@ function openModelCampus(state: GameState, fullSize: boolean): void {
   const map = state.map;
   const own = modelScale({ ...map, scale: 1 });
   openWithStudents(state, fullSize ? MODEL_STUDENTS : Math.round((MODEL_STUDENTS * map.scale) / own));
+  // A school already standing: its classes had years here before the player came (DESIGN.md 65.2).
+  openingHistory(state);
   // The classes that graduated before the player arrived (DESIGN.md 54.1): the first drive is not empty.
   state.alumni.opening = openingPool(state);
   // Each yard is given the workers it needs to keep up with what it looks after, and never fewer than one.
