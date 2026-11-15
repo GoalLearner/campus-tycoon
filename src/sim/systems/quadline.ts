@@ -554,8 +554,9 @@ export function postWeek(web: Web, ctx: PostContext, campusOnly: boolean): void 
       campusPost(web, ctx, posting, id, profile, read, week, h);
     }
   }
-  // The week's viral posts, once the week is posted (63.14). Not in the weeks a regrow lives: they are not news.
-  if (!campusOnly) chooseViral(web, posting);
+  // The week's viral posts, once the week is posted (63.14). In the weeks a regrow lives only the campus is posted
+  // about, so only the campus's posts can go viral: none of the regrowing's happenings is news (63.12).
+  chooseViral(web, posting);
 }
 
 // ------------------------------------------------- the app's reach (63.14) --
