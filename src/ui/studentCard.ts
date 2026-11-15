@@ -413,7 +413,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
           : card.street
             ? `Lives off campus on ${card.street}`
             : 'Lives off campus';
-    setText(aboutText, `${card.classYearName} · ${card.major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
+    // An undeclared student's leaning, or the major they left, beside the major (DESIGN.md 65.3).
+    const major = card.majorNote ? `${card.major} (${card.majorNote.charAt(0).toLowerCase()}${card.majorNote.slice(1)})` : card.major;
+    setText(aboutText, `${card.classYearName} · ${major} · ${card.archetypeName} · ${card.quirk} · ${lives}`);
     hallLink.hidden = hall === null;
     setText(hallLink, hall ?? '');
     setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');

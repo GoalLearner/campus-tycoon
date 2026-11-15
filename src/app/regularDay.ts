@@ -101,17 +101,17 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     // Classes in the morning, lunch with friends, a class after for the first two years.
     const classFrom = Math.max(9, t);
     if (classFrom > t) put(t, classFrom, 'food', 'Coffee before class');
-    put(classFrom, classFrom + 1.25, 'class', `${card.major} lecture`);
+    put(classFrom, classFrom + 1.25, 'class', `${card.subject} lecture`);
     t = classFrom + 1.5;
     if (t < 12) {
-      put(t, Math.min(12, t + 1.25), 'class', `A ${card.major} seminar`);
+      put(t, Math.min(12, t + 1.25), 'class', `A ${card.subject} seminar`);
       t = Math.max(t + 1.25, 12);
     }
     const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
     put(t, t + 1, 'food', `Lunch${withWords(state, lunch)}`, lunch);
     t += 1;
     if (card.classYear < 2) {
-      put(t + 0.5, t + 2, 'class', `A ${card.major} class`);
+      put(t + 0.5, t + 2, 'class', `A ${card.subject} class`);
       t += 2;
     }
   } else {

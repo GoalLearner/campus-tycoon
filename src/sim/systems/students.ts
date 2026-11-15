@@ -1,4 +1,5 @@
 import { scaleOf, smallCount } from '../scale';
+import { majorAt, majorPath, semestersIn, type MajorPath } from './majors';
 import { CLASS_YEARS } from '../config/population';
 import { calendarAt, SPRING_INTAKE_TICK_IN_YEAR } from '../calendar';
 import { stageSpec } from '../config/buildings';
@@ -359,8 +360,8 @@ export interface SocialProfile {
 
 /** What never changes about a student, from the seed alone: kept, since the social campus reads it every week. */
 interface FixedTraits {
-  major: string;
-  field: string;
+  /** Their path through majors (DESIGN.md 65.3): where it stands depends on the semester. */
+  path: MajorPath;
   nature: ArchetypeId;
   club: string | null;
 }
@@ -371,10 +372,11 @@ function fixedOf(seed: number, ref: StudentRef): FixedTraits {
   let fixed = fixedTraits.get(key);
   if (!fixed) {
     if (fixedTraits.size > 120_000) fixedTraits.clear();
-    const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+    const path = majorPath(seed, ref);
     const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
     const nature = natureOf(seed, ref, livesOnCampus(seed, ref));
-    fixed = { major: major.name, field: major.group, nature, club: clubOf(seed, ref, nature, major.group, quirk) };
+    // A club leans toward the subject they came for: a later change of major leaves their club as it was.
+    fixed = { path, nature, club: clubOf(seed, ref, nature, MAJORS[path.intended]!.group, quirk) };
     fixedTraits.set(key, fixed);
   }
   return fixed;
@@ -388,8 +390,13 @@ export function socialProfile(state: GameState, ref: StudentRef, housing: PlaceI
   const fixed = fixedOf(seed, ref);
   const home = studentHome(state, ref, housing);
   const member = home !== null ? memberOf(state, roll(seed, ref, SALT.greek), roll(seed, ref, SALT.chapter)) : null;
+  // Their class sections follow the major they study now, or the one they intend while undeclared (DESIGN.md 65.3).
+  const subject = MAJORS[majorAt(fixed.path, semestersIn(ref.entryYear, semesterOf(state))).subject]!;
   return {
-    ...fixed,
+    major: subject.name,
+    field: subject.group,
+    nature: fixed.nature,
+    club: fixed.club,
     classYear,
     home,
     chapter: member?.chapter.name ?? null,
@@ -467,7 +474,12 @@ export interface StudentCard {
   /** 0 for a freshman to 3 for a senior. */
   classYear: number;
   classYearName: string;
+  /** As shown (DESIGN.md 65.3): "Undeclared", "Biology", or "Biology and Economics". */
   major: string;
+  /** The major they study: the one they intend while undeclared. A lecture, a story or a professor names it. */
+  subject: string;
+  /** A short note beside the major: what an undeclared student leans toward, or what they changed from. null for most. */
+  majorNote: string | null;
   archetype: ArchetypeId;
   archetypeName: string;
   quirk: string;
@@ -679,7 +691,8 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
 
   const first = firstNameOf(state, ref);
   const last = pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start)) + pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end));
-  const major = pickFrom(MAJORS, roll(seed, ref, SALT.major));
+  const fixed = fixedOf(seed, ref);
+  const majorNow = majorAt(fixed.path, semestersIn(ref.entryYear, semesterOf(state)));
   const quirk = pickFrom(QUIRKS, roll(seed, ref, SALT.quirk));
 
   const home = studentHome(state, ref);
@@ -755,7 +768,9 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     name: `${first} ${last}`,
     classYear,
     classYearName: CLASS_YEAR_NAMES[classYear]!,
-    major: major.name,
+    major: majorNow.shown,
+    subject: MAJORS[majorNow.subject]!.name,
+    majorNote: majorNow.undeclared ? `Leaning toward ${MAJORS[majorNow.subject]!.name}` : majorNow.switchedFrom !== null ? `Switched from ${MAJORS[majorNow.switchedFrom]!.name}` : null,
     archetype,
     archetypeName: ARCHETYPE_NAMES[archetype],
     quirk,
@@ -766,7 +781,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     gpa,
     tutored: tutoring > 0,
     classSize: Math.round(classSizeNow(state)),
-    club: clubOf(seed, ref, nature, major.group, quirk),
+    club: fixed.club,
     relationship,
     happiness,
     mood: moodOf(happiness),

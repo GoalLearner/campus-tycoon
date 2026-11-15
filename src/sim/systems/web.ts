@@ -352,6 +352,8 @@ export function place(web: Web, state: GameState): void {
   const athletes = athleteShare(state);
   const sizes = capacities(housing);
   const majors = new Map(MAJORS.map((m, i) => [m.name, i]));
+  // A major's sections are as many as its students fill, at its share of the class (DESIGN.md 65.3).
+  const shares = new Map(MAJORS.map((m) => [m.name, m.share / 100]));
   const clubs = new Map(CLUBS.map((c, i) => [c.name, i]));
   // Kept on the web: a placing for new students only must number their chapter as the full placing did (63.12).
   const chapters = web.chapterIndex;
@@ -369,7 +371,7 @@ export function place(web: Web, state: GameState): void {
     const floors = home === null ? 1 : Math.max(1, Math.round((sizes.get(home) ?? FLOOR_SIZE) / FLOOR_SIZE));
     web.place[0]![id] = home === null ? -1 : home * 64 + (h % Math.min(64, floors));
     const cohort = state.cohorts[classYear] ?? 1;
-    const sections = Math.max(1, Math.min(64, Math.round(cohort / MAJORS.length / SECTION_SIZE)));
+    const sections = Math.max(1, Math.min(64, Math.round((cohort * (shares.get(p.major) ?? 1 / MAJORS.length)) / SECTION_SIZE)));
     web.place[1]![id] = ((majors.get(p.major) ?? 0) * 4 + classYear) * 64 + ((h >>> 6) % sections);
     const tables = Math.max(1, Math.min(256, Math.round((cohort * 4) / CLUBS.length / TABLE_SIZE)));
     web.place[2]![id] = p.club ? (clubs.get(p.club) ?? 0) * 256 + ((h >>> 12) % tables) : -1;

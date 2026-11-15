@@ -4,6 +4,9 @@ import { advance, newGame, parseSave, scorecard, studentCard, type GameState } f
 import { ANCHORS, CLASS_YEARS, LATE_FROM, LEAVE_WHYS } from '../src/sim/config/population';
 import { campusRates } from '../src/sim/systems/field';
 import { anchorAt, classPath, leaveShares, splitCount, standingOf } from '../src/sim/systems/population';
+import { afterSwitching, FINAL, INTENDED, majorAt, majorPath } from '../src/sim/systems/majors';
+import { MAJORS } from '../src/sim/config/students';
+import { sampleStudents } from '../src/sim';
 import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
 import { edition } from '../src/sim/newspaper';
@@ -160,5 +163,60 @@ describe('a save from version 30', () => {
     const played = advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + 4 * DAY).state;
     expect(played.cohorts[3] + played.cohorts[4]).toBeGreaterThan(0);
     for (const record of played.classes) expect(record.entered + (record.returned ?? 0)).toBeGreaterThan(0);
+  });
+});
+
+describe('majors', () => {
+  it('end at the real degree shares, after the real rates of changing major', () => {
+    const end = afterSwitching(INTENDED);
+    for (let i = 0; i < FINAL.length; i++) expect(end[i]!).toBeCloseTo(FINAL[i]!, 9);
+    expect(MAJORS.reduce((sum, major) => sum + major.share, 0)).toBeCloseTo(100, 6);
+    // More come intending biology and mathematics than finish in them; business is near where it began.
+    const at = (name: string): number => MAJORS.findIndex((major) => major.name === name);
+    expect(INTENDED[at('Biology')]!).toBeGreaterThan(FINAL[at('Biology')]!);
+    expect(INTENDED[at('Mathematics')]!).toBeGreaterThan(FINAL[at('Mathematics')]! * 1.3);
+  });
+
+  it('are undeclared for a third of first-years, declared by the second spring, changed by about a third, doubled by one in twenty', () => {
+    const n = 20_000;
+    const undeclared = [0, 0, 0, 0];
+    let switched = 0;
+    let doubled = 0;
+    const field: Record<string, number> = {};
+    for (let index = 0; index < n; index++) {
+      const path = majorPath(11, { entryYear: 4, index });
+      for (let semester = 0; semester < 4; semester++) if (majorAt(path, semester).undeclared) undeclared[semester]! += 1;
+      if (path.switchAt >= 0) switched += 1;
+      const senior = majorAt(path, 7);
+      expect(senior.undeclared).toBe(false);
+      if (senior.second !== null) {
+        doubled += 1;
+        expect(senior.shown).toBe(`${MAJORS[senior.subject]!.name} and ${MAJORS[senior.second]!.name}`);
+      }
+      field[MAJORS[senior.subject]!.field] = (field[MAJORS[senior.subject]!.field] ?? 0) + 1 / n;
+    }
+    expect(undeclared[0]! / n).toBeGreaterThan(0.3);
+    expect(undeclared[0]! / n).toBeLessThan(0.4);
+    expect(undeclared[3]).toBe(0);
+    expect(switched / n).toBeGreaterThan(0.28);
+    expect(switched / n).toBeLessThan(0.36);
+    expect(doubled / n).toBeGreaterThan(0.04);
+    expect(doubled / n).toBeLessThan(0.06);
+    // NCES Digest 322.10: business 18.6%, health 13.1%, biology 6.5%, psychology 6.4%.
+    expect(Math.abs(field.business! - 0.186)).toBeLessThan(0.01);
+    expect(Math.abs(field.health! - 0.131)).toBeLessThan(0.01);
+    expect(Math.abs(field.biology! - 0.065)).toBeLessThan(0.008);
+    expect(Math.abs(field.psychology! - 0.064)).toBeLessThan(0.008);
+  });
+
+  it('show on the card: undeclared with a leaning, a change of major, and the subject that lectures name', () => {
+    const cards = sampleStudents(MODEL, 400).map((ref) => studentCard(MODEL, ref)!);
+    const freshmen = cards.filter((card) => card.classYear === 0);
+    const undeclared = freshmen.filter((card) => card.major === 'Undeclared');
+    expect(undeclared.length).toBeGreaterThan(freshmen.length * 0.25);
+    for (const card of undeclared) expect(card.majorNote).toBe(`Leaning toward ${card.subject}`);
+    expect(cards.filter((card) => card.classYear >= 2).every((card) => card.major !== 'Undeclared')).toBe(true);
+    expect(cards.some((card) => card.majorNote?.startsWith('Switched from '))).toBe(true);
+    for (const card of cards) expect(card.subject).not.toBe('Undeclared');
   });
 });

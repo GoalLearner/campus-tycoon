@@ -193,7 +193,7 @@ export function makeMain(state: GameState, ref: StudentRef, people: MainPeople |
   const mc: MainCharacter = {
     ref: { entryYear: ref.entryYear, index: ref.index },
     name: card.name,
-    major: card.major,
+    major: card.subject,
     nature,
     quirk: card.quirk,
     chosen: state.clock.tick,
