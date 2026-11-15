@@ -276,6 +276,33 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
       case 'grades':
         out.push({ weight: 55, headline: `Dean's List Runs to ${Number(entry.data?.deans ?? 0).toLocaleString('en-US')} Names; Probation Letters Go Out Too`, deck: entry.text });
         break;
+      case 'milestones':
+        // Study abroad and summer internships (R2, DESIGN.md 66.4).
+        out.push({
+          weight: 46,
+          headline: entry.data?.graduates
+            ? 'Graduates Leave With Offers in Hand, or Plans for More School; Résumés Updated Accordingly'
+            : entry.data?.packages
+              ? 'Care Packages Pour In for Finals; Mail Room Runs Out of Shelf'
+            : entry.data?.interns
+              ? 'Summer Internships Begin; Business Casual Spotted on Campus'
+              : 'Third-Years Head Abroad for the Spring; Rolling Suitcases Heard on Every Path',
+          deck: entry.text,
+        });
+        break;
+      case 'calendar':
+        // Welcome week and parents' weekend (R2, DESIGN.md 66.1). The rest of the calendar stays in the list below.
+        if (entry.data?.id === 'welcomeWeek' && entry.data?.begins === 1) out.push({ weight: 45, headline: 'Welcome Week: New Students Move In; Boxes Briefly Outnumber People', deck: entry.text });
+        if (entry.data?.id === 'parentsWeekend' && entry.data?.begins === 1) out.push({ weight: 45, headline: "Parents' Weekend: Families Fill the Dining Halls; Rooms Tidied for the First Time", deck: entry.text });
+        break;
+      case 'housing':
+        // Moving off campus (R2, DESIGN.md 66.3).
+        out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });
+        break;
+      case 'writeUps':
+        // Under-21 drinking, caught as a rule broken (R2, DESIGN.md 66.2).
+        out.push({ weight: 49, headline: `${Number(entry.data?.writeUps ?? 0).toLocaleString('en-US')} Written Up for Drinking Under 21; Resident Advisors Keep the Paperwork Moving`, deck: entry.text });
+        break;
       case 'returned':
         out.push({ weight: 56, headline: 'Stop-Outs Return for the Fall; Registrar Finds Their Files', deck: entry.text });
         break;

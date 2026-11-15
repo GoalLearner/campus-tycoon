@@ -350,7 +350,7 @@ export interface Admissions {
    * `why` (DESIGN.md 65.2): how many left for each reason, in the order of LEAVE_WHYS; `returned`, stop-outs who came
    * back at the intake before it.
    */
-  lastSemester: { tick: number; stayed: number; left: number; happiness: number; friends?: number; why?: number[]; returned?: number } | null;
+  lastSemester: { tick: number; stayed: number; left: number; happiness: number; friends?: number; why?: number[]; returned?: number; writeUps?: number } | null;
   /** Students who stopped out and will come back at the next fall intake, to their own class (DESIGN.md 65.2). */
   away?: Array<{ entryYear: number; count: number }>;
   /** Who left this academic year by reason (LEAVE_WHYS order), and the stop-outs who came back; and last year's. */
@@ -1435,6 +1435,9 @@ export type LogKind =
   | 'semester'
   | 'returned'
   | 'grades'
+  | 'writeUps'
+  | 'housing'
+  | 'milestones'
   | 'flu'
   | 'teams'
   | 'incident'

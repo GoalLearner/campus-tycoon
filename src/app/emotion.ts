@@ -3,9 +3,14 @@ import { lonelyOf } from '../sim/systems/wellbeing';
 import { semesterOf } from '../sim/systems/students';
 import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
-import { DRINKING_YEAR } from '../sim/config/parties';
+import { FAMILY, PARENTS_VISITING, RHYTHM_FEELINGS } from '../sim/config/fourYears';
+import { MAJORS } from '../sim/config/students';
+
+/** A major's group by its name, for family pressure about a major (R2). */
+const MAJOR_GROUP: Readonly<Record<string, string>> = Object.fromEntries(MAJORS.map((major) => [major.name, major.group]));
 import { FEEL, FRIEND_AT, KIND, SLOTS } from '../sim/config/web';
 import { hashInts } from '../sim/rng';
+import { dateAt } from '../sim/calendar';
 import { homeGameNow } from '../sim/systems/football';
 import { dayRead } from '../sim/systems/season';
 import { firstNameOf } from '../sim/systems/students';
@@ -131,10 +136,48 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   if (day.kind === 'finals' || day.kind === 'midterms') add('tense', day.name ?? 'Exams', 1 + card.stress / 30);
   // An everyday hum of Stress is real (DESIGN.md 65.5): only the high end of it reads as exams ahead.
   else if (card.stress >= 65) add('tense', 'Exams ahead', card.stress / 45);
-  if (day.kind === 'break' || day.kind === 'summer') add('happy', day.kind === 'summer' ? 'Summer' : (day.name ?? 'A break'), 1.5);
+  // Home for a break, with the suitcase (R2); the summer is the summer.
+  if (day.kind === 'break' || day.kind === 'summer') add('happy', day.kind === 'summer' ? 'Summer' : (day.name ?? 'A break'), 1.5, day.kind === 'break' ? 'suitcase' : undefined);
+  // The year's rhythm (R2, DESIGN.md 66): welcome week, a family's visit, and the stretches of the year, each felt by
+  // most students but not all, each student their own way; and seniors' last weeks.
+  const feels = (hashInts(state.seed, 4801, ref.entryYear, ref.index, day.rhythmId ? day.rhythmId.length : 0) >>> 0) / 4294967296;
+  if (day.special === 'welcome') add(card.classYear === 0 ? 'excited' : 'happy', card.classYear === 0 ? 'Welcome week' : 'Back on campus', card.classYear === 0 ? 1.6 : 0.9);
+  else if (day.special === 'parents' && feels < PARENTS_VISITING) add('happy', 'Family visiting', 1.4);
+  const stretch = day.rhythmId ? RHYTHM_FEELINGS[day.rhythmId] : undefined;
+  if (stretch && feels < stretch.share) add(stretch.emotion, stretch.label, stretch.weight + (stretch.emotion === 'tense' ? card.stress / 60 : 0));
+  if (day.seniors && card.classYear >= 3) add('sad', 'Senior goodbyes', 1.6);
+  // Family and life outside (R2, DESIGN.md 66.6): a call home, a care package, a visit, a partner back home, and the
+  // pressure some families put on grades or a major. Each student's own day, from the seed.
+  const date = dateAt(state.clock);
+  const today = date.month * 31 + date.day;
+  const chance = (salt: number): number => (hashInts(state.seed, 4841, ref.entryYear, ref.index, today * 16 + salt) >>> 0) / 4294967296;
+  const thisWeek = (salt: number): number => (hashInts(state.seed, 4843, ref.entryYear, ref.index, Math.floor(today / 7) * 16 + salt) >>> 0) / 4294967296;
+  const first = card.classYear === 0;
+  const evening = hour >= 17;
+  if (evening && chance(1) < (date.weekday === 0 ? (first ? FAMILY.callSundayFirstYear : FAMILY.callSunday) : FAMILY.callOther)) add('happy', 'Called home', 1.2, 'phone');
+  const busy = day.kind === 'finals' || day.rhythmId === 'fallCrunch' || day.rhythmId === 'springCrunch' || (first && (day.special === 'welcome' || day.rhythmId === 'fallStartWeeks'));
+  // One day in the week it arrives, if it does this week.
+  if (thisWeek(2) < (busy ? FAMILY.packageBusy : FAMILY.packageOther) && Math.floor(thisWeek(3) * 7) === date.weekday) add('happy', 'Care package from home', 2.2, 'package');
+  if ((date.weekday === 6 || date.weekday === 0) && day.special !== 'parents' && thisWeek(4) < FAMILY.visitWeekend) add('happy', 'Family visiting', 1.4);
+  if (card.probation && thisWeek(5) < FAMILY.pressureGrades) add('tense', 'Family worried about grades', 1.5);
+  else if ((card.majorNote?.startsWith('Switched') || ['letters', 'arts', 'music'].includes(MAJOR_GROUP[card.subject] ?? '')) && (hashInts(state.seed, 4847, ref.entryYear, ref.index) >>> 0) / 4294967296 < FAMILY.pressureMajor) add('tense', 'Family wants a different major', 0.9);
+  if ((card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling') && (date.weekday === 5 || date.weekday === 6) && thisWeek(6) < FAMILY.partnerVisit) add('happy', 'Partner visiting from home', 2, 'heart');
+  // A senior's last year (R2, DESIGN.md 66.5): the job hunt, an offer, graduate school, and commencement itself.
+  const outcome = card.outcome;
+  if (outcome?.offerNew) add('excited', 'Got a job offer', 3, 'briefcase');
+  else if (outcome?.offer) add('happy', 'Has a job lined up', 0.9);
+  else if (outcome?.plan === 'job' && outcome.line === 'Job hunting' && day.kind !== 'break' && day.kind !== 'summer') add('tense', 'Job hunting', 1.1, 'briefcase');
+  if (outcome?.admitted) add('happy', 'Into graduate school', 1.3);
+  if (day.kind === 'commencement' && card.classYear >= 3) add('excited', 'Graduating', 3.5, 'mortarboard');
+  // Moving off campus (R2): a place of their own in town, felt through the fall's first weeks.
+  if (card.movedOut && (day.special === 'welcome' || day.rhythmId === 'fallStartWeeks')) add('happy', 'Own place in town', 1.2);
   if (homeGameNow(state)) add('excited', 'Game day', card.archetype === 'superfan' || card.archetype === 'athlete' ? 3 : 1.4);
   // The red cup is a drink: only a student of 21 or over carries it; a younger one goes with a soda (DESIGN.md 63.9).
-  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.classYear >= DRINKING_YEAR ? 'partycup' : 'sodacup');
+  if (card.party && (hour >= 18 || hour < 2)) add('excited', 'Party tonight', 2.5, card.over21 ? 'partycup' : 'sodacup');
+  // Their birthday (R2, DESIGN.md 66.2): a cake over their head all day, the 21st most of all.
+  // Happy, and heavy enough to lead what they feel today, so the cake is what floats over them.
+  if (card.turned21Today) add('happy', 'Turned 21 today', 5, 'cake');
+  else if (card.birthdayToday) add('happy', `Birthday today, ${card.age}`, 4, 'cake');
 
   // How they find the campus.
   if (card.mood >= 4) add('happy', 'Loves it here', 1.5);

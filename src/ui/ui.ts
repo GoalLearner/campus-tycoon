@@ -1114,9 +1114,10 @@ export function mountUi(root: HTMLElement): void {
     // Lead with what is happening now. The date is the small print.
     const tick = state.clock.tick;
     const pos = calendarAt(state.clock);
-    // A holiday, a break or an exam week is what is happening now. Otherwise the semester is.
+    // A holiday, a break or an exam week is what is happening now. Otherwise the stretch of the year it is (R2:
+    // "Welcome week", "Midterm slump", "Spring fatigue"), or the semester.
     const day = dayRead(state.clock);
-    setText(when, day.kind === 'term' || day.name === null ? NOW_LABEL[pos.phase] : day.name);
+    setText(when, day.kind === 'term' || day.name === null ? (day.rhythm ?? NOW_LABEL[pos.phase]) : day.name);
     const sky = SKY_WORD[weatherAt(state.seed, state.clock)];
     setText(next, pos.year === 0 ? formatDate(dateAt(state.clock)) : `${formatDate(dateAt(state.clock))} · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
     footballButton.set(footballStat(state), footballChip(state) ?? 'Football');

@@ -23,6 +23,8 @@ import { friendsStay } from './friends';
 import { campusHappiness } from './happiness';
 import { markRatesDirty } from './money';
 import { closeSemester, stressLoss } from './season';
+import { callTimes, partiesOn, partyScene } from './parties';
+import { GRAD_SCHOOL, OFFER_BY_COMMENCEMENT, WRITE_UPS_IN_DORMS, WRITE_UPS_PER_THOUSAND } from '../config/fourYears';
 import { addWhy, anchorAt, lateFrom, leaveShares, semesterStays, splitCount, standingOf, survivalTo } from './population';
 
 /**
@@ -420,6 +422,9 @@ export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): vo
   const left = before - stayed;
   const friends = before > 0 ? friendsKept / before : 0;
   const returned = state.admissions.lastSemester?.returned;
+  // Under-21 drinking, counted (R2, DESIGN.md 66.2, the owner's decision 8): the semester's liquor-law write-ups, most
+  // in the dorms, at the real rate, moved by the party scene and the party policies as calls from parties are.
+  const writeUps = partiesOn(state) ? Math.round(((WRITE_UPS_PER_THOUSAND / 1000) * before * partyScene(state) * callTimes(state, 0).safety) / 2) : 0;
   state.admissions.lastSemester = {
     tick: state.clock.tick,
     stayed,
@@ -428,6 +433,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): vo
     ...(Math.abs(friends) > 1e-9 ? { friends } : {}),
     why,
     ...(fall && returned ? { returned } : {}),
+    ...(writeUps > 0 ? { writeUps } : {}),
   };
   // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
   alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
@@ -458,6 +464,15 @@ export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): vo
       kind: 'grades',
       text: `Grades are in: ${headCount(deans)} on the Dean's list and ${headCount(probation)} on academic probation${suspended > 0 ? `; ${headCount(suspended)} were suspended for grades` : ''}.`,
       data: { deans, probation, suspended },
+    });
+  }
+  if (log && writeUps > 0) {
+    const dorms = Math.round(writeUps * WRITE_UPS_IN_DORMS);
+    log.push({
+      tick: state.clock.tick,
+      kind: 'writeUps',
+      text: `Campus Safety and the resident advisors wrote up ${headCount(writeUps)} ${writeUps === 1 ? 'student' : 'students'} this semester for drinking under 21, ${headCount(dorms)} of them in the dorms.`,
+      data: { writeUps, dorms },
     });
   }
 }
@@ -525,6 +540,15 @@ export function graduate(state: GameState, log: LogEntry[]): void {
       kind: 'graduation',
       text: `${headCount(finished)} seniors graduated${later > 0 ? `, ${headCount(later)} of them in their fifth or sixth year` : ''}. ${c[3] > 0 ? `${headCount(c[3])} stay on for a fifth year. ` : ''}${headCount(state.stats.graduates)} alumni so far.`,
       data: { seniors: finished, late: later, staying: c[3], alumni: state.stats.graduates },
+    });
+    // Where the graduates go (R2, DESIGN.md 66.5): an offer in hand, or more school, at the real shares.
+    const offers = Math.round(finished * OFFER_BY_COMMENCEMENT);
+    const more = Math.round(finished * GRAD_SCHOOL);
+    log.push({
+      tick: state.clock.tick,
+      kind: 'milestones',
+      text: `Of the ${headCount(finished)} graduates, about ${headCount(offers)} have a job offer in hand and ${headCount(more)} go on to graduate school; the rest keep looking, and most have work within six months.`,
+      data: { graduates: finished, offers, grad: more },
     });
     earn(state, 'graduation', log);
   }

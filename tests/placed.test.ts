@@ -176,7 +176,9 @@ describe('happiness', () => {
 
   it('is the average of what the student cards read', () => {
     const state = structuredClone(campus());
-    state.cohorts = [900, 0, 0, 0, 0, 0];
+    // A campus of every class year: since R2 a student's home follows their year (DESIGN.md 66.3), and every year
+    // together lives on campus at about the share the campus number reads the halls by.
+    state.cohorts = [230, 210, 200, 190, 55, 15];
     let sum = 0;
     const students = sampleStudents(state, 900);
     for (const ref of students) {

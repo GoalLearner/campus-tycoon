@@ -1,5 +1,6 @@
 import { happyParts, stressOff } from './boosts';
 import { fluShare } from './wellbeing';
+import { tellPractices } from './fourYears';
 import { headCount } from '../format';
 import { friendsHappiness, friendsStress } from './friends';
 import { examsOff } from './policies';
@@ -87,6 +88,14 @@ export interface DayRead {
   presence: number;
   /** The share of the usual crowd out on the paths. For show. */
   walkers: number;
+  /** A week of term with its own events (R2, DESIGN.md 66): move-in and orientation, or families visiting. */
+  special?: 'welcome' | 'parents';
+  /** The stretch of the year a term day falls in (R2): "Midterm slump", "Spring fatigue". For the day line and feelings. */
+  rhythm?: string;
+  /** Its calendar entry's id: "midtermSlump". */
+  rhythmId?: string;
+  /** Seniors' last weeks before commencement (R2). */
+  seniors?: boolean;
 }
 
 /** What kind of day it is on campus, from the calendar alone. */
@@ -108,9 +117,16 @@ export function dayRead(clock: Pick<Clock, 'tick' | 'week'>): DayRead {
   }
   const holiday = of('holiday');
   if (holiday) return { kind: 'holiday', name: holiday.name, presence: 1, walkers: HOLIDAY_WALKERS };
+  const seniors = of('senior') !== undefined;
   const commencement = of('commencement');
-  if (commencement) return { kind: 'commencement', name: commencement.name, presence: 1, walkers: 1 };
-  return { kind: 'term', name: null, presence: 1, walkers: 1 };
+  if (commencement) return { kind: 'commencement', name: commencement.name, presence: 1, walkers: 1, seniors };
+  // A day of term, as before: these only name it (R2).
+  const welcome = of('welcome');
+  if (welcome) return { kind: 'term', name: null, presence: 1, walkers: 1, special: 'welcome', rhythm: welcome.name };
+  const visit = of('visit');
+  if (visit) return { kind: 'term', name: null, presence: 1, walkers: 1, special: 'parents', rhythm: visit.name, seniors };
+  const rhythm = of('rhythm');
+  return { kind: 'term', name: null, presence: 1, walkers: 1, ...(rhythm ? { rhythm: rhythm.name, rhythmId: rhythm.id } : {}), ...(seniors ? { seniors } : {}) };
 }
 
 /** The share of students on campus now. Food places and campus stores earn by it. */
@@ -141,6 +157,10 @@ export function seasonCurve(clock: Pick<Clock, 'tick' | 'week'>): number {
     case 'moveIn':
     case 'founding':
       return SEASON_CURVE.founding;
+    case 'term':
+      // Welcome week, before the first classes, is as easy as the founding's move-in week (R2).
+      if (day.special === 'welcome') return SEASON_CURVE.founding;
+      break;
     case 'break':
       return SEASON_CURVE.break;
     case 'summer':
@@ -432,6 +452,8 @@ function onMark(state: GameState, mark: CalendarMark, log: LogEntry[], levels: (
   const words = CALENDAR_LINES[entry.kind];
   const text = begins ? words?.begins : words?.ends;
   if (text) log.push({ tick, kind: 'calendar', text: line(text, entry.name), data: { id: entry.id, begins: begins ? 1 : 0 } });
+  // The milestones of four years (R2, DESIGN.md 66.4): who goes abroad for the spring, and the summer's internships.
+  if (begins && (entry.id === 'springStart' || entry.id === 'summerStart' || entry.id === 'fallFinals' || entry.id === 'springFinals')) tellPractices(state, entry.id, log);
   if (entry.id === 'summerStart' && begins) {
     log.push({ tick, kind: 'calendar', text: SUMMER_START_LINE.replace('{share}', String(Math.round(SUMMER_PRESENCE * 100))), data: { id: entry.id, begins: 1 } });
   }

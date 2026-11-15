@@ -592,15 +592,34 @@ export interface YardStatus {
 }
 
 /**
- * Work a spot asks of its yard at each check, when it is kept clean: what
- * misses the bins, and emptying them. A broken bin still counts where a
- * staffed yard reaches it, because mending it is the first thing a crew does.
+ * True where a bin goes on catching litter: inside a yard's circle, and either
+ * that yard has workers or the bin is whole and has room. A broken or full bin
+ * under a staffed yard still counts, because mending and emptying it are the
+ * first things a crew does. One no yard reaches fills, and then catches nothing.
  */
-function upkeepOf(state: GameState, spot: Placed): number {
-  const drop = dropOf(state, spot);
+function binCatches(state: GameState, id: number): boolean {
+  const yardId = state.map.care.yard[id] ?? -1;
+  if (yardId < 0) return false;
+  return workersAt(state, yardId) > 0 || (!isBroken(state, id) && (state.grounds.bins[id] ?? 0) < BIN_CAPACITY);
+}
+
+/**
+ * Work a spot asks of one yard at each check, when it is kept clean: what
+ * misses the bins, from the yard over the spot, and emptying each bin, from
+ * the yard over that bin.
+ */
+function upkeepOf(state: GameState, spot: Placed, yardId: number): number {
   const care = state.map.care;
-  const bins = (care.bins[spot.id] ?? []).filter((id) => !isBroken(state, id) || workersAt(state, care.yard[id] ?? -1) > 0);
-  return bins.length > 0 ? drop * (1 - BIN_CATCH) + (drop * BIN_CATCH) / BIN_PER_WORK : drop;
+  const beside = care.bins[spot.id] ?? [];
+  const ownYard = care.yard[spot.id] === yardId;
+  if (!ownYard && !beside.some((id) => care.yard[id] === yardId)) return 0;
+  const drop = dropOf(state, spot);
+  let catching = 0;
+  for (const id of beside) if (binCatches(state, id)) catching += 1;
+  if (catching === 0) return ownYard ? drop : 0;
+  let work = ownYard ? drop * (1 - BIN_CATCH) : 0;
+  for (const id of beside) if (care.yard[id] === yardId && binCatches(state, id)) work += (drop * BIN_CATCH) / catching / BIN_PER_WORK;
+  return work;
 }
 
 export function yardStatus(state: GameState, yard: Placed): YardStatus {
@@ -611,17 +630,22 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   // What falls at each check, without the backlog: the part no amount of waiting clears.
   let falling = 0;
   for (const placed of state.map.placed) {
-    if (!placed || state.map.care.yard[placed.id] !== yard.id) continue;
+    if (!placed) continue;
+    const inCircle = state.map.care.yard[placed.id] === yard.id;
+    // A place outside the circle still asks for work here when one of its bins stands inside it.
     if (isMessSpot(placed)) {
-      // A filthy place draws more litter, and a worker clears deep litter faster by the same measure, so
-      // the two cancel: what a place asks of its yard is what it asks when clean, plus the backlog.
-      const lying = state.grounds.litter[placed.id] ?? 0;
-      const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
-      const drawn = upkeepOf(state, placed);
+      const drawn = upkeepOf(state, placed, yard.id);
       falling += drawn;
-      need += drawn + lying / pace / CLEAR_WITHIN_CHECKS;
+      need += drawn;
+      if (inCircle) {
+        // A filthy place draws more litter, and a worker clears deep litter faster by the same measure, so
+        // the two cancel: what a place asks of its yard is what it asks when clean, plus the backlog.
+        const lying = state.grounds.litter[placed.id] ?? 0;
+        const pace = 1 + (DIRT_INVITES * lying) / LITTER_CEILING;
+        need += lying / pace / CLEAR_WITHIN_CHECKS;
+      }
     }
-    need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
+    if (inCircle) need += (state.grounds.broken[placed.id] ?? 0) / CLEAR_WITHIN_CHECKS;
   }
   const supply = workers * WORK_PER_WORKER;
   const hire = need > supply + 1e-9 ? Math.ceil((need - supply) / WORK_PER_WORKER - 1e-9) : 0;

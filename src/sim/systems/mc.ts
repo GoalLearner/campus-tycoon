@@ -35,7 +35,7 @@ import {
   type LifeNeed,
   type CastTrait,
 } from '../config/mc';
-import { DRINKING_YEAR } from '../config/parties';
+import { ageOf } from './birthdays';
 import { RECENT_FADE, STORY_FADE, STORY_STEP } from '../config/stories';
 import { stepStory } from './storyteller';
 import { FIRST_NAMES, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
@@ -408,8 +408,8 @@ function startActivity(state: GameState, mc: MainCharacter, choice: Choice, clas
   const item = mc.plan?.items.find((one) => one.activity === choice.activity && !one.done);
   if (item) item.done = true;
   if (choice.activity === 'party') {
-    // Drinking belongs to those of 21 and over, and costs the morning after (52.2).
-    const over = classYear >= DRINKING_YEAR;
+    // Drinking belongs to those of 21 and over, by their own birthday (R2), and costs the morning after (52.2).
+    const over = ageOf(state.seed, mc.ref, state.clock).over21;
     const drinks = over && roll(state, mc.ref.index, state.clock.tick, 41) < (mc.nature === 'party' ? 0.6 : 0.3);
     if (drinks) mc.hangover = true;
     remember(state, mc, drinks ? `${mc.name} went to a party and had a few drinks. Tomorrow morning will be slow.` : over ? `${mc.name} went to a party and stuck to soda.` : `${mc.name} went to a party. Under 21, so no drinks.`, false, log);

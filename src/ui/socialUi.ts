@@ -5,6 +5,7 @@ import { socialWeb } from '../app/socialWeb';
 import { feedOf, moodLine } from '../app/quadline';
 import { studentFigure, type GameState, type StudentRef } from '../sim';
 import { regularsNow } from '../sim/systems/regulars';
+import { drinkingFigures } from '../sim/systems/birthdays';
 import { drawSprite, loadAtlas } from './atlas';
 
 /**
@@ -73,6 +74,17 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
         : []),
       // Picking on someone (DESIGN.md 63.11).
       ...(effects.bullied !== undefined ? [stat('Picked on', `${(effects.bullied * 100).toFixed(1)}% of students`)] : []),
+    );
+  }
+
+  // Turning 21 and drinking under 21, counted (R2, DESIGN.md 66.2): in the numbers, never on the map.
+  const drinking = drinkingFigures(state);
+  if (drinking) {
+    body.append(
+      el('div', 'money-head', 'Twenty-one'),
+      stat('21 and over', `${Math.round(drinking.over21 * 100)}% of students`),
+      stat('Under 21 who drank this month', `about ${count(drinking.under21Drank)}`),
+      ...(drinking.writeUps !== null ? [stat('Written up last semester', `${count(drinking.writeUps)} for drinking under 21, most in the dorms`)] : []),
     );
   }
 

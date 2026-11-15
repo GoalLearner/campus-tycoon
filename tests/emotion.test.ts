@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { EMOTION_EMOTE, EMOTION_FACE, EMOTION_NAMES, feelingOf, moodletsOf, type Emotion } from '../src/app/emotion';
 import { viewOf } from '../src/app/socialView';
 import { advance, newGame, sampleStudents, studentCard, toneProblem, type GameState } from '../src/sim';
-import { DRINKING_YEAR } from '../src/sim/config/parties';
 import { PARTY_CARD } from '../src/sim/config/students';
 import { HEAVY_WORDS } from '../src/sim/config/tone';
 import { KIND, SLOTS } from '../src/sim/config/web';
@@ -94,15 +93,23 @@ describe('a feeling', () => {
     }
   });
 
-  it('gives the red cup of a party night only to a student of 21 or over; a younger one has a soda (DESIGN.md 63.9)', () => {
+  it('gives the red cup of a party night only to a student of 21 or over, by their own birthday; a younger one has a soda (DESIGN.md 63.9, 66.2)', () => {
     const ref = SAMPLE[0]!;
     const card = studentCard(MODEL, ref)!;
-    for (let classYear = 0; classYear < 4; classYear++) {
-      const over = classYear >= DRINKING_YEAR;
-      const night = { ...card, classYear, party: over ? PARTY_CARD.over21 : PARTY_CARD.under21 };
+    for (const over of [false, true]) {
+      const night = { ...card, over21: over, party: over ? PARTY_CARD.over21 : PARTY_CARD.under21 };
       const party = moodletsOf(VIEW, MODEL, ref, night, 21).find((one) => one.reason === 'Party tonight');
-      expect(party?.emote, `class year ${classYear}`).toBe(over ? 'partycup' : 'sodacup');
+      expect(party?.emote, `21 or over: ${over}`).toBe(over ? 'partycup' : 'sodacup');
     }
+  });
+
+  it('puts a cake over a student on their birthday, the 21st most of all (DESIGN.md 66.2)', () => {
+    const ref = SAMPLE[0]!;
+    const card = studentCard(MODEL, ref)!;
+    const birthday = moodletsOf(VIEW, MODEL, ref, { ...card, birthdayToday: true, turned21Today: false, age: 20 }, 12).find((one) => one.emote === 'cake');
+    expect(birthday?.reason).toBe('Birthday today, 20');
+    const big = moodletsOf(VIEW, MODEL, ref, { ...card, birthdayToday: true, turned21Today: true, age: 21 }, 12).find((one) => one.emote === 'cake');
+    expect(big?.reason).toBe('Turned 21 today');
   });
 
   it('is said plainly: every reason passes the tone guide and none uses a heavy word', () => {

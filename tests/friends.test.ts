@@ -220,7 +220,8 @@ describe('the web', () => {
       if (WEB.strength[s]! <= EX_START) atStart += 1;
     }
     expect(exes).toBeGreaterThan(0);
-    expect(atStart / exes).toBeGreaterThan(0.8);
+    // About four in five: just over before R2, just under since its homes by class year changed who meets whom.
+    expect(atStart / exes).toBeGreaterThan(0.75);
   });
 });
 

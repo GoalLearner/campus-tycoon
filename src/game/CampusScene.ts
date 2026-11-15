@@ -23,7 +23,6 @@ import { lawnShare, partyTonight, RESTING_AT_FULL, type LawnKind } from '../app/
 import { seasonCurve } from '../sim/systems/season';
 import { IN_TERM_FROM } from '../sim/config/season';
 import { partiesOn } from '../sim/systems/parties';
-import { TICKS_PER_DAY } from '../sim/config/time';
 import { Windows } from './Windows';
 import { Art, MANIFEST_KEY, type ArtManifest } from './art';
 import { Cars } from './Cars';
@@ -95,6 +94,11 @@ const COVER_ALPHA = 0.3;
 const COVER_FADE_MS = 200;
 const COVER_EVERY_MS = 120;
 const COVER_REACH = 4;
+/** Welcome week and parents' weekend (R2): every so often, a batch of newcomers moving in, or of families visiting. */
+const WEEK_EVENT_MS = 20_000;
+const WELCOME_ARRIVALS = 48;
+const PARENT_VISITS = 4;
+const WEEKEND_VISIT_MS = 45_000;
 /** The caption's type, the interface's own. */
 const CAPTION_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 /** How quickly the map catches up with twisting fingers: it has most of the way in this many milliseconds. */
@@ -216,6 +220,8 @@ export class CampusScene extends Phaser.Scene {
   private faded = new Map<Phaser.GameObjects.Image, number>();
   private covers = new Set<Phaser.GameObjects.Image>();
   private coversAt = 0;
+  /** When the week's own events next bring people onto the map (R2). */
+  private nextWeekAt = 0;
   private caption: Phaser.GameObjects.Text | null = null;
   private feelingName = '';
   /** The sentence that stands with each edge marker, by which marker it is. */
@@ -651,10 +657,26 @@ export class CampusScene extends Phaser.Scene {
     // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them.
     const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });
     this.lawns.setLife(lawns, this.light.period, this.weather, day.kind === 'midterms' || day.kind === 'finals', reduced);
+    // Welcome week and parents' weekend (R2, DESIGN.md 66). In welcome week of every fall after the founding one, new
+    // students keep arriving with a parent and their boxes while the player watches, and orientation groups go round
+    // behind a leader; on parents' weekend students show their families round.
+    this.walkers.setWeek(day.special ?? null);
+    const now = this.time.now;
+    if (day.special && now >= this.nextWeekAt) {
+      this.nextWeekAt = now + WEEK_EVENT_MS;
+      if (day.special === 'welcome' && calendarAt(state.clock).year >= 1 && !reduced) this.scenes.moveIn(this.walkers.arrive(WELCOME_ARRIVALS, false), now);
+      if (day.special === 'parents' && this.light.period !== 'night') this.walkers.visit(PARENT_VISITS);
+    }
+    // An ordinary weekend: now and then a family visits (R2, DESIGN.md 66.6).
+    if (!day.special && weekend && day.kind === 'term' && this.light.period !== 'night' && now >= this.nextWeekAt) {
+      this.nextWeekAt = now + WEEKEND_VISIT_MS;
+      this.walkers.visit(1, 'Showed their family round');
+    }
     // A party night (L6): Thursday to Saturday evenings in term, in fine weather, on a game with parties. A crowd on the
     // grass by a hall or on Greek Row, and friend groups out for the night head there.
     const partying = partyTonight({ weekday: date.weekday, period: this.light.period, weather: this.weather, term: seasonCurve(state.clock) >= IN_TERM_FROM, parties: partiesOn(state) });
-    this.lawns.setParty(partying ? { night: Math.floor(state.clock.tick / TICKS_PER_DAY), weekday: date.weekday, hour: Math.floor(shownHour()) } : null);
+    // The night is the game's date, so each party night has its own spot and size.
+    this.lawns.setParty(partying ? { night: calendarAt(state.clock).year * 400 + date.month * 31 + date.day, weekday: date.weekday, hour: Math.floor(shownHour()) } : null);
     this.walkers.setPartySpots(this.lawns.partySpots());
     this.walkers.setResting(lawns * RESTING_AT_FULL);
     // What students may have a big moment about today (DESIGN.md 64.3), and the sky for what they carry.

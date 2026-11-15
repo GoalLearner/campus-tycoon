@@ -286,6 +286,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   // 3 and 4.
   const grades = row('GPA');
   const club = row('Club');
+  // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
+  const milestones = row('Four years');
 
   // 5. Relationship: the status, and a short note on what it does for this one student.
   const relationship = row('Relationship');
@@ -360,7 +362,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, club.line, milestones.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -412,13 +414,15 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
         : card.residence === 'dorm'
           ? 'Lives in '
           : card.street
-            ? `Lives off campus on ${card.street}`
-            : 'Lives off campus';
+            ? `Lives off campus on ${card.street}${card.movedOut ? ', moved out this year' : ''}`
+            : `Lives off campus${card.movedOut ? ', moved out this year' : ''}`;
     // An undeclared student's leaning, or the major they left, beside the major (DESIGN.md 65.3).
     const major = card.majorNote ? `${card.major} (${card.majorNote.charAt(0).toLowerCase()}${card.majorNote.slice(1)})` : card.major;
     // A varsity athlete's team beside what they are (DESIGN.md 65.7).
     const nature = card.team ? `${card.archetypeName} (${card.team})` : card.archetypeName;
-    setText(aboutText, `${card.classYearName} · ${major} · ${nature} · ${card.quirk} · ${lives}`);
+    // Their age (R2, DESIGN.md 66.2), and the day they turn 21 when it is this year, or that it is their birthday.
+    const age = card.birthdayToday ? `${card.age} today` : card.age === 20 ? `20, 21 on ${card.birthday}` : String(card.age);
+    setText(aboutText, `${card.classYearName}, ${age} · ${major} · ${nature} · ${card.quirk} · ${lives}`);
     hallLink.hidden = hall === null;
     setText(hallLink, hall ?? '');
     setText(aboutAfter, hall !== null && card.chapter ? ` · ${card.chapter}, its house full` : '');
@@ -484,6 +488,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
     setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
+    const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
+    milestones.line.hidden = years.length === 0;
+    setText(milestones.value, years.join(' · '));
     const status = relationshipWords(socialWeb.view, state, ref, card.relationship);
     setText(relationship.value, status.name);
     // Single, with their ties known: the old note said what their status did to Happiness, and their ties say it now.
