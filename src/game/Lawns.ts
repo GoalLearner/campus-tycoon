@@ -112,7 +112,12 @@ interface Group {
   plain: boolean;
   /** A group that keeps still, drawn in full: nothing about it changes until it leaves, so its frames are skipped. */
   settled: boolean;
+  /** Kept just off the screen, so it is there when the view moves, but not drawn (DESIGN.md 64.2, frames). */
+  hidden: boolean;
 }
+
+/** How far beyond the screen, in world pixels, a group is still drawn: a jog's loop and a thrown ball stay inside it. */
+const OFF_PAD = 70;
 
 /** The kinds where nobody moves and nothing flies: once faded in they are left as drawn (DESIGN.md 64.2, frames). */
 const STILL: ReadonlySet<LawnKind> = new Set<LawnKind>(['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug']);
@@ -486,7 +491,7 @@ export class Lawns {
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
       if (count + members.length > budget && count > 0) continue;
-      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false };
+      const group: Group = { key, kind, x: spot.x, y: spot.y, where: spot.quad ? 'the quad' : 'the lawn', members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false };
       this.form(group, members);
       this.groups.set(key, group);
       keep.add(key);
@@ -494,6 +499,18 @@ export class Lawns {
     }
     for (const group of this.groups.values()) if (!keep.has(group.key)) group.leaving = true;
     this.drawn = count;
+  }
+
+  /** Draw a group or stop drawing it, as it comes on or goes off the screen. Back on, it is drawn afresh. */
+  private shown(group: Group, on: boolean): void {
+    group.hidden = !on;
+    group.settled = false;
+    for (const member of group.members) {
+      member.sprite.setVisible(on);
+      member.held?.setVisible(on);
+    }
+    for (const prop of group.props) prop.sprite.setVisible(on);
+    if (!on) group.icon?.setVisible(false);
   }
 
   private release(group: Group): void {
@@ -518,6 +535,7 @@ export class Lawns {
     }
     const dt = Math.min(deltaMs, 100);
     const seconds = timeMs / 1000;
+    const view = this.scene.cameras.main.worldView;
     for (const group of [...this.groups.values()]) {
       group.alpha = group.leaving ? group.alpha - dt / FADE_MS : Math.min(1, group.alpha + dt / FADE_MS);
       if (group.leaving && group.alpha <= 0) {
@@ -525,6 +543,12 @@ export class Lawns {
         continue;
       }
       const alpha = Math.max(0, group.alpha);
+      const spot = this.iso.toWorld(group.x, group.y);
+      if (spot.x < view.x - OFF_PAD || spot.x > view.right + OFF_PAD || spot.y < view.y - OFF_PAD || spot.y > view.bottom + OFF_PAD) {
+        if (!group.hidden) this.shown(group, false);
+        continue;
+      }
+      if (group.hidden) this.shown(group, true);
       if (group.settled && !group.leaving) {
         this.icons(group, timeMs, alpha);
         continue;
