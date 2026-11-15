@@ -5943,6 +5943,42 @@
     }
    ]
   },
+  "prop.partyhat.0": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/partyhat-0.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.19
+    }
+   ]
+  },
+  "prop.partyhat.1": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/partyhat-1.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.19
+    }
+   ]
+  },
+  "prop.partyhat.2": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/partyhat-2.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.19
+    }
+   ]
+  },
   "decoration.statue": {
    "layers": [
     {

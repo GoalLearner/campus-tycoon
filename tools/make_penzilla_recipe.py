@@ -446,6 +446,9 @@ for mood in MOOD_RINGS:
 # do not have. Each about the size it is beside a figure 36 pixels tall: a frisbee, a phone, a dining tray, a dog.
 for prop, scale in (('frisbee', 0.17), ('phone', 0.18), ('tray', 0.22), ('dog', 0.24), ('bag', 0.16), ('umbrella', 0.315)):
     sprites[f'prop.{prop}'] = {'layers': [standing(f'_rendered/ours/props/{prop}.png', 0.5, 0.5, scale=scale)]}
+# A party night's hats (L6), ours, in three colours.
+for n in range(3):
+    sprites[f'prop.partyhat.{n}'] = {'layers': [standing(f'_rendered/ours/props/partyhat-{n}.png', 0.5, 0.5, scale=0.19)]}
 
 # ----------------------------------------------------------- decorations --
 # The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
