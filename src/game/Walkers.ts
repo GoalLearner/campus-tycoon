@@ -536,6 +536,7 @@ export class Walkers {
   private ringPool: Phaser.GameObjects.Image[] = [];
   private ringsShown = 0;
   private markedOnTop = false;
+  private markedParty = 0;
   /** Bike racks on the map (DESIGN.md 64.6), and the bikes parked at them or leaning on walls. */
   private racks: Array<{ id: number; x: number; y: number }> = [];
   private parked: Array<{ image: Phaser.GameObjects.Image; rack: number; until: number; from: number }> = [];
@@ -1322,8 +1323,11 @@ export class Walkers {
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward.
     walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
-    // Followed close up (DESIGN.md 64.5): over everything on the map but the floating icons.
-    if (this.markedOnTop && walker.key !== null && walker.key === this.marked) walker.sprite.setDepth(ON_TOP_DEPTH);
+    // Followed close up (DESIGN.md 64.5): over everything on the map but the floating icons, and the friends or the date
+    // walking with them too, so lunch with friends shows the friends.
+    if (this.markedOnTop && walker.key !== null && (walker.key === this.marked || (walker.party !== 0 && walker.party === this.markedParty))) {
+      walker.sprite.setDepth(ON_TOP_DEPTH + (this.iso.sum(walker.x, walker.y) % 1000) * 0.001);
+    }
     if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
     const hidden = this.scene.time.now < walker.hiddenUntil;
@@ -1843,6 +1847,7 @@ export class Walkers {
   /** In the close-up (DESIGN.md 64.5) the student followed is drawn over the buildings, so a wall never hides them. */
   setMarkedOnTop(on: boolean): void {
     this.markedOnTop = on;
+    this.markedParty = on && this.marked ? (this.walkerOf(this.marked)?.party ?? 0) : 0;
   }
 
   setMarked(key: string | null): void {

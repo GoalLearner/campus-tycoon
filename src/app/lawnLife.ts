@@ -127,9 +127,11 @@ export function chooseLawnKind(group: LawnGroup, period: DayPeriod, weather: Wea
   add('study', (likes('studying') ? 3 : 0.6) * (group.exams ? 3 : 1));
   add('guitar', likes('music') ? 3 : 0.3);
   add('music', likes('music') ? 1.5 : 0.4);
-  add('frisbee', fine ? (likes('sports') || likes('fitness') ? 3 : 0.8) : 0);
-  add('catch', fine ? (likes('sports') ? 2 : 0.6) : 0);
-  add('kick', fine ? (likes('sports') ? 2.5 : 0.5) : 0);
+  // Games on the grass are for the light: none at night.
+  const games = fine && period !== 'night';
+  add('frisbee', games ? (likes('sports') || likes('fitness') ? 3 : 0.8) : 0);
+  add('catch', games ? (likes('sports') ? 2 : 0.6) : 0);
+  add('kick', games ? (likes('sports') ? 2.5 : 0.5) : 0);
   add('phone', likes('gaming') || likes('fashion') ? 1.5 : 0.8);
   add('reading', likes('studying') || likes('art') ? 1.5 : 0.6);
   add('selfie', likes('fashion') || likes('partying') ? 1.5 : 0.4);
