@@ -328,7 +328,7 @@ describe('the save', () => {
   it('tells the owner, once, in the game’s voice', () => {
     const notes = upgradeNotes(29);
     // Its own, R1's, R3's price level, C1's Chaos meter and the play fixes' figures.
-    expect(notes).toHaveLength(6);
+    expect(notes).toHaveLength(5);
     expect(notes[0]).toMatch(/social campus/);
     expect(notes[0]).toMatch(/first names/);
     expect(toneProblem(notes[0]!)).toBeNull();

@@ -9,6 +9,9 @@ import { TIGHT_FROM, TIGHT_SHOWN, tightKnit } from '../src/app/tightKnit';
 import { catchUp, idOf, newWeb, place, refAt, webWeekOf } from '../src/sim/systems/web';
 import { DAY, MIN, T0 } from './helpers';
 
+/** A partner's label on the network: dating, or girlfriend, boyfriend or partner, long-time or not (DESIGN.md 69.3). */
+const PARTNER = /^(dating|(long-time )?(girlfriend|boyfriend|partner))$/;
+
 /**
  * Social stop 8 (DESIGN.md 63.12): a student's network, from the Network button on their card, and the campus-wide
  * reads on the Social tab, the most tight-knit halls, clubs, chapters and teams.
@@ -44,14 +47,17 @@ describe('a student’s network', () => {
       for (let i = 1; i < people.length; i++) expect(people[i - 1]!.ring).toBeLessThanOrEqual(people[i]!.ring);
       expect(people.every((one) => enrolled(one.ref))).toBe(true);
       // One partner at most, and they sit on the nearest ring with a best friend.
-      expect(people.filter((one) => ['dating', 'exclusive', 'long-term'].includes(one.label)).length).toBeLessThanOrEqual(1);
+      expect(people.filter((one) => PARTNER.test(one.label)).length).toBeLessThanOrEqual(1);
     }
     const sizes = SAMPLE.map((one) => one.people.length);
     expect(sizes.reduce((a, b) => a + b, 0) / sizes.length).toBeGreaterThan(3);
   });
 
   it('names each tie as the card does and draws how it feels from their end', () => {
-    const rings: Record<string, number> = { dating: 0, exclusive: 0, 'long-term': 0, 'best friend': 0, roommate: 1, friend: 1, 'friend, has a crush on them': 1, 'same group': 1, 'their crush': 2, ex: 2, 'arch-rival': 2, rival: 2, 'picks on': 2, 'picks on them': 2 };
+    // Partners by the partner's gender since the play fixes (DESIGN.md 69.3): girlfriend, boyfriend or partner.
+    const words = ['girlfriend', 'boyfriend', 'partner'];
+    const partners = Object.fromEntries(words.flatMap((w) => [[w, 0], [`long-time ${w}`, 0]]));
+    const rings: Record<string, number> = { dating: 0, ...partners, 'best friend': 0, roommate: 1, friend: 1, 'friend, has a crush on them': 1, 'same group': 1, 'their crush': 2, ex: 2, 'arch-rival': 2, rival: 2, 'picks on': 2, 'picks on them': 2 };
     const feelings = { [FEEL.warm]: 'warm', [FEEL.tense]: 'tense', [FEEL.complicated]: 'complicated' } as Record<number, string>;
     const seen = new Map<string, number>();
     const felt = new Map<string, number>();
@@ -87,7 +93,12 @@ describe('a student’s network', () => {
         const back = networkFor(VIEW, MODEL, one.ref);
         const me = back.find((p) => key(p.ref) === key(ref));
         expect(me, `${one.label}`).toBeDefined();
-        if (['dating', 'exclusive', 'long-term'].includes(one.label)) expect(me!.label).toBe(one.label);
+        // Each end names the other by their own gender; how far along they are is the same from both ends.
+        if (PARTNER.test(one.label)) {
+          expect(PARTNER.test(me!.label)).toBe(true);
+          expect(me!.label === 'dating').toBe(one.label === 'dating');
+          expect(me!.label.startsWith('long-time')).toBe(one.label.startsWith('long-time'));
+        }
         checked += 1;
       }
     }
