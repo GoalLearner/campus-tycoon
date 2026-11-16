@@ -338,7 +338,7 @@ describe('saves', () => {
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(15);
+      expect(notes).toHaveLength(16);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

@@ -1,11 +1,11 @@
-import type { ChaosKind, ProtestTopic } from './chaos';
+import type { IncidentChaosKind, ProtestTopic } from './chaos';
 
 /**
  * Chaos's lines on the map (DESIGN.md 68.2), comic words as the owner chose (his answer 2): a dust-up, a shouting match,
  * a prank, graffiti, a rally. Nobody is hurt worse than a bruise; no weapons, no fire, nothing graphic; the paper never
  * mocks a student. `{place}` is "a dorm" or "the quad".
  */
-export const CHAOS_LINES: Readonly<Record<Exclude<ChaosKind, 'party' | 'protest'>, readonly string[]>> = {
+export const CHAOS_LINES: Readonly<Record<Exclude<IncidentChaosKind, 'protest'>, readonly string[]>> = {
   dustUp: [
     'A dust-up outside {place}: a cloud, some stars, and two students who will laugh about it by Friday.',
     'Two rivals met on the path by {place}. A dust-up, a lot of noise, nobody worse than a bruise.',

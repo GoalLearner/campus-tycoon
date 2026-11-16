@@ -215,6 +215,8 @@ function meets(state: GameState, mc: MainCharacter, need: StoryNeed): boolean {
       return chaosOn(state) && chaosStepOf(state.chaos.level) >= ROWDY;
     case 'protest':
       return chaosOn(state) && state.chaos.grievance !== null;
+    case 'storm':
+      return chaosOn(state) && state.chaos.storm !== null;
   }
 }
 

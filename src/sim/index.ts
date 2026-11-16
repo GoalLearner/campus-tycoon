@@ -136,6 +136,7 @@ export * from './systems/capacity';
 export * from './config/staffing';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
 export { chaosOn, chaosStepOf } from './systems/chaos';
+export { footballChaosNow, rivalColour } from './systems/footballChaos';
 export * from './config/incidents';
 export {
   classYearOf,

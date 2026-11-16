@@ -337,6 +337,11 @@ interface Seen {
   mostStudents: number;
   /** The most the Chaos meter read at a visit (DESIGN.md 68). */
   chaosMost: number;
+  /** Football's chaos (DESIGN.md 77): field stormings, goalposts carried off, couches in the street, the rival's mascot, by football season. */
+  storms: number;
+  goalposts: number;
+  streets: number;
+  mascots: Record<number, number>;
   /** By game year: what the research labs took of the yearly allowance, and what all of its takers did (DESIGN.md 49). */
   labPaid: Record<number, number>;
   allowancePaid: Record<number, number>;
@@ -421,6 +426,10 @@ const newSeen = (): Seen => ({
   goalsUnsaid: 0,
   mostStudents: 0,
   chaosMost: 0,
+  storms: 0,
+  goalposts: 0,
+  streets: 0,
+  mascots: {},
   greekWeeks: [],
   greekRush: [],
   drives: [],
@@ -491,6 +500,14 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'greek' && entry.data?.scandal === 1) seen.scandals += 1;
     // Alumni giving (DESIGN.md 56): a drive at each commencement.
     if (entry.kind === 'graduation') seen.commencements += 1;
+    // Football's chaos (DESIGN.md 77).
+    if (entry.kind === 'chaos' && (entry.data?.football === 1 || entry.data?.football === 2)) seen.storms += 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 2) seen.goalposts += 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 3) seen.streets += 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 4) {
+      const year = state.football.season?.year ?? -1;
+      seen.mascots[year] = (seen.mascots[year] ?? 0) + 1;
+    }
     // The Main Character (DESIGN.md 57).
     if (entry.kind === 'mc') {
       seen.mcLines += 1;
@@ -2561,6 +2578,13 @@ function assertModelCampus(seed: number): void {
       'a campus run for Pandemonium on purpose gets there, and is below Rowdy within a few game weeks of being run well again',
       chaosStepOf(most) === 5 && weeks <= 6 && chaosStepOf(wild.state.chaos.level) <= 2,
       `${Math.round(most)} at the most (${chaosStepName(most)}) in two real days with no Campus Safety, no new beds, its yards' crews sent home and every calming switch off; below Rowdy ${Number.isFinite(weeks) ? `${weeks} game weeks` : 'never'} after the Serene player's first visit, and ${chaosStepName(wild.state.chaos.level)} two days on; ${wild.state.chaos.letters.sent} letters from the trustees, ${wild.state.chaos.letters.missed} ignored`,
+    );
+    // Football's chaos, stop C3 (DESIGN.md 77): it happens, and stays light for the usual players.
+    const football = runs.map((run) => ({ name: `${run.style} ${run.seed}`, storms: run.seen.storms, goalposts: run.seen.goalposts, streets: run.seen.streets, mascots: Object.values(run.seen.mascots) }));
+    check(
+      "football's chaos shows and stays light: stormings after big home wins, the goalposts down only after one, couches now and then, the rival's mascot once a season at most",
+      football.some((one) => one.storms > 0) && football.every((one) => one.goalposts <= one.storms && one.mascots.every((n) => n <= 1) && one.streets <= 3 * (YEARS + 1)),
+      football.map((one) => `${one.name}: ${one.storms} stormings, ${one.goalposts} with the goalposts, ${one.streets} couch nights, ${one.mascots.reduce((a, b) => a + b, 0)} mascots`).join('; '),
     );
     const calm = chaosDays('serene', 3, null, 0);
     const later = calm.levels.slice(Math.floor(calm.levels.length / 3));

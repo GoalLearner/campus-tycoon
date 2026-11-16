@@ -38,7 +38,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 37;
+export const SAVE_VERSION = 38;
 
 export interface SaveFile {
   v: number;
@@ -445,6 +445,31 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (PAINT_SAVED_WALKS && map && typeof map.width === 'number' && typeof map.height === 'number' && Array.isArray(map.cells)) {
       paintWalks({ width: map.width, height: map.height, cells: map.cells });
     }
+    return state;
+  },
+  // Version 38: football chaos (DESIGN.md 77). The Chaos meter counts goalposts, couches in the street and the rival's
+  // mascot, at nothing so far, and keeps where football's chaos stands: no game read yet, nothing on the map.
+  37: (state) => {
+    const chaos = state.chaos as Record<string, unknown> | undefined;
+    if (!chaos || typeof chaos !== 'object') return state;
+    const more = (counts: unknown): void => {
+      if (!counts || typeof counts !== 'object') return;
+      const record = counts as Record<string, number>;
+      for (const kind of ['goalposts', 'street', 'mascot']) if (typeof record[kind] !== 'number') record[kind] = 0;
+    };
+    more(chaos.tally);
+    more(chaos.missed);
+    const last = chaos.last as { tally?: unknown; missed?: unknown } | null | undefined;
+    if (last) {
+      more(last.tally);
+      more(last.missed);
+    }
+    // Games already played are not read again: chaos starts with the next whistle.
+    const season = (state.football as { season?: { games?: Array<{ kick: number; done: boolean }> } | null } | undefined)?.season;
+    const played = season?.games?.filter((game) => game.done).map((game) => game.kick) ?? [];
+    if (typeof chaos.lastKick !== 'number') chaos.lastKick = played.length > 0 ? Math.max(...played) : -1;
+    for (const key of ['storm', 'street', 'mascot']) if (chaos[key] === undefined) chaos[key] = null;
+    if (typeof chaos.mascotSeason !== 'number') chaos.mascotSeason = -1;
     return state;
   },
 };

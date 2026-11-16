@@ -144,7 +144,9 @@ export type StoryNeed =
   /** The chaos sandbox (DESIGN.md 68.6): the Chaos meter at Lively or worse, at Rowdy or worse, and a protest brewing. */
   | 'lively'
   | 'rowdy'
-  | 'protest';
+  | 'protest'
+  /** Football's chaos (DESIGN.md 77): the field stormed after a big home win, a little while ago. */
+  | 'storm';
 
 export interface StorySpec {
   id: string;
