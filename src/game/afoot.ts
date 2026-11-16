@@ -23,12 +23,14 @@ export interface Trip {
   total: number;
   startMs: number;
   out: boolean;
+  /** A walk in the open from one place to another, with no door at either end: nobody fades (DESIGN.md 72). */
+  open?: boolean;
 }
 
-export function tripOf(pts: Array<{ x: number; y: number }>, startMs: number, out: boolean): Trip {
+export function tripOf(pts: Array<{ x: number; y: number }>, startMs: number, out: boolean, open = false): Trip {
   const at = [0];
   for (let k = 1; k < pts.length; k++) at.push(at[k - 1]! + Math.hypot(pts[k]!.x - pts[k - 1]!.x, pts[k]!.y - pts[k - 1]!.y));
-  return { pts, at, total: at[at.length - 1]!, startMs, out };
+  return { pts, at, total: at[at.length - 1]!, startMs, out, ...(open ? { open } : {}) };
 }
 
 /** Move a trip's last point (a place that moves, as a player's does) and its length with it. */
@@ -54,6 +56,7 @@ export function pointOn(trip: Trip, d: number): { x: number; y: number; ax: numb
 
 /** How strongly someone on a trip shows: fading only in the doorway at its start (in) or its end (out), over `fade` cells. */
 export function doorAlpha(trip: Trip, d: number, fade: number): number {
+  if (trip.open) return 1;
   // Before setting out: not yet come out of the door, or still standing in their place.
   if (d <= 0) return trip.out ? 1 : 0;
   return trip.out ? Math.min(1, Math.max(0, (trip.total - d) / fade)) : Math.min(1, d / fade);

@@ -771,6 +771,29 @@ export function installDevTools(): void {
       grown.offCampus = grown.offCampus.map((n) => Math.round(n * share)) as typeof grown.offCampus;
       store.adopt(grown, { ephemeral: true });
     }
+    // &put=basketball,soccer puts those on the free ground nearest &putat=x,y (DESIGN.md 72), for pictures and frames.
+    const putting = (params.get('put') ?? '').split(',').filter((one) => one !== '') as PlacedType[];
+    if (putting.length > 0 && store.hasGame) {
+      const rich = structuredClone(store.state);
+      rich.money.cash = Math.max(rich.money.cash, 2_000_000_000);
+      store.adopt(rich, { ephemeral: true });
+      const [px, py] = (params.get('putat') ?? '16,16').split(',').map(Number) as [number, number];
+      for (const type of putting) {
+        if (!(type in PLACED)) continue;
+        let best: [number, number] | null = null;
+        let near = Infinity;
+        const map = store.state.map;
+        for (let y = 0; y < map.height; y++) {
+          for (let x = 0; x < map.width; x++) {
+            const far = Math.abs(x - px) + Math.abs(y - py);
+            if (far >= near || previewPlace(store.state, type, x, y).problem !== null) continue;
+            near = far;
+            best = [x, y];
+          }
+        }
+        if (best) store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
+      }
+    }
     // &bikes=3 lays that many bike paths (DESIGN.md 71), each along one of the longest straight runs of open ground with
     // a footpath beside it all the way, for pictures and the frame bench.
     const bikes = Number(params.get('bikes') ?? 0);

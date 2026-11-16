@@ -413,7 +413,8 @@ describe('no fifth cause', () => {
     expect(causeShifts(on, 'academic').find((shift) => shift.id === 'parkingFees')!.delta).toBeCloseTo(-0.18 * share, 9);
     expect(causeShifts(on, 'housing').some((shift) => shift.id === 'parkingFees')).toBe(false);
     const dorm = approvalAt(on, lotOf(on, 'housing')).causes.find((one) => one.id === 'life')!;
-    expect((dorm.policies ?? []).map((note) => note.id)).toEqual(['parties']);
+    // At a dorm, nothing but the parties (named where they still take something: not on a lot with Food & fun to spare).
+    expect((dorm.policies ?? []).every((note) => note.id === 'parties')).toBe(true);
     // The panel: each policy on its cause's line, with what it takes, and the campus number is the average of the lots.
     const view = happinessView(on);
     expect(view.rows.find((row) => row.id === 'grounds')!.notes).toEqual(['Naming rights −3']);

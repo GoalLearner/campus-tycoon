@@ -536,7 +536,9 @@ function mainLines(state: GameState, log: readonly LogEntry[]): Edition['main'] 
   const name = state.story?.mc?.name ?? String(said[said.length - 1]!.data?.name ?? '');
   const big = said.filter((entry) => entry.data?.big === 1);
   const rest = said.filter((entry) => entry.data?.big !== 1);
-  const kept = [...big.slice(-MAIN_LINES), ...rest.slice(-Math.max(0, MAIN_LINES - Math.min(MAIN_LINES, big.length)))].sort((a, b) => a.tick - b.tick);
+  // The key moments first, then the latest of the rest while there is room: slice(-0) would be all of them.
+  const room = Math.max(0, MAIN_LINES - Math.min(MAIN_LINES, big.length));
+  const kept = [...big.slice(-MAIN_LINES), ...(room > 0 ? rest.slice(-room) : [])].sort((a, b) => a.tick - b.tick);
   return { name, lines: kept.map((entry) => entry.text) };
 }
 

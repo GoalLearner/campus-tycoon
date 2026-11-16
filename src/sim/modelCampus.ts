@@ -323,6 +323,11 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   // A second of each, so the halls by the avenue and the north-east halls have both in reach.
   put('safety', 27, 11, false);
   put('medical', 17, 32, false);
+  // A second gym and four full basketball courts within reach of the halls (DESIGN.md 72, the owner's "we need two
+  // gyms and basketball courts as well"), on open ground: no hall, path or road moved. Each with a bin beside it.
+  put('gym', 30, 5, false);
+  for (const [x, y] of [[6, 6], [29, 10], [21, 3], [13, 33]] as const) put('basketball', x, y, false);
+  small('bin', [[30, 4], [5, 7], [31, 11], [20, 4], [12, 34]]);
 
   // ------------------------------------------------ lawn where nothing stands
   // What the game cannot draw yet (35.3) is left as lawn and trees.
