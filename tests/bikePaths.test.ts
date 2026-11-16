@@ -108,6 +108,21 @@ describe('the bike path tool', () => {
     expect(a.map.score).toEqual(b.map.score);
     expect(a.map.buildings).toEqual(b.map.buildings);
   });
+
+  it('leaves a footpath a footpath where a bike path crosses it: its lamp, its lots and its walkers, a day on', () => {
+    const state = small();
+    const paths = state.map.cells.map((cell, i) => (cell.kind === 'path' ? i : -1)).filter((i) => i >= 0);
+    expect(paths.length).toBeGreaterThan(5);
+    const crossed = structuredClone(state);
+    for (const i of paths) crossed.map.cells[i]!.kind = 'bikeCrossing';
+    const day = 86_400_000;
+    const a = advance(crossed, T0, T0 + day).state;
+    const b = advance(state, T0, T0 + day).state;
+    for (const key of Object.keys(a) as Array<keyof GameState>) if (key !== 'map') expect(a[key]).toEqual(b[key]);
+    expect(a.map.score).toEqual(b.map.score);
+    expect(a.map.walkMinutes).toEqual(b.map.walkMinutes);
+    expect(a.map.buildings).toEqual(b.map.buildings);
+  });
 });
 
 describe('riders on the bike path', () => {

@@ -105,7 +105,8 @@ function besideKind(state: GameState, placed: NonNullable<GameState['map']['plac
   return false;
 }
 
-const PATHS = new Set(['path']);
+// A footpath crossed by a bike path is still a footpath (DESIGN.md 71).
+const PATHS = new Set(['path', 'bikeCrossing']);
 
 /** Whether a tradition's condition holds now. */
 export function conditionHolds(state: GameState, condition: TraditionCondition): boolean {
@@ -149,7 +150,7 @@ export function conditionHolds(state: GameState, condition: TraditionCondition):
         if (besidePath) continue;
         const x = i % map.width;
         const y = (i - x) / map.width;
-        besidePath = ORTHO.some(([dx, dy]) => kindAt(state, x + dx, y + dy) === 'path');
+        besidePath = ORTHO.some(([dx, dy]) => PATHS.has(kindAt(state, x + dx, y + dy) ?? ''));
       }
       return quads >= TRADITION_QUAD && besidePath;
     }

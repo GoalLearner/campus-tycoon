@@ -82,7 +82,8 @@ function messReach(placed: Placed): number {
 /** True where the game stands a street lamp: every fourth cell of path, every fifth of road or street. */
 export function lampAt(map: MapState, x: number, y: number): boolean {
   const kind = map.cells[y * map.width + x]?.kind;
-  if (kind === 'path') return (x + y) % 4 === 0;
+  // A footpath crossed by a bike path keeps its lamp (DESIGN.md 71).
+  if (kind === 'path' || kind === 'bikeCrossing') return (x + y) % 4 === 0;
   if (kind === 'road' || kind === 'street') return (x + y) % 5 === 2;
   return false;
 }

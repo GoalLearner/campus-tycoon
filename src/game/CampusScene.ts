@@ -1009,6 +1009,12 @@ export class CampusScene extends Phaser.Scene {
           // A bike path (DESIGN.md 71): its piece by which sides join more of it, the bike painted on every third
           // straight cell, and bars across it where a footpath crosses.
           groundKey = this.bikeKey(state, x, y, cell.kind === 'bikeCrossing');
+          // A footpath crossed by a bike path keeps its street lamp.
+          if (cell.kind === 'bikeCrossing' && hasLamps && lampAt(state.map, x, y)) {
+            const out = (state.grounds.lamps[i] ?? 0) > 0;
+            objectKey = out ? 'lamp.off' : lamp;
+            if (!out) lampCells.push(i);
+          }
         } else if (cell.kind === 'crossing') {
           // The bars lie across the road, whichever way it runs.
           groundKey = this.iso.mask(this.roadMask(state, x, y)) & 5 ? 'road.cross.5' : 'road.cross.10';
