@@ -443,7 +443,6 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
 
     const people = atlas?.people;
     if (atlas && people) {
-      const looks = Math.min(people.looks, people.crowd ?? people.looks);
       // As they are drawn on the map now: a player on a court is in the kit. Otherwise they wear the face of what
       // they feel (DESIGN.md 63.7), where the art has it.
       const look = session.studentLook ?? studentFigure(state, ref, people);
@@ -642,7 +641,6 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const list: Person[] = view ? peopleOf(view, state, ref) : [];
     peopleRow.line.hidden = !view;
     const pack = atlas?.people;
-    const looks = pack ? Math.min(pack.looks, pack.crowd ?? pack.looks) : 1;
     const key = `${studentKey(ref)}|${list.map((one) => `${studentKey(one.ref)}${one.role}`).join(',')}${atlas ? '' : '-'}`;
     if (key === facesKey) return;
     facesKey = key;

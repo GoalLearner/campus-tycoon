@@ -6,6 +6,8 @@ import { setRoomClock } from '../ui/roomView';
 import { socialWeb } from './socialWeb';
 import { setEffectsSetting } from './life';
 import { upgradeNotes } from './upgradeNotes';
+import { loadAtlas } from '../ui/atlas';
+import { oldFigure, studentFigure } from '../sim/systems/students';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting, SAVE_VERSION } from '../sim';
@@ -688,8 +690,25 @@ function chapterDevSpot(state: GameState): Point | null {
   return best;
 }
 
+/**
+ * How many of the students on the books wear a different figure since figures follow gender (DESIGN.md 69.3), and the
+ * main character's before and after. For the owner's own save: `await __campus.figures()` in the console.
+ */
+async function figures(): Promise<{ students: number; changed: number; share: string; main: { name: string; before: number; after: number; changed: boolean } | null } | null> {
+  const pack = (await loadAtlas())?.people;
+  if (!pack || !store.hasGame) return null;
+  const state = store.state;
+  const all = sampleStudents(state, 1_000_000);
+  let changed = 0;
+  for (const ref of all) if (oldFigure(state, ref, pack) !== studentFigure(state, ref, pack)) changed += 1;
+  const mc = state.story?.mc ?? null;
+  const main = mc ? { name: mc.name, before: oldFigure(state, mc.ref, pack), after: studentFigure(state, mc.ref, pack), changed: false } : null;
+  if (main) main.changed = main.before !== main.after;
+  return { students: all.length, changed, share: `${Math.round((100 * changed) / Math.max(1, all.length))}%`, main };
+}
+
 export function installDevTools(): void {
-  (window as unknown as Record<string, unknown>).__campus = { store, session, clock, socialWeb };
+  (window as unknown as Record<string, unknown>).__campus = { store, session, clock, socialWeb, figures };
   const params = new URLSearchParams(window.location.search);
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);

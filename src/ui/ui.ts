@@ -1099,7 +1099,6 @@ export function mountUi(root: HTMLElement): void {
       void loadAtlas().then((atlas) => {
         const people = atlas?.people;
         if (!atlas || !people) return;
-        const looks = Math.min(people.looks, people.crowd ?? people.looks);
         const figure = main ? studentFigure(store.state, main.ref, people) : 0;
         drawSprite(mainArt, atlas, `person.${figure}.${people.flip?.sw ?? 'sw'}.0`);
       });

@@ -125,7 +125,6 @@ export function drawPostScene(canvas: HTMLCanvasElement, atlas: Atlas | null, vi
   if (post.scene === SCENE.building) return true;
   const pack = atlas.people;
   if (!pack) return true;
-  const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
   const people = peopleIn(view, state, post, look.crowd);
   const gap = Math.min(54, (W * 0.7) / Math.max(1, people.length));
   const first = W / 2 - (gap * (people.length - 1)) / 2;

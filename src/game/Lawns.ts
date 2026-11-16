@@ -568,7 +568,6 @@ export class Lawns {
     }
     const state = this.state!;
     const people = this.people!;
-    const crowd = Math.max(1, Math.min(people.looks, people.crowd ?? people.looks));
     const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
     const from = this.iso.view(x, y);
     const to = this.iso.view(towardX, towardY);

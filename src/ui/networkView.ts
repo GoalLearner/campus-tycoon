@@ -168,7 +168,6 @@ export function mountNetworkView(): { node: HTMLElement; render: (state: GameSta
     canvas.height = 112;
     const pack = atlas?.people;
     if (atlas && pack && state) {
-      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
       drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     }
     return canvas;
