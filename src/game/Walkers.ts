@@ -1884,12 +1884,13 @@ export class Walkers {
       const angle = (i / ring) * Math.PI * 2 + 0.4;
       const r = 1.05 + (i % 2) * 0.3;
       const spot = { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r };
-      const back = w.route[w.leg] ?? null;
+      // Already watching something else: after this they still go back to the way they were going (69.5).
+      const back = w.resume?.[0] ?? w.route[w.leg] ?? null;
       const clear = this.clearLine(w.x, w.y, spot.x, spot.y) && (!back || this.clearLine(spot.x, spot.y, back.x, back.y));
       if (i < most && !w.party && clear) {
         // After, on along the way they were going; or, already where they were going, back there the way they came.
         const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
-        w.resume = resume.length > 0 ? resume : [{ x: w.x, y: w.y }];
+        w.resume = w.resume ?? (resume.length > 0 ? resume : [{ x: w.x, y: w.y }]);
         w.route = [{ x: w.x, y: w.y }, spot];
         w.leg = 1;
         w.lingerMs = 0;
