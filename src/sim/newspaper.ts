@@ -317,7 +317,7 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
           out.push({ weight: 47, headline: `Students Rally for ${about[String(entry.data.topic)] ?? 'Change'}; the Dean Takes the Petition`, deck: entry.text });
         }
         else if (step >= 3 && step > was) out.push({ weight: 45, headline: `Campus Turns ${CHAOS_STEPS[step]}: Dust-Ups and Pranks Keep Campus Safety Busy`, deck: entry.text });
-        else if (step >= 0 && step < was && was >= 3) out.push({ weight: 50, headline: `Campus Settles Down: The Chaos Meter Reads ${CHAOS_STEPS[step]}`, deck: entry.text });
+        else if (step >= 0 && step < 3 && was >= 3) out.push({ weight: 50, headline: `Campus Settles Down: The Chaos Meter Reads ${CHAOS_STEPS[step]}`, deck: entry.text });
         break;
       }
       case 'writeUps':

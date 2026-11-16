@@ -30,7 +30,7 @@ import { CHAOS_LINES, PROTEST_LINES } from '../config/chaosLines';
 import { INCIDENT_EVAL_TICKS, RESPONSE_BASE_TICKS, RESPONSE_TICKS_PER_CELL } from '../config/incidents';
 import { POLICIES } from '../config/policies';
 import { WEB_WEEK_TICKS } from '../config/web';
-import { dollars } from '../format';
+import { dollarsShort } from '../format';
 import { nextFloat } from '../rng';
 import { scaleOf, smallCount } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
@@ -293,7 +293,8 @@ function consequences(state: GameState, log: LogEntry[], before: number, after: 
   const name = CHAOS_STEPS[after]!;
   // The meter changing step is news.
   if (after !== before) {
-    const why = causes(state).slice(0, 2).map((cause) => cause.text.toLowerCase());
+    // The causes as the Scorecard says them, their first letter small: Campus Safety keeps its capitals.
+    const why = causes(state).slice(0, 2).map((cause) => cause.text.charAt(0).toLowerCase() + cause.text.slice(1));
     log.push({ tick, kind: 'chaos', text: `The Chaos meter reads ${name}${why.length > 0 ? `: ${why.join('; ')}` : ''}.`, data: { step: after, was: before } });
   }
   // A Rowdy week or worse makes headlines, and applicants read them.
@@ -305,7 +306,7 @@ function consequences(state: GameState, log: LogEntry[], before: number, after: 
       c.letters.met += 1;
       c.letters.lastClosed = tick;
       state.money.cash += LETTER.reward * scaleOf(state);
-      log.push({ tick, kind: 'chaos', text: `The trustees write again: the campus has calmed down, below Rowdy in time. A gift of thanks, ${dollars(LETTER.reward * scaleOf(state))}, is in the bank.`, data: { letter: 2 } });
+      log.push({ tick, kind: 'chaos', text: `The trustees write again: the campus has calmed down, below Rowdy in time. A gift of thanks, ${dollarsShort(LETTER.reward * scaleOf(state))}, is in the bank.`, data: { letter: 2 } });
     } else if (tick >= c.letter.until) {
       c.letter = null;
       c.letters.missed += 1;
