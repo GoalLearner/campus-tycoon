@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_MOST, Game, GAME_CAP, RUN, type Area, type GameEvent, type Sport } from '../src/app/games';
+import { APART, BALL_MOST, Game, GAME_CAP, RUN, type Area, type GameEvent, type Sport } from '../src/app/games';
 
 /**
  * Real games (DESIGN.md 72): the play on a court, for show and seeded. Players never run faster than a player can, the
@@ -86,6 +86,47 @@ describe('real games', () => {
     });
     expect(lowest).toBeLessThan(1);
     play(half, 1, () => undefined);
+  });
+
+  it("keeps basketball players apart: a figure or more between any two, but a defender closing out, the shooter's man and a loose ball", () => {
+    for (const [n, seed] of [[10, 5], [10, 17], [8, 23], [6, 9]] as const) {
+      const game = new Game('basketball', AREAS.basketball, seed);
+      lineUp(game, n);
+      play(game, 4);
+      let worst = Infinity;
+      let let_in = 0;
+      let frames = 0;
+      play(game, 150, () => {
+        const ps = game.players;
+        for (let i = 0; i < ps.length; i++) {
+          for (let j = i + 1; j < ps.length; j++) {
+            if (!game.mayBeClose(ps[i]!, ps[j]!)) worst = Math.min(worst, Math.hypot(ps[i]!.x - ps[j]!.x, ps[i]!.y - ps[j]!.y));
+          }
+        }
+        let_in += game.closeNow();
+        frames += 1;
+      });
+      expect(worst, `${n} players`).toBeGreaterThanOrEqual(APART - 1e-6);
+      // Those let in close are few: the ball handler's man, the shooter's man on a shot, whoever goes for a loose ball.
+      expect(let_in / frames, `${n} players`).toBeLessThan(3);
+    }
+  });
+
+  it('spreads basketball to the floor: the offense at the top, the wings and the corners, the defence a step inside', () => {
+    const game = new Game('basketball', AREAS.basketball, 5);
+    lineUp(game, 10);
+    play(game, 4);
+    let spread = 0;
+    let looks = 0;
+    play(game, 150, () => {
+      if (!game.holder()) return;
+      const xs = game.players.map((p) => p.x);
+      spread += Math.max(...xs) - Math.min(...xs);
+      looks += 1;
+    });
+    // Across the court, on average, the players span most of its width (1.72), not a huddle in the key.
+    expect(looks).toBeGreaterThan(1000);
+    expect(spread / looks).toBeGreaterThan(1.1);
   });
 
   it('plays soccer with goals and saves, and keepers who stay in goal', () => {

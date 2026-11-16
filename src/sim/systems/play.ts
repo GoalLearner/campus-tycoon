@@ -27,6 +27,12 @@ function gap(placed: Placed, x: number, y: number): number {
   return Math.max(Math.max(placed.x - x, 0, x - (placed.x + placed.w - 1)), Math.max(placed.y - y, 0, y - (placed.y + placed.h - 1)));
 }
 
+/** How far a recreation building draws its players from: wider than its reach at a full court or a pitch. */
+export function drawsFrom(placed: Placed): number {
+  const spec = PLACED[placed.type];
+  return spec.draws ?? spec.radius;
+}
+
 /** How many students a recreation building holds at once. 0 for anything else. */
 export function playCapacity(placed: Placed, scale = 1): number {
   return PLACED[placed.type].family === 'recreation' ? placedRoom(placed.type, scale) : 0;
@@ -51,7 +57,7 @@ export function playLoads(map: MapState, recreation: readonly Placed[]): Record<
       near.length = 0;
       let holds = 0;
       for (const placed of recreation) {
-        if (gap(placed, x, y) > PLACED[placed.type].radius) continue;
+        if (gap(placed, x, y) > drawsFrom(placed)) continue;
         near.push(placed);
         holds += playCapacity(placed, scale);
       }
