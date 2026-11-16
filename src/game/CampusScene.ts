@@ -1788,7 +1788,7 @@ export class CampusScene extends Phaser.Scene {
     const key = student ? studentKey(student) : null;
     const walking = key ? this.walkers.doing(key) : null;
     // Not out walking: they may be standing in a game, a line or a small scene, which the card says in its own words.
-    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key)) : null;
+    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key) ?? this.mayhem.find(key)) : null;
     session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null, walking ? this.walkers.ridingWords(key!) : null);
     // A ring on the ground under them, as under a walker whose card is open.
     if (there) {

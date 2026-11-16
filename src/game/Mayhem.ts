@@ -47,8 +47,9 @@ const FACE_OFF = 0.24;
 /** And this far out from the path's middle, away from the wall, so the cloud is clear of the building. */
 const FRONT_OUT = 0.3;
 const STEP_APART = 0.2;
-/** A medic comes from no further than this, in cells of their way; further, the bruise waits for the clinic. */
-const MEDIC_MOST = 16;
+/** A medic comes from no further than this, in cells of their way, at a brisk walk; further, the bruise waits for the clinic. */
+const MEDIC_MOST = 12;
+const MEDIC_PACE = 1.35;
 const PATCH_MS = 3600;
 /** How long after the incident is over the two part, once Campus Safety is there. */
 const PART_MS = 900;
@@ -287,19 +288,35 @@ export class Mayhem {
       patchUntil: 0,
     };
     const places: Array<{ place: { x: number; y: number }; face: { x: number; y: number }; role: ShowRole; marches?: boolean }> = [];
-    if (kind === 'dustUp' || kind === 'shouting') {
-      // Face to face on the path in front of the door, across it.
-      const mid = { x: front.front.x + ux * FRONT_OUT, y: front.front.y + uy * FRONT_OUT };
-      show.mid = mid;
-      const a = { x: mid.x - uy * FACE_OFF, y: mid.y + ux * FACE_OFF };
-      const b = { x: mid.x + uy * FACE_OFF, y: mid.y - ux * FACE_OFF };
-      places.push({ place: a, face: { x: b.x - a.x, y: b.y - a.y }, role: kind });
-      places.push({ place: b, face: { x: a.x - b.x, y: a.y - b.y }, role: kind });
-    } else if (kind === 'prank' || kind === 'graffiti') {
-      // At the wall by the door, facing it.
-      const at = { x: door.x + ux * 0.32 - uy * 0.22, y: door.y + uy * 0.32 + ux * 0.22 };
-      show.mid = at;
-      places.push({ place: at, face: { x: -ux, y: -uy }, role: kind });
+    // Out of the door to the path in front, or on to open ground near it the player can see (76.1).
+    let wayOut: Array<{ x: number; y: number }> = [{ ...door }];
+    if (kind !== 'protest') {
+      // Clear of any other scene staged now.
+      const taken = (x: number, y: number): boolean => [...this.shows.values()].some((other) => Math.abs(Math.floor(other.mid.x) - x) <= 1 && Math.abs(Math.floor(other.mid.y) - y) <= 1);
+      const stand = this.walkers.standBy(door, front.front, taken);
+      wayOut = stand.way;
+      const moved = wayOut.length > 2;
+      // Which way is across: across the path from the door, or across the last step of the way.
+      const a0 = wayOut[wayOut.length - 2]!;
+      const a1 = wayOut[wayOut.length - 1]!;
+      const along = moved ? Math.max(1e-6, Math.hypot(a1.x - a0.x, a1.y - a0.y)) : 1;
+      const vx = moved ? (a1.x - a0.x) / along : ux;
+      const vy = moved ? (a1.y - a0.y) / along : uy;
+      if (kind === 'dustUp' || kind === 'shouting') {
+        // Face to face, across the way they came.
+        const mid = moved ? { ...stand.at } : { x: front.front.x + ux * FRONT_OUT, y: front.front.y + uy * FRONT_OUT };
+        show.mid = mid;
+        const a = { x: mid.x - vy * FACE_OFF, y: mid.y + vx * FACE_OFF };
+        const b = { x: mid.x + vy * FACE_OFF, y: mid.y - vx * FACE_OFF };
+        places.push({ place: a, face: { x: b.x - a.x, y: b.y - a.y }, role: kind });
+        places.push({ place: b, face: { x: a.x - b.x, y: a.y - b.y }, role: kind });
+      } else {
+        // At the wall by the door, facing it; or, where buildings in front would hide that, where it can be seen.
+        const at = moved ? { ...stand.at } : { x: door.x + ux * 0.32 - uy * 0.22, y: door.y + uy * 0.32 + ux * 0.22 };
+        show.mid = at;
+        places.push({ place: at, face: moved ? { x: vx, y: vy } : { x: -ux, y: -uy }, role: kind });
+      }
+      wayOut = wayOut.slice(0, -1);
     } else {
       // A rally on the lawn by the lecture hall, facing it.
       const spots = this.walkers.groundBy(front.front, rallySize(this.step));
@@ -318,7 +335,7 @@ export class Mayhem {
     places.forEach((one, i) => {
       const person = this.person(state, show, one.role, one.place, one.face, i, one.marches ?? false);
       if (!already) {
-        const from = kind === 'protest' ? rallyWay!.slice(0, -1) : [{ ...door }];
+        const from = kind === 'protest' ? rallyWay!.slice(0, -1) : wayOut;
         person.trip = tripOf([...from, { ...one.place }], timeMs + i * STAGGER_MS, false);
         person.at = { ...from[0]! };
       }
@@ -483,6 +500,7 @@ export class Mayhem {
     if (trip.total > MEDIC_MOST) return;
     const medic = this.person(state, show, 'medic', { x: at.x + 0.3, y: at.y + 0.18 }, { x: -0.3, y: -0.18 }, 99, false);
     medic.trip = trip;
+    medic.pace = MEDIC_PACE;
     medic.at = { ...way[0]! };
     show.medic = medic;
     show.medicWay = trip.pts.map((one) => ({ ...one }));
@@ -667,6 +685,18 @@ export class Mayhem {
       }
     }
     return found;
+  }
+
+  /** Someone in a staged incident by their key, for their card (what they are doing, and where to ring them), or null. */
+  find(key: string): Stander | null {
+    for (const show of this.shows.values()) {
+      for (const person of show.people) {
+        if (person.gone || !person.student || studentKey(person.student) !== key) continue;
+        const role = person.role === 'medic' ? 'patched' : person.role;
+        return { student: person.student, look: person.look, words: showWords(role, show.topic), x: person.sprite.x, y: person.sprite.y, far: 0, depth: person.sprite.depth };
+      }
+    }
+    return null;
   }
 
   // ------------------------------------------------------------ clearing --

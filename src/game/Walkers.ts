@@ -276,6 +276,18 @@ const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, ev
 const SIDEWALK = 0.5 - KERB_MIDDLE;
 /** A rally finds its lawn within this many cells of the lecture hall's door (DESIGN.md 76.4). */
 const RALLY_REACH = 7;
+/** A scene at a door stands no more than this many steps from it, and a building in front counts as this many steps. */
+const STAND_REACH = 3;
+const STAND_HIDDEN = 2.5;
+/** The cells in front of a cell on the screen, in the view's cells, and how much a building on each hides it. */
+const IN_FRONT: ReadonlyArray<readonly [number, number, number]> = [
+  [1, 0, 0.6],
+  [0, 1, 0.6],
+  [1, 1, 1],
+  [2, 1, 0.5],
+  [1, 2, 0.5],
+  [2, 2, 0.6],
+];
 /** Which sidewalk of its street a house is on: -1 above the street on the map, 1 below. */
 const sideOf = (house: Stop): number => (house.row !== undefined && house.cell.y < house.row ? -1 : 1);
 /** A tour ambles. */
@@ -2220,6 +2232,66 @@ export class Walkers {
   }
 
   /**
+   * How much the buildings in front of a cell hide it, in the view as it is turned (DESIGN.md 76.1): 0 when the player
+   * sees it plainly, more the more buildings stand between. The cells one and two steps down the screen from it count.
+   */
+  hiddenAt(cx: number, cy: number): number {
+    const map = this.state?.map;
+    if (!map) return 0;
+    let hid = 0;
+    for (const [dx, dy, weight] of IN_FRONT) {
+      const at = this.iso.step(cx, cy, dx, dy);
+      if (at.x < 0 || at.y < 0 || at.x >= this.width || at.y >= this.height) continue;
+      const cell = map.cells[at.y * this.width + at.x]!;
+      const placed = cell.kind === 'placed' && cell.placedId !== null ? map.placed[cell.placedId] : null;
+      if ((cell.kind === 'lot' && cell.buildingId !== null) || (placed && !PLACED[placed.type].flat)) hid += weight;
+    }
+    return hid;
+  }
+
+  /**
+   * Where a scene at a building's door stands (DESIGN.md 76.1): the path in front, or, when buildings in front hide
+   * it, the open ground nearest it within a few steps that the player can see, and the way there from the door. Never
+   * where `taken` says another scene already stands.
+   */
+  standBy(door: Spot, front: Spot, taken: (x: number, y: number) => boolean = () => false): { at: Spot; way: Spot[] } {
+    const width = this.width;
+    const fx = Math.floor(front.x);
+    const fy = Math.floor(front.y);
+    const open = (c: number): boolean => this.isOpen[c]! && !this.isStreet[c];
+    let best = { cell: fy * width + fx, score: this.hiddenAt(fx, fy) * STAND_HIDDEN + (taken(fx, fy) ? 100 : 0) };
+    if (best.score === 0) return { at: { ...front }, way: [{ ...door }, { ...front }] };
+    // A short search on foot from the front cell, over open ground.
+    const from = new Map<number, number>([[best.cell, -1]]);
+    let ring = [best.cell];
+    for (let steps = 1; steps <= STAND_REACH && ring.length > 0; steps++) {
+      const next: number[] = [];
+      for (const c of ring) {
+        const x = c % width;
+        const y = (c - x) / width;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= this.height) continue;
+          const n = ny * width + nx;
+          if (from.has(n) || !open(n)) continue;
+          from.set(n, c);
+          next.push(n);
+          if (taken(nx, ny)) continue;
+          const score = steps + this.hiddenAt(nx, ny) * STAND_HIDDEN;
+          if (score < best.score) best = { cell: n, score };
+        }
+      }
+      ring = next;
+    }
+    const cells: number[] = [];
+    for (let c = best.cell; c !== -1; c = from.get(c)!) cells.push(c);
+    cells.reverse();
+    const way: Spot[] = [{ ...door }, ...cells.map((c) => ({ x: (c % width) + 0.5, y: Math.floor(c / width) + 0.5 }))];
+    return { at: { ...way[way.length - 1]! }, way };
+  }
+
+  /**
    * Open ground for a rally by a building (DESIGN.md 76.4): up to `n` spots, two to a cell, gathered round the best cell
    * near its door: a quad's lawn first, then wide open paths and grass, never a street or a court. A clump, not a line
    * along a path. Empty when there is none.
@@ -2245,7 +2317,7 @@ export class Walkers {
         let open = 0;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && ground(x + dx, y + dy)) open += 1;
         // A lawn with open ground all round, near the door; a narrow path between buildings last.
-        cells.push({ x, y, score: far * 0.5 + (kind === 'quad' ? 0 : 3) + (8 - open) * 0.8 });
+        cells.push({ x, y, score: far * 0.5 + (kind === 'quad' ? 0 : 3) + (8 - open) * 0.8 + this.hiddenAt(x, y) * 1.5 });
       }
     }
     if (cells.length === 0) return [];
