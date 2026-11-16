@@ -10,11 +10,13 @@ export const ZONES: readonly Zone[] = ['housing', 'academic'];
 
 /**
  * 'road' is a road the player laid, and 'crossing' a cell where a road and a
- * path share the ground. 'street', 'house' and 'town' belong to the town
- * beside the campus: its streets, its house plots and its gardens. The player
- * cannot change those.
+ * path share the ground. 'bike' is a bike path, for riders only, and
+ * 'bikeCrossing' a cell where a bike path and a footpath share the ground: the
+ * walkers' way across it (DESIGN.md 71). 'street', 'house' and 'town' belong
+ * to the town beside the campus: its streets, its house plots and its gardens.
+ * The player cannot change those.
  */
-export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree' | 'placed' | 'road' | 'crossing' | 'street' | 'house' | 'town';
+export type CellKind = 'empty' | 'path' | 'quad' | 'lot' | 'tree' | 'placed' | 'road' | 'crossing' | 'bike' | 'bikeCrossing' | 'street' | 'house' | 'town';
 
 export interface Cell {
   kind: CellKind;

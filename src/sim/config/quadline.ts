@@ -478,6 +478,7 @@ export const TOPIC_HEADLINE: Record<CauseTopic, string> = {
   beds: 'Housing',
   seats: 'Crowded Lectures',
   racks: 'Bike Parking',
+  lanes: 'Bike Lanes',
 };
 
 /**
@@ -526,6 +527,7 @@ export const OFFICIAL_LINES = {
     beds: 'We know rooms are tight. More beds are coming.',
     seats: 'Lectures are too full. We are adding seats.',
     racks: 'More bike racks are on the way.',
+    lanes: 'More bike paths are on the way.',
   },
   welcome: {
     fall: 'Welcome to campus, new students! We are so glad you are here.',
@@ -554,6 +556,7 @@ export const OFFICIAL_REPLIES = {
     beds: 'where are the beds tho',
     seats: 'and the seats?',
     racks: 'cool. a bike rack would be nice',
+    lanes: 'cool. a bike lane would be nice',
   },
 } as const;
 
@@ -590,9 +593,9 @@ export const TEAM_POSTS: Record<(typeof TEAM_NEWS)[number], readonly string[]> =
 };
 
 /** What a complaint or praise is about: each part of Happiness, and beds and seats. */
-// 'racks' (DESIGN.md 64.6) is the app's own: no cause leads to it, so the web never posts it; the app shows bike-parking
-// complaints from it while racks are short, and they move nothing.
-export const CAUSE_TOPICS = ['walk', 'green', 'clean', 'seating', 'noise', 'dining', 'recreation', 'safety', 'beds', 'seats', 'racks'] as const;
+// 'racks' (DESIGN.md 64.6) and 'lanes' (71) are the app's own: no cause leads to them, so the web never posts them; the
+// app shows bike-parking and bike-lane posts from them, and they move nothing.
+export const CAUSE_TOPICS = ['walk', 'green', 'clean', 'seating', 'noise', 'dining', 'recreation', 'safety', 'beds', 'seats', 'racks', 'lanes'] as const;
 export type CauseTopic = (typeof CAUSE_TOPICS)[number];
 
 /** A complaint (rough) and praise (good) for each, aimed at the place itself, never at a person. */
@@ -666,6 +669,25 @@ export const CAUSE_POSTS: Record<CauseTopic, { tag: string; good: readonly strin
       'bike parking here is a free for all. one rack would change my life',
       'tripped over three bikes on the way to class. racks please',
       'my bike lives against a wall now. it deserves better',
+    ],
+  },
+  lanes: {
+    tag: 'BikeLanes',
+    good: [
+      'new bike path just opened. rode to class and nobody had to jump out of my way [sparkle]',
+      'the bike lane is so smooth. my commute is a vibe now',
+      'finally a bike path. no more weaving round people on the sidewalk',
+      'took the bike lane to class today. elite',
+    ],
+    rough: [
+      'bikes on the sidewalk again. nearly lost my coffee [sweat]',
+      'got a bell rung at me three times on the way to class. we need a bike lane',
+      'skateboards and walkers on one path. it is only a matter of time',
+      'the sidewalk is a racetrack at 9am. give the bikes their own path',
+      'dodged two scooters and a longboard before lunch. bike lane please',
+      'rode my bike to class and apologized the whole way. we need a bike path',
+      'sidewalk traffic here is chaos. a bike lane would fix half of it',
+      'my bike and i are tired of weaving round people. bike path when',
     ],
   },
   seats: {

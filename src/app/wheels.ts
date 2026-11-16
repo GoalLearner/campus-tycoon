@@ -2,6 +2,7 @@ import type { DayPeriod } from './daylight';
 import type { Weather } from './life';
 import { CAUSE_TOPICS, POST, TONE } from '../sim/config/quadline';
 import { WEB_WEEK_TICKS } from '../sim/config/web';
+import { TICKS_PER_DAY, TICKS_PER_HOUR } from '../sim/config/time';
 import { hashInts, type GameState, type StudentRef } from '../sim';
 import { classYearOf } from '../sim/systems/students';
 import type { Post } from '../sim/systems/quadline';
@@ -127,6 +128,74 @@ export function rackPosts(view: WebView, state: GameState, students: number): Po
     const minute = h % span;
     if (minute > now) continue;
     out.push({ week, minute, author, kind: POST.complaint, luck: h, a: topic, b: -1, tone: TONE.rough, line: (h >>> 8) % 8, scene: 0, viral: false });
+  }
+  return out;
+}
+
+/**
+ * The bike path (DESIGN.md 71). The campus wants a cell of bike path for every this many cells of footpath: with fewer
+ * than half that, riders share the footpaths and students say so.
+ */
+export const PATH_CELLS_PER_LANE = 10;
+
+/** Cells of footpath and of bike path on the campus. */
+export function laneCount(state: GameState): { paths: number; lanes: number } {
+  let paths = 0;
+  let lanes = 0;
+  for (const cell of state.map.cells) {
+    if (cell.kind === 'path' || cell.kind === 'crossing') paths += 1;
+    else if (cell.kind === 'bike' || cell.kind === 'bikeCrossing') lanes += 1;
+  }
+  return { paths, lanes };
+}
+
+/** True while riders share the footpaths: less than half the bike path the campus wants. */
+export function lanesShort(state: GameState): boolean {
+  const { paths, lanes } = laneCount(state);
+  return paths > 0 && lanes < paths / PATH_CELLS_PER_LANE / 2;
+}
+
+/** Complaints about bikes on the footpaths a week, while bike paths are short; and praise for a new one. */
+export const LANE_POSTS_A_WEEK = 2;
+export const LANE_PRAISE = 2;
+/** The praise goes up within two real hours of a bike path opening, and shows for a real day. */
+const PRAISE_WITHIN = 2 * TICKS_PER_HOUR;
+const PRAISE_SHOWN = TICKS_PER_DAY;
+
+/**
+ * Students on the bike path, on Quadline (DESIGN.md 71): "bikes on the sidewalk again" while riders share the
+ * footpaths, two a game week, and praise within two hours of a new bike path opening. The app's own, as the bike-parking
+ * complaints are: never kept, never viral, moving nothing.
+ */
+export function lanePosts(view: WebView, state: GameState): Post[] {
+  const topic = CAUSE_TOPICS.indexOf('lanes');
+  const week = view.week;
+  const now = state.clock.tick - (week - 1) * WEB_WEEK_TICKS;
+  const out: Post[] = [];
+  if (lanesShort(state)) {
+    const span = Math.max(1, Math.min(WEB_WEEK_TICKS - 1, now));
+    for (let k = 0; k < LANE_POSTS_A_WEEK; k++) {
+      const h = hashInts(view.seed, week, k, 6451) >>> 0;
+      const author = authorOf(view, state, h);
+      if (!author) continue;
+      const minute = h % span;
+      if (minute > now) continue;
+      out.push({ week, minute, author, kind: POST.complaint, luck: h, a: topic, b: -1, tone: TONE.rough, line: (h >>> 8) % 8, scene: 0, viral: false });
+    }
+  }
+  // The newest bike path, for a real day after it opened.
+  let opened = -1;
+  for (const cell of state.map.cells) if ((cell.kind === 'bike' || cell.kind === 'bikeCrossing') && cell.builtTick > opened) opened = cell.builtTick;
+  if (opened >= 0 && state.clock.tick - opened < PRAISE_SHOWN) {
+    for (let k = 0; k < LANE_PRAISE; k++) {
+      const h = hashInts(view.seed, opened, k, 6453) >>> 0;
+      const at = opened + 10 + (h % PRAISE_WITHIN);
+      if (at > state.clock.tick) continue;
+      const author = authorOf(view, state, h);
+      if (!author) continue;
+      const atWeek = Math.floor(at / WEB_WEEK_TICKS) + 1;
+      out.push({ week: atWeek, minute: at - (atWeek - 1) * WEB_WEEK_TICKS, author, kind: POST.praise, luck: h, a: topic, b: -1, tone: TONE.good, line: (h >>> 8) % 4, scene: 0, viral: false });
+    }
   }
   return out;
 }

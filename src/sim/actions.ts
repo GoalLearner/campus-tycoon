@@ -50,7 +50,7 @@ import type { CellKind, GameState, MainPeople, MapState, SocialEffects, Zone } f
 
 /** What a drag paints onto the map. */
 /** 'bin', 'bench' and 'table' lay small things one cell each, a row at a drag, as trees are planted. */
-export type Tool = Zone | 'path' | 'road' | 'quad' | 'tree' | 'clear' | 'bin' | 'bench' | 'table';
+export type Tool = Zone | 'path' | 'bike' | 'road' | 'quad' | 'tree' | 'clear' | 'bin' | 'bench' | 'table';
 
 export type Point = readonly [number, number];
 
@@ -156,7 +156,9 @@ function canPaint(kind: CellKind, tool: Tool): boolean {
   if (tool === 'clear') return kind !== 'empty';
   // A road laid over a path, or a path over a road, makes a crossing: both pass through the cell.
   if (tool === 'road') return kind === 'empty' || kind === 'path';
-  if (tool === 'path') return kind === 'empty' || kind === 'road';
+  if (tool === 'path') return kind === 'empty' || kind === 'road' || kind === 'bike';
+  // A bike path laid over a footpath, or a footpath over a bike path, makes the walkers' crossing (DESIGN.md 71).
+  if (tool === 'bike') return kind === 'empty' || kind === 'path';
   return kind === 'empty';
 }
 
@@ -192,6 +194,7 @@ export function refundFor(state: GameState, cost: number, builtTick: number): { 
 function laidCost(kind: CellKind, scale: number): number {
   switch (kind) {
     case 'path':
+    case 'bike':
     case 'quad':
     case 'tree':
     case 'road':
@@ -200,6 +203,8 @@ function laidCost(kind: CellKind, scale: number): number {
       return paintCost('zoneLot', scale);
     case 'crossing':
       return paintCost('road', scale) + paintCost('path', scale);
+    case 'bikeCrossing':
+      return paintCost('bike', scale) + paintCost('path', scale);
     default:
       return 0;
   }
@@ -302,7 +307,10 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
         clearCell(next, map, x, y);
         break;
       case 'path':
-        cell.kind = cell.kind === 'road' ? 'crossing' : 'path';
+        cell.kind = cell.kind === 'road' ? 'crossing' : cell.kind === 'bike' ? 'bikeCrossing' : 'path';
+        break;
+      case 'bike':
+        cell.kind = cell.kind === 'path' ? 'bikeCrossing' : 'bike';
         break;
       case 'road':
         cell.kind = cell.kind === 'path' ? 'crossing' : 'road';

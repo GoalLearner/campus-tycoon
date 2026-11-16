@@ -76,6 +76,226 @@
     1
    ]
   },
+  "bike.0": {
+   "frame": "bike.0",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.1": {
+   "frame": "bike.1",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.10": {
+   "frame": "bike.10",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.11": {
+   "frame": "bike.11",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.12": {
+   "frame": "bike.12",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.13": {
+   "frame": "bike.13",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.14": {
+   "frame": "bike.14",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.15": {
+   "frame": "bike.15",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.2": {
+   "frame": "bike.2",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.3": {
+   "frame": "bike.3",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.4": {
+   "frame": "bike.4",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.5": {
+   "frame": "bike.5",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.6": {
+   "frame": "bike.6",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.7": {
+   "frame": "bike.7",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.8": {
+   "frame": "bike.8",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.9": {
+   "frame": "bike.9",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.cross.10": {
+   "frame": "bike.cross.10",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.cross.5": {
+   "frame": "bike.cross.5",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.sym.10": {
+   "frame": "bike.sym.10",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "bike.sym.5": {
+   "frame": "bike.sym.5",
+   "anchor": [
+    66,
+    0
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.anger": {
    "frame": "emote.anger",
    "anchor": [

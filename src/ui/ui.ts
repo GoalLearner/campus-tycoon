@@ -151,6 +151,12 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: (scale: number) => str
 ];
 
 
+/**
+ * The bike path (DESIGN.md 71), for riders only, is picked beside the footpath: the Path tool shows both above the bar,
+ * as the Tree tool shows its trees, so the bar keeps seven buttons of 44 points on the narrowest phone.
+ */
+const BIKE_HINT = (scale: number): string => `Drag to lay a bike path · ${dollars(paintCost('bike', scale))} a cell · walkers cross where a path does`;
+
 /** Tools picked from the Build menu and kept in hand until Done: they have no button in the bar. */
 const DRAG_FROM_MENU: readonly ToolChoice[] = ['road', 'bin', 'bench', 'table'];
 const ROW_HINT: Record<'bin' | 'bench' | 'table', string> = {
@@ -163,6 +169,7 @@ const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]>
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
+  bike: ['bike path cell', 'bike path cells'],
   road: ['road cell', 'road cells'],
   bin: ['trash bin', 'trash bins'],
   bench: ['bench', 'benches'],
@@ -430,9 +437,11 @@ export function mountUi(root: HTMLElement): void {
   const chip = el('div', 'chip');
   const toolbar = el('div', 'toolbar');
   const toolButtons = new Map<ToolChoice, HTMLButtonElement>();
+  // The Path button holds the bike path too (DESIGN.md 71): a tap with either in hand puts it down.
+  const inHand = (id: ToolChoice): boolean => session.tool === id || (id === 'path' && session.tool === 'bike');
   for (const tool of TOOLS) {
     const b = button(tool.label, `tool tool-${tool.id}`, () => {
-      session.setTool(session.tool === tool.id ? 'look' : tool.id);
+      session.setTool(inHand(tool.id) ? 'look' : tool.id);
     });
     toolButtons.set(tool.id, b);
     toolbar.append(b);
@@ -453,6 +462,16 @@ export function mountUi(root: HTMLElement): void {
       treePicker.append(b);
     });
     render();
+  });
+
+  // ---------------------------------------------------------- path picker --
+  // Shown above the toolbar while the Path tool is in hand: a footpath, or a bike path for riders only (DESIGN.md 71).
+  const pathPicker = el('div', 'tree-picker path-picker');
+  const pathChoices: Array<[ToolChoice, HTMLButtonElement]> = (['path', 'bike'] as const).map((id) => {
+    const b = button('', `tree-choice path-choice path-choice-${id}`, () => session.setTool(id));
+    b.append(el('span', 'path-swatch'), el('span', '', id === 'path' ? 'Footpath' : 'Bike path'));
+    pathPicker.append(b);
+    return [id, b];
   });
 
   // ------------------------------------------------------------ inspector --
@@ -686,7 +705,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, quadApp.node, modalRoot);
+  root.append(hud, toast, chip, treePicker, pathPicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, quadApp.node, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1517,8 +1536,10 @@ export function mountUi(root: HTMLElement): void {
   function renderPlacer(state: GameState): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
-    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
-    collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
+    // The Path and Tree choosers sit where Build and Collect all float on a narrow phone (DESIGN.md 71): they step aside.
+    const choosing = session.tool === 'path' || session.tool === 'bike' || session.tool === 'tree';
+    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null || choosing);
+    collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null || choosing);
     if (!type) return;
     setText(placeButton, 'Place');
     if (type === 'decor' && session.decor) {
@@ -2570,14 +2591,17 @@ export function mountUi(root: HTMLElement): void {
   }
 
   function renderTools(): void {
-    for (const [id, b] of toolButtons) b.classList.toggle('active', session.tool === id);
+    for (const [id, b] of toolButtons) b.classList.toggle('active', inHand(id));
     const preview = session.preview;
     const tool = session.tool;
 
     const picking = tool === 'tree' && treeButtons.length > 0;
     treePicker.classList.toggle('show', picking);
-    // The tree picker and the road bar both sit where the chip would be, so it moves up.
-    chip.classList.toggle('raised', picking || DRAG_FROM_MENU.includes(tool));
+    const paving = tool === 'path' || tool === 'bike';
+    pathPicker.classList.toggle('show', paving);
+    for (const [id, b] of pathChoices) b.classList.toggle('active', tool === id);
+    // The pickers and the road bar all sit where the chip would be, so it moves up.
+    chip.classList.toggle('raised', picking || paving || DRAG_FROM_MENU.includes(tool));
     treeButtons.forEach((b, kind) => b.classList.toggle('active', kind === session.treeKind));
     if (tool === 'look' || tool === 'place') {
       chip.classList.remove('show', 'bad');
@@ -2601,7 +2625,11 @@ export function mountUi(root: HTMLElement): void {
       const name = picking ? treeNames[session.treeKind] : undefined;
       setText(
         chip,
-        name ? `${name} · tap or drag to plant · ${dollars(paintCost('tree', scaleOf(store.state)))} each` : (TOOLS.find((t) => t.id === tool)?.hint(scaleOf(store.state)) ?? ''),
+        name
+          ? `${name} · tap or drag to plant · ${dollars(paintCost('tree', scaleOf(store.state)))} each`
+          : tool === 'bike'
+            ? BIKE_HINT(scaleOf(store.state))
+            : (TOOLS.find((t) => t.id === tool)?.hint(scaleOf(store.state)) ?? ''),
       );
       // The road tool says what to do in its own bar, so there is nothing for the chip to say until a drag begins.
       chip.classList.toggle('show', chip.textContent !== '');
