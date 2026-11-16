@@ -158,7 +158,13 @@ describe('riders on the bike path', () => {
 });
 
 describe('bike paths on Quadline', () => {
-  const state = advance(newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + 86_400_000).state;
+  const model = advance(newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + 86_400_000).state;
+  // The model campus opens with its bike network (DESIGN.md 73); the same campus without it, as a player's could be.
+  const state = structuredClone(model);
+  for (const cell of state.map.cells) {
+    if (cell.kind === 'bike') cell.kind = 'empty';
+    else if (cell.kind === 'bikeCrossing') cell.kind = 'path';
+  }
   const web = newWeb(state.seed, 1024);
   catchUp(web, state, webWeekOf(state));
   const view = viewOf(web, false);
@@ -192,6 +198,9 @@ describe('bike paths on Quadline', () => {
     }
     expect(lanesShort(enough)).toBe(false);
     expect(lanePosts(view, enough).filter((post) => post.kind === POST.complaint)).toEqual([]);
+    // The model campus every new game opens on has more than enough: nobody complains of bikes on its sidewalks.
+    expect(lanesShort(model)).toBe(false);
+    expect(lanePosts(view, model).filter((post) => post.kind === POST.complaint)).toEqual([]);
   });
 
   it('praises a new bike path within two hours of it opening, and shows it for a day', () => {

@@ -80,11 +80,13 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   };
 
   /** Ground of one kind. `counted` is false for roads, walks and trees that tie districts together and belong to none. */
-  const ground = (kind: 'path' | 'road' | 'quad' | 'tree', cells: readonly Point[], counted = true): void => {
+  const ground = (kind: 'path' | 'road' | 'quad' | 'tree' | 'bike', cells: readonly Point[], counted = true): void => {
     for (const [x, y] of cells) {
       const cell = cellAt(x, y);
       if (kind === 'path' && (cell.kind === 'road' || cell.kind === 'crossing')) cell.kind = 'crossing';
       else if (kind === 'road' && (cell.kind === 'path' || cell.kind === 'crossing')) cell.kind = 'crossing';
+      // A bike path over a footpath is the walkers' crossing (DESIGN.md 71); it stays a footpath for every door.
+      else if (kind === 'bike' && cell.kind === 'path') cell.kind = 'bikeCrossing';
       else if (cell.kind === kind) continue;
       else {
         empty(x, y).kind = kind;
@@ -327,6 +329,24 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   // ------------------------------------------------ lawn where nothing stands
   // What the game cannot draw yet (35.3) is left as lawn and trees.
   ground('tree', [[18, 25], [19, 26], [20, 25], [21, 27], [19, 28], [17, 27], [11, 27], [12, 29], [10, 30], [13, 32], [11, 33], [5, 28], [3, 30], [6, 31], [4, 24], [2, 22], [5, 14], [3, 12], [6, 12], [11, 9], [12, 6], [10, 4], [17, 6], [20, 5], [18, 8], [28, 20], [29, 22], [27, 24], [30, 18], [26, 18], [9, 41], [6, 43], [10, 45], [4, 45], [25, 38], [28, 37], [23, 41], [27, 43], [24, 45], [29, 45]], false);
+
+  // ------------------------------------------------------- the bike paths
+  // A network as the planners would lay it (DESIGN.md 73, the owner's "Put bike paths on the model"): beside the busiest
+  // footpaths and across the lawns between them, joined up, and out to Lantern Avenue where commuters ride in. Only on
+  // open ground, with a crossing wherever it meets a footpath; no tree, hall, path or road moved. Free, as its footpaths
+  // are, and laid on new games only.
+  ground('bike', [
+    // The west spine, beside the walk by the west halls, north and south of the halls in the middle.
+    ...col(9, 4, 15), ...col(9, 25, 34),
+    // Across the north lawn to the east spine, and down it beside the walk by the north-east halls.
+    ...row(7, 10, 21), ...col(22, 5, 12), [23, 12], ...col(24, 12, 20),
+    // Out to the avenue, where commuters ride in.
+    ...row(13, 25, 31),
+    // On down the east spine past the middle, beside the walk by the lecture halls.
+    [23, 20], [23, 21], ...col(22, 21, 29),
+    // Across to the middle spine, and back to the west one.
+    ...row(29, 16, 21), [15, 29], ...col(14, 24, 29), ...row(28, 10, 13), ...col(14, 32, 35), ...row(34, 10, 13),
+  ], false);
 
   return districts;
 }

@@ -81,12 +81,49 @@ describe('the model campus is laid by a script', () => {
     expect(lots + placed).toBeLessThanOrEqual(120);
   });
 
+  it('opens with a bike network: joined up, out to the avenue, on open ground, crossing footpaths where it meets them (DESIGN.md 73)', () => {
+    const state = model();
+    const map = state.map;
+    const { width, height, cells } = map;
+    const lane = (i: number): boolean => cells[i]!.kind === 'bike' || cells[i]!.kind === 'bikeCrossing';
+    const cellsOf = cells.map((_, i) => i).filter(lane);
+    expect(cells.filter((cell) => cell.kind === 'bike').length).toBe(90);
+    expect(cells.filter((cell) => cell.kind === 'bikeCrossing').length).toBe(5);
+    // One network.
+    const seen = new Set([cellsOf[0]!]);
+    const queue = [cellsOf[0]!];
+    while (queue.length > 0) {
+      const c = queue.pop()!;
+      const x = c % width;
+      const y = (c - x) / width;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const n = ny * width + nx;
+        if (lane(n) && !seen.has(n)) {
+          seen.add(n);
+          queue.push(n);
+        }
+      }
+    }
+    expect(seen.size).toBe(cellsOf.length);
+    // Out to Lantern Avenue, where commuters ride in; and inside the campus's own land.
+    expect(cellsOf.some((i) => i % width === TOWN_X - 1 && cells[i + 1]!.kind === 'street')).toBe(true);
+    for (const i of cellsOf) expect(i % width).toBeLessThan(TOWN_X);
+    // Free: the campus began with it.
+    for (const i of cellsOf) expect(cells[i]!.builtTick).toBe(-1);
+    // Every lot still touches a footpath.
+    for (const building of map.buildings) if (building) expect(touchesPath(map, building.x, building.y), `${building.x}, ${building.y}`).toBe(true);
+  });
+
   it('has the long walk, the walk to Lantern Avenue and the loop road, each joined up', () => {
     const state = model();
     const map = state.map;
     const kind = (x: number, y: number): string => map.cells[y * map.width + x]!.kind;
     for (let x = 9; x <= 23; x++) expect(['path', 'crossing'], `the long walk at ${x}, 19`).toContain(kind(x, 19));
-    for (let x = 23; x <= 31; x++) expect(kind(x, 15), `the walk to the avenue at ${x}, 15`).toBe('path');
+    // A footpath all the way: one cell of it is where the bike path to the avenue crosses (DESIGN.md 73).
+    for (let x = 23; x <= 31; x++) expect(['path', 'bikeCrossing'], `the walk to the avenue at ${x}, 15`).toContain(kind(x, 15));
     // The loop road runs down the west edge and along the north edge, and a car can drive it from Lantern Avenue.
     const reached = roadReach(map);
     for (const [x, y] of [[0, 40], [0, 20], [0, 0], [16, 0], [31, 0]] as const) expect(reached[y * map.width + x], `road at ${x}, ${y}`).toBe(1);
