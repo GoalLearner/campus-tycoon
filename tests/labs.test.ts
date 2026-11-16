@@ -46,7 +46,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
 
 /**
  * The research labs (DESIGN.md 42.6, as built in section 49): one for each
@@ -296,6 +296,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on, and can build a lab.
@@ -305,7 +306,7 @@ describe('saves', () => {
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(13);
+      expect(notes).toHaveLength(14);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });

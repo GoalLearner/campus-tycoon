@@ -38,7 +38,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 36;
+export const SAVE_VERSION = 37;
 
 export interface SaveFile {
   v: number;
@@ -434,9 +434,13 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 35: admissions at real figures (DESIGN.md 70). The intake keeps a little more from its next class on, and
   // nothing in a save changes but the version, so the player is told once why the numbers read differently.
   34: (state) => state,
-  // Version 36: bike lanes painted on the walks (DESIGN.md 74). A cell of footpath may carry a lane. A save gets one on
-  // every walk only while `PAINT_SAVED_WALKS` is on, which waits on the owner; until then it keeps its map exactly.
-  35: (state) => {
+  // Version 36: bike lanes painted on the walks (DESIGN.md 74). A cell of footpath may carry a lane; a save's map is
+  // kept as it was here. Painting its walks is version 37's, so it happens in one place, once.
+  35: (state) => state,
+  // Version 37: the owner's answer (DESIGN.md 74.6), "bike lanes all over campus would be good". A save gets a lane on
+  // every walk, once, free, by the same rule as a new campus: a save already at 36 (whose upgrade painted nothing) and
+  // one from before alike. A walk that already has a lane, painted by the player, keeps it as it is.
+  36: (state) => {
     const map = state.map as { width?: number; height?: number; cells?: Cell[] } | undefined;
     if (PAINT_SAVED_WALKS && map && typeof map.width === 'number' && typeof map.height === 'number' && Array.isArray(map.cells)) {
       paintWalks({ width: map.width, height: map.height, cells: map.cells });

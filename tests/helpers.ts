@@ -1,4 +1,5 @@
 import { newChaos } from '../src/sim/systems/chaos';
+import { paintWalks } from '../src/sim/systems/walkLanes';
 import { seedStreams } from '../src/sim/rng';
 import { advance, newGame, TICK_MS, type GameState, type LogEntry } from '../src/sim';
 import { calendarAt } from '../src/sim/calendar';
@@ -143,4 +144,16 @@ export function sixClassYears(state: GameState): void {
 export function withChaos(state: GameState): void {
   if (!state.chaos) state.chaos = newChaos();
   if (typeof state.rng.chaos !== 'number') state.rng.chaos = seedStreams(state.seed).chaos;
+}
+
+/** What version 37 does to an older save (DESIGN.md 74.5): a lane painted on every walk, once, free. */
+export function withLanes(state: GameState): void {
+  paintWalks(state.map);
+}
+
+/** A copy of a state as version 37 leaves it: every walk painted, nothing else changed. */
+export function painted<T extends { map: GameState['map'] }>(state: T): T {
+  const copy = structuredClone(state);
+  paintWalks(copy.map);
+  return copy;
 }

@@ -337,27 +337,31 @@ describe('the save', () => {
 
   it('tells the owner, once, in the game’s voice', () => {
     const notes = upgradeNotes(29);
-    // Its own, R1's, R3's price level, C1's Chaos meter, the play fixes' figures and real admissions.
-    expect(notes).toHaveLength(6);
+    // Its own, R1's, R3's price level, C1's Chaos meter, the play fixes' figures, real admissions and the painted lanes.
+    expect(notes).toHaveLength(7);
     expect(notes[0]).toMatch(/social campus/);
     expect(notes[0]).toMatch(/first names/);
     expect(toneProblem(notes[0]!)).toBeNull();
     // Since R1 a save from version 30 is told what the realism pass changed (DESIGN.md 65).
-    expect(upgradeNotes(30)).toHaveLength(5);
+    expect(upgradeNotes(30)).toHaveLength(6);
     expect(upgradeNotes(30)[0]).toMatch(/real ones/);
     expect(toneProblem(upgradeNotes(30)[0]!)).toBeNull();
     // R3's one note follows it (DESIGN.md 67.1).
     expect(upgradeNotes(31)[0]).toBe(`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`);
     // C1's one note follows it (DESIGN.md 68).
-    expect(upgradeNotes(32)).toHaveLength(3);
+    expect(upgradeNotes(32)).toHaveLength(4);
     expect(upgradeNotes(32)[0]).toMatch(/Chaos meter on the Scorecard/);
     expect(toneProblem(upgradeNotes(32)[0]!)).toBeNull();
     // The play fixes' one note follows it (DESIGN.md 69.3).
     expect(upgradeNotes(33)[0]).toBe('Students now look like who they are: some figures changed to match.');
     // Admissions at real figures' one note follows it (DESIGN.md 70).
-    expect(upgradeNotes(34)).toHaveLength(1);
+    expect(upgradeNotes(34)).toHaveLength(2);
     expect(upgradeNotes(34)[0]).toMatch(/real university/);
     expect(toneProblem(upgradeNotes(34)[0]!)).toBeNull();
-    expect(upgradeNotes(35)).toEqual([]);
+    // The painted lanes' one note (DESIGN.md 74.5) is the only one from 35 and from 36.
+    expect(upgradeNotes(35)).toHaveLength(1);
+    expect(upgradeNotes(36)[0]).toMatch(/Bike lanes are painted/);
+    expect(toneProblem(upgradeNotes(36)[0]!)).toBeNull();
+    expect(upgradeNotes(37)).toEqual([]);
   });
 });

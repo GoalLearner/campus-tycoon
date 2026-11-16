@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, newGame, PAINT_SAVED_WALKS, paintCost, paintWalks, parseSave, previewPaint, SAVE_VERSION, scaleOf, serialize, type Cell, type GameState, type Point } from '../src/sim';
 import { ownedAt } from '../src/sim/systems/town';
+import { upgradeNotes } from '../src/app/upgradeNotes';
 import { MIGRATIONS } from '../src/sim/save';
 import { laneCount, lanesShort } from '../src/app/wheels';
 
@@ -127,24 +128,68 @@ describe('painted walks on the model campus', () => {
 });
 
 describe('a game saved before painted lanes', () => {
-  it('keeps its map exactly while the upgrade waits on the owner, and the upgrade would paint every walk', () => {
-    expect(SAVE_VERSION).toBe(36);
-    expect(PAINT_SAVED_WALKS).toBe(false);
-    // A model campus as saved at version 35: no cell had a lane then.
+  // The owner, 2026-11-16 (DESIGN.md 74.6): "I want bike lanes on the main campus .. bike lanes all over campus would be
+  // good". Every saved campus gets a lane on every walk, once, free, by the rule a new campus has.
+  const unpainted = (): GameState => {
     const old = model();
     for (const cell of old.map.cells) delete cell.lane;
-    const file = JSON.parse(serialize(old, T0));
-    file.v = 35;
-    const loaded = parseSave(JSON.stringify(file));
+    return old;
+  };
+  const savedAt = (state: GameState, v: number): ReturnType<typeof parseSave> => {
+    const file = JSON.parse(serialize(state, T0));
+    file.v = v;
+    return parseSave(JSON.stringify(file));
+  };
+  const lanes = (state: GameState): number => state.map.cells.filter((cell) => cell.lane !== undefined).length;
+
+  it('paints every walk of a save from before lanes, and of one already upgraded with nothing painted', () => {
+    expect(SAVE_VERSION).toBe(37);
+    expect(PAINT_SAVED_WALKS).toBe(true);
+    const fresh = model();
+    for (const v of [35, 36]) {
+      const old = unpainted();
+      const loaded = savedAt(old, v);
+      expect(loaded.ok, `v${v}`).toBe(true);
+      if (!loaded.ok) return;
+      expect(loaded.migratedFrom).toBe(v);
+      // Every walk, by the plaza rule: the same cells a new campus has painted, and nothing else on the map changed.
+      expect(loaded.state.map.cells.map((cell) => cell.lane), `v${v}`).toEqual(fresh.map.cells.map((cell) => cell.lane));
+      expect(loaded.state.map.cells.map((cell) => cell.kind)).toEqual(old.map.cells.map((cell) => cell.kind));
+      expect(lanes(loaded.state)).toBeGreaterThan(100);
+      // Free: the money is the save's to the cent.
+      expect(loaded.state.money.cash).toBe(old.money.cash);
+    }
+    expect(typeof MIGRATIONS[35]).toBe('function');
+    expect(typeof MIGRATIONS[36]).toBe('function');
+  });
+
+  it("keeps the lanes a save already had, as its player painted them, and paints the rest", () => {
+    const old = unpainted();
+    // Two walks the player painted with the tool: paid for, so their price is kept with them.
+    const walks = old.map.cells.map((cell, i) => ({ cell, i })).filter(({ cell }) => cell.kind === 'path');
+    const mine = walks.slice(0, 2);
+    for (const { cell } of mine) cell.lane = 1234;
+    const loaded = savedAt(old, 36);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    expect(loaded.migratedFrom).toBe(35);
-    expect(loaded.state.map.cells.filter((cell) => cell.lane !== undefined)).toHaveLength(0);
-    expect(loaded.state.map.cells.map((cell) => cell.kind)).toEqual(old.map.cells.map((cell) => cell.kind));
-    // With the switch on, the same upgrade paints the walks as a new game has them.
-    const upgraded = structuredClone(old);
-    const map = upgraded.map;
-    expect(paintWalks({ width: map.width, height: map.height, cells: map.cells })).toBe(model().map.cells.filter((cell) => cell.lane !== undefined).length);
-    expect(typeof MIGRATIONS[35]).toBe('function');
+    for (const { i } of mine) expect(loaded.state.map.cells[i]!.lane).toBe(1234);
+    expect(lanes(loaded.state)).toBe(lanes(model()));
+    expect(loaded.state.money.cash).toBe(old.money.cash);
+  });
+
+  it('paints once: a save already at 37 keeps its map exactly, a lane taken off stays off', () => {
+    const state = model();
+    const walk = state.map.cells.findIndex((cell) => cell.kind === 'path' && cell.lane !== undefined);
+    delete state.map.cells[walk]!.lane;
+    const loaded = parseSave(serialize(state, T0));
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.migratedFrom).toBeNull();
+    expect(loaded.state.map.cells[walk]!.lane).toBeUndefined();
+  });
+
+  it('tells the player once, in the upgrade notes', () => {
+    expect(upgradeNotes(36).some((line) => /bike lanes/i.test(line))).toBe(true);
+    expect(upgradeNotes(37).some((line) => /bike lanes/i.test(line))).toBe(false);
   });
 });

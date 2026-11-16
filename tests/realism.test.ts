@@ -22,7 +22,7 @@ import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
 import { edition } from '../src/sim/newspaper';
 import { toneProblem } from '../src/sim/config/tone';
-import { DAY, T0 } from './helpers';
+import { DAY, painted, T0 } from './helpers';
 
 /**
  * The realism pass, R1 (DESIGN.md 65): the numbers match. Who stays, who finishes and when, and why the others leave,
@@ -169,7 +169,8 @@ describe('a save from version 30', () => {
     expect(state.offCampus).toEqual([...old.offCampus, 0, 0]);
     // Version 33 adds the Chaos meter and its random stream (DESIGN.md 68), and moves nothing else.
     const { cohorts: _a, offCampus: _b, version: _c, chaos: _g, rng: { chaos: _h, ...rng }, ...rest } = state;
-    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = old;
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
+    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = painted(old);
     expect(rest).toEqual(was);
     expect(rng).toEqual(was_rng);
   });
