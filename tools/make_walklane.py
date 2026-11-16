@@ -12,9 +12,12 @@ Each piece is an overlay, drawn over the footpath's own tile:
     m<0-15>     the lane, as the walk joins
     sym5 sym10  a straight piece with the bike symbol on the lane, north-south (5) or east-west (10)
 
+Look a comes four ways, by the corner of the piece its two sides meet at as drawn (nw, ne, se, sw): the game picks the
+one that is the world's north-west as the view is turned, so the lane stays on the same side of the walk at every turn.
+
 Two sets, one for each pack:
 
-    art/source/_rendered/fallback/walklane/<look>-<piece>.png   on the drawn pack's 512 canvas, from its own sidewalk tile
+    art/source/_rendered/fallback/walklane/<look>[-<corner>]-<piece>.png   on the drawn pack's 512 canvas, from its own sidewalk tile
                                                                 (a paid part: the private atlas only)
     art/source/_rendered/ours/walklane/<look>-<piece>.png       on the free pack's 132 tile, from its plain slab, inside its
                                                                 walk's paving (free to use: the public atlas)
@@ -43,12 +46,12 @@ LOOKS = {
 EDGE = 0.032    # the white edge line's width, of a cell
 
 
-def band_mask(face, mask, centre, half, grow=0.0):
+def band_mask(face, mask, hub, half, grow=0.0):
     """The lane band for a piece, at SUPER scale: from the cell's lane hub out to each joined side, as wide as `half`."""
     w, h = face['size'][0] * SUPER, face['size'][1] * SUPER
     out = Image.new('L', (w, h), 0)
     d = ImageDraw.Draw(out)
-    hx = hy = centre
+    hx, hy = hub
     hw = half + grow
     reach = 0.25  # past the cell's side, so a joined side has no cap
 
@@ -77,10 +80,10 @@ def diamond(face):
     return out
 
 
-def piece(red, face, mask, centre, half, symbol=None):
+def piece(red, face, mask, hub, half, symbol=None):
     """The overlay for one piece: the red band, its white edges, and the bike symbol when asked."""
-    inner = band_mask(face, mask, centre, half)
-    outer = band_mask(face, mask, centre, half, grow=EDGE)
+    inner = band_mask(face, mask, hub, half)
+    outer = band_mask(face, mask, hub, half, grow=EDGE)
     cell = diamond(face)
     inner = ImageChops.multiply(inner, cell)
     outer = ImageChops.multiply(outer, cell)
@@ -91,7 +94,7 @@ def piece(red, face, mask, centre, half, symbol=None):
     big_red = red.resize(layer.size, Image.LANCZOS)
     layer.paste(big_red, (0, 0), inner)
     if symbol is not None:
-        sym = symbol_layer(face, centre, half, symbol)
+        sym = symbol_layer(face, hub[0] if symbol else hub[1], half, symbol)
         sym_a = ImageChops.multiply(sym.getchannel('A'), inner)
         layer.paste(sym, (0, 0), sym_a)
     return layer.resize(size, Image.LANCZOS)
@@ -135,10 +138,13 @@ def write():
         out = os.path.join(SRC, '_rendered', folder, 'walklane')
         os.makedirs(out, exist_ok=True)
         for look, (centre, half) in LOOKS[face_name].items():
-            for mask in range(16):
-                piece(red, face, mask, centre, half).save(os.path.join(out, f'{look}-m{mask}.png'))
-            piece(red, face, 5, centre, half, symbol=True).save(os.path.join(out, f'{look}-sym5.png'))
-            piece(red, face, 10, centre, half, symbol=False).save(os.path.join(out, f'{look}-sym10.png'))
+            far = 1 - centre
+            hubs = {'': (centre, centre)} if look == 'b' else {'-nw': (centre, centre), '-ne': (far, centre), '-se': (far, far), '-sw': (centre, far)}
+            for corner, hub in hubs.items():
+                for mask in range(16):
+                    piece(red, face, mask, hub, half).save(os.path.join(out, f'{look}{corner}-m{mask}.png'))
+                piece(red, face, 5, hub, half, symbol=True).save(os.path.join(out, f'{look}{corner}-sym5.png'))
+                piece(red, face, 10, hub, half, symbol=False).save(os.path.join(out, f'{look}{corner}-sym10.png'))
         print('wrote', os.path.relpath(out, ROOT))
 
 

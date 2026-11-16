@@ -3,7 +3,7 @@ import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
-import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
+import { LANE_LINE, LANE_LOOK, PARKS, rideMomentOf, WALK_LINE, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
 import { searchOnFoot, searchRide, searchSpace } from './afoot';
 import type { Footprints } from './footprints';
@@ -525,8 +525,12 @@ export class Walkers {
   private isAfoot: boolean[] = [];
   /** The bike path (DESIGN.md 71): its own cells and its crossings. Riders take them; walkers only cross at crossings. */
   private isLane: boolean[] = [];
-  /** The look sheet (life-7c): riders on a footpath keep to the painted lane, down one side (a) or the middle (b). */
-  painted: 'a' | 'b' | null = null;
+  /** A footpath with a bike lane painted on it (DESIGN.md 74). */
+  private isPainted: boolean[] = [];
+  /** A bike path, its crossings, or a painted walk: where riders ride a lane. */
+  private isRideLane: boolean[] = [];
+  /** How the painted lane looks, which says where riders and walkers keep on it: `LANE_LOOK`, or a dev option's. */
+  look: 'a' | 'b' = LANE_LOOK;
   /** Where a rider may ride: the footpaths and the bike path; and on a trip from the town, its streets as well. */
   private isRide: boolean[] = [];
   private isRideTown: boolean[] = [];
@@ -732,9 +736,11 @@ export class Walkers {
     this.isOpen = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'quad' || cell.kind === 'empty' || (cell.kind === 'lot' && cell.buildingId === null) || flatGround(cell));
     this.isAfoot = cells.map((cell, i) => this.isOpen[i]! || cell.kind === 'street' || cell.kind === 'crossing');
     this.isLane = cells.map((cell) => isBikeKind(cell.kind));
+    this.isPainted = cells.map((cell) => cell.kind === 'path' && cell.lane !== undefined);
+    this.isRideLane = cells.map((_, i) => this.isLane[i]! || this.isPainted[i]!);
     this.isRide = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'bike');
     this.isRideTown = cells.map((cell, i) => this.isWalk[i]! || cell.kind === 'bike');
-    this.laneCells = this.isLane.reduce((n, yes) => n + (yes ? 1 : 0), 0);
+    this.laneCells = this.isRideLane.reduce((n, yes) => n + (yes ? 1 : 0), 0);
     if (this.space.seen.length !== width * height) this.space = searchSpace(width * height);
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
@@ -1052,11 +1058,28 @@ export class Walkers {
   }
 
   /**
+   * Where someone goes over a walk with a lane painted on it (DESIGN.md 74): a rider on the lane's line, a walker on the
+   * walk beside it. At look a the lane runs down the west half of a walk going north-south and the north half of one going
+   * east-west, so the two lines meet in the cell's north-west quarter and walkers keep to its south-east: going along the
+   * walk they keep their side, and going across it they cross the lane once, anywhere.
+   */
+  private paintedFooting(cell: number, riding: boolean, side: Spot): Spot {
+    const x = cell % this.width;
+    const y = (cell - x) / this.width;
+    if (riding) return { x: x + LANE_LINE[this.look] + side.x * 0.12, y: y + LANE_LINE[this.look] + side.y * 0.12 };
+    if (this.look === 'a') return { x: x + WALK_LINE.a + side.x * 0.35, y: y + WALK_LINE.a + side.y * 0.35 };
+    // At look b, each to their own side of the middle lane.
+    const sx = side.x >= 0 ? 1 : -1;
+    const sy = side.y >= 0 ? 1 : -1;
+    return { x: x + 0.5 + sx * 0.33 + side.x * 0.1, y: y + 0.5 + sy * 0.33 + side.y * 0.1 };
+  }
+
+  /**
    * The spots a trip passes over its cells: from the edge of where it starts to the edge of where it ends, each to one
    * side of its path, on a street on the sidewalk, over the avenue at its marked crossings. On the bike path (DESIGN.md
    * 71) a rider keeps nearer its middle.
    */
-  private spotsAlong(cells: readonly number[], from: Stop, to: Stop): Spot[] {
+  private spotsAlong(cells: readonly number[], from: Stop, to: Stop, riding = false): Spot[] {
     // Each walker keeps a little to one side, so a crowd is not a single file.
     const side = { x: (Math.random() - 0.5) * 0.44, y: (Math.random() - 0.5) * 0.44 };
     const narrow = { x: side.x * LANE_SIDE, y: side.y * LANE_SIDE };
@@ -1074,6 +1097,10 @@ export class Walkers {
       if (this.plan && this.isStreet[i] && x === TOWN_X && (cells[k - 1] === i + 1 || cells[k + 1] === i + 1)) {
         const sidewalk = rows.get(y) ?? any;
         route.push(...(cells[k - 1] === i + 1 ? avenueCrossing(this.plan, y, sidewalk, SIDEWALK) : avenueCrossingBack(this.plan, y, sidewalk, SIDEWALK)));
+        continue;
+      }
+      if (this.isPainted[i]) {
+        route.push(this.paintedFooting(i, riding, side));
         continue;
       }
       route.push(this.footing(i, this.isLane[i] ? narrow : side, rows.get(y) ?? any));
@@ -1619,19 +1646,19 @@ export class Walkers {
     const most = Math.min(Math.ceil(walked * LANE_DETOUR) + 2, town ? MAX_COMMUTE_CELLS : MAX_ROUTE_CELLS);
     const ride = this.rideBetween(from.door, to.door, most, town ? this.isRideTown : this.isRide);
     if (!ride || ride.lane < LANE_LEAST) return null;
-    return this.spotsAlong(ride.cells, from, to);
+    return this.spotsAlong(ride.cells, from, to, true);
   }
 
   /** The cells a rider takes from one door to another (DESIGN.md 71), no more than `most`: `searchRide` on this map. */
   private rideBetween(from: number, to: number, most: number, ride: readonly boolean[]): { cells: number[]; lane: number } | null {
-    return searchRide(this.width, this.height, ride, this.isLane, from, to, most, LANE_COST, PATH_COST);
+    return searchRide(this.width, this.height, ride, this.isRideLane, from, to, most, LANE_COST, PATH_COST);
   }
 
   /** True while a rider is on the bike path or one of its crossings (DESIGN.md 71). */
   private onLane(walker: Walker): boolean {
     const x = Math.floor(walker.x);
     const y = Math.floor(walker.y);
-    return x >= 0 && y >= 0 && x < this.width && y < this.height && this.isLane[y * this.width + x] === true;
+    return x >= 0 && y >= 0 && x < this.width && y < this.height && this.isRideLane[y * this.width + x] === true;
   }
 
   /** How high the rider stands: on a saddle, a deck or a board, and up off a kerb for a trick. */
@@ -1693,18 +1720,6 @@ export class Walkers {
     // Smooth (DESIGN.md 69.1): once stepping round to one side they keep to it until clear, and ease over and back, so
     // a rider never wobbles from side to side. Within the path: the step and their own place on it stay inside its cell.
     if (target !== 0 && Math.abs(walker.weave) > 0.02 && Math.sign(target) !== Math.sign(walker.weave)) target = -target;
-    // On a painted walk (the look sheet), a rider keeps to the lane: the west half going north or south, the north half
-    // going east or west, at look a; the middle at look b.
-    const cx = Math.floor(walker.x);
-    const cy = Math.floor(walker.y);
-    if (this.painted && walker.wheel && cx >= 0 && cy >= 0 && cx < this.width && cy < this.height && this.isPath[cy * this.width + cx] && !lane) {
-      const [dx, dy] = STEP_OF[walker.direction];
-      const off = this.painted === 'a' ? 0.24 : 0;
-      // weave w moves the rider by (-dy * w, dx * w): toward x - off going north-south, y - off going east-west.
-      target = dy !== 0 ? off * dy : -off * dx;
-      // From their own place on the walk to the lane's line.
-      target += dy !== 0 ? (walker.x - (cx + 0.5)) * dy : -(walker.y - (cy + 0.5)) * dx;
-    }
     walker.weave += (target - walker.weave) * Math.min(1, dt / (lane ? 120 : 380));
     if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
     if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;

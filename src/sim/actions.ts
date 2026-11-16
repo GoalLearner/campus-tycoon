@@ -40,7 +40,7 @@ import { buyBench, collectCraft, moveDecor, placeDecor, setRecipe, storeDecor, t
 import { claimMoment, takeGift, type GiftPaid } from './systems/rhythm';
 import type { OrderReward } from './config/orders';
 import { cancelTimers } from './timers';
-import type { CellKind, GameState, MainPeople, MapState, SocialEffects, Zone } from './types';
+import type { Cell, CellKind, GameState, MainPeople, MapState, SocialEffects, Zone } from './types';
 
 /**
  * Everything the player can do. Each action is a pure function from one state
@@ -50,7 +50,7 @@ import type { CellKind, GameState, MainPeople, MapState, SocialEffects, Zone } f
 
 /** What a drag paints onto the map. */
 /** 'bin', 'bench' and 'table' lay small things one cell each, a row at a drag, as trees are planted. */
-export type Tool = Zone | 'path' | 'bike' | 'road' | 'quad' | 'tree' | 'clear' | 'bin' | 'bench' | 'table';
+export type Tool = Zone | 'path' | 'bike' | 'lane' | 'laneClear' | 'road' | 'quad' | 'tree' | 'clear' | 'bin' | 'bench' | 'table';
 
 export type Point = readonly [number, number];
 
@@ -147,9 +147,19 @@ function unitCost(tool: Tool, scale: number): number {
     case 'bench':
     case 'table':
       return placedCost(tool, scale);
+    // Taking a lane off is free; what comes back is the refund.
+    case 'laneClear':
+      return 0;
     default:
       return paintCost(tool, scale);
   }
+}
+
+/** A bike lane is painted on a footpath that has none, and taken off one that has (DESIGN.md 74). */
+function canPaintCell(cell: Cell, tool: Tool): boolean {
+  if (tool === 'lane') return cell.kind === 'path' && cell.lane === undefined;
+  if (tool === 'laneClear') return cell.kind === 'path' && cell.lane !== undefined;
+  return canPaint(cell.kind, tool);
 }
 
 function canPaint(kind: CellKind, tool: Tool): boolean {
@@ -226,12 +236,19 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
     if (seen.has(i)) continue;
     seen.add(i);
     // Only the campus's own land can be changed. The town and the fields for sale are not the player's.
-    if (ownedAt(map, x, y) && canPaint(map.cells[i]!.kind, tool) && !(tool === 'clear' && fixedInPlace(state, i))) valid.push([x, y]);
+    if (ownedAt(map, x, y) && canPaintCell(map.cells[i]!, tool) && !(tool === 'clear' && fixedInPlace(state, i))) valid.push([x, y]);
     else skipped += 1;
   }
   let refund = 0;
-  let undo = tool === 'clear' && valid.length > 0;
+  let undo = (tool === 'clear' || tool === 'laneClear') && valid.length > 0;
   const buildings: PlacedType[] = [];
+  if (tool === 'laneClear') {
+    for (const [x, y] of valid) {
+      const back = refundFor(state, paintCost('lane', scale), map.cells[y * map.width + x]!.lane ?? -1);
+      refund += back.amount;
+      if (!back.undo) undo = false;
+    }
+  }
   if (tool === 'clear') {
     const counted = new Set<number>();
     for (const [x, y] of valid) {
@@ -250,6 +267,11 @@ export function previewPaint(state: GameState, tool: Tool, cells: readonly Point
         }
       } else {
         back = refundFor(state, laidCost(cell.kind, scale), cell.builtTick);
+        // A lane painted on the walk comes back by its own price and when it was paid for.
+        if (cell.lane !== undefined) {
+          const lane = refundFor(state, paintCost('lane', scale), cell.lane);
+          back = { amount: back.amount + lane.amount, undo: back.undo && (lane.undo || cell.lane < 0) };
+        }
       }
       refund += back.amount;
       if (!back.undo) undo = false;
@@ -286,6 +308,7 @@ function clearCell(state: GameState, map: MapState, x: number, y: number): void 
   cell.buildingId = null;
   cell.variant = 0;
   cell.builtTick = -1;
+  delete cell.lane;
 }
 
 function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 0): ActionResult {
@@ -301,10 +324,17 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
   const map = next.map;
   for (const [x, y] of preview.cells) {
     const cell = map.cells[y * map.width + x]!;
-    if (tool !== 'clear') cell.builtTick = next.clock.tick;
+    // Paint on a walk is the walk's own: laying or taking off a lane leaves when the walk was paid for alone.
+    if (tool !== 'clear' && tool !== 'lane' && tool !== 'laneClear') cell.builtTick = next.clock.tick;
     switch (tool) {
       case 'clear':
         clearCell(next, map, x, y);
+        break;
+      case 'lane':
+        cell.lane = next.clock.tick;
+        break;
+      case 'laneClear':
+        delete cell.lane;
         break;
       case 'path':
         cell.kind = cell.kind === 'road' ? 'crossing' : cell.kind === 'bike' ? 'bikeCrossing' : 'path';
@@ -336,6 +366,8 @@ function paint(state: GameState, tool: Tool, cells: readonly Point[], variant = 
         cell.zone = tool;
         break;
     }
+    // A lane is only ever on a footpath: one turned into a crossing loses its paint.
+    if (cell.kind !== 'path') delete cell.lane;
   }
 
   next.money.cash += preview.refund - preview.cost;

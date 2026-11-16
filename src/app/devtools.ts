@@ -478,9 +478,9 @@ function applyViewParams(params: URLSearchParams): void {
       const effects = params.get('effects');
       if (effects === 'reduced' || effects === 'full') setEffectsSetting(effects);
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
-      // &walklanes=a|b paints a bike lane on every footpath, for the look sheet (life-7c): a one side, b the middle.
-      const walklanes = params.get('walklanes');
-      if (walklanes === 'a' || walklanes === 'b') (scene as unknown as { setWalkLanes?: (look: 'a' | 'b') => void }).setWalkLanes?.(walklanes);
+      // &lanelook=a|b draws the bike lane painted on the walks in that look (DESIGN.md 74): a one side, b the middle.
+      const lanelook = params.get('lanelook');
+      if (lanelook === 'a' || lanelook === 'b') (scene as unknown as { setLaneLook?: (look: 'a' | 'b') => void }).setLaneLook?.(lanelook);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
       // &social=off walks the crowd as before stop 4 (DESIGN.md 63.8): nobody walks together, meets or shows an icon.

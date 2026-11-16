@@ -81,25 +81,24 @@ describe('the model campus is laid by a script', () => {
     expect(lots + placed).toBeLessThanOrEqual(120);
   });
 
-  it('opens with a bike network: joined up, out to the avenue, on open ground, crossing footpaths where it meets them (DESIGN.md 73)', () => {
+  it('opens with a lane painted on every walk, and bike paths only out to the avenue and across the middle lawn (DESIGN.md 73, 74)', () => {
     const state = model();
     const map = state.map;
     const { width, height, cells } = map;
-    const lane = (i: number): boolean => cells[i]!.kind === 'bike' || cells[i]!.kind === 'bikeCrossing';
+    const at = (x: number, y: number) => cells[y * width + x]!;
+    const painted = (i: number): boolean => cells[i]!.kind === 'path' && cells[i]!.lane !== undefined;
+    const lane = (i: number): boolean => cells[i]!.kind === 'bike' || cells[i]!.kind === 'bikeCrossing' || painted(i);
+    // The bike paths left where a painted walk cannot do their work: out to Lantern Avenue, and across the middle lawn.
+    expect(cells.filter((cell) => cell.kind === 'bike').length).toBe(20);
+    expect(cells.filter((cell) => cell.kind === 'bikeCrossing').length).toBe(3);
+    // A lane on every walk, the long walk through the middle all the way; a square of paving only where a walk runs
+    // straight through it, so the plaza by the avenue and the library's forecourt keep their corners plain.
+    expect(cells.filter((cell) => cell.kind === 'path' && cell.lane !== undefined).length).toBe(168);
+    for (let x = 8; x <= 23; x++) expect(at(x, 19).lane, `the long walk at ${x}, 19`).toBe(-1);
+    for (const [x, y] of [[30, 14], [31, 14], [30, 16], [31, 16], [13, 18], [14, 18]] as const) expect(at(x, y).lane, `${x}, ${y}`).toBeUndefined();
+    expect(at(30, 15).lane).toBe(-1);
+    // One network for a rider: the bike paths, their crossings and the painted walks all join up.
     const cellsOf = cells.map((_, i) => i).filter(lane);
-    // 104 since a basketball court took the run out to the avenue's last cells and it went a row south (DESIGN.md 72).
-    expect(cells.filter((cell) => cell.kind === 'bike').length).toBe(104);
-    expect(cells.filter((cell) => cell.kind === 'bikeCrossing').length).toBe(4);
-    // One row back from the footpaths, so the ground beside them stays free for halls: it touches one only where riders
-    // get on and off and where it crosses one (DESIGN.md 73).
-    const beside = cellsOf.filter((i) => cells[i]!.kind === 'bike' && ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).some(([dx, dy]) => {
-      const x = (i % width) + dx;
-      const y = Math.floor(i / width) + dy;
-      return x >= 0 && y >= 0 && x < width && y < height && ['path', 'crossing', 'bikeCrossing'].includes(cells[y * width + x]!.kind);
-    }));
-    // 21: the two by the plaza where it meets the avenue (DESIGN.md 72).
-    expect(beside.length).toBe(21);
-    // One network.
     const seen = new Set([cellsOf[0]!]);
     const queue = [cellsOf[0]!];
     while (queue.length > 0) {
@@ -119,10 +118,11 @@ describe('the model campus is laid by a script', () => {
     }
     expect(seen.size).toBe(cellsOf.length);
     // Out to Lantern Avenue, where commuters ride in; and inside the campus's own land.
-    expect(cellsOf.some((i) => i % width === TOWN_X - 1 && cells[i + 1]!.kind === 'street')).toBe(true);
+    expect(cellsOf.some((i) => cells[i]!.kind === 'bike' && i % width === TOWN_X - 1 && cells[i + 1]!.kind === 'street')).toBe(true);
     for (const i of cellsOf) expect(i % width).toBeLessThan(TOWN_X);
-    // Free: the campus began with it.
+    // Free: the campus began with them.
     for (const i of cellsOf) expect(cells[i]!.builtTick).toBe(-1);
+    for (const i of cellsOf) if (painted(i)) expect(cells[i]!.lane).toBe(-1);
     // Every lot still touches a footpath.
     for (const building of map.buildings) if (building) expect(touchesPath(map, building.x, building.y), `${building.x}, ${building.y}`).toBe(true);
   });

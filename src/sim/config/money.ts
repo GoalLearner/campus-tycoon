@@ -84,6 +84,8 @@ export const COST = {
   path: 2_000,
   /** A cell of bike path (DESIGN.md 71): a path's price. */
   bike: 2_000,
+  /** A bike lane painted on a cell of footpath (DESIGN.md 74): a quarter of a path, as it is only paint. */
+  lane: 500,
   /** A cell of road. Its upkeep is in config/town.ts. */
   road: ROAD_COST,
   quad: 15_000,

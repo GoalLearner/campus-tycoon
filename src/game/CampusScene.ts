@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { STAYING, type Stander } from '../app/activityPeople';
 import { kerbAt, planTraffic, type TrafficPlan } from '../app/traffic';
 import { clock } from '../app/clock';
+import { LANE_LOOK } from '../app/wheels';
 import { quarterFor, spinAbout, stillSize, turntable } from '../app/spin';
 import { SETTLE_MS, settleDegrees, settling, twistMove, twistStart, type Twist } from '../app/twist';
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
@@ -13,7 +14,7 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -255,8 +256,8 @@ export class CampusScene extends Phaser.Scene {
   private glows = new Map<number, Phaser.GameObjects.Image>();
   private light: Daylight = currentDaylight();
   private lampsLit = false;
-  /** A look for the bike lane painted on every footpath, for the look sheet only (life-7c): a dev option. */
-  private walkLanes: 'a' | 'b' | null = null;
+  /** How the bike lane painted on a footpath looks (DESIGN.md 74): `LANE_LOOK`, or a dev option's, to compare. */
+  private laneLook: 'a' | 'b' = LANE_LOOK;
   private nextLightAt = 0;
   /** Extra tinted cells: the reach of a building being placed, or a coverage overlay. */
   private tints: Array<{ cells: Point[]; colour: number; alpha: number }> = [];
@@ -897,32 +898,40 @@ export class CampusScene extends Phaser.Scene {
     camera.setScroll(at.x - camera.width / 2, at.y - camera.height / 2 + (camera.height * 0.12) / camera.zoom);
   }
 
-  /** Dev screenshots: show the crowd the setting asks for, and stop stepping it down when frames are short. */
-  /** The look sheet (life-7c): paint a bike lane on every footpath in look `a` (one side) or `b` (the middle). */
-  setWalkLanes(look: 'a' | 'b' | null): void {
-    this.walkLanes = look;
-    this.walkers.painted = look;
+  /** A dev option: draw the painted lane in the other look (DESIGN.md 74), `a` down one side or `b` down the middle. */
+  setLaneLook(look: 'a' | 'b'): void {
+    this.laneLook = look;
+    this.walkers.look = look;
     this.dirty = true;
   }
 
-  /** The painted lane over a footpath cell, by which sides join more walk or bike path, as the turned view draws it. */
+  /**
+   * The bike lane painted over a footpath (DESIGN.md 74), as the turned view draws it: its piece by which sides join more
+   * painted walk or bike path, with the bike on every fourth straight cell. At look a the lane keeps to the world's west
+   * and north side of the walk, so the piece is the one drawn for whichever corner of the cell that is at this turn.
+   */
   private walkLaneKey(state: GameState, x: number, y: number): string {
-    if (!this.walkLanes) return '';
     const { width, height, cells } = state.map;
-    // No lane on a square of paving (a plaza): only on a walk.
-    const paved = (cx: number, cy: number): boolean => cx >= 0 && cy >= 0 && cx < width && cy < height && isPathKind(cells[cy * width + cx]!.kind);
-    for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]] as const) {
-      if (paved(x + ox, y + oy) && paved(x + ox + 1, y + oy) && paved(x + ox, y + oy + 1) && paved(x + ox + 1, y + oy + 1)) return '';
-    }
+    if (cells[y * width + x]!.lane === undefined) return '';
     const joins = (cx: number, cy: number): boolean => {
       if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
-      const kind = cells[cy * width + cx]!.kind;
-      return isPathKind(kind) || isBikeKind(kind);
+      const cell = cells[cy * width + cx]!;
+      return (cell.kind === 'path' && cell.lane !== undefined) || isBikeKind(cell.kind);
     };
     const mask = this.iso.mask((joins(x, y - 1) ? 1 : 0) | (joins(x + 1, y) ? 2 : 0) | (joins(x, y + 1) ? 4 : 0) | (joins(x - 1, y) ? 8 : 0));
-    const key = (mask === 5 || mask === 10) && (x + y) % 4 === 2 ? `walklane.${this.walkLanes}.sym.${mask}` : `walklane.${this.walkLanes}.${mask}`;
+    const sym = (mask === 5 || mask === 10) && (x + y) % 4 === 2;
+    const look = this.laneLook === 'a' ? `a.${this.laneCorner()}` : 'b';
+    const key = `walklane.${look}.${sym ? `sym.${mask}` : mask}`;
     return this.art.has(key) ? key : '';
   }
+
+  /** The corner of a cell, as drawn at this turn, that is the world's north-west. */
+  private laneCorner(): 'nw' | 'ne' | 'se' | 'sw' {
+    const sides = this.iso.mask(1) | this.iso.mask(8);
+    return sides === 9 ? 'nw' : sides === 3 ? 'ne' : sides === 6 ? 'se' : 'sw';
+  }
+
+  /** Dev screenshots: show the crowd the setting asks for, and stop stepping it down when frames are short. */
 
   holdCrowd(): void {
     this.crowdHeld = true;
@@ -2227,7 +2236,15 @@ export class CampusScene extends Phaser.Scene {
     if (this.gesture?.kind !== 'paint' || session.tool === 'look' || session.tool === 'place') return;
     this.gesture.last = to;
     const cells = rowBetween(this.gesture.start, to);
-    session.setPreview(previewPaint(store.state, session.tool, cells));
+    session.setPreview(previewPaint(store.state, this.laneMode(session.tool, this.gesture.start), cells));
+  }
+
+  /** The Bike lane choice (DESIGN.md 74): a drag that starts on a painted walk takes the lane off; anywhere else paints one. */
+  private laneMode(tool: Tool, start: Point): Tool {
+    if (tool !== 'lane') return tool;
+    const map = store.state.map;
+    const cell = map.cells[start[1] * map.width + start[0]];
+    return cell && cell.kind === 'path' && cell.lane !== undefined ? 'laneClear' : 'lane';
   }
 
   private onMove(pointer: Phaser.Input.Pointer): void {
@@ -2326,7 +2343,7 @@ export class CampusScene extends Phaser.Scene {
     }
     const result = store.dispatch({
       type: 'paint',
-      tool: session.tool,
+      tool: preview.tool,
       cells: preview.cells,
       ...(session.tool === 'tree' ? { variant: session.treeKind } : {}),
     });

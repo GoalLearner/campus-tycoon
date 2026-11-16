@@ -488,6 +488,11 @@ button:active {
   box-shadow: inset 0 0 0 2px rgba(246, 244, 240, 0.85);
 }
 
+/* A bike lane painted down one side of a footpath (DESIGN.md 74): the walk's colour with the red along its top. */
+.path-choice-lane .path-swatch {
+  background: linear-gradient(#cc5b52 0 45%, rgba(246, 244, 240, 0.9) 45% 55%, #77708a 55% 100%);
+}
+
 .chip.bad {
   color: var(--bad);
 }
