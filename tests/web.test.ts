@@ -106,12 +106,22 @@ describe('first names', () => {
     // The spring class joins the first-years after the save's last student: they, and only they, are new.
     const first = later.web.namesFrom;
     expect(first).toEqual({ entryYear: calendarAt(OLD.clock).year, index: OLD.cohorts[0] });
-    const arrived = later.cohorts[0]! - OLD.cohorts[0]!;
-    expect(arrived).toBeGreaterThan(100);
     for (let index = OLD.cohorts[0]!; index < later.cohorts[0]!; index += 7) {
       const ref = { entryYear: first.entryYear, index };
       expect(namedFresh(later, ref)).toBe(true);
       expect(fits(later.seed, ref, firstNameOf(later, ref)), firstNameOf(later, ref)).toBe(true);
+    }
+    // Since admissions at real figures (DESIGN.md 70) a spring class is small: the fall's is where the new names show,
+    // every one of its students new.
+    let fall = later;
+    for (let d = 0; d < 8 && calendarAt(fall.clock).year === year; d++) fall = advance(fall, fall.clock.lastSimulatedAt, fall.clock.lastSimulatedAt + DAY).state;
+    const fallYear = calendarAt(fall.clock).year;
+    expect(fallYear).toBe(year + 1);
+    expect(fall.cohorts[0]).toBeGreaterThan(1000);
+    for (let index = 0; index < fall.cohorts[0]!; index += 97) {
+      const ref = { entryYear: fallYear, index };
+      expect(namedFresh(fall, ref)).toBe(true);
+      expect(fits(fall.seed, ref, firstNameOf(fall, ref)), firstNameOf(fall, ref)).toBe(true);
     }
   });
 

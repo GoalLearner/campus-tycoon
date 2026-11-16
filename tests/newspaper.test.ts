@@ -171,9 +171,10 @@ describe('the admissions story', () => {
   it('says how many came, names what drew them most, and what turned any away', () => {
     const away = dayAway(whole(1), 7);
     const story = admissionsStory(away.state, away.log);
-    expect(story).toMatch(/wanted a place and [\d,]+ got one\./);
+    // On a game with goals, as an admissions office counts it (DESIGN.md 70).
+    expect(story).toMatch(/^[\d,]+ applied, [\d,]+ were admitted and [\d,]+ enrolled(, with [\d,]+ transfers)?\./);
     expect(story).toMatch(/What drew them most: /);
-    expect(story).toMatch(/What turned [\d,]+ away: (beds|classroom seats)\.|Nobody was turned away\./);
+    expect(story).not.toMatch(/wanted a place/);
     expect(admissionsStory(away.state, [])).toBeNull();
   });
 });

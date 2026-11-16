@@ -569,10 +569,13 @@ describe('Gold Seals and Finish now', () => {
     expect(waits(done).some((one) => one.id === 'faculty')).toBe(false);
     // They are on the payroll from today, as they would have been from the next semester.
     expect(budget(done).spending).toBeGreaterThan(budget(more).spending);
-    // The semester's own arrival finds them already there and brings nobody twice.
+    // The semester's own arrival finds them already there and brings nobody twice. Since admissions at real figures
+    // (DESIGN.md 70) the spring class is small, so the plan made at the semester's end can be a few under them: those
+    // stay until the next, and nobody is brought on top.
     const spring = advance(done, done.clock.lastSimulatedAt, T0 + 3 * DAY + 5 * MIN).state;
     const plain = advance(more, more.clock.lastSimulatedAt, T0 + 3 * DAY + 5 * MIN).state;
-    expect(spring.staffing.faculty).toBe(plain.staffing.faculty);
+    expect(spring.staffing.faculty).toBeGreaterThanOrEqual(plain.staffing.faculty);
+    expect(spring.staffing.faculty).toBe(more.staffing.faculty + coming);
   });
 
   it('opens a stadium tier that is going up, on the next minute', () => {

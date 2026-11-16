@@ -170,11 +170,19 @@ export function admissionsStory(state: GameState, log: readonly LogEntry[]): str
   ];
   drivers.sort((a, b) => b[1] - a[1]);
   const top = drivers[0]![1] > 0 ? drivers[0]![0] : 'word of mouth, and nothing else yet';
-  const came = `${expected.toLocaleString('en-US')} wanted a place and ${admitted.toLocaleString('en-US')} got one.`;
+  // On a game with goals, as an admissions office counts it (DESIGN.md 70): applications, admitted, enrolled, transfers.
+  const last = state.admissions.lastIntake;
+  const real = state.goals && last?.tick === intake.tick ? last.real : undefined;
+  const n = (x: number): string => x.toLocaleString('en-US');
+  const came = real
+    ? `${n(real.applied)} applied, ${n(real.offered)} were admitted and ${n(real.firstYears)} enrolled${real.transfers > 0 ? `, with ${n(real.transfers)} transfers` : ''}.`
+    : `${n(expected)} wanted a place and ${n(admitted)} got one.`;
   const drew = `What drew them most: ${top}.`;
-  let lost = turnedAway > 0 ? ` What turned ${turnedAway.toLocaleString('en-US')} away: ${UNIT[String(intake.data?.bottleneck)] ?? 'room'}.` : ' Nobody was turned away.';
-  // A campus at its cap turns the rest away, and is the more selective for it (DESIGN.md 38.4).
-  if (capped > 0) lost = `${turnedAway > 0 ? lost : ''} The campus is full: ${capped.toLocaleString('en-US')} were turned away, and it is the more selective for it.`;
+  let lost = turnedAway > 0 ? ` What turned ${n(turnedAway)} away: ${UNIT[String(intake.data?.bottleneck)] ?? 'room'}.` : ' Nobody was turned away.';
+  // A campus at its cap turns the rest away, and is the more selective for it (DESIGN.md 38.4); with real figures it
+  // admits fewer (70.1).
+  if (capped > 0) lost = `${turnedAway > 0 ? lost : ''} ${real ? 'The campus is full: it admitted fewer, and is the more selective for it.' : `The campus is full: ${n(capped)} were turned away, and it is the more selective for it.`}`;
+  else if (real && turnedAway === 0) lost = '';
   return `${came} ${drew}${lost}`;
 }
 
