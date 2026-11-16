@@ -2,7 +2,7 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { partnerWord, peopleOf, possessive, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
 import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
 import { firstNamesOf, happenedTo, idIn, mainPeopleOf, refIn } from '../app/socialView';
@@ -598,11 +598,13 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const web = socialWeb.view!;
     // Told apart from the student themself too: "studies with Phoenix W." on Phoenix's card.
     const name = (id: number): string => (id >= 0 ? firstNamesOf(state, [card.ref, refIn(web, id)])[1]! : '');
+    // Her, his or their, and girlfriend, boyfriend or partner, by gender (DESIGN.md 69.3).
+    const own = possessive(state, card.ref).toLowerCase();
     const words: Record<string, (who: number) => string> = {
       close: () => 'close friends',
-      partner: (who) => `${name(who)}, their partner`,
+      partner: (who) => `${name(who)}, ${own} ${partnerWord(state, refIn(web, who)).toLowerCase()}`,
       strained: (who) => `things with ${name(who)}`,
-      split: (who) => `${name(who)}, their ex`,
+      split: (who) => `${name(who)}, ${own} ex`,
       splitMessy: (who) => `a bad split with ${name(who)}`,
       rival: (who) => `${name(who)}, a rival`,
       alone: () => 'nobody close yet',

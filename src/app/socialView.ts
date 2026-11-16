@@ -245,7 +245,8 @@ export function networkFor(view: WebView, state: GameState, ref: StudentRef): Ne
       out.push({ ref: other, ring, label, feeling, line: 'tie', strength });
       seen.add(b);
     };
-    if (PARTNER_LABEL[kind]) put(0, kind === KIND.dating ? 'dating' : `${kind === KIND.longterm ? 'long-time ' : ''}${partnerWord(state, other).toLowerCase()}`);
+    // Short under a face on the ring: "boyfriend", however long; the card's line says "long-time" (DESIGN.md 69.3).
+    if (PARTNER_LABEL[kind]) put(0, kind === KIND.dating ? 'dating' : partnerWord(state, other).toLowerCase());
     else if (kind === KIND.best) put(0, 'best friend');
     else if (kind === KIND.roommate) put(1, 'roommate');
     else if (kind === KIND.friend) put(1, back === KIND.crush ? 'friend, has a crush on them' : 'friend');
