@@ -64,7 +64,7 @@ import { ticksToIntake } from '../src/sim/calendar';
 import { addTimer } from '../src/sim/timers';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { COLLECT_ALL_FROM, collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from '../src/ui/levelUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -691,6 +691,7 @@ describe('a save from version 17', () => {
     expected.web = webMetaFor(expected);
     sixClassYears(expected);
     withChaos(expected);
+    withLanes(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // Its money is what it was the moment before.
@@ -760,7 +761,7 @@ describe('a save from version 17', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(18);
+    expect(notes).toHaveLength(19);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

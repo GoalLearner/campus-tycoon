@@ -46,7 +46,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
 
 /**
  * The big builds of the eras (DESIGN.md 41.3, 41.4, as built in section 45):
@@ -330,6 +330,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.
@@ -337,7 +338,7 @@ describe('saves', () => {
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(14);
+      expect(notes).toHaveLength(15);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

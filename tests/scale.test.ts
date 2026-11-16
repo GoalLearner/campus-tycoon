@@ -40,7 +40,7 @@ import { BENEFITS_SHARE, paintCost } from '../src/sim/config/money';
 import { CROWD_STEPS, QUEUE_SHOWN, queueNow, walkersWanted } from '../src/app/crowd';
 import { ORDINARY_DAY, pathsAt } from '../src/app/campusDay';
 import { SEATS } from '../src/sim/config/football';
-import { freshGame, T0 } from './helpers';
+import { freshGame, painted, T0 } from './helpers';
 
 /**
  * The campus scale (DESIGN.md 35.7): one whole number that says how many of
@@ -237,8 +237,8 @@ describe('every other campus has a scale of 1 and is unchanged', () => {
     if (!back.ok) return;
     expect(back.migratedFrom).toBe(BEFORE_SCALE);
     expect(back.state.map.scale).toBe(1);
-    // The scale is the only thing added. Everything else is as it was saved.
-    expect(back.state).toEqual(later);
+    // The scale is the only thing added. Everything else is as it was saved, but for the lanes version 37 paints.
+    expect(back.state).toEqual(painted(later));
   });
 
   it('a save with no scale, or a scale that is not a whole number of 1 or more, is refused', () => {

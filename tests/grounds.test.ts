@@ -56,7 +56,7 @@ import {
   type Placed,
 } from '../src/sim';
 import { recomputeRates } from '../src/sim/systems/money';
-import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
+import { DAY, freshGame, HOUR, MIN, painted, T0 } from './helpers';
 
 function act(state: GameState, action: Action): GameState {
   const result = applyAction(state, action);
@@ -634,7 +634,8 @@ describe('upgrading a version 6 save, from before grounds', () => {
     // Two more class years, empty (DESIGN.md 65.2).
     expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.map.placed).toEqual(old.map.placed);
-    expect(state.map.cells).toEqual(old.map.cells);
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
+    expect(state.map.cells).toEqual(painted(old).map.cells);
     expect(state.map.buildings).toEqual(old.map.buildings);
     expect(ofType(state, 'bin').length).toBe(0);
     expect(wagesPerYear(state)).toBe(0);
@@ -675,7 +676,8 @@ describe('upgrading a version 7 save, from when a yard reached eight cells', () 
     // Two more class years, empty (DESIGN.md 65.2).
     expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.map.placed).toEqual(old.map.placed);
-    expect(state.map.cells).toEqual(old.map.cells);
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
+    expect(state.map.cells).toEqual(painted(old).map.cells);
     expect(state.grounds.litter).toEqual(old.grounds.litter);
     expect(state.grounds.lamps).toEqual(old.grounds.lamps);
     expect(state.grounds.workers).toEqual(old.grounds.workers);
@@ -727,7 +729,8 @@ describe('upgrading a version 8 save, from when a yard reached twelve cells', ()
     const state = load();
     expect(state.version).toBe(SAVE_VERSION);
     expect(state.map.placed).toEqual(old.map.placed);
-    expect(state.map.cells).toEqual(old.map.cells);
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
+    expect(state.map.cells).toEqual(painted(old).map.cells);
     expect(state.grounds.litter).toEqual(old.grounds.litter);
     expect(state.grounds.broken).toEqual(old.grounds.broken);
     expect(state.grounds.workers).toEqual(old.grounds.workers);

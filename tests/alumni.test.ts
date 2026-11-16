@@ -28,7 +28,7 @@ import { academicInputs } from '../src/sim/systems/field';
 import { edition } from '../src/sim/newspaper';
 import { moneyView } from '../src/ui/buildUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
+import { DAY, freshGame, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
 
 /**
  * Alumni giving (DESIGN.md 54, as built in section 56): the pool, the drive
@@ -228,6 +228,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY);
@@ -235,7 +236,7 @@ describe('saves', () => {
       expect(week.log.filter((entry) => entry.kind === 'alumni')).toHaveLength(1);
       const notes = upgradeNotes(26);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toMatch(/alumni/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

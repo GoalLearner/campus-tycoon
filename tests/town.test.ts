@@ -64,7 +64,7 @@ import {
 import { seedStreams } from '../src/sim/rng';
 import { housingFixLines } from '../src/ui/buildUi';
 import { recomputeRates } from '../src/sim/systems/money';
-import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
+import { DAY, freshGame, HOUR, MIN, painted, T0 } from './helpers';
 
 function act(state: GameState, action: Action): GameState {
   const result = applyAction(state, action);
@@ -378,7 +378,8 @@ describe('upgrading a version 5 save, from before the town', () => {
     expect(state.map.buildings).toEqual(old.map.buildings);
     expect(state.map.placed).toEqual(old.map.placed);
     expect(state.timers).toEqual(old.timers);
-    old.map.cells.forEach((was, i) => {
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
+    painted(old).map.cells.forEach((was, i) => {
       const x = i % old.map.width;
       const y = Math.floor(i / old.map.width);
       expect(state.map.cells[y * state.map.width + x]).toEqual(was);
