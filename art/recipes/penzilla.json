@@ -855,6 +855,526 @@
     }
    ]
   },
+  "walkground.a.nw.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-nw-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.nw.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-nw-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.nw.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-nw-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.nw.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-nw-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.ne.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-ne-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.ne.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-ne-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.ne.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-ne-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.ne.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-ne-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.se.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-se-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.se.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-se-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.se.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-se-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.se.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-se-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.sw.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-sw-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.sw.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-sw-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.sw.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-sw-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.a.sw.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/a-sw-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.b.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/b-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.b.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/b-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.b.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/b-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walkground.b.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Sidewalk_Tile9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    },
+    {
+     "file": "_rendered/fallback/walklane/b-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "walklane.a.nw.0": {
    "layers": [
     {

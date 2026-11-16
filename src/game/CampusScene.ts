@@ -922,7 +922,7 @@ export class CampusScene extends Phaser.Scene {
     const sym = (mask === 5 || mask === 10) && (x + y) % 4 === 2;
     const look = this.laneLook === 'a' ? `a.${this.laneCorner()}` : 'b';
     const key = `walklane.${look}.${sym ? `sym.${mask}` : mask}`;
-    return this.art.has(key) ? key : '';
+    return this.art.has(key) || this.art.has(key.replace('walklane.', 'walkground.')) ? key : '';
   }
 
   /** The corner of a cell, as drawn at this turn, that is the world's north-west. */
@@ -1026,7 +1026,12 @@ export class CampusScene extends Phaser.Scene {
         if (cell.kind === 'path') {
           // The piece the turned grid joins up with (DESIGN.md section 43).
           groundKey = `path.${this.iso.mask(this.pathMask(state, x, y))}`;
-          kerbKey = this.walkLaneKey(state, x, y);
+          // A painted lane (DESIGN.md 74): a whole tile of walk and lane where the pack's walks all look alike, so the cell
+          // is still one picture; laid over the walk's own piece where they do not.
+          const lane = this.walkLaneKey(state, x, y);
+          const whole = lane.replace('walklane.', 'walkground.');
+          if (lane && this.art.has(whole)) groundKey = whole;
+          else kerbKey = lane;
           // A street lamp every few cells along a walk. A broken one stays dark until a worker fixes it.
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
