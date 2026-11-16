@@ -422,6 +422,8 @@ export class Activity {
     // A team at practice in the afternoon of a term day: the place is busy with them.
     if (site.practice && this.term && this.period === 'afternoon') playing = Math.max(playing, Math.ceil(most * PRACTICE_SHOWN));
     const sport = GAME_OF[type];
+    // A pickup game makes even sides: one more comes along to make them up (DESIGN.md 72.4).
+    if (sport && playing > 1 && playing % 2 === 1) playing = Math.min(most, playing + 1);
     const role: Role = sport === 'soccer' ? 'field' : sport ? 'court' : type === 'track' ? 'runner' : type === 'pool' ? 'swimmer' : 'door';
     return [
       [role, playing],

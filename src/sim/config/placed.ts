@@ -46,6 +46,12 @@ export interface PlacedSpec {
   utilitiesPerYear?: number;
   /** Recreation only: how many students it holds at once in the small game. Read it through `placedRoom`. */
   capacity?: number;
+  /**
+   * Recreation only: how far it draws its players from, in cells, where that is wider than the reach it lifts
+   * Happiness over: a full court or a pitch, where intramural games bring players from across the campus (DESIGN.md
+   * 72.4). `radius` when left out.
+   */
+  draws?: number;
   /** Food only: how many kinds of food it counts as toward variety. The food court is three. One when left out. */
   kinds?: number;
   /** Food only: how many students it can feed at the busiest hour in the small game. Read it through `placedMeals`. */
@@ -142,22 +148,23 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Recreation field', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 15_000, upkeepPerYear: 1_000,
     radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.field', flat: true, buildable: true, capacity: 22,
   },
-  // Full-size courts and a pitch (DESIGN.md 72), with room for a real game: their capacity is who plays at once.
+  // Full-size courts and a pitch (DESIGN.md 72), with room for a real game: their capacity is who plays at once. They draw
+  // their players from wider than they lift Happiness over, as intramural games do (72.4).
   basketball: {
     name: 'Basketball court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 26_000, upkeepPerYear: 1_500,
-    radius: 5, strength: 0.45, effect: 'Raises happiness within 5 cells', sprite: 'build.basketball', flat: true, buildable: true, capacity: 10,
+    radius: 5, strength: 0.45, effect: 'Raises happiness within 5 cells', sprite: 'build.basketball', flat: true, buildable: true, capacity: 10, draws: 8,
   },
   tennis: {
     name: 'Tennis court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 22_000, upkeepPerYear: 1_200,
-    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.tennis', flat: true, buildable: true, capacity: 4,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.tennis', flat: true, buildable: true, capacity: 4, draws: 6,
   },
   volleyball: {
     name: 'Volleyball court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 20_000, upkeepPerYear: 1_200,
-    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.volleyball', flat: true, buildable: true, capacity: 12,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.volleyball', flat: true, buildable: true, capacity: 12, draws: 6,
   },
   soccer: {
     name: 'Soccer pitch', category: 'Recreation', family: 'recreation', w: 3, h: 4, cost: 32_000, upkeepPerYear: 2_000,
-    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.soccer', flat: true, buildable: true, capacity: 10,
+    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.soccer', flat: true, buildable: true, capacity: 10, draws: 14,
   },
   pondSmall: {
     name: 'Small pond', category: 'Water', family: 'water', w: 1, h: 1, cost: 8_000, upkeepPerYear: 0,
