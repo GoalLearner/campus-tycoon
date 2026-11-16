@@ -599,7 +599,7 @@ export class CampusScene extends Phaser.Scene {
 
   /**
    * The piece of bike path for a cell (DESIGN.md 71), as the turned view draws it. Its sides join more bike path; a
-   * dead end that runs into a footpath or a road is open there, so riders ride on and off it. A crossing's bars lie
+   * dead end that runs into a footpath or a road is open there, so riders ride on and off it. The bike is painted on every fourth cell. A crossing's bars lie
    * along the bike path, set across it, for the walkers going over.
    */
   private bikeKey(state: GameState, x: number, y: number, crossing: boolean): string {
@@ -625,7 +625,7 @@ export class CampusScene extends Phaser.Scene {
     }
     const turned = this.iso.mask(mask);
     const sym = `bike.sym.${turned}`;
-    if ((turned === 5 || turned === 10) && cellHash(x, y) % 3 === 0 && this.art.has(sym)) return sym;
+    if ((turned === 5 || turned === 10) && (x + y) % 4 === 2 && this.art.has(sym)) return sym;
     const key = `bike.${turned}`;
     return this.art.has(key) ? key : 'ground.grass';
   }

@@ -375,6 +375,8 @@ interface Walker {
   rideAt: number;
   rideDone: boolean;
   weave: number;
+  /** On a way along the bike path (DESIGN.md 71): a little faster once they ride. */
+  laned: boolean;
   /** The way the figure is drawn facing and since when: it turns at most once in `FACE_HOLD_MS` (DESIGN.md 69.1). */
   shownDir: WalkDirection;
   shownDirAt: number;
@@ -523,8 +525,9 @@ export class Walkers {
   private isAfoot: boolean[] = [];
   /** The bike path (DESIGN.md 71): its own cells and its crossings. Riders take them; walkers only cross at crossings. */
   private isLane: boolean[] = [];
-  /** Where a rider may ride: the footpaths and the bike path. */
+  /** Where a rider may ride: the footpaths and the bike path; and on a trip from the town, its streets as well. */
   private isRide: boolean[] = [];
+  private isRideTown: boolean[] = [];
   private laneCells = 0;
   /** Every door anyone could come out of, by its path or street cell, to the point at the building's edge (69.2). */
   private doorAt = new Map<number, Spot>();
@@ -728,6 +731,7 @@ export class Walkers {
     this.isAfoot = cells.map((cell, i) => this.isOpen[i]! || cell.kind === 'street' || cell.kind === 'crossing');
     this.isLane = cells.map((cell) => isBikeKind(cell.kind));
     this.isRide = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'bike');
+    this.isRideTown = cells.map((cell, i) => this.isWalk[i]! || cell.kind === 'bike');
     this.laneCells = this.isLane.reduce((n, yes) => n + (yes ? 1 : 0), 0);
     if (this.space.seen.length !== width * height) this.space = searchSpace(width * height);
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
@@ -1042,8 +1046,18 @@ export class Walkers {
     const town = from.kind === 'house' || to.kind === 'house';
     const cells = this.pathBetween(from.door, to.door, town ? this.isWalk : this.isPath);
     if (!cells || cells.length > (town ? MAX_COMMUTE_CELLS : MAX_ROUTE_CELLS)) return null;
+    return this.spotsAlong(cells, from, to);
+  }
+
+  /**
+   * The spots a trip passes over its cells: from the edge of where it starts to the edge of where it ends, each to one
+   * side of its path, on a street on the sidewalk, over the avenue at its marked crossings. On the bike path (DESIGN.md
+   * 71) a rider keeps nearer its middle.
+   */
+  private spotsAlong(cells: readonly number[], from: Stop, to: Stop): Spot[] {
     // Each walker keeps a little to one side, so a crowd is not a single file.
     const side = { x: (Math.random() - 0.5) * 0.44, y: (Math.random() - 0.5) * 0.44 };
+    const narrow = { x: side.x * LANE_SIDE, y: side.y * LANE_SIDE };
     // On a street they keep to the sidewalk of the house they are leaving or going to on that street, so nobody
     // crosses a street in the middle of a block.
     const rows = new Map<number, number>();
@@ -1060,7 +1074,7 @@ export class Walkers {
         route.push(...(cells[k - 1] === i + 1 ? avenueCrossing(this.plan, y, sidewalk, SIDEWALK) : avenueCrossingBack(this.plan, y, sidewalk, SIDEWALK)));
         continue;
       }
-      route.push(this.footing(i, side, rows.get(y) ?? any));
+      route.push(this.footing(i, this.isLane[i] ? narrow : side, rows.get(y) ?? any));
     }
     // People walk right onto a court or a field, to its middle. Anywhere else they stop at the edge.
     if (to.kind === 'place' && to.use === 'play' && to.flat && to.middle) {
@@ -1168,7 +1182,16 @@ export class Walkers {
     if (key !== null && (this.out.has(key) || this.elsewhere.has(key))) return false;
     let route = extra.route ?? this.routeBetween(from, to);
     if (!route || route.length < 2) return false;
-    const planned = route;
+    // A rider takes the bike path when it is on their way (DESIGN.md 71). Decided before they set out, so one already
+    // part of the way along when the view fills is on it too.
+    let laned = false;
+    if (student && (kind === 'student' || kind === 'commuter') && !extra.route && !extra.at && !extra.prop && !extra.party) {
+      const lane = this.laneRoute(student, kind === 'commuter', from, to, route);
+      if (lane) {
+        route = lane;
+        laned = true;
+      }
+    }
     // Someone already part of the way along, so a view fills with people mid-stride.
     let leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
     // Nobody appears in view (DESIGN.md 69.2): on the screen, they come out of a door, or walk in from its edge along
@@ -1232,6 +1255,7 @@ export class Walkers {
       rideAt: 0,
       rideDone: false,
       weave: 0,
+      laned,
       downUntil: 0,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
@@ -1264,9 +1288,7 @@ export class Walkers {
       socialAt: this.scene.time.now + SOCIAL_REST_MS * Math.random(),
     });
     sprite.clearTint();
-    // A rider may take the bike path on a trip of their own from a door: not part of the way along, nor one set for them.
-    const fromDoor = !extra.route && !extra.at && leg === 1 && route === planned;
-    if (student) this.dress(this.walkers[this.walkers.length - 1]!, from, to, fromDoor);
+    if (student) this.dress(this.walkers[this.walkers.length - 1]!, from, to);
     return true;
   }
 
@@ -1276,7 +1298,7 @@ export class Walkers {
    * How a student walking out feels, as it shows (DESIGN.md 64.3): their motion and pace, the ring at their feet, what
    * they carry, and a big moment of their own if they have one today. Their feeling is stop 3's, kept for the hour.
    */
-  private dress(walker: Walker, from: Stop, to: Stop, fromDoor = false): void {
+  private dress(walker: Walker, from: Stop, to: Stop): void {
     const state = this.state;
     const student = walker.student;
     if (!state || !student) return;
@@ -1293,12 +1315,13 @@ export class Walkers {
         quirk: known.quirk,
         likes: this.likesOf(student),
         commuter: walker.kind === 'commuter',
-        distance: walker.route.length - walker.leg,
+        // One on a way along the bike path rides it from end to end: the whole trip, as `laneRoute` read it.
+        distance: walker.laned ? walker.route.length - 2 : walker.route.length - walker.leg,
         roll: this.rollFor(student, 6431),
         pick: this.rollFor(student, 6433),
       });
       if (wheel) this.mount(walker, wheel, reduced);
-      if (walker.wheel && fromDoor) this.toLane(walker, from, to);
+      if (walker.wheel && walker.laned) walker.pace *= LANE_PACE;
     }
     // Something in hand, when they carry nothing yet and the frames allow it.
     if (!walker.prop && !walker.wheel && this.step > 0 && !reduced && this.carrying() < HELD_AT_STEP[this.step]!) {
@@ -1576,33 +1599,30 @@ export class Walkers {
   }
 
   /**
-   * A rider takes the bike path when it is on their way (DESIGN.md 71): the way that rides the most of it, when that is
-   * not much longer than the walk, and a little faster along it. Trips to and from the town keep to the footpaths.
+   * The way along the bike path for a student who will ride this trip (DESIGN.md 71): over the footpaths, the streets
+   * on a trip from the town, and the bike path, riding at least three cells of it and no more than 1.3 times the walk.
+   * Null for one who walks, or when it is not on their way. Their wheel is the one `dress` gives them: the same rule
+   * and rolls, over the whole trip.
    */
-  private toLane(walker: Walker, from: Stop, to: Stop): void {
-    if (this.laneCells < LANE_LEAST || from.kind === 'house' || to.kind === 'house') return;
-    const walked = walker.route.length - 2;
-    const ride = this.rideBetween(from.door, to.door, Math.ceil(walked * LANE_DETOUR) + 2);
-    if (!ride || ride.lane < LANE_LEAST) return;
-    const first = walker.route[0]!;
-    const last = walker.route[walker.route.length - 1]!;
-    // Their own place across the way, as on a walk, kept nearer the middle on the bike path.
-    const side = { x: (Math.random() - 0.5) * 0.44, y: (Math.random() - 0.5) * 0.44 };
-    const route: Spot[] = [first];
-    for (const i of ride.cells) {
-      const x = i % this.width;
-      const y = (i - x) / this.width;
-      const k = this.isLane[i] ? LANE_SIDE : 1;
-      route.push({ x: x + 0.5 + side.x * k, y: y + 0.5 + side.y * k });
-    }
-    route.push(last);
-    walker.route = route;
-    walker.pace *= LANE_PACE;
+  private laneRoute(student: StudentRef, commuter: boolean, from: Stop, to: Stop, walk: Spot[]): Spot[] | null {
+    if (this.laneCells < LANE_LEAST || this.step === 0) return null;
+    const known = this.feelingOf(student);
+    if (!known) return null;
+    const facts = { weather: this.weather, period: this.period, quirk: known.quirk, likes: this.likesOf(student), commuter, roll: this.rollFor(student, 6431), pick: this.rollFor(student, 6433) };
+    // A longer trip only makes riding likelier, so one who would ride the walk rides the way along the bike path too.
+    const wheel = wheelOf({ ...facts, distance: walk.length - 2 });
+    if (!wheel || !this.art.has(`wheel.${wheel}.sw`)) return null;
+    const town = from.kind === 'house' || to.kind === 'house';
+    const walked = this.pathBetween(from.door, to.door, town ? this.isWalk : this.isPath)?.length ?? walk.length - 2;
+    const most = Math.min(Math.ceil(walked * LANE_DETOUR) + 2, town ? MAX_COMMUTE_CELLS : MAX_ROUTE_CELLS);
+    const ride = this.rideBetween(from.door, to.door, most, town ? this.isRideTown : this.isRide);
+    if (!ride || ride.lane < LANE_LEAST) return null;
+    return this.spotsAlong(ride.cells, from, to);
   }
 
   /** The cells a rider takes from one door to another (DESIGN.md 71), no more than `most`: `searchRide` on this map. */
-  private rideBetween(from: number, to: number, most: number): { cells: number[]; lane: number } | null {
-    return searchRide(this.width, this.height, this.isRide, this.isLane, from, to, most, LANE_COST, PATH_COST);
+  private rideBetween(from: number, to: number, most: number, ride: readonly boolean[]): { cells: number[]; lane: number } | null {
+    return searchRide(this.width, this.height, ride, this.isLane, from, to, most, LANE_COST, PATH_COST);
   }
 
   /** True while a rider is on the bike path or one of its crossings (DESIGN.md 71). */

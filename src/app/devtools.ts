@@ -1112,14 +1112,52 @@ export function installDevTools(): void {
 }
 
 /**
- * Up to `n` straight runs of open ground the campus owns, each with a footpath beside every cell on one side, longest
- * first and none touching another: where a bike path would ride along a footpath (DESIGN.md 71). For the dev demo.
+ * Up to `n` straight runs of open ground the campus owns, each with a footpath beside every cell on one side, the
+ * busiest first and none touching another: where a bike path would ride along a footpath (DESIGN.md 71). How busy is
+ * counted from trips between the doors of the campus's buildings, by the shortest way over its footpaths. For the dev
+ * demo.
  */
 function laneRuns(state: GameState, n: number): Point[][] {
   const { width, height, cells } = state.map;
   const kind = (x: number, y: number): string | undefined => (x >= 0 && y >= 0 && x < width && y < height ? cells[y * width + x]!.kind : undefined);
+  const isPath = (i: number): boolean => cells[i]!.kind === 'path' || cells[i]!.kind === 'crossing';
   const open = (x: number, y: number): boolean => kind(x, y) === 'empty' && ownedAt(state.map, x, y);
-  const runs: Point[][] = [];
+  const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  // Doors: footpath cells beside a building.
+  const doors: number[] = [];
+  for (let i = 0; i < cells.length; i++) {
+    if (!isPath(i)) continue;
+    const x = i % width;
+    const y = (i - x) / width;
+    if (steps.some(([dx, dy]) => { const k = kind(x + dx, y + dy); return k === 'lot' || k === 'placed'; })) doors.push(i);
+  }
+  const traffic = new Float32Array(cells.length);
+  let seed = 7;
+  const next = (): number => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let trip = 0; trip < 300 && doors.length > 1; trip++) {
+    const from = doors[Math.floor(next() * doors.length)]!;
+    const to = doors[Math.floor(next() * doors.length)]!;
+    const parent = new Int32Array(cells.length).fill(-1);
+    parent[from] = from;
+    const queue = [from];
+    for (let head = 0; head < queue.length && parent[to] === -1; head++) {
+      const c = queue[head]!;
+      const cx = c % width;
+      const cy = (c - cx) / width;
+      for (const [dx, dy] of steps) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const ni = ny * width + nx;
+        if (parent[ni] !== -1 || !isPath(ni)) continue;
+        parent[ni] = c;
+        queue.push(ni);
+      }
+    }
+    if (parent[to] === -1) continue;
+    for (let c = to; c !== from; c = parent[c]!) traffic[c]! += 1;
+  }
+  const runs: Array<{ cells: Point[]; busy: number }> = [];
   for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
     for (const side of [-1, 1]) {
       const [sx, sy] = dx === 1 ? [0, side] : [side, 0];
@@ -1128,20 +1166,24 @@ function laneRuns(state: GameState, n: number): Point[][] {
           // Only from the start of a run.
           if (open(x - dx, y - dy) && kind(x - dx + sx, y - dy + sy) === 'path') continue;
           const run: Point[] = [];
-          for (let k = 0; open(x + k * dx, y + k * dy) && kind(x + k * dx + sx, y + k * dy + sy) === 'path'; k++) run.push([x + k * dx, y + k * dy]);
-          if (run.length >= 8) runs.push(run);
+          let busy = 0;
+          for (let k = 0; open(x + k * dx, y + k * dy) && kind(x + k * dx + sx, y + k * dy + sy) === 'path'; k++) {
+            run.push([x + k * dx, y + k * dy]);
+            busy += traffic[(y + k * dy + sy) * width + x + k * dx + sx]!;
+          }
+          if (run.length >= 6) runs.push({ cells: run, busy });
         }
       }
     }
   }
-  runs.sort((a, b) => b.length - a.length);
+  runs.sort((a, b) => b.busy - a.busy);
   const taken = new Set<number>();
   const out: Point[][] = [];
   for (const run of runs) {
     if (out.length >= n) break;
-    if (run.some(([x, y]) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([ox, oy]) => taken.has((y + oy!) * width + x + ox!)))) continue;
-    for (const [x, y] of run) taken.add(y * width + x);
-    out.push(run);
+    if (run.cells.some(([x, y]) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([ox, oy]) => taken.has((y + oy!) * width + x + ox!)))) continue;
+    for (const [x, y] of run.cells) taken.add(y * width + x);
+    out.push(run.cells);
   }
   return out;
 }
