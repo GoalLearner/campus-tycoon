@@ -153,6 +153,8 @@ export class Mayhem {
   private feet: Footprints | null = null;
   private step = 2;
   private recountAt = 0;
+  /** The storming whose goalposts have been carried off already: they go once, not again each time they reach the dorm. */
+  private carriedAt = -1;
 
   constructor(
     private scene: Phaser.Scene,
@@ -753,7 +755,7 @@ export class Mayhem {
     if (!this.people) return;
     const now = footballChaosNow(state);
     if (on.has(STREET_ID) && !this.shows.has(STREET_ID) && now.street) this.stageStreet(state, now.street.dorm, timeMs);
-    if (on.has(GOALPOSTS_ID) && !this.shows.has(GOALPOSTS_ID)) this.stageGoalposts(state, timeMs);
+    if (on.has(GOALPOSTS_ID) && !this.shows.has(GOALPOSTS_ID) && now.storm && now.storm.at !== this.carriedAt && this.stageGoalposts(state, timeMs)) this.carriedAt = now.storm.at;
     if (on.has(MASCOT_ID) && !this.shows.has(MASCOT_ID)) this.stageMascot(state, timeMs);
   }
 
@@ -809,19 +811,19 @@ export class Mayhem {
    * The goalposts carried off (77.2): out of the stadium once the fans on the field have gone, held up over the heads
    * of those carrying them, off across campus to a dorm some way off, cheering.
    */
-  private stageGoalposts(state: GameState, timeMs: number): void {
+  private stageGoalposts(state: GameState, timeMs: number): boolean {
     const plot = state.football.stadium.plot === null ? null : state.map.placed[state.football.stadium.plot];
-    if (!plot || !this.art.has('prop.goalpost')) return;
+    if (!plot || !this.art.has('prop.goalpost')) return false;
     const box = { x: plot.x, y: plot.y, w: plot.w, h: plot.h };
-    if (!this.walkers.seen({ x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 })) return;
+    if (!this.walkers.seen({ x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 })) return false;
     const front = this.walkers.frontOf(box);
-    if (!front) return;
+    if (!front) return false;
     // Off to a dorm a good way from the stadium: the walk across campus the paper tells.
     const dorms = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === 'housing' && b.stage > 0);
     const far = (b: { x: number; y: number }): number => Math.abs(b.x - plot.x) + Math.abs(b.y - plot.y);
     const to = dorms.filter((b) => far(b) >= 8).sort((a, b) => far(a) - far(b))[0] ?? dorms[0];
     const way = to ? this.walkers.wayBetween(front.door.x, front.door.y, { x: to.x, y: to.y, w: to.w, h: to.h }) : this.walkers.approach(front.front.x, front.front.y)?.reverse() ?? null;
-    if (!way || way.length < 2) return;
+    if (!way || way.length < 2) return false;
     const show = this.footballShow(GOALPOSTS_ID, 'goalposts', front.door, front.front, { ...front.front });
     for (let n = 0; n < CARRIERS; n++) {
       const person = this.person(state, show, 'goalposts', way[0]!, { x: 1, y: 0 }, n, false);
@@ -839,6 +841,7 @@ export class Mayhem {
     show.overAt = timeMs;
     show.parted = true;
     this.shows.set(show.id, show);
+    return true;
   }
 
   /** The rival's mascot shown round campus (77.4): a slow lap of the lawn nearest the middle of the view, round and round. */
@@ -978,5 +981,6 @@ export class Mayhem {
     this.icons = [];
     this.doorless.clear();
     this.fled.clear();
+    this.carriedAt = -1;
   }
 }
