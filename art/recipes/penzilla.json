@@ -9710,7 +9710,8 @@
    "parent": 25,
    "medic": 27,
    "officer": 28,
-   "worker": 29
+   "worker": 29,
+   "mascot": 30
   },
   "looks": [
    "penzilla/NPC/NpcReadymade_Character2.png",
@@ -9742,7 +9743,15 @@
    "penzilla/NPC/NpcReadymade_Character4.png",
    "penzilla/NPC/NpcReadymade_Doctor.png",
    "penzilla/NPC/NpcReadymade_Police.png",
-   "penzilla/NPC/NpcReadymade_ConstructionWorker.png"
+   "penzilla/NPC/NpcReadymade_ConstructionWorker.png",
+   "_rendered/fallback/mascot/costume-crimson.png",
+   "_rendered/fallback/mascot/costume-navy.png",
+   "_rendered/fallback/mascot/costume-forest.png",
+   "_rendered/fallback/mascot/costume-gold.png",
+   "_rendered/fallback/mascot/costume-purple.png",
+   "_rendered/fallback/mascot/costume-orange.png",
+   "_rendered/fallback/mascot/costume-teal.png",
+   "_rendered/fallback/mascot/costume-maroon.png"
   ]
  },
  "footprints": {

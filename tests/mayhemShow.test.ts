@@ -34,6 +34,7 @@ import {
 import { toneProblem } from '../src/sim';
 import { hardLineProblem } from '../src/sim/config/hardLines';
 import type { ProtestTopic } from '../src/sim/config/chaos';
+import { SCHOOL_COLOURS } from '../src/sim/config/football';
 
 /**
  * The chaos sandbox, C2 (DESIGN.md 76): the crowd shows it. The plain rules for staging chaos's incidents where they
@@ -192,5 +193,13 @@ describe('the art', () => {
       expect(penzilla).toContain(`"${key}"`);
     }
     expect(read('../CREDITS.md')).toContain('four rally signs for the chaos sandbox');
+  });
+
+  it("dresses the rival's mascot (look A, the costume) in each school colour, in the order the game reads them, in the pack's atlas only", () => {
+    const pack = JSON.parse(read('../art/recipes/penzilla.json')) as { people: { looks: string[]; roles: Record<string, number> } };
+    const first = pack.people.roles.mascot!;
+    expect(first).toBeGreaterThan(0);
+    SCHOOL_COLOURS.forEach((colour, n) => expect(pack.people.looks[first + n]).toBe(`_rendered/fallback/mascot/costume-${colour.id}.png`));
+    expect(read('../art/recipes/kenney.json')).not.toContain('mascot');
   });
 });
