@@ -478,6 +478,9 @@ function applyViewParams(params: URLSearchParams): void {
       const effects = params.get('effects');
       if (effects === 'reduced' || effects === 'full') setEffectsSetting(effects);
       if (crowd === 'low' || crowd === 'normal' || crowd === 'high') setCrowdSetting(crowd);
+      // &walklanes=a|b paints a bike lane on every footpath, for the look sheet (life-7c): a one side, b the middle.
+      const walklanes = params.get('walklanes');
+      if (walklanes === 'a' || walklanes === 'b') (scene as unknown as { setWalkLanes?: (look: 'a' | 'b') => void }).setWalkLanes?.(walklanes);
       // &pin holds the crowd at its setting: a machine taking screenshots draws slowly, and the frame budget would thin it.
       if (params.has('pin')) (scene as unknown as { holdCrowd?: () => void }).holdCrowd?.();
       // &social=off walks the crowd as before stop 4 (DESIGN.md 63.8): nobody walks together, meets or shows an icon.
@@ -793,6 +796,15 @@ export function installDevTools(): void {
         }
         if (best) store.dispatch({ type: 'place', building: type, x: best[0], y: best[1] });
       }
+    }
+    // &nobike takes the bike paths off (a crossing back to footpath), for the painted-lane look sheet (life-7c).
+    if (params.has('nobike') && store.hasGame) {
+      const bare = structuredClone(store.state);
+      for (const cell of bare.map.cells) {
+        if (cell.kind === 'bike') cell.kind = 'empty';
+        else if (cell.kind === 'bikeCrossing') cell.kind = 'path';
+      }
+      store.adopt(bare, { ephemeral: true });
     }
     // &bikes=3 lays that many bike paths (DESIGN.md 71), each along one of the longest straight runs of open ground with
     // a footpath beside it all the way, for pictures and the frame bench.

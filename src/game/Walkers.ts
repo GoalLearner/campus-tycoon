@@ -525,6 +525,8 @@ export class Walkers {
   private isAfoot: boolean[] = [];
   /** The bike path (DESIGN.md 71): its own cells and its crossings. Riders take them; walkers only cross at crossings. */
   private isLane: boolean[] = [];
+  /** The look sheet (life-7c): riders on a footpath keep to the painted lane, down one side (a) or the middle (b). */
+  painted: 'a' | 'b' | null = null;
   /** Where a rider may ride: the footpaths and the bike path; and on a trip from the town, its streets as well. */
   private isRide: boolean[] = [];
   private isRideTown: boolean[] = [];
@@ -1691,6 +1693,18 @@ export class Walkers {
     // Smooth (DESIGN.md 69.1): once stepping round to one side they keep to it until clear, and ease over and back, so
     // a rider never wobbles from side to side. Within the path: the step and their own place on it stay inside its cell.
     if (target !== 0 && Math.abs(walker.weave) > 0.02 && Math.sign(target) !== Math.sign(walker.weave)) target = -target;
+    // On a painted walk (the look sheet), a rider keeps to the lane: the west half going north or south, the north half
+    // going east or west, at look a; the middle at look b.
+    const cx = Math.floor(walker.x);
+    const cy = Math.floor(walker.y);
+    if (this.painted && walker.wheel && cx >= 0 && cy >= 0 && cx < this.width && cy < this.height && this.isPath[cy * this.width + cx] && !lane) {
+      const [dx, dy] = STEP_OF[walker.direction];
+      const off = this.painted === 'a' ? 0.24 : 0;
+      // weave w moves the rider by (-dy * w, dx * w): toward x - off going north-south, y - off going east-west.
+      target = dy !== 0 ? off * dy : -off * dx;
+      // From their own place on the walk to the lane's line.
+      target += dy !== 0 ? (walker.x - (cx + 0.5)) * dy : -(walker.y - (cy + 0.5)) * dx;
+    }
     walker.weave += (target - walker.weave) * Math.min(1, dt / (lane ? 120 : 380));
     if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
     if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;

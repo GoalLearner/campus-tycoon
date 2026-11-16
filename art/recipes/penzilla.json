@@ -855,6 +855,402 @@
     }
    ]
   },
+  "walklane.a.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.3": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.6": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.7": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.9": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.11": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m11.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.12": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m12.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.13": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m13.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.14": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.15": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-m15.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.sym.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.a.sym.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/a-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.0": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.1": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.2": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.3": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.4": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.6": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.7": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.8": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.9": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.11": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m11.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.12": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m12.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.13": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m13.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.14": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.15": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-m15.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.sym.5": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "walklane.b.sym.10": {
+   "layers": [
+    {
+     "file": "_rendered/fallback/walklane/b-sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "build.basketball": {
    "layers": [
     {"file": "penzilla/GiantCityBuilder/Tiles/Grass.png", "footprint": [1, 1], "swap": "rim", "shift": [0, 0]},

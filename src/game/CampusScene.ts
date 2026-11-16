@@ -255,6 +255,8 @@ export class CampusScene extends Phaser.Scene {
   private glows = new Map<number, Phaser.GameObjects.Image>();
   private light: Daylight = currentDaylight();
   private lampsLit = false;
+  /** A look for the bike lane painted on every footpath, for the look sheet only (life-7c): a dev option. */
+  private walkLanes: 'a' | 'b' | null = null;
   private nextLightAt = 0;
   /** Extra tinted cells: the reach of a building being placed, or a coverage overlay. */
   private tints: Array<{ cells: Point[]; colour: number; alpha: number }> = [];
@@ -896,6 +898,32 @@ export class CampusScene extends Phaser.Scene {
   }
 
   /** Dev screenshots: show the crowd the setting asks for, and stop stepping it down when frames are short. */
+  /** The look sheet (life-7c): paint a bike lane on every footpath in look `a` (one side) or `b` (the middle). */
+  setWalkLanes(look: 'a' | 'b' | null): void {
+    this.walkLanes = look;
+    this.walkers.painted = look;
+    this.dirty = true;
+  }
+
+  /** The painted lane over a footpath cell, by which sides join more walk or bike path, as the turned view draws it. */
+  private walkLaneKey(state: GameState, x: number, y: number): string {
+    if (!this.walkLanes) return '';
+    const { width, height, cells } = state.map;
+    // No lane on a square of paving (a plaza): only on a walk.
+    const paved = (cx: number, cy: number): boolean => cx >= 0 && cy >= 0 && cx < width && cy < height && isPathKind(cells[cy * width + cx]!.kind);
+    for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]] as const) {
+      if (paved(x + ox, y + oy) && paved(x + ox + 1, y + oy) && paved(x + ox, y + oy + 1) && paved(x + ox + 1, y + oy + 1)) return '';
+    }
+    const joins = (cx: number, cy: number): boolean => {
+      if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
+      const kind = cells[cy * width + cx]!.kind;
+      return isPathKind(kind) || isBikeKind(kind);
+    };
+    const mask = this.iso.mask((joins(x, y - 1) ? 1 : 0) | (joins(x + 1, y) ? 2 : 0) | (joins(x, y + 1) ? 4 : 0) | (joins(x - 1, y) ? 8 : 0));
+    const key = (mask === 5 || mask === 10) && (x + y) % 4 === 2 ? `walklane.${this.walkLanes}.sym.${mask}` : `walklane.${this.walkLanes}.${mask}`;
+    return this.art.has(key) ? key : '';
+  }
+
   holdCrowd(): void {
     this.crowdHeld = true;
     this.crowdCeiling = stepOf(crowdSetting());
@@ -989,6 +1017,7 @@ export class CampusScene extends Phaser.Scene {
         if (cell.kind === 'path') {
           // The piece the turned grid joins up with (DESIGN.md section 43).
           groundKey = `path.${this.iso.mask(this.pathMask(state, x, y))}`;
+          kerbKey = this.walkLaneKey(state, x, y);
           // A street lamp every few cells along a walk. A broken one stays dark until a worker fixes it.
           if (hasLamps && lampAt(state.map, x, y)) {
             const out = (state.grounds.lamps[i] ?? 0) > 0;
