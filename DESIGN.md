@@ -8575,7 +8575,7 @@ Feelings never turn anyone about. Before, an angry student who stopped turned on
 
 - **Angry** shows as the hard step, a pace a fifth quicker, and now and then the anger mark over their head, every 7 to 14 seconds while they walk.
 - **Stressed about exams**, stopped somewhere, they pace for real: a few steps back the way they came (0.6 of a cell), one turn, back to where they stopped, one turn, and again, with the walk frames. About two seconds a way, a short stand at each end, so a turn comes once in about 2.6 seconds.
-- **Any figure** turns on the screen at most once in 650 ms [T]. A real corner of a path comes far less often at a walk; a quicker change waits. Watched for a minute in the game: turns less than half a second apart went from 3,945 to 49, and a walker on the move turns 16 times a minute where it turned 90.
+- **Any figure** turns on the screen at most once in 650 ms [T]. A real corner of a path comes far less often at a walk; a quicker change waits. Watched for a minute in the game: turns less than half a second apart went from 2,682 to 48, and a walker on the move turns 17 times a minute where it turned 61 (11 to 2 a minute standing).
 - **A rider** stepping round someone keeps to one side until clear and eases over and back, inside the path's cell, and never wobbles from side to side. Found in the game: the drawing's step aside was added to where the rider was every frame, so riders slid off the path and zigzagged back, at times into a building. The step is only drawn now.
 - **People crossing a quad** walk the line, stop at the end for 2.4 seconds [T], turn once and walk back. Before, they turned straight round at each end.
 - **Watchers** of a moment walk over only on a straight line over open ground, there and back; otherwise they watch from where they are.
@@ -8590,7 +8590,7 @@ Nobody appears or disappears in view. Everyone on the screen comes out of a door
 - **Grounds workers and Campus Safety** walk along paths and open ground there and back (69.5). A worker finishes the job in hand and takes up the next back in the yard, so nobody jumps from one job to another; Campus Safety walk back to their station when the incident is over.
 - **Instant only out of sight.** Ground that has just come into sight, at the first look, after a pan or a zoom, may already have people on it: they are there as the screen shows it. Once the view has been still for 1.2 seconds [T] or is full, everyone new walks in.
 
-**Tested**: `tests/afoot.test.ts` (the way on foot found round a building and never through it; out from a cell just built on; fading only in a doorway; a moving place's last stretch). In the game, on an iPhone 14's screen with the camera still for a minute on the model campus's afternoon, every person the crowd draws was watched frame by frame: before, 70 of 338 appeared and 14 of 335 went somewhere other than a door or the screen's edge; now 0 of 314 appeared and 1 of 320 went anywhere else (the play-fixes page).
+**Tested**: `tests/afoot.test.ts` (the way on foot found round a building and never through it; out from a cell just built on; fading only in a doorway; a moving place's last stretch). In the game, on an iPhone 14's screen with the camera still for a minute on the model campus's afternoon, every person the crowd draws was watched frame by frame: before, 87 of 331 appeared and 17 of 321 went somewhere other than a door or the screen's edge; now 1 of 311 appeared anywhere else and none of 314 went anywhere else (the play-fixes page).
 
 ### 69.3 Figures that match gender, and a crowd like a real campus
 
@@ -8629,7 +8629,7 @@ Every look in both packs is tagged now (`src/sim/config/looks.ts`): drawn as a w
 
 Every student keeps their name and gender. A figure that fits is kept: every everyday look that fits their gender, and a head covering as often as the new shares allow. The rest are drawn again from what each look is short of, so the crowd ends at the new shares exactly while as few as can be change. On the model campus 43% of students wear a different figure: 28% had been drawn as the other gender, and head coverings go from 33% of students to 1.5%. Whether a game's main character changes depends on the save: `await __campus.figures()` in the console of a running game says how many changed and the main character's before and after.
 
-Save version 34 changes nothing in a save; it carries the one note: "Students now look like who they are: some figures changed to match."
+Save version 34 changes nothing in a save; it carries the one note: "Students now look like who they are: some figures changed to match." Nothing in the simulation changed: figures, names and words are drawn, not counted, so no line of the long run can move and it was not run again.
 
 ### 69.5 Nobody on a wall
 
@@ -8645,7 +8645,9 @@ Nobody stands, sits or walks inside a building's footprint:
 - Grounds workers and Campus Safety walk paths and open ground, never through a building.
 - When something is built or cleared, groups and walkers on it walk off, and a cleared court or food place sends its people off on foot.
 
-**Tested**: `tests/footprints.test.ts` (every spot a tenth of a cell apart round a wide building and a shallow one, at all four turns: in front means over it, behind means under it; and the two cases the owner saw, wrong by the feet alone). In the game, the same minute watched frame by frame: before, a visible person's feet were inside a building in 10,493 of 627,109 looks (1.7%); now in none of 614,933.
+**Tested**: `tests/footprints.test.ts` (every spot a tenth of a cell apart round a wide building and a shallow one, at all four turns: in front means over it, behind means under it; and the two cases the owner saw, wrong by the feet alone). In the game, the same minute watched frame by frame: before, a visible person's feet were inside a building in 3,778 of 627,182 looks (0.6%); now in 75 of 618,630 (0.01%). At noon with the crowd on High, 0.13%: people stepping out of a house into its front garden, which is part of the house's plot, and a route that clips a building's corner by less than a tenth of a cell as it turns off a door.
+
+**Frames** on the slowed phone (47.2's method), main against the play fixes with the same art, three rounds, the middle of the last five frames: an afternoon 18.0 ms before and 17.6 now; a busy morning with the crowd on High 22.8 and 20.4; rain 17.6 and 21.7; a January afternoon 17.8 and 17.5. Over every frame of the runs the play fixes are 0.4 to 1.8 ms slower, most in rain: people now find a way in and out and each sorts against the building beside them (about 0.4 ms a frame on the slowed phone, measured on and off in one game), with as many people on screen as before. Catch-up is unchanged: nothing here runs in the simulation.
 
 | Decisions made here | Instead |
 |---|---|
