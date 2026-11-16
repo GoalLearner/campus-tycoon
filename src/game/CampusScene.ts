@@ -32,6 +32,7 @@ import { PlacedSprites, type PlacedItem } from './Placed';
 import { townLook } from './townLook';
 import { Walkers } from './Walkers';
 import { doorAlpha, pointOn, tripOf, type Trip } from './afoot';
+import { Footprints } from './footprints';
 
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
 const ZONE_TINT: Record<Zone, number> = { housing: 0x9cc3ff, academic: 0xffc27a };
@@ -279,6 +280,7 @@ export class CampusScene extends Phaser.Scene {
   private pendingArrivals = 0;
   /** One walking responder for each incident that has help on the way. */
   private responders = new Map<number, Phaser.GameObjects.Image>();
+  private feet!: Footprints;
   /** Each responder's way to their incident on foot (DESIGN.md 69.5), and those walking back once it is over (69.2). */
   private responderWays = new Map<number, Trip>();
   private respondersBack = new Map<number, { sprite: Phaser.GameObjects.Image; trip: Trip; look: number }>();
@@ -323,6 +325,9 @@ export class CampusScene extends Phaser.Scene {
     // Nobody appears or disappears in view (DESIGN.md 69.2): the lawns, the courts and the small scenes ask the walkers,
     // who know the doors and the paths, for a way on and off the screen.
     this.crew.setRouter((ax, ay, box) => this.walkers.wayBetween(ax, ay, box));
+    // Everyone sorts against the building beside them, so nobody is drawn on a wall (69.5).
+    this.feet = new Footprints(this.iso);
+    for (const one of [this.walkers, this.crew, this.activity, this.scenes, this.lawns]) one.setFootprints(this.feet);
     this.activity.setAfoot(this.walkers);
     this.scenes.setAfoot(this.walkers);
     this.lawns.setAfoot(this.walkers);
@@ -435,6 +440,7 @@ export class CampusScene extends Phaser.Scene {
     this.watchFrames(time);
     if (this.dirty) {
       this.syncMap(state);
+      this.feet.setMap(state);
       this.walkers.setMap(state);
       // A Saturday or Sunday in the game's own calendar is quieter on the paths.
       const weekday = dateAt(state.clock).weekday;
@@ -1592,7 +1598,7 @@ export class CampusScene extends Phaser.Scene {
         sprite.setData('look', look);
         sprite.setFlipX(people.flip?.[direction] !== undefined);
         const at = this.iso.toWorld(x, y);
-        sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(x, y) - 1) * 4 + 2.6).setAlpha(Math.min(1, (along * trip.total) / 0.35));
+        sprite.setPosition(at.x, at.y).setDepth(this.feet.depth(x, y, (this.iso.sum(x, y) - 1) * 4 + 2.6)).setAlpha(Math.min(1, (along * trip.total) / 0.35));
         seen.add(incident.id);
       }
     }
@@ -1626,7 +1632,7 @@ export class CampusScene extends Phaser.Scene {
       this.art.apply(one.sprite, `person.${one.look}.${facing}.${Math.floor(timeMs / people.frameMs) % people.frames}`);
       one.sprite.setFlipX(people.flip?.[direction] !== undefined);
       const at = this.iso.toWorld(on.x, on.y);
-      one.sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(on.x, on.y) - 1) * 4 + 2.6).setAlpha(doorAlpha(one.trip, d, 0.35));
+      one.sprite.setPosition(at.x, at.y).setDepth(this.feet.depth(on.x, on.y, (this.iso.sum(on.x, on.y) - 1) * 4 + 2.6)).setAlpha(doorAlpha(one.trip, d, 0.35));
     }
   }
 

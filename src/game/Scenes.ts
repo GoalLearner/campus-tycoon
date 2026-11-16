@@ -3,6 +3,7 @@ import { findStudent, sceneWords, type SceneRole, type Stander } from '../app/ac
 import type { Scenes as Wanted } from '../app/life';
 import { dateAt, everydayLook, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
 import { doorAlpha, pointOn, tripOf, type Afoot, type Trip } from './afoot';
+import type { Footprints } from './footprints';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Box, type Iso } from './iso';
 
@@ -494,6 +495,14 @@ export class Scenes {
     }
   }
 
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
+  }
+
   /** The walkers' doors and paths, so a scene's people walk on and off the screen (DESIGN.md 69.2). */
   setAfoot(afoot: Afoot): void {
     this.afoot = afoot;
@@ -680,10 +689,13 @@ export class Scenes {
         actor.atY = spot.y;
         const at = this.iso.toWorld(spot.x, spot.y);
         // Fans on the field are drawn over the stadium they are standing in.
+        const ownDepth = (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
         const depth =
-          scene.kind === 'storm' && host
+          scene.kind === 'storm' && host && !walkSpot
             ? this.iso.front(host.x, host.y, host.w, host.h) * 4 + 1.2 + this.iso.sum(spot.x, spot.y) * 0.01
-            : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
+            : this.feet && !host
+              ? this.feet.depth(spot.x, spot.y, ownDepth)
+              : ownDepth;
         actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? pitchOf(this.stadium?.tier ?? 1).lift : 0)).setDepth(depth).setAlpha(shown);
       }
     }

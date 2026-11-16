@@ -6,6 +6,7 @@ import { feelingOf, type Emotion } from '../app/emotion';
 import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
 import { searchOnFoot, searchSpace } from './afoot';
+import type { Footprints } from './footprints';
 import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
@@ -836,7 +837,7 @@ export class Walkers {
     const edge = (cx: number, cy: number, door: number): Spot => {
       const dx = (door % width) + 0.5;
       const dy = Math.floor(door / width) + 0.5;
-      return { x: dx + (cx + 0.5 - dx) * 0.52, y: dy + (cy + 0.5 - dy) * 0.52 };
+      return { x: dx + (cx + 0.5 - dx) * 0.46, y: dy + (cy + 0.5 - dy) * 0.46 };
     };
     for (const stop of [...this.stops, ...this.houses]) {
       if (stop.kind === 'building' && !this.doorAt.has(stop.door)) this.doorAt.set(stop.door, edge(stop.cell.x, stop.cell.y, stop.door));
@@ -999,8 +1000,10 @@ export class Walkers {
     if (stop.kind === 'gate') return door;
     const centre = { x: stop.cell.x + 0.5, y: stop.cell.y + 0.5 };
     if (stop.kind === 'house') return { x: centre.x, y: centre.y + (door.y - centre.y) * 0.3 };
-    // Buildings are entered at their edge. On a quad, people stop on the near part of the lawn.
-    const reach = stop.kind === 'quad' || stop.kind === 'place' ? 0.62 + Math.random() * 0.16 : 0.52;
+    // Buildings are entered at their edge, from just outside it (69.5: nobody stands inside a building's footprint). On
+    // a quad, people stop on the near part of the lawn; on a court or a field, on its near part; at a bench, before it.
+    const onto = stop.kind === 'quad' || (stop.kind === 'place' && stop.flat === true);
+    const reach = onto ? 0.62 + Math.random() * 0.16 : stop.kind === 'place' && stop.use === 'seat' ? 0.42 : 0.46;
     return { x: door.x + (centre.x - door.x) * reach, y: door.y + (centre.y - door.y) * reach };
   }
 
@@ -1460,7 +1463,8 @@ export class Walkers {
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
     // Just above the ground of the cell underfoot, and below anything on the next cell forward: where the figure is
     // drawn, a step aside in a party or round someone included, so it sorts against buildings where it stands (69.5).
-    walker.sprite.setDepth((this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5);
+    const own = (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
+    walker.sprite.setDepth(this.feet ? this.feet.depth(spot.x, spot.y, own) : own);
     // Followed close up they keep their place in the drawing order: what stands in front of them fades instead (L6).
     if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
@@ -1764,7 +1768,12 @@ export class Walkers {
     for (const at of fountains) {
       const world = this.iso.toWorld(at.x, at.y);
       if (!view.contains(world.x, world.y)) continue;
-      const near = this.walkers.find((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.lingerMs <= 0 && w.talkMs <= 0 && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) < 3);
+      // Up to the water's edge in a straight line over open ground, never through a building (69.5).
+      const edge = (w: Walker): boolean => {
+        const d = Math.hypot(at.x - w.x, at.y - w.y);
+        return d > 0.6 && this.clearLine(w.x, w.y, w.x + ((at.x - w.x) * (d - 0.6)) / d, w.y + ((at.y - w.y) * (d - 0.6)) / d);
+      };
+      const near = this.walkers.find((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.lingerMs <= 0 && w.talkMs <= 0 && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) < 3 && edge(w));
       if (near) return { at, walker: near };
     }
     return null;
@@ -1921,6 +1930,14 @@ export class Walkers {
     walker.direction = step.back ? facing(-anchor.ux, -anchor.uy) : facing(anchor.ux, anchor.uy);
     walker.pacingStep = step.walking;
     if (step.walking) walker.stride += dt;
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
   }
 
   /** True for a stop with a door to go in at or come out of: a building, a house, a place that is not flat (69.2). */

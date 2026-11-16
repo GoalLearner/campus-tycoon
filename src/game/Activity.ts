@@ -5,6 +5,7 @@ import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
 import { dayRead, enrollment, everydayLook, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
 import { doorAlpha, moveEnd, pointOn, tripOf, type Afoot, type Trip } from './afoot';
+import type { Footprints } from './footprints';
 import { teamVenues } from '../sim/systems/teams';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Box, type Iso } from './iso';
@@ -43,6 +44,8 @@ const SURFACE: Record<string, { x0: number; x1: number; y0: number; y1: number }
 };
 /** How far apart people stand in a line, in cells. */
 const LINE_GAP = 0.3;
+/** At most this many wait by a door, each a little further from it. */
+const DOOR_ROOM = 8;
 /** The longest line drawn beside a building, however many are waiting. */
 const LINE_SHOWN = 6;
 /** The share of benches and of picnic-table places taken in each part of the day. */
@@ -128,6 +131,9 @@ interface Site {
   line: { x: number; y: number; dx: number; dy: number; onDrawing?: boolean };
   /** True when the line stands on a side nearer the viewer: in front of the building, whatever its width. */
   lineInFront: boolean;
+  /** How many places in its line, and by its door, are on open ground (69.5). */
+  lineRoom: number;
+  doorRoom: number;
   figures: Figure[];
   /** Things floating in a pool, and the ball on a field. */
   props: Phaser.GameObjects.Image[];
@@ -147,6 +153,8 @@ function mix(a: number, b: number): number {
 
 export class Activity {
   private sites: Site[] = [];
+  /** Places cleared from the map whose people are still walking off (69.2). */
+  private cleared: Site[] = [];
   private pool: Phaser.GameObjects.Image[] = [];
   private readonly people: PeopleSpec | null;
   private period: DayPeriod = 'afternoon';
@@ -184,6 +192,14 @@ export class Activity {
     private walking: (key: string) => boolean = () => false,
   ) {
     this.people = art.people;
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
   }
 
   /** The walkers' doors and paths, so players and lines walk on and off the screen (DESIGN.md 69.2). */
@@ -263,6 +279,20 @@ export class Activity {
           lineInFront = chosen.front;
         }
       }
+      // As many in the line, and waiting by the door, as stand on open ground (69.5): never into a building beside it.
+      const clear = (x: number, y: number): boolean => {
+        const cx = Math.floor(x);
+        const cy = Math.floor(y);
+        return cx >= 0 && cy >= 0 && cx < width && cy < height && ['empty', 'path', 'quad', 'crossing'].includes(cells[cy * width + cx]!.kind);
+      };
+      let lineRoom = LINE_SHOWN;
+      let doorRoom = DOOR_ROOM;
+      if (!line.onDrawing) {
+        lineRoom = 0;
+        while (lineRoom < LINE_SHOWN * 2 && clear(line.x + line.dx * lineRoom, line.y + line.dy * lineRoom)) lineRoom += 1;
+        doorRoom = 0;
+        while (doorRoom < DOOR_ROOM && clear(line.x - line.dx * (doorRoom + 1) * 0.8, line.y - line.dy * (doorRoom + 1) * 0.8)) doorRoom += 1;
+      }
       const before = kept.get(placed.id);
       kept.delete(placed.id);
       // People eat at the benches and tables within a few cells of food.
@@ -288,11 +318,14 @@ export class Activity {
           }
         }
       }
-      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, lineRoom, doorRoom, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
     }
-    // Whatever was cleared takes its people with it.
+    // Whatever was cleared, its people walk off to the nearest door or off the screen (69.2); its things go with it.
     for (const gone of kept.values()) {
-      this.empty(gone);
+      for (const prop of gone.props) prop.destroy();
+      gone.props = [];
+      for (const figure of gone.figures) figure.leaving = true;
+      if (gone.figures.length > 0) this.cleared.push(gone);
       this.cheers.get(gone.placed.id)?.destroy();
       this.cheers.delete(gone.placed.id);
     }
@@ -319,19 +352,6 @@ export class Activity {
     if (SPORTY.includes(figure.role) && people.roles?.athlete !== undefined) return;
     figure.look = studentFigure(state, student, people);
     figure.shownKey = '';
-  }
-
-  private empty(site: Site): void {
-    for (const figure of site.figures) {
-      this.release(figure);
-      figure.held?.destroy();
-      figure.held = null;
-      figure.sprite.setVisible(false);
-      this.pool.push(figure.sprite);
-    }
-    for (const prop of site.props) prop.destroy();
-    site.figures = [];
-    site.props = [];
   }
 
   /** Who should be at a site right now, by role. */
@@ -391,7 +411,8 @@ export class Activity {
       const wanted = seen ? this.wanted(site) : [];
       for (const [role, count] of wanted) {
         const have = site.figures.filter((figure) => figure.role === role && !figure.leaving);
-        const want = Math.max(0, Math.min(count, budget));
+        const room = role === 'line' ? site.lineRoom : role === 'door' ? site.doorRoom : count;
+        const want = Math.max(0, Math.min(count, budget, room));
         budget -= want;
         this.drawn += want;
         for (let n = have.length; n < want; n++) {
@@ -638,7 +659,8 @@ export class Activity {
       this.recount(this.scene.cameras.main.worldView);
     }
     const seconds = time / 1000;
-    for (const site of this.sites) {
+    this.cleared = this.cleared.filter((site) => site.figures.length > 0);
+    for (const site of [...this.sites, ...this.cleared]) {
       if (site.figures.length === 0 && site.props.length === 0) continue;
       // Buildings that stand up are drawn after the ground. People on them go in front of the whole footprint.
       const flat = PLACED[site.placed.type].flat;
@@ -736,7 +758,8 @@ export class Activity {
         const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
         // A line on a side nearer the viewer stands in front of its building, however wide the building is.
         const beside = figure.role === 'line' || figure.role === 'door';
-        figure.sprite.setDepth(flat || figure.trip || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front));
+        const order = flat || figure.trip || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front);
+        figure.sprite.setDepth(this.feet ? this.feet.depth(figure.x, figure.y, order) : order);
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
         // Someone eating at a seat has a tray or a cup in front of them, towards the table (DESIGN.md 64).
         const eating = figure.role === 'seat' && !figure.leaving && site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
@@ -833,7 +856,7 @@ export class Activity {
   }
 
   clear(): void {
-    for (const site of this.sites) {
+    for (const site of [...this.sites, ...this.cleared]) {
       for (const figure of site.figures) this.release(figure);
       for (const figure of site.figures) {
         figure.sprite.destroy();
@@ -841,6 +864,7 @@ export class Activity {
       }
       for (const prop of site.props) prop.destroy();
     }
+    this.cleared = [];
     for (const sprite of this.pool) sprite.destroy();
     for (const icon of this.cheers.values()) icon.destroy();
     this.cheers.clear();

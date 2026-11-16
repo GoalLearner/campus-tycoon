@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BIN_CAPACITY, isBrokenThing, isMessSpot, workersAt, type GameState, type Placed } from '../sim';
 import type { Art } from './art';
 import { facingOf, type Iso } from './iso';
+import type { Footprints } from './footprints';
 
 /**
  * Grounds workers, for show. One or two walk out from each staffed Facilities
@@ -60,6 +61,14 @@ export class GroundsWorkers {
     private art: Art,
     private iso: Iso,
   ) {}
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
+  }
 
   /** The walkers' paths, so workers walk round buildings and not through them (DESIGN.md 69.5). */
   setRouter(router: Router): void {
@@ -200,7 +209,8 @@ export class GroundsWorkers {
       this.art.apply(trip.body, `person.${people.roles!.worker}.${facing}.${frame}`);
       trip.body.setFlipX(people.flip?.[direction] !== undefined);
       const spot = this.iso.toWorld(x, y);
-      const depth = (this.iso.sum(x, y) - 1) * 4 + 2.6;
+      const own = (this.iso.sum(x, y) - 1) * 4 + 2.6;
+      const depth = this.feet ? this.feet.depth(x, y, own) : own;
       // Out of the yard's door and back in it: they fade only in the doorway.
       const door = Math.min(1, d / 0.35);
       trip.body.setPosition(spot.x, spot.y).setDepth(depth).setAlpha(door);

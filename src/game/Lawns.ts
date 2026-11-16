@@ -17,6 +17,7 @@ import { INTEREST, TRAIT, traitOf } from '../sim/systems/identity';
 import { KIND, SLOTS } from '../sim/config/web';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { doorAlpha, pointOn, tripOf, type Afoot, type Trip } from './afoot';
+import type { Footprints } from './footprints';
 import { facingOf, type Iso } from './iso';
 
 /**
@@ -202,6 +203,8 @@ interface Group {
   walked: boolean;
   since: number;
   propAlpha: number;
+  /** A group that moves: how far round its spot it goes, made smaller to stay on open ground (69.5). */
+  loopR: number;
 }
 
 /** A party night as the scene reads it (L6): the game date as a number, its weekday, and the shown hour, whole. */
@@ -279,6 +282,14 @@ export class Lawns {
     private taken: () => ReadonlySet<number> = () => new Set(),
   ) {
     this.people = art.people;
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
   }
 
   /** The walkers' doors and paths, so a group's people walk on and off the screen (DESIGN.md 69.2). */
@@ -392,8 +403,14 @@ export class Lawns {
     for (const spot of candidates) {
       const cx = Math.floor(spot.x);
       const cy = Math.floor(spot.y);
+      // Grass all round the middle, and no building within two cells: the crowd and its lanterns reach that far (69.5).
       let room = true;
-      for (let dy = -1; dy <= 1 && room; dy++) for (let dx = -1; dx <= 1 && room; dx++) if (!open(cx + dx, cy + dy)) room = false;
+      for (let dy = -2; dy <= 2 && room; dy++) {
+        for (let dx = -2; dx <= 2 && room; dx++) {
+          const core = Math.abs(dx) <= 1 && Math.abs(dy) <= 1;
+          if (core ? !open(cx + dx, cy + dy) : !open(cx + dx, cy + dy) && kind(cx + dx, cy + dy) !== 'path') room = false;
+        }
+      }
       if (!room) continue;
       const home = homes.find((one) => cx >= one.x - PARTY_REACH && cx < one.x + one.w + PARTY_REACH && cy >= one.y - PARTY_REACH && cy < one.y + one.h + PARTY_REACH);
       if (home) this.partySites.push({ x: cx + 0.5, y: cy + 0.5, greek: home.greek });
@@ -521,7 +538,34 @@ export class Lawns {
     group.props.push({ sprite, x, y, flat, moves });
   }
 
+  /** True for ground anyone may stand on: a quad, a path, or the campus's own open grass (69.5). */
+  private ground(x: number, y: number): boolean {
+    const map = this.state?.map;
+    if (!map) return true;
+    const cx = Math.floor(x);
+    const cy = Math.floor(y);
+    if (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height) return false;
+    const kind = map.cells[cy * map.width + cx]!.kind;
+    return kind === 'quad' || kind === 'path' || (kind === 'empty' && ownedAt(map, cx, cy));
+  }
+
+  /** How far round its spot a group that moves can go and stay on open ground (69.5): its loop, made smaller to fit. */
+  private fitLoop(group: Group): void {
+    let r = this.loopOf(group.kind);
+    const fits = (radius: number): boolean => {
+      for (let k = 0; k < 16; k++) if (!this.ground(group.x + Math.cos((k / 16) * Math.PI * 2) * (radius + 0.12), group.y + Math.sin((k / 16) * Math.PI * 2) * (radius + 0.12))) return false;
+      return true;
+    };
+    while (r > 0.25 && !fits(r)) r -= 0.05;
+    group.loopR = r;
+  }
+
   private member(group: Group, ref: StudentRef, x: number, y: number, pose: LawnPose, towardX: number, towardY: number, held: string | null = null, heldLift = 0.45): void {
+    // Nobody stands inside a building or on a road (69.5): a place that would be pulled in towards the spot.
+    for (let k = 1; k <= 10 && !this.ground(x, y); k++) {
+      x += (group.x - x) * (k / 10);
+      y += (group.y - y) * (k / 10);
+    }
     const state = this.state!;
     const people = this.people!;
     const crowd = Math.max(1, Math.min(people.looks, people.crowd ?? people.looks));
@@ -725,6 +769,7 @@ export class Lawns {
       const group = this.newGroup(key, kind, spot.x, spot.y, spot.quad ? 'the quad' : 'the lawn');
       group.route = route;
       this.form(group, members);
+      this.fitLoop(group);
       // In view, they walk there from the nearest door or the edge (69.2); with no way there, not here.
       if (!this.walkIn(group)) {
         this.release(group);
@@ -740,7 +785,7 @@ export class Lawns {
   }
 
   private newGroup(key: string, kind: LawnKind, x: number, y: number, where: string): Group {
-    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0, glow: null, walked: false, since: -1, propAlpha: 0 };
+    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0, glow: null, walked: false, since: -1, propAlpha: 0, loopR: this.loopOf(kind) };
   }
 
   /** From a spot on a quad or a big lawn, three to six cells across it along the grid, over open ground only (L6), or null. */
@@ -963,7 +1008,7 @@ export class Lawns {
     }
     if (member.pose === 'move') {
       const a = mix(Math.floor(group.x), Math.floor(group.y)) * 6 - i * 0.9;
-      const loop = this.loopOf(group.kind);
+      const loop = group.loopR;
       return { x: group.x + Math.cos(a) * loop, y: group.y + Math.sin(a) * loop };
     }
     return { x: member.x, y: member.y };
@@ -1124,7 +1169,7 @@ export class Lawns {
       const started = group.since < 0 || seconds >= group.since;
       const clock = group.since >= 0 ? Math.max(0, seconds - group.since) : seconds;
       // Movers go round a loop about the spot: a jog, a chase, a dog walk.
-      const loop = this.loopOf(group.kind);
+      const loop = group.loopR;
       const pace = group.kind === 'jog' ? 0.55 : group.kind === 'goof' ? 0.9 : 0.25;
       const angleOf = (i: number): number => clock * pace + mix(Math.floor(group.x), Math.floor(group.y)) * 6 - i * 0.9;
       // A thrown thing: from one to the next, the next pass after a short wait.
@@ -1249,7 +1294,8 @@ export class Lawns {
         }
         member.sprite.setFlipX(flip);
         const at = this.iso.toWorld(x, y);
-        const depth = (this.iso.sum(x, y) - 1) * 4 + 2.5;
+        const own = (this.iso.sum(x, y) - 1) * 4 + 2.5;
+        const depth = this.feet ? this.feet.depth(x, y, own) : own;
         member.sprite.setPosition(at.x, at.y - bob).setDepth(depth).setAlpha(alpha * member.fade);
         member.atX = x;
         member.atY = y;
