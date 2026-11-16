@@ -1,4 +1,5 @@
 import { newChaos } from './systems/chaos';
+import { PAINT_SAVED_WALKS, paintWalks } from './systems/walkLanes';
 import { MAIN_STREET } from './config/town';
 import { openingStanding } from './systems/field';
 import { newGoals } from './systems/goals';
@@ -29,7 +30,7 @@ import { newStory } from './systems/mc';
 import { calendarAt } from './calendar';
 import { effectsSound } from './systems/friends';
 import { OFFICIAL_KEPT, officialSound } from './systems/official';
-import type { Field, GameState, MapState, Placed } from './types';
+import type { Cell, Field, GameState, MapState, Placed } from './types';
 
 /**
  * Versioned saves. A save file is { v, savedAt, state }. On load it is parsed,
@@ -37,7 +38,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 35;
+export const SAVE_VERSION = 36;
 
 export interface SaveFile {
   v: number;
@@ -433,6 +434,15 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 35: admissions at real figures (DESIGN.md 70). The intake keeps a little more from its next class on, and
   // nothing in a save changes but the version, so the player is told once why the numbers read differently.
   34: (state) => state,
+  // Version 36: bike lanes painted on the walks (DESIGN.md 74). A cell of footpath may carry a lane. A save gets one on
+  // every walk only while `PAINT_SAVED_WALKS` is on, which waits on the owner; until then it keeps its map exactly.
+  35: (state) => {
+    const map = state.map as { width?: number; height?: number; cells?: Cell[] } | undefined;
+    if (PAINT_SAVED_WALKS && map && typeof map.width === 'number' && typeof map.height === 'number' && Array.isArray(map.cells)) {
+      paintWalks({ width: map.width, height: map.height, cells: map.cells });
+    }
+    return state;
+  },
 };
 
 /**

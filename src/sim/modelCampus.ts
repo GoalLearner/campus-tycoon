@@ -4,6 +4,7 @@ import { PLACED } from './config/placed';
 import { TOWN_X } from './config/town';
 import { hashInts } from './rng';
 import { addPlaced } from './systems/placed';
+import { paintWalks } from './systems/walkLanes';
 import type { Cell, MapState, PlacedType, Zone } from './types';
 
 /**
@@ -336,26 +337,18 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   ground('tree', [[18, 25], [19, 26], [20, 25], [21, 27], [19, 28], [17, 27], [11, 27], [12, 29], [10, 30], [13, 32], [11, 33], [5, 28], [3, 30], [6, 31], [4, 24], [2, 22], [5, 14], [3, 12], [6, 12], [11, 9], [12, 6], [10, 4], [17, 6], [20, 5], [18, 8], [28, 20], [29, 22], [27, 24], [30, 18], [26, 18], [9, 41], [6, 43], [10, 45], [4, 45], [25, 38], [28, 37], [23, 41], [27, 43], [24, 45], [29, 45]], false);
 
   // ------------------------------------------------------- the bike paths
-  // A network as the planners would lay it (DESIGN.md 73, the owner's "Put bike paths on the model"): one row back from
-  // the busiest footpaths, on open ground no hall could use, and across the lawns between them; joined up, and out to
-  // Lantern Avenue where commuters ride in. It touches a footpath only where riders get on and off and where it crosses
-  // one (a crossing, straight over), so the ground beside the footpaths stays free for halls. No tree, hall, path or road
-  // moved. Free, as its footpaths are, and laid on new games only.
+  // A bike lane painted down one side of every walk (DESIGN.md 74, the owner's "bike paths everywhere they're walking"),
+  // and the bike paths only where they do what a painted walk cannot (DESIGN.md 73): out to Lantern Avenue from the east
+  // walk, where commuters ride in, and across the middle lawn from the east walk to the cross walk. The stretches that
+  // ran a row behind a walk are left to the lane painted on it, and their ground to the halls. Free, as the footpaths
+  // are, and on new games only.
   ground('bike', [
-    // The west spine, behind the walk by the west halls, with a way on at each end.
-    ...col(10, 5, 15), [9, 5], [9, 15], [11, 10], [12, 10],
-    // The middle spine, behind the walk to the lecture halls, and over the north lawn to the east spine.
-    ...col(13, 8, 15), [14, 10], [14, 8], [15, 8], [16, 8], [16, 9], ...row(9, 17, 20), ...col(21, 5, 9),
     // Over the east walk, and out to the avenue.
-    [22, 9], [22, 10], [22, 11], [22, 12], [23, 12], [24, 12], [25, 12], ...row(13, 25, 31),
-    // Down the east side: over the walk to the avenue, and behind the walk by the lecture halls, with ways on.
-    [26, 14], [26, 15], [26, 16], [26, 17], ...col(25, 17, 20), [26, 20], [26, 21], [26, 22], ...col(25, 22, 26), [24, 17], [24, 20], [24, 22],
-    // Across the middle: over the east walk, through the lawn, over the middle walk to the middle spine's south half.
-    [24, 25], [23, 25], [22, 25], [21, 25], [21, 26], [20, 26], [20, 27], [19, 27], [18, 27], [18, 28], [17, 28], [16, 28], [15, 28], [14, 28],
-    ...col(13, 25, 30),
-    // Back to the west spine's south half, and on down it past the south-west halls.
-    ...row(28, 10, 12), ...col(10, 25, 29), [9, 25], [11, 30], [12, 30], [11, 31], ...col(10, 31, 36), [9, 31],
+    [23, 12], [24, 12], [25, 12], ...row(13, 25, 31),
+    // Across the middle: over the east walk, through the lawn, over the cross walk.
+    [24, 25], [23, 25], [22, 25], [21, 25], [21, 26], [20, 26], [20, 27], [19, 27], [18, 27], [18, 28], [17, 28], [16, 28], [15, 28],
   ], false);
+  paintWalks(map);
 
   return districts;
 }

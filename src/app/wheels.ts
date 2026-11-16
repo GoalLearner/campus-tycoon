@@ -138,6 +138,16 @@ export function rackPosts(view: WebView, state: GameState, students: number): Po
  */
 export const PATH_CELLS_PER_LANE = 10;
 
+/**
+ * How the bike lane painted on a footpath looks (DESIGN.md 74): `a` down one side of the walk (the west half of a walk
+ * running north-south, the north half of one running east-west), `b` down the middle. The owner's pick is open; `a`, the
+ * recommended one, until he answers. The map's pieces and where riders and walkers keep both follow it.
+ */
+export const LANE_LOOK: 'a' | 'b' = 'a';
+/** Across a painted cell, in cells from its west or north side: the lane's line for riders, and where walkers keep. */
+export const LANE_LINE: Record<'a' | 'b', number> = { a: 0.26, b: 0.5 };
+export const WALK_LINE: Record<'a' | 'b', number> = { a: 0.73, b: 0.5 };
+
 /** Cells of footpath and of bike path on the campus. */
 export function laneCount(state: GameState): { paths: number; lanes: number } {
   let paths = 0;
@@ -145,6 +155,8 @@ export function laneCount(state: GameState): { paths: number; lanes: number } {
   for (const cell of state.map.cells) {
     if (cell.kind === 'path' || cell.kind === 'crossing') paths += 1;
     else if (cell.kind === 'bike' || cell.kind === 'bikeCrossing') lanes += 1;
+    // A walk with a lane painted on it counts as a lane too, and stays a footpath (DESIGN.md 74).
+    if (cell.kind === 'path' && cell.lane !== undefined) lanes += 1;
   }
   return { paths, lanes };
 }

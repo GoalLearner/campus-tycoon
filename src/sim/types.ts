@@ -34,6 +34,11 @@ export interface Cell {
    * with, which was never paid for and so refunds nothing.
    */
   builtTick: number;
+  /**
+   * On a footpath only: a bike lane painted down one side of the walk (DESIGN.md 74), and the tick the player paid for
+   * it; -1 for one the campus began with. Absent where there is none. To everything else the cell is a footpath.
+   */
+  lane?: number;
 }
 
 /** The hand-placed buildings of the Build menu. Their numbers live in config/placed.ts. */

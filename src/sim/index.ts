@@ -236,3 +236,4 @@ export * from './systems/alumni';
 export * from './systems/scorecard';
 export * from './config/mc';
 export * from './systems/mc';
+export * from './systems/walkLanes';

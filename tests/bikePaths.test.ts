@@ -159,11 +159,13 @@ describe('riders on the bike path', () => {
 
 describe('bike paths on Quadline', () => {
   const model = advance(newGame({ seed: 35, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + 86_400_000).state;
-  // The model campus opens with its bike network (DESIGN.md 73); the same campus without it, as a player's could be.
+  // The model campus opens with its bike paths and a lane painted on every walk (DESIGN.md 73 and 74); the same campus
+  // without them, as a player's could be.
   const state = structuredClone(model);
   for (const cell of state.map.cells) {
     if (cell.kind === 'bike') cell.kind = 'empty';
     else if (cell.kind === 'bikeCrossing') cell.kind = 'path';
+    delete cell.lane;
   }
   const web = newWeb(state.seed, 1024);
   catchUp(web, state, webWeekOf(state));
