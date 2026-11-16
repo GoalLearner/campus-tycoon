@@ -31,6 +31,7 @@ import { facingOf, Iso, nextTurn, type Turn } from './iso';
 import { PlacedSprites, type PlacedItem } from './Placed';
 import { townLook } from './townLook';
 import { Walkers } from './Walkers';
+import { doorAlpha, pointOn, tripOf, type Trip } from './afoot';
 
 /** Empty zoned lots are tinted so the player can tell the zones apart at a glance. */
 const ZONE_TINT: Record<Zone, number> = { housing: 0x9cc3ff, academic: 0xffc27a };
@@ -278,6 +279,9 @@ export class CampusScene extends Phaser.Scene {
   private pendingArrivals = 0;
   /** One walking responder for each incident that has help on the way. */
   private responders = new Map<number, Phaser.GameObjects.Image>();
+  /** Each responder's way to their incident on foot (DESIGN.md 69.5), and those walking back once it is over (69.2). */
+  private responderWays = new Map<number, Trip>();
+  private respondersBack = new Map<number, { sprite: Phaser.GameObjects.Image; trip: Trip; look: number }>();
   /** Items the dev previews put on the map, beside the buildings in the game state. */
   private devItems: PlacedItem[] = [];
   private placedDirty = true;
@@ -316,6 +320,12 @@ export class CampusScene extends Phaser.Scene {
     this.scenes = new Scenes(this, this.art, this.iso, this.staying, walking);
     // People doing things on the lawns and quads (DESIGN.md 64), clear of the small scenes.
     this.lawns = new Lawns(this, this.art, this.iso, this.staying, walking, () => this.scenes.takenCells());
+    // Nobody appears or disappears in view (DESIGN.md 69.2): the lawns, the courts and the small scenes ask the walkers,
+    // who know the doors and the paths, for a way on and off the screen.
+    this.crew.setRouter((ax, ay, box) => this.walkers.wayBetween(ax, ay, box));
+    this.activity.setAfoot(this.walkers);
+    this.scenes.setAfoot(this.walkers);
+    this.lawns.setAfoot(this.walkers);
     // Moments the crowd gathers round (DESIGN.md 64.4), made of the people the other layers have out.
     this.moments = new Moments(this, this.art, this.iso, this.walkers, this.lawns, this.scenes, this.activity);
     this.walkers.setElsewhere(this.staying);
@@ -513,6 +523,9 @@ export class CampusScene extends Phaser.Scene {
     this.glows.clear();
     for (const sprite of this.responders.values()) sprite.destroy();
     this.responders.clear();
+    for (const one of this.respondersBack.values()) one.sprite.destroy();
+    this.respondersBack.clear();
+    this.responderWays.clear();
     this.tints = [];
     this.pendingArrivals = 0;
     this.overlay.clear();
@@ -1552,11 +1565,20 @@ export class CampusScene extends Phaser.Scene {
         const fromX = home.x + home.w / 2;
         const fromY = home.y + home.h + 0.2;
         const over = this.incidentPlace(state, incident);
-        const toX = over.x + over.w / 2;
-        const toY = over.y + over.h / 2;
-        const x = fromX + (toX - fromX) * along;
-        const y = fromY + (toY - fromY) * along;
-        const way = this.iso.dir(toX - fromX, toY - fromY);
+        // Along paths and open ground to beside the place, never through a building (69.5); straight if there is no way.
+        let trip = this.responderWays.get(incident.id);
+        if (!trip) {
+          const pts = this.walkers.wayBetween(fromX, fromY, over) ?? [
+            { x: fromX, y: fromY },
+            { x: over.x + over.w / 2, y: over.y + over.h + 0.2 },
+          ];
+          trip = tripOf(pts, 0, false);
+          this.responderWays.set(incident.id, trip);
+        }
+        const on = pointOn(trip, along * trip.total);
+        const x = on.x;
+        const y = on.y;
+        const way = this.iso.dir(on.bx - on.ax, on.by - on.ay);
         const direction = facingOf(way.x, way.y);
         const facing = people.flip?.[direction] ?? direction;
         const look = (incident.kind === 'injury' ? people.roles?.medic : people.roles?.officer) ?? 0;
@@ -1567,16 +1589,44 @@ export class CampusScene extends Phaser.Scene {
           this.responders.set(incident.id, sprite);
         }
         this.art.apply(sprite, `person.${look}.${facing}.${frame}`);
+        sprite.setData('look', look);
         sprite.setFlipX(people.flip?.[direction] !== undefined);
         const at = this.iso.toWorld(x, y);
-        sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(x, y) - 1) * 4 + 2.6);
+        sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(x, y) - 1) * 4 + 2.6).setAlpha(Math.min(1, (along * trip.total) / 0.35));
         seen.add(incident.id);
       }
     }
+    // Over: they walk back the way they came and in at their door (69.2), or are simply gone when out of sight.
     for (const [id, sprite] of this.responders) {
       if (seen.has(id)) continue;
-      sprite.destroy();
       this.responders.delete(id);
+      const out = this.responderWays.get(id);
+      this.responderWays.delete(id);
+      const view = this.cameras.main.worldView;
+      const inSight = sprite.x >= view.x - 44 && sprite.x <= view.right + 44 && sprite.y >= view.y - 44 && sprite.y <= view.bottom + 60;
+      if (!people || !out || !inSight) {
+        sprite.destroy();
+        continue;
+      }
+      const back = [...out.pts].reverse();
+      const look = Number(sprite.getData('look') ?? people.roles?.officer ?? 0);
+      this.respondersBack.set(id, { sprite, trip: tripOf(back, timeMs, true), look });
+    }
+    for (const [id, one] of this.respondersBack) {
+      const d = ((timeMs - one.trip.startMs) / 1000) * 0.9;
+      if (!people || d >= one.trip.total) {
+        one.sprite.destroy();
+        this.respondersBack.delete(id);
+        continue;
+      }
+      const on = pointOn(one.trip, d);
+      const way = this.iso.dir(on.bx - on.ax, on.by - on.ay);
+      const direction = facingOf(way.x, way.y);
+      const facing = people.flip?.[direction] ?? direction;
+      this.art.apply(one.sprite, `person.${one.look}.${facing}.${Math.floor(timeMs / people.frameMs) % people.frames}`);
+      one.sprite.setFlipX(people.flip?.[direction] !== undefined);
+      const at = this.iso.toWorld(on.x, on.y);
+      one.sprite.setPosition(at.x, at.y).setDepth((this.iso.sum(on.x, on.y) - 1) * 4 + 2.6).setAlpha(doorAlpha(one.trip, d, 0.35));
     }
   }
 

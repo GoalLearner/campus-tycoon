@@ -16,6 +16,7 @@ import { firstNameOf, studentCard } from '../sim/systems/students';
 import { INTEREST, TRAIT, traitOf } from '../sim/systems/identity';
 import { KIND, SLOTS } from '../sim/config/web';
 import type { Art, PeopleSpec, WalkDirection } from './art';
+import { doorAlpha, pointOn, tripOf, type Afoot, type Trip } from './afoot';
 import { facingOf, type Iso } from './iso';
 
 /**
@@ -34,6 +35,13 @@ import { facingOf, type Iso } from './iso';
  */
 
 const FADE_MS = 500;
+/**
+ * Nobody appears or disappears in view (DESIGN.md 69.2): a group's people walk to it from the nearest door or the edge
+ * of the screen and walk off the same way, at this pace in cells a second, a little apart, fading only in a doorway.
+ */
+const LAWN_WALK = 0.8;
+const WALK_STAGGER_MS = 380;
+const DOOR_FADE = 0.35;
 const RECOUNT_MS = 1100;
 /** How long a group stays, in game ticks (minutes): each spot keeps its group this long, on its own clock. */
 const STAY_TICKS = 9;
@@ -133,6 +141,16 @@ interface Member {
   cup: 'partycup' | 'sodacup' | null;
   /** Their own fade in, 0 to 1: someone arriving at a party already going. */
   fade: number;
+  /** On foot to their place or away from it (69.2), and gone once away. Where they were last drawn. */
+  trip: MemberTrip | null;
+  gone: boolean;
+  atX: number;
+  atY: number;
+}
+
+/** A walk to a group's spot or away from it (69.2), and the way they faced in their place, for when they get there. */
+interface MemberTrip extends Trip {
+  restDir: WalkDirection | null;
 }
 
 interface Prop {
@@ -179,6 +197,11 @@ interface Group {
   danceOffUntil: number;
   /** A party's glow after dark (L6). */
   glow: Phaser.GameObjects.Image | null;
+  /** Its people come and go on foot (69.2); when the last of them arrived, in seconds, or -1 for found already there;
+   * and how strongly its things show. */
+  walked: boolean;
+  since: number;
+  propAlpha: number;
 }
 
 /** A party night as the scene reads it (L6): the game date as a number, its weekday, and the shown hour, whole. */
@@ -243,6 +266,8 @@ export class Lawns {
   /** The update's clock. */
   private nowMs = 0;
   private drawn = 0;
+  private afoot: Afoot | null = null;
+  private goneCount = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -254,6 +279,11 @@ export class Lawns {
     private taken: () => ReadonlySet<number> = () => new Set(),
   ) {
     this.people = art.people;
+  }
+
+  /** The walkers' doors and paths, so a group's people walk on and off the screen (DESIGN.md 69.2). */
+  setAfoot(afoot: Afoot): void {
+    this.afoot = afoot;
   }
 
   /** How full the lawns are (lawnShare), the sky, the part of the day, exams, and Reduce effects. */
@@ -290,7 +320,7 @@ export class Lawns {
     const sample = sampleStudents(state);
     if (sample.length !== this.everyone.length || sample[0]?.entryYear !== this.everyone[0]?.entryYear) {
       this.everyone = sample;
-      for (const group of this.groups.values()) group.leaving = true;
+      for (const group of [...this.groups.values()]) this.walkOut(group);
     }
     const kind = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
     const nearPath = (x: number, y: number): boolean => {
@@ -370,6 +400,10 @@ export class Lawns {
     }
     this.tonight = null;
     this.recountAt = 0;
+    // Built over (69.5): a group with anyone where a building now stands walks off at once.
+    for (const group of [...this.groups.values()]) {
+      if (group.members.some((member) => { const k = kind(Math.floor(member.atX), Math.floor(member.atY)); return k !== 'quad' && k !== 'empty' && k !== 'path'; })) this.walkOut(group);
+    }
   }
 
   // -------------------------------------------------------------- who --
@@ -514,6 +548,10 @@ export class Lawns {
       hat: null,
       cup: null,
       fade: 1,
+      trip: null,
+      gone: false,
+      atX: x,
+      atY: y,
     });
   }
 
@@ -672,7 +710,7 @@ export class Lawns {
       if (taken.has(cell(spot)) || near.has(cell(spot)) || crowded(spot, false)) continue;
       const have = this.groups.get(key);
       // One group to a spot and a time: one there already, leaving or formed from the seed alone, gives way at once.
-      if (have) this.release(have);
+      if (have) this.giveWay(have);
       const { refs, couple, vibe } = this.company(spot, slot);
       if (refs.length === 0) continue;
       const roll = mix(hashInts(state.seed, slot, 4733), Math.floor(spot.x) * 997 + Math.floor(spot.y));
@@ -687,17 +725,22 @@ export class Lawns {
       const group = this.newGroup(key, kind, spot.x, spot.y, spot.quad ? 'the quad' : 'the lawn');
       group.route = route;
       this.form(group, members);
+      // In view, they walk there from the nearest door or the edge (69.2); with no way there, not here.
+      if (!this.walkIn(group)) {
+        this.release(group);
+        continue;
+      }
       this.groups.set(key, group);
       keep.add(key);
       count += members.length;
       if (spot.quad || spot.big) hold(spot, WIDE.has(kind));
     }
-    for (const group of this.groups.values()) if (!keep.has(group.key)) group.leaving = true;
+    for (const group of [...this.groups.values()]) if (!keep.has(group.key)) this.walkOut(group);
     this.drawn = count;
   }
 
   private newGroup(key: string, kind: LawnKind, x: number, y: number, where: string): Group {
-    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0, glow: null };
+    return { key, kind, x, y, where, members: [], props: [], alpha: 0, leaving: false, seen: true, icon: null, iconOn: -1, iconAt: 0, iconUntil: 0, plain: !this.web, settled: false, hidden: false, beats: [], route: null, notes: [], noteAt: 0, crowd: [], night: -1, danceOffUntil: 0, glow: null, walked: false, since: -1, propAlpha: 0 };
   }
 
   /** From a spot on a quad or a big lawn, three to six cells across it along the grid, over open ground only (L6), or null. */
@@ -768,7 +811,7 @@ export class Lawns {
       const key = `party:${night.night}:${site.x},${site.y}`;
       let group = this.groups.get(key);
       if (group && group.leaving) {
-        this.release(group);
+        this.giveWay(group);
         group = undefined;
       }
       if (!group) {
@@ -777,8 +820,12 @@ export class Lawns {
         this.formParty(group);
         this.groups.set(key, group);
       }
-      // People arrive as the night fills, a friend group at a time.
-      if (group.members.length < want) this.joinParty(group, this.partyPeople(night.night, want - group.members.length, group));
+      // People arrive as the night fills, a friend group at a time, on foot from a door or the edge (69.2).
+      if (group.members.length < want) {
+        const before = group.members.length;
+        this.joinParty(group, this.partyPeople(night.night, want - group.members.length, group));
+        this.walkIn(group, before);
+      }
       keep.add(key);
     }
   }
@@ -892,6 +939,104 @@ export class Lawns {
     return this.night ? this.partiesTonight().map((site) => ({ x: site.x, y: site.y })) : [];
   }
 
+  /** A walk along points, from `startMs`: in to a place, or `out` and away. */
+  private tripOf(pts: Array<{ x: number; y: number }>, startMs: number, out: boolean): MemberTrip {
+    return { ...tripOf(pts, startMs, out), restDir: null };
+  }
+
+  /** How far round a mover's loop they start, and the loop's size, for a kind. */
+  private loopOf(kind: LawnKind): number {
+    return kind === 'jog' ? 0.85 : kind === 'goof' ? 0.42 : 0.6;
+  }
+
+  /** Where a member of a group stands when its time starts: a stroller at the start of the line, a mover on its loop. */
+  private restOf(group: Group, member: Member, i: number): { x: number; y: number } {
+    const n = group.members.length;
+    const route = group.route;
+    if (route) {
+      const dx = route.bx - route.ax;
+      const dy = route.by - route.ay;
+      const len = Math.max(0.001, Math.hypot(dx, dy));
+      const side = (i - (n - 1) / 2) * 0.22;
+      const back = i * 0.06;
+      return { x: route.ax - (dy / len) * side - (dx / len) * back, y: route.ay + (dx / len) * side - (dy / len) * back };
+    }
+    if (member.pose === 'move') {
+      const a = mix(Math.floor(group.x), Math.floor(group.y)) * 6 - i * 0.9;
+      const loop = this.loopOf(group.kind);
+      return { x: group.x + Math.cos(a) * loop, y: group.y + Math.sin(a) * loop };
+    }
+    return { x: member.x, y: member.y };
+  }
+
+  /**
+   * Its people walk to the group (DESIGN.md 69.2), from member `from` on: from the nearest door or the edge of the
+   * screen, one after another. Out of sight, or on ground only just come into sight, they are there already. False
+   * when it is in sight and there is no way to it.
+   */
+  private walkIn(group: Group, from = 0): boolean {
+    const afoot = this.afoot;
+    if (!afoot || from >= group.members.length || !afoot.seen(group) || afoot.fresh(group.x, group.y)) return true;
+    const way = afoot.approach(group.x, group.y);
+    if (!way) {
+      if (group.kind !== 'party') return false;
+      // A party has a hall beside it: with no way found they come out of it as before.
+      for (let i = from; i < group.members.length; i++) group.members[i]!.fade = 0;
+      return true;
+    }
+    let last = this.nowMs;
+    for (let i = from; i < group.members.length; i++) {
+      const member = group.members[i]!;
+      const rest = this.restOf(group, member, i);
+      const trip = this.tripOf([...way.slice(0, -1), rest], this.nowMs + (i - from) * WALK_STAGGER_MS, false);
+      trip.restDir = member.direction;
+      member.trip = trip;
+      member.fade = 0;
+      member.atX = way[0]!.x;
+      member.atY = way[0]!.y;
+      last = Math.max(last, trip.startMs + (trip.total / LAWN_WALK) * 1000);
+    }
+    if (!group.walked || group.since >= 0) group.since = Math.max(group.since, last / 1000);
+    group.walked = true;
+    group.settled = false;
+    return true;
+  }
+
+  /**
+   * The group breaks up (DESIGN.md 69.2): in sight, each walks off to the nearest door or the edge of the screen and is
+   * gone there; out of sight, it simply goes, as before.
+   */
+  private walkOut(group: Group): void {
+    if (group.leaving && (group.walked || group.alpha <= 0)) return;
+    group.leaving = true;
+    const afoot = this.afoot;
+    if (!afoot || group.hidden || !afoot.seen(group)) return;
+    group.walked = true;
+    group.settled = false;
+    group.members.forEach((member, i) => {
+      if (member.gone) return;
+      const way = afoot.approach(member.atX, member.atY);
+      if (!way) {
+        member.trip = this.tripOf([{ x: member.atX, y: member.atY }, { x: member.atX, y: member.atY }], this.nowMs, true);
+        return;
+      }
+      way.reverse();
+      member.trip = this.tripOf(way, this.nowMs + i * (WALK_STAGGER_MS / 2), true);
+    });
+  }
+
+  /** A group whose spot a new one wants at once: it walks off under another name, or out of sight is gone at once. */
+  private giveWay(group: Group): void {
+    if (this.groups.get(group.key) === group) this.groups.delete(group.key);
+    if (group.hidden || !this.afoot || !this.afoot.seen(group)) {
+      this.release(group);
+      return;
+    }
+    group.key = `${group.key}~${this.goneCount++}`;
+    this.groups.set(group.key, group);
+    this.walkOut(group);
+  }
+
   /** Draw a group or stop drawing it, as it comes on or goes off the screen. Back on, it is drawn afresh. */
   private shown(group: Group, on: boolean): void {
     group.hidden = !on;
@@ -941,29 +1086,47 @@ export class Lawns {
     const seconds = timeMs / 1000;
     const view = this.scene.cameras.main.worldView;
     for (const group of [...this.groups.values()]) {
-      group.alpha = group.leaving ? group.alpha - dt / FADE_MS : Math.min(1, group.alpha + dt / FADE_MS);
-      if (group.leaving && group.alpha <= 0) {
-        this.release(group);
-        continue;
+      const spot = this.iso.toWorld(group.x, group.y);
+      const off = spot.x < view.x - OFF_PAD || spot.x > view.right + OFF_PAD || spot.y < view.y - OFF_PAD || spot.y > view.bottom + OFF_PAD;
+      if (group.walked) {
+        // Its people come and go on foot (69.2): they are drawn in full, its things show once someone is there.
+        group.alpha = 1;
+        const there = group.members.some((member) => !member.trip && !member.gone);
+        group.propAlpha = group.leaving || !there ? Math.max(0, group.propAlpha - dt / FADE_MS) : Math.min(1, group.propAlpha + dt / FADE_MS);
+        if (group.leaving && (off || group.members.every((member) => member.gone))) {
+          this.release(group);
+          continue;
+        }
+      } else {
+        group.alpha = group.leaving ? group.alpha - dt / FADE_MS : Math.min(1, group.alpha + dt / FADE_MS);
+        group.propAlpha = Math.max(0, group.alpha);
+        if (group.leaving && group.alpha <= 0) {
+          this.release(group);
+          continue;
+        }
       }
       const alpha = Math.max(0, group.alpha);
-      const spot = this.iso.toWorld(group.x, group.y);
-      if (spot.x < view.x - OFF_PAD || spot.x > view.right + OFF_PAD || spot.y < view.y - OFF_PAD || spot.y > view.bottom + OFF_PAD) {
+      const things = group.propAlpha;
+      if (off) {
         if (!group.hidden) this.shown(group, false);
         continue;
       }
       if (group.hidden) this.shown(group, true);
-      if (group.settled && !group.leaving) {
-        this.icons(group, timeMs, alpha);
+      const walking = group.members.some((member) => member.trip !== null);
+      if (group.settled && !group.leaving && !walking) {
+        this.icons(group, timeMs, things);
         continue;
       }
       // Drawn once more at full strength, then left as it is.
-      if (!group.leaving && group.alpha >= 1 && STILL.has(group.kind)) group.settled = true;
+      if (!group.leaving && !walking && group.alpha >= 1 && group.propAlpha >= 1 && STILL.has(group.kind)) group.settled = true;
       const n = group.members.length;
+      // A group's own clock: from when the last of them arrived on foot (69.2), or, found already there, from the seed.
+      const started = group.since < 0 || seconds >= group.since;
+      const clock = group.since >= 0 ? Math.max(0, seconds - group.since) : seconds;
       // Movers go round a loop about the spot: a jog, a chase, a dog walk.
-      const loop = group.kind === 'jog' ? 0.85 : group.kind === 'goof' ? 0.42 : 0.6;
+      const loop = this.loopOf(group.kind);
       const pace = group.kind === 'jog' ? 0.55 : group.kind === 'goof' ? 0.9 : 0.25;
-      const angleOf = (i: number): number => seconds * pace + mix(Math.floor(group.x), Math.floor(group.y)) * 6 - i * 0.9;
+      const angleOf = (i: number): number => clock * pace + mix(Math.floor(group.x), Math.floor(group.y)) * 6 - i * 0.9;
       // A thrown thing: from one to the next, the next pass after a short wait.
       const passS = group.kind === 'frisbee' ? 1.6 : group.kind === 'catch' ? 1.2 : 1.4;
       const t = seconds / passS + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * 10;
@@ -977,8 +1140,41 @@ export class Lawns {
         let x = member.x;
         let y = member.y;
         let moving = false;
-        member.fade = Math.min(1, member.fade + dt / FADE_MS);
-        if (route) {
+        if (member.gone) {
+          member.sprite.setAlpha(0);
+          member.held?.setAlpha(0);
+          member.hat?.setAlpha(0);
+          return;
+        }
+        const trip = member.trip;
+        if (trip) {
+          // On foot to their place or away (69.2): along the way, facing it, fading only in a doorway.
+          const d = ((timeMs - trip.startMs) / 1000) * LAWN_WALK;
+          if (d >= trip.total) {
+            member.trip = null;
+            if (trip.out) {
+              member.gone = true;
+              member.sprite.setAlpha(0);
+              member.held?.setAlpha(0);
+              member.hat?.setAlpha(0);
+              return;
+            }
+            member.fade = 1;
+            if (trip.restDir) member.direction = trip.restDir;
+          } else {
+            const on = pointOn(trip, d);
+            x = on.x;
+            y = on.y;
+            const v0 = this.iso.view(on.ax, on.ay);
+            const v1 = this.iso.view(on.bx, on.by);
+            if (Math.abs(v1.x - v0.x) + Math.abs(v1.y - v0.y) > 1e-6) member.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
+            moving = d > 0;
+            member.fade = doorAlpha(trip, d, DOOR_FADE);
+          }
+        } else member.fade = Math.min(1, member.fade + dt / FADE_MS);
+        if (member.trip) {
+          // Walking: drawn below.
+        } else if (route) {
           // Crossing the quad and back (L6), side by side, a little apart along the way too.
           const dx = route.bx - route.ax;
           const dy = route.by - route.ay;
@@ -987,7 +1183,7 @@ export class Lawns {
           // without a pause.
           const walkS = len / STROLL_SPEED;
           const lap = 2 * (walkS + STROLL_PAUSE_S);
-          const tt = (seconds + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * lap) % lap;
+          const tt = group.since >= 0 ? clock % lap : (seconds + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * lap) % lap;
           const out = tt < walkS + STROLL_PAUSE_S;
           const u = out ? tt : tt - walkS - STROLL_PAUSE_S;
           const f = u < walkS ? (out ? u / walkS : 1 - u / walkS) : out ? 1 : 0;
@@ -999,7 +1195,7 @@ export class Lawns {
           const v0 = this.iso.view(0, 0);
           const v1 = this.iso.view(dx * sign, dy * sign);
           member.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
-          moving = u < walkS;
+          moving = u < walkS && started;
         } else if (member.pose === 'move') {
           const a = angleOf(i);
           x = group.x + Math.cos(a) * loop;
@@ -1010,7 +1206,7 @@ export class Lawns {
           const v0 = this.iso.view(x, y);
           const v1 = this.iso.view(nx, ny);
           member.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
-          moving = true;
+          moving = started;
         } else if ((group.kind === 'frisbee' || group.kind === 'catch' || group.kind === 'kick') && (i === from || i === to) && part < 0.25) {
           moving = true;
         } else if (group.kind === 'dance' || (party && member.dancing)) {
@@ -1020,7 +1216,7 @@ export class Lawns {
         // Dancers sway from side to side and bob (DESIGN.md 64.3), each a beat off the others; at a party, most of them.
         // In a dance-off the two in the middle go faster and bigger (L6).
         const off = i < 2 && timeMs < group.danceOffUntil;
-        const swaying = (group.kind === 'dance' || (party && member.dancing) || off) && !this.reduced;
+        const swaying = (group.kind === 'dance' || (party && member.dancing) || off) && !this.reduced && !member.trip;
         const base = swaying ? swayAt(off ? timeMs * 1.7 : timeMs, i * 0.13 + member.phase) : null;
         const sway = base && off ? { rotation: base.rotation * 2.2, lift: base.lift * 3 } : base;
         if (off) moving = true;
@@ -1030,16 +1226,17 @@ export class Lawns {
         const facing = flipFrom ?? member.direction;
         let key: string;
         let flip = flipFrom !== undefined;
-        if (member.pose === 'sit') {
+        if (member.pose === 'sit' && !member.trip) {
           // Facing the viewer (south-west or south-east) or away (north-west or north-east), mirrored for the east.
           const away = member.direction === 'nw' || member.direction === 'ne';
           key = `person.${member.look}.pose.${away ? 'sit-nw' : 'sit-sw'}`;
           flip = member.direction === 'se' || member.direction === 'ne';
-        } else if (member.pose === 'lie' || member.pose === 'nap') {
+        } else if ((member.pose === 'lie' || member.pose === 'nap') && !member.trip) {
           key = `person.${member.look}.pose.${member.pose}`;
           flip = mix(Math.floor(member.x * 10), 3) < 0.5;
         } else {
-          const stride = moving ? Math.floor((timeMs * (group.kind === 'jog' ? 1.6 : group.kind === 'goof' ? 1.8 : 1) + member.phase * 300) / people.frameMs) % people.frames : 0;
+          const quick = member.trip ? 1 : group.kind === 'jog' ? 1.6 : group.kind === 'goof' ? 1.8 : 1;
+          const stride = moving ? Math.floor((timeMs * quick + member.phase * 300) / people.frameMs) % people.frames : 0;
           key = `person.${member.look}.${facing}.${stride}`;
         }
         if (!this.art.has(key)) {
@@ -1054,6 +1251,8 @@ export class Lawns {
         const at = this.iso.toWorld(x, y);
         const depth = (this.iso.sum(x, y) - 1) * 4 + 2.5;
         member.sprite.setPosition(at.x, at.y - bob).setDepth(depth).setAlpha(alpha * member.fade);
+        member.atX = x;
+        member.atY = y;
         if (member.hat) {
           // On top of the head, leaning as they sway.
           const tall = member.sprite.displayHeight * HAT_AT;
@@ -1063,7 +1262,7 @@ export class Lawns {
         if (member.held) {
           // Held in front of them: at the lap for a book, up by the face for a phone, a guitar across them.
           const side = flip ? 1 : -1;
-          member.held.setPosition(at.x + side * member.sprite.displayWidth * 0.18, at.y - member.sprite.displayHeight * member.heldLift + member.sprite.displayHeight * 0.1).setDepth(depth + 0.02).setAlpha(alpha);
+          member.held.setPosition(at.x + side * member.sprite.displayWidth * 0.18, at.y - member.sprite.displayHeight * member.heldLift + member.sprite.displayHeight * 0.1).setDepth(depth + 0.02).setAlpha(alpha * member.fade);
         }
       });
       for (const prop of group.props) {
@@ -1088,17 +1287,17 @@ export class Lawns {
         }
         const at = this.iso.toWorld(px, py);
         const depth = prop.flat ? (this.iso.sum(group.x, group.y) - 1) * 4 + 2.3 : (this.iso.sum(px, py) - 1) * 4 + 2.45;
-        prop.sprite.setPosition(at.x, at.y - lift).setDepth(depth).setAlpha(alpha);
+        prop.sprite.setPosition(at.x, at.y - lift).setDepth(depth).setAlpha(things);
         if (prop.moves === 'disc') prop.sprite.setRotation(Math.sin(seconds * 9) * 0.15);
       }
       if (party && group.glow) {
         const at = this.iso.toWorld(group.x, group.y);
-        group.glow.setPosition(at.x, at.y).setDepth(this.glowDepth).setAlpha(alpha * this.lamps * PARTY_GLOW_ALPHA).setVisible(this.lamps > 0.05);
+        group.glow.setPosition(at.x, at.y).setDepth(this.glowDepth).setAlpha(things * this.lamps * PARTY_GLOW_ALPHA).setVisible(this.lamps > 0.05);
       }
       if (party) {
-        this.notes(group, timeMs, alpha);
-        this.partyIcons(group, timeMs, alpha);
-      } else this.icons(group, timeMs, alpha);
+        this.notes(group, timeMs, things);
+        this.partyIcons(group, timeMs, things);
+      } else this.icons(group, timeMs, things);
     }
   }
 

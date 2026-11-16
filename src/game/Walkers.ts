@@ -5,6 +5,7 @@ import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
 import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
+import { searchOnFoot, searchSpace } from './afoot';
 import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
@@ -223,6 +224,16 @@ const MAX_COMMUTE_CELLS = 90;
 const FADE_MS = 260;
 const SPAWN_EVERY_MS = 120;
 const OFFSCREEN_LIMIT_MS = 3500;
+/**
+ * Nobody appears or disappears in view (DESIGN.md 69.2, the owner's "they gotta come out of a house/building"): how far
+ * beyond the view's edge, in world pixels, a figure is out of sight, and how many cells a way on or off is looked for.
+ */
+const OUT_OF_SIGHT_PX = 44;
+const AFOOT_CELLS = 4000;
+/** Ground uncovered by a pan or the first look is fresh until the view has been still this long, in milliseconds. */
+const FRESH_MS = 1200;
+/** The families of hand-placed buildings with a door to come out of; flat ones (courts, lawns) have none. */
+const DOOR_FAMILIES: ReadonlySet<string> = new Set(['library', 'dining', 'store', 'recreation', 'tutoring', 'medical', 'safety', 'landmark', 'reward', 'era', 'lab', 'chapter']);
 /** Commuters out at once for this many who walk in, before the time of day, and the most there can be. */
 const WALKERS_IN_PER_COMMUTER = 14;
 const MAX_COMMUTERS = 26;
@@ -330,6 +341,8 @@ interface Walker {
   cheerUntil: number;
   /** In a crowd moment (DESIGN.md 64.4): how long to stand once at their place by it, the way on after, what they face. */
   watchMs: number;
+  /** On their way off the screen or in at a door (69.2): when they get there they are gone. */
+  exiting: boolean;
   resume: Spot[] | null;
   faceAt: { x: number; y: number } | null;
   /** One of the moment's own people until then: not a watcher. */
@@ -492,6 +505,16 @@ export class Walkers {
   /** Ground anyone may stand on or cross on foot off a path (DESIGN.md 69.5): a path, a quad, open grass, an empty
    * lot. Never a building's footprint, a placed thing, a tree, a road or the town. */
   private isOpen: boolean[] = [];
+  /** Where anyone may walk on or off the screen (69.2): open ground, streets and crossings. */
+  private isAfoot: boolean[] = [];
+  /** Every door anyone could come out of, by its path or street cell, to the point at the building's edge (69.2). */
+  private doorAt = new Map<number, Spot>();
+  /** The view at the last top-up: ground outside it has just come into sight, and may be found already busy (69.2). */
+  private knownView: { x: number; y: number; right: number; bottom: number } | null = null;
+  private space = searchSpace(0);
+  /** The view at the last top-up and when it last moved, for what counts as fresh. */
+  private viewAt = { x: NaN, y: NaN, width: NaN };
+  private movedAt = -Infinity;
   /** Where the junctions and the marked crossings are (src/app/traffic.ts). */
   private plan: TrafficPlan | null = null;
   private pathCells = 0;
@@ -677,7 +700,14 @@ export class Walkers {
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
     this.plan = planTraffic(this.width, this.height, cells.map((cell) => cell.kind), TOWN_X);
     this.isWalk = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'street');
-    this.isOpen = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'quad' || cell.kind === 'empty' || (cell.kind === 'lot' && cell.buildingId === null));
+    // A court, a field or a pool is flat ground people walk on to; nothing else hand-placed is.
+    const flatGround = (cell: (typeof cells)[number]): boolean => {
+      const placed = cell.kind === 'placed' && cell.placedId !== null ? state.map.placed[cell.placedId] : null;
+      return !!placed && PLACED[placed.type].flat && PLACED[placed.type].family === 'recreation';
+    };
+    this.isOpen = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'quad' || cell.kind === 'empty' || (cell.kind === 'lot' && cell.buildingId === null) || flatGround(cell));
+    this.isAfoot = cells.map((cell, i) => this.isOpen[i]! || cell.kind === 'street' || cell.kind === 'crossing');
+    if (this.space.seen.length !== width * height) this.space = searchSpace(width * height);
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
     const doorOf = (x: number, y: number): number => {
@@ -801,15 +831,39 @@ export class Walkers {
       });
     }
 
-    // Anyone whose way ahead was dug up leaves quietly.
-    for (const walker of this.walkers) {
-      for (let k = walker.leg; k < walker.route.length - 1; k++) {
-        const spot = walker.route[k]!;
-        if (!this.isWalk[Math.floor(spot.y) * width + Math.floor(spot.x)]) {
-          walker.fading = 'out';
-          break;
+    // Every door (69.2): the buildings on lots, the houses, and every hand-placed building that is not flat.
+    this.doorAt.clear();
+    const edge = (cx: number, cy: number, door: number): Spot => {
+      const dx = (door % width) + 0.5;
+      const dy = Math.floor(door / width) + 0.5;
+      return { x: dx + (cx + 0.5 - dx) * 0.52, y: dy + (cy + 0.5 - dy) * 0.52 };
+    };
+    for (const stop of [...this.stops, ...this.houses]) {
+      if (stop.kind === 'building' && !this.doorAt.has(stop.door)) this.doorAt.set(stop.door, edge(stop.cell.x, stop.cell.y, stop.door));
+      if (stop.kind === 'house' && !this.doorAt.has(stop.door)) this.doorAt.set(stop.door, this.threshold(stop));
+    }
+    for (const placed of state.map.placed) {
+      if (!placed) continue;
+      const spec = PLACED[placed.type];
+      if (spec.flat || !DOOR_FAMILIES.has(spec.family)) continue;
+      for (let cy = placed.y; cy < placed.y + placed.h; cy++) {
+        for (let cx = placed.x; cx < placed.x + placed.w; cx++) {
+          const door = doorOf(cx, cy);
+          if (door >= 0 && !this.doorAt.has(door)) this.doorAt.set(door, edge(cx, cy, door));
         }
       }
+    }
+
+    // Anyone whose way ahead was dug up, or who stands where something was just built, walks off (69.2, 69.5).
+    for (const walker of this.walkers) {
+      if (walker.fading === 'out') continue;
+      const here = Math.floor(walker.y) * width + Math.floor(walker.x);
+      let cut = !this.isAfoot[here];
+      for (let k = walker.leg; k < walker.route.length - 1 && !cut; k++) {
+        const spot = walker.route[k]!;
+        if (!this.isWalk[Math.floor(spot.y) * width + Math.floor(spot.x)]) cut = true;
+      }
+      if (cut) this.leave(walker, true);
     }
   }
 
@@ -1088,9 +1142,26 @@ export class Walkers {
     // Nobody is in two places: a student by who they are, anyone else by their own card.
     const key = student ? studentKey(student) : extra.person ? `p:${personKey(extra.person)}` : null;
     if (key !== null && (this.out.has(key) || this.elsewhere.has(key))) return false;
-    const route = extra.route ?? this.routeBetween(from, to);
+    let route = extra.route ?? this.routeBetween(from, to);
     if (!route || route.length < 2) return false;
-    const looks = Math.min(people.looks, people.crowd ?? people.looks);
+    // Someone already part of the way along, so a view fills with people mid-stride.
+    let leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
+    // Nobody appears in view (DESIGN.md 69.2): on the screen, they come out of a door, or walk in from its edge along
+    // a way from the nearest door or the edge to where they would have been. Ground just come into sight, at the first
+    // look or after a pan, may already have people on it.
+    const first = extra.at ?? route[leg - 1]!;
+    let already = false;
+    if (this.seen(first)) {
+      already = this.fresh(first.x, first.y);
+      const outOfDoor = leg === 1 && !extra.at && this.hasDoor(from);
+      if (!already && !outOfDoor) {
+        if (extra.at) return false;
+        const way = this.approach(first.x, first.y);
+        if (!way) return false;
+        route = [...way, ...route.slice(leg)];
+        leg = 1;
+      }
+    }
     if (key !== null) this.out.add(key);
 
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
@@ -1103,8 +1174,6 @@ export class Walkers {
       // It stands on its own base, so it can sway about it.
       prop.setOrigin(0.5, 1).setAlpha(0);
     }
-    // Someone already part of the way along, so a view fills with people mid-stride.
-    const leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
     const begin = extra.at ?? route[leg - 1]!;
     this.walkers.push({
       sprite,
@@ -1152,8 +1221,9 @@ export class Walkers {
       pacingStep: false,
       angerAt: this.scene.time.now + Math.random() * ANGER_MARK_MS.spread,
       stride: Math.random() * 1000,
-      alpha: 0,
-      fading: 'in',
+      alpha: already ? 1 : 0,
+      fading: already ? null : 'in',
+      exiting: false,
       lingerMs: 0,
       goal: to,
       offscreenMs: 0,
@@ -1853,6 +1923,119 @@ export class Walkers {
     if (step.walking) walker.stride += dt;
   }
 
+  /** True for a stop with a door to go in at or come out of: a building, a house, a place that is not flat (69.2). */
+  private hasDoor(stop: Stop): boolean {
+    if (stop.kind === 'building' || stop.kind === 'house') return true;
+    return stop.kind === 'place' && !stop.flat && stop.family !== undefined && DOOR_FAMILIES.has(stop.family);
+  }
+
+  /** True when a point of the map is on the screen, or near enough to it that a figure there would show. */
+  seen(at: { x: number; y: number }): boolean {
+    return this.inView(this.scene.cameras.main.worldView, at.x, at.y, OUT_OF_SIGHT_PX);
+  }
+
+  /**
+   * True when a point has only just come into sight: at the first look, or uncovered by a pan or a zoom since the last
+   * top-up. People may be found already there; anywhere else in view they must walk in (DESIGN.md 69.2).
+   */
+  fresh(x: number, y: number): boolean {
+    const known = this.knownView;
+    if (!known) return true;
+    const at = this.iso.toWorld(x, y);
+    const m = OUT_OF_SIGHT_PX;
+    return at.x < known.x - m || at.x > known.right + m || at.y < known.y - m || at.y > known.bottom + m;
+  }
+
+  /** Remember the view as it is now: from here on, only ground uncovered after this is fresh. */
+  knowView(): void {
+    const view = this.scene.cameras.main.worldView;
+    this.knownView = { x: view.x, y: view.y, right: view.right, bottom: view.bottom };
+  }
+
+  /**
+   * A way on to the screen to (x, y) (DESIGN.md 69.2): from the nearest door anyone could come out of, or from just past
+   * the edge of the view, whichever is nearer on foot, over paths, open ground, streets and crossings, never through a
+   * building. The points run from where they appear to (x, y), a cell at a time. Null when there is none in reach.
+   * Read backwards, it is a way off the screen from (x, y).
+   */
+  approach(x: number, y: number): Spot[] | null {
+    const width = this.width;
+    const sx = Math.floor(x);
+    const sy = Math.floor(y);
+    if (sx < 0 || sy < 0 || sx >= width || sy >= this.height) return null;
+    const view = this.scene.cameras.main.worldView;
+    const start = sy * width + sx;
+    const end = (c: number): boolean => c !== start && (this.doorAt.has(c) || !this.inView(view, (c % width) + 0.5, Math.floor(c / width) + 0.5, OUT_OF_SIGHT_PX));
+    const cells = searchOnFoot(width, this.height, this.isAfoot, start, end, AFOOT_CELLS, this.space);
+    if (!cells || cells.length < 2) return null;
+    const last = cells[cells.length - 1]!;
+    const out: Spot[] = [];
+    if (this.doorAt.has(last)) out.push({ ...this.doorAt.get(last)! });
+    for (let k = cells.length - 1; k >= 1; k--) out.push({ x: (cells[k]! % width) + 0.5, y: Math.floor(cells[k]! / width) + 0.5 });
+    out.push({ x, y });
+    return out;
+  }
+
+
+  /**
+   * A way on foot from a point to beside a box of cells (DESIGN.md 69.5): over paths, open ground, streets and
+   * crossings, never through a building, ending on the open cell nearest the box, a step towards it. For the grounds
+   * workers and Campus Safety, who walked straight lines before. Null when there is none in reach.
+   */
+  wayBetween(ax: number, ay: number, box: { x: number; y: number; w: number; h: number }): Spot[] | null {
+    const width = this.width;
+    const sx = Math.floor(ax);
+    const sy = Math.floor(ay);
+    if (sx < 0 || sy < 0 || sx >= width || sy >= this.height) return null;
+    const near = (c: number): boolean => {
+      if (!this.isAfoot[c]) return false;
+      const x = c % width;
+      const y = (c - x) / width;
+      const dx = Math.max(box.x - x, 0, x - (box.x + box.w - 1));
+      const dy = Math.max(box.y - y, 0, y - (box.y + box.h - 1));
+      return dx + dy <= 1;
+    };
+    const start = sy * width + sx;
+    const cells = searchOnFoot(width, this.height, this.isAfoot, start, near, AFOOT_CELLS * 2, this.space);
+    if (!cells) return null;
+    const out: Spot[] = [{ x: ax, y: ay }];
+    for (const c of cells) if (c !== start || this.isAfoot[c]) out.push({ x: (c % width) + 0.5, y: Math.floor(c / width) + 0.5 });
+    const last = out[out.length - 1]!;
+    const mx = box.x + box.w / 2;
+    const my = box.y + box.h / 2;
+    const reach = Math.hypot(mx - last.x, my - last.y);
+    // A step towards it, staying on the open cell.
+    if (reach > 0.01) out[out.length - 1] = { x: last.x + ((mx - last.x) / reach) * 0.3, y: last.y + ((my - last.y) / reach) * 0.3 };
+    return out.length >= 2 ? out : null;
+  }
+
+
+  /**
+   * Off they go (DESIGN.md 69.2): out of sight already, they are simply gone; in view, they walk to the nearest door and
+   * in, or off the edge of the screen, and are gone when they get there. `again` sends them off anew, as when the map
+   * changes under them.
+   */
+  private leave(walker: Walker, again = false): void {
+    if (walker.exiting && !again) return;
+    if (!this.seen(walker)) {
+      walker.fading = 'out';
+      return;
+    }
+    const way = this.approach(walker.x, walker.y);
+    if (!way) {
+      walker.fading = 'out';
+      return;
+    }
+    way.reverse();
+    walker.route = way;
+    walker.leg = 1;
+    walker.exiting = true;
+    walker.lingerMs = 0;
+    walker.resume = null;
+    walker.paceAnchor = null;
+    walker.pacingStep = false;
+  }
+
   /** True when every point of the straight line from a to b, a tenth of a cell apart, is open ground (69.5). */
   private clearLine(ax: number, ay: number, bx: number, by: number): boolean {
     const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 10));
@@ -2260,7 +2443,7 @@ export class Walkers {
             walker.from = walker.goal;
             walker.goal = next;
           } else {
-            walker.fading = 'out';
+            this.leave(walker);
           }
         }
       } else if (walker.fading !== 'out' || walker.leg < walker.route.length) {
@@ -2313,6 +2496,9 @@ export class Walkers {
             this.showIcon(walker, 'splash');
             this.showIcon(walker, 'sweat', 1400);
           }
+        } else if (walker.leg >= walker.route.length && walker.fading !== 'out' && walker.exiting) {
+          // At the door or past the edge (69.2): in, or out of sight.
+          walker.fading = 'out';
         } else if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           // A rider parks (a bike or an e-scooter at a rack, or against a wall) and goes on in (DESIGN.md 64.6).
@@ -2324,7 +2510,9 @@ export class Walkers {
             const longer = scene === 'date' ? DATE_LINGER : scene === 'party' ? PARTY_NIGHT_LINGER : 1;
             walker.lingerMs = (walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000) * longer;
           }
-          else walker.fading = 'out';
+          // In at a door; anywhere else (a court, a gate, a lawn) they walk on to the nearest door or off the screen.
+          else if (walker.goal && this.hasDoor(walker.goal) && !walker.wheel) walker.fading = 'out';
+          else this.leave(walker);
         }
       }
 
@@ -2377,6 +2565,15 @@ export class Walkers {
       }
       // And among them, the people who work here or are visiting.
       this.topUpOthers(this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0)), seen, neighboursSeen);
+      // Ground just come into sight stays fresh while the view moves and fills (69.2); once it has been still a moment,
+      // or is full, everyone new walks in.
+      const now = this.scene.time.now;
+      const was = this.viewAt;
+      if (Math.abs(view.x - was.x) > 2 || Math.abs(view.y - was.y) > 2 || Math.abs(view.width - was.width) > 2 || !(was.width > 0)) {
+        this.movedAt = now;
+        this.viewAt = { x: view.x, y: view.y, width: view.width };
+      }
+      if (now - this.movedAt > FRESH_MS || seen >= wanted * 0.85) this.knowView();
     }
     this.socialClock += dt;
     if (this.socialClock >= SOCIAL_EVERY_MS) {

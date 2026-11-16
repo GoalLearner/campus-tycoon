@@ -17,7 +17,7 @@ const WORK_MS = 3200;
 /** At most this many are shown walking from one yard, however many it employs. */
 const SHOWN_PER_YARD = 2;
 
-interface Trip {
+interface Job {
   fromX: number;
   fromY: number;
   toX: number;
@@ -30,12 +30,30 @@ interface Trip {
   yard: number;
   n: number;
   thing: number;
+  /** The box of cells of the thing, so the way ends beside it. */
+  box: { x: number; y: number; w: number; h: number };
+}
+
+interface Trip extends Job {
+  /** The way there on foot, along paths and open ground (DESIGN.md 69.5), and the length to each point. */
+  pts: Array<{ x: number; y: number }>;
+  at: number[];
+  total: number;
+  /** When its round began: out, work, back, a breather in the yard. */
+  t0: number;
+  /** The next job, or null to stop: taken up only in the yard, so nobody jumps from one way to another (69.2). */
+  next: Job | null | undefined;
   body: Phaser.GameObjects.Image;
   tool: Phaser.GameObjects.Image;
 }
 
+/** A way between two places on foot, from the walkers who know the paths, or null for none. */
+export type Router = (ax: number, ay: number, box: { x: number; y: number; w: number; h: number }) => Array<{ x: number; y: number }> | null;
+
 export class GroundsWorkers {
   private trips: Trip[] = [];
+  private router: Router | null = null;
+  private nowMs = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -43,9 +61,14 @@ export class GroundsWorkers {
     private iso: Iso,
   ) {}
 
+  /** The walkers' paths, so workers walk round buildings and not through them (DESIGN.md 69.5). */
+  setRouter(router: Router): void {
+    this.router = router;
+  }
+
   /** Decide again where each yard's workers are needed. Called whenever the game state changes. */
   setMap(state: GameState): void {
-    const wanted: Array<Omit<Trip, 'body' | 'tool'>> = [];
+    const wanted: Job[] = [];
     const g = state.grounds;
     for (const yard of state.map.placed) {
       if (!yard || yard.type !== 'yard') continue;
@@ -73,33 +96,77 @@ export class GroundsWorkers {
           yard: yard.id,
           n,
           thing: job.thing.id,
+          box: { x: job.thing.x, y: job.thing.y, w: job.thing.w, h: job.thing.h },
         });
       });
     }
-    // Keep the sprites that are still needed, so nobody blinks when the minute turns.
-    while (this.trips.length > wanted.length) {
-      const gone = this.trips.pop()!;
-      gone.body.destroy();
-      gone.tool.destroy();
-    }
-    wanted.forEach((trip, i) => {
+    // Keep the sprites that are still needed, so nobody blinks when the minute turns. A worker out on a job finishes
+    // it and takes up the next back in the yard; one no longer needed stays in when next there (69.2).
+    const first = this.trips.length === 0;
+    for (let i = 0; i < Math.max(wanted.length, this.trips.length); i++) {
+      const job = wanted[i];
       const old = this.trips[i];
-      if (old) this.trips[i] = { ...trip, body: old.body, tool: old.tool };
-      else this.trips.push({ ...trip, body: this.scene.add.image(0, 0, '__DEFAULT'), tool: this.scene.add.image(0, 0, '__DEFAULT') });
-    });
+      if (old && job && old.yard === job.yard && old.thing === job.thing) {
+        old.next = undefined;
+        continue;
+      }
+      if (old) {
+        old.next = job ?? null;
+        continue;
+      }
+      if (!job) continue;
+      const trip: Trip = { ...job, pts: [], at: [], total: 0, t0: 0, next: undefined, body: this.scene.add.image(0, 0, '__DEFAULT'), tool: this.scene.add.image(0, 0, '__DEFAULT') };
+      this.route(trip);
+      // At the first look they are about their rounds already; a new one starts in the yard.
+      trip.t0 = first ? -job.offsetMs : this.nowMs - this.cycle(trip).inAt;
+      this.trips.push(trip);
+    }
+  }
+
+  /** The way there on foot: along paths and open ground, or straight when the walkers find none. */
+  private route(trip: Trip): void {
+    const pts = this.router?.(trip.fromX, trip.fromY, trip.box) ?? [
+      { x: trip.fromX, y: trip.fromY },
+      { x: trip.toX, y: trip.toY },
+    ];
+    trip.pts = pts;
+    trip.at = [0];
+    for (let k = 1; k < pts.length; k++) trip.at.push(trip.at[k - 1]! + Math.hypot(pts[k]!.x - pts[k - 1]!.x, pts[k]!.y - pts[k - 1]!.y));
+    trip.total = trip.at[trip.at.length - 1]!;
+  }
+
+  /** A round's times: walking out, working, walking back, and the breather in the yard from `inAt` to `length`. */
+  private cycle(trip: Trip): { walkMs: number; inAt: number; length: number } {
+    const walkMs = (Math.max(0.5, trip.total) / SPEED) * 1000;
+    return { walkMs, inAt: 2 * walkMs + WORK_MS, length: 2 * walkMs + 2 * WORK_MS };
   }
 
   update(timeMs: number): void {
+    this.nowMs = timeMs;
     const people = this.art.people;
-    for (const trip of this.trips) {
+    for (let i = this.trips.length - 1; i >= 0; i--) {
+      const trip = this.trips[i]!;
+      let { walkMs, inAt, length } = this.cycle(trip);
+      let at = (((timeMs - trip.t0) % length) + length) % length;
+      // In the yard: the next job, or no more rounds.
+      if (at >= inAt && trip.next !== undefined) {
+        const next = trip.next;
+        if (next === null) {
+          trip.body.destroy();
+          trip.tool.destroy();
+          this.trips.splice(i, 1);
+          continue;
+        }
+        Object.assign(trip, next, { next: undefined });
+        this.route(trip);
+        ({ walkMs, inAt, length } = this.cycle(trip));
+        trip.t0 = timeMs - inAt;
+        at = inAt;
+      }
       const visible = !!people && people.roles?.worker !== undefined;
       trip.body.setVisible(visible);
       trip.tool.setVisible(visible);
       if (!people || !visible) continue;
-      const dx = trip.toX - trip.fromX;
-      const dy = trip.toY - trip.fromY;
-      const walkMs = (Math.max(0.5, Math.abs(dx) + Math.abs(dy)) / SPEED) * 1000;
-      const at = (timeMs + trip.offsetMs) % (2 * walkMs + 2 * WORK_MS);
       // Out, work, back, and a breather at the yard.
       let along: number;
       let outbound = true;
@@ -116,10 +183,17 @@ export class GroundsWorkers {
         walking = false;
         outbound = false;
       }
-      const x = trip.fromX + dx * along;
-      const y = trip.fromY + dy * along;
+      const d = along * trip.total;
+      let k = 1;
+      while (k < trip.pts.length - 1 && trip.at[k]! < d) k += 1;
+      const a = trip.pts[k - 1]!;
+      const b = trip.pts[k]!;
+      const span = Math.max(1e-6, trip.at[k]! - trip.at[k - 1]!);
+      const f = Math.min(1, Math.max(0, (d - trip.at[k - 1]!) / span));
+      const x = a.x + (b.x - a.x) * f;
+      const y = a.y + (b.y - a.y) * f;
       // The way they walk on the screen, as the view is turned.
-      const way = this.iso.dir(outbound ? dx : -dx, outbound ? dy : -dy);
+      const way = this.iso.dir(outbound ? b.x - a.x : a.x - b.x, outbound ? b.y - a.y : a.y - b.y);
       const direction = facingOf(way.x, way.y);
       const facing = people.flip?.[direction] ?? direction;
       const frame = walking ? Math.floor(timeMs / people.frameMs) % people.frames : 0;
@@ -127,13 +201,15 @@ export class GroundsWorkers {
       trip.body.setFlipX(people.flip?.[direction] !== undefined);
       const spot = this.iso.toWorld(x, y);
       const depth = (this.iso.sum(x, y) - 1) * 4 + 2.6;
-      trip.body.setPosition(spot.x, spot.y).setDepth(depth);
+      // Out of the yard's door and back in it: they fade only in the doorway.
+      const door = Math.min(1, d / 0.35);
+      trip.body.setPosition(spot.x, spot.y).setDepth(depth).setAlpha(door);
       // The broom or cart goes beside them: no figure in the pack can hold anything.
       this.art.apply(trip.tool, trip.cart ? 'grounds.cart' : 'grounds.broom');
       const off = this.iso.offset(-0.75, -0.3);
-      trip.tool.setPosition(spot.x + off.x, spot.y + off.y).setDepth(depth - 0.1);
+      trip.tool.setPosition(spot.x + off.x, spot.y + off.y).setDepth(depth - 0.1).setAlpha(door);
       // At rest in the yard between trips, they are indoors.
-      const indoors = at >= 2 * walkMs + WORK_MS;
+      const indoors = at >= inAt;
       trip.body.setVisible(!indoors);
       trip.tool.setVisible(!indoors);
     }
