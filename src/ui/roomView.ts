@@ -232,7 +232,7 @@ export function mountRoomView(): { node: HTMLElement; render: (state: GameState 
     const key = studentKey(ref);
     // Worked out again when the student or the hour changes: what they are doing follows the clock.
     if (!open || open.key !== key || Math.floor(open.hour * 4) !== Math.floor(hour * 4)) {
-      const room = roomFor(state, ref, hour, { crowd: looks, look: (one) => studentFigure(state, one, looks, people?.roles?.athlete) });
+      const room = roomFor(state, ref, hour, { crowd: looks, look: (one) => (people ? studentFigure(state, one, people) : 0) });
       if (!room) {
         session.closeRoom();
         return;

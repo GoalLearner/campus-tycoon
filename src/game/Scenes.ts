@@ -341,7 +341,7 @@ export class Scenes {
     actor.student = student;
     if (!student) return;
     this.staying.add(studentKey(student));
-    actor.look = studentFigure(state, student, Math.max(1, Math.min(people.looks, people.crowd ?? people.looks)), people.roles?.athlete);
+    actor.look = studentFigure(state, student, people);
     actor.shownKey = '';
   }
 

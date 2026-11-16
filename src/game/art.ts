@@ -38,6 +38,8 @@ export interface PeopleSpec {
   crowd?: number;
   /** Looks with a job, by name: { medic: 21, officer: 22 }. */
   roles?: Record<string, number>;
+  /** The pack's name, copied from the manifest when it loads, so figures can be picked from its look table (DESIGN.md 69.3). */
+  pack?: string;
 }
 
 export interface ArtManifest {
@@ -81,10 +83,14 @@ export class Art {
     this.halfHeight = tile.halfHeight;
   }
 
+  private peopleSpec: PeopleSpec | null | undefined;
+
   /** The pack's walking people, or null when it has none. */
   get people(): PeopleSpec | null {
+    if (this.peopleSpec !== undefined) return this.peopleSpec;
     const people = this.manifest?.people;
-    return people && people.looks > 0 && people.frames > 0 ? people : null;
+    this.peopleSpec = people && people.looks > 0 && people.frames > 0 ? { ...people, pack: this.manifest!.pack } : null;
+    return this.peopleSpec;
   }
 
   /** True when the manifest supplies this sprite. */

@@ -15,6 +15,8 @@ import {
 } from '../config/people';
 import { PLACED } from '../config/placed';
 import { FIRST_NAMES, MAJORS, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
+import { MEN_NAMES, WOMEN_NAMES } from '../config/names';
+import type { LookGender } from '../config/looks';
 import { TOWN_X } from '../config/town';
 import { dollars } from '../format';
 import { hashInts } from '../rng';
@@ -95,9 +97,13 @@ export function personKey(ref: PersonRef): string {
   return `${ref.role}:${ref.n}:${ref.at ?? ''}`;
 }
 
-/** A person's name, from the pools the student cards use. No card can carry the full name of a real person. */
-export function personName(seed: number, ref: PersonRef): string {
-  const first = pickFrom(FIRST_NAMES, roll(seed, ref, SALT.first));
+/**
+ * A person's name, from the pools the student cards use. No card can carry the full name of a real person. The first
+ * name fits the figure they are drawn in (DESIGN.md 69.3): a woman's for a feminine figure, a man's for a masculine
+ * one, and one anyone can carry for a figure that could be either. Their surname never changes.
+ */
+export function personName(seed: number, ref: PersonRef, drawn: LookGender = 'x'): string {
+  const first = pickFrom(drawn === 'f' ? WOMEN_NAMES : drawn === 'm' ? MEN_NAMES : FIRST_NAMES, roll(seed, ref, SALT.first));
   return `${first} ${pickFrom(SURNAME_STARTS, roll(seed, ref, SALT.start))}${pickFrom(SURNAME_ENDS, roll(seed, ref, SALT.end))}`;
 }
 
@@ -165,11 +171,12 @@ export function peopleCounts(state: GameState): { faculty: number; staff: number
  * Everything a person's card shows, or null when there is no such person now:
  * a professor beyond the faculty the campus employs, a dining worker whose
  * kitchen has been cleared, a worker whose yard has nobody on its books.
+ * `drawn` is the gender of the figure the map draws them in, which their first name follows.
  */
-export function personCard(state: GameState, ref: PersonRef): PersonCard | null {
+export function personCard(state: GameState, ref: PersonRef, drawn: LookGender = 'x'): PersonCard | null {
   const seed = state.seed;
   const students = enrollment(state);
-  const name = personName(seed, ref);
+  const name = personName(seed, ref, drawn);
   const moment = Math.floor(state.clock.tick / DOING_EVERY_TICKS);
   const admin = first(state, 'admin');
   const adminCell = admin ? cellOf(state, admin) : null;

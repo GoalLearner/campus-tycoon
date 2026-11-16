@@ -56,6 +56,8 @@ const BIG_STROLL_SHARE = 0.1;
 const WIDE: ReadonlySet<LawnKind> = new Set<LawnKind>(['frisbee', 'catch', 'kick', 'jog', 'goof', 'dog']);
 /** People crossing a quad walk this fast, in cells a second, to the far side and back, three to six cells. */
 const STROLL_SPEED = 0.5;
+/** At each end of a stroll they stop a while before turning back, in seconds (DESIGN.md 69.1). */
+const STROLL_PAUSE_S = 2.4;
 /**
  * A party night (L6): a crowd on the grass within PARTY_REACH cells of a hall or a chapter house, with room round it.
  * At most PARTIES_MOST on the map in a night, PARTY_APART cells apart; one is drawn while it is near the screen.
@@ -499,7 +501,7 @@ export class Lawns {
     group.members.push({
       sprite,
       student: ref,
-      look: studentFigure(state, ref, crowd, people.roles?.athlete),
+      look: studentFigure(state, ref, people),
       x,
       y,
       direction,
@@ -981,18 +983,23 @@ export class Lawns {
           const dx = route.bx - route.ax;
           const dy = route.by - route.ay;
           const len = Math.max(0.001, Math.hypot(dx, dy));
-          const t = (seconds * STROLL_SPEED) / len + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * 2;
-          const leg = t % 2;
-          const f = leg < 1 ? leg : 2 - leg;
+          // A straight line, then a stop at the end, then one turn and back (DESIGN.md 69.1): never back and forth
+          // without a pause.
+          const walkS = len / STROLL_SPEED;
+          const lap = 2 * (walkS + STROLL_PAUSE_S);
+          const tt = (seconds + mix(Math.floor(group.x * 7), Math.floor(group.y * 7)) * lap) % lap;
+          const out = tt < walkS + STROLL_PAUSE_S;
+          const u = out ? tt : tt - walkS - STROLL_PAUSE_S;
+          const f = u < walkS ? (out ? u / walkS : 1 - u / walkS) : out ? 1 : 0;
           const side = (i - (n - 1) / 2) * 0.22;
           const back = i * 0.06;
           x = route.ax + dx * f - (dy / len) * side - (dx / len) * back;
           y = route.ay + dy * f + (dx / len) * side - (dy / len) * back;
-          const sign = leg < 1 ? 1 : -1;
+          const sign = out ? 1 : -1;
           const v0 = this.iso.view(0, 0);
           const v1 = this.iso.view(dx * sign, dy * sign);
           member.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
-          moving = true;
+          moving = u < walkS;
         } else if (member.pose === 'move') {
           const a = angleOf(i);
           x = group.x + Math.cos(a) * loop;

@@ -11,7 +11,7 @@ export interface Atlas {
   sheet: HTMLImageElement;
   frames: Record<string, Frame>;
   /** The pack's walking people, when it has them. */
-  people: { looks: number; crowd?: number; flip?: Record<string, string>; roles?: Record<string, number> } | null;
+  people: { looks: number; crowd?: number; flip?: Record<string, string>; roles?: Record<string, number>; pack?: string } | null;
   /** Where each sprite meets the ground, in its own pixels: the top corner of its cell, or the feet of a person. */
   anchors: Record<string, [number, number]>;
 }
@@ -23,6 +23,7 @@ export function loadAtlas(): Promise<Atlas | null> {
   once ??= (async () => {
     try {
       const manifest = (await (await fetch('./assets/manifest.json')).json()) as {
+        pack?: string;
         atlas: { image: string; data: string };
         people?: Atlas['people'];
         sprites?: Record<string, { anchor?: [number, number] }>;
@@ -33,7 +34,7 @@ export function loadAtlas(): Promise<Atlas | null> {
       await sheet.decode();
       const anchors: Record<string, [number, number]> = {};
       for (const [key, sprite] of Object.entries(manifest.sprites ?? {})) if (sprite.anchor) anchors[key] = sprite.anchor;
-      return { sheet, frames, people: manifest.people ?? null, anchors };
+      return { sheet, frames, people: manifest.people ? { ...manifest.people, ...(manifest.pack ? { pack: manifest.pack } : {}) } : null, anchors };
     } catch {
       return null;
     }

@@ -39,6 +39,8 @@ export { occupiedBeds } from './systems/money';
 export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
 export { dormName, hallName, peopleCounts, personCard, personKey, personName, type PersonCard, type PersonRef } from './systems/people';
 export * from './config/people';
+export * from './config/looks';
+export { everydayLook, lookGender, lookOdds, lookTags, type LookPack } from './systems/looks';
 export { besideRecreation, diningAt, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, mealLoads, mealUse, tutoredAt, tutoringLift, varietyAt, type FoodTrade, type MealUse } from './systems/food';
 export {
   budget,
@@ -146,6 +148,7 @@ export {
   studentKey,
   studentLook,
   studentFigure,
+  shownGender,
   isVarsity,
   teachingQuality,
   type Relationship,

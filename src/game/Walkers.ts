@@ -5,7 +5,7 @@ import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
 import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
-import { BIG_KEY, bigMomentOf, cheeringAt, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
+import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
 import { itemAt, regularDay } from '../app/regularDay';
@@ -31,6 +31,7 @@ import {
   studentKey,
   studentCard,
   studentFigure,
+  everydayLook,
   TOWN_X,
   townLiving,
   type GameState,
@@ -190,7 +191,12 @@ const HEART_EVERY_MS = 6000;
 const KISS_SHARE = 0.18;
 const FELT_KEPT = 4000;
 const TICKS_A_DAY = 24 * 60;
-const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1, turned: false };
+const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1 };
+/** How far a pacing student walks up and back, in cells: a few steps, along the way they came (DESIGN.md 69.1). */
+const PACING_REACH = 0.6;
+/** How far a rider steps aside round someone in the way, in cells: with their own place on the path (at most 0.22 off
+ * its middle) it keeps them inside the path's cell (DESIGN.md 69.1, 69.5). */
+const RIDER_WEAVE = 0.24;
 /** A scuffle's dust cloud (DESIGN.md 64.4): a moment after the argument, for this long. A fall into a fountain lasts this long. */
 export const DUST_FROM_MS = 900;
 export const DUST_MS = 2800;
@@ -342,6 +348,15 @@ interface Walker {
   rideAt: number;
   rideDone: boolean;
   weave: number;
+  /** The way the figure is drawn facing and since when: it turns at most once in `FACE_HOLD_MS` (DESIGN.md 69.1). */
+  shownDir: WalkDirection;
+  shownDirAt: number;
+  /** Pacing while stopped (69.1): where they stopped, the way back along their route, and how far; and whether they are
+   * stepping this moment, so the walk frames show. */
+  paceAnchor: { x: number; y: number; ux: number; uy: number; reach: number } | null;
+  pacingStep: boolean;
+  /** When an angry student next shows the anger mark (69.1). */
+  angerAt: number;
   downUntil: number;
   key: string | null;
   look: number;
@@ -474,6 +489,9 @@ export class Walkers {
   private isWalk: boolean[] = [];
   private isCrossing: boolean[] = [];
   private isStreet: boolean[] = [];
+  /** Ground anyone may stand on or cross on foot off a path (DESIGN.md 69.5): a path, a quad, open grass, an empty
+   * lot. Never a building's footprint, a placed thing, a tree, a road or the town. */
+  private isOpen: boolean[] = [];
   /** Where the junctions and the marked crossings are (src/app/traffic.ts). */
   private plan: TrafficPlan | null = null;
   private pathCells = 0;
@@ -659,6 +677,7 @@ export class Walkers {
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
     this.plan = planTraffic(this.width, this.height, cells.map((cell) => cell.kind), TOWN_X);
     this.isWalk = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'street');
+    this.isOpen = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'quad' || cell.kind === 'empty' || (cell.kind === 'lot' && cell.buildingId === null));
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
     const doorOf = (x: number, y: number): number => {
@@ -1119,7 +1138,7 @@ export class Walkers {
       downUntil: 0,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
-      look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
+      look: extra.look ?? (student && this.state ? studentFigure(this.state, student, people) : everydayLook(people, Math.random(), Math.random())),
       from,
       route,
       leg,
@@ -1127,6 +1146,11 @@ export class Walkers {
       y: begin.y,
       pace: extra.pace ?? PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period]) * (0.8 + Math.random() * 0.45),
       direction: 'se',
+      shownDir: 'se',
+      shownDirAt: -Infinity,
+      paceAnchor: null,
+      pacingStep: false,
+      angerAt: this.scene.time.now + Math.random() * ANGER_MARK_MS.spread,
       stride: Math.random() * 1000,
       alpha: 0,
       fading: 'in',
@@ -1317,13 +1341,18 @@ export class Walkers {
   }
 
   private draw(walker: Walker, people: PeopleSpec): void {
-    // They walk the map. On a turned view they face the way they go on the screen (DESIGN.md section 43).
-    const direction = this.iso.face(walker.direction);
+    // They walk the map. On a turned view they face the way they go on the screen (DESIGN.md section 43). The figure
+    // turns at most about once a second, so a short wiggle in a route never shows as spinning (69.1).
+    const held = heldFacing(walker.shownDir, walker.shownDirAt, walker.direction, this.scene.time.now);
+    walker.shownDir = held.dir;
+    walker.shownDirAt = held.at;
+    const direction = this.iso.face(walker.shownDir);
     const flipFrom = people.flip?.[direction];
     const facing = flipFrom ?? direction;
-    // A rider stands still on what they ride; skaters stride (DESIGN.md 64.6).
+    // A rider stands still on what they ride; skaters stride (DESIGN.md 64.6). A pacing student steps as they go.
     const rolling = walker.wheel !== null && walker.wheel !== 'skates';
-    const frame = walker.lingerMs > 0 || walker.talkMs > 0 || rolling ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
+    const stopped = (walker.lingerMs > 0 && !walker.pacingStep) || walker.talkMs > 0;
+    const frame = stopped || rolling ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
     let key = `person.${walker.look}.${facing}.${frame}`;
     const down = this.scene.time.now < walker.downUntil;
     if (down && this.art.has(`person.${walker.look}.pose.lie`)) key = `person.${walker.look}.pose.lie`;
@@ -1348,7 +1377,7 @@ export class Walkers {
     // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
     const pose = this.poseOf(walker);
     if (kneeling) walker.sprite.setFlipX(direction === 'se' || direction === 'ne');
-    else walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
+    else walker.sprite.setFlipX(flipFrom !== undefined);
     if (walker.sprite.scaleY !== pose.squash) walker.sprite.setScale(1, pose.squash);
     // In a fountain (DESIGN.md 64.4): up to the waist in the water, as a swimmer is drawn.
     const inWater = this.scene.time.now < walker.fallUntil;
@@ -1359,8 +1388,9 @@ export class Walkers {
     }
     const ride = walker.wheel ? this.rideLift(walker) : 0;
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
-    // Just above the ground of the cell underfoot, and below anything on the next cell forward.
-    walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
+    // Just above the ground of the cell underfoot, and below anything on the next cell forward: where the figure is
+    // drawn, a step aside in a party or round someone included, so it sorts against buildings where it stands (69.5).
+    walker.sprite.setDepth((this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5);
     // Followed close up they keep their place in the drawing order: what stands in front of them fades instead (L6).
     if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
@@ -1492,12 +1522,15 @@ export class Walkers {
         if (ahead <= 0 || ahead > 0.8) continue;
         const side = -ox * dy + oy * dx;
         if (Math.abs(side) > 0.32) continue;
-        target = side > 0 ? -0.3 : 0.3;
+        target = side > 0 ? -RIDER_WEAVE : RIDER_WEAVE;
         passing = other;
         break;
       }
     }
-    walker.weave += (target - walker.weave) * Math.min(1, dt / 220);
+    // Smooth (DESIGN.md 69.1): once stepping round to one side they keep to it until clear, and ease over and back, so
+    // a rider never wobbles from side to side. Within the path: the step and their own place on it stay inside its cell.
+    if (target !== 0 && Math.abs(walker.weave) > 0.02 && Math.sign(target) !== Math.sign(walker.weave)) target = -target;
+    walker.weave += (target - walker.weave) * Math.min(1, dt / 380);
     if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
     if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;
     if ((walker.ride === 'bell' || walker.ride === 'nearMiss') && !passing) return;
@@ -1763,13 +1796,17 @@ export class Walkers {
     near.forEach((w, i) => {
       w.faceAt = { x: at.x, y: at.y };
       w.momentUntil = now + ms;
-      if (i < most && !w.party) {
-        // Over to a place in the ring round it.
-        const angle = (i / ring) * Math.PI * 2 + 0.4;
-        const r = 1.05 + (i % 2) * 0.3;
+      // Over to a place in the ring round it, in a straight line over open ground there and back (69.1, 69.5): where
+      // the line would cross a building or the place is on one, they watch from where they are.
+      const angle = (i / ring) * Math.PI * 2 + 0.4;
+      const r = 1.05 + (i % 2) * 0.3;
+      const spot = { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r };
+      const back = w.route[w.leg] ?? null;
+      const clear = this.clearLine(w.x, w.y, spot.x, spot.y) && (!back || this.clearLine(spot.x, spot.y, back.x, back.y));
+      if (i < most && !w.party && clear) {
         const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
         w.resume = resume.length > 0 ? resume : null;
-        w.route = [{ x: w.x, y: w.y }, { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r }];
+        w.route = [{ x: w.x, y: w.y }, spot];
         w.leg = 1;
         w.lingerMs = 0;
         w.talkMs = 0;
@@ -1785,6 +1822,46 @@ export class Walkers {
       if (this.onMemory) this.onMemory(w.student!, watchWords(kind));
     });
     return near.length;
+  }
+
+  /**
+   * Pacing (DESIGN.md 69.1): a student tense about exams, stopped somewhere, walks a few steps back along the way they
+   * came, turns once, walks back to where they stopped, turns once, and again, with the walk frames. Nothing else
+   * moves anyone while they stand, and with Reduce effects they stand still.
+   */
+  private pace(walker: Walker, dt: number): void {
+    const can = walker.feel?.motion === 'pace' && walker.talkMs <= 0 && !walker.party && !walker.wheel && !walker.resume && walker.watchMs === 0 && walker.fading === null && effectsSetting() !== 'reduced';
+    if (!can) {
+      walker.pacingStep = false;
+      return;
+    }
+    if (!walker.paceAnchor) {
+      const back = walker.route[walker.route.length - 2];
+      if (!back) return;
+      const dx = back.x - walker.x;
+      const dy = back.y - walker.y;
+      const length = Math.hypot(dx, dy);
+      if (length < 0.2) return;
+      walker.paceAnchor = { x: walker.x, y: walker.y, ux: dx / length, uy: dy / length, reach: Math.min(PACING_REACH, length) };
+    }
+    const anchor = walker.paceAnchor;
+    const step = pacingAt(this.scene.time.now, walker.phase);
+    walker.x = anchor.x + anchor.ux * anchor.reach * step.along;
+    walker.y = anchor.y + anchor.uy * anchor.reach * step.along;
+    walker.direction = step.back ? facing(-anchor.ux, -anchor.uy) : facing(anchor.ux, anchor.uy);
+    walker.pacingStep = step.walking;
+    if (step.walking) walker.stride += dt;
+  }
+
+  /** True when every point of the straight line from a to b, a tenth of a cell apart, is open ground (69.5). */
+  private clearLine(ax: number, ay: number, bx: number, by: number): boolean {
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 10));
+    for (let k = 0; k <= steps; k++) {
+      const x = Math.floor(ax + ((bx - ax) * k) / steps);
+      const y = Math.floor(ay + ((by - ay) * k) / steps);
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height || !this.isOpen[y * this.width + x]) return false;
+    }
+    return true;
   }
 
   /** The body this moment: laughing, cheering, a fan on game day, or as they feel; still with Reduce effects. */
@@ -2153,6 +2230,11 @@ export class Walkers {
         if (walker.talkMs <= 0) walker.talkWith = null;
       } else if (walker.lingerMs > 0) {
         walker.lingerMs -= dt;
+        this.pace(walker, dt);
+        if (walker.lingerMs <= 0) {
+          walker.paceAnchor = null;
+          walker.pacingStep = false;
+        }
         if (walker.lingerMs <= 0 && walker.resume) {
           // Done watching (DESIGN.md 64.4): on along the way they were going.
           walker.route = [{ x: walker.x, y: walker.y }, ...walker.resume];
@@ -2215,6 +2297,11 @@ export class Walkers {
           }
         }
         if (!waiting) walker.stride += dt * (walker.pace / PACE);
+        // Angry (69.1): a brisk stomp, and now and then the anger mark over their head, never a turn about.
+        if (!waiting && walker.feel?.motion === 'stomp' && this.scene.time.now >= walker.angerAt) {
+          walker.angerAt = this.scene.time.now + ANGER_MARK_MS.least + Math.random() * ANGER_MARK_MS.spread;
+          if (this.inView(view, walker.x, walker.y, 0)) this.showIcon(walker, 'anger');
+        }
         if (walker.leg >= walker.route.length && walker.fading !== 'out' && walker.watchMs > 0) {
           // At their place by a moment (DESIGN.md 64.4): they stand and watch it, facing it; or they are in the fountain.
           walker.lingerMs = walker.watchMs;

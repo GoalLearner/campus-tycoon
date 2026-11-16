@@ -121,5 +121,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 33) {
     notes.push('New: a Chaos meter on the Scorecard, from Serene to Pandemonium. Dust-ups, pranks, protests and party calls come from how the campus is run, and the meter says what drives them. A rowdy campus makes headlines and gets letters from the trustees; a lively, happy one has the odd legendary night.');
   }
+  if (fromVersion < 34) {
+    notes.push('Students now look like who they are: some figures changed to match.');
+  }
   return notes;
 }

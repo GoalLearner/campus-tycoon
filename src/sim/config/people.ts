@@ -79,7 +79,7 @@ export const PERSON_LINES = {
   worker: ['{n} of us at this yard. {line}'],
   officer: ['The campus has handled {n} calls and missed {m}. Mostly traffic cones.', '{n} calls handled and {m} missed. I have a drawer of confiscated balloons.'],
   medic: ['The campus has handled {n} calls and missed {m}. Mostly ankles.', '{n} calls handled and {m} missed. Nobody ever warms up.'],
-  parentBeds: ['Lovely quad. Where would she sleep? I hear you are {n} beds short.', 'It is a handsome campus. But {n} beds short, they tell me.'],
+  parentBeds: ['Lovely quad. Where would our kid sleep? I hear you are {n} beds short.', 'It is a handsome campus. But {n} beds short, they tell me.'],
   parent: ['They say {n} are coming in the next class. It does look like a nice place.', 'About {n} in the next class, the guide said. We like the look of it.'],
   booster: ['{n} alumni out there now. I have shaken hands with most of them.', '{n} graduates and counting. I keep a list.'],
   boosterNone: ['No alumni yet. I am practising my handshake for the first.'],

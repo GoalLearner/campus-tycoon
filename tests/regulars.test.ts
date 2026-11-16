@@ -43,7 +43,7 @@ describe('regulars', () => {
       const game = advance(newGame({ seed, name: 'Test University', now: T0, campus: 'model' }), T0, T0 + DAY / 24).state;
       const counts = new Map<number, number>();
       for (const ref of namedRegulars(game)) {
-        const look = studentFigure(game, ref, 16, 12);
+        const look = studentFigure(game, ref, { looks: 30, crowd: 16, roles: { athlete: 12 }, pack: 'penzilla-giant-city' });
         counts.set(look, (counts.get(look) ?? 0) + 1);
       }
       most += Math.max(...counts.values());

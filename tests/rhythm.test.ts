@@ -353,7 +353,7 @@ describe('saves', () => {
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(13);
+      expect(notes).toHaveLength(14);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

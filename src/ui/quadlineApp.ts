@@ -96,7 +96,7 @@ export function mountQuadline(): { node: HTMLElement; render: (state: GameState 
     canvas.width = 96;
     canvas.height = 112;
     const pack = atlas?.people;
-    if (atlas && pack) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, Math.min(pack.looks, pack.crowd ?? pack.looks), pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+    if (atlas && pack) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     return canvas;
   }
 

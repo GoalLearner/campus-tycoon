@@ -1,5 +1,5 @@
 import { session } from '../app/session';
-import { personCard, personKey, type GameState, type PersonRef } from '../sim';
+import { lookGender, personCard, personKey, type GameState, type PersonRef } from '../sim';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -88,7 +88,9 @@ export function mountPersonCard(): { node: HTMLElement; render: (state: GameStat
       shownKey = '';
       return;
     }
-    const card = personCard(state, ref);
+    // Their first name fits the figure they are drawn in (DESIGN.md 69.3).
+    const people = atlas?.people;
+    const card = personCard(state, ref, people ? lookGender(people, personLook(people.roles, ref)) : 'x');
     if (!card) {
       // Their job went while the card was open: the kitchen was cleared, or the yard let them go.
       session.closeStudent();
@@ -102,7 +104,6 @@ export function mountPersonCard(): { node: HTMLElement; render: (state: GameStat
     setText(name, card.name);
     setText(about, card.title);
 
-    const people = atlas?.people;
     if (atlas && people) {
       const look = personLook(people.roles, ref);
       const sprite = look === null ? '' : `person.${look}.${people.flip?.sw ?? 'sw'}.0`;

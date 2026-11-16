@@ -204,7 +204,7 @@ describe('a card’s people', () => {
     const dating = sample.find((ref) => partnerLine(VIEW, MODEL, ref) !== null)!;
     expect(dating).toBeDefined();
     const line = partnerLine(VIEW, MODEL, dating)!;
-    expect(line.text).toMatch(/^(Dating|Together with|Together a long while with) /);
+    expect(line.text).toMatch(/^(Dating |(Her|His|Their) (long-time )?(girlfriend|boyfriend|partner), )/);
     const seeded = { id: 'singleHappy', name: 'Happily single', note: 'a little happier' };
     expect(relationshipWords(VIEW, MODEL, dating, seeded).name).toBe(line.text);
     // Before the web answers, the card reads as it always has.

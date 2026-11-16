@@ -327,21 +327,23 @@ describe('the save', () => {
 
   it('tells the owner, once, in the game’s voice', () => {
     const notes = upgradeNotes(29);
-    // Its own, R1's, R3's price level and C1's Chaos meter.
-    expect(notes).toHaveLength(4);
+    // Its own, R1's, R3's price level, C1's Chaos meter and the play fixes' figures.
+    expect(notes).toHaveLength(6);
     expect(notes[0]).toMatch(/social campus/);
     expect(notes[0]).toMatch(/first names/);
     expect(toneProblem(notes[0]!)).toBeNull();
     // Since R1 a save from version 30 is told what the realism pass changed (DESIGN.md 65).
-    expect(upgradeNotes(30)).toHaveLength(3);
+    expect(upgradeNotes(30)).toHaveLength(4);
     expect(upgradeNotes(30)[0]).toMatch(/real ones/);
     expect(toneProblem(upgradeNotes(30)[0]!)).toBeNull();
     // R3's one note follows it (DESIGN.md 67.1).
     expect(upgradeNotes(31)[0]).toBe(`Prices now read in today's dollars: tuition is ${dollars(TUITION_ESTABLISHED_PER_YEAR)} a year. Nothing about your campus changed.`);
     // C1's one note follows it (DESIGN.md 68).
-    expect(upgradeNotes(32)).toHaveLength(1);
+    expect(upgradeNotes(32)).toHaveLength(2);
     expect(upgradeNotes(32)[0]).toMatch(/Chaos meter on the Scorecard/);
     expect(toneProblem(upgradeNotes(32)[0]!)).toBeNull();
-    expect(upgradeNotes(33)).toEqual([]);
+    // The play fixes' one note follows it (DESIGN.md 69.3).
+    expect(upgradeNotes(33)).toEqual(['Students now look like who they are: some figures changed to match.']);
+    expect(upgradeNotes(34)).toEqual([]);
   });
 });

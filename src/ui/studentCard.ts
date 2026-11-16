@@ -446,7 +446,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       const looks = Math.min(people.looks, people.crowd ?? people.looks);
       // As they are drawn on the map now: a player on a court is in the kit. Otherwise they wear the face of what
       // they feel (DESIGN.md 63.7), where the art has it.
-      const look = session.studentLook ?? studentFigure(state, ref, looks, people.roles?.athlete);
+      const look = session.studentLook ?? studentFigure(state, ref, people);
       const plain = `person.${look}.${people.flip?.sw ?? 'sw'}.0`;
       const faced = session.studentLook === null && feeling.face ? `person.${look}.mood.${feeling.face}` : null;
       const sprite = faced && atlas.frames[faced] ? faced : plain;
@@ -658,7 +658,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       const picture = el('canvas', 'student-friend-art');
       picture.width = 96;
       picture.height = 112;
-      if (atlas && pack) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      if (atlas && pack) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
       button.append(picture, el('span', 'student-friend-name', first), el('span', 'student-friend-role', one.label));
       button.addEventListener('click', () => session.openStudent(one.ref));
       faces.append(button);

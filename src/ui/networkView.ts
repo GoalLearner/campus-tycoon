@@ -169,7 +169,7 @@ export function mountNetworkView(): { node: HTMLElement; render: (state: GameSta
     const pack = atlas?.people;
     if (atlas && pack && state) {
       const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
-      drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     }
     return canvas;
   }

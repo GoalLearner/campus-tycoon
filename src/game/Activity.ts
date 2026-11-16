@@ -299,7 +299,7 @@ export class Activity {
     this.staying.add(studentKey(student));
     // On a court, a pitch or the track everyone wears the kit. Anywhere else they are drawn as they walk about.
     if (SPORTY.includes(figure.role) && people.roles?.athlete !== undefined) return;
-    figure.look = studentFigure(state, student, Math.min(people.looks, people.crowd ?? people.looks), people.roles?.athlete);
+    figure.look = studentFigure(state, student, people);
     figure.shownKey = '';
   }
 
