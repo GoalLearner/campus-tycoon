@@ -99,7 +99,7 @@ export class PlacedSprites {
       } else if (layer === 'ground') {
         // After the tiles behind it and before the tiles in front. A wide one would otherwise be
         // drawn before the tiles beside its far corners, and their earth would lie over its shore.
-        sprite.setDepth((iso.back(item.x, item.y, w, h) + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5);
+        sprite.setDepth(iso.groundDepth(item.x, item.y, w, h));
       } else if (layer === 'object') {
         // Sorted by its front cell, so things behind it stay behind all of it.
         sprite.setDepth(iso.front(item.x, item.y, w, h) * 4 + 1);

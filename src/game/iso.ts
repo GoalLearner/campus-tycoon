@@ -291,6 +291,15 @@ export class Iso {
     return box.x + box.y;
   }
 
+  /**
+   * Draw order for a flat building on the ground: after the tiles behind it and before the tiles in front. A wide one
+   * is drawn a little later, or the earth of the tiles beside its far corners would lie over its edge. Whoever stands
+   * on it must be drawn after this (DESIGN.md 72).
+   */
+  groundDepth(x: number, y: number, w: number, h: number): number {
+    return (this.back(x, y, w, h) + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5;
+  }
+
   /** The world rectangle that holds a whole map, with room for tall buildings at the top. */
   bounds(width: number, height: number): { x: number; y: number; width: number; height: number } {
     const w = this.odd ? height : width;

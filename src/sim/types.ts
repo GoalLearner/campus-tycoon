@@ -49,6 +49,11 @@ export type PlacedType =
   | 'pool'
   | 'courts'
   | 'field'
+  /** Full-size courts and a pitch (DESIGN.md 72): room for a real game, drawn by us. */
+  | 'basketball'
+  | 'tennis'
+  | 'volleyball'
+  | 'soccer'
   | 'pondSmall'
   | 'pondMedium'
   | 'pondLarge'

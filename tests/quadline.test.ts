@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { commentsFor, feedOf, followersOf, postCounts, postSubject, postWords, trendingOf } from '../src/app/quadline';
 import { idIn, viewOf } from '../src/app/socialView';
-import { advance, applyAction, landRankGoals, newGame, previewPlace, type GameState, type StudentRef } from '../src/sim';
+import { advance, applyAction, campusHappiness, landRankGoals, newGame, previewPlace, type GameState, type StudentRef } from '../src/sim';
 import { POST, POST_FIELDS, POSTS_KEPT, VIRAL_KEPT } from '../src/sim/config/quadline';
 import { KIND, SLOTS, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { FIELDS, postsOf, type Post } from '../src/sim/systems/quadline';
@@ -184,11 +184,14 @@ describe('posts', () => {
 
   it('read every week of the calendar and the campus: the weakest spot, the weather, the term', () => {
     const kinds = new Set(EACH.flat().map((post) => post.kind));
-    for (const kind of [POST.complaint, POST.praise, POST.club, POST.party] as const) expect(kinds.has(kind), String(kind)).toBe(true);
-    // The weakest spot is the most complained about.
+    for (const kind of [POST.praise, POST.club, POST.party] as const) expect(kinds.has(kind), String(kind)).toBe(true);
+    // The weakest spot is the most complained about, and a campus with none is not complained about. The model campus
+    // has none since its second gym and four basketball courts (DESIGN.md 72) lifted places to play above the line.
+    const weak = campusHappiness(MODEL).causes.some((cause) => cause.parts.some((part) => part.level < 0.45));
+    expect(kinds.has(POST.complaint)).toBe(weak);
     const topics = new Map<number, number>();
     for (const post of EACH.flat()) if (post.kind === POST.complaint) topics.set(post.a, (topics.get(post.a) ?? 0) + 1);
-    expect(topics.size).toBeGreaterThan(0);
+    expect(topics.size > 0).toBe(weak);
   });
 
   it('start again after a long time away with the last two weeks, and nothing from the regrowing by name', () => {

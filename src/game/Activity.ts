@@ -9,6 +9,7 @@ import type { Footprints } from './footprints';
 import { teamVenues } from '../sim/systems/teams';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Box, type Iso } from './iso';
+import { Game, type Area, type Sport } from '../app/games';
 
 /**
  * People using the campus, for show: a game on the courts, runners circling
@@ -28,8 +29,24 @@ import { facingOf, type Box, type Iso } from './iso';
  * by `findStudent`, so a tap on them opens the ordinary student card.
  */
 
-/** Of the students playing at a building, the most that are drawn on it. A court fits two games. */
-const SHOWN: Record<string, number> = { courts: 8, field: 10, track: 8, pool: 7, gym: 2 };
+/**
+ * Of the students playing at a building, the most that are drawn on it: as many as its game takes (DESIGN.md 72). The
+ * small courts already on campuses stay half courts, a game of tennis at most four; the small field, three a side.
+ */
+const SHOWN: Record<string, number> = { courts: 4, field: 6, track: 8, pool: 7, gym: 2, basketball: 10, tennis: 4, volleyball: 12, soccer: 10 };
+/** The game each court and pitch plays (DESIGN.md 72). */
+const GAME_OF: Readonly<Record<string, Sport>> = { courts: 'tennis', field: 'soccer', basketball: 'basketball', tennis: 'tennis', volleyball: 'volleyball', soccer: 'soccer' };
+/** The ball of each game, and its size on the map in pixels; a tennis ball is a small ball, tinted. */
+const BALL_OF: Readonly<Record<Sport, { key: string; size: number; tint?: number }>> = {
+  basketball: { key: 'room.ball', size: 8 },
+  soccer: { key: 'room.soccerBall', size: 8 },
+  volleyball: { key: 'play.volleyball', size: 8 },
+  tennis: { key: 'room.ball', size: 5, tint: 0xd9ef5a },
+};
+/** A cell of the ball's height is this many pixels up, so it reaches the rim of our hoop at `RIM`. */
+const HEIGHT_PX = 66;
+/** Every so many points or baskets, one waiting on the side comes on and one goes off to wait (DESIGN.md 72). */
+const ROTATE_EVERY = 2;
 /**
  * Where the playing surface lies inside each building's footprint, in cells
  * from its north corner. Measured from the art: the court, the pitch, the
@@ -41,6 +58,11 @@ const SURFACE: Record<string, { x0: number; x1: number; y0: number; y1: number }
   field: { x0: 0.8, x1: 1.85, y0: 0.15, y1: 1.8 },
   pool: { x0: 0.5, x1: 1.89, y0: 0.12, y1: 0.88 },
   track: { x0: 0.9, x1: 1.7, y0: 0.25, y1: 1.72 },
+  // Our full-size courts and pitch: the lines drawn inside their surround (tools/make_court.py).
+  basketball: { x0: 0.14, x1: 1.86, y0: 0.14, y1: 2.86 },
+  tennis: { x0: 0.18, x1: 1.82, y0: 0.18, y1: 2.82 },
+  volleyball: { x0: 0.22, x1: 1.78, y0: 0.22, y1: 2.78 },
+  soccer: { x0: 0.16, x1: 2.84, y0: 0.16, y1: 3.84 },
 };
 /** How far apart people stand in a line, in cells. */
 const LINE_GAP = 0.3;
@@ -139,6 +161,9 @@ interface Site {
   props: Phaser.GameObjects.Image[];
   /** A varsity team practises here (DESIGN.md 65.7): in the afternoons of term it is busy with them. */
   practice: boolean;
+  /** The game being played on a court or a pitch (DESIGN.md 72), and its last point: who won it and when. */
+  game: Game | null;
+  lastPoint: { team: number; at: number; count: number } | null;
 }
 
 /** [T] A team's practice fills this share of the most a court, a field, the track or a pool shows. */
@@ -258,6 +283,9 @@ export class Activity {
       let lineInFront = false;
       if (placed.type === 'courts' || placed.type === 'field') {
         line = { x: placed.x + 0.44, y: placed.y + 0.3, dx: 0, dy: LINE_GAP, onDrawing: true };
+      } else if (GAME_OF[placed.type]) {
+        // Our full-size courts (DESIGN.md 72): those waiting stand on the surround down the long side, beside the game.
+        line = { x: placed.x + 0.07, y: placed.y + 0.45, dx: 0, dy: LINE_GAP, onDrawing: true };
       } else {
         const kindAt = (x: number, y: number): string => (x < 0 || y < 0 || x >= width || y >= height ? 'off' : cells[y * width + x]!.kind);
         const sides = [
@@ -318,7 +346,10 @@ export class Activity {
           }
         }
       }
-      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, lineRoom, doorRoom, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
+      // A court or a pitch keeps its game going while it stands (DESIGN.md 72).
+      const sport = GAME_OF[placed.type];
+      const game = before?.game ?? (sport ? new Game(sport, SURFACE[placed.type]! as Area, state.seed ^ (placed.id * 7919), SHOWN[placed.type]) : null);
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, lineRoom, doorRoom, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id), game, lastPoint: before?.lastPoint ?? null });
     }
     // Whatever was cleared, its people walk off to the nearest door or off the screen (69.2); its things go with it.
     for (const gone of kept.values()) {
@@ -390,7 +421,8 @@ export class Activity {
     let playing = Math.min(most, Math.ceil((now.playing * most) / use.capacity));
     // A team at practice in the afternoon of a term day: the place is busy with them.
     if (site.practice && this.term && this.period === 'afternoon') playing = Math.max(playing, Math.ceil(most * PRACTICE_SHOWN));
-    const role: Role = type === 'courts' ? 'court' : type === 'field' ? 'field' : type === 'track' ? 'runner' : type === 'pool' ? 'swimmer' : 'door';
+    const sport = GAME_OF[type];
+    const role: Role = sport === 'soccer' ? 'field' : sport ? 'court' : type === 'track' ? 'runner' : type === 'pool' ? 'swimmer' : 'door';
     return [
       [role, playing],
       ['line', seen ? Math.min(LINE_SHOWN, now.waiting) : 0],
@@ -464,9 +496,12 @@ export class Activity {
   /** A ball on a field with a game on it, and a book on a table with a study group at it. The pool's own art has its toys. */
   private setProps(site: Site, seen: boolean): void {
     const type = site.placed.type;
-    const playing = site.figures.some((figure) => !figure.leaving && figure.role === 'field');
     const studying = site.study && this.studyShare > 0 && site.figures.filter((figure) => !figure.leaving && figure.role === 'seat').length >= 2;
-    const keys = !seen ? [] : playing && type === 'field' ? ['play.ball'] : studying ? ['scene.book'] : [];
+    // A game (DESIGN.md 72): its ball while anyone plays, and a basketball court's two hoops whenever it is in sight.
+    const sport = GAME_OF[type];
+    const playing = site.figures.some((figure) => !figure.leaving && (figure.role === 'court' || figure.role === 'field'));
+    const gameKeys = sport ? [...(playing ? [BALL_OF[sport].key] : []), ...(sport === 'basketball' && type === 'basketball' ? ['court.hoop.far', 'court.hoop.near'] : [])] : [];
+    const keys = !seen ? [] : sport ? gameKeys : studying ? ['scene.book'] : [];
     const have = keys.filter((key) => this.art.has(key));
     if (site.props.length === have.length) return;
     for (const prop of site.props) prop.destroy();
@@ -474,7 +509,14 @@ export class Activity {
       const sprite = this.scene.add.image(0, 0, '__DEFAULT');
       this.art.apply(sprite, key);
       // It rests on its own base, where it is put.
-      sprite.setOrigin(0.5, 1);
+      sprite.setOrigin(0.5, 1).setData('key', key);
+      const ball = sport ? BALL_OF[sport] : null;
+      if (ball && key === ball.key && key !== 'court.hoop.far') {
+        const long = Math.max(sprite.frame.width, sprite.frame.height);
+        if (long > 0) sprite.setScale(ball.size / long);
+        if (ball.tint !== undefined) sprite.setTint(ball.tint);
+        sprite.setData('ball', true);
+      }
       return sprite;
     });
   }
@@ -489,7 +531,19 @@ export class Activity {
     let x = figure.x;
     let y = figure.y;
     figure.moving = true;
-    if (figure.role === 'court') {
+    const player = site.game && (figure.role === 'court' || figure.role === 'field') ? site.game.players.find((one) => one.slot === figure.slot) : undefined;
+    if (site.game && (figure.role === 'court' || figure.role === 'field')) {
+      // In the game (DESIGN.md 72): where the game has them. Not on yet: at the head of the line, coming on.
+      if (player) {
+        x = placed.x + player.x;
+        y = placed.y + player.y;
+        figure.moving = player.moving;
+      } else {
+        x = site.line.x;
+        y = site.line.y;
+        figure.moving = false;
+      }
+    } else if (figure.role === 'court') {
       // Either side of the net, up to four a side: a game, or two games of doubles. They move with the rally.
       const side = figure.slot % 2 === 0 ? -1 : 1;
       const spot = Math.floor(figure.slot / 2);
@@ -575,6 +629,12 @@ export class Activity {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     if (figure.moving && (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4)) figure.direction = facingOf(dx, dy);
+    else if (player && site.game) {
+      // Standing in the game, they watch the ball.
+      const ball = this.iso.onDrawing(this.boxOf(site), site.game.ball.x, site.game.ball.y);
+      const at = this.iso.view(ball.x, ball.y);
+      if (Math.abs(at.x - to.x) + Math.abs(at.y - to.y) > 1e-3) figure.direction = facingOf(at.x - to.x, at.y - to.y);
+    }
     figure.x = x;
     figure.y = y;
   }
@@ -605,6 +665,8 @@ export class Activity {
     if (this.reduced || (role !== 'court' && role !== 'field')) return null;
     const big = this.bigs.get(site.placed.id);
     if (big !== undefined && seconds - big >= 0 && seconds - big < BIG_POINT_S) return { n: 0, part: seconds - big, big: true };
+    // A game's own points (DESIGN.md 72): the side that won the last one, for a moment after it.
+    if (site.game) return site.lastPoint ? { n: site.lastPoint.team, part: seconds - site.lastPoint.at, big: false } : null;
     const every = POINT_S[role];
     const t = seconds + mix(site.placed.id, 11) * every;
     const n = Math.floor(t / every);
@@ -615,7 +677,7 @@ export class Activity {
   private cheer(site: Site, seconds: number): void {
     const players = site.figures.filter((figure) => !figure.leaving && (figure.role === 'court' || figure.role === 'field'));
     const point = players[0] ? this.pointAt(site, players[0].role, seconds) : null;
-    const winners = point ? players.filter((figure) => figure.slot % 2 === point.n % 2) : [];
+    const winners = point ? players.filter((figure) => this.teamOf(site, figure) === point.n % 2) : [];
     let icon = this.cheers.get(site.placed.id);
     const lasts = point?.big ? BIG_POINT_S : CHEER_S;
     if (!point || point.part >= lasts || winners.length === 0) {
@@ -637,6 +699,68 @@ export class Activity {
     // Over the whole game, so a player in front does not hide it.
     const top = players.reduce((most, figure) => Math.max(most, figure.sprite.depth), who.sprite.depth);
     icon.setVisible(true).setPosition(who.sprite.x, who.sprite.y - 44).setDepth(top + 0.1).setAlpha(Math.max(0, who.alpha) * fade);
+  }
+
+  /** The side a player is on: in a game, the game's; otherwise by their place, as before. */
+  private teamOf(site: Site, figure: Figure): number {
+    return site.game ? site.game.teamOf(figure.slot) : figure.slot % 2;
+  }
+
+  /**
+   * The game on a court or a pitch (DESIGN.md 72): who is on (those come to their place; the rest wait in the line), a
+   * step of play, and its points: a cheer, and every so often one waiting comes on and one goes off to wait.
+   */
+  private playGame(site: Site, dt: number, time: number): void {
+    const game = site.game;
+    if (!game) return;
+    const { placed } = site;
+    const area = SURFACE[placed.type]!;
+    const on = site.figures.filter((figure) => (figure.role === 'court' || figure.role === 'field') && !figure.leaving && !figure.trip);
+    game.roster(
+      on.map((figure) => {
+        // One who walked on comes on from the head of the line; one there already, from a place of their own.
+        if (figure.walked) return { slot: figure.slot, x: site.line.x - placed.x, y: site.line.y - placed.y };
+        return { slot: figure.slot, x: area.x0 + (area.x1 - area.x0) * mix(placed.id, figure.slot * 3 + 1), y: area.y0 + (area.y1 - area.y0) * mix(placed.id, figure.slot * 3 + 2) };
+      }),
+    );
+    game.step(dt);
+    for (const event of game.take()) {
+      if (event.kind !== 'score' && event.kind !== 'point') continue;
+      const count = (site.lastPoint?.count ?? 0) + 1;
+      site.lastPoint = { team: event.team, at: this.seconds, count };
+      if (count % ROTATE_EVERY === 0) this.rotate(site, time);
+    }
+  }
+
+  /** One waiting at the head of the line comes on, and one playing goes to the back of it (DESIGN.md 72). */
+  private rotate(site: Site, time: number): void {
+    const line = site.figures.filter((figure) => figure.role === 'line' && !figure.leaving && !figure.trip).sort((a, b) => a.slot - b.slot);
+    const playing = site.figures.filter((figure) => (figure.role === 'court' || figure.role === 'field') && !figure.leaving && !figure.trip);
+    const head = line[0];
+    if (!head || playing.length === 0) return;
+    const off = playing[(site.lastPoint?.count ?? 0) % playing.length]!;
+    const role = off.role;
+    const slot = off.slot;
+    const walk = (figure: Figure): void => {
+      const from = { x: figure.x, y: figure.y };
+      this.place(site, figure, this.seconds);
+      figure.trip = tripOf([from, { x: figure.x, y: figure.y }], time, false, true);
+      figure.x = from.x;
+      figure.y = from.y;
+    };
+    // The one going off walks to the back of the line; the rest of the line steps up; the head walks on.
+    off.role = 'line';
+    off.slot = Math.max(...line.map((figure) => figure.slot)) + 1;
+    walk(off);
+    for (const figure of line.slice(1)) {
+      figure.slot -= 1;
+      walk(figure);
+    }
+    off.slot -= 1;
+    // The head is where the game brings new players on: they come on from there.
+    head.role = role;
+    head.slot = slot;
+    head.walked = true;
   }
 
   private ballAt(site: Site, seconds: number): { x: number; y: number } {
@@ -662,6 +786,7 @@ export class Activity {
     this.cleared = this.cleared.filter((site) => site.figures.length > 0);
     for (const site of [...this.sites, ...this.cleared]) {
       if (site.figures.length === 0 && site.props.length === 0) continue;
+      this.playGame(site, dt, time);
       // Buildings that stand up are drawn after the ground. People on them go in front of the whole footprint.
       const flat = PLACED[site.placed.type].flat;
       const front = this.iso.front(site.placed.x, site.placed.y, site.placed.w, site.placed.h) * 4 + 3;
@@ -753,12 +878,21 @@ export class Activity {
         // The side that won the point hops (DESIGN.md 64).
         const point = this.pointAt(site, figure.role, seconds);
         const hopS = point?.big ? BIG_POINT_S - 0.4 : HOP_S;
-        const hop = point && !figure.trip && figure.slot % 2 === point.n % 2 && point.part < hopS ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX * (point.big ? 1.8 : 1) : 0;
-        figure.sprite.setPosition(at.x, at.y + sink - hop);
+        const cheering = site.game !== null && figure.role === 'line';
+        const gamePoint = cheering ? this.pointAt(site, 'court', seconds) : point;
+        const winner = figure.role === 'line' ? cheering : this.teamOf(site, figure) === (gamePoint?.n ?? -1) % 2;
+        const hop = gamePoint && !figure.trip && winner && gamePoint.part < hopS ? Math.abs(Math.sin((gamePoint.part / HOP_S) * Math.PI * 2)) * HOP_PX * (gamePoint.big ? 1.8 : 1) : 0;
+        // Up for a jump shot, a block or a spike (DESIGN.md 72).
+        const jumper = site.game && !figure.trip ? site.game.players.find((one) => one.slot === figure.slot && (figure.role === 'court' || figure.role === 'field')) : undefined;
+        const jump = jumper ? Math.sin(Math.min(1, jumper.lift) * Math.PI) * 9 : 0;
+        figure.sprite.setPosition(at.x, at.y + sink - hop - jump);
         const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
         // A line on a side nearer the viewer stands in front of its building, however wide the building is.
         const beside = figure.role === 'line' || figure.role === 'door';
-        const order = flat || figure.trip || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front);
+        let order = flat || figure.trip || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front);
+        // On a big court the court itself is drawn late, so its edge lies over the tiles behind it (src/game/Placed.ts):
+        // whoever stands on it is drawn after it, however near its far end (DESIGN.md 72).
+        if (site.game && !figure.trip) order = Math.max(order, this.courtDepth(site) + 0.2);
         figure.sprite.setDepth(this.feet ? this.feet.depth(figure.x, figure.y, order) : order);
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
         // Someone eating at a seat has a tray or a cup in front of them, towards the table (DESIGN.md 64).
@@ -782,6 +916,10 @@ export class Activity {
       }
       this.cheer(site, seconds);
       for (const prop of site.props) {
+        if (site.game) {
+          this.placeGameProp(site, prop);
+          continue;
+        }
         if (site.placed.type !== 'field') {
           // A study group's book lies open on the table.
           // The table's top is about 21 pixels of the map above where its picture stands.
@@ -796,6 +934,34 @@ export class Activity {
         prop.setPosition(at.x, at.y).setDepth((this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.45);
       }
     }
+  }
+
+  /** A game's ball, at its height over where it is on the court, and a basketball court's hoops at its ends. */
+  private placeGameProp(site: Site, prop: Phaser.GameObjects.Image): void {
+    const game = site.game!;
+    const box = this.boxOf(site);
+    if (prop.getData('ball')) {
+      const spot = this.iso.onDrawing(box, game.ball.x, game.ball.y);
+      const at = this.iso.toWorld(spot.x, spot.y);
+      prop.setPosition(at.x, at.y - game.ball.z * HEIGHT_PX).setDepth(Math.max((this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.62, this.courtDepth(site) + 0.3));
+      return;
+    }
+    // The hoops: at each end, the one higher on the screen seen from the front, the other from behind.
+    const area = SURFACE[site.placed.type]!;
+    const mid = (area.x0 + area.x1) / 2;
+    const ends = [this.iso.onDrawing(box, mid, area.y0 - 0.04), this.iso.onDrawing(box, mid, area.y1 + 0.04)];
+    const worlds = ends.map((end) => this.iso.toWorld(end.x, end.y));
+    const farIndex = worlds[0]!.y <= worlds[1]!.y ? 0 : 1;
+    const far = prop.getData('key') === 'court.hoop.far';
+    const end = ends[far ? farIndex : 1 - farIndex]!;
+    const at = worlds[far ? farIndex : 1 - farIndex]!;
+    prop.setPosition(at.x, at.y).setFlipX(this.iso.mirrors(site.placed.w, site.placed.h)).setDepth(Math.max((this.iso.sum(end.x, end.y) - 1) * 4 + 2.5, this.courtDepth(site) + 0.1));
+  }
+
+  /** Where a court is in the draw order, as src/game/Placed.ts puts a flat building on the ground. */
+  private courtDepth(site: Site): number {
+    const { x, y, w, h } = site.placed;
+    return this.iso.groundDepth(x, y, w, h);
   }
 
   // ------------------------------------------------------- student cards --

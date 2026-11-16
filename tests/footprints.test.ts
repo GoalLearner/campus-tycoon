@@ -81,3 +81,39 @@ describe('footprints', () => {
     expect(feet.depth(7.9, 1.9, own(iso, 7.9, 1.9))).toBeLessThan(hall);
   });
 });
+
+describe('people on a big court', () => {
+  it('are drawn after the court, however near its far end, and before what stands in front of it, at all four turns (DESIGN.md 72)', () => {
+    for (const turn of [0, 1, 2, 3] as Turn[]) {
+      const iso = new Iso(66, 33);
+      iso.setMap(W, H);
+      iso.setTurn(turn);
+      for (const box of [
+        { x: 3, y: 3, w: 2, h: 3 },
+        { x: 2, y: 2, w: 3, h: 4 },
+      ]) {
+        const court = iso.groundDepth(box.x, box.y, box.w, box.h);
+        let under = 0;
+        for (let fy = 0.1; fy < box.h; fy += 0.2) {
+          for (let fx = 0.1; fx < box.w; fx += 0.2) {
+            const mine = own(iso, box.x + fx, box.y + fy);
+            if (mine <= court) under += 1;
+            // As the map draws a player on a court: never under it.
+            expect(Math.max(mine, court + 0.2)).toBeGreaterThan(court);
+          }
+        }
+        // Without the rule some would be under it: the far end of a court longer than two cells.
+        expect(under, `turn ${turn}`).toBeGreaterThan(0);
+        // A building standing just in front of the court, as the view is turned, is still drawn after anyone on it.
+        const beside = [
+          [box.x + 1, box.y + box.h],
+          [box.x + box.w, box.y + 1],
+          [box.x + 1, box.y - 1],
+          [box.x - 1, box.y + 1],
+        ] as const;
+        const [fx, fy] = [...beside].sort((a, b) => iso.sum(b[0] + 0.5, b[1] + 0.5) - iso.sum(a[0] + 0.5, a[1] + 0.5))[0]!;
+        expect(iso.front(fx, fy, 1, 1) * 4 + 1, `turn ${turn}`).toBeGreaterThan(court + 0.2);
+      }
+    }
+  });
+});

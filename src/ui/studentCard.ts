@@ -101,6 +101,11 @@ function doingText(doing: string): string {
 const PLAYING: Record<string, string> = {
   'Outdoor courts': 'Playing on the courts',
   'Recreation field': 'In a game on the field',
+  // The full-size courts and pitch (DESIGN.md 72).
+  'Basketball court': 'Shooting hoops on the court',
+  'Tennis court': 'Playing tennis',
+  'Volleyball court': 'Playing volleyball',
+  'Soccer pitch': 'In a game on the pitch',
   'Aquatics pool': 'Swimming at the pool',
   'Track and field': 'Running on the track',
   Gym: 'Working out at the gym',

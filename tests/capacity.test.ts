@@ -206,7 +206,8 @@ describe('faculty and staff are head counts the campus keeps', () => {
     const spring = at(more, SPRING).state;
     // The plan is made again as the semester ends, for those who will be there with the spring class: a small one
     // since admissions at real figures (DESIGN.md 70), so a few fewer.
-    expect(facultyCount(spring)).toBe(2662);
+    // A few more since the model campus's second gym and four basketball courts (DESIGN.md 72) keep a few more students.
+    expect(facultyCount(spring)).toBe(2664);
     expect(classSizeNow(spring)).toBeLessThan(18);
     expect(teaching(spring)).toBeLessThan(0.3);
 
@@ -569,7 +570,8 @@ describe('the Capacity page', () => {
     expect(need(twice, 'staff').want).toBe(2300);
     expect(need(twice, 'seats').want).toBe(92_000);
     expect(need(twice, 'dining').want).toBe(2 * need(state, 'dining').want);
-    expect(need(twice, 'recreation').want).toBe(2 * need(state, 'recreation').want);
+    // Each is rounded to a whole student, so twice one is within one of the other.
+    expect(Math.abs(need(twice, 'recreation').want - 2 * need(state, 'recreation').want)).toBeLessThanOrEqual(1);
     // The same campus at scale 1 is the same page, 28 times smaller.
     const small = capacity(model(1));
     expect(Math.abs((small.needs[2]!.have * 28) / 2300 - 1)).toBeLessThan(0.01);

@@ -679,7 +679,7 @@ function approvalOver(state: GameState, spots: readonly number[], shifts?: reado
 const WAIT_TALK_SHARE = 0.34;
 
 /** How a student names the recreation building they waited at. */
-const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym', makerspace: 'a bench at the makerspace' };
+const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym', makerspace: 'a bench at the makerspace', basketball: 'the basketball court', tennis: 'the tennis court', volleyball: 'the volleyball court', soccer: 'the pitch' };
 
 function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], resident: boolean, approval: Approval, content: boolean): StudentReason | null {
   // A line at a court is something people talk about, pleased with the place or not: about one in three

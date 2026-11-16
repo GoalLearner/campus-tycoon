@@ -325,6 +325,11 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   // A second of each, so the halls by the avenue and the north-east halls have both in reach.
   put('safety', 27, 11, false);
   put('medical', 17, 32, false);
+  // A second gym and four full basketball courts within reach of the halls (DESIGN.md 72, the owner's "we need two
+  // gyms and basketball courts as well"), on open ground: no hall, path or road moved. Each with a bin beside it.
+  put('gym', 30, 5, false);
+  for (const [x, y] of [[6, 6], [29, 10], [18, 3], [13, 33]] as const) put('basketball', x, y, false);
+  small('bin', [[31, 6], [5, 7], [31, 11], [20, 4], [12, 34]]);
 
   // ------------------------------------------------ lawn where nothing stands
   // What the game cannot draw yet (35.3) is left as lawn and trees.
@@ -342,7 +347,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
     // The middle spine, behind the walk to the lecture halls, and over the north lawn to the east spine.
     ...col(13, 8, 15), [14, 10], [14, 8], [15, 8], [16, 8], [16, 9], ...row(9, 17, 20), ...col(21, 5, 9),
     // Over the east walk, and out to the avenue.
-    [22, 9], [22, 10], [22, 11], [22, 12], [23, 12], [24, 12], [25, 12], ...row(13, 25, 29), [29, 12], [30, 12], [31, 12],
+    [22, 9], [22, 10], [22, 11], [22, 12], [23, 12], [24, 12], [25, 12], ...row(13, 25, 31),
     // Down the east side: over the walk to the avenue, and behind the walk by the lecture halls, with ways on.
     [26, 14], [26, 15], [26, 16], [26, 17], ...col(25, 17, 20), [26, 20], [26, 21], [26, 22], ...col(25, 22, 26), [24, 17], [24, 20], [24, 22],
     // Across the middle: over the east walk, through the lawn, over the middle walk to the middle spine's south half.
