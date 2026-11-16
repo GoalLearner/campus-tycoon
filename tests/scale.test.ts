@@ -109,7 +109,8 @@ describe('the model campus at its own size', () => {
     const before = state.money.cash;
     const rich = structuredClone(state);
     rich.money.cash = 1e12;
-    const built = applyAction(rich, { type: 'place', building: 'coffee', x: 12, y: 30 });
+    // On open ground beside the middle spine's bike path (DESIGN.md 73), which has (12,30).
+    const built = applyAction(rich, { type: 'place', building: 'coffee', x: 12, y: 31 });
     expect(built.ok).toBe(true);
     if (built.ok) expect(built.cost).toBe(PLACED.coffee.cost * scale);
     expect(state.money.cash).toBe(before);
