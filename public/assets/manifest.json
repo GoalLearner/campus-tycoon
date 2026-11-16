@@ -307,6 +307,17 @@
     1
    ]
   },
+  "emote.bandage": {
+   "frame": "emote.bandage",
+   "anchor": [
+    13,
+    -13
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "emote.bell": {
    "frame": "emote.bell",
    "anchor": [
@@ -741,6 +752,50 @@
    "anchor": [
     14,
     -5
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sign-beds": {
+   "frame": "emote.sign-beds",
+   "anchor": [
+    53,
+    -1
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sign-food": {
+   "frame": "emote.sign-food",
+   "anchor": [
+    53,
+    -1
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sign-parking": {
+   "frame": "emote.sign-parking",
+   "anchor": [
+    53,
+    -1
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "emote.sign-policy": {
+   "frame": "emote.sign-policy",
+   "anchor": [
+    53,
+    -1
    ],
    "footprint": [
     1,

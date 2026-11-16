@@ -7581,6 +7581,66 @@
     }
    ]
   },
+  "emote.bandage": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/bandage.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.485
+    }
+   ]
+  },
+  "emote.sign-beds": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/sign-beds.png",
+     "stand": [
+      0.5,
+      0.98
+     ],
+     "scale": 0.73
+    }
+   ]
+  },
+  "emote.sign-food": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/sign-food.png",
+     "stand": [
+      0.5,
+      0.98
+     ],
+     "scale": 0.73
+    }
+   ]
+  },
+  "emote.sign-parking": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/sign-parking.png",
+     "stand": [
+      0.5,
+      0.98
+     ],
+     "scale": 0.73
+    }
+   ]
+  },
+  "emote.sign-policy": {
+   "layers": [
+    {
+     "file": "_rendered/ours/emotes/sign-policy.png",
+     "stand": [
+      0.5,
+      0.98
+     ],
+     "scale": 0.73
+    }
+   ]
+  },
   "wheel.bike.sw": {
    "layers": [
     {

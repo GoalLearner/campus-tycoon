@@ -1,4 +1,5 @@
 import type { DayPeriod } from './daylight';
+import { NO_CHAOS, type ChaosCrowd } from './mayhemShow';
 import type { Weather } from './life';
 
 /**
@@ -8,8 +9,12 @@ import type { Weather } from './life';
  * For show only: nothing here is saved, nothing changes a number.
  */
 
-export type MomentKind = 'dustup' | 'coupleFight' | 'performer' | 'danceOff' | 'proposal' | 'fountain' | 'winningShot';
-export const MOMENT_KINDS: readonly MomentKind[] = ['dustup', 'coupleFight', 'performer', 'danceOff', 'proposal', 'fountain', 'winningShot'];
+/**
+ * The chaos sandbox, C2 (DESIGN.md 76), adds three: a shouting match between two who meet (no cloud), and two the map
+ * stages at a chaos incident and the crowd watches, never chosen here: a rally, and Campus Safety chasing a prankster.
+ */
+export type MomentKind = 'dustup' | 'coupleFight' | 'performer' | 'danceOff' | 'proposal' | 'fountain' | 'winningShot' | 'shouting' | 'rally' | 'prank';
+export const MOMENT_KINDS: readonly MomentKind[] = ['dustup', 'coupleFight', 'performer', 'danceOff', 'proposal', 'fountain', 'winningShot', 'shouting', 'rally', 'prank'];
 
 /** What the moment could be made of now: the hour, the sky, the calendar, and what is on screen. */
 export interface MomentFacts {
@@ -27,6 +32,8 @@ export interface MomentFacts {
   fountain: boolean;
   couples: boolean;
   pairs: boolean;
+  /** How the Chaos meter shows in the crowd (DESIGN.md 76.5); as before when left out. */
+  chaos?: ChaosCrowd;
 }
 
 /**
@@ -36,12 +43,15 @@ export interface MomentFacts {
 export function momentWeights(facts: MomentFacts): Partial<Record<MomentKind, number>> {
   const fine = facts.weather === 'clear';
   const late = facts.period === 'evening' || facts.period === 'night';
+  // The meter (76.5): scuffles and arguments more often the rowdier the campus, in daylight too from Rowdy, fewer when serene.
+  const chaos = facts.chaos ?? NO_CHAOS;
   const out: Partial<Record<MomentKind, number>> = {};
   const add = (kind: MomentKind, weight: number): void => {
     if (weight > 0) out[kind] = weight;
   };
-  add('dustup', facts.pairs && late && facts.weather !== 'snow' ? (facts.partyNight ? 1.2 : 0.4) : 0);
-  add('coupleFight', facts.couples ? 0.8 : 0);
+  add('dustup', facts.pairs && (late || chaos.daytime) && facts.weather !== 'snow' ? (facts.partyNight ? 1.2 : 0.4) * chaos.moments : 0);
+  add('coupleFight', facts.couples ? 0.8 * chaos.moments : 0);
+  add('shouting', facts.pairs ? chaos.shouting : 0);
   add('performer', facts.busker ? 2 : 0);
   add('danceOff', facts.dance && late ? 2.5 : 0);
   add('proposal', facts.commencement && facts.couples ? 4 : 0);
@@ -72,6 +82,9 @@ export const MOMENT_MS: Record<MomentKind, number> = {
   proposal: 9000,
   fountain: 6500,
   winningShot: 6000,
+  shouting: 6000,
+  rally: 7000,
+  prank: 5000,
 };
 
 /** Between two moments where the player is looking: long enough that each is an event. */
@@ -92,6 +105,9 @@ export const WATCH_REACTIONS: Record<MomentKind, { emotes: readonly string[]; ch
   proposal: { emotes: ['heart', 'sparkle', 'exclaim', 'heart'], cheer: true },
   fountain: { emotes: ['laugh', 'laugh', 'exclaim', 'sweat'], cheer: false },
   winningShot: { emotes: ['exclaim', 'highfive', 'fistbump', 'laugh'], cheer: true },
+  shouting: { emotes: ['exclaim', 'sweat', 'thought', 'exclaim'], cheer: false },
+  rally: { emotes: ['thought', 'exclaim', 'speech', 'sparkle'], cheer: false },
+  prank: { emotes: ['laugh', 'exclaim', 'laugh', 'laugh'], cheer: false },
 };
 
 /** A watcher's line on their card, for their day. */
@@ -111,6 +127,12 @@ export function watchWords(kind: MomentKind): string {
       return 'Laughed when someone fell in the fountain';
     case 'winningShot':
       return 'Watched a game-winning shot on the courts';
+    case 'shouting':
+      return 'Saw a shouting match';
+    case 'rally':
+      return 'Stopped to watch a rally';
+    case 'prank':
+      return 'Saw Campus Safety chase a prankster';
   }
 }
 
@@ -131,5 +153,11 @@ export function actorWords(kind: MomentKind, other: string | null, first = true)
       return 'Played to a crowd';
     case 'danceOff':
       return 'Won a dance-off';
+    case 'shouting':
+      return other ? `Had a shouting match with ${other}` : 'Had a shouting match';
+    case 'rally':
+      return 'Spoke up at a rally';
+    case 'prank':
+      return 'Got away from Campus Safety after a prank';
   }
 }

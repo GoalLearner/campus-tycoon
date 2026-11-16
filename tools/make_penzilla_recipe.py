@@ -432,6 +432,11 @@ for moment in BIG_MOMENTS:
 # L3 (DESIGN.md 64.4): the dust cloud of a scuffle, about two figures wide, and the splash of a fall into a fountain.
 sprites['emote.dustup'] = {'layers': [standing('_rendered/ours/emotes/dustup.png', 0.5, 0.5, scale=1.25)]}
 sprites['emote.splash'] = {'layers': [standing('_rendered/ours/emotes/splash.png', 0.5, 0.5, scale=0.485)]}
+# The chaos sandbox, C2 (DESIGN.md 76): the plaster a medic puts on a bruise, an emote's size, and a rally's signs,
+# half as big again, standing on the bottom of their sticks so they are held up over a head.
+sprites['emote.bandage'] = {'layers': [standing('_rendered/ours/emotes/bandage.png', 0.5, 0.5, scale=0.485)]}
+for topic in ('beds', 'food', 'parking', 'policy'):
+    sprites[f'emote.sign-{topic}'] = {'layers': [standing(f'_rendered/ours/emotes/sign-{topic}.png', 0.5, 0.98, scale=0.73)]}
 # L5 (DESIGN.md 64.6): what students ride, each facing two ways, and the bike rack. Ours, by tools/make_wheels.py,
 # each about its size beside a figure 36 pixels tall.
 WHEELS = {'bike': 0.74, 'skateboard': 0.64, 'longboard': 0.64, 'kick': 0.62, 'escooter': 0.66, 'skates': 0.47}

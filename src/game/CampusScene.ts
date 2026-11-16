@@ -15,12 +15,14 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
 import { Lawns } from './Lawns';
 import { Moments } from './Moments';
+import { Mayhem } from './Mayhem';
+import { alongBy, chaosCrowd, RUN, setOff } from '../app/mayhemShow';
 import { lawnShare, partyTonight, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
 import { seasonCurve } from '../sim/systems/season';
 import { IN_TERM_FROM } from '../sim/config/season';
@@ -193,6 +195,8 @@ export class CampusScene extends Phaser.Scene {
   private scenes!: Scenes;
   private lawns!: Lawns;
   private moments!: Moments;
+  /** Chaos's incidents staged where they happen (DESIGN.md 76). */
+  private mayhem!: Mayhem;
   /** Students standing in an activity or a small scene, by key. Shared with the walkers, so nobody is in two places. */
   private readonly staying = new Set<string>();
   /** The ring under such a student while their card is open. */
@@ -287,7 +291,7 @@ export class CampusScene extends Phaser.Scene {
   private feet!: Footprints;
   /** Each responder's way to their incident on foot (DESIGN.md 69.5), and those walking back once it is over (69.2). */
   private responderWays = new Map<number, Trip>();
-  private respondersBack = new Map<number, { sprite: Phaser.GameObjects.Image; trip: Trip; look: number }>();
+  private respondersBack = new Map<number, { sprite: Phaser.GameObjects.Image; trip: Trip; look: number; runFor: number }>();
   /** Items the dev previews put on the map, beside the buildings in the game state. */
   private devItems: PlacedItem[] = [];
   private placedDirty = true;
@@ -337,6 +341,8 @@ export class CampusScene extends Phaser.Scene {
     this.lawns.setAfoot(this.walkers);
     // Moments the crowd gathers round (DESIGN.md 64.4), made of the people the other layers have out.
     this.moments = new Moments(this, this.art, this.iso, this.walkers, this.lawns, this.scenes, this.activity);
+    this.mayhem = new Mayhem(this, this.art, this.iso, this.walkers, this.staying, walking);
+    this.mayhem.setFootprints(this.feet);
     this.walkers.setElsewhere(this.staying);
     this.ambient = new Ambient(this, this.art, this.iso);
     this.windows = new Windows(this, this.art, this.iso, LIGHT_DEPTH + 1);
@@ -453,6 +459,7 @@ export class CampusScene extends Phaser.Scene {
       this.crew.setMap(state);
       this.activity.setMap(state);
       this.scenes.setMap(state);
+      this.mayhem.setMap(state);
       this.lawns.setMap(state);
       this.moments.setMap(state);
       this.ambient.setMap(state);
@@ -485,6 +492,7 @@ export class CampusScene extends Phaser.Scene {
     this.scenes.update(time, delta);
     this.lawns.update(time, delta);
     this.moments.update(time);
+    this.mayhem.update(state, time, delta);
     this.ambient.update(time);
     this.sway(time);
     this.showHintTexts();
@@ -518,6 +526,7 @@ export class CampusScene extends Phaser.Scene {
     this.activity.clear();
     this.lawns.clear();
     this.moments.clear();
+    this.mayhem.clear();
     this.scenes.clear();
     this.staying.clear();
     this.stayRing?.setVisible(false);
@@ -746,6 +755,10 @@ export class CampusScene extends Phaser.Scene {
     this.walkers.setToday({ homeWin: homeWinLately(state), bids: pledgeSeason(state) && chapters(state).length > 0, exams: day.kind === 'midterms' || day.kind === 'finals' });
     // Moments the crowd gathers round (DESIGN.md 64.4): a party night is Thursday to Saturday (63.11).
     this.moments.setLife({ period: this.light.period, weather: this.weather, partyNight: date.weekday >= 4 && date.weekday <= 6, commencement: day.kind === 'commencement', reduced });
+    // The Chaos meter in the everyday crowd (DESIGN.md 76.5): rowdier, more scuffles, arguments and glares; as before with no chaos.
+    const crowdChaos = chaosCrowd(chaosOn(state) ? chaosStepOf(state.chaos.level) : null);
+    this.walkers.setChaos(crowdChaos);
+    this.moments.setChaos(crowdChaos);
     this.scenes.setGame(tint ?? (storming ? softened(colour) : null), storming);
     this.ambient.setWeather(this.weather, reduced);
     this.life = life;
@@ -804,6 +817,7 @@ export class CampusScene extends Phaser.Scene {
     this.scenes.setStep(step);
     this.lawns.setStep(step);
     this.moments.setStep(step);
+    this.mayhem.setStep(step);
     this.walkers.setStep(step);
     this.cars.setStep(step);
     this.activity.setStep(step);
@@ -1660,7 +1674,6 @@ export class CampusScene extends Phaser.Scene {
         if (!home) continue;
         const began = this.realTimeOfTick(state, incident.startTick);
         const ends = this.realTimeOfTick(state, incident.endTick);
-        const along = Phaser.Math.Clamp((now - began) / Math.max(1, ends - began), 0, 1);
         const fromX = home.x + home.w / 2;
         const fromY = home.y + home.h + 0.2;
         const over = this.incidentPlace(state, incident);
@@ -1674,6 +1687,16 @@ export class CampusScene extends Phaser.Scene {
           trip = tripOf(pts, 0, false);
           this.responderWays.set(incident.id, trip);
         }
+        // To chaos (DESIGN.md 76.3) Campus Safety sets off later and runs, arriving on the same minute; until then they are
+        // still at their station. Anything else they walk to, all the way.
+        const runs = incident.chaos !== undefined;
+        const from = runs ? setOff(began, ends, trip.total) : began;
+        seen.add(incident.id);
+        if (runs && now < from) {
+          this.responders.get(incident.id)?.setVisible(false);
+          continue;
+        }
+        const along = alongBy(from, ends, now);
         const on = pointOn(trip, along * trip.total);
         const x = on.x;
         const y = on.y;
@@ -1681,18 +1704,18 @@ export class CampusScene extends Phaser.Scene {
         const direction = facingOf(way.x, way.y);
         const facing = people.flip?.[direction] ?? direction;
         const look = (incident.kind === 'injury' ? people.roles?.medic : people.roles?.officer) ?? 0;
-        const frame = along >= 1 ? 0 : Math.floor(timeMs / people.frameMs) % people.frames;
+        const frame = along >= 1 ? 0 : Math.floor((timeMs * (runs ? RUN / 0.85 : 1)) / people.frameMs) % people.frames;
         let sprite = this.responders.get(incident.id);
         if (!sprite) {
           sprite = this.add.image(0, 0, '__DEFAULT');
           this.responders.set(incident.id, sprite);
         }
+        sprite.setVisible(true);
         this.art.apply(sprite, `person.${look}.${facing}.${frame}`);
         sprite.setData('look', look);
         sprite.setFlipX(people.flip?.[direction] !== undefined);
         const at = this.iso.toWorld(x, y);
         sprite.setPosition(at.x, at.y).setDepth(this.feet.depth(x, y, (this.iso.sum(x, y) - 1) * 4 + 2.6)).setAlpha(Math.min(1, (along * trip.total) / 0.35));
-        seen.add(incident.id);
       }
     }
     // Over: they walk back the way they came and in at their door (69.2), or are simply gone when out of sight.
@@ -1707,12 +1730,29 @@ export class CampusScene extends Phaser.Scene {
         sprite.destroy();
         continue;
       }
-      const back = [...out.pts].reverse();
+      let back = [...out.pts].reverse();
       const look = Number(sprite.getData('look') ?? people.roles?.officer ?? 0);
-      this.respondersBack.set(id, { sprite, trip: tripOf(back, timeMs, true), look });
+      // After a prank: a chase after the one who bolted, at a run, a few cells; they give up and walk back (DESIGN.md 76.3).
+      const chase = this.mayhem.chaseFor(id);
+      let runFor = 0;
+      if (chase) {
+        const end = chase[chase.length - 1]!;
+        const home = out.pts[0]!;
+        const way = this.walkers.wayBetween(end.x, end.y, { x: Math.floor(home.x), y: Math.floor(home.y - 0.2) - 1, w: 1, h: 1 });
+        if (way) {
+          // From where they stand at the dorm, after the one who bolted, then home along paths.
+          const run = tripOf([back[0]!, ...chase], 0, false);
+          runFor = run.total;
+          back = [...run.pts, ...way.slice(1), home];
+          this.mayhem.iconOver(sprite, 'sweat', (runFor / RUN) * 1000);
+        }
+      }
+      this.respondersBack.set(id, { sprite, trip: tripOf(back, timeMs, true), look, runFor });
     }
     for (const [id, one] of this.respondersBack) {
-      const d = ((timeMs - one.trip.startMs) / 1000) * 0.9;
+      const t = (timeMs - one.trip.startMs) / 1000;
+      const running = t * RUN < one.runFor;
+      const d = running ? t * RUN : one.runFor + (t - one.runFor / RUN) * 0.9;
       if (!people || d >= one.trip.total) {
         one.sprite.destroy();
         this.respondersBack.delete(id);
@@ -1722,7 +1762,7 @@ export class CampusScene extends Phaser.Scene {
       const way = this.iso.dir(on.bx - on.ax, on.by - on.ay);
       const direction = facingOf(way.x, way.y);
       const facing = people.flip?.[direction] ?? direction;
-      this.art.apply(one.sprite, `person.${one.look}.${facing}.${Math.floor(timeMs / people.frameMs) % people.frames}`);
+      this.art.apply(one.sprite, `person.${one.look}.${facing}.${Math.floor((timeMs * (running ? RUN / 0.85 : 1)) / people.frameMs) % people.frames}`);
       one.sprite.setFlipX(people.flip?.[direction] !== undefined);
       const at = this.iso.toWorld(on.x, on.y);
       one.sprite.setPosition(at.x, at.y).setDepth(this.feet.depth(on.x, on.y, (this.iso.sum(on.x, on.y) - 1) * 4 + 2.6)).setAlpha(doorAlpha(one.trip, d, 0.35));
@@ -1748,7 +1788,7 @@ export class CampusScene extends Phaser.Scene {
     const key = student ? studentKey(student) : null;
     const walking = key ? this.walkers.doing(key) : null;
     // Not out walking: they may be standing in a game, a line or a small scene, which the card says in its own words.
-    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key)) : null;
+    const there = key && !walking ? (this.activity.find(key) ?? this.scenes.find(key) ?? this.lawns.find(key) ?? this.mayhem.find(key)) : null;
     session.setDoing(walking ?? (there ? `${STAYING}${there.words}` : null), there?.look ?? null, walking ? this.walkers.ridingWords(key!) : null);
     // A ring on the ground under them, as under a walker whose card is open.
     if (there) {
@@ -2492,7 +2532,8 @@ export class CampusScene extends Phaser.Scene {
     const figure = this.activity.figureAt(world.x, world.y, thumb);
     const actor = this.scenes.actorAt(world.x, world.y, thumb);
     const lawn = this.lawns.memberAt(world.x, world.y, thumb);
-    const stander = [figure, actor, lawn].filter((one): one is Stander => one !== null).sort((a, b) => a.far - b.far)[0] ?? null;
+    const mayhem = this.mayhem.actorAt(world.x, world.y, thumb);
+    const stander = [figure, actor, lawn, mayhem].filter((one): one is Stander => one !== null).sort((a, b) => a.far - b.far)[0] ?? null;
     if (stander && (!walker || stander.far < walker.far)) {
       // Someone in a game, a line, at a table or in a small scene is a student, with the ordinary card.
       if (stander.student) session.openStudent(stander.student, stander.look);

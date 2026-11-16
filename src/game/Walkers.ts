@@ -5,6 +5,7 @@ import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
 import { LANE_LINE, LANE_LOOK, PARKS, rideMomentOf, WALK_LINE, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
+import { NO_CHAOS, WATCH_RUN, type ChaosCrowd } from '../app/mayhemShow';
 import { searchOnFoot, searchRide, searchSpace } from './afoot';
 import type { Footprints } from './footprints';
 import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
@@ -273,6 +274,20 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
 /** How far from the middle of a street the middle of its sidewalk runs (DESIGN.md 59.1). */
 const SIDEWALK = 0.5 - KERB_MIDDLE;
+/** A rally finds its lawn within this many cells of the lecture hall's door (DESIGN.md 76.4). */
+const RALLY_REACH = 7;
+/** A scene at a door stands no more than this many steps from it, and a building in front counts as this many steps. */
+const STAND_REACH = 3;
+const STAND_HIDDEN = 2.5;
+/** The cells in front of a cell on the screen, in the view's cells, and how much a building on each hides it. */
+const IN_FRONT: ReadonlyArray<readonly [number, number, number]> = [
+  [1, 0, 0.6],
+  [0, 1, 0.6],
+  [1, 1, 1],
+  [2, 1, 0.5],
+  [1, 2, 0.5],
+  [2, 2, 0.6],
+];
 /** Which sidewalk of its street a house is on: -1 above the street on the map, 1 below. */
 const sideOf = (house: Stop): number => (house.row !== undefined && house.cell.y < house.row ? -1 : 1);
 /** A tour ambles. */
@@ -372,6 +387,8 @@ interface Walker {
   faceAt: { x: number; y: number } | null;
   /** One of the moment's own people until then: not a watcher. */
   momentUntil: number;
+  /** Times their walk: running over to see a dust-up or a chase (DESIGN.md 76.5), 1 otherwise. */
+  rush: number;
   /** In a dust cloud, kneeling, or standing in a fountain, until then; `fallOnArrive` sends them in at the end of the way. */
   hiddenUntil: number;
   kneelUntil: number;
@@ -642,6 +659,8 @@ export class Walkers {
   private stadiumStop: Stop | null = null;
   /** The crowd step in force: the player's setting, or lower while frames are short. */
   private step = 2;
+  /** How the Chaos meter shows in the crowd (DESIGN.md 76.5): strangers who bump and glare. */
+  private chaos: ChaosCrowd = NO_CHAOS;
   /** How much a pennant sways, from 0 for still. */
   private wind = 0;
   /** Everyone on screen at the last frame, for the sound of the crowd. */
@@ -706,6 +725,11 @@ export class Walkers {
   }
 
   /** The crowd step to show: 0 is sparse, 1 Low, 2 Normal, 3 High. */
+  /** How the Chaos meter shows in the crowd (DESIGN.md 76.5). */
+  setChaos(chaos: ChaosCrowd): void {
+    this.chaos = chaos;
+  }
+
   setStep(step: number): void {
     this.step = Math.max(0, Math.min(CROWD_STEPS.length - 1, step));
   }
@@ -1298,6 +1322,7 @@ export class Walkers {
       resume: null,
       faceAt: null,
       momentUntil: 0,
+      rush: 1,
       hiddenUntil: 0,
       kneelUntil: 0,
       fallUntil: 0,
@@ -1961,6 +1986,22 @@ export class Walkers {
       }
       return mid(a, b);
     }
+    if (kind === 'shouting') {
+      // Two who meet have it out, face to face, in turn (DESIGN.md 76.5): no cloud, and each off their own way after.
+      const pair = this.pairIn(view);
+      if (!pair) return null;
+      const [a, b] = pair;
+      hold(a, b);
+      this.showBig(a, 'argue');
+      this.showIcon(b, 'anger', 500);
+      this.showIcon(a, 'anger', 2400);
+      this.showIcon(b, 'speech', 3600);
+      if (this.onMemory) {
+        this.onMemory(a.student!, actorWords('shouting', this.first(b)));
+        this.onMemory(b.student!, actorWords('shouting', this.first(a)));
+      }
+      return mid(a, b);
+    }
     if (kind === 'coupleFight' || kind === 'proposal') {
       const pair = this.coupleIn(view);
       if (!pair) return null;
@@ -2035,6 +2076,8 @@ export class Walkers {
         w.lingerMs = 0;
         w.talkMs = 0;
         w.watchMs = Math.max(1500, ms - 900);
+        // To a dust-up or a chase they run (DESIGN.md 76.5).
+        if (kind === 'dustup' || kind === 'prank') w.rush = WATCH_RUN;
       } else {
         // Near enough: they stop where they are and turn to look.
         if (w.lingerMs > 0) w.lingerMs = Math.max(w.lingerMs, ms * 0.7);
@@ -2133,14 +2176,16 @@ export class Walkers {
    * building. The points run from where they appear to (x, y), a cell at a time. Null when there is none in reach.
    * Read backwards, it is a way off the screen from (x, y).
    */
-  approach(x: number, y: number): Spot[] | null {
+  approach(x: number, y: number, notFrom?: { x: number; y: number }): Spot[] | null {
     const width = this.width;
     const sx = Math.floor(x);
     const sy = Math.floor(y);
     if (sx < 0 || sy < 0 || sx >= width || sy >= this.height) return null;
     const view = this.scene.cameras.main.worldView;
     const start = sy * width + sx;
-    const end = (c: number): boolean => c !== start && (this.doorAt.has(c) || !this.inView(view, (c % width) + 0.5, Math.floor(c / width) + 0.5, OUT_OF_SIGHT_PX));
+    // `notFrom`: not by the door on that cell (a prankster never bolts back into the dorm they pranked, DESIGN.md 76.3).
+    const shut = notFrom ? Math.floor(notFrom.y) * width + Math.floor(notFrom.x) : -1;
+    const end = (c: number): boolean => c !== start && ((this.doorAt.has(c) && c !== shut) || !this.inView(view, (c % width) + 0.5, Math.floor(c / width) + 0.5, OUT_OF_SIGHT_PX));
     const cells = searchOnFoot(width, this.height, this.isAfoot, start, end, AFOOT_CELLS, this.space);
     if (!cells || cells.length < 2) return null;
     const last = cells[cells.length - 1]!;
@@ -2151,6 +2196,143 @@ export class Walkers {
     return out;
   }
 
+
+  /**
+   * The chaos sandbox, C2 (DESIGN.md 76): the door of a building on a box of cells and the path in front of it, where
+   * someone at that building comes out (69.2) and where a scene there stands. A door on a side facing the player first,
+   * then the one with the most open ground round it; null when the building has no door on a path.
+   */
+  frontOf(box: { x: number; y: number; w: number; h: number }): { door: Spot; front: Spot } | null {
+    const width = this.width;
+    let best: { door: Spot; front: Spot } | null = null;
+    let most = -1;
+    for (const [cell, door] of this.doorAt) {
+      const x = cell % width;
+      const y = (cell - x) / width;
+      // The building a door belongs to is the cell it leans towards from its path.
+      const bx = x + Math.sign(Math.round((door.x - (x + 0.5)) * 100));
+      const by = y + Math.sign(Math.round((door.y - (y + 0.5)) * 100));
+      if (bx < box.x || by < box.y || bx >= box.x + box.w || by >= box.y + box.h) continue;
+      let open = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const c = (y + dy) * width + x + dx;
+          if (x + dx >= 0 && y + dy >= 0 && x + dx < width && y + dy < this.height && this.isOpen[c] && !this.isStreet[c]) open += 1;
+        }
+      }
+      // A door on a side facing the player, in the view as it is turned, so the scene is not behind the building.
+      const facing = this.iso.dir(x - bx, y - by);
+      const score = open + (facing.x + facing.y > 0 ? 10 : 0);
+      if (score > most) {
+        most = score;
+        best = { door: { ...door }, front: { x: x + 0.5, y: y + 0.5 } };
+      }
+    }
+    return best;
+  }
+
+  /**
+   * How much the buildings in front of a cell hide it, in the view as it is turned (DESIGN.md 76.1): 0 when the player
+   * sees it plainly, more the more buildings stand between. The cells one and two steps down the screen from it count.
+   */
+  hiddenAt(cx: number, cy: number): number {
+    const map = this.state?.map;
+    if (!map) return 0;
+    let hid = 0;
+    for (const [dx, dy, weight] of IN_FRONT) {
+      const at = this.iso.step(cx, cy, dx, dy);
+      if (at.x < 0 || at.y < 0 || at.x >= this.width || at.y >= this.height) continue;
+      const cell = map.cells[at.y * this.width + at.x]!;
+      const placed = cell.kind === 'placed' && cell.placedId !== null ? map.placed[cell.placedId] : null;
+      if ((cell.kind === 'lot' && cell.buildingId !== null) || (placed && !PLACED[placed.type].flat)) hid += weight;
+    }
+    return hid;
+  }
+
+  /**
+   * Where a scene at a building's door stands (DESIGN.md 76.1): the path in front, or, when buildings in front hide
+   * it, the open ground nearest it within a few steps that the player can see, and the way there from the door. Never
+   * where `taken` says another scene already stands.
+   */
+  standBy(door: Spot, front: Spot, taken: (x: number, y: number) => boolean = () => false): { at: Spot; way: Spot[] } {
+    const width = this.width;
+    const fx = Math.floor(front.x);
+    const fy = Math.floor(front.y);
+    const open = (c: number): boolean => this.isOpen[c]! && !this.isStreet[c];
+    let best = { cell: fy * width + fx, score: this.hiddenAt(fx, fy) * STAND_HIDDEN + (taken(fx, fy) ? 100 : 0) };
+    if (best.score === 0) return { at: { ...front }, way: [{ ...door }, { ...front }] };
+    // A short search on foot from the front cell, over open ground.
+    const from = new Map<number, number>([[best.cell, -1]]);
+    let ring = [best.cell];
+    for (let steps = 1; steps <= STAND_REACH && ring.length > 0; steps++) {
+      const next: number[] = [];
+      for (const c of ring) {
+        const x = c % width;
+        const y = (c - x) / width;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= this.height) continue;
+          const n = ny * width + nx;
+          if (from.has(n) || !open(n)) continue;
+          from.set(n, c);
+          next.push(n);
+          if (taken(nx, ny)) continue;
+          const score = steps + this.hiddenAt(nx, ny) * STAND_HIDDEN;
+          if (score < best.score) best = { cell: n, score };
+        }
+      }
+      ring = next;
+    }
+    const cells: number[] = [];
+    for (let c = best.cell; c !== -1; c = from.get(c)!) cells.push(c);
+    cells.reverse();
+    const way: Spot[] = [{ ...door }, ...cells.map((c) => ({ x: (c % width) + 0.5, y: Math.floor(c / width) + 0.5 }))];
+    return { at: { ...way[way.length - 1]! }, way };
+  }
+
+  /**
+   * Open ground for a rally by a building (DESIGN.md 76.4): up to `n` spots, two to a cell, gathered round the best cell
+   * near its door: a quad's lawn first, then wide open paths and grass, never a street or a court. A clump, not a line
+   * along a path. Empty when there is none.
+   */
+  groundBy(front: Spot, n: number): Spot[] {
+    const width = this.width;
+    const fx = Math.floor(front.x);
+    const fy = Math.floor(front.y);
+    const map = this.state?.map;
+    if (!map) return [];
+    const ground = (x: number, y: number): 'quad' | 'open' | null => {
+      if (x < 0 || y < 0 || x >= width || y >= this.height) return null;
+      const kind = map.cells[y * width + x]!.kind;
+      if (kind === 'quad') return 'quad';
+      return kind === 'empty' || this.isPath[y * width + x] ? 'open' : null;
+    };
+    const cells: Array<{ x: number; y: number; score: number }> = [];
+    for (let y = fy - RALLY_REACH; y <= fy + RALLY_REACH; y++) {
+      for (let x = fx - RALLY_REACH; x <= fx + RALLY_REACH; x++) {
+        const kind = ground(x, y);
+        const far = Math.abs(x - fx) + Math.abs(y - fy);
+        if (!kind || far > RALLY_REACH) continue;
+        let open = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && ground(x + dx, y + dy)) open += 1;
+        // A lawn with open ground all round, near the door; a narrow path between buildings last.
+        cells.push({ x, y, score: far * 0.5 + (kind === 'quad' ? 0 : 3) + (8 - open) * 0.8 + this.hiddenAt(x, y) * 1.5 });
+      }
+    }
+    if (cells.length === 0) return [];
+    cells.sort((a, b) => a.score - b.score || a.y - b.y || a.x - b.x);
+    const best = cells[0]!;
+    // The clump: the cells nearest the best one.
+    const near = cells.slice().sort((a, b) => Math.hypot(a.x - best.x, a.y - best.y) - Math.hypot(b.x - best.x, b.y - best.y) || a.score - b.score);
+    const out: Spot[] = [];
+    for (const cell of near) {
+      if (out.length >= n || Math.hypot(cell.x - best.x, cell.y - best.y) > 2.3) break;
+      out.push({ x: cell.x + 0.3, y: cell.y + 0.35 });
+      if (out.length < n) out.push({ x: cell.x + 0.7, y: cell.y + 0.68 });
+    }
+    return out;
+  }
 
   /**
    * A way on foot from a point to beside a box of cells (DESIGN.md 69.5): over paths, open ground, streets and
@@ -2207,6 +2389,7 @@ export class Walkers {
     walker.exiting = true;
     walker.lingerMs = 0;
     walker.resume = null;
+    walker.rush = 1;
     walker.paceAnchor = null;
     walker.pacingStep = false;
   }
@@ -2599,6 +2782,7 @@ export class Walkers {
           walker.leg = 1;
           walker.resume = null;
           walker.faceAt = null;
+          walker.rush = 1;
         } else if (walker.lingerMs <= 0 && walker.goal) {
           // Rested on the lawn. Off to the next place: a party goes on together, where the first of them chose.
           const known = walker.party ? this.partyNext.get(walker.party) : undefined;
@@ -2622,7 +2806,7 @@ export class Walkers {
           }
         }
       } else if (walker.fading !== 'out' || walker.leg < walker.route.length) {
-        let step = (walker.pace * dt) / 1000;
+        let step = (walker.pace * walker.rush * dt) / 1000;
         // At a crossing a car has, or is due, they wait at the kerb. Once on it they keep going.
         const ahead = walker.route[walker.leg];
         if (ahead) {
@@ -2654,7 +2838,7 @@ export class Walkers {
             step = 0;
           }
         }
-        if (!waiting) walker.stride += dt * (walker.pace / PACE);
+        if (!waiting) walker.stride += dt * ((walker.pace * walker.rush) / PACE);
         // Angry (69.1): a brisk stomp, and now and then the anger mark over their head, never a turn about.
         if (!waiting && walker.feel?.motion === 'stomp' && this.scene.time.now >= walker.angerAt) {
           walker.angerAt = this.scene.time.now + ANGER_MARK_MS.least + Math.random() * ANGER_MARK_MS.spread;
@@ -2664,6 +2848,7 @@ export class Walkers {
           // At their place by a moment (DESIGN.md 64.4): they stand and watch it, facing it; or they are in the fountain.
           walker.lingerMs = walker.watchMs;
           walker.watchMs = 0;
+          walker.rush = 1;
           if (walker.faceAt) walker.direction = facing(walker.faceAt.x - walker.x, walker.faceAt.y - walker.y);
           if (walker.fallOnArrive) {
             walker.fallOnArrive = false;
@@ -3180,6 +3365,14 @@ export class Walkers {
         this.showIcon(b, 'wave', 250);
         this.remember(b, `Waved at ${this.first(a)}`);
       }
+      return;
+    }
+    // On a rowdy campus, strangers passing bump and glare (DESIGN.md 76.5): short tempers, no more than that.
+    if (ta === null && tb === null && this.chaos.bump > 0 && Math.random() < this.chaos.bump) {
+      this.showIcon(a, 'anger');
+      this.showIcon(b, Math.random() < 0.5 ? 'anger' : 'sweat', 250);
+      this.remember(a, `Bumped into ${this.first(b)} and glared`);
+      this.remember(b, `Bumped into ${this.first(a)}`);
       return;
     }
     // A crush, an ex, a rival, or a stranger they would click with: it shows on their face.

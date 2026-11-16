@@ -723,6 +723,83 @@ def phone():
     return c
 
 
+# The chaos sandbox, C2 (DESIGN.md 76): a sticking plaster over a student a medic patches after a dust-up (a bruise,
+# never worse), and the signs a rally holds up, one for each thing students protest about, all of them campus things:
+# beds, food, parking and a policy they dislike. Pictures only, no words, so they read the same everywhere.
+
+def bandage():
+    c = blank('RGBA')
+    strip = rotated(rounded((150, 380, 874, 644), 120), -28, (512, 512))
+    body(c, strip, TAN, TAN_RIM, (250, 470, 330, 520))
+    pad = rotated(rounded((380, 400, 644, 624), 40), -28, (512, 512))
+    body(c, pad, CREAM, CREAM_RIM, None, 26, 16)
+    d = ImageDraw.Draw(c)
+    # The little holes along each end.
+    for along in (-290, -220, 220, 290):
+        for across in (-50, 50):
+            a = math.radians(-28)
+            x = 512 + along * math.cos(a) - across * math.sin(a)
+            y = 512 - along * math.sin(a) - across * math.cos(a)
+            d.ellipse((x - 16, y - 16, x + 16, y + 16), fill=TAN_RIM)
+    return c
+
+
+WOOD = (196, 140, 84, 255)
+WOOD_RIM = (140, 92, 48, 255)
+
+
+def sign(draw_on):
+    """A sign on a stick, as a rally holds one up: a white board, its picture, and the stick below to the hands."""
+    def make():
+        c = blank('RGBA')
+        body(c, rounded((474, 560, 550, 975), 26), WOOD, WOOD_RIM, None, 34, 18)
+        body(c, rounded((130, 70, 894, 610), 50), WHITE, PAPER_RIM, (180, 110, 260, 160))
+        draw_on(c)
+        return c
+    return make
+
+
+def on_bed(c):
+    frame = union(rounded((250, 210, 300, 520), 20), rounded((724, 330, 774, 520), 20))
+    body(c, frame, BROWN, BROWN_RIM, None, INNER, INNER_RIM)
+    body(c, rounded((280, 350, 754, 450), 30), BLUE, BLUE_RIM, None, INNER, INNER_RIM)
+    body(c, rounded((310, 300, 420, 360), 30), WHITE, PAPER_RIM, None, INNER, INNER_RIM)
+    body(c, rounded((420, 300, 744, 370), 30), RED, RED_RIM, None, INNER, INNER_RIM)
+
+
+def on_food(c):
+    bun = union(ellipse((300, 170, 724, 420)), rounded((300, 300, 724, 360), 10))
+    body(c, bun, TAN, TAN_RIM, (380, 210, 450, 250), INNER, INNER_RIM)
+    lettuce = union(*[ellipse((x - 46, 340, x + 46, 400)) for x in range(320, 720, 60)])
+    body(c, lettuce, GREEN, GREEN_RIM, None, INNER, INNER_RIM)
+    body(c, rounded((290, 380, 734, 440), 30), BROWN, BROWN_RIM, None, INNER, INNER_RIM)
+    body(c, rounded((300, 440, 724, 520), 34), TAN, TAN_RIM, None, INNER, INNER_RIM)
+
+
+def on_parking(c):
+    body(c, rounded((372, 160, 652, 530), 40), BLUE, BLUE_RIM, None, INNER, INNER_RIM)
+    letter = union(rounded((442, 210, 500, 480), 10), ImageChops.subtract(ellipse((442, 210, 610, 370)), ellipse((496, 256, 560, 324))))
+    paint(c, letter, WHITE)
+
+
+def on_policy(c):
+    body(c, rounded((360, 140, 664, 540), 24), PAPER, PAPER_RIM, None, INNER, INNER_RIM)
+    d = ImageDraw.Draw(c)
+    for k in range(5):
+        y = 210 + k * 60
+        d.line([(410, y), (614 - (60 if k == 4 else 0), y)], fill=SKY_RIM, width=22)
+    cross = union(rotated(rounded((300, 310, 724, 370), 26), 40, (512, 340)), rotated(rounded((300, 310, 724, 370), 26), -40, (512, 340)))
+    body(c, cross, RED, RED_RIM, None, INNER, INNER_RIM)
+
+
+SIGNS = {
+    'sign-beds': sign(on_bed),
+    'sign-food': sign(on_food),
+    'sign-parking': sign(on_parking),
+    'sign-policy': sign(on_policy),
+}
+
+
 ICONS = {
     'thermometer': thermometer,
     'cake': cake,
@@ -759,6 +836,8 @@ EMOTES = {
     'splash': splash,
     **{f'mood-{name}': mood_ring(*colours) for name, colours in MOODS.items()},
     **ICONS,
+    'bandage': bandage,
+    **SIGNS,
 }
 
 

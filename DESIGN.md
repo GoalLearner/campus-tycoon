@@ -8163,6 +8163,8 @@ Built 2026-11-15 on the branch `life-3`. Now and then, where the player is looki
 
 **Measured.** Frames on the slowed phone (47.2), back to back with main (e3bf1c5), 16 frames each, median frame work: Normal 16.6 ms against L3's 16.0; High, the morning rush, 18.6 and 18.6; an evening 18.2 and 14.8; rain 14.6 and 16.3. A moment is a few emotes and one cloud for a few seconds every half a minute or so, and the frames move with the PC more than with it. In the pictures a moment drew 2 to 4 walkers over to watch at Normal on the model campus. The long run was not run again: the simulator reads only `src/sim` and `scripts`, and L3 changes neither.
 
+**Changed by 76.4 (2026-11-16):** a shouting match between two who meet is a crowd moment too, and on a game with chaos the Chaos meter sets how often scuffles and arguments come (fewer when Serene, more when Rowdy or worse, and from Rowdy in daylight too). Watchers run over to a scuffle. With no chaos, as above.
+
 **Tested**: `tests/crowdMoments.test.ts` (8): nothing staged when nothing on screen could make one; each moment kept to its time and place (a scuffle only late and never in snow, a proposal only at commencement, a dance-off only late, a fountain only on a fine day); a scuffle likelier on a party night and a proposal the likeliest at commencement; the same for the same roll; a few seconds each, a good while between; more watchers at a higher crowd step and none at the lowest; cheers for a win, a proposal and a dance-off, none for a scuffle or an argument; every card line inside the tone guide and its hard lines (which caught "Hit the game-winning shot": now "Made").
 
 | Rough | Why |
@@ -9056,3 +9058,70 @@ The busiest class change fills the view up to what the crowd step allows (28.5):
 **Measured.** On the model campus a real day on (Thursday, October 8, in term), at Normal, the students in view against those the hour wants, the slider moved and each hour held for twelve seconds: the change before 11 AM 89 wanted and about 85 in view; class at 11:15 31 (in view 31 within six seconds of the jump from the change); the lunch rush 41; the afternoon 37; dinner 48; ten at night 49; three in the morning 6 (from 43 to 6 in about ten seconds); the change before 8 AM 71; class at 8:25 38. Frames on the slowed phone (47.2), back to back with main (8d2005e), three rounds of eight frames, the mean, at the same hour on both: the change before 11 at High 22.9 ms with 214 people out against 22.6 with 175; the change before 1 PM at Normal 19.2 ms with 124 out against 17.9 with 84, the extra people being the class change asked for. In pictures at 375, 390, 430 and 530 wide with Today open: the clock 44 points tall, the slider 44, the × 44, and no row runs over; with the longest row there is ("Spring semester in session", "Year 12", "Heat wave") at 375 the year and the sky shorten and the rest stands.
 
 **Tested**: `tests/campusDay.test.ts`: classes start on the hour from 8 and some on the half hour, every change is ten minutes and ends as a class starts, the last out by 9; the paths fill at a change and empty once classes start, are quiet at night with a few about, busier at lunch and dinner than in class; a weekend starts late with no changes, more on the lawns and out on a party night; people head to class in a change, to food at lunch, to the courts in the afternoon, home at night; finals keep the library busy with exams in blocks; the kind of day from the calendar; the now and next lines; the curve; the clock in 12 and 24 hours; a followed student's classes on the hour or half hour from 8, out by 9, clubs from 7 and parties from 9; none of it reaches the simulation. `tests/crowd.test.ts`: the crowd by the hour, the busiest change at the step's limit, the courts and the food by the hour. `tests/daylight.test.ts`: View at shows another hour and closing it puts the clock back.
+
+## 76. The chaos sandbox, C2: the crowd shows it (approved 2026-11-14)
+
+The second of the chaos sandbox's five stops (68), approved with the rest on 2026-11-14 ("Yes, all twelve"). The brief: "the crowd shows it: arguments, running, gathering round a dust-up, Campus Safety chasing, Medical patching bruises, protest signs. Check the frame budget." Built on the branch `chaos-2`. Like all of section 28 it is for show: nothing here is saved and no number of the game reads it. When an incident starts, who answers it and when it ends are the simulation's (68.1); the map draws them. So catch-up and the long run are as they were.
+
+### 76.1 Each incident where it happens
+
+When chaos starts an incident and the player is looking at its building, the map stages it there (`src/game/Mayhem.ts`, with the plain rules in `src/app/mayhemShow.ts`): three at once at most, the nearest the middle of the view first [T]. The people in it are enrolled students found from the seed, as the small scenes find theirs, so a tap opens the ordinary card ("In a dust-up outside a dorm"). They come out of the building's door, or for a rally walk in from the nearest door or the screen's edge, and leave the same way (69.2); on ground only just come into sight they are there already. A door on a side facing the player, in the view as it is turned, is chosen first, so the scene is not hidden behind its building.
+
+| Kind | What the map shows |
+|---|---|
+| Dust-up | Two come out of the dorm and face each other on the path in front: an argument (the big red bubble), then the cloud with its stars and a flying sneaker over both of them (no punch is ever drawn), then out apart, a sweat drop and a scowl. Three rounds of eleven seconds; then they stand apart glaring until Campus Safety arrives. At each cloud the crowd near runs over and stands round it (64.4) |
+| Shouting match | Face to face, each in turn: the big bubble, an anger mark, a speech bubble. Those passing stop and turn |
+| Prank | One at the dorm's wall by its door, laughing; for graffiti, a painter's palette over their head. As Campus Safety runs up they bolt, to another door or off the screen, never back into that dorm |
+| Rally | 4, 6, 9 or 12 students by the crowd step, on the lawn nearest the lecture hall (a quad first, then wide paths or grass, gathered in a clump, never strung along a narrow path), facing the hall, each holding up a sign: a bed, a burger, a parking sign or a policy crossed out, by what they want. Some mark time on the spot, a voice at a time rises over them, and every half minute those passing stop to look. When it is over they walk home |
+| Nobody coming | They part on their own: after the rounds of a dust-up, after 45 seconds of shouting, after 40 of a prank. The incident's icon stays as before, saying nobody is coming |
+
+### 76.2 Campus Safety runs, and chases
+
+To chaos, Campus Safety stays at the station until it is time and then runs (2.2 cells a second, the walk at a quicker step) [T], arriving on the very minute the simulation fixed when the incident began. To anything else they walk the whole way, as before. At a prank or graffiti, from where they stop they run after the one who bolted, along the same way, 4.5 cells at most [T], give up with a sweat drop and walk home along paths. The one who bolted always gets away.
+
+### 76.3 A bruise patched
+
+After a dust-up Campus Safety answered, the two look sheepish; one goes on their way at once. If a Medical building reaches the dorm and its medic is no more than 18 cells away on foot [T], the medic hurries over, the other turns to them, a plaster goes on (a few seconds), and each goes back the way they came. Without one in reach they simply part. Nothing worse than a bruise is ever shown. A plaster now and then is the medical treatment the rating plan already answers as infrequent (52.2).
+
+### 76.4 The meter in the everyday crowd
+
+On a game with chaos the meter's step sets how rowdy the crowd is, everywhere on the map [T]:
+
+| | Serene | Calm | Lively | Rowdy | Chaotic | Pandemonium |
+|---|---|---|---|---|---|---|
+| Scuffles and couples arguing (64.4), times as often | 0.5 | 1 | 1.3 | 1.8 | 2.4 | 3 |
+| Scuffles in daylight too | | | | Yes | Yes | Yes |
+| A shouting match between two who meet (weight) | | | 0.4 | 0.8 | 1.2 | 1.6 |
+| Strangers passing who bump and glare | | 3% | 6% | 12% | 18% | 25% |
+| The gap between two moments, times | 1.3 | 1 | 0.9 | 0.75 | 0.6 | 0.5 |
+
+- A shouting match is a crowd moment of its own: two who meet have it out in turn and go their own ways; no cloud.
+- Strangers who bump: an anger mark, a scowl or a sweat drop, and on their cards "Bumped into Sam and glared".
+- Watchers of a dust-up or a chase run over (1.9 times their walk) [T]; everyone else walks.
+- With no chaos (the small campus) the crowd is exactly as it was.
+
+### 76.5 The frame budget
+
+- Three incidents staged at once at most; a rally's size goes by the crowd step, so the frame budget that steps the crowd down steps it down too.
+- At the step kept for short frames, watchers stop and turn where they are and none walk over (64.4); a rally is four.
+- With Reduce effects: no icons, the cloud holds still, signs do not bob, nobody marks time.
+- Nothing is drawn for an incident out of sight; a scene that goes out of sight is gone at once.
+
+**Frames** on the slowed phone (47.2's method), back to back with main (8e281e1), three rounds of eight frames, the mean: the model campus's afternoon with the meter at Pandemonium and a rally of nine, a dust-up and a shouting match staged in view, 20.1 ms at High against 22.0 on main (which draws none of them), and 19.3 against 20.5 at Normal. Level with main, inside the rounds' own spread (17.9 to 22.9).
+
+### 76.6 The art
+
+Ours, drawn in code in the people pack's way by `tools/make_emotes.py`, in both atlases and credited: a sticking plaster, and four rally signs, a white board on a stick with a picture (a bed, a burger, a parking sign, a policy crossed out). The signs have no words, so they read the same everywhere and stay inside the tone guide.
+
+| Decisions made here | Instead |
+|---|---|
+| Each incident staged at its own building, its people out of its door | A scene on any open ground nearby, with nobody knowing where it came from |
+| A door facing the player first | The door with the most room, often behind the building where nothing can be seen |
+| Three at once, the nearest the middle of the view | Every incident in view: a Pandemonium campus could stage a dozen and the frames would fall |
+| Campus Safety runs the last stretch, arriving on the simulation's minute | Walking the whole way, slower than the scuffle they are going to |
+| A medic walks over for the bruise, for show | Medical answering dust-ups in the simulation, which would change the incidents and the long run |
+| A rally of 4 to 12, by the crowd step | One as big as the protest is strong: on a big campus far more than the frame budget allows |
+| Signs as pictures | Signs with words: to translate, and to keep inside the tone guide |
+| Strangers bump and glare as the meter climbs | More students angry, which would be changing their feelings, the social web's own (63) |
+
+**Tested**: `tests/mayhemShow.test.ts`: a campus with no chaos as before, and the crowd rowdier step by step from Serene to Pandemonium; the crowd's moments scaled, a shouting match from Lively, scuffles in daylight from Rowdy, never in snow, and the rally and the chase never chosen by the crowd; watchers and Campus Safety run; a dust-up in rounds and then a glare, the cloud as long as the crowd's own; turns in a shouting match; Campus Safety setting off later and arriving on the minute; a sign for each topic and rallies bigger at a higher crowd step; chaos only, in view, nearest first, three at most; every card line in comic words inside the tone guide and its hard lines; the plaster and the signs in the atlas, both recipes and the credits. In the game, on the model campus with a dev option (`&mayhem=dustUp,prank,protest&mayhemin=1`), each staged incident was followed every two seconds: a dust-up in rounds, Campus Safety leaving the station five seconds before the minute and running in, one walking off and a medic walking over with the plaster; a prankster bolting two and a half seconds before Campus Safety, who chased 2.5 cells and walked home; a rally of nine on the lawn by the lecture hall with burger signs.
