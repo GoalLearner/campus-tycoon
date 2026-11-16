@@ -135,6 +135,7 @@ export * from './systems/staffing';
 export * from './systems/capacity';
 export * from './config/staffing';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
+export { chaosOn, chaosStepOf } from './systems/chaos';
 export * from './config/incidents';
 export {
   classYearOf,

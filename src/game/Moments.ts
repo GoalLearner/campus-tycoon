@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { chooseMoment, MOMENT_GAP_MS, MOMENT_MS, type MomentKind } from '../app/crowdMoments';
 import type { DayPeriod } from '../app/daylight';
+import { NO_CHAOS, type ChaosCrowd } from '../app/mayhemShow';
 import type { Weather } from '../app/life';
 import { hashInts, type GameState } from '../sim';
 import type { Activity } from './Activity';
@@ -30,6 +31,8 @@ export class Moments {
   private state: GameState | null = null;
   private life: MomentLife = { period: 'afternoon', weather: 'clear', partyNight: false, commencement: false, reduced: false };
   private step = 2;
+  /** How the Chaos meter shows in the crowd (DESIGN.md 76.5). */
+  private chaos: ChaosCrowd = NO_CHAOS;
   private fountains: Array<{ x: number; y: number }> = [];
   private nextAt = 0;
   private live: { kind: MomentKind; until: number } | null = null;
@@ -53,6 +56,10 @@ export class Moments {
 
   setStep(step: number): void {
     this.step = step;
+  }
+
+  setChaos(chaos: ChaosCrowd): void {
+    this.chaos = chaos;
   }
 
   /** The fountains on the map: a one-cell quad's, the reward fountain, and the stone fountain among the decorations. */
@@ -87,7 +94,7 @@ export class Moments {
     const state = this.state;
     const seed = state.seed;
     const roll = (n: number): number => (hashInts(seed, state.clock.tick, this.staged, n) >>> 0) / 4294967296;
-    this.nextAt = now + MOMENT_GAP_MS[0] + roll(7003) * (MOMENT_GAP_MS[1] - MOMENT_GAP_MS[0]);
+    this.nextAt = now + (MOMENT_GAP_MS[0] + roll(7003) * (MOMENT_GAP_MS[1] - MOMENT_GAP_MS[0])) * this.chaos.gap;
     void time;
     const view = this.scene.cameras.main.worldView;
     const busker = this.scenes.buskerAt();
@@ -96,7 +103,7 @@ export class Moments {
     const walks = this.walkers.momentFacts(view, this.fountains);
     const sitting = this.lawns.groupIn(view, 'couple') !== null;
     const kind = chooseMoment(
-      { ...this.life, busker: busker !== null, dance: dance !== null, courts: game !== null, fountain: walks.fountain, couples: walks.couples || sitting, pairs: walks.pairs },
+      { ...this.life, busker: busker !== null, dance: dance !== null, courts: game !== null, fountain: walks.fountain, couples: walks.couples || sitting, pairs: walks.pairs, chaos: this.chaos },
       roll(7001),
     );
     if (!kind) return;

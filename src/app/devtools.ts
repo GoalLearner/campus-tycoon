@@ -796,6 +796,42 @@ export function installDevTools(): void {
       store.catchUp();
     }
     store.away = null;
+    // &mayhem=dustUp,shouting,prank,graffiti,protest starts those chaos incidents (DESIGN.md 76) at the dorms nearest
+    // &mayhemat=x,y (a rally: by the lecture hall nearest), Campus Safety arriving &mayhemin=3 minutes on (&nobody: no one
+    // comes); a rally is about &topic=beds and lasts its 90. &chaoslevel=80 sets the Chaos meter, for the crowd.
+    const mayhem = (params.get('mayhem') ?? '').split(',').filter((one) => one !== '');
+    if ((mayhem.length > 0 || params.has('chaoslevel')) && store.hasGame && store.state.chaos) {
+      const stirred = structuredClone(store.state);
+      if (params.has('chaoslevel')) stirred.chaos.level = Number(params.get('chaoslevel'));
+      const [mx, my] = (params.get('mayhemat') ?? '16,16').split(',').map(Number) as [number, number];
+      const minutes = Number(params.get('mayhemin') ?? 3);
+      const used = new Set<number>();
+      for (const kind of mayhem) {
+        if (!['dustUp', 'shouting', 'prank', 'graffiti', 'protest'].includes(kind)) continue;
+        const zone = kind === 'protest' ? 'academic' : 'housing';
+        const near = (b: { x: number; y: number }): number => Math.abs(b.x - mx) + Math.abs(b.y - my);
+        const where = stirred.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === zone && b.stage > 0 && !used.has(b.id)).sort((a, b) => near(a) - near(b))[0];
+        if (!where) continue;
+        used.add(where.id);
+        const cover = kind === 'protest' || params.has('nobody') ? null : coverFor(stirred.map, 'safety', where.x, where.y);
+        const tick = stirred.clock.tick;
+        stirred.incidents.active.push({
+          id: stirred.incidents.nextId,
+          kind: 'mischief',
+          x: where.x,
+          y: where.y,
+          place: kind === 'protest' ? 'the quad' : 'a dorm',
+          line: 0,
+          startTick: tick,
+          responder: cover ? cover.placed.id : null,
+          endTick: tick + (kind === 'protest' ? 90 : cover ? Math.max(1, minutes) : 45),
+          chaos: kind as 'dustUp',
+          ...(kind === 'protest' ? { topic: (params.get('topic') ?? 'beds') as 'beds' } : {}),
+        });
+        stirred.incidents.nextId += 1;
+      }
+      store.adopt(stirred, { ephemeral: true });
+    }
     // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.
     const grow = Number(params.get('grow') ?? 0);
     if (grow > 0 && store.hasGame) {
