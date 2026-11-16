@@ -1,3 +1,5 @@
+import { chaosOn, chaosStepOf } from './chaos';
+import { ROWDY } from '../config/chaos';
 import { castFromWeb, castable } from './mainWeb';
 import { POLICIES } from '../config/policies';
 import {
@@ -207,6 +209,12 @@ function meets(state: GameState, mc: MainCharacter, need: StoryNeed): boolean {
       return mc.club !== null;
     case 'term':
       return kind === 'term' || kind === 'midterms' || kind === 'finals';
+    case 'lively':
+      return chaosOn(state) && chaosStepOf(state.chaos.level) >= 2;
+    case 'rowdy':
+      return chaosOn(state) && chaosStepOf(state.chaos.level) >= ROWDY;
+    case 'protest':
+      return chaosOn(state) && state.chaos.grievance !== null;
   }
 }
 

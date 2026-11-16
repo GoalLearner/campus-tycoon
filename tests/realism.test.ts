@@ -167,9 +167,11 @@ describe('a save from version 30', () => {
     const state = loaded.state;
     expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.offCampus).toEqual([...old.offCampus, 0, 0]);
-    const { cohorts: _a, offCampus: _b, version: _c, ...rest } = state;
-    const { cohorts: _d, offCampus: _e, version: _f, ...was } = old;
+    // Version 33 adds the Chaos meter and its random stream (DESIGN.md 68), and moves nothing else.
+    const { cohorts: _a, offCampus: _b, version: _c, chaos: _g, rng: { chaos: _h, ...rng }, ...rest } = state;
+    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = old;
     expect(rest).toEqual(was);
+    expect(rng).toEqual(was_rng);
   });
 
   it('plays on: its seniors finish or stay on at commencement, and its records keep adding up', () => {

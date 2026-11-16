@@ -24,7 +24,7 @@ import { budget } from '../src/sim/systems/budget';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor, sixClassYears } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
 
 /**
  * The story system (DESIGN.md 53.3 to 53.6, as built in section 58): arcs and
@@ -81,8 +81,11 @@ function texts(): string[] {
 
 describe('the library', () => {
   it('ships about 26 arcs and 60 events, every category of the owner’s list covered', () => {
-    expect(ARCS).toHaveLength(26);
-    expect(EVENTS).toHaveLength(60);
+    // And chaos's two arcs and three events (DESIGN.md 68.6).
+    expect(ARCS).toHaveLength(28);
+    expect(EVENTS).toHaveLength(63);
+    expect(ARCS.filter((spec) => spec.category === 'chaos')).toHaveLength(2);
+    expect(EVENTS.filter((spec) => spec.category === 'chaos')).toHaveLength(3);
     const categories: StoryCategory[] = ['roommates', 'classes', 'dating', 'partying', 'social', 'money', 'greek', 'teams', 'good'];
     for (const category of categories) {
       expect(ARCS.some((spec) => spec.category === category), category).toBe(true);
@@ -257,11 +260,12 @@ describe('saves', () => {
       Object.assign(expected.story.mc!, { recent: {}, mood: 0, stress: 0, gpaBonus: 0, member: null, team: false });
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
+      withChaos(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(28);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(4);
+      expect(notes).toHaveLength(5);
       expect(notes[0]).toMatch(/stor/i);
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(newStory().arcs).toEqual([]);

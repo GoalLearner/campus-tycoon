@@ -1308,7 +1308,7 @@ Apple's current tiers are 4+, 9+, 13+, 16+ and 18+, set by a content questionnai
 | Crude or insult-based humour | 9+ |
 | None of the above | 4+ |
 
-**Target: 16+** (the owner, 2026-11-14: "16+, show it all"; 52.2 has the plan and what would move it). It was 13+ from 2026-11-13 and 4+ before that. The icon and screenshots still suit 4+ (Guideline 2.3.8). The table was read through a summary of Apple's page on 2026-11-11, and 52.2 has the fuller one read on 2026-11-13, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
+**Target: 16+** (the owner, 2026-11-14: "16+, show it all"; 52.2 has the plan, the questionnaire answers and what would move it). It was 13+ from 2026-11-13 and 4+ before that. The icon and screenshots still suit 4+ (Guideline 2.3.8). The table was read through a summary of Apple's page on 2026-11-11, and 52.2 has the fuller one read on 2026-11-13, so the questionnaire must be rechecked at submission. Later features that could raise the rating: social features, shared names, unrestricted web access.
 
 The relationship line on the student card (13.8) was checked against this table on 2026-11-11. It is a status and nothing more, with no detail, no partner and no storyline, and none of the rows above describes it. Since 2026-11-13 it may also say a student is single after a breakup (section 55). It goes on the list to recheck against Apple's questionnaire at submission.
 
@@ -6724,6 +6724,18 @@ Guideline 1.4.3: an app may not encourage excessive drinking, and one that encou
 4. **Drinking choices belong to students of 21 and over** (juniors and seniors). Younger students at a party are shown at the party; if they drink, it is a rule broken and caught. The red cup shows only over a student of 21 or over (63.9).
 5. **Romance at most a kiss, and seldom.** Relationships stay at status and story level.
 6. **Violence:** cartoon violence as the chaos sandbox plans it; realistic violence none.
+
+**The questionnaire plan at 16+** (the chaos sandbox's brief, 2026-11-14; recheck at submission):
+
+| Apple's content | The answer | Because |
+|---|---|---|
+| Mature or suggestive themes | Frequent (16+) | Drama, bullying, breakups and mayhem show as they happen (63.9, 68) |
+| Cartoon or fantasy violence | Frequent (13+) | Chaos's dust-ups are a cloud with stars, never a drawn punch; a Pandemonium campus can show many at once |
+| Profanity or crude humour | As it falls: pranks, at most | No swearing is written anywhere |
+| Alcohol, tobacco or drug use or references | Infrequent (13+) | Wilder parties add noise and calls, not drinking on screen; frequent would be 18+ |
+| Realistic violence | None | Lifelike fighting shown often would be 18+ |
+
+The owner's chaos answer 2 (comic words: a dust-up, a prank, a field storming) stands as he chose it: a choice of tone, not only of rating.
 7. **The icon and screenshots show none of it** (Guideline 2.3.8: they must suit 4+ whatever the rating).
 8. **The paper's own voice never mocks a student** (16.1). Students may be mean to each other in the simulation; the game's narrator is not.
 
@@ -8480,3 +8492,69 @@ The day of a regular or a followed student (63.9) now has its small details, eac
 | Shares worked out on the Social tab from the shares themselves | A sample of cards, which would wobble from one look to the next |
 
 **Tested**: `tests/priceLevel.test.ts` (5): no code builds a dollar amount of its own; tuition reads $12,290 and every amount at the same level, a share of every $100 and a student's money as they are; the Money panel's tuition and room and board, netting to the room fee, with what is kept unchanged; a student's rent in today's dollars; a version 31 save keeps every number and is told once. Pinned amounts across the tests now go through the formatter. `tests/studentMoney.test.ts` (9): the aid shares, the debt at graduation and that it only grows, jobs and their hours, work-study on campus, the Campus jobs program, running short with and without the policies and not the same students every month, rent only for those in town on their own, books, the card's Money row and never a word about weight, the paper's lines, the Social tab, a student running short feeling it. `tests/regulars.test.ts`: shifts on their days and where the job is, meal swipes counted down for students in a hall, laundry, the mailroom, a food run, a gym phase, an 8 AM class after its coffee, the alarm slept through only in a week a class was missed. The long run reads every campus's cards against R3's figures (`scripts/realism.ts`): the aid shares and work; running short against what the policies put it at; seniors who borrowed and what they owe.
+
+## 68. The chaos sandbox, C1: the Chaos meter (approved 2026-11-14)
+
+The owner approved the chaos sandbox on 2026-11-14 ("Yes, all twelve"): a campus that can run calm and happy or tip into mayhem, depending on how it is run and what is stirred up. His twelve answers: after social stop 7; comic words on screen; 13+ (since replaced by 16+, 52.2); mixed costs for meddling; day cooldowns; trustees' letters; good chaos as spirit; light, capped and recovering; draw the dog; compose the rival mascot; protests about campus things only; and the sandbox as a copy. Five stops: C1 the meter and what sets it going (this section), C2 the crowd shows it, C3 football chaos, C4 the Meddle menu and the calm tools, C5 the sandbox. C1 runs on a game with goals only, as parties do, so the small campus of before is untouched.
+
+The limits, his and the tone guide's (16.1, 52.2): no weapons, no killing, nothing sexual, no serious injuries, no fire, no blood. A dust-up is a cloud of dust and stars, never a drawn punch. Hazing stays light. Protests are about campus things. The paper never mocks a student. On screen, a dust-up and a prank (16.2): never riot, brawl, crime or vandalism.
+
+### 68.1 What sets it going
+
+| Kind | What it is | What sets it going |
+|---|---|---|
+| Dust-up | "A dust-up outside a dorm: a cloud, some stars, and two students who will laugh about it by Friday." Nobody worse than a bruise | Tension, free rein, game days (twice as likely) |
+| Shouting match | About the thermostat, the trash, a group project | Tension, game days; quiet hours cut it |
+| Prank | Sticky notes on every door, beach balls in the lobby, rubber ducks in the fountain | Free rein, rivalry week (three times as likely); quiet hours cut it |
+| Graffiti | A very large, very cheerful squirrel; the statue in the rival's colours. Each costs a repaint | Free rein |
+| Protest | A rally on the quad or a sit-in, for more beds, food in reach of every hall, or against a policy students dislike | What students would protest about, and how strongly |
+| Calls from parties | The party calls of 55, counted as the meter's party chaos | The party policies, as before |
+
+**Tension**, read once a game week from what the game already keeps: Stress (the hour's reading), Happiness (the last semester's), the share of dorms Campus Safety does not reach, students waiting for a bed, and the web's drama (the shares freshly split, with a rival, or picked on). About 1 on a middling campus, from 0.3 to 3. **Free rein**: dust-ups, pranks and graffiti run at a quarter of their rate where Campus Safety reaches every dorm, and at twice it where it reaches none. Each happens at a dorm, or for a protest on the quad by a lecture hall. Campus Safety answers all but protests from inside its circle, as it answers mischief; a protest has no responder, and the students go home when they have said their piece. A protest never makes a place feel unsafe.
+
+Chaos draws on a random stream of its own, and its incidents have a cap of their own (four at once) apart from the incidents of before, which count only themselves against their six (injuries, mischief and calls from parties alike), so nothing else turns out differently. The rates are in `src/sim/config/chaos.ts` [T]; the lines in `src/sim/config/chaosLines.ts`.
+
+### 68.2 The Chaos meter
+
+Six steps, read once a game week: **Serene** (0 to 7), **Calm** (8 to 19), **Lively** (20 to 35), **Rowdy** (36 to 54), **Chaotic** (55 to 74) and **Pandemonium** (75 and up). The week's reading is each kind of chaos for every thousand students, as the small game counts them, so a big campus is not punished for being big: a dust-up 12, a protest 16, graffiti 8, a prank 6, a party call 6, a shouting match 5, and one nobody came to six tenths more again; and the web's drama, 60 for its whole share. The meter moves 45% of the way to the week's reading, so one wild night does not swing it [T].
+
+It is a row on the Scorecard (54.3, after Donations): its step and level ("Rowdy, 41 of 100"), the biggest cause in a line that says what would ease it ("Dust-ups where Campus Safety does not reach: build Campus Safety nearer the halls"), and the next two causes and any letter from the trustees under it. Its arrow against last year points down when it is better.
+
+### 68.3 What it costs and gives
+
+Every effect is capped and fades: a week of Pandemonium dents a season and never ruins a campus (the owner's answer 8).
+
+| | As built |
+|---|---|
+| Headlines | A Rowdy week or worse costs applicants' reach half a percent for each step past Lively, fading over three game weeks; never more than 2% in all, with spirit's |
+| Repairs | A repaint for each graffiti |
+| The trustees' letters | After two Rowdy readings in a row (one wild week is not enough), a letter with one ask: the meter below Rowdy within two real days. One at a time, and a real day's rest between. Met, a gift of thanks; ignored, Reputation 2 points lower in the academic rating for ten game weeks, said on its line |
+| Spirit | A Lively campus, its last semester's Happiness 65 or more and Campus Safety over most of its halls, has about one week in eight a legendary night, at most once a real day: Happiness 2 points higher for two real days (sharing the desk's cap) and reach 1% higher, fading. The paper: "Most Spirited Campus?" |
+
+### 68.4 The paper and the main character
+
+The paper tells the meter turning Rowdy or worse, and settling again; each letter and its outcome; a legendary night; and each rally when it breaks up ("Students Rally for More Beds; the Dean Takes the Petition"). Mayhem shows as it happens: at 16+ there is no ration on it (52.2).
+
+The main character's storyteller (53.5) has chaos as material: two arcs, The prank war (their floor against the one above, with their roommate) and A rowdy week (no sleep, a paper due), and three events, a dust-up outside their hall, the rally, and a door covered in sticky notes. Each waits for the meter (Lively or worse, Rowdy or worse) or a protest brewing, and casts the character's own people.
+
+### 68.5 The two test players
+
+The long run adds two players on the model campus, each the once-a-day player with one difference. **Pandemonium on purpose**: no Campus Safety, no new beds, its yards' crews sent home, every calming switch off and the disliked ones on. **Serene**: every calming switch on, the disliked ones off, Campus Safety over every hall and the yards staffed. The checks: the usual players keep their campuses Calm to Lively (never Chaotic at a visit, few letters); a campus run for Pandemonium gets there in two real days and is below Rowdy within a few game weeks of the Serene player's first visit; a campus kept Serene stays Calm or quieter once its first weeks are past.
+
+| Decisions made here | Instead |
+|---|---|
+| Chaos's incidents ride on the incidents of before (Campus Safety answers them, the map shows them), tagged with their kind | New incident kinds with icons of their own: C2 draws the dust-ups, signs and running |
+| A random stream and a cap of its own | Sharing the incident stream, which would have changed every incident after the first |
+| On a game with goals only | Chaos on the small campus too, which would move its long-run numbers |
+| Tension from cached readings (the hour's Stress, last semester's Happiness) | A full Happiness reading every game week, too slow for catch-up |
+| Spirit as a line of its own among Happiness's parts | A desk boost, which would look like the desk's doing |
+
+**Tested** (see 68.6 for the long run): `tests/chaos.test.ts` (13): a game with goals only; the six steps, smoothed; for every thousand students; free rein where Campus Safety does not reach and the cap of its own; protests with no responder that never make a place feel unsafe; headlines capped, and the trustees' letter; the letter met and ignored, Reputation's line; a legendary night's spirit; the Scorecard's row and causes; comic words, the tone guide and the hard lines, and the paper's headlines; a version 32 save; the same in one step or many. Save version 33 adds the meter and chaos's random stream and nothing else (every save test checks it), with one upgrade note.
+
+### 68.6 The long run and frames
+
+**The long run** (`npm run simulate`, 1,749 s): 107 of 107 checks pass, chaos's three among them, after two passes that found what to put right. The first (103 of 107): calls from parties still counted chaos's incidents against the six at once that the incidents of before allow, so where Campus Safety was thin chaos could block them, now fixed; one wild week sent the trustees a letter, so they now write after two Rowdy readings in a row; and a test player left its last reward building waiting where no free spot lifted any lot's looks any more, so it now places it on the first free ground it fits. The second (106 of 107): Party registration on a campus with half its cover gone, where a few calls from parties a year are too few for two six-year histories to show the switch every time once chaos makes them drift apart; the check now reads the switch's own number, the chance of a call Campus Safety answers, on and off at the same moment, and still prints the six-year count.
+
+The usual players end Calm, never Chaotic at a visit (30 to 42 at the most); the trustees wrote 0 to 6 times in 44 real weeks, every letter met. A campus run for Pandemonium on purpose reaches it (78) in two real days, is below Rowdy 3 game weeks after the Serene player's first visit and Calm two days on. A campus kept Serene is Calm or quieter in 13 of 15 game weeks once its first weeks are past. Against R3, 45 lines moved, every one on the model campus, where chaos runs, each with its reason in the C1 page: chaos moves Happiness, applicants and money a little, so the players there take slightly different turns. The small campus did not move. Money stays inside $12 to $17 (12.1% at the least), the Top 10 no earlier than week 24, catch-up under a second.
+
+**Frames** on the slowed phone (47.2's method), main against C1, two rounds, the middle of the last five frames of each run: an afternoon 22.0 ms before and 18.6 with C1; a busy morning 22.3 and 23.9; rain 16.7 and 20.2; a January afternoon three days in 16.7 and 20.0. The January afternoon was slower in both rounds, by 3 to 5 ms: more incidents on the map, with Campus Safety walking out to them. Every scene stays near 20 ms. C2 adds to what is drawn, so its frames are to watch.

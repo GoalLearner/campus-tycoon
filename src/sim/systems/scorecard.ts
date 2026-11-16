@@ -1,3 +1,4 @@
+import { chaosOn, chaosView } from './chaos';
 import { AFFINITY_PARTS } from '../config/alumni';
 import { LEAVE_FIX, LEAVE_WHYS, LEAVE_WORDS } from '../config/population';
 import { dollars, headCount } from '../format';
@@ -16,7 +17,7 @@ import { classSizeNow, ratioTarget } from './staffing';
  * are kept, at each year's end, for the arrows.
  */
 
-export type ScoreId = 'applications' | 'acceptance' | 'yield' | 'retention' | 'graduation' | 'success' | 'donations';
+export type ScoreId = 'applications' | 'acceptance' | 'yield' | 'retention' | 'graduation' | 'success' | 'donations' | 'chaos';
 
 export interface ScoreRow {
   id: ScoreId;
@@ -29,11 +30,13 @@ export interface ScoreRow {
   trend: { way: 'up' | 'down' | 'same'; good: boolean | null } | null;
   /** The one thing that limits it most, in plain words. */
   limit: string;
+  /** More lines under it: the Chaos meter's causes, biggest first, and a letter from the trustees (DESIGN.md 68.3). */
+  more?: string[];
 }
 
-const ORDER: readonly ScoreId[] = ['applications', 'acceptance', 'yield', 'retention', 'graduation', 'success', 'donations'];
+const ORDER: readonly ScoreId[] = ['applications', 'acceptance', 'yield', 'retention', 'graduation', 'success', 'donations', 'chaos'];
 /** For each row, whether a higher number is better. Acceptance is better lower: a more selective school. */
-const HIGHER_IS_BETTER: Record<ScoreId, boolean> = { applications: true, acceptance: false, yield: true, retention: true, graduation: true, success: true, donations: true };
+const HIGHER_IS_BETTER: Record<ScoreId, boolean> = { applications: true, acceptance: false, yield: true, retention: true, graduation: true, success: true, donations: true, chaos: false };
 
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
@@ -67,7 +70,7 @@ function numbersNow(state: GameState): Array<number | null> {
   const latest = alumniClasses(state).slice(-1)[0];
   const success = latest?.success ?? state.alumni.opening?.success ?? null;
   const rates = campusRates(state);
-  return [applicants, accept, 1, rates.second, rates.graduation, success, state.alumni.last?.raised ?? null];
+  return [applicants, accept, 1, rates.second, rates.graduation, success, state.alumni.last?.raised ?? null, chaosOn(state) ? Math.round(state.chaos.level) : null];
 }
 
 /** The year's end: the numbers are kept, so next year's arrows have something to point from. */
@@ -125,8 +128,10 @@ export function scorecard(state: GameState): ScoreRow[] | null {
       value: state.alumni.last ? `${dollars(state.alumni.last.raised)} at the last drive` : 'The first drive is at commencement',
       limit: capital(weakestAffinity(state)),
     },
+    chaos: chaosRow(state),
   };
-  return ORDER.map((id, n) => {
+  return ORDER.filter((id) => id !== 'chaos' || chaosOn(state)).map((id) => {
+    const n = ORDER.indexOf(id);
     const number = now[n] ?? null;
     const before = last?.[n] ?? null;
     let trend: ScoreRow['trend'] = null;
@@ -141,3 +146,11 @@ export function scorecard(state: GameState): ScoreRow[] | null {
 }
 
 const capital = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** The Chaos meter's row (DESIGN.md 68.3): its step, the biggest cause, and the next two and any letter under it. */
+function chaosRow(state: GameState): Omit<ScoreRow, 'id' | 'number' | 'trend'> {
+  const view = chaosView(state);
+  if (!view) return { name: 'Chaos', value: 'Calm', limit: 'Nothing much: a quiet week' };
+  const [first, ...rest] = view.causes;
+  return { name: 'Chaos', value: `${view.step}, ${view.level} of 100`, limit: first ?? 'Nothing much: a quiet week', more: [...rest, ...(view.letter ? [view.letter] : [])] };
+}

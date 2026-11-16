@@ -1,3 +1,4 @@
+import { chaosReach } from './chaos';
 import { viralReach } from './buzz';
 import { commencementLeavers } from './population';
 import { applicantsLift } from './boosts';
@@ -104,7 +105,8 @@ export function fallApplicants(state: GameState): Applicants {
       ['rank', 'Academic rank', 1 + rankLift(state)],
     ];
     // Viral posts on Quadline widen or narrow the reach a little (DESIGN.md 63.14): at most 3% either way.
-    const base = Math.round(((REACH * scale) / GOAL_SCALE) * (1 + viralReach(state)));
+    // Chaos's headlines (DESIGN.md 68.4), bad and good: at most 2% either way.
+    const base = Math.round(((REACH * scale) / GOAL_SCALE) * (1 + viralReach(state) + chaosReach(state)));
     let running = base;
     const causes = factors.map(([id, name, factor]) => {
       const next = Math.round(running * factor);

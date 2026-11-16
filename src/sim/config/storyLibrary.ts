@@ -671,6 +671,57 @@ export const ARCS: readonly StorySpec[] = [
       },
     ],
   }),
+  // Chaos (DESIGN.md 68.6): the main character caught up in it, with their own people. Comic, and nobody is hurt.
+  ARC({
+    id: 'prankWar',
+    category: 'chaos',
+    title: 'The prank war',
+    weight: 2,
+    needs: ['lively', 'roommate'],
+    stages: [
+      {
+        text: '{name}’s floor and the floor above are in a prank war: beach balls in the lounge one night, sticky notes on every door the next.',
+        hours: 2,
+        choices: [
+          choice('joins in with {roommate}', odds(0.6, ROOMIE, SAFE), O('Legends of the floor', '{name} and {roommate} pull off the best one yet, and the whole floor talks about it for a week.', [close('roommate', 10), mood(6)]), O('Caught by the RA', 'The RA catches them with a ladder and four hundred sticky notes.', [stress(5), mood(-2)])),
+          choice('keeps out of it', null, O('Front-row seat', '{name} watches it all from a doorway and keeps the score.', [need('fun', 4)])),
+        ],
+      },
+      {
+        text: 'The floor above strikes back: {name}’s lounge furniture is on the ceiling, every chair of it.',
+        hours: 20,
+        choices: [
+          choice('calls a truce over pizza', odds(0.6, FRIEND, RA), O('Peace, with pizza', 'Two floors, ten pizzas, one truce. Some of them are friends now.', [need('social', 10), mood(5)]), O('No truce', 'The floor above wants a rematch.', [stress(3)])),
+          choice('plans the grand finale', odds(0.45, ROOMIE, SAFE), O('The grand finale', 'A thousand rubber ducks in the fountain. Even the Dean laughs.', [mood(8), close('roommate', 6)], { big: true }), O('Campus Safety noticed', 'Campus Safety noticed, and so did the bill for the ducks.', [stress(6), money(-40)])),
+        ],
+      },
+    ],
+  }),
+  ARC({
+    id: 'rowdyWeek',
+    category: 'chaos',
+    title: 'A rowdy week',
+    weight: 2,
+    needs: ['rowdy'],
+    stages: [
+      {
+        text: 'The campus is rowdy this week: dust-ups on the paths, shouting in the halls at two in the morning. {name} cannot sleep.',
+        hours: 2,
+        choices: [
+          choice('stays a night at {friend}’s', odds(0.65, FRIEND), O('A quiet night', '{friend}’s floor is quiet, the couch is soft, and they talk until late anyway.', [close('friend', 8), need('energy', 10)]), O('Not quiet there either', 'The noise is everywhere this week.', [need('energy', -8), stress(4)])),
+          choice('writes to the Dean', odds(0.4, SAFE), O('Heard', 'The Dean writes back, and Campus Safety walks the halls that night.', [mood(4)]), O('A form reply', 'A form reply, and the noise goes on.', [stress(4), need('energy', -6)])),
+        ],
+      },
+      {
+        text: 'Days later it is still going: {name} has a paper due and a hall full of noise.',
+        hours: 30,
+        choices: [
+          choice('moves into the library for the week', odds(0.6, NEAR_LIBRARY, STUDY), O('Done in time', 'The paper gets written in the quietest corner of the library.', [gpa(0.02), need('study', 8)]), O('Too tired to write', 'Too little sleep to write well.', [gpa(-0.03), stress(5)])),
+          choice('joins the noise for one night', odds(0.5, OUT), O('One good night', 'One night of it, and somehow the paper gets done after.', [need('fun', 10), mood(4)]), O('One night too many', 'The paper is late.', [gpa(-0.04), stress(6)])),
+        ],
+      },
+    ],
+  }),
 ];
 
 // ------------------------------------------------------------------ events --
@@ -747,6 +798,10 @@ export const EVENTS: readonly StorySpec[] = [
   EVENT({ id: 'clubElection', category: 'social', title: 'Club officer', weight: 1, good: true, needs: ['club'], text: 'The {club} needs a new treasurer.', choices: [choice('volunteers', odds(0.6, CLUB, OUT), O('Treasurer', '{name} is the new treasurer of the {club}.', [mood(6)], { big: true }), O('Someone else', 'Someone else got it.', []))] }),
   EVENT({ id: 'studyBuddy', category: 'classes', title: 'A study buddy', weight: 1, good: true, needs: ['term'], text: 'Someone in {name}’s class asks to study together.', choices: [choice('says yes', odds(0.65, NEAR_LIBRARY, MEETING), O('A study buddy', 'A study buddy, and maybe a friend.', [need('study', 8), need('social', 6)]), O('Wrong fit', 'They study very differently.', []))] }),
   EVENT({ id: 'homeVisit', category: 'social', title: 'A visit from home', weight: 1, good: true, text: 'Family visits for the weekend.', choices: [choice('shows them the campus', null, O('A proud tour', 'A tour of every favourite spot, and dinner out.', [mood(8), money(40)]))] }),
+  // Chaos (DESIGN.md 68.6).
+  EVENT({ id: 'dustUpNearby', category: 'chaos', title: 'A dust-up outside', weight: 2, needs: ['lively'], text: 'A dust-up breaks out outside {name}’s hall: two students, a lot of noise, a cloud of dust.', choices: [choice('steps in to calm it', odds(0.55, SAFE, FRIEND), O('Peacemaker', '{name} talks them down before anyone gets more than a bruise.', [mood(5)]), O('A bruise of their own', '{name} comes away with a bruise and a story.', [mood(-3), stress(4)])), choice('walks the other way', null, O('Out of it', '{name} keeps out of it.', []))] }),
+  EVENT({ id: 'theRally', category: 'chaos', title: 'The rally', weight: 2, needs: ['protest', 'term', 'friend'], text: 'Students are rallying on the quad, and {friend} wants {name} to come.', choices: [choice('joins the rally', odds(0.7, OUT), O('Part of it', '{name} holds a sign, chants, and meets half the campus.', [need('social', 8), mood(4)]), O('A long afternoon', 'Hours on the quad, and a paper still due.', [stress(5), gpa(-0.02)])), choice('stays in to study', null, O('Stayed in', '{name} watches from a window and gets the reading done.', [need('study', 5)]))] }),
+  EVENT({ id: 'doorPrank', category: 'chaos', title: 'The sticky notes', weight: 1, needs: ['lively'], text: 'Overnight, someone covered {name}’s door in sticky notes. Hundreds of them.', choices: [choice('laughs it off', null, O('A good one', '{name} takes a picture and leaves them up for a day.', [mood(3)]))] }),
 ];
 
 export const LIBRARY: readonly StorySpec[] = [...ARCS, ...EVENTS];

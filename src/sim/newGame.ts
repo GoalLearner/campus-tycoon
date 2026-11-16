@@ -1,3 +1,4 @@
+import { newChaos } from './systems/chaos';
 import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
@@ -199,6 +200,7 @@ export function newGame(opts: NewGameOptions): GameState {
     timerSeq: 0,
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
+    chaos: newChaos(),
     grounds: { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
     term: newTerm(0),
     // Filled in just below, from the football random stream.

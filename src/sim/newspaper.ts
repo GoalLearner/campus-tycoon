@@ -1,3 +1,4 @@
+import { CHAOS_STEPS } from './config/chaos';
 import { policiesAt } from './systems/policies';
 import { VARSITY_TEAMS } from './config/teams';
 import { LEAVE_WHYS, type LeaveWhy } from './config/population';
@@ -301,6 +302,24 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         // Moving off campus (R2, DESIGN.md 66.3).
         out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });
         break;
+      case 'chaos': {
+        // The chaos sandbox (DESIGN.md 68): the meter changing step, the trustees' letters, a legendary night, a rally.
+        // Mayhem shows as it happens (16+): no ration on it. Comic words, and never at a student's expense.
+        const step = Number(entry.data?.step ?? -1);
+        const was = Number(entry.data?.was ?? -1);
+        const letter = Number(entry.data?.letter ?? 0);
+        if (letter === 1) out.push({ weight: 44, headline: 'The Trustees Write: Calm the Campus Down, and Soon', deck: entry.text });
+        else if (letter === 2) out.push({ weight: 46, headline: 'Trustees Pleased as Campus Calms; a Small Gift Follows', deck: entry.text });
+        else if (letter === 3) out.push({ weight: 44, headline: 'Trustees Unimpressed; Reputation Takes a Small Knock', deck: entry.text });
+        else if (entry.data?.spirit === 1) out.push({ weight: 42, headline: 'Most Spirited Campus? A Legendary Night Has Everyone Talking', deck: entry.text });
+        else if (entry.data?.protest === 1) {
+          const about: Record<string, string> = { beds: 'More Beds', food: 'Better Food', parking: 'Parking', policy: 'a Campus Policy' };
+          out.push({ weight: 47, headline: `Students Rally for ${about[String(entry.data.topic)] ?? 'Change'}; the Dean Takes the Petition`, deck: entry.text });
+        }
+        else if (step >= 3 && step > was) out.push({ weight: 45, headline: `Campus Turns ${CHAOS_STEPS[step]}: Dust-Ups and Pranks Keep Campus Safety Busy`, deck: entry.text });
+        else if (step >= 0 && step < 3 && was >= 3) out.push({ weight: 50, headline: `Campus Settles Down: The Chaos Meter Reads ${CHAOS_STEPS[step]}`, deck: entry.text });
+        break;
+      }
       case 'writeUps':
         // Under-21 drinking, caught as a rule broken (R2, DESIGN.md 66.2).
         out.push({ weight: 49, headline: `${Number(entry.data?.writeUps ?? 0).toLocaleString('en-US')} Written Up for Drinking Under 21; Resident Advisors Keep the Paperwork Moving`, deck: entry.text });

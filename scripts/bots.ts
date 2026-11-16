@@ -117,7 +117,7 @@ import {
  * 'striver' is a once-a-day player on a game with goals who works every cause of applicants: looks, marketing,
  * football and the academic rank (DESIGN.md 37.8). It shows what the best regular player can reach, and when.
  */
-export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver';
+export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver' | 'pandemonium' | 'serene';
 
 /**
  * On a game with goals a campus is run well when it keeps $12 to $17 of every $100 (the owner's target, 37.10).
@@ -557,6 +557,7 @@ function splitSpot(state: GameState, yard: Placed): Point | null {
  * so it never counts as a purchase.
  */
 function tendGrounds(state: GameState, reserve: number, most: number): { state: GameState; built: number } {
+  if (wild) return { state, built: 0 };
   let current = state;
   let built = 0;
   for (let guard = 0; guard < 40 && built < most; guard++) {
@@ -614,6 +615,8 @@ function neediestZone(state: GameState): Zone | null {
   let best: Zone | null = null;
   let most = 0;
   for (const zone of ZONES) {
+    // The Pandemonium player lets the halls crowd: no new beds (DESIGN.md 68.7).
+    if (zone === 'housing' && wild) continue;
     const short = shortage(state, zone);
     if (short > most) {
       most = short;
@@ -714,6 +717,8 @@ function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedTyp
       gaps += 1;
     }
   }
+  // The Pandemonium player never builds Campus Safety (DESIGN.md 68.7).
+  if (wild) return wants.filter((want) => want.type !== 'safety');
   // Everything above is a need. What follows is a nicety, bought last and only on the visit's final pass.
   if (!extras) return wants;
   // Variety: three kinds of food in reach lift Food & fun a little. A dorm with food but fewer kinds than
@@ -778,10 +783,13 @@ function placeRewards(state: GameState): { state: GameState; placed: number } {
     const map = current.map;
     const lots = map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0);
     let best: Point | null = null;
+    // Where it lifts nothing more, it still goes on the first free ground it fits: a player would not leave it waiting.
+    let anywhere: Point | null = null;
     let most = 0;
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (!freeAt(current, x, y) || previewPlace(current, type, x, y).problem !== null) continue;
+        anywhere ??= [x, y];
         let gain = 0;
         for (const lot of lots) {
           const far = Math.max(Math.max(x - lot.x, 0, lot.x - (x + spec.w - 1)), Math.max(y - lot.y, 0, lot.y - (y + spec.h - 1)));
@@ -796,6 +804,7 @@ function placeRewards(state: GameState): { state: GameState; placed: number } {
         }
       }
     }
+    best ??= anywhere;
     if (!best) continue;
     const result = applyAction(current, { type: 'place', building: type, x: best[0], y: best[1] });
     if (!result.ok) continue;
@@ -1469,8 +1478,64 @@ function useRhythm(state: GameState): GameState {
   return current;
 }
 
+/** True while the Pandemonium player is taking its turn: it builds as the once-a-day player, less what calms. */
+let wild = false;
+
+/** The policies that calm a campus, and those students dislike enough to protest (DESIGN.md 68.7). */
+const CALMING = ['quietHours', 'partyRegistration', 'alcoholEducation', 'antiBullying', 'antiHazing', 'greekOversight', 'dryCampus'];
+const DISLIKED = ['parkingFees', 'toughGrading'];
+
+/**
+ * The chaos sandbox's two test players (DESIGN.md 68.7), each the once-a-day player with one difference. The Serene
+ * player turns on every switch that calms. The Pandemonium player runs the campus for mayhem on purpose: no Campus
+ * Safety, no new beds, its yards' crews sent home, every calming switch off and the disliked ones on.
+ */
+function chaosTurn(state: GameState, as: 'pandemonium' | 'serene'): TurnResult {
+  wild = as === 'pandemonium';
+  let turn: TurnResult;
+  try {
+    turn = takeTurn(state, 'daily');
+  } finally {
+    wild = false;
+  }
+  let current = turn.state;
+  const flip = (id: string, on: boolean): void => {
+    if (current.policies.on.includes(id) === on) return;
+    const done = applyAction(current, { type: 'policy', id, on });
+    if (done.ok) current = done.state;
+  };
+  if (as === 'serene') {
+    for (const id of CALMING) if (id !== 'dryCampus') flip(id, true);
+    for (const id of DISLIKED) flip(id, false);
+    // Campus Safety over every hall, before anything else: up to six on a visit, while there is the money.
+    for (let n = 0; n < 6; n++) {
+      const dorm = current.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !coverFor(current.map, 'safety', b.x, b.y));
+      if (!dorm || current.money.cash - placedCost('safety', scaleOf(current)) < 0) break;
+      const spot = menuSpot(current, 'safety', dorm.x, dorm.y);
+      const placed = spot ? applyAction(current, { type: 'place', building: 'safety', x: spot[0], y: spot[1] }) : null;
+      if (!placed?.ok) break;
+      current = placed.state;
+    }
+    // And its yards staffed again, as the yards ask.
+    current = tendGrounds(current, 0, 8).state;
+    return { ...turn, state: current };
+  }
+  for (const id of CALMING) flip(id, false);
+  for (const id of DISLIKED) flip(id, true);
+  for (const placed of current.map.placed.filter((one) => one && one.type === 'safety')) {
+    const cleared = applyAction(current, { type: 'paint', tool: 'clear', cells: [[placed!.x, placed!.y]] });
+    if (cleared.ok) current = cleared.state;
+  }
+  for (const yard of current.map.placed.filter((one) => one && one.type === 'yard')) {
+    const sent = applyAction(current, { type: 'staff', yard: yard!.id, workers: 0 });
+    if (sent.ok) current = sent.state;
+  }
+  return { ...turn, state: current };
+}
+
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
+  if (as === 'pandemonium' || as === 'serene') return chaosTurn(state, as);
   // The once-a-day player follows a main character, the one the game suggests, and the next when one graduates
   // (DESIGN.md 53.2). They change nothing on the campus, so the campus's numbers are the same as without.
   if (botOptions.main && as === 'daily' && state.goals && state.story && !state.story.mc) {

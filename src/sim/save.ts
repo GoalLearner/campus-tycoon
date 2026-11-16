@@ -1,3 +1,4 @@
+import { newChaos } from './systems/chaos';
 import { MAIN_STREET } from './config/town';
 import { openingStanding } from './systems/field';
 import { newGoals } from './systems/goals';
@@ -36,7 +37,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 32;
+export const SAVE_VERSION = 33;
 
 export interface SaveFile {
   v: number;
@@ -418,6 +419,14 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 32: the realism pass, R3 (DESIGN.md 67.1). Money is shown at today's prices, and a save keeps every number
   // it has: nothing changes but the version, so the player is told once why their cash reads about 40% higher.
   31: (state) => state,
+  // Version 33: the chaos sandbox, stop C1 (DESIGN.md 68). A save gains the Chaos meter, read from its next game week,
+  // and chaos's own random stream, which starts where a new game's would, so the streams it has are untouched.
+  32: (state) => {
+    if (typeof state.chaos !== 'object' || state.chaos === null) state.chaos = newChaos();
+    const rng = state.rng as Record<string, number> | undefined;
+    if (rng && typeof rng.chaos !== 'number') rng.chaos = seedStreams(Number(state.seed ?? 0)).chaos;
+    return state;
+  },
 };
 
 /**
@@ -483,7 +492,7 @@ export function validate(state: unknown): string | null {
   if (!isObject(state)) return 'The save holds no game.';
   if (state.version !== SAVE_VERSION) return `Unexpected save version ${String(state.version)}.`;
 
-  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek', 'alumni', 'story', 'web'] as const) {
+  for (const key of ['clock', 'money', 'map', 'rng', 'school', 'admissions', 'stats', 'incidents', 'grounds', 'term', 'field', 'football', 'decisions', 'inbox', 'staffing', 'policies', 'daily', 'orders', 'decor', 'rhythm', 'bigBuilds', 'labs', 'traditions', 'greek', 'alumni', 'story', 'web', 'chaos'] as const) {
     if (!isObject(state[key])) return `The save is missing "${key}".`;
   }
   for (const key of ['cohorts', 'timers', 'offCampus'] as const) {
