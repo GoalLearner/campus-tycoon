@@ -142,6 +142,23 @@ export const PLACED: Record<PlacedType, PlacedSpec> = {
     name: 'Recreation field', category: 'Recreation', family: 'recreation', w: 2, h: 2, cost: 15_000, upkeepPerYear: 1_000,
     radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.field', flat: true, buildable: true, capacity: 22,
   },
+  // Full-size courts and a pitch (DESIGN.md 72), with room for a real game: their capacity is who plays at once.
+  basketball: {
+    name: 'Basketball court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 26_000, upkeepPerYear: 1_500,
+    radius: 5, strength: 0.45, effect: 'Raises happiness within 5 cells', sprite: 'build.basketball', flat: true, buildable: true, capacity: 10,
+  },
+  tennis: {
+    name: 'Tennis court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 22_000, upkeepPerYear: 1_200,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.tennis', flat: true, buildable: true, capacity: 4,
+  },
+  volleyball: {
+    name: 'Volleyball court', category: 'Recreation', family: 'recreation', w: 2, h: 3, cost: 20_000, upkeepPerYear: 1_200,
+    radius: 4, strength: 0.4, effect: 'Raises happiness within 4 cells', sprite: 'build.volleyball', flat: true, buildable: true, capacity: 12,
+  },
+  soccer: {
+    name: 'Soccer pitch', category: 'Recreation', family: 'recreation', w: 3, h: 4, cost: 32_000, upkeepPerYear: 2_000,
+    radius: 5, strength: 0.5, effect: 'Raises happiness within 5 cells', sprite: 'build.soccer', flat: true, buildable: true, capacity: 10,
+  },
   pondSmall: {
     name: 'Small pond', category: 'Water', family: 'water', w: 1, h: 1, cost: 8_000, upkeepPerYear: 0,
     radius: 0, strength: 0, effect: 'Green space. Every zone likes water', sprite: 'pond.small', flat: true, buildable: true,
@@ -328,7 +345,7 @@ export function placedCars(type: PlacedType, scale: number): number {
 export const BUILD_ORDER: readonly PlacedType[] = [
   'library', 'computerLab', 'studyCenter', 'makerspace',
   'dining', 'foodcourt', 'diner', 'burger', 'pizza', 'taco', 'coffee', 'smoothie', 'convenience', 'truck',
-  'store', 'gym', 'track', 'pool', 'courts', 'field', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard', 'rack',
+  'store', 'gym', 'track', 'pool', 'courts', 'basketball', 'tennis', 'volleyball', 'field', 'soccer', 'pondSmall', 'pondMedium', 'pondLarge', 'medical', 'safety', 'parking', 'garage', 'yard', 'rack',
   'stadium',
 ];
 

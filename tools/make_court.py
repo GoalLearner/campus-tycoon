@@ -256,8 +256,13 @@ def hoop(facing_viewer):
     return im.crop(im.getbbox())
 
 
+# The basketball court's look the game uses (the owner's pick from the look sheet); the recipe reads basketball-2x3.png.
+CHOSEN = 'blue'
+
+
 def write():
     os.makedirs(OUT, exist_ok=True)
+    court(2, 3, CHOSEN).save(os.path.join(OUT, 'basketball-2x3.png'))
     for style in STYLES:
         for w, h in ((2, 3), (2, 2)):
             court(w, h, style).save(os.path.join(OUT, f'court-{style}-{w}x{h}.png'))
