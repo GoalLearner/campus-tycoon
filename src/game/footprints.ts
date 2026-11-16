@@ -20,6 +20,11 @@ export class Footprints {
   /** For each cell, the footprint standing on it, or -1. */
   private at = new Int32Array(0);
   private boxes: Array<{ x: number; y: number; w: number; h: number }> = [];
+  /** Each footprint as the view is turned now, and its own draw order: worked out once a turn, not each frame. */
+  private viewed: Array<{ x0: number; y0: number; x1: number; y1: number; drawn: number }> = [];
+  private viewedTurn = -1;
+  /** For each cell, whether any footprint is on it or beside it: most people are nowhere near one. */
+  private near = new Uint8Array(0);
   private width = 0;
   private height = 0;
 
@@ -48,6 +53,28 @@ export class Footprints {
       this.boxes.push({ x: one.x, y: one.y, w: one.w, h: one.h });
       for (let y = one.y; y < one.y + one.h; y++) for (let x = one.x; x < one.x + one.w; x++) if (x >= 0 && y >= 0 && x < width && y < height) this.at[y * width + x] = k;
     }
+    this.near = new Uint8Array(width * height);
+    for (let i = 0; i < this.at.length; i++) {
+      if (this.at[i]! < 0) continue;
+      const x = i % width;
+      const y = (i - x) / width;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (x + dx >= 0 && y + dy >= 0 && x + dx < width && y + dy < height) this.near[(y + dy) * width + x + dx] = 1;
+    }
+    this.viewedTurn = -1;
+  }
+
+  /** The footprints as the view is turned now, worked out again only when the turn changes. */
+  private viewBoxes(): Array<{ x0: number; y0: number; x1: number; y1: number; drawn: number }> {
+    const turn = this.iso.turn;
+    if (turn !== this.viewedTurn) {
+      this.viewedTurn = turn;
+      this.viewed = this.boxes.map((b) => {
+        const box = this.iso.viewBox(b.x, b.y, b.w, b.h);
+        // The building's own order: its front cell, as drawn (CampusScene and Placed draw it so).
+        return { x0: box.x, y0: box.y, x1: box.x + box.w, y1: box.y + box.h, drawn: (box.x + box.w - 1 + box.y + box.h - 1) * 4 + 1 };
+      });
+    }
+    return this.viewed;
   }
 
   /** True when a point of the map is inside a building's footprint. */
@@ -62,9 +89,10 @@ export class Footprints {
    * over any building next to them that they stand in front of, under any they stand behind, at the view's turn.
    */
   depth(x: number, y: number, own: number): number {
-    if (this.boxes.length === 0) return own;
     const cx = Math.floor(x);
     const cy = Math.floor(y);
+    if (cx < 0 || cy < 0 || cx >= this.width || cy >= this.height || !this.near[cy * this.width + cx]) return own;
+    const boxes = this.viewBoxes();
     const v = this.iso.view(x, y);
     let out = own;
     let last = -1;
@@ -76,14 +104,11 @@ export class Footprints {
         const k = this.at[ny * this.width + nx]!;
         if (k < 0 || k === last) continue;
         last = k;
-        const b = this.boxes[k]!;
-        const box = this.iso.viewBox(b.x, b.y, b.w, b.h);
-        // The building's own order: its front cell, as drawn (CampusScene and Placed draw it so).
-        const drawn = (box.x + box.w - 1 + box.y + box.h - 1) * 4 + 1;
-        const before = v.x >= box.x + box.w || v.y >= box.y + box.h;
-        const behind = v.x < box.x || v.y < box.y;
-        if (before && !behind) out = Math.max(out, drawn + CLEAR);
-        else if (behind && !before) out = Math.min(out, drawn - CLEAR);
+        const box = boxes[k]!;
+        const before = v.x >= box.x1 || v.y >= box.y1;
+        const behind = v.x < box.x0 || v.y < box.y0;
+        if (before && !behind) out = Math.max(out, box.drawn + CLEAR);
+        else if (behind && !before) out = Math.min(out, box.drawn - CLEAR);
       }
     }
     return out;

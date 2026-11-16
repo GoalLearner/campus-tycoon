@@ -8575,8 +8575,8 @@ Feelings never turn anyone about. Before, an angry student who stopped turned on
 
 - **Angry** shows as the hard step, a pace a fifth quicker, and now and then the anger mark over their head, every 7 to 14 seconds while they walk.
 - **Stressed about exams**, stopped somewhere, they pace for real: a few steps back the way they came (0.6 of a cell), one turn, back to where they stopped, one turn, and again, with the walk frames. About two seconds a way, a short stand at each end, so a turn comes once in about 2.6 seconds.
-- **Any figure** turns on the screen at most once in 650 ms [T]. A real corner of a path comes far less often at a walk; a quicker change waits.
-- **A rider** stepping round someone keeps to one side until clear and eases over and back, inside the path's cell, and never wobbles from side to side.
+- **Any figure** turns on the screen at most once in 650 ms [T]. A real corner of a path comes far less often at a walk; a quicker change waits. Watched for a minute in the game: turns less than half a second apart went from 3,945 to 49, and a walker on the move turns 16 times a minute where it turned 90.
+- **A rider** stepping round someone keeps to one side until clear and eases over and back, inside the path's cell, and never wobbles from side to side. Found in the game: the drawing's step aside was added to where the rider was every frame, so riders slid off the path and zigzagged back, at times into a building. The step is only drawn now.
 - **People crossing a quad** walk the line, stop at the end for 2.4 seconds [T], turn once and walk back. Before, they turned straight round at each end.
 - **Watchers** of a moment walk over only on a straight line over open ground, there and back; otherwise they watch from where they are.
 
@@ -8590,7 +8590,7 @@ Nobody appears or disappears in view. Everyone on the screen comes out of a door
 - **Grounds workers and Campus Safety** walk along paths and open ground there and back (69.5). A worker finishes the job in hand and takes up the next back in the yard, so nobody jumps from one job to another; Campus Safety walk back to their station when the incident is over.
 - **Instant only out of sight.** Ground that has just come into sight, at the first look, after a pan or a zoom, may already have people on it: they are there as the screen shows it. Once the view has been still for 1.2 seconds [T] or is full, everyone new walks in.
 
-**Tested**: `tests/afoot.test.ts` (the way on foot found round a building and never through it; out from a cell just built on; fading only in a doorway; a moving place's last stretch). The rule as a whole was checked in the game with the camera still for a few game minutes: every figure became visible or stopped being visible only at a door or the screen's edge (the play-fixes page).
+**Tested**: `tests/afoot.test.ts` (the way on foot found round a building and never through it; out from a cell just built on; fading only in a doorway; a moving place's last stretch). In the game, on an iPhone 14's screen with the camera still for a minute on the model campus's afternoon, every person the crowd draws was watched frame by frame: before, 70 of 338 appeared and 14 of 335 went somewhere other than a door or the screen's edge; now 0 of 314 appeared and 1 of 320 went anywhere else (the play-fixes page).
 
 ### 69.3 Figures that match gender, and a crowd like a real campus
 
@@ -8641,11 +8641,11 @@ Nobody stands, sits or walks inside a building's footprint:
 - A group's places on a lawn are kept on open ground, and a group that moves round its spot keeps its loop on open ground, smaller where it must be.
 - A party needs two clear cells all round its middle: its crowd and lanterns reach that far.
 - A line at a food place, and people waiting by a gym's door, stop where open ground ends.
-- The one who falls in the fountain, and watchers, go only on a clear line.
+- The one who falls in the fountain, and watchers, go only on a clear line, and afterwards walk back the way they came; before, one already where they were going cut straight back to the next path, through whatever stood between.
 - Grounds workers and Campus Safety walk paths and open ground, never through a building.
 - When something is built or cleared, groups and walkers on it walk off, and a cleared court or food place sends its people off on foot.
 
-**Tested**: `tests/footprints.test.ts` (every spot a tenth of a cell apart round a wide building and a shallow one, at all four turns: in front means over it, behind means under it; and the two cases the owner saw, wrong by the feet alone). In the game, over a few game minutes at each turn, no figure's feet stood inside a footprint (the play-fixes page).
+**Tested**: `tests/footprints.test.ts` (every spot a tenth of a cell apart round a wide building and a shallow one, at all four turns: in front means over it, behind means under it; and the two cases the owner saw, wrong by the feet alone). In the game, the same minute watched frame by frame: before, a visible person's feet were inside a building in 10,493 of 627,109 looks (1.7%); now in none of 614,933.
 
 | Decisions made here | Instead |
 |---|---|
