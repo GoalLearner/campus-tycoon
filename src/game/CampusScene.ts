@@ -13,7 +13,7 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -597,6 +597,39 @@ export class CampusScene extends Phaser.Scene {
     );
   }
 
+  /**
+   * The piece of bike path for a cell (DESIGN.md 71), as the turned view draws it. Its sides join more bike path; a
+   * dead end that runs into a footpath or a road is open there, so riders ride on and off it. A crossing's bars lie
+   * along the bike path, set across it, for the walkers going over.
+   */
+  private bikeKey(state: GameState, x: number, y: number, crossing: boolean): string {
+    const { width, height, cells } = state.map;
+    const kindAt = (cx: number, cy: number) => (cx >= 0 && cy >= 0 && cx < width && cy < height ? cells[cy * width + cx]!.kind : undefined);
+    const lane = (cx: number, cy: number): boolean => isBikeKind(kindAt(cx, cy));
+    const sides: Array<[number, number, number]> = [[0, -1, 1], [1, 0, 2], [0, 1, 4], [-1, 0, 8]];
+    let mask = 0;
+    for (const [dx, dy, bit] of sides) if (lane(x + dx, y + dy)) mask |= bit;
+    if (crossing) {
+      // The bike path runs the way its other cells do; with none beside it, across the footpath.
+      const upDown = mask & 5 ? true : mask & 10 ? false : !(isPathKind(kindAt(x, y - 1)) || isPathKind(kindAt(x, y + 1)));
+      const key = `bike.cross.${this.iso.mask(upDown ? 5 : 10)}`;
+      return this.art.has(key) ? key : 'ground.grass';
+    }
+    // A dead end opens onto the footpath or road it runs into.
+    const ends: Record<number, number> = { 1: 4, 2: 8, 4: 1, 8: 2 };
+    const end = ends[mask];
+    if (end !== undefined) {
+      const [dx, dy] = sides.find((side) => side[2] === end)!;
+      const beyond = kindAt(x + dx, y + dy);
+      if (isPathKind(beyond) || isRoadKind(beyond)) mask |= end;
+    }
+    const turned = this.iso.mask(mask);
+    const sym = `bike.sym.${turned}`;
+    if ((turned === 5 || turned === 10) && cellHash(x, y) % 3 === 0 && this.art.has(sym)) return sym;
+    const key = `bike.${turned}`;
+    return this.art.has(key) ? key : 'ground.grass';
+  }
+
   /** The sidewalk drawn over a road cell, as the view is turned (DESIGN.md 59.1), or '' for none. */
   private kerbKey(plan: TrafficPlan, x: number, y: number): string {
     const { sides, corners } = kerbAt(plan, x, y);
@@ -972,6 +1005,10 @@ export class CampusScene extends Phaser.Scene {
             objectKey = out ? 'lamp.off' : lamp;
             if (!out) lampCells.push(i);
           }
+        } else if (cell.kind === 'bike' || cell.kind === 'bikeCrossing') {
+          // A bike path (DESIGN.md 71): its piece by which sides join more of it, the bike painted on every third
+          // straight cell, and bars across it where a footpath crosses.
+          groundKey = this.bikeKey(state, x, y, cell.kind === 'bikeCrossing');
         } else if (cell.kind === 'crossing') {
           // The bars lie across the road, whichever way it runs.
           groundKey = this.iso.mask(this.roadMask(state, x, y)) & 5 ? 'road.cross.5' : 'road.cross.10';

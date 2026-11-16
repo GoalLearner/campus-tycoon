@@ -145,6 +145,8 @@ const TOOLS: Array<{ id: ToolChoice; label: string; hint: (scale: number) => str
   { id: 'housing', label: 'Housing', hint: (scale) => `Drag a row of dorm lots · ${dollars(paintCost('zoneLot', scale))} each · two fingers move the map` },
   { id: 'academic', label: 'Academic', hint: (scale) => `Drag a row of lecture-hall lots · ${dollars(paintCost('zoneLot', scale))} each · two fingers move the map` },
   { id: 'path', label: 'Path', hint: (scale) => `Drag to lay a path · ${dollars(paintCost('path', scale))} a cell` },
+  // A bike path, for riders only (DESIGN.md 71): walkers cross it where a footpath does.
+  { id: 'bike', label: 'Bike', hint: (scale) => `Drag to lay a bike path · ${dollars(paintCost('bike', scale))} a cell · walkers cross where a path does` },
   { id: 'quad', label: 'Quad', hint: (scale) => `Drag to plant a quad · ${dollars(paintCost('quad', scale))} a cell` },
   { id: 'tree', label: 'Tree', hint: (scale) => `Tap or drag to plant trees · ${dollars(paintCost('tree', scale))} each` },
   { id: 'clear', label: 'Clear', hint: () => 'Drag over what to clear · you see what comes back before it goes' },
@@ -163,6 +165,7 @@ const TOOL_NOUN: Record<Exclude<ToolChoice, 'look' | 'place'>, [string, string]>
   housing: ['lot', 'lots'],
   academic: ['lot', 'lots'],
   path: ['path cell', 'path cells'],
+  bike: ['bike path cell', 'bike path cells'],
   road: ['road cell', 'road cells'],
   bin: ['trash bin', 'trash bins'],
   bench: ['bench', 'benches'],

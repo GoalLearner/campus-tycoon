@@ -10,7 +10,7 @@ import { loadAtlas } from '../ui/atlas';
 import { oldFigure, studentFigure } from '../sim/systems/students';
 import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
-import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting, SAVE_VERSION } from '../sim';
+import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting, SAVE_VERSION, ownedAt } from '../sim';
 import { clock } from './clock';
 import { forceHour } from './daylight';
 import { openBuildMenu } from '../ui/buildMenu';
@@ -771,6 +771,10 @@ export function installDevTools(): void {
       grown.offCampus = grown.offCampus.map((n) => Math.round(n * share)) as typeof grown.offCampus;
       store.adopt(grown, { ephemeral: true });
     }
+    // &bikes=3 lays that many bike paths (DESIGN.md 71), each along one of the longest straight runs of open ground with
+    // a footpath beside it all the way, for pictures and the frame bench.
+    const bikes = Number(params.get('bikes') ?? 0);
+    if (bikes > 0 && store.hasGame) for (const run of laneRuns(store.state, bikes)) store.dispatch({ type: 'paint', tool: 'bike', cells: run });
     // &rank=90 puts the campus at that rank with every rank goal down to it reached, so their buildings are
     // waiting in the Build menu (DESIGN.md section 40). &rewards=8 then places that many of them, each on the
     // free ground nearest &at=x,y, for a picture of them on the campus.
@@ -1105,4 +1109,39 @@ export function installDevTools(): void {
       }
     }, 150);
   }
+}
+
+/**
+ * Up to `n` straight runs of open ground the campus owns, each with a footpath beside every cell on one side, longest
+ * first and none touching another: where a bike path would ride along a footpath (DESIGN.md 71). For the dev demo.
+ */
+function laneRuns(state: GameState, n: number): Point[][] {
+  const { width, height, cells } = state.map;
+  const kind = (x: number, y: number): string | undefined => (x >= 0 && y >= 0 && x < width && y < height ? cells[y * width + x]!.kind : undefined);
+  const open = (x: number, y: number): boolean => kind(x, y) === 'empty' && ownedAt(state.map, x, y);
+  const runs: Point[][] = [];
+  for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
+    for (const side of [-1, 1]) {
+      const [sx, sy] = dx === 1 ? [0, side] : [side, 0];
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          // Only from the start of a run.
+          if (open(x - dx, y - dy) && kind(x - dx + sx, y - dy + sy) === 'path') continue;
+          const run: Point[] = [];
+          for (let k = 0; open(x + k * dx, y + k * dy) && kind(x + k * dx + sx, y + k * dy + sy) === 'path'; k++) run.push([x + k * dx, y + k * dy]);
+          if (run.length >= 8) runs.push(run);
+        }
+      }
+    }
+  }
+  runs.sort((a, b) => b.length - a.length);
+  const taken = new Set<number>();
+  const out: Point[][] = [];
+  for (const run of runs) {
+    if (out.length >= n) break;
+    if (run.some(([x, y]) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([ox, oy]) => taken.has((y + oy!) * width + x + ox!)))) continue;
+    for (const [x, y] of run) taken.add(y * width + x);
+    out.push(run);
+  }
+  return out;
 }

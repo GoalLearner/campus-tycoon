@@ -33,7 +33,7 @@ const NEIGHBOURS: ReadonlyArray<readonly [number, number]> = [
  * Steps from each walkable cell to the nearest Academic lot, counted along
  * paths, quads and crossings. -1 where no Academic lot can be reached.
  */
-const walkable = (kind: string): boolean => kind === 'path' || kind === 'quad' || kind === 'crossing';
+const walkable = (kind: string): boolean => kind === 'path' || kind === 'quad' || kind === 'crossing' || kind === 'bikeCrossing';
 
 export function stepsToClass(map: MapState): Int32Array {
   const { width, height, cells } = map;

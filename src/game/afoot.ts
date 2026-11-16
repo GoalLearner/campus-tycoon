@@ -115,3 +115,61 @@ export function searchOnFoot(width: number, height: number, afoot: ArrayLike<boo
   for (let c = end; c >= 0; c = from[c]!) cells.push(c);
   return cells.reverse();
 }
+
+/**
+ * The cells a rider takes from one cell to another (DESIGN.md 71): over the cells they may `ride`, a cell of bike path
+ * (`lane`) costing `laneCost` and any other `pathCost`, so a way along the bike path wins over a slightly shorter one
+ * along the footpaths. No more than `most` cells. Both ends included, with how many of them are bike path; null when
+ * they do not join. Pure: for the walkers, and for the tests.
+ */
+export function searchRide(
+  width: number,
+  height: number,
+  ride: ArrayLike<boolean>,
+  lane: ArrayLike<boolean>,
+  start: number,
+  end: number,
+  most: number,
+  laneCost = 2,
+  pathCost = 3,
+): { cells: number[]; lane: number } | null {
+  const size = width * height;
+  if (start < 0 || end < 0 || start >= size || end >= size) return null;
+  const dist = new Int32Array(size).fill(-1);
+  const parent = new Int32Array(size).fill(-1);
+  const steps = new Int32Array(size);
+  const buckets: number[][] = [[start]];
+  dist[start] = 0;
+  parent[start] = start;
+  for (let d = 0; d < buckets.length; d++) {
+    const bucket = buckets[d];
+    if (!bucket) continue;
+    for (let k = 0; k < bucket.length; k++) {
+      const c: number = bucket[k]!;
+      if (dist[c] !== d) continue;
+      if (c === end) {
+        const cells = [end];
+        while (cells[cells.length - 1] !== start) cells.push(parent[cells[cells.length - 1]!]!);
+        cells.reverse();
+        return { cells, lane: cells.reduce((n, one) => n + (lane[one] ? 1 : 0), 0) };
+      }
+      if (steps[c]! >= most) continue;
+      const cx: number = c % width;
+      const cy: number = (c - cx) / width;
+      for (const [dx, dy] of STEPS) {
+        const nx: number = cx + dx;
+        const ny: number = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const n: number = ny * width + nx;
+        if (!ride[n]) continue;
+        const nd = d + (lane[n] ? laneCost : pathCost);
+        if (dist[n] !== -1 && dist[n]! <= nd) continue;
+        dist[n] = nd;
+        parent[n] = c;
+        steps[n] = steps[c]! + 1;
+        (buckets[nd] ??= []).push(n);
+      }
+    }
+  }
+  return null;
+}

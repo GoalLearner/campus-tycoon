@@ -82,6 +82,8 @@ export const PHASE_STEPS = 7;
 /** One-off costs the player pays for permission and conditions, in the small game. Read them through `paintCost`. */
 export const COST = {
   path: 2_000,
+  /** A cell of bike path (DESIGN.md 71): a path's price. */
+  bike: 2_000,
   /** A cell of road. Its upkeep is in config/town.ts. */
   road: ROAD_COST,
   quad: 15_000,

@@ -475,6 +475,386 @@
     }
    ]
   },
+  "bike.0": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m0.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.1": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m1.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.2": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m2.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.3": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m3.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.4": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m4.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.6": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m6.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.7": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m7.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.8": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m8.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.9": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m9.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.11": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m11.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.12": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m12.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.13": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m13.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.14": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m14.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.15": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/m15.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.sym.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/sym5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.sym.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/sym10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.cross.5": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/cross5.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
+  "bike.cross.10": {
+   "layers": [
+    {
+     "file": "penzilla/GiantCityBuilder/Tiles/Grass.png",
+     "footprint": [
+      1,
+      1
+     ],
+     "swap": "rim"
+    },
+    {
+     "file": "_rendered/fallback/bikelane/cross10.png",
+     "footprint": [
+      1,
+      1
+     ]
+    }
+   ]
+  },
   "lot.empty": {
    "layers": [
     {

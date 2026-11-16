@@ -90,7 +90,12 @@ export function upkeepPerYear(state: GameState): number {
 
 /** True for ground a student walks along: a path, or a crossing where a path and a road share a cell. */
 export function isPathKind(kind: CellKind | undefined): boolean {
-  return kind === 'path' || kind === 'crossing';
+  return kind === 'path' || kind === 'crossing' || kind === 'bikeCrossing';
+}
+
+/** True for ground a rider can take: the footpaths, and the bike paths that are theirs alone (DESIGN.md 71). */
+export function isBikeKind(kind: CellKind | undefined): boolean {
+  return kind === 'bike' || kind === 'bikeCrossing';
 }
 
 /** True for ground a car drives along: the player's roads, crossings, and the town's streets. */
