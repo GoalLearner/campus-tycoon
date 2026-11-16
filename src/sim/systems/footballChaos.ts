@@ -55,17 +55,18 @@ function divisionClinched(state: GameState): boolean {
 
 /**
  * The fans storm the field (DESIGN.md 77.2) only after a win that is a moment: the rival beaten at home, an upset (a team
- * rated above ours), or the home win that clinches the division or a bowl. A blowout on its own is cheered in the
+ * rated above ours), or the season's clinching win at home (the division or a bowl, whichever comes first, once a
+ * season). A blowout on its own is cheered in the
  * stands and the street, not stormed: the model campus's strong team wins big most weeks.
  */
-function stormed(state: GameState, game: Game, clinched: boolean): boolean {
+function stormed(game: Game, clinched: boolean): boolean {
   if (!game.home || sum(game.us) <= sum(game.them) || game.slot < 0) return false;
-  if (game.slot === RIVALRY_SLOT || game.oppRating > game.rating || clinched) return true;
-  const season = state.football.season;
-  if (!season || game.slot >= 10) return false;
-  // The sixth win of the regular season: a bowl is certain.
-  const wins = season.games.filter((one) => one.done && one.slot >= 0 && one.slot < 10 && sum(one.us) > sum(one.them)).length;
-  return wins === BOWL_WINS;
+  return game.slot === RIVALRY_SLOT || game.oppRating > game.rating || clinched;
+}
+
+/** Wins in the regular season so far. */
+function regularWins(state: GameState): number {
+  return state.football.season?.games.filter((one) => one.done && one.slot >= 0 && one.slot < 10 && sum(one.us) > sum(one.them)).length ?? 0;
 }
 
 /** True when a game was a big win: the rivalry, an upset, or by seventeen or more, as football reads it (10.4). */
@@ -115,15 +116,16 @@ function afterGame(state: GameState, game: Game, log: LogEntry[]): void {
   const won = sum(game.us) > sum(game.them);
   const big = bigWin(game);
   const plot = f.stadium.plot === null ? null : state.map.placed[f.stadium.plot];
-  // The division won for certain, the first time this season: by this game if it was a home win, or elsewhere.
+  // The season's clinching win: the first time this season the division is won for certain (the way to the title game)
+  // or a bowl is (the sixth win), whichever comes first. Once a season, and stormed only if this game was a home win.
   const season = f.season;
   let clinched = false;
-  if (season && c.clinchedSeason !== season.year && game.slot >= 0 && game.slot < 10 && divisionClinched(state)) {
+  if (season && c.clinchedSeason !== season.year && game.slot >= 0 && game.slot < 10 && (divisionClinched(state) || regularWins(state) >= BOWL_WINS)) {
     c.clinchedSeason = season.year;
     clinched = won;
   }
   // The field stormed: a win that is a moment, at home, at the campus's own stadium.
-  if (stormed(state, game, clinched) && f.stadium.tier >= 1 && plot) {
+  if (stormed(game, clinched) && f.stadium.tier >= 1 && plot) {
     const reached = coverFor(state.map, 'safety', plot.x, plot.y) !== null;
     const roll = nextFloat(state.rng, 'chaos');
     const goalposts = roll < (reached ? FOOTBALL_CHAOS.goalposts.reached : FOOTBALL_CHAOS.goalposts.none);
