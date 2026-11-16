@@ -961,7 +961,7 @@ export class Activity {
   /** Where a court is in the draw order, as src/game/Placed.ts puts a flat building on the ground. */
   private courtDepth(site: Site): number {
     const { x, y, w, h } = site.placed;
-    return (this.iso.back(x, y, w, h) + Math.max(0, Math.max(w, h) - 2)) * 4 + 0.5;
+    return this.iso.groundDepth(x, y, w, h);
   }
 
   // ------------------------------------------------------- student cards --
