@@ -51,6 +51,40 @@ sprites['ground.grass'] = {'layers': [GRASS]}
 for mask in range(16):
     sprites[f'path.{mask}'] = {'layers': [GRASS, on_grid(TILES + 'Sidewalk_Tile9.png')]}
 
+# Bike paths (DESIGN.md 71): our lane, by tools/make_bikelane.py, on the grass, one picture for each of the 16 ways a
+# cell joins its neighbours; the bike sign on a straight run (5 and 10), and where a bike path crosses a footpath.
+LANE = '_rendered/fallback/bikelane/'
+for mask in range(16):
+    sprites[f'bike.{mask}'] = {'layers': [GRASS, on_grid(LANE + f'm{mask}.png')]}
+for run in (5, 10):
+    sprites[f'bike.sym.{run}'] = {'layers': [GRASS, on_grid(LANE + f'sym{run}.png')]}
+for run in (5, 10):
+    sprites[f'bike.cross.{run}'] = {'layers': [GRASS, on_grid(LANE + f'cross{run}.png')]}
+# Bike lanes painted on the walks (DESIGN.md 74), by tools/make_walklane.py: look A down one side, a set for each way the
+# view is turned, and look B down the middle. A painted walk on its own ground (a straight run, with or without the
+# sign), and the paint alone laid over the walk for every way a cell joins.
+WALKLANE = '_rendered/fallback/walklane/'
+SIDEWALK = on_grid(TILES + 'Sidewalk_Tile9.png')
+LOOKS = [('a.nw', 'a-nw'), ('a.ne', 'a-ne'), ('a.se', 'a-se'), ('a.sw', 'a-sw'), ('b', 'b')]
+for name, file in LOOKS:
+    for run in (5, 10):
+        sprites[f'walkground.{name}.{run}'] = {'layers': [GRASS, SIDEWALK, on_grid(WALKLANE + f'{file}-m{run}.png')]}
+    for run in (5, 10):
+        sprites[f'walkground.{name}.sym.{run}'] = {'layers': [GRASS, SIDEWALK, on_grid(WALKLANE + f'{file}-sym{run}.png')]}
+for name, file in LOOKS:
+    for mask in range(16):
+        sprites[f'walklane.{name}.{mask}'] = {'layers': [on_grid(WALKLANE + f'{file}-m{mask}.png')]}
+    for run in (5, 10):
+        sprites[f'walklane.{name}.sym.{run}'] = {'layers': [on_grid(WALKLANE + f'{file}-sym{run}.png')]}
+# Real games (DESIGN.md 72): the four full-size courts, ours by tools/make_court.py, each on its own lawn, and the
+# basketball hoops stood at each end.
+COURTS = {'basketball': (2, 3), 'tennis': (2, 3), 'volleyball': (2, 3), 'soccer': (3, 4)}
+for court, (w, h) in COURTS.items():
+    lawn = [on_grid(TILES + 'Grass.png', swap='rim', shift=[x, y]) for x in range(w) for y in range(h)]
+    sprites[f'build.{court}'] = {'layers': [*lawn, on_grid(f'_rendered/ours/court/{court}-{w}x{h}.png', w, h)]}
+for end in ('far', 'near'):
+    sprites[f'court.hoop.{end}'] = {'layers': [standing(f'_rendered/ours/court/hoop-{end}.png', 0.5, 0.5)]}
+
 sprites['lot.empty'] = {'layers': [DIRT]}
 sprites['lot.site'] = {'layers': [DIRT, on_grid(PUBLIC + 'Construction_1x1.png')]}
 sprites['lot.works'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.22, 0.96), standing(DECOR + 'EmergencyCone.png', 0.96, 0.22)]}
@@ -697,6 +731,7 @@ recipe = {
         'reward.fountain': [2, 2], 'reward.post': [2, 1], 'reward.cinema': [2, 2], 'reward.radio': [2, 1], 'reward.museum': [2, 2], 'reward.alumni': [2, 1],
         'era.union': [2, 2], 'era.honors': [2, 1], 'era.welcome': [2, 1], 'era.commons': [3, 3], 'build.site.wide': [2, 1],
         'lab.sciences': [2, 2], 'lab.engineering': [2, 2], 'lab.health': [2, 2],
+        **{f'build.{court}': [w, h] for court, (w, h) in COURTS.items()},
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
     'credits': [
