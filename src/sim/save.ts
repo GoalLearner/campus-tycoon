@@ -37,7 +37,7 @@ import type { Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 34;
+export const SAVE_VERSION = 35;
 
 export interface SaveFile {
   v: number;
@@ -430,6 +430,9 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 34: the play fixes (DESIGN.md 69.3). Figures follow gender and nothing in a save changes but the version,
   // so the player is told once why some students look different.
   33: (state) => state,
+  // Version 35: admissions at real figures (DESIGN.md 70). The intake keeps a little more from its next class on, and
+  // nothing in a save changes but the version, so the player is told once why the numbers read differently.
+  34: (state) => state,
 };
 
 /**

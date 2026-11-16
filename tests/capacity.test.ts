@@ -129,32 +129,31 @@ describe('faculty and staff are head counts the campus keeps', () => {
   });
 
   it('arrive a semester behind the students, so a bigger class stretches the ratio until they do', () => {
+    // Since admissions at real figures (DESIGN.md 70) the big class is the fall's; the spring's is small.
     const spring = at(model(), SPRING);
-    expect(enrollment(spring.state)).toBeGreaterThan(46_000);
-    // The spring class has moved in, and the faculty for it have not.
+    expect(enrollment(spring.state)).toBeLessThan(46_000);
     expect(facultyCount(spring.state)).toBe(2300);
-    expect(staffCount(spring.state)).toBe(1150);
-    expect(facultyNeed(spring.state)).toBeGreaterThan(2300);
-    expect(classSizeNow(spring.state)).toBeGreaterThan(20);
-    expect(teaching(spring.state)).toBeGreaterThan(0.5);
+    const fall = at(spring.state, FALL_2);
+    expect(enrollment(fall.state)).toBeGreaterThan(46_000);
+    // The fall class has moved in, and the faculty for it have not.
+    expect(facultyCount(fall.state)).toBe(2300);
+    expect(staffCount(fall.state)).toBe(1150);
+    expect(facultyNeed(fall.state)).toBeGreaterThan(2300);
+    expect(classSizeNow(fall.state)).toBeGreaterThan(20);
+    expect(teaching(fall.state)).toBeGreaterThan(0.5);
     // What the campus needs now is what it has gone looking for, and they arrive with the next semester.
-    expect(spring.state.staffing.facultyPlan).toBe(facultyNeed(spring.state));
-    expect(nextSemesterStaff(spring.state).faculty).toBe(facultyNeed(spring.state));
-    const said = spring.log.filter((entry) => entry.kind === 'staff');
+    expect(fall.state.staffing.facultyPlan).toBe(facultyNeed(fall.state));
+    expect(nextSemesterStaff(fall.state).faculty).toBe(facultyNeed(fall.state));
+    const said = fall.log.filter((entry) => entry.kind === 'staff');
     expect(said.length).toBe(1);
-    expect(said[0]!.text).toMatch(/^Classes are larger this semester: one member of faculty to every 21 students, where 20 is funded\. [\d,]+ more faculty arrive in the fall\.$/);
+    expect(said[0]!.text).toMatch(/^Classes are larger this semester: one member of faculty to every 2[1-3] students, where 20 is funded\. [\d,]+ more faculty arrive in the spring\.$/);
 
-    const fall = at(spring.state, FALL_2).state;
-    expect(facultyCount(fall)).toBe(spring.state.staffing.facultyPlan);
-    expect(staffCount(fall)).toBe(spring.state.staffing.staffPlan);
-    // The fall class is bigger again, so they are still a semester behind.
-    expect(facultyNeed(fall)).toBeGreaterThan(facultyCount(fall));
-    // A campus that has stopped growing catches up, and stays caught up.
-    const settled = at(fall, T0 + 2 * WEEK + DAY).state;
-    expect(enrollment(settled)).toBe(50_000);
-    expect(facultyCount(settled)).toBe(2500);
-    expect(staffCount(settled)).toBe(1250);
-    expect(classSizeNow(settled)).toBe(20);
+    // A campus that has stopped growing catches up in the spring, and stays within a semester of its students.
+    const settled = at(fall.state, T0 + 2 * WEEK + 4 * DAY).state;
+    expect(enrollment(settled)).toBeGreaterThan(49_000);
+    expect(facultyCount(settled)).toBe(facultyNeed(settled));
+    expect(Math.abs(staffCount(settled) - facultyCount(settled) / 2)).toBeLessThanOrEqual(1);
+    expect(classSizeNow(settled)).toBeCloseTo(20, 5);
   });
 
   it('are never let go: a fall in enrollment is carried on the payroll for a semester', () => {
@@ -204,7 +203,9 @@ describe('faculty and staff are head counts the campus keeps', () => {
     expect(classSizeNow(more)).toBeCloseTo(20, 1);
     expect(nextSemesterStaff(more).faculty).toBe(2706);
     const spring = at(more, SPRING).state;
-    expect(facultyCount(spring)).toBe(2706);
+    // The plan is made again as the semester ends, for those who will be there with the spring class: a small one
+    // since admissions at real figures (DESIGN.md 70), so a few fewer.
+    expect(facultyCount(spring)).toBe(2662);
     expect(classSizeNow(spring)).toBeLessThan(18);
     expect(teaching(spring)).toBeLessThan(0.3);
 
@@ -214,8 +215,9 @@ describe('faculty and staff are head counts the campus keeps', () => {
     expect(facultyCount(fewer)).toBe(2300);
     const later = at(fewer, SPRING).state;
     expect(facultyCount(later)).toBe(Math.max(facultyNeed(later), 1840));
-    expect(classSizeNow(later)).toBe(25);
-    expect(teaching(later)).toBe(1);
+    // Within a student of the floor: a small spring class (DESIGN.md 70) leaves a few under 1,840 to a 25 each.
+    expect(classSizeNow(later)).toBeCloseTo(25, 0);
+    expect(teaching(later)).toBeGreaterThan(0.95);
 
     for (const step of [-1, INSTRUCTION_RATIOS.length, 2.5]) expect(applyAction(start, { type: 'instruction', step }).ok).toBe(false);
     const same = applyAction(start, { type: 'instruction', step: INSTRUCTION_FULL });
@@ -390,22 +392,29 @@ describe('the cap on enrollment', () => {
     expect(enrollment(state)).toBe(50_000);
     const said = run.log.filter((entry) => entry.kind === 'intake').pop()!;
     expect(said.text).toBe(`The fall class of year 3 moved in: ${headCount(last.admitted)} students. The campus is full at 50,000: ${headCount(last.capped!)} more who applied were turned away.`);
-    expect(yearAcceptance(state)).toBeCloseTo(last.admitted / last.expected, 9);
+    // Real figures (DESIGN.md 70): at its cap the campus admits only as many first-years as fill its places, fewer
+    // than the four in five it admits with room for all, and is read the more selective for it.
+    const real = last.real!;
+    expect(yearAcceptance(state)).toBeCloseTo(real.offered / real.applied, 9);
+    expect(yearAcceptance(state)!).toBeLessThan(0.75);
     const selectivity = academicInputs(state).find((input) => input.id === 'selectivity')!;
     expect(selectivity.level).toBeGreaterThan(0);
-    expect(selectivity.detail).toBe(`${Math.round((100 * last.admitted) / last.expected)}% of applicants are admitted`);
+    expect(selectivity.detail).toBe(`${Math.round((100 * real.offered) / real.applied)}% of applicants are admitted`);
   });
 
   it("reads selectivity from the year's two classes together, so one small spring class does not speak for it", () => {
     const run = at(model(), T0 + 2 * WEEK + 3 * DAY + HOUR);
     const intakes = run.log.filter((entry) => entry.kind === 'intake').slice(-2);
     expect(intakes.map((entry) => entry.data?.season)).toEqual(['fall', 'spring']);
-    const applied = intakes.reduce((sum, entry) => sum + Number(entry.data?.expected), 0);
-    const admitted = intakes.reduce((sum, entry) => sum + Number(entry.data?.admitted), 0);
-    expect(run.state.admissions.year).toEqual({ applied, admitted });
-    expect(yearAcceptance(run.state)).toBeCloseTo(admitted / applied, 9);
-    // The spring class by itself: a few hundred places for a couple of thousand applicants.
-    expect(acceptanceRate(run.state)!).toBeLessThan(yearAcceptance(run.state)! - 0.3);
+    // Real figures (DESIGN.md 70): the year's first-years' applications and offers, the fall's and the small spring's
+    // together, so a spring class of a few hundred first-years cannot speak for the year.
+    const spring = run.state.admissions.lastIntake!;
+    expect(spring.season).toBe('spring');
+    const year = run.state.admissions.year;
+    expect(year.applied).toBeGreaterThan(spring.real!.applied * 20);
+    expect(year.admitted).toBeGreaterThan(spring.real!.offered * 20);
+    expect(yearAcceptance(run.state)).toBeCloseTo(year.admitted / year.applied, 9);
+    expect(acceptanceRate(run.state)).toBe(yearAcceptance(run.state));
   });
 
   it('stops the forecast at the cap: the campus plans for the students it can take', () => {
@@ -603,7 +612,8 @@ describe('the Capacity page', () => {
     expect(need(state, 'faculty').status).toBe('short');
     expect(need(state, 'staff').status).toBe('short');
     expect(need(state, 'workers').status).toBe('short');
-    const run = at(state, T0 + 3 * WEEK + DAY);
+    // After a spring: since DESIGN.md 70 the big class is the fall's, and faculty catch up with it a semester later.
+    const run = at(state, T0 + 3 * WEEK + 4 * DAY);
     state = run.state;
     expect(run.log.filter((entry) => entry.kind === 'intake' && Number(entry.data?.admitted) > 0).length).toBeGreaterThanOrEqual(4);
     expect(enrollment(state)).toBeGreaterThan(45_000);
@@ -721,7 +731,7 @@ describe('a save from version 15', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes.length).toBe(20);
+    expect(notes.length).toBe(21);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

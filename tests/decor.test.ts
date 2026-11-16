@@ -718,7 +718,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(15);
+      expect(notes).toHaveLength(16);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

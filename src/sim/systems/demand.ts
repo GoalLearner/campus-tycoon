@@ -22,6 +22,7 @@ import { marketingLift } from './budget';
 import { roomUnderCap } from './goals';
 import { athleticLift } from './football';
 import { freeTownPlaces, offCampusNow, townPlaces } from './town';
+import { FALL_SIZE, SPRING_SIZE } from './selectivity';
 
 /**
  * The forecast: who is expected at the next intake, and how much room each
@@ -141,10 +142,15 @@ export function fallClassDraw(state: GameState): number {
 /**
  * The class a given intake would bring if there were room for everyone.
  * The very first fall class is the founding class.
+ *
+ * On a game with goals (DESIGN.md 70.2) a fall brings the first-years who would come and most of a year's transfers,
+ * and a spring a few first-years (a hundredth of the fall's) and the rest of the transfers: the year brings as many as
+ * before, a fifth then and the rest in the fall. The small campus keeps its spring class of a fifth of the fall's.
  */
 export function classSize(state: GameState, season: Season, founding: boolean): number {
   if (founding) return FOUNDING_CLASS * scaleOf(state);
   const fall = fallClassDraw(state);
+  if (state.goals) return Math.round(fall * (season === 'fall' ? FALL_SIZE : SPRING_SIZE));
   return season === 'fall' ? fall : Math.round(fall * SPRING_SHARE);
 }
 

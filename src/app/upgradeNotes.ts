@@ -124,5 +124,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 34) {
     notes.push('Students now look like who they are: some figures changed to match.');
   }
+  if (fromVersion < 35) {
+    notes.push("Admissions now read like a real university's: how many apply, the share admitted and the share who come. Spring brings a small class now, most of them transfers.");
+  }
   return notes;
 }

@@ -42,6 +42,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { FOUNDING_CLASS, POOL_CEILING, SPRING_SHARE, WORD_OF_MOUTH, DESIRABILITY_DRAW_FLOOR, DESIRABILITY_DRAW_SPAN } from '../src/sim/config/demand';
+import { FALL_SIZE, SPRING_SIZE } from '../src/sim/systems/selectivity';
 import { TUITION_ESTABLISHED_PER_YEAR, TUITION_PER_STUDENT_PER_YEAR } from '../src/sim/config/money';
 import { MAIN_STREET } from '../src/sim/config/town';
 import { averageDesirability, classSize } from '../src/sim/systems/demand';
@@ -233,7 +234,10 @@ describe('applicants on a game with goals', () => {
       }
       expect(running).toBe(applicants.total);
       expect(fallClassDraw(state)).toBe(applicants.total);
-      expect(classSize(state, 'spring', false)).toBe(Math.round(applicants.total * SPRING_SHARE));
+      // A fall brings its first-years and most of the year's transfers, a spring a few of each (DESIGN.md 70.2).
+      expect(classSize(state, 'fall', false)).toBe(Math.round(applicants.total * FALL_SIZE));
+      expect(classSize(state, 'spring', false)).toBe(Math.round(applicants.total * SPRING_SIZE));
+      expect(SPRING_SIZE).toBeLessThan(SPRING_SHARE / 4);
     }
   });
 
@@ -326,9 +330,18 @@ describe('the Goals page on a game with goals', () => {
     const view = sizeView(model());
     expect(view.title).toBe('46,000 students');
     expect(view.cap).toEqual({ line: '4,000 places open of 50,000', note: 'A full campus is the first goal. It is counted when a class moves in.', percent: 92 });
-    // Next fall the seniors have gone, so there is room for every applicant.
-    expect(view.places).toEqual({ admitted: view.applicants.total, turnedAway: '0' });
-    expect(view.applicants.head).toBe("This fall's applicants");
+    // Next fall as an admissions office counts it (DESIGN.md 70): about four in five admitted, a fifth of those come.
+    // The fall class with its transfers is a little more than the room the seniors leave, so it fills the campus.
+    expect(view.places).toBeNull();
+    expect(view.pipeline!.map((row) => row.name.replace(/\(.*\)/, '()'))).toEqual(['Applications', 'Admitted ()', 'Enrolling ()', 'Transfers']);
+    const [applied, admitted, enrolling] = view.pipeline!.map((row) => number(row.value));
+    expect(admitted! / applied!).toBeGreaterThan(0.75);
+    expect(admitted! / applied!).toBeLessThan(0.85);
+    expect(enrolling! / admitted!).toBeGreaterThan(0.19);
+    expect(enrolling! / admitted!).toBeLessThan(0.22);
+    expect(enrolling).toBeLessThanOrEqual(number(view.applicants.total));
+    expect(enrolling).toBeGreaterThan(number(view.applicants.total) * 0.9);
+    expect(view.applicants.head).toBe('First-years who would come this fall');
     expect(view.applicants.rows.map((row) => row.name)).toEqual(['Reach', 'How the campus looks', 'Marketing', 'Football', 'Academic rank']);
     expect(view.applicants.rows[0]!.value).toBe('11,000');
     expect(view.applicants.rows.reduce((sum, row) => sum + number(row.value), 0)).toBe(number(view.applicants.total));
@@ -342,8 +355,8 @@ describe('the Goals page on a game with goals', () => {
     const state = years(model(), 2).state;
     const view = sizeView(state);
     expect(view.cap!.line).toMatch(/^(Full at 50,000|[\d,]+ places open of 50,000)$/);
-    expect(view.cap!.note).toBe('A full campus turns the rest of its applicants away, and is ranked the higher for it.');
-    expect(number(view.places!.admitted) + number(view.places!.turnedAway)).toBe(number(view.applicants.total));
+    expect(view.cap!.note).toBe('A full campus admits fewer of those who apply, and is ranked the higher for it.');
+    expect(view.pipeline).toHaveLength(4);
     expect(view.reached.length).toBeGreaterThanOrEqual(2);
     expect(view.reached.every((line) => /^Year \d+ · /.test(line))).toBe(true);
     expect(view.rank).toMatch(/^No\. \d+ of 200 for academics$/);
@@ -353,9 +366,9 @@ describe('the Goals page on a game with goals', () => {
 
 describe('a goal in the paper', () => {
   it('is the headline of its day, said once, when it was reached while away', () => {
-    // The campus fills with the spring class of its second year.
-    const before = advance(model(), T0, T0 + 9 * DAY).state;
-    const away = advance(before, before.clock.lastSimulatedAt, T0 + 11 * DAY);
+    // The campus fills with the fall class of its second year: since DESIGN.md 70 the spring's is small.
+    const before = advance(model(), T0, T0 + 6 * DAY).state;
+    const away = advance(before, before.clock.lastSimulatedAt, T0 + 8 * DAY);
     const goal = away.log.find((entry) => entry.kind === 'goal' && entry.data?.ladder === 'size')!;
     expect(goal).toBeDefined();
     const paper = edition(away.state, away.log, { minutes: 2 * 1440, cashBefore: before.money.cash, cashAfter: away.state.money.cash, studentsBefore: enrollment(before), studentsAfter: enrollment(away.state) });

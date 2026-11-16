@@ -333,6 +333,14 @@ export interface IntakeResult {
    * which counts those who wait for a bed or a seat. Left out on a game with no cap, and on an older save.
    */
   capped?: number;
+  /**
+   * The intake as an admissions office counts it, on a game with goals (DESIGN.md 70.1): first-years' applications,
+   * offers of a place and those who enrol, the share of offers taken, and the transfers who enrol, their applications
+   * and offers. Left out on the small campus and on an older save.
+   */
+  real?: { applied: number; offered: number; firstYears: number; yield: number; transfers: number; transferApplied: number; transferOffered: number };
+  /** The campus opened with its students: nobody applied for those places (DESIGN.md 70.1). */
+  opening?: boolean;
 }
 
 export interface Admissions {
@@ -364,6 +372,7 @@ export interface Admissions {
    */
   year: { applied: number; admitted: number };
 }
+
 
 /**
  * The people a campus employs for its students (DESIGN.md section 38). They

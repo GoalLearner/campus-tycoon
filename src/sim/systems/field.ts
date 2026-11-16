@@ -22,6 +22,7 @@ import { nextFloat, nextInt } from '../rng';
 import type { Field, GameState, LogEntry, RngState, School } from '../types';
 import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
 import { begunHere, yearAcceptance } from './admissions';
+import { SELECTIVE } from '../config/admissions';
 import { ratesOf } from './population';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
@@ -243,7 +244,8 @@ export function academicInputs(state: GameState): AcademicInput[] {
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : levelIn(retention, RETENTION_LEVEL), detail: retention === null ? 'No class has begun a second year yet' : `${percentOf(retention)} of freshmen come back for a second year` },
-    { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
+    // On a game with goals, read against real figures (DESIGN.md 70.3): none at 80% admitted, all at 15%.
+    { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : state.goals ? levelIn(1 - accept, { none: 1 - SELECTIVE.none, all: 1 - SELECTIVE.all }) : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
   ];
   // Alumni success (DESIGN.md 24.4, switched on with alumni giving in section 56): the latest classes' success, on a
   // game with goals. Elsewhere it has nothing to read, and its weight is shared among the others as before.

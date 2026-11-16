@@ -6,6 +6,8 @@ import type { GameState } from '../types';
 import { alumniClasses, alumniOn, classNumbers } from './alumni';
 import { yearAcceptance } from './admissions';
 import { fallApplicants } from './demand';
+import { nextFall } from './capacity';
+import { admissionsRank, pipeline, pipelineWords, transferWords, type Pipeline } from './selectivity';
 import { campusRates } from './field';
 import { classSizeNow, ratioTarget } from './staffing';
 
@@ -63,14 +65,45 @@ function leavingLine(state: GameState): string {
   return `${state.admissions.whyLastYear ? 'Last year' : 'This year'} ${headCount(total)} left; the biggest group ${LEAVE_WORDS[why].verb} (${headCount(tally.why[most] ?? 0)}). ${capital(LEAVE_FIX[why])}${back}`;
 }
 
+/**
+ * Next fall as an admissions office would count it (DESIGN.md 70.1): the applications the campus draws today, as many
+ * admitted as fill the places the cap leaves, and the yield at its rank.
+ */
+export function fallPipeline(state: GameState): Pipeline {
+  const fall = nextFall(state);
+  return pipeline(fall.applicants, fall.admitted, admissionsRank(state), 'fall');
+}
+
+/**
+ * The last intake as an admissions office counts it, and next fall, in the panel's words (DESIGN.md 70.1): "Last fall:
+ * 58,400 applied · 46,100 admitted (79%) · 9,500 enrolling (21% yield), and 1,400 transfers (37% of 6,300 admitted)."
+ * A campus that opened with its students never says they applied.
+ */
+export function admissionsLines(state: GameState): string[] {
+  const last = state.admissions.lastIntake;
+  const next = fallPipeline(state);
+  const words = (p: Pipeline): string => `${pipelineWords(p, headCount)}${p.transfers.enrolling > 0 ? `, and ${transferWords(p, headCount)}` : ''}`;
+  const nextLine = `Next fall: ${words(next)}.`;
+  if (!last?.real) return [...(last?.opening ? [`The campus opened with its ${headCount(last.admitted)} students: nobody applied for those places.`] : []), nextLine];
+  const r = last.real;
+  const was: Pipeline = { applied: r.applied, admitted: r.offered, enrolling: r.firstYears, yield: r.yield, transfers: { applied: r.transferApplied, admitted: r.transferOffered, enrolling: r.transfers } };
+  return [`Last ${last.season}: ${words(was)}.`, ...(last.season === 'spring' ? [nextLine] : [])];
+}
+
+/** The yield the Scorecard shows: the last fall's, or what next fall's would be. */
+function yieldNow(state: GameState): number {
+  const last = state.admissions.lastIntake;
+  return last?.season === 'fall' && last.real ? last.real.yield : fallPipeline(state).yield;
+}
+
 /** The seven numbers, in the order of the rows, as they stand now. */
 function numbersNow(state: GameState): Array<number | null> {
-  const applicants = fallApplicants(state).total;
+  const applicants = fallPipeline(state).applied;
   const accept = yearAcceptance(state);
   const latest = alumniClasses(state).slice(-1)[0];
   const success = latest?.success ?? state.alumni.opening?.success ?? null;
   const rates = campusRates(state);
-  return [applicants, accept, 1, rates.second, rates.graduation, success, state.alumni.last?.raised ?? null, chaosOn(state) ? Math.round(state.chaos.level) : null];
+  return [applicants, accept, yieldNow(state), rates.second, rates.graduation, success, state.alumni.last?.raised ?? null, chaosOn(state) ? Math.round(state.chaos.level) : null];
 }
 
 /** The year's end: the numbers are kept, so next year's arrows have something to point from. */
@@ -105,13 +138,14 @@ export function scorecard(state: GameState): ScoreRow[] | null {
   const rates = campusRates(state);
   const latest = alumniClasses(state).slice(-1)[0];
   const rows: Record<ScoreId, Omit<ScoreRow, 'id' | 'number' | 'trend'>> = {
-    applications: { name: 'Applications', value: headCount(applicants.total), limit: least ? capital(APPLICANT_FIX[least.id] ?? `${least.name} adds the least`) : 'Nothing yet' },
+    // Real figures (DESIGN.md 70): this fall's applications, the year's first-years admitted, and the share who come.
+    applications: { name: 'Applications', value: headCount(now[0]!), limit: least ? capital(APPLICANT_FIX[least.id] ?? `${least.name} adds the least`) : 'Nothing yet' },
     acceptance: {
       name: 'Acceptance rate',
-      value: now[1] === null ? 'No class yet' : `${percent(now[1]!)} admitted`,
-      limit: intake?.capped ? 'The campus is full: the rest are turned away, and it is the more selective for it' : intake?.bottleneck ? `Room: ${intake.bottleneck === 'housing' ? 'beds' : 'classroom seats'} decide how many get a place` : 'Room for everyone who applied: more applicants would make it more selective',
+      value: now[1] === null ? 'No class yet' : `${percent(now[1]!)} of first-year applicants admitted`,
+      limit: intake?.capped ? 'The campus is full: it admits fewer, and is the more selective for it' : 'Rank: the higher it is, the more apply for each place, and the fewer are admitted',
     },
-    yield: { name: 'Yield', value: 'Every student offered a place comes', limit: 'Nothing yet: no other school competes for them in this version' },
+    yield: { name: 'Yield', value: `${percent(now[2]!)} of those admitted enrol`, limit: 'Rank: the higher it is, the more of those admitted choose to come' },
     retention: { name: 'Retention', value: now[3] === null ? 'No class has begun a second year yet' : `${percent(now[3]!)} of freshmen come back for a second year`, limit: leavingLine(state) },
     graduation: {
       name: 'Graduation rate',
@@ -135,7 +169,8 @@ export function scorecard(state: GameState): ScoreRow[] | null {
     const number = now[n] ?? null;
     const before = last?.[n] ?? null;
     let trend: ScoreRow['trend'] = null;
-    if (number !== null && before !== null && id !== 'yield') {
+    // Yield is a real share since DESIGN.md 70; before, it was every student, always, and had no arrow.
+    if (number !== null && before !== null && (id !== 'yield' || before < 1)) {
       const delta = number - before;
       const same = Math.abs(delta) <= Math.abs(before) * 0.005;
       const way = same ? 'same' : delta > 0 ? 'up' : 'down';
