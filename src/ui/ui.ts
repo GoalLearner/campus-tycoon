@@ -1536,8 +1536,10 @@ export function mountUi(root: HTMLElement): void {
   function renderPlacer(state: GameState): void {
     const type = session.tool === 'place' ? session.placing : null;
     placer.classList.toggle('show', type !== null);
-    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
-    collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null);
+    // The Path and Tree choosers sit where Build and Collect all float on a narrow phone (DESIGN.md 71): they step aside.
+    const choosing = session.tool === 'path' || session.tool === 'bike' || session.tool === 'tree';
+    buildButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null || choosing);
+    collectButton.classList.toggle('hidden', type !== null || session.clearing !== null || DRAG_FROM_MENU.includes(session.tool) || session.overlay !== null || choosing);
     if (!type) return;
     setText(placeButton, 'Place');
     if (type === 'decor' && session.decor) {

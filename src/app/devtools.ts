@@ -612,7 +612,7 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
       const overlay = params.get('overlay');
       if (overlay === 'parking' || overlay === 'clean') setTimeout(() => session.setOverlay(overlay), 1400);
       const hand = params.get('tool');
-      if (hand === 'bin' || hand === 'bench' || hand === 'table') setTimeout(() => session.setTool(hand), 1400);
+      if (hand === 'bin' || hand === 'bench' || hand === 'table' || hand === 'path' || hand === 'bike') setTimeout(() => session.setTool(hand), 1400);
       if (card !== null) {
         // After the view has been aimed for the last time.
         setTimeout(() => {
