@@ -9,6 +9,7 @@ import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
 import { currentDaylight, shownHour, type Daylight } from '../app/daylight';
+import { todayOf } from '../app/campusDay';
 import { feelingOf } from '../app/emotion';
 import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
@@ -708,6 +709,12 @@ export class CampusScene extends Phaser.Scene {
     // plot, and no game is heard from it. The tailgates in the car parks are the day's only sign on the map.
     const built = state.football.stadium.tier >= 1;
     this.walkers.setGameDay(built ? tint : null);
+    // The class changes, the meal rushes and the evening by the hour shown (DESIGN.md 75), the player's own or the
+    // "View at" slider's, on the kind of day the game's calendar says.
+    const today = todayOf(state, { weekend, weather: this.weather });
+    const hour = shownHour();
+    this.walkers.setHour(hour, today);
+    this.activity.setHour(hour, weekend);
     this.walkers.setPresence(day.walkers);
     // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them.
     const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });

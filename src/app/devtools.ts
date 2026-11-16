@@ -12,7 +12,8 @@ import { shownHour } from './daylight';
 import { collectShow } from '../game/CampusScene';
 import { advance, applyAction, DEFAULT_SCHOOL_NAME, incidentText, lampAt, nearestSpot, newGame, parseSave, PLACED, previewPaint, previewPlace, rowBetween, studentCard, yardOver, yardStatus, type GameState, type PlacedType, type Point, type Tool, landRankGoals, rewardsWaiting, SAVE_VERSION, ownedAt } from '../sim';
 import { clock } from './clock';
-import { forceHour } from './daylight';
+import { forceClock, forceHour } from './daylight';
+import { forceClockCycle } from './clockText';
 import { openBuildMenu } from '../ui/buildMenu';
 import { LOOK_MENU, lookCampus, lookItems, stadiumCampus, stadiumItems, townCampus, townItems, type LookScene } from './lookPreview';
 import { setCrowdSetting } from './crowd';
@@ -716,6 +717,30 @@ export function installDevTools(): void {
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);
   if (Number.isFinite(hour)) forceHour(hour);
+  // &clockat=23.5 sets the player's own clock to that hour, so the View at slider can be shown from it (DESIGN.md 75.4).
+  const clockat = Number(params.get('clockat') ?? NaN);
+  if (Number.isFinite(clockat)) forceClock(clockat);
+  // &clock24 and &clock12 write times on that clock whatever the device keeps (DESIGN.md 75.1).
+  if (params.has('clock24')) forceClockCycle(24);
+  if (params.has('clock12')) forceClockCycle(12);
+  // &today opens Today on campus, and &viewat=7.83 moves its View at slider to that hour (75.3, 75.4).
+  const viewat = Number(params.get('viewat') ?? NaN);
+  if (params.has('today') || Number.isFinite(viewat)) {
+    const open = (tries: number): void => {
+      const clockButton = document.querySelector<HTMLButtonElement>('.clock-button');
+      if (!clockButton) {
+        if (tries > 0) window.setTimeout(() => open(tries - 1), 250);
+        return;
+      }
+      clockButton.click();
+      const slider = document.querySelector<HTMLInputElement>('.today-slider');
+      if (slider && Number.isFinite(viewat)) {
+        slider.value = String(Math.round((viewat * 60) / 5) * 5);
+        slider.dispatchEvent(new Event('input'));
+      }
+    };
+    window.setTimeout(() => open(40), 500);
+  }
   // &turn=1 turns the view a quarter before the map is drawn (DESIGN.md section 43).
   const turn = Number(params.get('turn') ?? NaN);
   if (turn === 0 || turn === 1 || turn === 2 || turn === 3) session.setTurn(turn);
@@ -763,6 +788,12 @@ export function installDevTools(): void {
       clock.skip(86_400_000);
       store.catchUp();
       if (params.has('answer')) for (const item of [...store.state.inbox.open]) store.dispatch({ type: 'inbox', id: item.id, option: item.advised });
+    }
+    // &skip=40 then lets that many more minutes pass, to land on a weekday of term or a weekend (DESIGN.md 75).
+    const skip = Number(params.get('skip') ?? 0);
+    if (skip > 0) {
+      clock.skip(skip * 60_000);
+      store.catchUp();
     }
     store.away = null;
     // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.

@@ -183,6 +183,9 @@ export class Activity {
   private pool: Phaser.GameObjects.Image[] = [];
   private readonly people: PeopleSpec | null;
   private period: DayPeriod = 'afternoon';
+  /** The hour shown (DESIGN.md 75), for the meal rushes and the afternoon's games, and the game's weekend. */
+  private hour = 15;
+  private weekend = false;
   /** True in a term week: teams practise. */
   private term = true;
   /** Reduce effects: no hops or cheers after a point. */
@@ -235,6 +238,14 @@ export class Activity {
   setPeriod(period: DayPeriod): void {
     if (period !== this.period) this.recountAt = 0;
     this.period = period;
+  }
+
+  /** The hour shown and the game's weekend (DESIGN.md 75): lines at food by the meal rushes, the courts by the hour. */
+  setHour(hour: number, weekend: boolean): void {
+    // A new count when the hour moves on by five minutes or more, as the "View at" slider moves it.
+    if (Math.abs(hour - this.hour) >= 1 / 12 || weekend !== this.weekend) this.recountAt = 0;
+    this.hour = hour;
+    this.weekend = weekend;
   }
 
   setReduced(reduced: boolean): void {
@@ -395,7 +406,7 @@ export class Activity {
       if (this.students <= 0) return [['seat', 0]];
       // Beside food that is busy now, most seats are taken by people eating.
       let share = SEATED[this.period];
-      for (const kind of site.foodNear) share = Math.max(share, EATING_SHARE * mealNow(kind, this.period));
+      for (const kind of site.foodNear) share = Math.max(share, EATING_SHARE * mealNow(kind, this.hour, this.weekend));
       // A study group fills a table by the lecture halls when the rule says they are out.
       if (site.study) share = Math.max(share, this.studyShare);
       if (type === 'bench') return [['seat', mix(site.placed.id, this.period.length) < share ? 1 : 0]];
@@ -406,7 +417,7 @@ export class Activity {
     if (PLACED[type].family === 'dining') {
       // A line at the door when its kind of food is busy. At the food court they stand among the stalls first.
       // A line that could only stand behind the building, out of sight, is not drawn (DESIGN.md 47).
-      const queue = seen ? queueNow(site.eaters, type, this.period) : 0;
+      const queue = seen ? queueNow(site.eaters, type, this.hour, this.weekend) : 0;
       if (type !== 'foodcourt') return [['line', queue]];
       const among = Math.min(STALL_SPOTS.length, queue);
       return [
@@ -416,7 +427,7 @@ export class Activity {
     }
     const use = site.use;
     if (!use) return [];
-    const now = playingNow(use.demand, use.capacity, this.period);
+    const now = playingNow(use.demand, use.capacity, this.hour, this.weekend);
     const most = SHOWN[type] ?? 4;
     let playing = Math.min(most, Math.ceil((now.playing * most) / use.capacity));
     // A team at practice in the afternoon of a term day: the place is busy with them.
@@ -898,7 +909,7 @@ export class Activity {
         figure.sprite.setDepth(this.feet ? this.feet.depth(figure.x, figure.y, order) : order);
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
         // Someone eating at a seat has a tray or a cup in front of them, towards the table (DESIGN.md 64).
-        const eating = figure.role === 'seat' && !figure.leaving && site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
+        const eating = figure.role === 'seat' && !figure.leaving && site.foodNear.some((kind) => mealNow(kind, this.hour, this.weekend) >= 0.5);
         if (eating && !figure.held) {
           const thing = figure.slot % 2 === 0 ? 'prop.tray' : 'room.cup';
           if (this.art.has(thing)) {
@@ -971,7 +982,7 @@ export class Activity {
   /** What a figure is doing now, in the words its card shows. */
   private words(site: Site, figure: Figure): string {
     const spec = PLACED[site.placed.type];
-    const eating = site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
+    const eating = site.foodNear.some((kind) => mealNow(kind, this.hour, this.weekend) >= 0.5);
     const studying = site.study && this.studyShare > 0 && site.figures.filter((one) => !one.leaving && one.role === 'seat').length >= 2;
     return activityWords(figure.role, { type: site.placed.type, name: spec.name, food: spec.family === 'dining', eating, studying }, this.period);
   }

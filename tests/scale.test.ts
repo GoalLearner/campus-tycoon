@@ -38,6 +38,7 @@ import {
 } from '../src/sim';
 import { BENEFITS_SHARE, paintCost } from '../src/sim/config/money';
 import { CROWD_STEPS, QUEUE_SHOWN, queueNow, walkersWanted } from '../src/app/crowd';
+import { ORDINARY_DAY, pathsAt } from '../src/app/campusDay';
 import { SEATS } from '../src/sim/config/football';
 import { freshGame, T0 } from './helpers';
 
@@ -178,14 +179,14 @@ describe('the model campus at its own size', () => {
 
   it('draws a crowd that follows the real enrollment, and never more than the limits that already hold it', () => {
     const big = model();
-    const facts = { pathCells: 180, visiblePathCells: 180, period: 'morning' as const, weekend: false };
+    const facts = { pathCells: 180, visiblePathCells: 180, level: pathsAt(10 + 55 / 60, ORDINARY_DAY) };
     for (let step = 0; step < CROWD_STEPS.length; step++) {
       const wanted = walkersWanted({ ...facts, students: enrollment(big), step });
       expect(wanted).toBeLessThanOrEqual(CROWD_STEPS[step]!.inView);
       // A campus that stands for 46,000 shows at least the crowd of a small campus of 1,600.
       expect(wanted).toBeGreaterThanOrEqual(walkersWanted({ ...facts, students: smallCount(big, enrollment(big)), step }));
     }
-    expect(queueNow(enrollment(big), 'dining', 'afternoon')).toBe(QUEUE_SHOWN);
+    expect(queueNow(enrollment(big), 'dining', 12.4)).toBe(QUEUE_SHOWN);
     expect(smallCount(model(1), 400)).toBe(400);
   });
 });

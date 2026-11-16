@@ -1,3 +1,4 @@
+import { mealAt, playAt } from './campusDay';
 import type { DayPeriod } from './daylight';
 
 /**
@@ -53,14 +54,11 @@ export function stepOf(crowd: Crowd): number {
 }
 
 /**
- * How busy the paths are in each part of the player's day, against a steady
- * afternoon. Night is quiet but never empty: a few people are always about,
- * so someone who only ever plays at night still finds a campus with people.
+ * [T] How full the paths are at the busiest class change of the day (DESIGN.md 75.2), against the steady afternoon of
+ * before (28.4): every other hour is a share of it, from campusDay's `pathsAt`. Before 75 the morning rush was 1.35.
  */
-export const BUSY: Record<DayPeriod, number> = { morning: 1.35, afternoon: 1, evening: 0.8, night: 0.3 };
-/** A weekend in the game's own calendar is quieter on the paths. */
-export const WEEKEND_BUSY = 0.65;
-/** A campus with buildings is never quite empty: staff and faculty. */
+export const PEAK_BUSY = 1.8;
+/** A campus with buildings is never quite empty: staff and faculty, and a few night owls. */
 export const MIN_IN_VIEW = 4;
 /** Path cells per student sample: lower means a busier campus. */
 const STUDENTS_PER_PATH_CELL = 9;
@@ -73,76 +71,60 @@ export interface CrowdFacts {
   /** Path cells on the whole map, and those on screen now. Zooming out shows more of them. */
   pathCells: number;
   visiblePathCells: number;
-  period: DayPeriod;
-  /** Saturday or Sunday in the game's calendar. */
-  weekend: boolean;
+  /**
+   * How busy the paths are now, as a share of the busiest class change of the day, from 0 to 1 (campusDay's
+   * `pathsAt`): the hour, the class changes and the kind of day in one number.
+   */
+  level: number;
   /** 0 to 3: see CROWD_STEPS. */
   step: number;
 }
 
 /**
- * Walkers wanted on screen: more with more students, with more of the campus
- * in view, in the morning rush, and at a higher crowd setting. Never more
- * than the step allows.
+ * Walkers wanted on screen: more with more students, with more of the campus in view, at a higher crowd setting, and
+ * in a class change. The busiest class change of the day fills the view up to what the step allows, so the frame
+ * budget holds at the peak (75.5), and every other hour is a share of that: the paths empty when classes start.
  */
 export function walkersWanted(facts: CrowdFacts): number {
   const step = CROWD_STEPS[Math.max(0, Math.min(CROWD_STEPS.length - 1, Math.round(facts.step)))]!;
   if (facts.pathCells <= 0 || facts.visiblePathCells <= 0) return 0;
   const perCell = Math.min(MAX_DENSITY, Math.max(MIN_DENSITY, facts.students / (facts.pathCells * STUDENTS_PER_PATH_CELL)));
-  const busy = BUSY[facts.period] * (facts.weekend ? WEEKEND_BUSY : 1);
-  const wanted = Math.round(facts.visiblePathCells * perCell * step.density * busy);
-  return Math.max(Math.min(MIN_IN_VIEW, facts.visiblePathCells), Math.min(step.inView, wanted));
+  const peak = Math.min(step.inView, facts.visiblePathCells * perCell * step.density * PEAK_BUSY);
+  const wanted = Math.round(peak * Math.max(0, Math.min(1, facts.level)));
+  return Math.max(Math.min(MIN_IN_VIEW, facts.visiblePathCells), wanted);
 }
 
-/** How much of a recreation building's peak crowd is there at each part of the day. Afternoons and evenings are busiest. */
-export const PLAY_NOW: Record<DayPeriod, number> = { morning: 0.35, afternoon: 1, evening: 0.9, night: 0.06 };
-
 /**
- * Who is at a recreation building right now, for show: the simulation's peak
- * demand scaled by the part of the day. The simulation's own numbers are for
- * the peak and never read the clock.
+ * Who is at a recreation building right now, for show: the simulation's peak demand scaled by how busy the courts and
+ * the gym are at the hour (campusDay's `playAt`: the afternoon's games, the evening gym). The simulation's own numbers
+ * are for the peak and never read the clock.
  */
-export function playingNow(demandAtPeak: number, capacity: number, period: DayPeriod): { playing: number; waiting: number } {
-  const here = Math.round(Math.max(0, demandAtPeak) * PLAY_NOW[period]);
+export function playingNow(demandAtPeak: number, capacity: number, hour: number, weekend = false): { playing: number; waiting: number } {
+  const here = Math.round(Math.max(0, demandAtPeak) * playAt(hour, weekend));
   return { playing: Math.min(capacity, here), waiting: Math.max(0, here - capacity) };
 }
 
-/**
- * When each kind of food is busy, against its own busiest part of the day
- * (DESIGN.md 30.2): coffee in the morning, burgers and tacos at lunch, pizza
- * in the evening and at night, the diner at night. This is seen and never
- * counted: what a place feeds and earns is the same at every hour.
- */
-export const MEAL_NOW: Record<string, Record<DayPeriod, number>> = {
-  dining: { morning: 0.7, afternoon: 1, evening: 0.9, night: 0.1 },
-  foodcourt: { morning: 0.4, afternoon: 1, evening: 0.9, night: 0.15 },
-  diner: { morning: 0.6, afternoon: 0.3, evening: 0.6, night: 1 },
-  burger: { morning: 0.1, afternoon: 1, evening: 0.6, night: 0.2 },
-  pizza: { morning: 0.05, afternoon: 0.4, evening: 1, night: 0.9 },
-  taco: { morning: 0.1, afternoon: 1, evening: 0.5, night: 0.15 },
-  coffee: { morning: 1, afternoon: 0.6, evening: 0.3, night: 0.05 },
-  smoothie: { morning: 0.5, afternoon: 1, evening: 0.5, night: 0 },
-  convenience: { morning: 0.3, afternoon: 0.5, evening: 0.8, night: 1 },
-  truck: { morning: 0.2, afternoon: 1, evening: 0.6, night: 0.1 },
-};
 /** Of the students a place has to itself, one in this many is in its line at its busiest. */
 export const STUDENTS_PER_QUEUER = 40;
 /** The longest line drawn at a place to eat, however many it serves. */
 export const QUEUE_SHOWN = 6;
 
-/** How busy a kind of food is now, from 0 to 1. A kind with no entry is steady all day. */
-export function mealNow(kind: string, period: DayPeriod): number {
-  return MEAL_NOW[kind]?.[period] ?? 0.6;
+/**
+ * How busy a kind of food is at an hour, from 0 to 1 (DESIGN.md 30.2, 75.2): the meal rushes, from campusDay's
+ * `mealAt`. This is seen and never counted: what a place feeds and earns is the same at every hour.
+ */
+export function mealNow(kind: string, hour: number, weekend = false): number {
+  return mealAt(kind, hour, weekend);
 }
 
 /**
  * How many are queuing at a place to eat right now, for show: the students it
- * has to itself, by how busy its kind of food is at this part of the day. A
- * place with anyone to serve has somebody at it when it is busy.
+ * has to itself, by how busy its kind of food is at this hour. A place with
+ * anyone to serve has somebody at it when it is busy.
  */
-export function queueNow(students: number, kind: string, period: DayPeriod): number {
+export function queueNow(students: number, kind: string, hour: number, weekend = false): number {
   if (!(students > 0)) return 0;
-  const busy = mealNow(kind, period);
+  const busy = mealNow(kind, hour, weekend);
   const line = Math.round((students / STUDENTS_PER_QUEUER) * busy);
   return Math.min(QUEUE_SHOWN, Math.max(busy >= 0.5 ? 1 : 0, line));
 }

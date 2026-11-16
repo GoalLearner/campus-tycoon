@@ -1,6 +1,9 @@
 import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
-import { alwaysDaylight, setAlwaysDaylight } from '../app/daylight';
+import { shownHour, viewedHour } from '../app/daylight';
+import { todayOf } from '../app/campusDay';
+import { clockText } from '../app/clockText';
+import { makeTodayStrip } from './todayStrip';
 import { HOME_SCREEN_TIP, markHomeScreenTipShown, shouldShowHomeScreenTip } from '../app/homeScreenTip';
 import { markTwistTipShown, TWIST_TIP, twistTipDue } from '../app/twistTip';
 import { exportSave, isStoragePersistent, pickSaveFile, requestPersistentStorage } from '../app/persistence';
@@ -336,8 +339,15 @@ export function mountUi(root: HTMLElement): void {
 
   const calendar = el('div', 'calendar');
   const when = el('span', 'when');
+  // The game's date, the hour on the player's own clock (DESIGN.md 75.1), and the year and the sky.
   const next = el('span', 'next');
+  const dateText = el('span', 'date-text');
+  const clockButton = button('', 'clock-button', () => today.toggle());
+  const dateRest = el('span', 'date-rest');
+  next.append(dateText, clockButton, dateRest);
   calendar.append(when, next);
+  // "Today on campus", under the date while it is open (75.3).
+  const today = makeTodayStrip(() => render());
 
   // Football has a chip when there is a season behind it. The Inbox always has one, and says so when something waits.
   const chips = el('div', 'hud-chips');
@@ -435,7 +445,7 @@ export function mountUi(root: HTMLElement): void {
   const visitText = el('span', '', '');
   const visitButton = button('Back', 'update-button', () => void store.leaveVisit());
   visitRow.append(visitText, visitButton);
-  hud.append(top, calendar, chips, bars, status, upcoming, updateRow, visitRow);
+  hud.append(top, calendar, today.node, chips, bars, status, upcoming, updateRow, visitRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -934,14 +944,6 @@ export function mountUi(root: HTMLElement): void {
           }),
         );
       }
-      // Day and night follow the player's own clock. This shows the campus in daylight at any hour.
-      const daylight = button('', 'wide', () => {
-        setAlwaysDaylight(!alwaysDaylight());
-        setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
-      });
-      setText(daylight, alwaysDaylight() ? 'Daylight at any hour: on' : 'Daylight at any hour: off');
-      card.append(daylight);
-
       // How many people the map shows. The setting is a ceiling: the map shows fewer by itself if frames run short.
       const crowd = button('', 'wide', () => {
         setCrowdSetting(CROWDS[(CROWDS.indexOf(crowdSetting()) + 1) % CROWDS.length]!);
@@ -1144,7 +1146,16 @@ export function mountUi(root: HTMLElement): void {
     const day = dayRead(state.clock);
     setText(when, day.kind === 'term' || day.name === null ? (day.rhythm ?? NOW_LABEL[pos.phase]) : day.name);
     const sky = SKY_WORD[weatherAt(state.seed, state.clock)];
-    setText(next, pos.year === 0 ? formatDate(dateAt(state.clock)) : `${formatDate(dateAt(state.clock))} · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
+    setText(dateText, formatDate(dateAt(state.clock)));
+    // The hour shown: the player's own, or the "View at" slider's while the Today strip shows another (75.4).
+    const viewing = viewedHour() !== null;
+    setText(clockButton, clockText(shownHour()));
+    clockButton.classList.toggle('viewing', viewing);
+    clockButton.setAttribute('aria-label', `${viewing ? 'Viewing' : 'Now'} ${clockText(shownHour())}. Today on campus`);
+    clockButton.setAttribute('aria-expanded', today.isOpen() ? 'true' : 'false');
+    hud.classList.toggle('today-open', today.isOpen());
+    setText(dateRest, pos.year === 0 ? '' : ` · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
+    today.render(todayOf(state));
     footballButton.set(footballStat(state), footballChip(state) ?? 'Football');
     inboxButton.set(inboxStat(state), inboxChip(state).text);
     const board = ordersChip(state);

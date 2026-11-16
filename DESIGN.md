@@ -2530,6 +2530,8 @@ Lit windows, umbrellas, coats and snow wait, because their art has to be made. W
 
 `&hour=22` on a dev page shows any hour. Nothing here is simulation, and nothing is saved but the switch.
 
+**Changed by 75 (2026-11-16).** The walkers by part of the day became the campus's timetable (75.2: class changes, meal rushes, the evening, a quiet night), and the Menu's "Daylight at any hour" became the View at slider in Today on campus (75.4). Its stored choice is forgotten.
+
 ### 28.5 Crowd density and the frame budget
 
 Asked for by the owner on 2026-11-11: more people on the map, scaled by enrollment, zoom and time of day, a Crowd density setting, and a frame budget that drops the crowd by itself when frames fall. Built the same day. The rules are plain sums in `src/app/crowd.ts`, tested in `tests/crowd.test.ts`. All of it is for show: none of these counts is saved, none is read by the simulation, and nothing here runs while the game is closed.
@@ -7587,6 +7589,8 @@ Between builds the medians move by more than the social crowd costs: on one buil
 
 ### 63.9 Stop 5 as built: regulars and the followed student's day
 
+**Changed by 75.2 (2026-11-16):** a regular's classes keep the campus's timetable (a lecture on the hour, a seminar on the half hour, 50 minutes each, "Between classes" between), lunch is at noon, clubs meet at 7 PM, parties start at 9 and a weekend's brunch is from 10:30.
+
 Built 2026-11-14 on the branch `social-sim-5`. The web and its record are unchanged; the save gains one optional list.
 
 **Regulars** (`src/sim/systems/regulars.ts`). Three kinds, as 13.5 and 63.2 have them:
@@ -8989,3 +8993,66 @@ Save version 36: a cell of footpath may carry a lane. Whether a game saved befor
 **The long run**: all 109 checks pass in 1,699 s. 45 lines moved against the run after 72.6, old in brackets, as the test players build on the 84 cells the bike paths gave back. The money: it opens keeping 16.1% (16.1%); years 3 to 8: casual 14.3% to 15.6% (14.0% to 15.6%), once-a-day 13.7% to 15.9% (13.8% to 15.8%), striver 11.6% to 14.1% (11.6% to 14.5%); the later weeks: casual 12.7% to 15.6% (12.9% to 15.8%), once-a-day 12.5% to 15.9% (12.4% to 15.7%), striver 12.9% to 15.0% (12.4% to 15.3%). The Top 10 at week 24 at the earliest (24). The level pace: 5.9 and 5.8 levels a week in weeks 4 to 12, 5.9 and 5.5 after (6.3, 5.9, 6.3, 5.6). Catch-up: 486 ms (476), 514 ms on a campus nobody tends (507), 251 and 411 ms on the model campus (247 and 394), the social web 446 ms (436). Also moved, each inside its line: the reward buildings' looks (67.5 to 69.8, was 66.8 to 68.9), the levels and experience at week 44, Gold Seals, collecting (a little less, with fewer buildings ready to collect on the test players' campuses), the orders, the board, the big builds' weeks (two players no longer buy the Welcome Center), the labs, the chapters' names, the paper's lines, the share of lines about drinking and heavy themes, the calls from parties, the drives, the main character's stories and plans, the year goals, the calendar moments, decorations (more on the map), the switches thrown, the thirty-year settling (looks 69.8, was 68.9), the shrinking campus (worst $-12.1, was $-12.8), the reading of the web, the realism lines (leavers, majors, grades, ties, senior work, money) and admissions, and the calm (on seed 2 the casual player reached 41 at the most, was 35, and the striver had no letter from the trustees, was one).
 
 **Tested**: `tests/walkLanes.test.ts`: the tool paints a footpath and only a footpath for a quarter of its price and leaves when the walk was paid for; a drag over a painted walk takes the lane off with the whole price back inside the undo minute; clearing the walk gives back both; a crossing laid over a painted walk loses the paint; a painted walk counts as a lane and still as a footpath, and a new game has lanes enough; every walk is painted but the corners of a square of paving, and a walk straight through one; a game saved at version 35 opens with its map exactly while the switch is off, and the upgrade would paint every walk. `tests/modelCampus.test.ts`: the bike paths kept, the lanes painted, the long walk all the way, the plaza and forecourt corners plain, one network out to the avenue, all free. `tests/bikePaths.test.ts`: the "bikes on the sidewalk" posts come on the same campus with its bike paths and lanes taken away.
+
+## 75. Time of day you can see (asked for 2026-11-15)
+
+The owner, word for word: "Make time of day visible. The light and walker schedule already follow my real local clock; add: 1. A clock on the HUD next to the date ("Mon, Sep 14 · 9:48 AM"), in the player's local time and format. 2. A real class schedule driving the crowd [...] 3. A "Today on campus" strip, opened by tapping the clock [...] 4. Watch any hour: a "View at" slider in that strip [...] This replaces the old "Daylight at any hour" setting. 5. Keep the frame budget and crowd density setting working during peak rushes." Built on the branch `life-9`. Like the rest of section 28 it is all for show: nothing here is saved, and no rule of the simulation reads the hour, the timetable or the slider, so what a campus earns is the same at every hour and catch-up stays exact.
+
+### 75.1 The clock, and how the two times read together
+
+The HUD's small print reads the date, then the hour: "Thu, Oct 8 · 10:55 AM · Year 1". The date is the game's own, which runs a year to a real week (a game day is about 28 real minutes); the hour is the player's own clock, which the light, the lamps and the crowd have followed since 28.1. They read together as "what day it is at your school, and what time it is where you are": the campus looks like your hour on the game's day. So a weekday of term at 10:55 on your phone is a class change; the game's Saturday at 10:55 is a slow weekend morning; and as the game's day turns over while you watch, the same hour can move from a Friday to a Saturday. The hour is written as the device writes it, "10:55 AM" on a 12-hour phone and "10:55" on a 24-hour one, as its settings say (`src/app/clockText.ts`); the times on a followed student's day follow it too. The clock is the button for Today on campus: drawn as small print, it is a 44-point target.
+
+### 75.2 The campus's day
+
+`src/app/campusDay.ts` holds the timetable, and the map reads it a few times a second:
+
+| Part | Built |
+|---|---|
+| Classes | On the hour from 8 AM to 8 PM, 50 minutes each, the last out at 8:50 PM; some on the half hour from 9:30 AM to 7:30 PM, a third as many. Most start mid-morning and early afternoon, fewer at noon, few in the evening |
+| Class changes | Ten minutes before each start: :50 to :00 on the hour, a smaller one :20 to :30. Out of class within the first two minutes, the last few hurrying in before the hour. The paths are at their fullest at the change before 11 AM |
+| How full the paths are | A share of that busiest change: about half in class, more at lunch and dinner, a little less in the evening, a twentieth in the small hours. A class change adds up to 0.55 on top |
+| Where people head | In a class change nearly everyone is going to class, most out of the lecture halls and dorms, a little quicker. At the meal rushes, food. In the afternoon, the courts and the lawns. In the evening the gym, clubs and Greek Row (a chapter house is somewhere to go). At night, home, with a few to the library or a late bite |
+| Food | Each kind by the hour: breakfast 7:30 to 9, the lunch rush 11:45 to 1, the dinner rush 5:30 to 7, a late bite 10 to 12:30, the day between. The dining hall at every meal; coffee at breakfast and through the day; burgers and tacos at lunch; pizza at dinner and late; the diner and the corner store late. Lines and the tables beside food follow it |
+| The courts and the gym | Early lifters from 6:30, the afternoon's games at their fullest 3:30 to 6, the evening gym to 9:30, nobody in the small hours |
+| A weekend | Starts late: brunch from 10:30, games and the lawns all afternoon, no class changes |
+| A party night | Thursday to Saturday in term, in fine weather, on a game with parties (63.11): out from 9 PM, home after 1 |
+| Finals | No classes: exams of two hours from 8, 10:30, 1, 3:30 and 6:30, with a change before each, and the library busy all day and late |
+| A break or the summer | Most students away (the crowd already thins, 28.4); no classes |
+
+**The paths empty through doors.** In a class change people come out of doors, and once classes start nobody new sets out. Those already on their way finish their walk and go in at a door. When there are more in view than the hour wants (a class has started, or the slider moved on to a quieter hour), a few a second of those with furthest still to go head in at the nearest door, or walk off the screen, alone or as a group of friends together; nobody followed, talking or riding is sent. Nobody pops in or out of view (69.2).
+
+**A followed student keeps the same timetable.** Their lecture starts on the hour, a seminar on the half hour, each 50 minutes, with "Between classes" between; lunch at noon, in the rush; the class after lunch on the hour; clubs meet at 7 PM; a party starts at 9; on a weekend, brunch from 10:30.
+
+### 75.3 Today on campus
+
+Tapping the clock opens a strip under the date:
+
+- The day's curve: how full the paths are, every five minutes from midnight, with a spike at every class change, the hour marked.
+- What is happening now: "Class change: classes start at 11 AM", "Class change in 2 minutes" (five minutes ahead), "Lunch rush", "Classes until 11:50 AM", "Party night", "Quiet night: a few night owls".
+- What comes next, two at most: "Lunch rush at 12 PM · Games on the courts from 3 PM", "Party night from 9 PM".
+
+The money and the date stay above it; the chips and the bars stand aside while it is open, so the map shows beneath. The × or the clock closes it.
+
+### 75.4 View at
+
+A slider in the strip, in five-minute steps, shows the campus at another hour: the morning rush at night, a party night in the afternoon. The light, the lamps, the crowd, the lines, the courts, the parties and a followed student's place all follow it; the clock turns gold and shows the hour viewed, the curve marks it with your own hour dashed beside it, and "Now" comes back. Nothing else does: the simulation, income and the game's date go on as they were. Closing the strip puts your own clock back. It replaces the Menu's "Daylight at any hour" (28.1, 28.4), whose stored choice is forgotten; someone who only plays at night now looks at the day this way.
+
+### 75.5 The frame budget at the rushes
+
+The busiest class change fills the view up to what the crowd step allows (28.5): the step's limit is the peak, and every other hour is a share of it. So the rushes ask for no more people than the old morning rush did at High, and the frame budget steps the crowd down as before if frames fall. The number for "at its fullest" is 1.8 of a steady afternoon of before (the old morning was 1.35); on the model campus, where the paths already reached the step's limit all day, the change fills to the limit and class time is about a third to a half of it.
+
+| Decisions made here | Instead |
+|---|---|
+| The hour is the player's own, and the kind of day the game's | The game's own hour, which turns a day every 28 minutes, far too fast for a day and a night (28.1) |
+| Class changes of ten minutes, on the hour and some on the half hour, sized by how many classes start | Every hour the same, which makes noon and 8 PM as busy as 10 AM |
+| The busiest change at the step's limit, everything else a share | A rush on top of the old crowd, which on a big campus was at the limit already and could not show it |
+| Too many for the hour head in at the nearest door, a few a second | Waiting for each walk to end, which left the paths full for a minute after class began |
+| The library in finals; exams in blocks | Classes in finals week |
+| Clubs in the evening, parties from 9 | Clubs in the afternoon (63.9), parties from dinner |
+| The slider fixed at the hour chosen | The clock running on from it, which would need a second clock |
+| "Daylight at any hour" removed | Kept beside the slider: two ways to do one thing |
+| On the narrowest phone the year and the sky shorten first | The date and the hour shortened, or a second line under the HUD |
+
+**Measured.** On the model campus a real day on (Thursday, October 8, in term), at Normal, the students in view against those the hour wants, the slider moved and each hour held for twelve seconds: the change before 11 AM 89 wanted and about 85 in view; class at 11:15 31 (in view 31 within six seconds of the jump from the change); the lunch rush 41; the afternoon 37; dinner 48; ten at night 49; three in the morning 6 (from 43 to 6 in about ten seconds); the change before 8 AM 71; class at 8:25 38. Frames on the slowed phone (47.2), back to back with main (8d2005e), three rounds of eight frames, the mean, at the same hour on both: the change before 11 at High 22.9 ms with 214 people out against 22.6 with 175; the change before 1 PM at Normal 19.2 ms with 124 out against 17.9 with 84, the extra people being the class change asked for. In pictures at 375, 390, 430 and 530 wide with Today open: the clock 44 points tall, the slider 44, the × 44, and no row runs over; with the longest row there is ("Spring semester in session", "Year 12", "Heat wave") at 375 the year and the sky shorten and the rest stands.
+
+**Tested**: `tests/campusDay.test.ts`: classes start on the hour from 8 and some on the half hour, every change is ten minutes and ends as a class starts, the last out by 9; the paths fill at a change and empty once classes start, are quiet at night with a few about, busier at lunch and dinner than in class; a weekend starts late with no changes, more on the lawns and out on a party night; people head to class in a change, to food at lunch, to the courts in the afternoon, home at night; finals keep the library busy with exams in blocks; the kind of day from the calendar; the now and next lines; the curve; the clock in 12 and 24 hours; a followed student's classes on the hour or half hour from 8, out by 9, clubs from 7 and parties from 9; none of it reaches the simulation. `tests/crowd.test.ts`: the crowd by the hour, the busiest change at the step's limit, the courts and the food by the hour. `tests/daylight.test.ts`: View at shows another hour and closing it puts the clock back.

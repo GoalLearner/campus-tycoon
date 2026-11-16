@@ -184,10 +184,187 @@ button:active {
   white-space: nowrap;
 }
 
-/* The date, as small print. */
+/* The date, as small print, and the hour beside it. */
 .calendar .next {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 0;
   text-align: right;
   white-space: nowrap;
+}
+
+/* On a narrow phone the year and the sky give way first: the date and the hour stay whole. */
+.calendar .date-text {
+  flex: none;
+}
+
+.calendar .date-rest {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The hour on the player's own clock (DESIGN.md 75.1): tap it for Today on campus. Drawn small, a 44-point target. */
+.clock-button {
+  flex: none;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  background: none;
+  border-radius: 8px;
+  padding: 14px 4px;
+  margin: -14px 0;
+  white-space: nowrap;
+}
+
+.clock-button::before {
+  content: '· ';
+  color: var(--muted);
+}
+
+.clock-button:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Another hour, from the View at slider. */
+.clock-button.viewing {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ------------------------------------------- Today on campus (DESIGN.md 75.3) */
+
+.today-strip {
+  display: none;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.today-strip.open {
+  display: block;
+}
+
+/* With Today open, the HUD keeps to the clock, the strip and the money, so the map shows beneath. */
+.hud.today-open .hud-chips,
+.hud.today-open .bars,
+.hud.today-open .status,
+.hud.today-open .upcoming {
+  display: none;
+}
+
+.today-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.today-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.today-close {
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 4px 0 16px;
+  margin: -6px -4px -6px 0;
+  color: var(--muted);
+}
+
+.today-curve {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin-top: 2px;
+}
+
+.today-area {
+  fill: rgba(255, 210, 74, 0.35);
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.today-marker {
+  stroke: var(--text);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The player's own hour while the slider shows another. */
+.today-real {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  display: none;
+}
+
+.today-real.show {
+  display: inline;
+}
+
+/* Midnight, 6, noon and 6, under their places on the curve. */
+.today-hours {
+  position: relative;
+  height: 13px;
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--muted);
+  margin: 1px 0 4px;
+}
+
+.today-hours span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.today-hours span:first-child {
+  transform: none;
+}
+
+.today-now {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.today-next {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+}
+
+.today-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.today-view-label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.today-slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.today-back {
+  display: none;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.today-back.show {
+  display: inline-block;
 }
 
 .bars {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/app/platform', () => ({ isNative: false, hasTimeSkip: false }));
 
-import { alwaysDaylight, currentDaylight, daylightAt, forceHour, periodAt, setAlwaysDaylight, shownHour } from '../src/app/daylight';
+import { currentDaylight, daylightAt, forceHour, periodAt, shownHour, viewAt, viewedHour } from '../src/app/daylight';
 import { HOME_SCREEN_TIP, homeScreenTipDue } from '../src/app/homeScreenTip';
 
 describe('the time of day', () => {
@@ -48,17 +48,21 @@ describe('the time of day', () => {
     expect(daylightAt(7).lamps).toBe(0);
   });
 
-  it('reads the player\'s own clock, unless they asked for daylight at any hour', () => {
+  it("reads the player's own clock, unless the View at slider shows another hour (DESIGN.md 75.4)", () => {
     const lateEvening = new Date(2026, 10, 11, 22, 30, 0);
     expect(shownHour(lateEvening)).toBe(22.5);
     expect(currentDaylight(lateEvening).period).toBe('night');
 
-    expect(alwaysDaylight()).toBe(false);
-    setAlwaysDaylight(true);
-    expect(shownHour(lateEvening)).toBe(12);
+    expect(viewedHour()).toBe(null);
+    viewAt(7 + 50 / 60);
+    expect(shownHour(lateEvening)).toBeCloseTo(7.8333, 3);
+    expect(currentDaylight(lateEvening).period).toBe('morning');
+    viewAt(12);
     expect(currentDaylight(lateEvening).strength).toBe(0);
     expect(currentDaylight(lateEvening).period).toBe('afternoon');
-    setAlwaysDaylight(false);
+    // Closing the strip puts the player's own clock back.
+    viewAt(null);
+    expect(viewedHour()).toBe(null);
     expect(currentDaylight(lateEvening).period).toBe('night');
 
     // A screenshot can ask for any hour.
