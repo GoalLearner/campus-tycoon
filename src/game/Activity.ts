@@ -3,7 +3,9 @@ import { fitOnMap } from './propSize';
 import { activityWords, findStudent, type ActivityRole, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS, mealNow, playingNow, queueNow } from '../app/crowd';
 import type { DayPeriod } from '../app/daylight';
-import { dayRead, enrollment, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
+import { dayRead, enrollment, everydayLook, foodTrade, isBrokenThing, isPathKind, PLACED, playUse, sampleStudents, SEAT_REACH, studentFigure, studentKey, type GameState, type Placed, type PlayUse, type StudentRef } from '../sim';
+import { doorAlpha, moveEnd, pointOn, tripOf, type Afoot, type Trip } from './afoot';
+import type { Footprints } from './footprints';
 import { teamVenues } from '../sim/systems/teams';
 import type { Art, PeopleSpec, WalkDirection } from './art';
 import { facingOf, type Box, type Iso } from './iso';
@@ -42,6 +44,8 @@ const SURFACE: Record<string, { x0: number; x1: number; y0: number; y1: number }
 };
 /** How far apart people stand in a line, in cells. */
 const LINE_GAP = 0.3;
+/** At most this many wait by a door, each a little further from it. */
+const DOOR_ROOM = 8;
 /** The longest line drawn beside a building, however many are waiting. */
 const LINE_SHOWN = 6;
 /** The share of benches and of picnic-table places taken in each part of the day. */
@@ -60,6 +64,12 @@ const STALL_SPOTS: ReadonlyArray<readonly [number, number]> = [
 /** How often who is where is worked out again. The figures themselves move every frame. */
 const RECOUNT_MS = 900;
 const FADE_MS = 350;
+/** Nobody appears or disappears in view (DESIGN.md 69.2): players and the line walk there from a door or the edge of
+ * the screen and away again, at this pace in cells a second, a little apart, fading only in a doorway. */
+const ACT_WALK = 0.85;
+const ACT_STAGGER_MS = 420;
+const ACT_DOOR_FADE = 0.35;
+
 /**
  * A point won on a court or the field (DESIGN.md 64): every so many seconds one side hops and one of them shows a
  * high five, a fist bump or a shout. Only for show, and off with Reduce effects.
@@ -100,6 +110,11 @@ interface Figure {
   shownKey: string;
   /** A tray or a cup in front of someone eating at a table or a bench (DESIGN.md 64). */
   held: Phaser.GameObjects.Image | null;
+  /** On foot to their place or away (69.2); gone once away; sent off on foot already. */
+  trip: Trip | null;
+  gone: boolean;
+  walked: boolean;
+  sentOff: boolean;
 }
 
 interface Site {
@@ -116,6 +131,9 @@ interface Site {
   line: { x: number; y: number; dx: number; dy: number; onDrawing?: boolean };
   /** True when the line stands on a side nearer the viewer: in front of the building, whatever its width. */
   lineInFront: boolean;
+  /** How many places in its line, and by its door, are on open ground (69.5). */
+  lineRoom: number;
+  doorRoom: number;
   figures: Figure[];
   /** Things floating in a pool, and the ball on a field. */
   props: Phaser.GameObjects.Image[];
@@ -135,6 +153,8 @@ function mix(a: number, b: number): number {
 
 export class Activity {
   private sites: Site[] = [];
+  /** Places cleared from the map whose people are still walking off (69.2). */
+  private cleared: Site[] = [];
   private pool: Phaser.GameObjects.Image[] = [];
   private readonly people: PeopleSpec | null;
   private period: DayPeriod = 'afternoon';
@@ -148,6 +168,7 @@ export class Activity {
   private bigs = new Map<number, number>();
   /** The update's clock, in seconds. */
   private seconds = 0;
+  private afoot: Afoot | null = null;
   private step = 2;
   private students = 0;
   private studyShare = 0;
@@ -171,6 +192,19 @@ export class Activity {
     private walking: (key: string) => boolean = () => false,
   ) {
     this.people = art.people;
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
+  }
+
+  /** The walkers' doors and paths, so players and lines walk on and off the screen (DESIGN.md 69.2). */
+  setAfoot(afoot: Afoot): void {
+    this.afoot = afoot;
   }
 
   setPeriod(period: DayPeriod): void {
@@ -245,6 +279,20 @@ export class Activity {
           lineInFront = chosen.front;
         }
       }
+      // As many in the line, and waiting by the door, as stand on open ground (69.5): never into a building beside it.
+      const clear = (x: number, y: number): boolean => {
+        const cx = Math.floor(x);
+        const cy = Math.floor(y);
+        return cx >= 0 && cy >= 0 && cx < width && cy < height && ['empty', 'path', 'quad', 'crossing'].includes(cells[cy * width + cx]!.kind);
+      };
+      let lineRoom = LINE_SHOWN;
+      let doorRoom = DOOR_ROOM;
+      if (!line.onDrawing) {
+        lineRoom = 0;
+        while (lineRoom < LINE_SHOWN * 2 && clear(line.x + line.dx * lineRoom, line.y + line.dy * lineRoom)) lineRoom += 1;
+        doorRoom = 0;
+        while (doorRoom < DOOR_ROOM && clear(line.x - line.dx * (doorRoom + 1) * 0.8, line.y - line.dy * (doorRoom + 1) * 0.8)) doorRoom += 1;
+      }
       const before = kept.get(placed.id);
       kept.delete(placed.id);
       // People eat at the benches and tables within a few cells of food.
@@ -270,11 +318,14 @@ export class Activity {
           }
         }
       }
-      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
+      next.push({ placed, use: playUse(state, placed), eaters, foodNear, study, line, lineInFront, lineRoom, doorRoom, figures: before?.figures ?? [], props: before?.props ?? [], practice: venues.has(placed.id) });
     }
-    // Whatever was cleared takes its people with it.
+    // Whatever was cleared, its people walk off to the nearest door or off the screen (69.2); its things go with it.
     for (const gone of kept.values()) {
-      this.empty(gone);
+      for (const prop of gone.props) prop.destroy();
+      gone.props = [];
+      for (const figure of gone.figures) figure.leaving = true;
+      if (gone.figures.length > 0) this.cleared.push(gone);
       this.cheers.get(gone.placed.id)?.destroy();
       this.cheers.delete(gone.placed.id);
     }
@@ -299,21 +350,8 @@ export class Activity {
     this.staying.add(studentKey(student));
     // On a court, a pitch or the track everyone wears the kit. Anywhere else they are drawn as they walk about.
     if (SPORTY.includes(figure.role) && people.roles?.athlete !== undefined) return;
-    figure.look = studentFigure(state, student, Math.min(people.looks, people.crowd ?? people.looks), people.roles?.athlete);
+    figure.look = studentFigure(state, student, people);
     figure.shownKey = '';
-  }
-
-  private empty(site: Site): void {
-    for (const figure of site.figures) {
-      this.release(figure);
-      figure.held?.destroy();
-      figure.held = null;
-      figure.sprite.setVisible(false);
-      this.pool.push(figure.sprite);
-    }
-    for (const prop of site.props) prop.destroy();
-    site.figures = [];
-    site.props = [];
   }
 
   /** Who should be at a site right now, by role. */
@@ -373,15 +411,24 @@ export class Activity {
       const wanted = seen ? this.wanted(site) : [];
       for (const [role, count] of wanted) {
         const have = site.figures.filter((figure) => figure.role === role && !figure.leaving);
-        const want = Math.max(0, Math.min(count, budget));
+        const room = role === 'line' ? site.lineRoom : role === 'door' ? site.doorRoom : count;
+        const want = Math.max(0, Math.min(count, budget, room));
         budget -= want;
         this.drawn += want;
         for (let n = have.length; n < want; n++) {
           const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
           sprite.setVisible(true).setAlpha(0).setCrop();
           const sporty = role === 'court' || role === 'field' || role === 'runner';
-          const look = sporty && athletes !== undefined ? athletes + ((site.placed.id + n) % 4) : Math.floor(mix(site.placed.id * 13 + n, 5) * Math.min(16, crowd));
-          site.figures.push({ sprite, role, student: null, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '', held: null });
+          // Until they are found among the students, an everyday look: never a uniform (DESIGN.md 69.3).
+          const look = sporty && athletes !== undefined ? athletes + ((site.placed.id + n) % 4) : everydayLook(people, mix(site.placed.id * 13 + n, 7), mix(site.placed.id * 13 + n, 5));
+          const figure: Figure = { sprite, role, student: null, look, slot: n, x: site.placed.x + 0.5, y: site.placed.y + 0.5, direction: 'sw', stride: mix(site.placed.id, n) * 1000, moving: false, alpha: 0, leaving: false, shownKey: '', held: null, trip: null, gone: false, walked: false, sentOff: false };
+          site.figures.push(figure);
+          if (!this.arrive(site, figure, n - have.length)) {
+            // In sight with no way there: not here.
+            site.figures.pop();
+            sprite.setVisible(false);
+            this.pool.push(sprite);
+          }
         }
         // The last to come are the first to go.
         for (let n = have.length - 1; n >= want; n--) have[n]!.leaving = true;
@@ -390,6 +437,28 @@ export class Activity {
       for (const figure of site.figures) if (!figure.leaving && figure.student === null) this.cast(site, figure);
       this.setProps(site, seen);
     }
+  }
+
+  /**
+   * A figure comes to its place (DESIGN.md 69.2): in sight, on foot from the nearest door or the edge of the screen,
+   * the `k`th of those coming a little after the one before; on ground only just come into sight, there already. False
+   * when it is in sight with no way there.
+   */
+  private arrive(site: Site, figure: Figure, k: number): boolean {
+    const afoot = this.afoot;
+    const middle = { x: site.placed.x + site.placed.w / 2, y: site.placed.y + site.placed.h / 2 };
+    if (!afoot || !afoot.seen(middle)) return true;
+    if (afoot.fresh(middle.x, middle.y)) {
+      figure.alpha = 1;
+      return true;
+    }
+    this.place(site, figure, this.seconds);
+    const way = afoot.approach(figure.x, figure.y);
+    if (!way) return false;
+    figure.trip = tripOf(way, this.seconds * 1000 + k * ACT_STAGGER_MS, false);
+    figure.walked = true;
+    figure.alpha = 0;
+    return true;
   }
 
   /** A ball on a field with a game on it, and a book on a table with a study group at it. The pool's own art has its toys. */
@@ -590,15 +659,27 @@ export class Activity {
       this.recount(this.scene.cameras.main.worldView);
     }
     const seconds = time / 1000;
-    for (const site of this.sites) {
+    this.cleared = this.cleared.filter((site) => site.figures.length > 0);
+    for (const site of [...this.sites, ...this.cleared]) {
       if (site.figures.length === 0 && site.props.length === 0) continue;
       // Buildings that stand up are drawn after the ground. People on them go in front of the whole footprint.
       const flat = PLACED[site.placed.type].flat;
       const front = this.iso.front(site.placed.x, site.placed.y, site.placed.w, site.placed.h) * 4 + 3;
       for (let i = site.figures.length - 1; i >= 0; i--) {
         const figure = site.figures[i]!;
-        figure.alpha = figure.leaving ? figure.alpha - dt / FADE_MS : Math.min(1, figure.alpha + dt / FADE_MS);
-        if (figure.leaving && figure.alpha <= 0) {
+        // Leaving in sight, they walk off to the nearest door or the edge of the screen (69.2).
+        if (figure.leaving && !figure.sentOff) {
+          figure.sentOff = true;
+          const way = (figure.alpha > 0.5 || figure.trip) && this.afoot && this.afoot.seen(figure) ? this.afoot.approach(figure.x, figure.y) : null;
+          if (way) {
+            figure.walked = true;
+            figure.alpha = Math.max(figure.alpha, 0.01);
+            figure.trip = tripOf(way.reverse(), time, true);
+          } else if (figure.walked) figure.alpha = 0;
+        }
+        if (!figure.walked) figure.alpha = figure.leaving ? figure.alpha - dt / FADE_MS : Math.min(1, figure.alpha + dt / FADE_MS);
+        else if (!figure.trip) figure.alpha = figure.leaving ? 0 : 1;
+        if (figure.leaving && (figure.alpha <= 0 || figure.gone)) {
           this.release(figure);
           figure.held?.destroy();
           figure.held = null;
@@ -607,7 +688,37 @@ export class Activity {
           site.figures.splice(i, 1);
           continue;
         }
-        this.place(site, figure, seconds);
+        const trip = figure.trip;
+        if (trip && !trip.out) {
+          // The last stretch is to where their place is now: a player moves about the court as they come.
+          this.place(site, figure, seconds);
+          moveEnd(trip, figure.x, figure.y);
+        }
+        if (trip) {
+          const d = (time - trip.startMs) / 1000 * ACT_WALK;
+          if (d >= trip.total) {
+            figure.trip = null;
+            figure.shownKey = '';
+            if (trip.out) {
+              figure.gone = true;
+              figure.alpha = 0;
+              figure.sprite.setAlpha(0);
+              figure.held?.setAlpha(0);
+              continue;
+            }
+            figure.alpha = 1;
+            this.place(site, figure, seconds);
+          } else {
+            const on = pointOn(trip, d);
+            figure.x = on.x;
+            figure.y = on.y;
+            const v0 = this.iso.view(on.ax, on.ay);
+            const v1 = this.iso.view(on.bx, on.by);
+            if (Math.abs(v1.x - v0.x) + Math.abs(v1.y - v0.y) > 1e-6) figure.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
+            figure.moving = d > 0;
+            figure.alpha = doorAlpha(trip, d, ACT_DOOR_FADE);
+          }
+        } else this.place(site, figure, seconds);
         const runs = figure.role === 'runner' ? 1.7 : 1;
         if (figure.moving) figure.stride += dt * runs;
         const flipFrom = people.flip?.[figure.direction];
@@ -617,7 +728,7 @@ export class Activity {
         let flip = flipFrom !== undefined;
         // At a bench or a picnic table they sit now (DESIGN.md 64): on the bench facing out, round the table facing it.
         let seatedAway = false;
-        if (figure.role === 'seat') {
+        if (figure.role === 'seat' && !figure.trip) {
           const middle = this.iso.view(site.placed.x + site.placed.w / 2, site.placed.y + site.placed.h / 2);
           const own = this.iso.view(figure.x, figure.y);
           const dir = site.placed.type === 'bench' ? 'sw' : facingOf(middle.x - own.x, middle.y - own.y);
@@ -632,22 +743,23 @@ export class Activity {
           this.art.apply(figure.sprite, key);
           figure.shownKey = key;
           // A swimmer is a figure seen from the chest up: the water hides the rest.
-          if (figure.role === 'swimmer') figure.sprite.setCrop(0, 0, figure.sprite.frame.width, figure.sprite.frame.height * 0.46);
+          if (figure.role === 'swimmer' && !figure.trip) figure.sprite.setCrop(0, 0, figure.sprite.frame.width, figure.sprite.frame.height * 0.46);
           else figure.sprite.setCrop();
         }
         figure.sprite.setFlipX(flip);
         const at = this.iso.toWorld(figure.x, figure.y);
         // The cut edge of a swimmer sits on the water.
-        const sink = figure.role === 'swimmer' ? figure.sprite.displayHeight * 0.5 : 0;
+        const sink = figure.role === 'swimmer' && !figure.trip ? figure.sprite.displayHeight * 0.5 : 0;
         // The side that won the point hops (DESIGN.md 64).
         const point = this.pointAt(site, figure.role, seconds);
         const hopS = point?.big ? BIG_POINT_S - 0.4 : HOP_S;
-        const hop = point && figure.slot % 2 === point.n % 2 && point.part < hopS ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX * (point.big ? 1.8 : 1) : 0;
+        const hop = point && !figure.trip && figure.slot % 2 === point.n % 2 && point.part < hopS ? Math.abs(Math.sin((point.part / HOP_S) * Math.PI * 2)) * HOP_PX * (point.big ? 1.8 : 1) : 0;
         figure.sprite.setPosition(at.x, at.y + sink - hop);
         const own = (this.iso.sum(figure.x, figure.y) - 1) * 4 + 2.5;
         // A line on a side nearer the viewer stands in front of its building, however wide the building is.
         const beside = figure.role === 'line' || figure.role === 'door';
-        figure.sprite.setDepth(flat || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front));
+        const order = flat || figure.trip || figure.role === 'seat' || (beside && !site.lineInFront) ? own : Math.max(own, front);
+        figure.sprite.setDepth(this.feet ? this.feet.depth(figure.x, figure.y, order) : order);
         figure.sprite.setAlpha(Math.max(0, figure.alpha));
         // Someone eating at a seat has a tray or a cup in front of them, towards the table (DESIGN.md 64).
         const eating = figure.role === 'seat' && !figure.leaving && site.foodNear.some((kind) => mealNow(kind, this.period) >= 0.5);
@@ -744,7 +856,7 @@ export class Activity {
   }
 
   clear(): void {
-    for (const site of this.sites) {
+    for (const site of [...this.sites, ...this.cleared]) {
       for (const figure of site.figures) this.release(figure);
       for (const figure of site.figures) {
         figure.sprite.destroy();
@@ -752,6 +864,7 @@ export class Activity {
       }
       for (const prop of site.props) prop.destroy();
     }
+    this.cleared = [];
     for (const sprite of this.pool) sprite.destroy();
     for (const icon of this.cheers.values()) icon.destroy();
     this.cheers.clear();

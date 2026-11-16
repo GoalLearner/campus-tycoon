@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { findStudent, sceneWords, type SceneRole, type Stander } from '../app/activityPeople';
 import type { Scenes as Wanted } from '../app/life';
-import { dateAt, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
+import { dateAt, everydayLook, ownedAt, sampleStudents, studentFigure, studentKey, type GameState, type StudentRef } from '../sim';
+import { doorAlpha, pointOn, tripOf, type Afoot, type Trip } from './afoot';
+import type { Footprints } from './footprints';
 import type { Art, PeopleSpec, WalkDirection } from './art';
-import type { Box, Iso } from './iso';
+import { facingOf, type Box, type Iso } from './iso';
 
 /**
  * Small scenes that come and go (DESIGN.md section 33.4): a club's table on a
@@ -24,6 +26,12 @@ import type { Box, Iso } from './iso';
  */
 
 const FADE_MS = 450;
+/** Nobody appears or disappears in view (DESIGN.md 69.2): a scene's people walk to it from a door or the screen's edge
+ * and away again, at this pace in cells a second, a little apart, fading only in a doorway (or, storming the field,
+ * as they come over the front of the stands). */
+const SCENE_WALK = 0.85;
+const SCENE_STAGGER_MS = 360;
+const SCENE_DOOR_FADE = 0.35;
 /** How often the scenes on the map are brought in line with what is wanted. */
 const RECOUNT_MS = 1200;
 /** Boxes stay by the dorms this long after a class moves in. */
@@ -59,6 +67,12 @@ interface Actor {
   marches: boolean;
   phase: number;
   shownKey: string;
+  /** On foot to their place or away (69.2), gone once away, where they were last drawn, and the way they face there. */
+  trip: Trip | null;
+  gone: boolean;
+  atX: number;
+  atY: number;
+  restDir: WalkDirection;
 }
 
 interface Prop {
@@ -94,6 +108,9 @@ interface Scene {
    * with it (DESIGN.md section 43). Every spot below is given as the map has it with no turn.
    */
   host: Box | null;
+  /** Its people come and go on foot (69.2), and how strongly its things show. */
+  walked: boolean;
+  propAlpha: number;
 }
 
 /**
@@ -131,6 +148,9 @@ export class Scenes {
   private scenes = new Map<string, Scene>();
   private readonly people: PeopleSpec | null;
   private wanted: Wanted | null = null;
+  /** Scenes set out since the last recount, whose people are still to be sent on their way in (69.2). */
+  private born: Scene[] = [];
+  private afoot: Afoot | null = null;
   private step = 2;
   private recountAt = 0;
   /** Lawn beside a path and near buildings, where a club can set out its table: best first for today. */
@@ -299,8 +319,9 @@ export class Scenes {
   }
 
   private begin(key: string, kind: Kind, x: number, y: number, w: number, h: number, host: Box | null = null): Scene {
-    const scene: Scene = { key, kind, x, y, w, h, actors: [], props: [], alpha: 0, leaving: false, seen: false, untilMs: 0, host };
+    const scene: Scene = { key, kind, x, y, w, h, actors: [], props: [], alpha: 0, leaving: false, seen: false, untilMs: 0, host, walked: false, propAlpha: 0 };
     this.scenes.set(key, scene);
+    this.born.push(scene);
     return scene;
   }
 
@@ -320,7 +341,7 @@ export class Scenes {
     if (marches || scene.kind === 'tailgate') {
       if (this.tint !== null) sprite.setTint(this.tint);
     }
-    const actor: Actor = { sprite, role, student: null, look, x, y, direction, plays, marches, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '' };
+    const actor: Actor = { sprite, role, student: null, look, x, y, direction, plays, marches, phase: mix(scene.x * 131 + scene.y, scene.actors.length) * Math.PI * 2, shownKey: '', trip: null, gone: false, atX: x, atY: y, restDir: direction };
     scene.actors.push(actor);
     this.cast(scene, actor);
   }
@@ -341,7 +362,7 @@ export class Scenes {
     actor.student = student;
     if (!student) return;
     this.staying.add(studentKey(student));
-    actor.look = studentFigure(state, student, Math.max(1, Math.min(people.looks, people.crowd ?? people.looks)), people.roles?.athlete);
+    actor.look = studentFigure(state, student, people);
     actor.shownKey = '';
   }
 
@@ -351,8 +372,8 @@ export class Scenes {
     const people = this.people;
     const keep = new Set<string>();
     if (wanted && people) {
-      const crowd = Math.max(1, Math.min(people.looks, people.crowd ?? people.looks));
-      const look = (a: number, b: number): number => Math.floor(mix(a, b) * crowd);
+      // Until they are found among the students, an everyday look: never a uniform (DESIGN.md 69.3).
+      const look = (a: number, b: number): number => everydayLook(people, mix(b, a), mix(a, b));
       const few = this.step <= 0;
       // A scene is only set out when its own art is in the pack in use: two people standing by nothing are not a club table.
       const shown = (asked: number, room: number, needs: string): number => (this.art.has(needs) ? Math.min(room, few ? Math.min(1, asked) : asked) : 0);
@@ -463,9 +484,96 @@ export class Scenes {
       }
     }
     for (const scene of this.scenes.values()) {
-      if (scene.kind === 'boxes') scene.leaving = timeMs >= scene.untilMs;
-      else scene.leaving = !keep.has(scene.key);
+      const leave = scene.kind === 'boxes' ? timeMs >= scene.untilMs : !keep.has(scene.key);
+      if (leave) this.walkOut(scene, timeMs);
+      // Wanted again before it had gone: it stays, unless its people are already walking off.
+      else if (scene.leaving && !scene.walked) scene.leaving = false;
     }
+    // New scenes in sight: their people walk there (69.2); one with no way to it is not set out.
+    for (const scene of this.born.splice(0)) {
+      if (this.scenes.get(scene.key) === scene && !this.walkIn(scene, timeMs)) this.drop(scene);
+    }
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
+  }
+
+  /** The walkers' doors and paths, so a scene's people walk on and off the screen (DESIGN.md 69.2). */
+  setAfoot(afoot: Afoot): void {
+    this.afoot = afoot;
+  }
+
+  /** Where a spot of a scene is on the map in the view as turned: on its drawing, or on the map's own grass. */
+  private spotOf(scene: Scene, x: number, y: number): { x: number; y: number } {
+    const host = scene.host;
+    return host ? this.iso.onDrawing(host, x - host.x, y - host.y) : { x, y };
+  }
+
+  /** Fans storming the field come over the front of the stands: the nearest edge of the pitch to their spot. */
+  private standsBy(scene: Scene, actor: Actor): { x: number; y: number } {
+    const pitch = pitchOf(this.stadium?.tier ?? 1);
+    const x0 = scene.x + pitch.x0;
+    const x1 = scene.x + pitch.x1;
+    const y0 = scene.y + pitch.y0;
+    const y1 = scene.y + pitch.y1;
+    const gaps = [actor.x - x0, x1 - actor.x, actor.y - y0, y1 - actor.y];
+    const k = gaps.indexOf(Math.min(...gaps));
+    const edge = k === 0 ? { x: x0, y: actor.y } : k === 1 ? { x: x1, y: actor.y } : k === 2 ? { x: actor.x, y: y0 } : { x: actor.x, y: y1 };
+    return this.spotOf(scene, edge.x, edge.y);
+  }
+
+  /**
+   * A new scene's people walk to it (DESIGN.md 69.2): from the nearest door or the screen's edge, one after another;
+   * fans storm the field from the stands. Out of sight or on ground only just come into sight, they are there already.
+   * False when it is in sight and there is no way to it.
+   */
+  private walkIn(scene: Scene, timeMs: number): boolean {
+    const afoot = this.afoot;
+    if (!afoot || scene.actors.length === 0) return true;
+    const middle = this.spotOf(scene, scene.x + scene.w / 2, scene.y + scene.h / 2);
+    if (!afoot.seen(middle) || afoot.fresh(middle.x, middle.y)) return true;
+    const first = this.spotOf(scene, scene.actors[0]!.x, scene.actors[0]!.y);
+    const way = scene.kind === 'storm' ? [] : afoot.approach(first.x, first.y);
+    if (!way) return false;
+    scene.actors.forEach((actor, i) => {
+      const spot = this.spotOf(scene, actor.x, actor.y);
+      const from = scene.kind === 'storm' ? [this.standsBy(scene, actor)] : way.slice(0, -1);
+      actor.trip = tripOf([...from, spot], timeMs + i * (scene.kind === 'storm' ? SCENE_STAGGER_MS / 3 : SCENE_STAGGER_MS), false);
+      actor.atX = from[0]!.x;
+      actor.atY = from[0]!.y;
+    });
+    scene.walked = true;
+    scene.alpha = 1;
+    return true;
+  }
+
+  /** The scene breaks up (69.2): in sight, each walks off to the nearest door or the screen's edge; out of sight, it goes. */
+  private walkOut(scene: Scene, timeMs: number): void {
+    if (scene.leaving) return;
+    scene.leaving = true;
+    const afoot = this.afoot;
+    if (!afoot || scene.actors.length === 0 || !scene.seen) return;
+    scene.walked = true;
+    scene.alpha = 1;
+    scene.actors.forEach((actor, i) => {
+      if (actor.gone) return;
+      const here = { x: actor.atX, y: actor.atY };
+      const way = scene.kind === 'storm' ? [here, this.standsBy(scene, actor)] : afoot.approach(here.x, here.y)?.reverse() ?? [here, here];
+      actor.trip = tripOf(way, timeMs + i * (SCENE_STAGGER_MS / 2), true);
+    });
+  }
+
+  /** Take a scene off the map at once: it was never seen, or it has gone. */
+  private drop(scene: Scene): void {
+    for (const actor of scene.actors) this.release(actor);
+    for (const actor of scene.actors) actor.sprite.destroy();
+    for (const prop of scene.props) prop.sprite.destroy();
+    if (this.scenes.get(scene.key) === scene) this.scenes.delete(scene.key);
   }
 
   update(timeMs: number, deltaMs: number): void {
@@ -479,22 +587,32 @@ export class Scenes {
     const view = this.scene.cameras.main.worldView;
     const seconds = timeMs / 1000;
     const wind = this.wanted?.wind ?? 0;
-    for (const scene of this.scenes.values()) {
-      scene.alpha = scene.leaving ? scene.alpha - dt / FADE_MS : Math.min(1, scene.alpha + dt / FADE_MS);
-      if (scene.leaving && scene.alpha <= 0) {
-        for (const actor of scene.actors) this.release(actor);
-        for (const actor of scene.actors) actor.sprite.destroy();
-        for (const prop of scene.props) prop.sprite.destroy();
-        this.scenes.delete(scene.key);
-        continue;
-      }
+    for (const scene of [...this.scenes.values()]) {
       const middle = this.iso.toWorld(scene.x + scene.w / 2, scene.y + scene.h / 2);
       const seen = middle.x >= view.x - 220 && middle.x <= view.right + 220 && middle.y >= view.y - 220 && middle.y <= view.bottom + 220;
+      if (scene.walked) {
+        // Its people come and go on foot (69.2): drawn in full, its things show once someone is there.
+        scene.alpha = 1;
+        const there = scene.actors.some((actor) => !actor.trip && !actor.gone);
+        scene.propAlpha = scene.leaving || !there ? Math.max(0, scene.propAlpha - dt / FADE_MS) : Math.min(1, scene.propAlpha + dt / FADE_MS);
+        if (scene.leaving && (!seen || scene.actors.every((actor) => actor.gone))) {
+          this.drop(scene);
+          continue;
+        }
+      } else {
+        scene.alpha = scene.leaving ? scene.alpha - dt / FADE_MS : Math.min(1, scene.alpha + dt / FADE_MS);
+        scene.propAlpha = Math.max(0, scene.alpha);
+        if (scene.leaving && scene.alpha <= 0) {
+          this.drop(scene);
+          continue;
+        }
+      }
       scene.seen = seen;
       for (const actor of scene.actors) actor.sprite.setVisible(seen);
       for (const prop of scene.props) prop.sprite.setVisible(seen);
       if (!seen) continue;
       const alpha = Math.max(0, scene.alpha);
+      const things = scene.propAlpha;
 
       // The ball of a ring goes from one friend to the next but one, and rises and falls on the way.
       let ballX = 0;
@@ -522,14 +640,41 @@ export class Scenes {
         const at = this.iso.toWorld(spot.x, spot.y);
         // A rug is under everyone on its cell. Everything else stands among the people by where its base is.
         const depth = prop.flat ? this.iso.depth(scene.x, scene.y, 0) + 0.5 : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.45;
-        prop.sprite.setPosition(at.x, at.y - (prop.ball ? lift : 0)).setDepth(depth).setAlpha(alpha);
+        prop.sprite.setPosition(at.x, at.y - (prop.ball ? lift : 0)).setDepth(depth).setAlpha(things);
         if (prop.sways) prop.sprite.setRotation(Math.sin(seconds * 1.7 + prop.x * 3.1) * 0.05 * wind);
       }
       if (!people) continue;
       for (let n = 0; n < scene.actors.length; n++) {
         const actor = scene.actors[n]!;
+        if (actor.gone) {
+          actor.sprite.setAlpha(0);
+          continue;
+        }
+        // On foot to their place or away (69.2): along the way, facing it, fading only in a doorway.
+        let walkSpot: { x: number; y: number } | null = null;
+        let shown = alpha;
+        const trip = actor.trip;
+        if (trip) {
+          const d = ((timeMs - trip.startMs) / 1000) * SCENE_WALK;
+          if (d >= trip.total) {
+            actor.trip = null;
+            actor.direction = actor.restDir;
+            if (trip.out) {
+              actor.gone = true;
+              actor.sprite.setAlpha(0);
+              continue;
+            }
+          } else {
+            const on = pointOn(trip, d);
+            walkSpot = { x: on.x, y: on.y };
+            const v0 = this.iso.view(on.ax, on.ay);
+            const v1 = this.iso.view(on.bx, on.by);
+            if (Math.abs(v1.x - v0.x) + Math.abs(v1.y - v0.y) > 1e-6) actor.direction = facingOf(v1.x - v0.x, v1.y - v0.y);
+            shown = doorAlpha(trip, d, SCENE_DOOR_FADE);
+          }
+        }
         // Whoever is sending or getting the ball steps on the spot. Everyone else stands.
-        const busy = actor.marches || (actor.plays && (n === from || n === to));
+        const busy = walkSpot !== null || actor.marches || (actor.plays && (n === from || n === to));
         const flipFrom = people.flip?.[actor.direction];
         const frame = busy ? Math.floor((timeMs + actor.phase * 300) / people.frameMs) % people.frames : 0;
         const key = `person.${actor.look}.${flipFrom ?? actor.direction}.${frame}`;
@@ -539,14 +684,19 @@ export class Scenes {
         }
         actor.sprite.setFlipX(flipFrom !== undefined);
         // The way they face is the scene's own, on the screen: a scene keeps its look at every turn.
-        const spot = place(actor.x, actor.y);
+        const spot = walkSpot ?? place(actor.x, actor.y);
+        actor.atX = spot.x;
+        actor.atY = spot.y;
         const at = this.iso.toWorld(spot.x, spot.y);
         // Fans on the field are drawn over the stadium they are standing in.
+        const ownDepth = (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
         const depth =
-          scene.kind === 'storm' && host
+          scene.kind === 'storm' && host && !walkSpot
             ? this.iso.front(host.x, host.y, host.w, host.h) * 4 + 1.2 + this.iso.sum(spot.x, spot.y) * 0.01
-            : (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
-        actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? pitchOf(this.stadium?.tier ?? 1).lift : 0)).setDepth(depth).setAlpha(alpha);
+            : this.feet && !host
+              ? this.feet.depth(spot.x, spot.y, ownDepth)
+              : ownDepth;
+        actor.sprite.setPosition(at.x, at.y - (scene.kind === 'storm' ? pitchOf(this.stadium?.tier ?? 1).lift : 0)).setDepth(depth).setAlpha(shown);
       }
     }
   }

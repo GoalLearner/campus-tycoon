@@ -131,8 +131,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     void loadAtlas().then((atlas) => {
       const pack = atlas?.people;
       if (!atlas || !pack) return;
-      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
-      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     });
   }
 
@@ -160,8 +159,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     void loadAtlas().then((atlas) => {
       const pack = atlas?.people;
       if (!atlas || !pack) return;
-      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
-      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     });
   }
 
@@ -227,8 +225,7 @@ export function drawSocialPage(body: HTMLElement, state: GameState, view: WebVie
     void loadAtlas().then((atlas) => {
       const pack = atlas?.people;
       if (!atlas || !pack) return;
-      const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
-      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      for (const { canvas, ref } of canvases) drawSprite(canvas, atlas, `person.${studentFigure(state, ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
     });
   }
 

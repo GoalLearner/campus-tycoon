@@ -125,13 +125,12 @@ export function drawPostScene(canvas: HTMLCanvasElement, atlas: Atlas | null, vi
   if (post.scene === SCENE.building) return true;
   const pack = atlas.people;
   if (!pack) return true;
-  const looks = Math.min(pack.looks, pack.crowd ?? pack.looks);
   const people = peopleIn(view, state, post, look.crowd);
   const gap = Math.min(54, (W * 0.7) / Math.max(1, people.length));
   const first = W / 2 - (gap * (people.length - 1)) / 2;
   people.forEach((ref, i) => {
     const dir = i < people.length / 2 ? pack.flip?.se ?? 'se' : pack.flip?.sw ?? 'sw';
-    drawFrame(pen, atlas, `person.${studentFigure(state, ref, looks, pack.roles?.athlete)}.${dir}.0`, first + i * gap, H * 0.93, H * 0.5);
+    drawFrame(pen, atlas, `person.${studentFigure(state, ref, pack)}.${dir}.0`, first + i * gap, H * 0.93, H * 0.5);
   });
   // The scene's emotes over their heads.
   look.emotes.forEach((emote, i) => {

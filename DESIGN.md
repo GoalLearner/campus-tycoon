@@ -8558,3 +8558,104 @@ The long run adds two players on the model campus, each the once-a-day player wi
 The usual players end Calm, never Chaotic at a visit (30 to 42 at the most); the trustees wrote 0 to 6 times in 44 real weeks, every letter met. A campus run for Pandemonium on purpose reaches it (78) in two real days, is below Rowdy 3 game weeks after the Serene player's first visit and Calm two days on. A campus kept Serene is Calm or quieter in 13 of 15 game weeks once its first weeks are past. Against R3, 45 lines moved, every one on the model campus, where chaos runs, each with its reason in the C1 page: chaos moves Happiness, applicants and money a little, so the players there take slightly different turns. The small campus did not move. Money stays inside $12 to $17 (12.1% at the least), the Top 10 no earlier than week 24, catch-up under a second.
 
 **Frames** on the slowed phone (47.2's method), main against C1, two rounds, the middle of the last five frames of each run: an afternoon 22.0 ms before and 18.6 with C1; a busy morning 22.3 and 23.9; rain 16.7 and 20.2; a January afternoon three days in 16.7 and 20.0. The January afternoon was slower in both rounds, by 3 to 5 ms: more incidents on the map, with Campus Safety walking out to them. Every scene stays near 20 ms. C2 adds to what is drawn, so its frames are to watch.
+
+## 69. Play fixes of builds 33 and 34 (asked for 2026-11-15)
+
+The owner played builds 33 and 34 and sent five things back. Each is fixed here, on one branch and in one build. His words:
+
+- "Some people are pathing crazily ... just spininng and looks bugged especially spinning and just moving everywhere" (69.1).
+- "sometimes people just appear out of nowhere ... I don't want people to spawn in just from out of nowhere...they gotta come out of a house/building" (69.2).
+- "The genders are all wrong... andrea is a guy....jacob is a girl...mia is a guy....make sure the name and genders align correctly" (69.3).
+- "We don't need so many hijabs in the game" (69.3).
+- "This guy is stuck on building" (69.5).
+
+### 69.1 No more spinning
+
+Feelings never turn anyone about. Before, an angry student who stopped turned one way and back every half second, and one stressed about exams every second, with a shake; R1 doubled everyday Stress, so many more did it. Now:
+
+- **Angry** shows as the hard step, a pace a fifth quicker, and now and then the anger mark over their head, every 7 to 14 seconds while they walk.
+- **Stressed about exams**, stopped somewhere, they pace for real: a few steps back the way they came (0.6 of a cell), one turn, back to where they stopped, one turn, and again, with the walk frames. About two seconds a way, a short stand at each end, so a turn comes once in about 2.6 seconds.
+- **Any figure** turns on the screen at most once in 650 ms [T]. A real corner of a path comes far less often at a walk; a quicker change waits. Watched for a minute in the game: turns less than half a second apart went from 2,682 to 48, and a walker on the move turns 17 times a minute where it turned 61 (11 to 2 a minute standing).
+- **A rider** stepping round someone keeps to one side until clear and eases over and back, inside the path's cell, and never wobbles from side to side. Found in the game: the drawing's step aside was added to where the rider was every frame, so riders slid off the path and zigzagged back, at times into a building. The step is only drawn now.
+- **People crossing a quad** walk the line, stop at the end for 2.4 seconds [T], turn once and walk back. Before, they turned straight round at each end.
+- **Watchers** of a moment walk over only on a straight line over open ground, there and back; otherwise they watch from where they are.
+
+### 69.2 Coming and going on foot
+
+Nobody appears or disappears in view. Everyone on the screen comes out of a door (a hall, a house, a lecture hall, a food place, recreation, a chapter house) or walks in from the screen's edge, and anyone leaving walks to a door and in, or off the screen.
+
+- **The walkers** know the doors and the paths. Someone who would have started part way along a route on the screen now walks to that spot from the nearest door or the edge, whichever is nearer on foot, and on from there. Someone who arrives where there is no door (a court, a lawn, the end of a path) walks on to the nearest door or off the screen. A route dug up under them, or a building put down where they stand, sends them off the same way.
+- **The groups on the lawns, picnics, party crowds, the players and lines at courts, pools and food places, the small scenes** (club tables, pickup games, tailgates, the band, the busker) walk to their places one after another from the nearest door or the edge, and walk off the same way when they break up. Their things (a rug, a speaker, a ball) show once the first of them is there and go when they leave. A court's players head for where their place on the court is at that moment, so nobody jumps when they arrive. A group whose game moves (a jog, a stroll) starts it when the last of them has arrived.
+- **Fans storming the field** come over the front of the stands to their places, and go back the same way.
+- **Grounds workers and Campus Safety** walk along paths and open ground there and back (69.5). A worker finishes the job in hand and takes up the next back in the yard, so nobody jumps from one job to another; Campus Safety walk back to their station when the incident is over.
+- **Instant only out of sight.** Ground that has just come into sight, at the first look, after a pan or a zoom, may already have people on it: they are there as the screen shows it. Once the view has been still for 1.2 seconds [T] or is full, everyone new walks in.
+
+**Tested**: `tests/afoot.test.ts` (the way on foot found round a building and never through it; out from a cell just built on; fading only in a doorway; a moving place's last stretch). In the game, on an iPhone 14's screen with the camera still for a minute on the model campus's afternoon, every person the crowd draws was watched frame by frame: before, 87 of 331 appeared and 17 of 321 went somewhere other than a door or the screen's edge; now 1 of 311 appeared anywhere else and none of 314 went anywhere else (the play-fixes page).
+
+### 69.3 Figures that match gender, and a crowd like a real campus
+
+Names and genders already agreed: since the social campus (63) a student's first name comes from their gender's list, and the names before it are ones anyone can carry. The figures were picked without gender: Andrea, a freshman woman, had a beard; her boyfriend Jacob wore a pink hijab. And four of the twelve everyday looks wore a head covering, so a third of all students did.
+
+Every look in both packs is tagged now (`src/sim/config/looks.ts`): drawn as a woman, a man or either (a beard is a man's; long hair, a bun or a flower a woman's), what it is for, and any religious head covering. A student is drawn from their gender's looks everywhere they are drawn: the map, the card, the room, Quadline, the network, the Social tab, the regulars and the main character. A woman wears a feminine look or one that could be either; a man a masculine one or either; a nonbinary student any of them.
+
+| Look | Drawn | For | Women | Men | Nonbinary |
+|---|---|---|---|---|---|
+| A bun with a flower | woman | students | 14.0% | | 12.3% |
+| A bucket hat | either | students | 14.0% | 16.5% | 12.3% |
+| A ponytail and a headband | woman | students | 14.0% | | 12.3% |
+| Glasses and a bobble hat | either | students | 14.0% | 16.5% | 12.3% |
+| A pink hijab | woman, hijab | students | 1.0% | | 0.5% |
+| A dark headscarf | woman, hijab | students | 1.0% | | 0.5% |
+| A grey turban and a beard | man, turban | students | | 0.4% | 0.2% |
+| An orange turban and a beard | man, turban | students | | 0.4% | 0.2% |
+| Spiky grey hair and a beard | man | students | | 16.5% | 12.3% |
+| A blue crest | either | students | 14.0% | 16.5% | 12.3% |
+| Curly white hair | either | students | 14.0% | 16.5% | 12.3% |
+| A green bowl cut | either | students | 14.0% | 16.5% | 12.3% |
+| Four helmets | either | the varsity only | | | |
+| A teacher's hat, a waiter, a bellhop's cap, a chef's hat, a bus driver's cap, a top hat, a mail carrier's cap, a nurse's cap, a police cap, a hard hat | as drawn | staff in their role only | | | |
+| A trucker cap and a red beard; a red cap and long hair | man; woman | neighbours in town | | | |
+| Long grey hair and glasses; a black hat and a white beard | woman; man | parents | | | |
+
+**Head coverings** at a real campus's share [T]: about 2 in 100 women wear a hijab and under 1 in 100 men a turban (0.8 in 100). This is a judgement, not a survey figure: Muslim students are a few in a hundred of American undergraduates and about 4 in 10 Muslim women in the country always or usually wear a hijab (Pew Research Center, 2017), and Sikh men, who wear the turban, are far fewer than one student in a hundred. Nonbinary students wear each at half its share. A covering is never tied to how anyone behaves.
+
+**No uniform or costume is ever a student's.** The chef's hat, the police cap, the hard hat, the mail carrier's and bellhop's caps, the top hat, the nurse's cap and the sports kit are worn by staff in their role and by the varsity, and nobody else. Anyone in the crowd the game does not know (a visitor, a commuter) wears an everyday look. The two caps of the town's neighbours are not a student's because the pack has no seated, sleeping or face drawings of them.
+
+**Staff, parents and neighbours** are named to match their figure: a woman's first name for a figure drawn as a woman, a man's for a man's, and one anyone can carry for a figure that could be either. Their surnames are as before. Every professor wears the teacher's look, drawn as a woman, so every professor has a woman's first name; advisors, store clerks and boosters have men's; tour guides, drivers, Campus Safety and Facilities have names anyone can carry.
+
+**Girlfriend and boyfriend.** Once two students are together, the card says what each is to the other by gender, with her, his or their for the student: "Her boyfriend, Jacob", "His long-time girlfriend, Mia", "Their partner, Sam". Under a face on the Social tab and on the network's ring, "Girlfriend", "Boyfriend" or "Partner" (the ring leaves out "long-time", which did not fit at 375 wide); before they are together, "Dating" as before. The card's Friends line ("Alyssa, her girlfriend +2", "her ex") and the room ("A game with Gloria, her roommate", "Working out in his room") say her, his or their the same way. The one line in the game with a pronoun for someone it did not know (a parent's "Where would she sleep?") now says "our kid".
+
+### 69.4 What changes in a game already going
+
+Every student keeps their name and gender. A figure that fits is kept: every everyday look that fits their gender, and a head covering as often as the new shares allow. The rest are drawn again from what each look is short of, so the crowd ends at the new shares exactly while as few as can be change. On the model campus 43% of students wear a different figure: 28% had been drawn as the other gender, and head coverings go from 33% of students to 1.5%. Whether a game's main character changes depends on the save: `await __campus.figures()` in the console of a running game says how many changed and the main character's before and after.
+
+Save version 34 changes nothing in a save; it carries the one note: "Students now look like who they are: some figures changed to match." Nothing in the simulation changed: figures, names and words are drawn, not counted, so no line of the long run can move and it was not run again.
+
+### 69.5 Nobody on a wall
+
+A figure drawn halfway up a hall's front wall stood either inside the hall's footprint or just behind it. A building is drawn in order by its front cell, a person by where their feet are, and right beside a building the two disagree: just behind a shallow hall's back wall a person was drawn over it, as if they stood on the wall, and in front of a wide building's far corners under it. Every person now sorts against any building next to them (`src/game/footprints.ts`): over one they stand in front of, under one they stand behind, at every turn of the view. The close-up's rule stays as it was (64.5): only the student followed, close up, has what stands in front of them made see-through.
+
+Nobody stands, sits or walks inside a building's footprint:
+
+- Doors are entered from just outside the wall; a bench from just before it.
+- A group's places on a lawn are kept on open ground, and a group that moves round its spot keeps its loop on open ground, smaller where it must be.
+- A party needs two clear cells all round its middle: its crowd and lanterns reach that far.
+- A line at a food place, and people waiting by a gym's door, stop where open ground ends.
+- The one who falls in the fountain, and watchers, go only on a clear line, and afterwards walk back the way they came; before, one already where they were going cut straight back to the next path, through whatever stood between.
+- Grounds workers and Campus Safety walk paths and open ground, never through a building.
+- When something is built or cleared, groups and walkers on it walk off, and a cleared court or food place sends its people off on foot.
+
+**Tested**: `tests/footprints.test.ts` (every spot a tenth of a cell apart round a wide building and a shallow one, at all four turns: in front means over it, behind means under it; and the two cases the owner saw, wrong by the feet alone). In the game, the same minute watched frame by frame: before, a visible person's feet were inside a building in 3,778 of 627,182 looks (0.6%); now in 75 of 618,630 (0.01%). At noon with the crowd on High, 0.13%: people stepping out of a house into its front garden, which is part of the house's plot, and a route that clips a building's corner by less than a tenth of a cell as it turns off a door.
+
+**Frames** on the slowed phone (47.2's method), main against the play fixes with the same art, three rounds, the middle of the last five frames: an afternoon 18.0 ms before and 17.6 now; a busy morning with the crowd on High 22.8 and 20.4; rain 17.6 and 21.7; a January afternoon 17.8 and 17.5. Over every frame of the runs the play fixes are 0.4 to 1.8 ms slower, most in rain: people now find a way in and out and each sorts against the building beside them (about 0.4 ms a frame on the slowed phone, measured on and off in one game), with as many people on screen as before. Catch-up is unchanged: nothing here runs in the simulation.
+
+| Decisions made here | Instead |
+|---|---|
+| Students are drawn from the first twelve looks only; the town's two caps stay the neighbours' | Draw seated, sleeping and face pictures of the caps, for two more student looks |
+| Head coverings at a judged share | A survey figure, which no source gives for a campus like this |
+| An old figure kept where it fits | Every student drawn again, which changes far more of them |
+| Staff named to match the one figure each role wears: every professor a woman | Professors in either of two figures, which needs a second teacher's look the pack does not have |
+| Instant only on ground just come into sight | People appearing anywhere off the busy part of the screen |
+| Each person sorted against the building next to them | Cutting each wide building's picture into one-cell slices |
+
+**Tested** (69.1 and 69.3): `tests/feelingShow.test.ts` (no feeling turns anyone; pacing turns only at its ends, never twice in two seconds; a figure's facing held for 650 ms, a real corner at once); `tests/looks.test.ts` (both packs tagged in full; a woman never in a man's look, a man never in a woman's; no student in a uniform, the helmets the varsity's alone; hijabs 1.5 to 2.5 in 100 women and turbans 0.4 to 1 in 100 men; everyday looks within 8% of even; an old figure kept wherever it fits; staff, parents and neighbours named to their figure; girlfriend, boyfriend and her, his or their by gender). Save version 34 adds nothing to a save (the save tests load every older version), with one upgrade note (`tests/web.test.ts`).

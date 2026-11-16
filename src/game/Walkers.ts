@@ -5,7 +5,9 @@ import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
 import { PARKS, rideMomentOf, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
-import { BIG_KEY, bigMomentOf, cheeringAt, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
+import { searchOnFoot, searchSpace } from './afoot';
+import type { Footprints } from './footprints';
+import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
 import { itemAt, regularDay } from '../app/regularDay';
@@ -31,6 +33,7 @@ import {
   studentKey,
   studentCard,
   studentFigure,
+  everydayLook,
   TOWN_X,
   townLiving,
   type GameState,
@@ -190,7 +193,12 @@ const HEART_EVERY_MS = 6000;
 const KISS_SHARE = 0.18;
 const FELT_KEPT = 4000;
 const TICKS_A_DAY = 24 * 60;
-const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1, turned: false };
+const STILL_POSE: Pose = { lift: 0, shake: 0, squash: 1 };
+/** How far a pacing student walks up and back, in cells: a few steps, along the way they came (DESIGN.md 69.1). */
+const PACING_REACH = 0.6;
+/** How far a rider steps aside round someone in the way, in cells: with their own place on the path (at most 0.22 off
+ * its middle) it keeps them inside the path's cell (DESIGN.md 69.1, 69.5). */
+const RIDER_WEAVE = 0.24;
 /** A scuffle's dust cloud (DESIGN.md 64.4): a moment after the argument, for this long. A fall into a fountain lasts this long. */
 export const DUST_FROM_MS = 900;
 export const DUST_MS = 2800;
@@ -217,6 +225,16 @@ const MAX_COMMUTE_CELLS = 90;
 const FADE_MS = 260;
 const SPAWN_EVERY_MS = 120;
 const OFFSCREEN_LIMIT_MS = 3500;
+/**
+ * Nobody appears or disappears in view (DESIGN.md 69.2, the owner's "they gotta come out of a house/building"): how far
+ * beyond the view's edge, in world pixels, a figure is out of sight, and how many cells a way on or off is looked for.
+ */
+const OUT_OF_SIGHT_PX = 44;
+const AFOOT_CELLS = 4000;
+/** Ground uncovered by a pan or the first look is fresh until the view has been still this long, in milliseconds. */
+const FRESH_MS = 1200;
+/** The families of hand-placed buildings with a door to come out of; flat ones (courts, lawns) have none. */
+const DOOR_FAMILIES: ReadonlySet<string> = new Set(['library', 'dining', 'store', 'recreation', 'tutoring', 'medical', 'safety', 'landmark', 'reward', 'era', 'lab', 'chapter']);
 /** Commuters out at once for this many who walk in, before the time of day, and the most there can be. */
 const WALKERS_IN_PER_COMMUTER = 14;
 const MAX_COMMUTERS = 26;
@@ -324,6 +342,8 @@ interface Walker {
   cheerUntil: number;
   /** In a crowd moment (DESIGN.md 64.4): how long to stand once at their place by it, the way on after, what they face. */
   watchMs: number;
+  /** On their way off the screen or in at a door (69.2): when they get there they are gone. */
+  exiting: boolean;
   resume: Spot[] | null;
   faceAt: { x: number; y: number } | null;
   /** One of the moment's own people until then: not a watcher. */
@@ -342,6 +362,15 @@ interface Walker {
   rideAt: number;
   rideDone: boolean;
   weave: number;
+  /** The way the figure is drawn facing and since when: it turns at most once in `FACE_HOLD_MS` (DESIGN.md 69.1). */
+  shownDir: WalkDirection;
+  shownDirAt: number;
+  /** Pacing while stopped (69.1): where they stopped, the way back along their route, and how far; and whether they are
+   * stepping this moment, so the walk frames show. */
+  paceAnchor: { x: number; y: number; ux: number; uy: number; reach: number } | null;
+  pacingStep: boolean;
+  /** When an angry student next shows the anger mark (69.1). */
+  angerAt: number;
   downUntil: number;
   key: string | null;
   look: number;
@@ -474,6 +503,19 @@ export class Walkers {
   private isWalk: boolean[] = [];
   private isCrossing: boolean[] = [];
   private isStreet: boolean[] = [];
+  /** Ground anyone may stand on or cross on foot off a path (DESIGN.md 69.5): a path, a quad, open grass, an empty
+   * lot. Never a building's footprint, a placed thing, a tree, a road or the town. */
+  private isOpen: boolean[] = [];
+  /** Where anyone may walk on or off the screen (69.2): open ground, streets and crossings. */
+  private isAfoot: boolean[] = [];
+  /** Every door anyone could come out of, by its path or street cell, to the point at the building's edge (69.2). */
+  private doorAt = new Map<number, Spot>();
+  /** The view at the last top-up: ground outside it has just come into sight, and may be found already busy (69.2). */
+  private knownView: { x: number; y: number; right: number; bottom: number } | null = null;
+  private space = searchSpace(0);
+  /** The view at the last top-up and when it last moved, for what counts as fresh. */
+  private viewAt = { x: NaN, y: NaN, width: NaN };
+  private movedAt = -Infinity;
   /** Where the junctions and the marked crossings are (src/app/traffic.ts). */
   private plan: TrafficPlan | null = null;
   private pathCells = 0;
@@ -659,6 +701,14 @@ export class Walkers {
     this.isCrossing = cells.map((cell) => cell.kind === 'crossing');
     this.plan = planTraffic(this.width, this.height, cells.map((cell) => cell.kind), TOWN_X);
     this.isWalk = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'street');
+    // A court, a field or a pool is flat ground people walk on to; nothing else hand-placed is.
+    const flatGround = (cell: (typeof cells)[number]): boolean => {
+      const placed = cell.kind === 'placed' && cell.placedId !== null ? state.map.placed[cell.placedId] : null;
+      return !!placed && PLACED[placed.type].flat && PLACED[placed.type].family === 'recreation';
+    };
+    this.isOpen = cells.map((cell, i) => this.isPath[i]! || cell.kind === 'quad' || cell.kind === 'empty' || (cell.kind === 'lot' && cell.buildingId === null) || flatGround(cell));
+    this.isAfoot = cells.map((cell, i) => this.isOpen[i]! || cell.kind === 'street' || cell.kind === 'crossing');
+    if (this.space.seen.length !== width * height) this.space = searchSpace(width * height);
     this.pathCells = this.isPath.reduce((n, yes) => n + (yes ? 1 : 0), 0);
 
     const doorOf = (x: number, y: number): number => {
@@ -782,15 +832,39 @@ export class Walkers {
       });
     }
 
-    // Anyone whose way ahead was dug up leaves quietly.
-    for (const walker of this.walkers) {
-      for (let k = walker.leg; k < walker.route.length - 1; k++) {
-        const spot = walker.route[k]!;
-        if (!this.isWalk[Math.floor(spot.y) * width + Math.floor(spot.x)]) {
-          walker.fading = 'out';
-          break;
+    // Every door (69.2): the buildings on lots, the houses, and every hand-placed building that is not flat.
+    this.doorAt.clear();
+    const edge = (cx: number, cy: number, door: number): Spot => {
+      const dx = (door % width) + 0.5;
+      const dy = Math.floor(door / width) + 0.5;
+      return { x: dx + (cx + 0.5 - dx) * 0.46, y: dy + (cy + 0.5 - dy) * 0.46 };
+    };
+    for (const stop of [...this.stops, ...this.houses]) {
+      if (stop.kind === 'building' && !this.doorAt.has(stop.door)) this.doorAt.set(stop.door, edge(stop.cell.x, stop.cell.y, stop.door));
+      if (stop.kind === 'house' && !this.doorAt.has(stop.door)) this.doorAt.set(stop.door, this.threshold(stop));
+    }
+    for (const placed of state.map.placed) {
+      if (!placed) continue;
+      const spec = PLACED[placed.type];
+      if (spec.flat || !DOOR_FAMILIES.has(spec.family)) continue;
+      for (let cy = placed.y; cy < placed.y + placed.h; cy++) {
+        for (let cx = placed.x; cx < placed.x + placed.w; cx++) {
+          const door = doorOf(cx, cy);
+          if (door >= 0 && !this.doorAt.has(door)) this.doorAt.set(door, edge(cx, cy, door));
         }
       }
+    }
+
+    // Anyone whose way ahead was dug up, or who stands where something was just built, walks off (69.2, 69.5).
+    for (const walker of this.walkers) {
+      if (walker.fading === 'out') continue;
+      const here = Math.floor(walker.y) * width + Math.floor(walker.x);
+      let cut = !this.isAfoot[here];
+      for (let k = walker.leg; k < walker.route.length - 1 && !cut; k++) {
+        const spot = walker.route[k]!;
+        if (!this.isWalk[Math.floor(spot.y) * width + Math.floor(spot.x)]) cut = true;
+      }
+      if (cut) this.leave(walker, true);
     }
   }
 
@@ -926,8 +1000,10 @@ export class Walkers {
     if (stop.kind === 'gate') return door;
     const centre = { x: stop.cell.x + 0.5, y: stop.cell.y + 0.5 };
     if (stop.kind === 'house') return { x: centre.x, y: centre.y + (door.y - centre.y) * 0.3 };
-    // Buildings are entered at their edge. On a quad, people stop on the near part of the lawn.
-    const reach = stop.kind === 'quad' || stop.kind === 'place' ? 0.62 + Math.random() * 0.16 : 0.52;
+    // Buildings are entered at their edge, from just outside it (69.5: nobody stands inside a building's footprint). On
+    // a quad, people stop on the near part of the lawn; on a court or a field, on its near part; at a bench, before it.
+    const onto = stop.kind === 'quad' || (stop.kind === 'place' && stop.flat === true);
+    const reach = onto ? 0.62 + Math.random() * 0.16 : stop.kind === 'place' && stop.use === 'seat' ? 0.42 : 0.46;
     return { x: door.x + (centre.x - door.x) * reach, y: door.y + (centre.y - door.y) * reach };
   }
 
@@ -1069,9 +1145,29 @@ export class Walkers {
     // Nobody is in two places: a student by who they are, anyone else by their own card.
     const key = student ? studentKey(student) : extra.person ? `p:${personKey(extra.person)}` : null;
     if (key !== null && (this.out.has(key) || this.elsewhere.has(key))) return false;
-    const route = extra.route ?? this.routeBetween(from, to);
+    let route = extra.route ?? this.routeBetween(from, to);
     if (!route || route.length < 2) return false;
-    const looks = Math.min(people.looks, people.crowd ?? people.looks);
+    // Someone already part of the way along, so a view fills with people mid-stride.
+    let leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
+    // Nobody appears in view (DESIGN.md 69.2): on the screen, they come out of a door, or walk in from its edge along
+    // a way from the nearest door or the edge to where they would have been. Ground just come into sight, at the first
+    // look or after a pan, may already have people on it.
+    const first = extra.at ?? route[leg - 1]!;
+    let already = false;
+    if (this.seen(first)) {
+      already = this.fresh(first.x, first.y);
+      // Out of a door: the route starts at the stop's own door, or (a route given) at a door's edge (69.2).
+      const outOfDoor = leg === 1 && !extra.at && (extra.route ? this.atDoorEdge(route[0]!) : this.hasDoor(from));
+      // Friends setting out with someone come out with them, from where they came out (63.8).
+      const withLeader = extra.at !== undefined && leg === 1 && Math.hypot(extra.at.x - route[0]!.x, extra.at.y - route[0]!.y) < 0.05;
+      if (!already && !outOfDoor && !withLeader) {
+        if (extra.at) return false;
+        const way = this.approach(first.x, first.y);
+        if (!way) return false;
+        route = [...way, ...route.slice(leg)];
+        leg = 1;
+      }
+    }
     if (key !== null) this.out.add(key);
 
     const sprite = this.pool.pop() ?? this.scene.add.image(0, 0, '__DEFAULT');
@@ -1084,8 +1180,6 @@ export class Walkers {
       // It stands on its own base, so it can sway about it.
       prop.setOrigin(0.5, 1).setAlpha(0);
     }
-    // Someone already part of the way along, so a view fills with people mid-stride.
-    const leg = extra.leg ?? (partWay ? 1 + Math.floor(Math.random() * Math.max(1, route.length - 2)) : 1);
     const begin = extra.at ?? route[leg - 1]!;
     this.walkers.push({
       sprite,
@@ -1119,7 +1213,7 @@ export class Walkers {
       downUntil: 0,
       key,
       // A student's look is part of who they are. Anyone with a job wears it.
-      look: extra.look ?? (student && this.state ? studentFigure(this.state, student, looks, this.people?.roles?.athlete) : Math.floor(Math.random() * looks)),
+      look: extra.look ?? (student && this.state ? studentFigure(this.state, student, people) : everydayLook(people, Math.random(), Math.random())),
       from,
       route,
       leg,
@@ -1127,9 +1221,15 @@ export class Walkers {
       y: begin.y,
       pace: extra.pace ?? PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period]) * (0.8 + Math.random() * 0.45),
       direction: 'se',
+      shownDir: 'se',
+      shownDirAt: -Infinity,
+      paceAnchor: null,
+      pacingStep: false,
+      angerAt: this.scene.time.now + Math.random() * ANGER_MARK_MS.spread,
       stride: Math.random() * 1000,
-      alpha: 0,
-      fading: 'in',
+      alpha: already ? 1 : 0,
+      fading: already ? null : 'in',
+      exiting: false,
       lingerMs: 0,
       goal: to,
       offscreenMs: 0,
@@ -1317,13 +1417,18 @@ export class Walkers {
   }
 
   private draw(walker: Walker, people: PeopleSpec): void {
-    // They walk the map. On a turned view they face the way they go on the screen (DESIGN.md section 43).
-    const direction = this.iso.face(walker.direction);
+    // They walk the map. On a turned view they face the way they go on the screen (DESIGN.md section 43). The figure
+    // turns at most about once a second, so a short wiggle in a route never shows as spinning (69.1).
+    const held = heldFacing(walker.shownDir, walker.shownDirAt, walker.direction, this.scene.time.now);
+    walker.shownDir = held.dir;
+    walker.shownDirAt = held.at;
+    const direction = this.iso.face(walker.shownDir);
     const flipFrom = people.flip?.[direction];
     const facing = flipFrom ?? direction;
-    // A rider stands still on what they ride; skaters stride (DESIGN.md 64.6).
+    // A rider stands still on what they ride; skaters stride (DESIGN.md 64.6). A pacing student steps as they go.
     const rolling = walker.wheel !== null && walker.wheel !== 'skates';
-    const frame = walker.lingerMs > 0 || walker.talkMs > 0 || rolling ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
+    const stopped = (walker.lingerMs > 0 && !walker.pacingStep) || walker.talkMs > 0;
+    const frame = stopped || rolling ? 0 : Math.floor(walker.stride / people.frameMs) % people.frames;
     let key = `person.${walker.look}.${facing}.${frame}`;
     const down = this.scene.time.now < walker.downUntil;
     if (down && this.art.has(`person.${walker.look}.pose.lie`)) key = `person.${walker.look}.pose.lie`;
@@ -1348,7 +1453,7 @@ export class Walkers {
     // How they feel, in how they move (DESIGN.md 64.3): over the pack's own walk, and none with Reduce effects.
     const pose = this.poseOf(walker);
     if (kneeling) walker.sprite.setFlipX(direction === 'se' || direction === 'ne');
-    else walker.sprite.setFlipX((flipFrom !== undefined) !== pose.turned);
+    else walker.sprite.setFlipX(flipFrom !== undefined);
     if (walker.sprite.scaleY !== pose.squash) walker.sprite.setScale(1, pose.squash);
     // In a fountain (DESIGN.md 64.4): up to the waist in the water, as a swimmer is drawn.
     const inWater = this.scene.time.now < walker.fallUntil;
@@ -1359,8 +1464,10 @@ export class Walkers {
     }
     const ride = walker.wheel ? this.rideLift(walker) : 0;
     walker.sprite.setPosition(at.x + pose.shake, at.y - pose.lift - ride + (inWater ? walker.sprite.displayHeight * 0.3 : 0));
-    // Just above the ground of the cell underfoot, and below anything on the next cell forward.
-    walker.sprite.setDepth((this.iso.sum(walker.x, walker.y) - 1) * 4 + 2.5);
+    // Just above the ground of the cell underfoot, and below anything on the next cell forward: where the figure is
+    // drawn, a step aside in a party or round someone included, so it sorts against buildings where it stands (69.5).
+    const own = (this.iso.sum(spot.x, spot.y) - 1) * 4 + 2.5;
+    walker.sprite.setDepth(this.feet ? this.feet.depth(spot.x, spot.y, own) : own);
     // Followed close up they keep their place in the drawing order: what stands in front of them fades instead (L6).
     if (walker.wheelSprite) this.drawWheel(walker, direction, at, down);
     // Inside a scuffle's dust cloud (DESIGN.md 64.4) they are not seen.
@@ -1492,12 +1599,15 @@ export class Walkers {
         if (ahead <= 0 || ahead > 0.8) continue;
         const side = -ox * dy + oy * dx;
         if (Math.abs(side) > 0.32) continue;
-        target = side > 0 ? -0.3 : 0.3;
+        target = side > 0 ? -RIDER_WEAVE : RIDER_WEAVE;
         passing = other;
         break;
       }
     }
-    walker.weave += (target - walker.weave) * Math.min(1, dt / 220);
+    // Smooth (DESIGN.md 69.1): once stepping round to one side they keep to it until clear, and ease over and back, so
+    // a rider never wobbles from side to side. Within the path: the step and their own place on it stay inside its cell.
+    if (target !== 0 && Math.abs(walker.weave) > 0.02 && Math.sign(target) !== Math.sign(walker.weave)) target = -target;
+    walker.weave += (target - walker.weave) * Math.min(1, dt / 380);
     if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
     if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;
     if ((walker.ride === 'bell' || walker.ride === 'nearMiss') && !passing) return;
@@ -1661,7 +1771,12 @@ export class Walkers {
     for (const at of fountains) {
       const world = this.iso.toWorld(at.x, at.y);
       if (!view.contains(world.x, world.y)) continue;
-      const near = this.walkers.find((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.lingerMs <= 0 && w.talkMs <= 0 && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) < 3);
+      // Up to the water's edge in a straight line over open ground, never through a building (69.5).
+      const edge = (w: Walker): boolean => {
+        const d = Math.hypot(at.x - w.x, at.y - w.y);
+        return d > 0.6 && this.clearLine(w.x, w.y, w.x + ((at.x - w.x) * (d - 0.6)) / d, w.y + ((at.y - w.y) * (d - 0.6)) / d);
+      };
+      const near = this.walkers.find((w) => w.kind === 'student' && w.student && w.fading === null && !w.party && w.lingerMs <= 0 && w.talkMs <= 0 && w.momentUntil < now && w.watchMs === 0 && Math.hypot(w.x - at.x, w.y - at.y) < 3 && edge(w));
       if (near) return { at, walker: near };
     }
     return null;
@@ -1734,7 +1849,8 @@ export class Walkers {
       const { at, walker } = found;
       walker.momentUntil = now + ms;
       walker.resume = walker.route.slice(walker.leg).map((one) => ({ ...one }));
-      if (walker.resume.length === 0) walker.resume = null;
+      // Already where they were going: out of the water and back there the way they came (69.5).
+      if (walker.resume.length === 0) walker.resume = [{ x: walker.x, y: walker.y }];
       walker.route = [{ x: walker.x, y: walker.y }, { x: at.x, y: at.y }];
       walker.leg = 1;
       walker.watchMs = FOUNTAIN_MS;
@@ -1763,13 +1879,19 @@ export class Walkers {
     near.forEach((w, i) => {
       w.faceAt = { x: at.x, y: at.y };
       w.momentUntil = now + ms;
-      if (i < most && !w.party) {
-        // Over to a place in the ring round it.
-        const angle = (i / ring) * Math.PI * 2 + 0.4;
-        const r = 1.05 + (i % 2) * 0.3;
+      // Over to a place in the ring round it, in a straight line over open ground there and back (69.1, 69.5): where
+      // the line would cross a building or the place is on one, they watch from where they are.
+      const angle = (i / ring) * Math.PI * 2 + 0.4;
+      const r = 1.05 + (i % 2) * 0.3;
+      const spot = { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r };
+      // Already watching something else: after this they still go back to the way they were going (69.5).
+      const back = w.resume?.[0] ?? w.route[w.leg] ?? null;
+      const clear = this.clearLine(w.x, w.y, spot.x, spot.y) && (!back || this.clearLine(spot.x, spot.y, back.x, back.y));
+      if (i < most && !w.party && clear) {
+        // After, on along the way they were going; or, already where they were going, back there the way they came.
         const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
-        w.resume = resume.length > 0 ? resume : null;
-        w.route = [{ x: w.x, y: w.y }, { x: at.x + Math.cos(angle) * r, y: at.y + Math.sin(angle) * r }];
+        w.resume = w.resume ?? (resume.length > 0 ? resume : [{ x: w.x, y: w.y }]);
+        w.route = [{ x: w.x, y: w.y }, spot];
         w.leg = 1;
         w.lingerMs = 0;
         w.talkMs = 0;
@@ -1785,6 +1907,180 @@ export class Walkers {
       if (this.onMemory) this.onMemory(w.student!, watchWords(kind));
     });
     return near.length;
+  }
+
+  /**
+   * Pacing (DESIGN.md 69.1): a student tense about exams, stopped somewhere, walks a few steps back along the way they
+   * came, turns once, walks back to where they stopped, turns once, and again, with the walk frames. Nothing else
+   * moves anyone while they stand, and with Reduce effects they stand still.
+   */
+  private pace(walker: Walker, dt: number): void {
+    const can = walker.feel?.motion === 'pace' && walker.talkMs <= 0 && !walker.party && !walker.wheel && !walker.resume && walker.watchMs === 0 && walker.fading === null && effectsSetting() !== 'reduced';
+    if (!can) {
+      walker.pacingStep = false;
+      return;
+    }
+    if (!walker.paceAnchor) {
+      const back = walker.route[walker.route.length - 2];
+      if (!back) return;
+      const dx = back.x - walker.x;
+      const dy = back.y - walker.y;
+      const length = Math.hypot(dx, dy);
+      if (length < 0.2) return;
+      walker.paceAnchor = { x: walker.x, y: walker.y, ux: dx / length, uy: dy / length, reach: Math.min(PACING_REACH, length) };
+    }
+    const anchor = walker.paceAnchor;
+    const step = pacingAt(this.scene.time.now, walker.phase);
+    walker.x = anchor.x + anchor.ux * anchor.reach * step.along;
+    walker.y = anchor.y + anchor.uy * anchor.reach * step.along;
+    walker.direction = step.back ? facing(-anchor.ux, -anchor.uy) : facing(anchor.ux, anchor.uy);
+    walker.pacingStep = step.walking;
+    if (step.walking) walker.stride += dt;
+  }
+
+  /** The buildings people sort against (DESIGN.md 69.5). */
+  private feet: Footprints | null = null;
+
+  /** The buildings people sort against, so nobody is drawn on a wall (DESIGN.md 69.5). */
+  setFootprints(feet: Footprints): void {
+    this.feet = feet;
+  }
+
+  /** True for a stop with a door to go in at or come out of: a building, a house, a place that is not flat (69.2). */
+  private hasDoor(stop: Stop): boolean {
+    if (stop.kind === 'building' || stop.kind === 'house') return true;
+    return stop.kind === 'place' && !stop.flat && stop.family !== undefined && DOOR_FAMILIES.has(stop.family);
+  }
+
+  /** True when a point is at the edge of a door: where someone comes out of a building (69.2). */
+  private atDoorEdge(at: { x: number; y: number }): boolean {
+    const cx = Math.floor(at.x);
+    const cy = Math.floor(at.y);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const edge = this.doorAt.get((cy + dy) * this.width + cx + dx);
+        if (edge && Math.hypot(edge.x - at.x, edge.y - at.y) < 0.3) return true;
+      }
+    }
+    return false;
+  }
+
+  /** True when a point of the map is on the screen, or near enough to it that a figure there would show. */
+  seen(at: { x: number; y: number }): boolean {
+    return this.inView(this.scene.cameras.main.worldView, at.x, at.y, OUT_OF_SIGHT_PX);
+  }
+
+  /**
+   * True when a point has only just come into sight: at the first look, or uncovered by a pan or a zoom since the last
+   * top-up. People may be found already there; anywhere else in view they must walk in (DESIGN.md 69.2).
+   */
+  fresh(x: number, y: number): boolean {
+    const known = this.knownView;
+    if (!known) return true;
+    const at = this.iso.toWorld(x, y);
+    const m = OUT_OF_SIGHT_PX;
+    return at.x < known.x - m || at.x > known.right + m || at.y < known.y - m || at.y > known.bottom + m;
+  }
+
+  /** Remember the view as it is now: from here on, only ground uncovered after this is fresh. */
+  knowView(): void {
+    const view = this.scene.cameras.main.worldView;
+    this.knownView = { x: view.x, y: view.y, right: view.right, bottom: view.bottom };
+  }
+
+  /**
+   * A way on to the screen to (x, y) (DESIGN.md 69.2): from the nearest door anyone could come out of, or from just past
+   * the edge of the view, whichever is nearer on foot, over paths, open ground, streets and crossings, never through a
+   * building. The points run from where they appear to (x, y), a cell at a time. Null when there is none in reach.
+   * Read backwards, it is a way off the screen from (x, y).
+   */
+  approach(x: number, y: number): Spot[] | null {
+    const width = this.width;
+    const sx = Math.floor(x);
+    const sy = Math.floor(y);
+    if (sx < 0 || sy < 0 || sx >= width || sy >= this.height) return null;
+    const view = this.scene.cameras.main.worldView;
+    const start = sy * width + sx;
+    const end = (c: number): boolean => c !== start && (this.doorAt.has(c) || !this.inView(view, (c % width) + 0.5, Math.floor(c / width) + 0.5, OUT_OF_SIGHT_PX));
+    const cells = searchOnFoot(width, this.height, this.isAfoot, start, end, AFOOT_CELLS, this.space);
+    if (!cells || cells.length < 2) return null;
+    const last = cells[cells.length - 1]!;
+    const out: Spot[] = [];
+    if (this.doorAt.has(last)) out.push({ ...this.doorAt.get(last)! });
+    for (let k = cells.length - 1; k >= 1; k--) out.push({ x: (cells[k]! % width) + 0.5, y: Math.floor(cells[k]! / width) + 0.5 });
+    out.push({ x, y });
+    return out;
+  }
+
+
+  /**
+   * A way on foot from a point to beside a box of cells (DESIGN.md 69.5): over paths, open ground, streets and
+   * crossings, never through a building, ending on the open cell nearest the box, a step towards it. For the grounds
+   * workers and Campus Safety, who walked straight lines before. Null when there is none in reach.
+   */
+  wayBetween(ax: number, ay: number, box: { x: number; y: number; w: number; h: number }): Spot[] | null {
+    const width = this.width;
+    const sx = Math.floor(ax);
+    const sy = Math.floor(ay);
+    if (sx < 0 || sy < 0 || sx >= width || sy >= this.height) return null;
+    const near = (c: number): boolean => {
+      if (!this.isAfoot[c]) return false;
+      const x = c % width;
+      const y = (c - x) / width;
+      const dx = Math.max(box.x - x, 0, x - (box.x + box.w - 1));
+      const dy = Math.max(box.y - y, 0, y - (box.y + box.h - 1));
+      return dx + dy <= 1;
+    };
+    const start = sy * width + sx;
+    const cells = searchOnFoot(width, this.height, this.isAfoot, start, near, AFOOT_CELLS * 2, this.space);
+    if (!cells) return null;
+    const out: Spot[] = [{ x: ax, y: ay }];
+    for (const c of cells) if (c !== start || this.isAfoot[c]) out.push({ x: (c % width) + 0.5, y: Math.floor(c / width) + 0.5 });
+    const last = out[out.length - 1]!;
+    const mx = box.x + box.w / 2;
+    const my = box.y + box.h / 2;
+    const reach = Math.hypot(mx - last.x, my - last.y);
+    // A step towards it, staying on the open cell.
+    if (reach > 0.01) out[out.length - 1] = { x: last.x + ((mx - last.x) / reach) * 0.3, y: last.y + ((my - last.y) / reach) * 0.3 };
+    return out.length >= 2 ? out : null;
+  }
+
+
+  /**
+   * Off they go (DESIGN.md 69.2): out of sight already, they are simply gone; in view, they walk to the nearest door and
+   * in, or off the edge of the screen, and are gone when they get there. `again` sends them off anew, as when the map
+   * changes under them.
+   */
+  private leave(walker: Walker, again = false): void {
+    if (walker.exiting && !again) return;
+    if (!this.seen(walker)) {
+      walker.fading = 'out';
+      return;
+    }
+    const way = this.approach(walker.x, walker.y);
+    if (!way) {
+      walker.fading = 'out';
+      return;
+    }
+    way.reverse();
+    walker.route = way;
+    walker.leg = 1;
+    walker.exiting = true;
+    walker.lingerMs = 0;
+    walker.resume = null;
+    walker.paceAnchor = null;
+    walker.pacingStep = false;
+  }
+
+  /** True when every point of the straight line from a to b, a tenth of a cell apart, is open ground (69.5). */
+  private clearLine(ax: number, ay: number, bx: number, by: number): boolean {
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 10));
+    for (let k = 0; k <= steps; k++) {
+      const x = Math.floor(ax + ((bx - ax) * k) / steps);
+      const y = Math.floor(ay + ((by - ay) * k) / steps);
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height || !this.isOpen[y * this.width + x]) return false;
+    }
+    return true;
   }
 
   /** The body this moment: laughing, cheering, a fan on game day, or as they feel; still with Reduce effects. */
@@ -2153,6 +2449,11 @@ export class Walkers {
         if (walker.talkMs <= 0) walker.talkWith = null;
       } else if (walker.lingerMs > 0) {
         walker.lingerMs -= dt;
+        this.pace(walker, dt);
+        if (walker.lingerMs <= 0) {
+          walker.paceAnchor = null;
+          walker.pacingStep = false;
+        }
         if (walker.lingerMs <= 0 && walker.resume) {
           // Done watching (DESIGN.md 64.4): on along the way they were going.
           walker.route = [{ x: walker.x, y: walker.y }, ...walker.resume];
@@ -2178,7 +2479,7 @@ export class Walkers {
             walker.from = walker.goal;
             walker.goal = next;
           } else {
-            walker.fading = 'out';
+            this.leave(walker);
           }
         }
       } else if (walker.fading !== 'out' || walker.leg < walker.route.length) {
@@ -2215,6 +2516,11 @@ export class Walkers {
           }
         }
         if (!waiting) walker.stride += dt * (walker.pace / PACE);
+        // Angry (69.1): a brisk stomp, and now and then the anger mark over their head, never a turn about.
+        if (!waiting && walker.feel?.motion === 'stomp' && this.scene.time.now >= walker.angerAt) {
+          walker.angerAt = this.scene.time.now + ANGER_MARK_MS.least + Math.random() * ANGER_MARK_MS.spread;
+          if (this.inView(view, walker.x, walker.y, 0)) this.showIcon(walker, 'anger');
+        }
         if (walker.leg >= walker.route.length && walker.fading !== 'out' && walker.watchMs > 0) {
           // At their place by a moment (DESIGN.md 64.4): they stand and watch it, facing it; or they are in the fountain.
           walker.lingerMs = walker.watchMs;
@@ -2226,10 +2532,14 @@ export class Walkers {
             this.showIcon(walker, 'splash');
             this.showIcon(walker, 'sweat', 1400);
           }
+        } else if (walker.leg >= walker.route.length && walker.fading !== 'out' && walker.exiting) {
+          // At the door or past the edge (69.2): in, or out of sight.
+          walker.fading = 'out';
         } else if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           // A rider parks (a bike or an e-scooter at a rack, or against a wall) and goes on in (DESIGN.md 64.6).
-          if (walker.wheel) this.park(walker);
+          // Only at a door: anywhere else they ride on to one, or off the screen (69.2).
+          if (walker.wheel && walker.goal && this.hasDoor(walker.goal)) this.park(walker);
           const stays = !walker.wheel && (walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play'));
           // A party stays as long as each other: the same while for all of them, from who they are together.
           if (stays && walker.kind === 'student') {
@@ -2237,7 +2547,9 @@ export class Walkers {
             const longer = scene === 'date' ? DATE_LINGER : scene === 'party' ? PARTY_NIGHT_LINGER : 1;
             walker.lingerMs = (walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000) * longer;
           }
-          else walker.fading = 'out';
+          // In at a door; anywhere else (a court, a gate, a lawn) they walk on to the nearest door or off the screen.
+          else if (walker.goal && this.hasDoor(walker.goal)) walker.fading = 'out';
+          else this.leave(walker);
         }
       }
 
@@ -2290,6 +2602,15 @@ export class Walkers {
       }
       // And among them, the people who work here or are visiting.
       this.topUpOthers(this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0)), seen, neighboursSeen);
+      // Ground just come into sight stays fresh while the view moves and fills (69.2); once it has been still a moment,
+      // or is full, everyone new walks in.
+      const now = this.scene.time.now;
+      const was = this.viewAt;
+      if (Math.abs(view.x - was.x) > 2 || Math.abs(view.y - was.y) > 2 || Math.abs(view.width - was.width) > 2 || !(was.width > 0)) {
+        this.movedAt = now;
+        this.viewAt = { x: view.x, y: view.y, width: view.width };
+      }
+      if (now - this.movedAt > FRESH_MS || seen >= wanted * 0.85) this.knowView();
     }
     this.socialClock += dt;
     if (this.socialClock >= SOCIAL_EVERY_MS) {
@@ -2371,7 +2692,9 @@ export class Walkers {
 
   /** Where a walker is drawn: their own spot, or their place beside the first of their party, across the way they go. */
   private placeOf(walker: Walker): { x: number; y: number } {
-    if (!walker.party) return walker;
+    // A copy, never the walker itself: the drawing steps a rider aside from it, and that step must not move them
+    // (DESIGN.md 69.1: it was added to where they were every frame, so riders drifted off the path and zigzagged back).
+    if (!walker.party) return { x: walker.x, y: walker.y };
     const [across, behind] = walker.place;
     // Walking along x (south-east or north-west) the party spreads along y, and the other way about.
     const alongX = walker.direction === 'se' || walker.direction === 'nw';

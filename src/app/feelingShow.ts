@@ -34,18 +34,19 @@ export function motionOf(emotion: Emotion, reasons: readonly string[]): Motion {
 }
 
 /** How fast they walk against the usual pace: slower when sad, brisker when angry or excited. */
-export const MOTION_PACE: Record<Motion, number> = { bounce: 1.05, hop: 1.08, slump: 0.78, stomp: 1.12, pace: 1, fidget: 1, none: 1 };
+export const MOTION_PACE: Record<Motion, number> = { bounce: 1.05, hop: 1.08, slump: 0.78, stomp: 1.2, pace: 1, fidget: 1, none: 1 };
 
-/** Where the body is drawn this moment, against where it stands: lifted, shaken sideways, squashed, turned about. */
+/**
+ * Where the body is drawn this moment, against where it stands: lifted, shaken sideways, squashed. A feeling never
+ * turns anyone about (DESIGN.md 69.1, the owner's "just spinning ... looks bugged"): they face the way they walk.
+ */
 export interface Pose {
   lift: number;
   shake: number;
   squash: number;
-  /** True when they face the other way for now: the quick turns of anger and the pacing of stress, when stopped. */
-  turned: boolean;
 }
 
-const STILL: Pose = { lift: 0, shake: 0, squash: 1, turned: false };
+const STILL: Pose = { lift: 0, shake: 0, squash: 1 };
 
 /**
  * The body at `ms` (any steady clock), `moving` or stopped, with `phase` (0 to 1) their own so no two move together.
@@ -56,24 +57,24 @@ export function motionAt(motion: Motion, ms: number, moving: boolean, phase: num
   switch (motion) {
     case 'bounce':
       // A spring in the step: two small lifts a stride.
-      return moving ? { lift: Math.abs(Math.sin(s * 9)) * 1.6, shake: 0, squash: 1, turned: false } : STILL;
+      return moving ? { lift: Math.abs(Math.sin(s * 9)) * 1.6, shake: 0, squash: 1 } : STILL;
     case 'hop': {
       // Now and then a jump, walking or not.
       const t = s % 2.6;
-      return { lift: t < 0.36 ? Math.sin((t / 0.36) * Math.PI) * 5 : 0, shake: 0, squash: 1, turned: false };
+      return { lift: t < 0.36 ? Math.sin((t / 0.36) * Math.PI) * 5 : 0, shake: 0, squash: 1 };
     }
     case 'slump':
       // Lower and heavier: a little shorter, a pixel down.
-      return { lift: -1, shake: 0, squash: 0.93, turned: false };
+      return { lift: -1, shake: 0, squash: 0.93 };
     case 'stomp':
-      // Hard steps when walking; stopped, quick turns one way and back.
-      return moving ? { lift: Math.max(0, Math.sin(s * 11)) * 1.4, shake: 0, squash: 1, turned: false } : { ...STILL, turned: Math.floor(s / 0.55) % 2 === 1 };
+      // Hard steps at a brisk pace when walking, and now and then an anger mark (the map's); stopped, they stand still.
+      return moving ? { lift: Math.max(0, Math.sin(s * 11)) * 1.4, shake: 0, squash: 1 } : STILL;
     case 'pace':
-      // Stopped, they turn about every second, as if walking up and down.
-      return moving ? STILL : { lift: 0, shake: Math.sin(s * 2.2) * 2, squash: 1, turned: Math.floor(s / 1.1) % 2 === 1 };
+      // Stopped, they walk up and down (`pacingAt`, which the map moves them by): the body itself is still.
+      return STILL;
     case 'fidget':
       // Stopped, a small quick shift from foot to foot.
-      return moving ? STILL : { lift: 0, shake: Math.sin(s * 22) * 0.8, squash: 1, turned: false };
+      return moving ? STILL : { lift: 0, shake: Math.sin(s * 22) * 0.8, squash: 1 };
     default:
       return STILL;
   }
@@ -82,13 +83,46 @@ export function motionAt(motion: Motion, ms: number, moving: boolean, phase: num
 /** Laughing, whatever they feel: bouncing and shaking while the laugh shows. */
 export function laughingAt(ms: number, phase: number): Pose {
   const s = ms / 1000 + phase * 10;
-  return { lift: Math.abs(Math.sin(s * 14)) * 1.5, shake: Math.sin(s * 31) * 0.7, squash: 1, turned: false };
+  return { lift: Math.abs(Math.sin(s * 14)) * 1.5, shake: Math.sin(s * 31) * 0.7, squash: 1 };
 }
 
 /** Cheering: a jump a second while the cheer lasts. */
 export function cheeringAt(ms: number, phase: number): Pose {
   const t = (ms / 1000 + phase) % 1;
-  return { lift: t < 0.4 ? Math.sin((t / 0.4) * Math.PI) * 6 : 0, shake: 0, squash: 1, turned: false };
+  return { lift: t < 0.4 ? Math.sin((t / 0.4) * Math.PI) * 6 : 0, shake: 0, squash: 1 };
+}
+
+/** Pacing: out for this long, a pause, one turn, back, a pause, one turn, in seconds (DESIGN.md 69.1). */
+export const PACING = { walk: 1.9, pause: 0.7 } as const;
+
+/**
+ * Where a pacing student is on their few steps up and down, at `ms`, with `phase` their own: `along` from 0 (where they
+ * stopped) to 1 (the far end), `walking` while they step (the walk frames show), and `back` on the way back, when they
+ * face the other way. They turn only at the two ends, once each, so never more than once in two seconds.
+ */
+export function pacingAt(ms: number, phase: number): { along: number; walking: boolean; back: boolean } {
+  const lap = 2 * (PACING.walk + PACING.pause);
+  const t = (ms / 1000 + phase * lap) % lap;
+  if (t < PACING.walk) return { along: t / PACING.walk, walking: true, back: false };
+  if (t < PACING.walk + PACING.pause) return { along: 1, walking: false, back: false };
+  const u = t - PACING.walk - PACING.pause;
+  if (u < PACING.walk) return { along: 1 - u / PACING.walk, walking: true, back: true };
+  return { along: 0, walking: false, back: true };
+}
+
+/** Anger shows as a mark over the head now and then while walking, about this often, in milliseconds. */
+export const ANGER_MARK_MS = { least: 7000, spread: 7000 } as const;
+
+/**
+ * The shortest time between two turns of a figure on the screen, in milliseconds (DESIGN.md 69.1): "nothing re-faces
+ * more than about once a second". A real corner of a path comes far less often at a walk; a quicker change waits.
+ */
+export const FACE_HOLD_MS = 650;
+
+/** The way a figure is drawn facing now: the way it wants, unless it turned less than `FACE_HOLD_MS` ago. */
+export function heldFacing<D extends string>(shown: D, shownAt: number, want: D, now: number): { dir: D; at: number } {
+  if (want === shown || now - shownAt < FACE_HOLD_MS) return { dir: shown, at: shownAt };
+  return { dir: want, at: now };
 }
 
 /** Dancing: a sway from side to side, in radians, and a bob. */

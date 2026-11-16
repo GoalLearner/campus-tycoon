@@ -420,7 +420,7 @@ function belongings(card: StudentCard): string[] {
 }
 
 /** The line under the room, in the card's voice. */
-function lineOf(activity: RoomActivity, card: StudentCard, mate: { name: string; asleep: boolean; in: boolean } | null, night: boolean): string {
+function lineOf(activity: RoomActivity, card: StudentCard, mate: { name: string; asleep: boolean; in: boolean } | null, night: boolean, own: string): string {
   switch (activity) {
     case 'sick':
       return 'In bed with the flu';
@@ -439,9 +439,9 @@ function lineOf(activity: RoomActivity, card: StudentCard, mate: { name: string;
     case 'call':
       return card.relationship.id.startsWith('distance') ? 'On a call with someone far away' : 'On a call home';
     case 'game':
-      return mate ? `A game with ${mate.name}, their roommate` : 'Playing a game';
+      return mate ? `A game with ${mate.name}, ${own} roommate` : 'Playing a game';
     case 'workout':
-      return 'Working out in their room';
+      return `Working out in ${own} room`;
     case 'relax':
       return night ? 'Winding down for the night' : 'Taking it easy';
   }
@@ -580,7 +580,8 @@ export function roomFor(state: GameState, ref: StudentRef, hour: number, figures
   return {
     layout,
     activity,
-    line: lineOf(activity, card, mateName ? { name: mateName, asleep: mateAsleep && mateIn, in: mateIn } : null, night),
+    // Her, his or their, by the student's gender (DESIGN.md 69.3).
+    line: lineOf(activity, card, mateName ? { name: mateName, asleep: mateAsleep && mateIn, in: mateIn } : null, night, ['her', 'his', 'their'][genderOf(state.seed, ref)] ?? 'their'),
     lights,
     pieces,
     beds,

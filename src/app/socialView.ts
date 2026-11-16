@@ -4,7 +4,7 @@ import { BULLYING_LINES, BULLYING_ROLES } from '../sim/config/bullying';
 import type { GameState } from '../sim';
 import { calendarAt } from '../sim/calendar';
 import { EVENT, FEEL, FRIEND_AT, HEAVY_EVENTS, KIND, SLOTS, ROOM_FRICTION_BELOW } from '../sim/config/web';
-import { classYearOf, firstNameOf, movedAway, semesterOf, studentName, type StudentRef } from '../sim/systems/students';
+import { classYearOf, firstNameOf, movedAway, semesterOf, shownGender, studentName, type StudentRef } from '../sim/systems/students';
 import { homesickOf, lonelyOf } from '../sim/systems/wellbeing';
 import { HAPPENING_FIELDS, type Web } from '../sim/systems/web';
 
@@ -131,12 +131,29 @@ export type Role = 'partner' | 'best' | 'roommate' | 'friend' | 'ex' | 'rival';
 export interface Person {
   ref: StudentRef;
   role: Role;
-  /** Under their face: "Dating", "Best friend", "Roommate", "Friend", "Ex", "Rival". */
+  /** Under their face: "Dating", "Girlfriend", "Best friend", "Roommate", "Friend", "Ex", "Rival". */
   label: string;
   strength: number;
+  /** For a partner, how far along they are. */
+  stage?: 'dating' | 'exclusive' | 'long-term';
 }
 
 const PARTNER_LABEL: Record<number, string> = { [KIND.dating]: 'Dating', [KIND.exclusive]: 'Exclusive', [KIND.longterm]: 'Long-term' };
+
+/**
+ * What a student's partner is to them, by the partner's gender (DESIGN.md 69.3): "Girlfriend", "Boyfriend", or
+ * "Partner" for a nonbinary student. Only once they are together: before that it is "Dating".
+ */
+export function partnerWord(state: GameState, partner: StudentRef): string {
+  const g = shownGender(state, partner);
+  return g === 'f' ? 'Girlfriend' : g === 'm' ? 'Boyfriend' : 'Partner';
+}
+
+/** "Her", "His" or "Their", by the student's gender. */
+export function possessive(state: GameState, ref: StudentRef): string {
+  const g = shownGender(state, ref);
+  return g === 'f' ? 'Her' : g === 'm' ? 'His' : 'Their';
+}
 
 /**
  * A student's people for their card, in the order a friend would tell them: a partner, a best friend, a roommate,
@@ -156,7 +173,10 @@ export function peopleOf(view: WebView, state: GameState, ref: StudentRef, max =
     const kind = view.kind[s]!;
     const strength = view.strength[s]!;
     const add = (role: Role, label: string): void => void by[role].push({ ref: other, role, label, strength });
-    if (PARTNER_LABEL[kind]) add('partner', PARTNER_LABEL[kind]!);
+    if (PARTNER_LABEL[kind]) {
+      const stage = kind === KIND.dating ? 'dating' : kind === KIND.exclusive ? 'exclusive' : 'long-term';
+      by.partner.push({ ref: other, role: 'partner', label: stage === 'dating' ? 'Dating' : partnerWord(state, other), strength, stage });
+    }
     else if (kind === KIND.best) add('best', 'Best friend');
     else if (kind === KIND.roommate) add('roommate', 'Roommate');
     else if ((kind === KIND.friend || kind === KIND.crush) && strength >= FRIEND_AT - 5) add('friend', 'Friend');
@@ -225,7 +245,8 @@ export function networkFor(view: WebView, state: GameState, ref: StudentRef): Ne
       out.push({ ref: other, ring, label, feeling, line: 'tie', strength });
       seen.add(b);
     };
-    if (PARTNER_LABEL[kind]) put(0, kind === KIND.dating ? 'dating' : kind === KIND.exclusive ? 'exclusive' : 'long-term');
+    // Short under a face on the ring: "boyfriend", however long; the card's line says "long-time" (DESIGN.md 69.3).
+    if (PARTNER_LABEL[kind]) put(0, kind === KIND.dating ? 'dating' : partnerWord(state, other).toLowerCase());
     else if (kind === KIND.best) put(0, 'best friend');
     else if (kind === KIND.roommate) put(1, 'roommate');
     else if (kind === KIND.friend) put(1, back === KIND.crush ? 'friend, has a crush on them' : 'friend');
@@ -272,7 +293,9 @@ export function partnerLine(view: WebView, state: GameState, ref: StudentRef): {
   let feeling = 0;
   for (let k = 0; k < SLOTS; k++) if (view.other[id * SLOTS + k] === idIn(view, partner.ref)) feeling = view.feeling[id * SLOTS + k]!;
   const first = firstNameOf(state, partner.ref);
-  const text = partner.label === 'Dating' ? `Dating ${first}` : partner.label === 'Exclusive' ? `Together with ${first}` : `Together a long while with ${first}`;
+  // "Her boyfriend, Jacob": the word follows the partner's gender and the pronoun the student's (DESIGN.md 69.3).
+  const word = partnerWord(state, partner.ref).toLowerCase();
+  const text = partner.stage === 'dating' ? `Dating ${first}` : partner.stage === 'exclusive' ? `${possessive(state, ref)} ${word}, ${first}` : `${possessive(state, ref)} long-time ${word}, ${first}`;
   return { text, note: feeling === FEEL.complicated ? "It's complicated" : 'Happy together', ref: partner.ref };
 }
 

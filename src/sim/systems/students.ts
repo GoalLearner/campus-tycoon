@@ -59,6 +59,8 @@ import {
 import { hashInts } from '../rng';
 import { MEN_NAMES, NEUTRAL_EXTRA, WOMEN_NAMES } from '../config/names';
 import { genderOf } from './identity';
+import { figureFor, lookTags, type LookPack } from './looks';
+import type { LookGender } from '../config/looks';
 import { enrollment, openCapacity } from '../selectors';
 import type { GameState, Zone } from '../types';
 import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
@@ -103,7 +105,7 @@ export function studentKey(ref: StudentRef): string {
 }
 
 // One salt per trait, so traits do not move together.
-const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26, greek: 27, chapter: 28 } as const;
+const SALT = { first: 1, start: 2, end: 3, major: 4, nature: 5, phase: 6, quirk: 7, club: 8, noClub: 9, bed: 10, lives: 11, room: 12, grade: 13, mood: 14, look: 15, line: 16, room2: 17, tie: 18, kind: 19, stays: 20, moves: 21, side: 22, wait: 23, favourite: 24, sport: 25, finals: 26, greek: 27, chapter: 28, lookKeep: 29, lookPick: 30 } as const;
 
 /** A number in [0, 1) that is always the same for this student and this trait. */
 function roll(seed: number, ref: StudentRef, salt: number, semester?: number): number {
@@ -253,13 +255,35 @@ export function studentLook(state: GameState, ref: StudentRef): number {
   return hashInts(state.seed, ref.entryYear, ref.index, SALT.look);
 }
 
+/** How a student is drawn: as a woman, a man, or, for a nonbinary student, from any everyday look. */
+export function shownGender(state: GameState, ref: StudentRef): LookGender {
+  const g = genderOf(state.seed, ref);
+  return g === 0 ? 'f' : g === 1 ? 'm' : 'x';
+}
+
 /**
- * The figure a student is drawn as, among `crowd` looks. When the pack has
- * athlete figures they are the looks from `athletes` up, and they are worn by
- * the Varsity Athletes and by nobody else.
+ * The figure a student is drawn as (DESIGN.md 69.3). When the pack has athlete figures they are the crowd's looks
+ * from `roles.athlete` up, and they are worn by the Varsity Athletes and by nobody else. Everyone else wears a look
+ * that fits their gender, at the odds of `lookOdds`; a student whose old figure fits keeps it. A pack with no look
+ * table keeps the old rule.
  */
-export function studentFigure(state: GameState, ref: StudentRef, crowd: number, athletes: number | undefined): number {
+export function studentFigure(state: GameState, ref: StudentRef, pack: LookPack): number {
   const hash = studentLook(state, ref);
+  const crowd = Math.max(1, Math.min(pack.looks, pack.crowd ?? pack.looks));
+  const athletes = pack.roles?.athlete;
+  const split = athletes !== undefined && athletes > 0 && athletes < crowd;
+  if (split && isVarsity(state, ref)) return athletes + (hash % (crowd - athletes));
+  const old = split ? athletes : crowd;
+  const tags = lookTags(pack);
+  if (!tags) return hash % old;
+  return figureFor(tags, old, shownGender(state, ref), hash, roll(state.seed, ref, SALT.lookKeep), roll(state.seed, ref, SALT.lookPick));
+}
+
+/** The figure a student wore before figures followed gender (save version 33 and before), for the upgrade's count. */
+export function oldFigure(state: GameState, ref: StudentRef, pack: LookPack): number {
+  const hash = studentLook(state, ref);
+  const crowd = Math.max(1, Math.min(pack.looks, pack.crowd ?? pack.looks));
+  const athletes = pack.roles?.athlete;
   if (athletes === undefined || athletes <= 0 || athletes >= crowd) return hash % crowd;
   return isVarsity(state, ref) ? athletes + (hash % (crowd - athletes)) : hash % athletes;
 }

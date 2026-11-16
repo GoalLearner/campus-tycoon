@@ -2,7 +2,7 @@ import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
-import { peopleOf, relationshipWords, type Person } from '../app/socialView';
+import { partnerWord, peopleOf, possessive, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
 import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
 import { firstNamesOf, happenedTo, idIn, mainPeopleOf, refIn } from '../app/socialView';
@@ -443,10 +443,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
 
     const people = atlas?.people;
     if (atlas && people) {
-      const looks = Math.min(people.looks, people.crowd ?? people.looks);
       // As they are drawn on the map now: a player on a court is in the kit. Otherwise they wear the face of what
       // they feel (DESIGN.md 63.7), where the art has it.
-      const look = session.studentLook ?? studentFigure(state, ref, looks, people.roles?.athlete);
+      const look = session.studentLook ?? studentFigure(state, ref, people);
       const plain = `person.${look}.${people.flip?.sw ?? 'sw'}.0`;
       const faced = session.studentLook === null && feeling.face ? `person.${look}.mood.${feeling.face}` : null;
       const sprite = faced && atlas.frames[faced] ? faced : plain;
@@ -599,11 +598,13 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const web = socialWeb.view!;
     // Told apart from the student themself too: "studies with Phoenix W." on Phoenix's card.
     const name = (id: number): string => (id >= 0 ? firstNamesOf(state, [card.ref, refIn(web, id)])[1]! : '');
+    // Her, his or their, and girlfriend, boyfriend or partner, by gender (DESIGN.md 69.3).
+    const own = possessive(state, card.ref).toLowerCase();
     const words: Record<string, (who: number) => string> = {
       close: () => 'close friends',
-      partner: (who) => `${name(who)}, their partner`,
+      partner: (who) => `${name(who)}, ${own} ${partnerWord(state, refIn(web, who)).toLowerCase()}`,
       strained: (who) => `things with ${name(who)}`,
-      split: (who) => `${name(who)}, their ex`,
+      split: (who) => `${name(who)}, ${own} ex`,
       splitMessy: (who) => `a bad split with ${name(who)}`,
       rival: (who) => `${name(who)}, a rival`,
       alone: () => 'nobody close yet',
@@ -642,7 +643,6 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const list: Person[] = view ? peopleOf(view, state, ref) : [];
     peopleRow.line.hidden = !view;
     const pack = atlas?.people;
-    const looks = pack ? Math.min(pack.looks, pack.crowd ?? pack.looks) : 1;
     const key = `${studentKey(ref)}|${list.map((one) => `${studentKey(one.ref)}${one.role}`).join(',')}${atlas ? '' : '-'}`;
     if (key === facesKey) return;
     facesKey = key;
@@ -658,7 +658,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       const picture = el('canvas', 'student-friend-art');
       picture.width = 96;
       picture.height = 112;
-      if (atlas && pack) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, looks, pack.roles?.athlete)}.${pack.flip?.sw ?? 'sw'}.0`);
+      if (atlas && pack) drawSprite(picture, atlas, `person.${studentFigure(state, one.ref, pack)}.${pack.flip?.sw ?? 'sw'}.0`);
       button.append(picture, el('span', 'student-friend-name', first), el('span', 'student-friend-role', one.label));
       button.addEventListener('click', () => session.openStudent(one.ref));
       faces.append(button);

@@ -358,7 +358,7 @@ describe('saves', () => {
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(9);
+      expect(notes).toHaveLength(10);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });
