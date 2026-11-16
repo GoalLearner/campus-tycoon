@@ -4,6 +4,8 @@ import { dayRead } from '../sim/systems/season';
 import { semesterOf } from '../sim/systems/students';
 import { INTEREST } from '../sim/systems/identity';
 import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socialView';
+import { CLASS_LENGTH } from './campusDay';
+import { clockText } from './clockText';
 
 /**
  * A regular's day (DESIGN.md 63.9): what they do from waking to sleep on the player's own real day, and with whom,
@@ -62,13 +64,9 @@ function withWords(state: GameState, people: Person[]): string {
   return people.length > 0 ? ` with ${names(first(state, people))}` : '';
 }
 
-/** "9 AM", "12:30 PM", "1 AM": a time of the player's day as the card says it. */
+/** "9 AM", "12:30 PM", "1 AM": a time of the player's day as the card says it, on the device's own clock (75.1). */
 export function clockWords(hour: number): string {
-  const h = ((hour % 24) + 24) % 24;
-  const whole = Math.floor(h + 1e-6);
-  const minutes = Math.round((h - whole) * 60);
-  const twelve = whole % 12 === 0 ? 12 : whole % 12;
-  return `${twelve}${minutes > 0 ? `:${String(minutes).padStart(2, '0')}` : ''} ${whole < 12 ? 'AM' : 'PM'}`;
+  return clockText(hour, true);
 }
 
 const likes = (view: WebView | null, ref: StudentRef, interest: number): boolean => {
@@ -85,6 +83,10 @@ const likes = (view: WebView | null, ref: StudentRef, interest: number): boolean
  */
 export const DETAILS = { package: 0.08, lockedOut: 0.015, alarm: 0.06, foodRun: 0.1, foodRunWeekend: 0.3, eightAm: 0.4, gym: 0.15, gymJanuary: 0.35 } as const;
 export const MEAL_SWIPES = 14;
+/** [T] The walk from one class to the next, inside the class change (75.2), and when the evening's clubs and parties start. */
+const PASSING_WALK = 10 / 60;
+export const CLUBS_FROM = 19;
+export const PARTY_FROM = 21;
 /** A gym phase lasts this many of the player's days (about three and a half months of the game's), then comes or goes. */
 export const GYM_PHASE_DAYS = 2;
 
@@ -189,46 +191,57 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   }
 
   if (!weekend) {
-    // Classes in the morning, lunch with friends, a class after for the first two years.
+    // Classes as the campus keeps them (DESIGN.md 75.2): a lecture on the hour, a seminar on the half hour, each 50
+    // minutes, so a followed student walks in the class changes with everyone else. Lunch in the noon rush.
+    const onHour = (at: number): number => Math.ceil(at - 1e-6);
+    const onHalf = (at: number): number => Math.ceil(at * 2 - 1e-6) / 2;
     if (slept) {
-      const late = Math.max(10.5, t);
-      put(late, late + 1.25, 'class', `A ${card.subject} seminar, the morning lecture missed`);
-      t = Math.max(late + 1.5, 12);
+      const late = Math.max(10.5, onHalf(t));
+      put(late, late + CLASS_LENGTH, 'class', `A ${card.subject} seminar, the morning lecture missed`);
+      t = late + CLASS_LENGTH;
     } else {
-      const classFrom = eight ? 8 : Math.max(9, t);
+      const classFrom = eight ? 8 : Math.max(9, onHour(t));
       if (classFrom > t) put(t, classFrom, 'food', eight ? 'Coffee before an 8 AM class' : 'Coffee before class');
-      put(classFrom, classFrom + 1.25, 'class', eight ? `An 8 AM ${card.subject} lecture` : `${card.subject} lecture`);
-      t = classFrom + 1.5;
-      if (t < 12) {
-        put(t, Math.min(12, t + 1.25), 'class', `A ${card.subject} seminar`);
-        t = Math.max(t + 1.25, 12);
+      put(classFrom, classFrom + CLASS_LENGTH, 'class', eight ? `An 8 AM ${card.subject} lecture` : `${card.subject} lecture`);
+      t = classFrom + CLASS_LENGTH;
+      // A seminar on the half hour after, when it is out before lunch.
+      const seminar = classFrom + 1.5;
+      if (seminar + CLASS_LENGTH <= 12) {
+        put(t + PASSING_WALK, seminar, 'seat', 'Between classes');
+        put(seminar, seminar + CLASS_LENGTH, 'class', `A ${card.subject} seminar`);
+        t = seminar + CLASS_LENGTH;
       }
     }
+    const noon = Math.max(12, t);
+    if (noon - t >= 0.5) put(t + PASSING_WALK, noon, 'seat', 'Between classes');
+    t = noon;
     const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
-    put(t, t + 1, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
-    t += 1;
+    put(t, t + CLASS_LENGTH, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
+    t += CLASS_LENGTH;
     if (roll(30) < DETAILS.package) {
       put(t, t + 0.5, 'food', 'Picking up a package at the mailroom');
       t += 0.5;
     }
     if (card.classYear < 2) {
-      put(t + 0.5, t + 2, 'class', `A ${card.subject} class`);
-      t += 2;
+      const after = onHour(t + PASSING_WALK);
+      put(after, after + CLASS_LENGTH, 'class', `A ${card.subject} class`);
+      t = after + CLASS_LENGTH;
     }
   } else {
+    // A weekend starts late: brunch from 10:30 at the earliest (75.2).
     const brunch = pick(friends, 2, 3);
+    t = Math.max(t, 10.5);
     put(t, t + 1.25, 'food', meal(`Brunch${withWords(state, brunch)}`, false), brunch);
     t += 1.5;
   }
 
-  // The afternoon: a weekend shift, their club on its days, the gym, studying, or friends on a lawn.
+  // The afternoon: a weekend shift, the gym, studying, or friends on a lawn. Clubs meet in the evening (75.2).
   const clubDay = card.club !== null && hashInts(state.seed, 9510, ref.entryYear, ref.index, weekday) % 7 < 2;
   if (weekend && shiftToday) put(t, t + shiftHours, shiftWhere, shiftWords);
   else if (exams || (studious && roll(4) < 0.6)) {
     const mates = exams ? pick(friends, 1, 5) : [];
     put(t, t + 2.5, 'seat', exams ? `Studying for ${read.name ?? 'exams'}${withWords(state, mates)}` : 'Studying', mates);
-  } else if (clubDay) put(t, t + 1.5, 'seat', `${card.club} meets`);
-  else if (gymPhase && roll(6) < 0.8) put(t, t + 1.5, 'play', 'A workout, in a gym phase');
+  } else if (gymPhase && roll(6) < 0.8) put(t, t + 1.5, 'play', 'A workout, in a gym phase');
   else if (fit && roll(6) < 0.7) put(t, t + 1.5, 'play', 'A workout');
   else {
     const out = pick(friends, 2, 7);
@@ -245,12 +258,19 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     t += 1.25;
   }
 
-  // The evening: a weekday shift, a party on its nights, a date, studying, a game night with their roommate, or in.
+  // The evening: a weekday shift, a party on its nights from 9 PM, their club at 7 on its days, a date, studying, a game
+  // night with their roommate, or in.
   const partyNight = card.party !== null && (weekday === 4 || weekday === 5 || weekday === 6);
   if (!weekend && shiftToday) put(t, t + shiftHours, shiftWhere, shiftWords);
   else if (partyNight && !exams) {
-    put(t, t + 1.5, 'home', 'Getting ready to go out');
-    put(t + 1.5, sleep - 0.5, 'away', 'At a party', pick(friends, 2, 10));
+    const out = Math.max(PARTY_FROM, t + 1);
+    if (out - 1 - t >= 0.25) put(t, out - 1, 'home', 'In their room');
+    put(Math.max(t, out - 1), out, 'home', 'Getting ready to go out');
+    put(out, sleep - 0.5, 'away', 'At a party', pick(friends, 2, 10));
+  } else if (clubDay && !exams) {
+    const meets = Math.max(CLUBS_FROM, t);
+    if (meets - t >= 0.25) put(t, meets, 'home', 'In their room');
+    put(meets, meets + 1.5, 'seat', `${card.club} meets`);
   } else if (partner.length > 0 && roll(11) < 0.35 && !exams) put(t, t + 2.5, 'food', `A date${withWords(state, partner)}`, partner);
   else if (studious || roll(12) < 0.3) put(t, t + 2.5, 'seat', 'Studying');
   else if (gamer && roommate.length > 0) put(t, t + 2.5, 'home', `Gaming${withWords(state, roommate)}`, roommate);

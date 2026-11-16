@@ -18,6 +18,7 @@ import { dateAt } from '../sim/calendar';
 import { INTEREST } from '../sim/systems/identity';
 import { BULLYING_PASSING } from '../sim/config/bullying';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
+import { headingsAt, ORDINARY_DAY, passingAt, pathsAt, type DayFacts } from '../app/campusDay';
 import type { DayPeriod } from '../app/daylight';
 import { avenueCrossing, avenueCrossingBack, KERB_MIDDLE, KERB_NEAR, onRoadway, planTraffic, type TrafficPlan } from '../app/traffic';
 import {
@@ -237,6 +238,16 @@ const MAX_ROUTE_CELLS = 36;
 const MAX_COMMUTE_CELLS = 90;
 const FADE_MS = 260;
 const SPAWN_EVERY_MS = 120;
+/** [T] A class change on (DESIGN.md 75.2): this full or more, and most new walkers come out of lecture halls and dorms, a little quicker. */
+const PASSING_FROM = 0.15;
+const CHANGE_FROM_DOORS = 0.8;
+const CHANGE_HURRY = 1.15;
+/** [T] More in view than the hour wants by this much, and those with furthest to go head in (75.2); this many spots of their way left at least. */
+const OVER_HOUR = 1.25;
+const THIN_FROM_LEGS = 6;
+/** [T] How many a second head in: the extra over this many seconds, at least one and at most six a second. */
+const THIN_PER_SECOND = [1, 6] as const;
+const THIN_OVER_SECONDS = 8;
 const OFFSCREEN_LIMIT_MS = 3500;
 /**
  * Nobody appears or disappears in view (DESIGN.md 69.2, the owner's "they gotta come out of a house/building"): how far
@@ -597,6 +608,9 @@ export class Walkers {
   /** The part of the player's own day. It sets how many are out and where they go. */
   private period: DayPeriod = 'afternoon';
   private weekend = false;
+  /** The hour shown and the kind of day (DESIGN.md 75): the class changes, the meal rushes, where people head. */
+  private hour = 15;
+  private day: DayFacts = ORDINARY_DAY;
   /** The school's colour while a home game is on, laid over the fans walking to it. null on any other day. */
   private fanTint: number | null = null;
   /** The feelings that show (DESIGN.md 64.3): each student's for the hour, the rings put away, today's news, the sky. */
@@ -632,6 +646,9 @@ export class Walkers {
   private wind = 0;
   /** Everyone on screen at the last frame, for the sound of the crowd. */
   private seenAll = 0;
+  private crowdSeen = { students: 0, wanted: 0 };
+  /** Walkers owed a turn indoors when there are too many for the hour (75.2): a fraction carried between top-ups. */
+  private thinBudget = 0;
   /** Asked before stepping onto a crossing: is a car on it, or driving onto it? */
   private carOn: (cell: number) => boolean = () => false;
 
@@ -646,6 +663,17 @@ export class Walkers {
   /** Told by the map when the hour moves into another part of the day. */
   setPeriod(period: DayPeriod): void {
     this.period = period;
+  }
+
+  /** Told by the map: the hour shown, the player's own or the "View at" slider's, and the kind of day (DESIGN.md 75). */
+  setHour(hour: number, day: DayFacts): void {
+    this.hour = hour;
+    this.day = day;
+  }
+
+  /** How full of a class change the paths are now, from 0 to 1 (75.2). */
+  private passing(): number {
+    return passingAt(this.hour, this.day);
   }
 
   /** Told by the map: a Saturday or Sunday in the game's calendar is quieter. */
@@ -695,6 +723,11 @@ export class Walkers {
   /** Everyone on screen now: students, staff, visitors and neighbours. */
   get onScreen(): number {
     return this.seenAll;
+  }
+
+  /** Students in view and how many the hour wants there, at the last top-up. For the dev console and probes. */
+  get crowdNow(): { students: number; wanted: number } {
+    return this.crowdSeen;
   }
 
   /** Is this spot on the road itself, at a crossing or a junction? */
@@ -1142,9 +1175,8 @@ export class Walkers {
   }
 
   /**
-   * Somewhere to go next. Mornings are for class. Afternoons and evenings fill
-   * the courts, the gym and the dining halls. At night people go home. A
-   * student only ever goes home to their own dorm.
+   * Somewhere to go next, by the hour (DESIGN.md 75): class in a class change, food at the meal rushes, the courts in
+   * the afternoon, home at night. A student only ever goes home to their own dorm.
    */
   private destinationFrom(origin: Stop, student: StudentRef | null): Stop | undefined {
     // The student whose card is open, or who is followed, goes where their day says (DESIGN.md 63.9).
@@ -1160,8 +1192,9 @@ export class Walkers {
     const places = others.filter((stop) => stop.kind === 'place');
     const play = places.filter((stop) => stop.use === 'play');
     const food = places.filter((stop) => stop.use === 'food');
-    // Benches and tables are empty at night. A library or a store counts as somewhere to be.
-    const sit = [...places.filter((stop) => (stop.use === 'seat' && this.period !== 'night') || stop.use === 'other'), ...quads];
+    // Benches and tables are empty at night. A library or a store counts as somewhere to be; a chapter house is Greek Row.
+    const sit = places.filter((stop) => (stop.use === 'seat' && this.period !== 'night') || (stop.use === 'other' && stop.family !== 'chapter'));
+    const chapters = places.filter((stop) => stop.family === 'chapter');
     let homes: Stop[];
     if (student) {
       const home = this.stopAt.get(this.homes.get(studentKey(student)) ?? -1);
@@ -1170,26 +1203,18 @@ export class Walkers {
       homes = others.filter((stop) => stop.zone === 'housing');
     }
     const from = origin.zone === 'housing' ? 'home' : origin.zone === 'academic' ? 'class' : 'out';
-    let choice: readonly Stop[];
-    if (this.period === 'morning') {
-      // The rush: nearly everyone is on the way to class.
-      if (from === 'home') choice = pickWeighted([[classes, 85], [food, 10], [sit, 5]]);
-      else if (from === 'class') choice = pickWeighted([[classes, 60], [homes, 15], [food, 15], [sit, 10]]);
-      else choice = pickWeighted([[classes, 80], [homes, 20]]);
-    } else if (this.period === 'afternoon') {
-      // Classes still, and the courts and fields fill up.
-      if (from === 'home') choice = pickWeighted([[classes, 45], [play, 25], [food, 15], [sit, 15]]);
-      else if (from === 'class') choice = pickWeighted([[homes, 30], [classes, 25], [play, 22], [food, 13], [sit, 10]]);
-      else choice = pickWeighted([[classes, 35], [homes, 35], [play, 20], [sit, 10]]);
-    } else if (this.period === 'evening') {
-      // Dinner, the gym, a game. Few are going to class.
-      if (from === 'home') choice = pickWeighted([[play, 40], [food, 30], [sit, 20], [classes, 10]]);
-      else if (from === 'class') choice = pickWeighted([[homes, 45], [play, 30], [food, 25]]);
-      else choice = pickWeighted([[homes, 55], [play, 25], [food, 20]]);
-    } else if (from === 'home') {
-      // Night: a few head to a night class, the library or a late bite. Everyone else is going home.
-      choice = pickWeighted([[classes, 40], [food, 40], [sit, 20]]);
-    } else choice = pickWeighted([[homes, 85], [food, 15]]);
+    // Where the hour sends people (DESIGN.md 75.2): to class in a class change, to food at the meal rushes, to the
+    // courts and lawns in the afternoon, the gym, clubs and Greek Row in the evening, home at night.
+    const heading = headingsAt(this.hour, this.day, from);
+    let choice: readonly Stop[] = pickWeighted([
+      [classes, heading.class],
+      [food, heading.food],
+      [play, heading.play],
+      [sit, heading.seat],
+      [quads, heading.quad],
+      [homes, heading.home],
+      [chapters, heading.greek],
+    ]);
     if (choice.length === 0) choice = classes.length > 0 ? classes : quads.length > 0 ? quads : homes;
     return pick(choice);
   }
@@ -1294,7 +1319,7 @@ export class Walkers {
       leg,
       x: begin.x,
       y: begin.y,
-      pace: extra.pace ?? PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period]) * (0.8 + Math.random() * 0.45),
+      pace: extra.pace ?? PACE * (kind === 'neighbour' ? 0.9 : HURRY[this.period] * (this.passing() > PASSING_FROM ? CHANGE_HURRY : 1)) * (0.8 + Math.random() * 0.45),
       direction: 'se',
       shownDir: 'se',
       shownDirAt: -Infinity,
@@ -2699,21 +2724,35 @@ export class Walkers {
     if (this.spawnClock >= SPAWN_EVERY_MS) {
       this.spawnClock = 0;
       const wanted = this.wantedInView(view);
+      this.crowdSeen = { students: seen, wanted };
       if (seen < wanted) {
         const here = this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0));
         // A big gap is closed several walkers at a time, so a busy campus does not take a minute to fill.
         const batch = Math.max(1, Math.min(6, Math.ceil((wanted - seen) / 10)));
+        // In a class change people pour out of the lecture halls and the dorms (DESIGN.md 75.2), out of their doors.
+        const changing = this.passing() > PASSING_FROM;
+        const doors = changing ? here.filter((stop) => stop.kind === 'building' && (stop.zone === 'academic' || stop.zone === 'housing')) : [];
         for (let n = 0; n < batch; n++) {
-          const from = pick(here);
+          const from = doors.length > 0 && Math.random() < CHANGE_FROM_DOORS ? pick(doors) : pick(here);
           // Once there are students, every walker is one of them. Before that, staff.
           const student = from ? this.studentFor(from) : null;
           const to = from && (student || this.everyone.length === 0) ? this.destinationFrom(from, student) : undefined;
           // An emptier view is filled with people already on their way.
           // Now and then, someone a walker on screen knows, coming the other way (DESIGN.md 63.8).
           if (this.social && student && Math.random() < MEET_UP && this.meetUp(view)) continue;
-          if (from && to && this.start(from, to, seen < wanted * 0.6, student, 'student', carried(from, to, this.period)) && student && this.social) this.bringCompanions(this.walkers[this.walkers.length - 1]!);
+          if (from && to && this.start(from, to, !changing && seen < wanted * 0.6, student, 'student', carried(from, to, this.period)) && student && this.social) this.bringCompanions(this.walkers[this.walkers.length - 1]!);
         }
       }
+      // Too many for the hour now: a class has started, or the View at slider moved on to a quieter hour. Those with
+      // the furthest still to go head in at the nearest door, or walk off the screen, so the paths empty through doors
+      // (DESIGN.md 75.2) and nobody vanishes.
+      // A few a second, so the paths empty over ten seconds or so, as a class starts.
+      else if (seen > wanted * OVER_HOUR + 4) {
+        this.thinBudget += (SPAWN_EVERY_MS / 1000) * Math.max(THIN_PER_SECOND[0], Math.min(THIN_PER_SECOND[1], (seen - wanted) / THIN_OVER_SECONDS));
+        const count = Math.floor(this.thinBudget);
+        this.thinBudget -= count;
+        if (count > 0) this.thinOut(view, count);
+      } else this.thinBudget = 0;
       // And among them, the people who work here or are visiting.
       this.topUpOthers(this.stops.filter((stop) => this.inView(view, stop.cell.x + 0.5, stop.cell.y + 0.5, 0)), seen, neighboursSeen);
       // Ground just come into sight stays fresh while the view moves and fills (69.2); once it has been still a moment,
@@ -2755,6 +2794,27 @@ export class Walkers {
   }
 
   // ------------------------------------------------------ the social crowd --
+
+  /**
+   * Sends `count` students on their way in (75.2): those in view with the furthest to go, not followed, not mid-talk
+   * and not riding. Friends walking together go in together, at the nearest door to each.
+   */
+  private thinOut(view: Phaser.Geom.Rectangle, count: number): void {
+    const far: Walker[] = [];
+    for (const walker of this.walkers) {
+      if (walker.kind !== 'student' || walker.exiting || walker.fading !== null || walker.wheel) continue;
+      if (walker.lingerMs > 0 || walker.watchMs > 0 || walker.talkMs > 0) continue;
+      if (walker.student && studentKey(walker.student) === this.marked) continue;
+      if (walker.party !== 0 && walker.party === this.markedParty) continue;
+      if (walker.route.length - walker.leg < THIN_FROM_LEGS || !this.inView(view, walker.x, walker.y, 0)) continue;
+      far.push(walker);
+    }
+    far.sort((a, b) => b.route.length - b.leg - (a.route.length - a.leg));
+    for (const walker of far.slice(0, count)) {
+      if (walker.party === 0) this.leave(walker);
+      else for (const one of this.walkers) if (one.party === walker.party && !one.exiting && one.fading !== 'out') this.leave(one);
+    }
+  }
 
   /** Where a student's day sends them next, from their schedule at the player's hour; undefined to choose as usual. */
   private plannedFrom(origin: Stop, student: StudentRef): Stop | undefined {
@@ -3200,7 +3260,7 @@ export class Walkers {
       const x = i % this.width;
       if (this.inView(view, x + 0.5, (i - x) / this.width + 0.5, 0)) visible += 1;
     }
-    const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, period: this.period, weekend: this.weekend, step: this.step });
+    const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, level: pathsAt(this.hour, this.day), step: this.step });
     // Fewer on a break, half as many again on a home game day, and never an empty campus.
     return Math.max(Math.min(wanted, 3), Math.round(wanted * this.presence * (1 - this.resting) * (this.fanTint !== null ? GAME_DAY_CROWD : 1)));
   }

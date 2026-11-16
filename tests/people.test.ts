@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CROWD_STEPS, MAX_BOOSTERS, MAX_TOURS, OTHERS_SHARE, othersWanted, TOUR_SIZE, walkersWanted, type OthersFacts } from '../src/app/crowd';
+import { ORDINARY_DAY, pathsAt } from '../src/app/campusDay';
+/** An hour in each part of the day, for the crowd rule (DESIGN.md 75). */
+const PERIOD_HOUR = { morning: 7.9, afternoon: 15, evening: 19, night: 3 } as const;
 import type { DayPeriod } from '../src/app/daylight';
 import {
   acceptanceRate,
@@ -421,7 +424,7 @@ describe('students stay most of the crowd', () => {
           for (let step = 0; step < CROWD_STEPS.length; step++) {
             for (const visible of [3, 10, 40, 200, 900]) {
               // The students on screen are whatever the crowd rule asks for at that setting.
-              const crowd = walkersWanted({ students, pathCells: 900, visiblePathCells: visible, period, weekend, step });
+              const crowd = walkersWanted({ students, pathCells: 900, visiblePathCells: visible, level: pathsAt(PERIOD_HOUR[period], { ...ORDINARY_DAY, weekend, classes: !weekend }), step });
               const others = othersWanted(facts({ studentsInView: crowd, students, faculty: Math.round(students / 20), staff: Math.round(students / 40), period, weekend }));
               expect(others.people).toBe(others.professors + others.staff + others.tours * TOUR_SIZE + others.boosters);
               expect(others.people / Math.max(1, others.people + crowd), `${period} ${students} step ${step} view ${visible}`).toBeLessThanOrEqual(OTHERS_SHARE + 1e-9);

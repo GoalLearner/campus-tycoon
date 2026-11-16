@@ -60,44 +60,55 @@ export function daylightAt(hour: number): Daylight {
   return { period: periodAt(h), colour: (mix(1) << 16) | (mix(2) << 8) | mix(3), strength: a[4] + (b[4] - a[4]) * t, lamps };
 }
 
-// ---------------------------------------------------------------- setting --
+// ------------------------------------------------------ the hour shown --
 
-const KEY = 'campus-tycoon.alwaysDaylight';
-let always: boolean | null = null;
+/**
+ * The "View at" slider (DESIGN.md 75.4): while the Today strip shows another hour, the light and the crowd show that
+ * hour. It is never saved, and closing the strip puts the player's own clock back. It replaced the Menu's "Daylight at
+ * any hour" (28.4), whose old stored choice is forgotten here.
+ */
+let viewing: number | null = null;
 /** Dev builds and screenshots: an hour to show instead of the clock's. */
 let forcedHour: number | null = null;
 
-/** True when the player has asked to see the campus in daylight whatever the hour. */
-export function alwaysDaylight(): boolean {
-  if (always === null) {
-    try {
-      always = localStorage.getItem(KEY) === 'yes';
-    } catch {
-      always = false;
-    }
-  }
-  return always;
+try {
+  localStorage.removeItem('campus-tycoon.alwaysDaylight');
+} catch {
+  // Storage is blocked: there is nothing stored to forget.
 }
 
-export function setAlwaysDaylight(on: boolean): void {
-  always = on;
-  try {
-    if (on) localStorage.setItem(KEY, 'yes');
-    else localStorage.removeItem(KEY);
-  } catch {
-    // Private browsing: the choice lasts until the page closes.
-  }
+/** Show the campus at an hour of the day, from 0 up to 24, or null for the player's own clock again. */
+export function viewAt(hour: number | null): void {
+  viewing = hour === null ? null : ((hour % 24) + 24) % 24;
+}
+
+/** The hour the slider shows, or null when the campus shows the player's own clock. */
+export function viewedHour(): number | null {
+  return viewing;
 }
 
 export function forceHour(hour: number | null): void {
   forcedHour = hour;
 }
 
-/** The hour to show now. Noon when the player has asked for daylight at any hour. */
+/** Dev builds and screenshots: the player's own clock set to an hour, under the View at slider (75.4). */
+let clockAt: number | null = null;
+
+export function forceClock(hour: number | null): void {
+  clockAt = hour;
+}
+
+/** The hour on the player's own clock, from 0 up to 24. */
+export function clockHour(now: Date = new Date()): number {
+  if (clockAt !== null) return clockAt;
+  return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+}
+
+/** The hour to show now: the slider's while the Today strip shows one, or the player's own. */
 export function shownHour(now: Date = new Date()): number {
   if (forcedHour !== null) return forcedHour;
-  if (alwaysDaylight()) return 12;
-  return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+  if (viewing !== null) return viewing;
+  return clockHour(now);
 }
 
 export function currentDaylight(now: Date = new Date()): Daylight {
