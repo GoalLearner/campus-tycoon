@@ -713,7 +713,10 @@ export class CampusScene extends Phaser.Scene {
     // Fans, the band and the tailgates wear the school's colour, softened so faces still read.
     const colour = SCHOOL_COLOURS.find((one) => one.id === state.football.colour)?.hex ?? 0xffffff;
     const tint = home ? softened(colour) : null;
-    const storming = this.stormHeld || (state.football.bigWin > 0 && state.clock.tick - state.football.bigWin < STORM_TICKS);
+    // On a game with chaos the fans storm the field only when the simulation says they did (DESIGN.md 77.2); on any other
+    // campus after any big home win, as before (34).
+    const stormAt = chaosOn(state) ? (state.chaos.storm?.at ?? -1) : state.football.bigWin;
+    const storming = this.stormHeld || (stormAt > 0 && state.clock.tick - stormAt < STORM_TICKS);
     // Before the first stadium the team plays at a rented field in town (DESIGN.md 10.2): nobody walks to the bare
     // plot, and no game is heard from it. The tailgates in the car parks are the day's only sign on the map.
     const built = state.football.stadium.tier >= 1;

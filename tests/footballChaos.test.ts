@@ -116,16 +116,44 @@ describe('football chaos', () => {
     expect(whistle(old).filter((entry) => entry.data?.football !== undefined)).toEqual([]);
   });
 
-  it('has no storming away from home, after an ordinary win or a loss, or before the campus has its own stadium', () => {
-    for (const [slot, home, us, them] of [[3, false, 35, 3], [3, true, 14, 10], [3, true, 3, 35]] as const) {
+  it('has no storming for a blowout alone, away from home, after an ordinary win or a loss, or before the campus has its own stadium', () => {
+    for (const [slot, home, us, them] of [[3, true, 35, 3], [3, false, 35, 3], [3, true, 14, 10], [3, true, 3, 35]] as const) {
       const state = withStadium(false);
       played(state, slot, home, us, them);
-      expect(whistle(state).some((entry) => entry.data?.football === 1 || entry.data?.football === 2)).toBe(false);
+      expect(whistle(state).some((entry) => entry.data?.football === 1 || entry.data?.football === 2), `${slot} ${home} ${us}-${them}`).toBe(false);
+      expect(state.chaos.storm).toBeNull();
     }
     const rented = withStadium(false);
     rented.football.stadium.tier = 0;
     played(rented, RIVALRY_SLOT, true, 28, 7);
     expect(whistle(rented).some((entry) => entry.data?.football === 1 || entry.data?.football === 2)).toBe(false);
+  });
+
+  it('storms the field after a win that is a moment: an upset, the sixth win (a bowl is certain), and the win that clinches the division', () => {
+    const stormedBy = (state: GameState): boolean => whistle(state).some((entry) => entry.data?.football === 1 || entry.data?.football === 2);
+    // An upset: a team rated above ours, beaten at home.
+    const upset = withStadium(false);
+    played(upset, 3, true, 17, 14, true);
+    expect(stormedBy(upset)).toBe(true);
+    // The sixth win of the regular season, at home: five before it, long over.
+    const sixth = withStadium(false);
+    for (let slot = 0; slot < 5; slot++) {
+      const old = played(sixth, slot, slot % 2 === 0, 21, 7);
+      old.kick = sixth.clock.tick - 3000 - slot;
+    }
+    played(sixth, 5, true, 21, 14);
+    expect(stormedBy(sixth)).toBe(true);
+    // The division won for certain by this home win: more division wins than any rival in it could still reach.
+    const clinch = withStadium(false);
+    const f = clinch.football;
+    const mine = f.divisions.find((division) => division.includes(-1))!;
+    clinch.football.season!.table = Object.fromEntries(mine.map((team) => [String(team), team === -1 ? { w: 4, l: 0, cw: 4, cl: 0, dw: 3, dl: 0 } : { w: 1, l: 3, cw: 1, cl: 3, dw: 0, dl: 3 }]));
+    played(clinch, 4, true, 17, 13);
+    expect(stormedBy(clinch)).toBe(true);
+    expect(clinch.chaos.clinchedSeason).toBe(1);
+    // Once a season: a later home win with the division long won is no storming.
+    played(clinch, 6, true, 17, 13).kick = clinch.clock.tick - 20;
+    expect(stormedBy(clinch)).toBe(false);
   });
 
   it('brings couches into the street now and then after a big win or a rivalry loss, by a dorm, for a while, and pays to haul them back', () => {
@@ -226,7 +254,7 @@ describe('football chaos', () => {
     const file = JSON.parse(serialize(state, T0));
     file.v = 37;
     const chaos = file.state.chaos;
-    for (const key of ['lastKick', 'storm', 'street', 'mascot', 'mascotSeason']) delete chaos[key];
+    for (const key of ['lastKick', 'storm', 'street', 'mascot', 'mascotSeason', 'clinchedSeason']) delete chaos[key];
     for (const counts of [chaos.tally, chaos.missed]) for (const kind of ['goalposts', 'street', 'mascot']) delete counts[kind];
     const loaded = parseSave(JSON.stringify(file));
     expect(loaded.ok).toBe(true);

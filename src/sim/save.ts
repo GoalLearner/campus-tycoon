@@ -470,6 +470,7 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof chaos.lastKick !== 'number') chaos.lastKick = played.length > 0 ? Math.max(...played) : -1;
     for (const key of ['storm', 'street', 'mascot']) if (chaos[key] === undefined) chaos[key] = null;
     if (typeof chaos.mascotSeason !== 'number') chaos.mascotSeason = -1;
+    if (typeof chaos.clinchedSeason !== 'number') chaos.clinchedSeason = -1;
     return state;
   },
 };

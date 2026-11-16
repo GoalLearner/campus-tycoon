@@ -1465,6 +1465,8 @@ export interface ChaosState {
   street: { from: number; until: number; dorm: number; won: boolean } | null;
   mascot: { at: number; until: number } | null;
   mascotSeason: number;
+  /** The football season whose division was last won for certain, so its clinching win is stormed once. */
+  clinchedSeason: number;
 }
 
 export interface Incidents {

@@ -1,12 +1,12 @@
 import { FOOTBALL_CHAOS, FREE_REIN, SPIRIT_REACH } from '../config/chaos';
-import { RIVALRY_SLOT, SCHOOL_COLOURS } from '../config/football';
+import { DIVISION_SIZE, RIVALRY_SLOT, SCHOOL_COLOURS } from '../config/football';
 import { INCIDENT_EVAL_TICKS } from '../config/incidents';
 import { dollarsShort } from '../format';
 import { hashInts, nextFloat } from '../rng';
 import { scaleOf } from '../scale';
 import type { Game, GameState, LogEntry } from '../types';
 import { chaosOn, rivalryWeek } from './chaos';
-import { teamName } from './football';
+import { ME, teamName } from './football';
 import { coverFor } from './incidents';
 
 /**
@@ -33,6 +33,39 @@ export function rivalColour(state: GameState): { id: string; name: string; hex: 
   const f = state.football;
   const others = SCHOOL_COLOURS.filter((one) => one.id !== f.colour);
   return others[hashInts(state.seed, f.rival, 7717) % others.length]!;
+}
+
+/** Wins a season needs to be sure of a bowl (the Mill Pond Bowl takes six wins: football's bowl rule). */
+const BOWL_WINS = 6;
+
+/**
+ * True when the division is won for certain: the player's team has more division wins than any rival in it could still
+ * reach. The win that does it sends the team to the conference title game.
+ */
+function divisionClinched(state: GameState): boolean {
+  const f = state.football;
+  const season = f.season;
+  const mine = f.divisions.find((division) => division.includes(ME));
+  if (!season || !mine) return false;
+  const games = DIVISION_SIZE - 1;
+  const row = (team: number): { dw: number; dl: number } => season.table[String(team)] ?? { dw: 0, dl: 0 };
+  const me = row(ME);
+  return mine.filter((team) => team !== ME).every((team) => me.dw > row(team).dw + (games - row(team).dw - row(team).dl));
+}
+
+/**
+ * The fans storm the field (DESIGN.md 77.2) only after a win that is a moment: the rival beaten at home, an upset (a team
+ * rated above ours), or the home win that clinches the division or a bowl. A blowout on its own is cheered in the
+ * stands and the street, not stormed: the model campus's strong team wins big most weeks.
+ */
+function stormed(state: GameState, game: Game, clinched: boolean): boolean {
+  if (!game.home || sum(game.us) <= sum(game.them) || game.slot < 0) return false;
+  if (game.slot === RIVALRY_SLOT || game.oppRating > game.rating || clinched) return true;
+  const season = state.football.season;
+  if (!season || game.slot >= 10) return false;
+  // The sixth win of the regular season: a bowl is certain.
+  const wins = season.games.filter((one) => one.done && one.slot >= 0 && one.slot < 10 && sum(one.us) > sum(one.them)).length;
+  return wins === BOWL_WINS;
 }
 
 /** True when a game was a big win: the rivalry, an upset, or by seventeen or more, as football reads it (10.4). */
@@ -82,8 +115,15 @@ function afterGame(state: GameState, game: Game, log: LogEntry[]): void {
   const won = sum(game.us) > sum(game.them);
   const big = bigWin(game);
   const plot = f.stadium.plot === null ? null : state.map.placed[f.stadium.plot];
-  // The field stormed: a big win at home, at the campus's own stadium.
-  if (game.home && big && f.stadium.tier >= 1 && plot) {
+  // The division won for certain, the first time this season: by this game if it was a home win, or elsewhere.
+  const season = f.season;
+  let clinched = false;
+  if (season && c.clinchedSeason !== season.year && game.slot >= 0 && game.slot < 10 && divisionClinched(state)) {
+    c.clinchedSeason = season.year;
+    clinched = won;
+  }
+  // The field stormed: a win that is a moment, at home, at the campus's own stadium.
+  if (stormed(state, game, clinched) && f.stadium.tier >= 1 && plot) {
     const reached = coverFor(state.map, 'safety', plot.x, plot.y) !== null;
     const roll = nextFloat(state.rng, 'chaos');
     const goalposts = roll < (reached ? FOOTBALL_CHAOS.goalposts.reached : FOOTBALL_CHAOS.goalposts.none);

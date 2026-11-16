@@ -76,6 +76,7 @@ export function newChaos(): ChaosState {
     street: null,
     mascot: null,
     mascotSeason: -1,
+    clinchedSeason: -1,
   };
 }
 
