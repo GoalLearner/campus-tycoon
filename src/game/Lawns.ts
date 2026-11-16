@@ -742,7 +742,10 @@ export class Lawns {
     const fresh: typeof ranked = [];
     for (const one of ranked) {
       const have = this.groups.get(one.key);
-      if (have && !have.leaving && !(have.plain && this.web) && count < budget) {
+      // One formed before the social web answered gives way to friends and couples: out of sight at once, in sight
+      // when its time is up, so the lawns do not all change hands as the web comes in (69.2).
+      const stale = have !== undefined && have.plain && this.web !== null && !(this.afoot?.seen(have) ?? false);
+      if (have && !have.leaving && !stale && count < budget) {
         keep.add(one.key);
         count += have.members.length;
         if (one.spot.quad || one.spot.big) hold(one.spot, WIDE.has(have.kind));

@@ -1157,7 +1157,9 @@ export class Walkers {
     if (this.seen(first)) {
       already = this.fresh(first.x, first.y);
       const outOfDoor = leg === 1 && !extra.at && this.hasDoor(from);
-      if (!already && !outOfDoor) {
+      // Friends setting out with someone come out with them, from where they came out (63.8).
+      const withLeader = extra.at !== undefined && leg === 1 && Math.hypot(extra.at.x - route[0]!.x, extra.at.y - route[0]!.y) < 0.05;
+      if (!already && !outOfDoor && !withLeader) {
         if (extra.at) return false;
         const way = this.approach(first.x, first.y);
         if (!way) return false;
@@ -2519,7 +2521,8 @@ export class Walkers {
         } else if (walker.leg >= walker.route.length && walker.fading !== 'out') {
           // On a lawn, at a bench or by a dining hall they stay a while. Onto a court they join the game.
           // A rider parks (a bike or an e-scooter at a rack, or against a wall) and goes on in (DESIGN.md 64.6).
-          if (walker.wheel) this.park(walker);
+          // Only at a door: anywhere else they ride on to one, or off the screen (69.2).
+          if (walker.wheel && walker.goal && this.hasDoor(walker.goal)) this.park(walker);
           const stays = !walker.wheel && (walker.goal?.kind === 'quad' || (walker.goal?.kind === 'place' && walker.goal.use !== 'play'));
           // A party stays as long as each other: the same while for all of them, from who they are together.
           if (stays && walker.kind === 'student') {
@@ -2528,7 +2531,7 @@ export class Walkers {
             walker.lingerMs = (walker.party ? 2500 + ((walker.party * 2654435761) >>> 0) % 5000 : 2500 + Math.random() * 5000) * longer;
           }
           // In at a door; anywhere else (a court, a gate, a lawn) they walk on to the nearest door or off the screen.
-          else if (walker.goal && this.hasDoor(walker.goal) && !walker.wheel) walker.fading = 'out';
+          else if (walker.goal && this.hasDoor(walker.goal)) walker.fading = 'out';
           else this.leave(walker);
         }
       }
