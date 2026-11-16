@@ -1,8 +1,8 @@
 /**
  * Who each figure in a people pack looks like (DESIGN.md 69.3, the owner's play feedback of builds 33-34): "The genders
  * are all wrong ... make sure the name and genders align correctly", and "We don't need so many hijabs in the game".
- * Every look is tagged by gender as drawn (a beard or moustache is masculine; long hair, a bun or a flower feminine;
- * the rest either), by what it is for (a student, an athlete, a member of staff in uniform, an older person), and by a
+ * Every look is tagged by gender as drawn (a beard or moustache is masculine; long hair, a bob, a bun or a flower
+ * feminine; the rest either; each looked over at eight to sixteen times its size, 2026-11-15), by what it is for (a student, an athlete, a member of staff in uniform, an older person), and by a
  * religious head covering if it has one. Figures are picked from these tags everywhere a person is drawn.
  */
 
@@ -33,7 +33,7 @@ const PENZILLA: readonly LookTag[] = [
   { g: 'f', use: 'student', what: 'hair in a bun with a flower' },
   { g: 'x', use: 'student', what: 'a bucket hat' },
   { g: 'f', use: 'student', what: 'a ponytail and a headband' },
-  { g: 'x', use: 'student', what: 'glasses and a bobble hat' },
+  { g: 'm', use: 'student', what: 'glasses, a bobble hat and a beard' },
   { g: 'f', use: 'student', cover: 'hijab', what: 'a pink hijab' },
   { g: 'f', use: 'student', cover: 'hijab', what: 'a dark headscarf' },
   { g: 'm', use: 'student', cover: 'turban', what: 'a grey turban and a beard' },
@@ -58,7 +58,7 @@ const PENZILLA: readonly LookTag[] = [
   { g: 'f', use: 'older', what: 'long grey hair, glasses and a flower (a parent)' },
   { g: 'm', use: 'older', what: 'a black hat and a white beard (a parent)' },
   { g: 'f', use: 'uniform', what: 'a nurse’s cap (Medical Center)' },
-  { g: 'x', use: 'uniform', what: 'a police cap (Campus Safety)' },
+  { g: 'f', use: 'uniform', what: 'a police cap and a bob (Campus Safety)' },
   { g: 'x', use: 'uniform', what: 'a hard hat (Facilities)' },
 ];
 

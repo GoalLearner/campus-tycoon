@@ -8596,22 +8596,22 @@ Nobody appears or disappears in view. Everyone on the screen comes out of a door
 
 Names and genders already agreed: since the social campus (63) a student's first name comes from their gender's list, and the names before it are ones anyone can carry. The figures were picked without gender: Andrea, a freshman woman, had a beard; her boyfriend Jacob wore a pink hijab. And four of the twelve everyday looks wore a head covering, so a third of all students did.
 
-Every look in both packs is tagged now (`src/sim/config/looks.ts`): drawn as a woman, a man or either (a beard is a man's; long hair, a bun or a flower a woman's), what it is for, and any religious head covering. A student is drawn from their gender's looks everywhere they are drawn: the map, the card, the room, Quadline, the network, the Social tab, the regulars and the main character. A woman wears a feminine look or one that could be either; a man a masculine one or either; a nonbinary student any of them.
+Every look in both packs is tagged now (`src/sim/config/looks.ts`): drawn as a woman, a man or either (a beard or moustache is a man's, a beard however small; long hair, a bob, a bun or a flower a woman's; each looked over at eight to sixteen times its size), what it is for, and any religious head covering. A student is drawn from their gender's looks everywhere they are drawn: the map, the card, the room, Quadline, the network, the Social tab, the regulars and the main character. A woman wears a feminine look or one that could be either; a man a masculine one or either; a nonbinary student any of them.
 
 | Look | Drawn | For | Women | Men | Nonbinary |
 |---|---|---|---|---|---|
-| A bun with a flower | woman | students | 14.0% | | 12.3% |
-| A bucket hat | either | students | 14.0% | 16.5% | 12.3% |
-| A ponytail and a headband | woman | students | 14.0% | | 12.3% |
-| Glasses and a bobble hat | either | students | 14.0% | 16.5% | 12.3% |
+| A bun with a flower | woman | students | 16.3% | | 12.3% |
+| A bucket hat | either | students | 16.3% | 16.5% | 12.3% |
+| A ponytail and a headband | woman | students | 16.3% | | 12.3% |
+| Glasses, a bobble hat and a beard | man | students | | 16.5% | 12.3% |
 | A pink hijab | woman, hijab | students | 1.0% | | 0.5% |
 | A dark headscarf | woman, hijab | students | 1.0% | | 0.5% |
 | A grey turban and a beard | man, turban | students | | 0.4% | 0.2% |
 | An orange turban and a beard | man, turban | students | | 0.4% | 0.2% |
 | Spiky grey hair and a beard | man | students | | 16.5% | 12.3% |
-| A blue crest | either | students | 14.0% | 16.5% | 12.3% |
-| Curly white hair | either | students | 14.0% | 16.5% | 12.3% |
-| A green bowl cut | either | students | 14.0% | 16.5% | 12.3% |
+| A blue crest | either | students | 16.3% | 16.5% | 12.3% |
+| Curly white hair | either | students | 16.3% | 16.5% | 12.3% |
+| A green bowl cut | either | students | 16.3% | 16.5% | 12.3% |
 | Four helmets | either | the varsity only | | | |
 | A teacher's hat, a waiter, a bellhop's cap, a chef's hat, a bus driver's cap, a top hat, a mail carrier's cap, a nurse's cap, a police cap, a hard hat | as drawn | staff in their role only | | | |
 | A trucker cap and a red beard; a red cap and long hair | man; woman | neighbours in town | | | |
@@ -8621,13 +8621,13 @@ Every look in both packs is tagged now (`src/sim/config/looks.ts`): drawn as a w
 
 **No uniform or costume is ever a student's.** The chef's hat, the police cap, the hard hat, the mail carrier's and bellhop's caps, the top hat, the nurse's cap and the sports kit are worn by staff in their role and by the varsity, and nobody else. Anyone in the crowd the game does not know (a visitor, a commuter) wears an everyday look. The two caps of the town's neighbours are not a student's because the pack has no seated, sleeping or face drawings of them.
 
-**Staff, parents and neighbours** are named to match their figure: a woman's first name for a figure drawn as a woman, a man's for a man's, and one anyone can carry for a figure that could be either. Their surnames are as before. Every professor wears the teacher's look, drawn as a woman, so every professor has a woman's first name; advisors, store clerks and boosters have men's; tour guides, drivers, Campus Safety and Facilities have names anyone can carry.
+**Staff, parents and neighbours** are named to match their figure: a woman's first name for a figure drawn as a woman, a man's for a man's, and one anyone can carry for a figure that could be either. Their surnames are as before. Every professor wears the teacher's look, drawn as a woman, so every professor has a woman's first name, and so do Campus Safety's officers (the police figure wears a bob); advisors, store clerks and boosters have men's; tour guides, drivers and Facilities have names anyone can carry.
 
 **Girlfriend and boyfriend.** Once two students are together, the card says what each is to the other by gender, with her, his or their for the student: "Her boyfriend, Jacob", "His long-time girlfriend, Mia", "Their partner, Sam". Under a face on the Social tab and on the network's ring, "Girlfriend", "Boyfriend" or "Partner" (the ring leaves out "long-time", which did not fit at 375 wide); before they are together, "Dating" as before. The card's Friends line ("Alyssa, her girlfriend +2", "her ex") and the room ("A game with Gloria, her roommate", "Working out in his room") say her, his or their the same way. The one line in the game with a pronoun for someone it did not know (a parent's "Where would she sleep?") now says "our kid".
 
 ### 69.4 What changes in a game already going
 
-Every student keeps their name and gender. A figure that fits is kept: every everyday look that fits their gender, and a head covering as often as the new shares allow. The rest are drawn again from what each look is short of, so the crowd ends at the new shares exactly while as few as can be change. On the model campus 43% of students wear a different figure: 28% had been drawn as the other gender, and head coverings go from 33% of students to 1.5%. Whether a game's main character changes depends on the save: `await __campus.figures()` in the console of a running game says how many changed and the main character's before and after.
+Every student keeps their name and gender. A figure that fits is kept: every everyday look that fits their gender, and a head covering as often as the new shares allow. The rest are drawn again from what each look is short of, so the crowd ends at the new shares exactly while as few as can be change. On the model campus 48% of students wear a different figure: 32% had been drawn as the other gender, and head coverings go from 33% of students to 1.5%. Whether a game's main character changes depends on the save: `await __campus.figures()` in the console of a running game says how many changed and the main character's before and after.
 
 Save version 34 changes nothing in a save; it carries the one note: "Students now look like who they are: some figures changed to match." Nothing in the simulation changed: figures, names and words are drawn, not counted, so no line of the long run can move and it was not run again.
 
