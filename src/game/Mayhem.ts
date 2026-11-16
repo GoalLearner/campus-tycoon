@@ -122,6 +122,9 @@ function mix(a: number, b: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
+/** How many of the seed's students are tried for someone in a scene, for one whose figure nobody else there has. */
+const CAST_TRIES = 12;
+
 const KIND_SALT: Record<ShowKind, number> = { dustUp: 1, shouting: 2, prank: 3, graffiti: 4, protest: 5 };
 
 export class Mayhem {
@@ -354,11 +357,22 @@ export class Mayhem {
     let student: StudentRef | null = null;
     let look = role === 'medic' ? (people.roles?.medic ?? 0) : everydayLook(people, mix(show.id, n), mix(n, show.id));
     if (role !== 'medic') {
-      student = findStudent(state.seed, this.everyone, show.id * 31 + KIND_SALT[show.kind], n, (key) => this.staying.has(key) || this.walking(key));
-      if (student) {
-        this.staying.add(studentKey(student));
-        look = studentFigure(state, student, people);
+      // Each one a different figure from the others in the scene: the pack has a dozen everyday figures, and two
+      // students drawn the same in one dust-up read as clones (DESIGN.md 76.1). The seed's next students are tried.
+      const taken = new Set(show.people.map((one) => one.look));
+      const busy = (key: string): boolean => this.staying.has(key) || this.walking(key);
+      const place = show.id * 31 + KIND_SALT[show.kind];
+      for (let k = 0; k < CAST_TRIES; k++) {
+        const found = findStudent(state.seed, this.everyone, place, n + k * 1009, busy);
+        if (!found) break;
+        const figure = studentFigure(state, found, people);
+        if (!student || !taken.has(figure)) {
+          student = found;
+          look = figure;
+        }
+        if (!taken.has(figure)) break;
       }
+      if (student) this.staying.add(studentKey(student));
     }
     let sign: Phaser.GameObjects.Image | null = null;
     if (role === 'protest' && show.topic && this.art.has(signKey(show.topic))) {
@@ -407,7 +421,7 @@ export class Mayhem {
         } else if (beat.phase === 'cloud') {
           show.cloud = show.cloud ?? this.cloudImage();
           // The crowd near runs over to see (DESIGN.md 76.5).
-          this.walkers.watch(show.mid, 'dustup', 6500);
+          this.walkers.watch(show.mid, 'dustup', 6500, show.people.map((one) => one.look));
         } else {
           this.icon(a.sprite, 'sweat', 100);
           this.icon(b.sprite, 'anger', 300);
@@ -426,7 +440,7 @@ export class Mayhem {
       }
       if (timeMs >= show.watchAt) {
         show.watchAt = timeMs + 20_000;
-        this.walkers.watch(show.mid, 'shouting', 6000);
+        this.walkers.watch(show.mid, 'shouting', 6000, show.people.map((one) => one.look));
       }
     } else if ((show.kind === 'prank' || show.kind === 'graffiti') && a) {
       if (!show.flee && timeMs >= show.nextAt) {
@@ -444,7 +458,7 @@ export class Mayhem {
       }
       if (timeMs >= show.watchAt) {
         show.watchAt = timeMs + RALLY_WATCH_MS;
-        this.walkers.watch(show.mid, 'rally', 7000);
+        this.walkers.watch(show.mid, 'rally', 7000, show.people.map((one) => one.look));
       }
     }
     // Nobody coming: after a while they part on their own (or saunter off from their prank).
@@ -467,7 +481,7 @@ export class Mayhem {
     this.icon(who.sprite, 'exclaim');
     who.trip = tripOf(way, timeMs + 250, true);
     who.pace = FLEE;
-    this.walkers.watch(show.mid, 'prank', 5000);
+    this.walkers.watch(show.mid, 'prank', 5000, show.people.map((one) => one.look));
   }
 
   /** The incident is over in the simulation: the scene plays out its end. */

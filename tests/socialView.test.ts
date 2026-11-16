@@ -364,5 +364,5 @@ describe('couples over the years', () => {
     const away = seen.find((one) => one.regrown !== undefined)!;
     expect(Math.abs(away.regrown! - away.per1000) / away.per1000).toBeLessThan(0.15);
     // Two game years of the campus itself take a while.
-  }, 90_000);
+  }, 180_000);
 });

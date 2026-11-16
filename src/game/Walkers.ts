@@ -2047,7 +2047,7 @@ export class Walkers {
    * few at most by crowd step; others near stop where they are and turn; each reacts in turn, some cheer. Returns how
    * many watch.
    */
-  watch(at: { x: number; y: number }, kind: MomentKind, ms: number): number {
+  watch(at: { x: number; y: number }, kind: MomentKind, ms: number, drawn: readonly number[] = []): number {
     const now = this.scene.time.now;
     const view = this.scene.cameras.main.worldView;
     const near = this.walkers
@@ -2056,6 +2056,12 @@ export class Walkers {
     const most = WATCHERS_AT_STEP[this.step] ?? 0;
     const ring = Math.max(3, Math.min(most, near.length));
     const reaction = WATCH_REACTIONS[kind];
+    // Those who walk over are each a different figure (DESIGN.md 76.1): one drawn like another already going stops
+    // and turns where they are instead, so a ring of watchers is never a row of clones.
+    // `drawn`: the figures of those in the moment itself (a staged dust-up's two); and those already watching it.
+    const going = new Set<number>(drawn);
+    for (const w of this.walkers) if (w.momentUntil >= now && Math.hypot(w.x - at.x, w.y - at.y) <= WATCH_REACH) going.add(w.look);
+    let over = 0;
     near.forEach((w, i) => {
       w.faceAt = { x: at.x, y: at.y };
       w.momentUntil = now + ms;
@@ -2067,7 +2073,9 @@ export class Walkers {
       // Already watching something else: after this they still go back to the way they were going (69.5).
       const back = w.resume?.[0] ?? w.route[w.leg] ?? null;
       const clear = this.clearLine(w.x, w.y, spot.x, spot.y) && (!back || this.clearLine(spot.x, spot.y, back.x, back.y));
-      if (i < most && !w.party && clear) {
+      if (over < most && !w.party && clear && !going.has(w.look)) {
+        going.add(w.look);
+        over += 1;
         // After, on along the way they were going; or, already where they were going, back there the way they came.
         const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
         w.resume = w.resume ?? (resume.length > 0 ? resume : [{ x: w.x, y: w.y }]);
