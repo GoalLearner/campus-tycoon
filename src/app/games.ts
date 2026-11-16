@@ -28,13 +28,15 @@ export const BALL_MOST = 6;
 export const RIM = 1.06;
 /**
  * At basketball, the least room between two players, centre to centre, in cells: a figure is about 0.21 of a cell
- * across, so this leaves a gap between them. Only a defender closing out on the ball, and on a shot the shooter's man
- * and the bigs going for the rebound, come closer (DESIGN.md 72.3).
+ * across, so this leaves a gap between them. Only a defender closing out on the ball, the shooter's man on a shot, and
+ * whoever goes for a loose ball come closer (DESIGN.md 72.6).
  */
 export const APART = 0.3;
+/** At rest, the room between two players' spots: more than `APART`, so there is room to pass between them. */
+const ROOM = 0.38;
 /** How far inside their player, toward the basket, a defender stands; and how close the ball handler's comes. */
-const STEP = 0.32;
-const CLOSE = 0.22;
+const STEP = 0.38;
+const CLOSE = 0.24;
 /** The three-point line as drawn: its arc round the basket, and the straight lines in the corners, across a court 1.72 wide. */
 const ARC = 0.78;
 const CORNER = 0.7;
@@ -204,6 +206,7 @@ export class Game {
     }
     if (this.restS > 0) this.restS -= dt;
     this.plan(dt);
+    if (this.sport === 'basketball') this.spreadSpots();
     for (const player of this.players) {
       if (this.sport === 'basketball') this.moveApart(player, dt);
       else {
@@ -224,6 +227,53 @@ export class Game {
     }
     if (this.sport === 'basketball') this.letGo();
     this.moveBall(dt);
+  }
+
+  /**
+   * Where everyone is going, spread so that any two spots have `ROOM` between them (but for those let in close), so each
+   * player can reach theirs and stand there: two spots too near each other are each moved half the shortfall apart, a
+   * spot too near one let in close the whole of it, a few times over, and kept on the court.
+   */
+  private spreadSpots(): void {
+    const a = this.area;
+    const room = ROOM;
+    const ps = this.players;
+    for (let pass = 0; pass < 6; pass++) {
+      let moved = false;
+      for (let i = 0; i < ps.length; i++) {
+        for (let j = i + 1; j < ps.length; j++) {
+          const p = ps[i]!;
+          const q = ps[j]!;
+          const pFree = this.close.has(p.slot);
+          const qFree = this.close.has(q.slot);
+          if (pFree && qFree) continue;
+          let dx = q.tx - p.tx;
+          let dy = q.ty - p.ty;
+          let d = Math.hypot(dx, dy);
+          if (d >= room) continue;
+          if (d < 1e-6) {
+            // On the same spot: apart across the court, the lower slot to one side.
+            dx = 1;
+            dy = 0;
+            d = 1;
+          }
+          const short = room - Math.min(d, room);
+          const ux = dx / d;
+          const uy = dy / d;
+          const pShare = pFree ? 0 : qFree ? 1 : 0.5;
+          p.tx -= ux * short * pShare;
+          p.ty -= uy * short * pShare;
+          q.tx += ux * short * (1 - pShare);
+          q.ty += uy * short * (1 - pShare);
+          moved = true;
+        }
+      }
+      for (const p of ps) {
+        p.tx = clamp(p.tx, a.x0 + 0.05, a.x1 - 0.05);
+        p.ty = clamp(p.ty, a.y0 + 0.05, a.y1 - 0.05);
+      }
+      if (!moved) break;
+    }
   }
 
   /** Whether two players may stand closer than `APART` just now: a defender closing out, the bigs on a rebound. */
@@ -253,7 +303,7 @@ export class Game {
       for (const k of [1, 0.5]) {
         const nx = player.x + Math.cos(toward + turn) * len * k;
         const ny = player.y + Math.sin(toward + turn) * len * k;
-        if (!free && !this.roomAt(player, nx, ny)) continue;
+        if (!(free ? this.onCourt(player, nx, ny) : this.roomAt(player, nx, ny))) continue;
         player.x = nx;
         player.y = ny;
         player.moving = d > 0.02;
@@ -263,12 +313,23 @@ export class Game {
   }
 
   private roomAt(player: GamePlayer, nx: number, ny: number): boolean {
+    // Never off the court: a step out over its edge is refused, unless it brings someone already outside back in.
+    const a = this.area;
+    const out = (x: number, y: number): number => Math.max(a.x0 - x, x - a.x1, a.y0 - y, y - a.y1, 0);
+    if (out(nx, ny) > Math.max(0, out(player.x, player.y) - 1e-9)) return false;
     for (const other of this.players) {
       if (other === player || this.close.has(other.slot)) continue;
       const was = Math.hypot(player.x - other.x, player.y - other.y);
       if (Math.hypot(nx - other.x, ny - other.y) < Math.min(APART, was) - 1e-9) return false;
     }
     return true;
+  }
+
+  /** For one let in close (after a loose ball too): a step that stays within a little of the court's edge. */
+  private onCourt(player: GamePlayer, nx: number, ny: number): boolean {
+    const a = this.area;
+    const out = (x: number, y: number): number => Math.max(a.x0 - x, x - a.x1, a.y0 - y, y - a.y1, 0);
+    return out(nx, ny) <= 0.25 || out(nx, ny) < out(player.x, player.y);
   }
 
   /** Those let in close go back to keeping their room once they have it again, and no shot is in the air. */
@@ -503,11 +564,11 @@ export class Game {
    */
   private spots(n: number): Array<[number, number]> {
     const all: Record<number, Array<[number, number]>> = {
-      1: [[0, 0.9]],
-      2: [[-0.3, 0.86], [0.6, 0.6]],
-      3: [[0, 0.9], [-0.6, 0.6], [0.6, 0.6]],
-      4: [[0, 0.9], [-0.6, 0.6], [0.6, 0.6], [0.4, -0.02]],
-      5: [[0, 0.9], [-0.6, 0.6], [0.6, 0.6], [-0.74, 0.05], [0.4, -0.02]],
+      1: [[0, 1.0]],
+      2: [[-0.35, 1.0], [0.7, 0.66]],
+      3: [[0, 1.1], [-0.7, 0.66], [0.7, 0.66]],
+      4: [[0, 1.1], [-0.7, 0.7], [0.7, 0.7], [0.45, 0]],
+      5: [[0, 1.1], [-0.72, 0.72], [0.72, 0.72], [-0.78, 0.02], [0.45, 0]],
     };
     return all[Math.max(1, Math.min(5, n))]!.map(([a, d]) => [a * this.side, d]);
   }
@@ -568,20 +629,19 @@ export class Game {
       return;
     }
     if (s.kind === 'flight') {
-      // A shot in the air: only the shooter's man and the bigs, the two nearest the basket on each side, collapse.
+      // A shot in the air: the shooter's man contests it, close; the bigs, the two nearest the basket on each side, crash.
       if (s.then.kind === 'rim' || s.then.kind === 'rebound') {
         const shooter = s.then.kind === 'rim' ? this.byslot(s.then.by) : undefined;
         const near = (team: GamePlayer[]): GamePlayer[] =>
           team.filter((player) => player !== shooter).sort((a, b) => Math.hypot(a.x - basket.x, a.y - basket.y) - Math.hypot(b.x - basket.x, b.y - basket.y)).slice(0, 2);
+        // The bigs go for the rebound but keep their room: each to their own spot round the rim.
         near(off).forEach((player, i) => {
-          player.tx = basket.x + (i === 0 ? -0.3 : 0.3) * this.side;
-          player.ty = basket.y + into * 0.34;
-          this.close.add(player.slot);
+          player.tx = basket.x + (i === 0 ? -0.45 : 0.45) * this.side;
+          player.ty = basket.y + into * 0.4;
         });
         near(def).forEach((player, i) => {
-          player.tx = basket.x + (i === 0 ? -0.17 : 0.17) * this.side;
-          player.ty = basket.y + into * 0.14;
-          this.close.add(player.slot);
+          player.tx = basket.x + (i === 0 ? -0.3 : 0.3) * this.side;
+          player.ty = basket.y + into * 0.12;
         });
         if (shooter) {
           const man = def[off.indexOf(shooter) % Math.max(1, def.length)];

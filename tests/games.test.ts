@@ -88,7 +88,7 @@ describe('real games', () => {
     play(half, 1, () => undefined);
   });
 
-  it('keeps basketball players apart: a figure or more between any two, but a defender closing out and the bigs on a shot', () => {
+  it("keeps basketball players apart: a figure or more between any two, but a defender closing out, the shooter's man and a loose ball", () => {
     for (const [n, seed] of [[10, 5], [10, 17], [8, 23], [6, 9]] as const) {
       const game = new Game('basketball', AREAS.basketball, seed);
       lineUp(game, n);
@@ -107,7 +107,7 @@ describe('real games', () => {
         frames += 1;
       });
       expect(worst, `${n} players`).toBeGreaterThanOrEqual(APART - 1e-6);
-      // Those let in close are few: the ball handler's man, and on a shot the shooter's man and four bigs, for a moment.
+      // Those let in close are few: the ball handler's man, the shooter's man on a shot, whoever goes for a loose ball.
       expect(let_in / frames, `${n} players`).toBeLessThan(3);
     }
   });
