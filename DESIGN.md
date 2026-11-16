@@ -8750,3 +8750,48 @@ The second long run's casual player on its second seed drew ten letters from the
 - **The trustees** (70.6): letters 0, 0, 0, 1, 0, 0 (C1: 0, 0, 1, 0, 0, 6, the last at the check's limit); the meter's highest reading 42 (42).
 - **Catch-up**: 477 ms and 502 ms for 30 days, 228 ms and 394 ms on the model campus, 439 ms for the social web, all under a second.
 - **Everything a player does in a day** moves by a little, as the players' visits fall differently (when they are short of money, and the Campus Safety they now build): levels at week 44 255 to 277 (251 to 280), Seals 12.2 to 13.2 a week, orders 81% to 85% claimed, decorations 277 to 331 at week 44, collecting $265K to $336K a year, the eras' big builds (the Welcome Center bought on two campuses more), Greek names, labs, traditions, party calls, finals met, stories and drives. Each passes as before.
+
+## 71. Bike paths (asked for 2026-11-15)
+
+The owner, after playing builds 33 and 34: "There needs to be a bike path exclusive for skateboarders and bikers". Built on the branch `life-7`. Visual and travel only, as the riders of 64.6 are: a bike path costs its price and nothing else in the game reads it. A look sheet went to the owner first (`docs/handoff/bike-paths-look.html`), red recommended and green offered. He had not answered by the merge, so red, under his rule that the recommendation stands; green is `CHOSEN` in `tools/make_bikelane.py` and the chooser's swatch in `src/ui/ui.css`, with both atlases built and published again.
+
+### 71.1 The tool and the ground
+
+The **Path** tool now picks between a **Footpath** and a **Bike path**, shown above the bar while it is in hand, as the Tree tool shows its trees ("Drag to lay a bike path · $2,000 a cell · walkers cross where a path does", the price at the campus's price level, as a path's). An eighth button in the bar would not fit the narrowest phone at 44 points a tap (47): seven do. It is laid cell by cell on open ground, as a path is.
+
+- A cell of bike path (`bike`) is for riders only. It is not a footpath: a lot beside it alone has no way in (a lot must touch a footpath), and nothing walks along it.
+- Where a bike path and a footpath meet on one cell, the cell is both (`bikeCrossing`): a bike path laid over a footpath, or a footpath laid over a bike path, makes it, as a road and a path make a crossing (`crossing`). It is a footpath for everything that reads one (walkers, lots, walk times) and bike path for riders, and it is where walkers cross. A road cannot go on a bike path.
+- Cleared, each gives back what it cost under the refund rule (all of it in the undo minute, half after); a crossing gives back both.
+- Nothing else counts it: no upkeep, no looks, no walk time, no litter or lamps on a bike path, no order on the board, no part of any sum. A crossing is a footpath to the game in every way (its lamp, its lots, its walk times, a tradition's place beside a path). The long run's players never lay one.
+
+### 71.2 How it looks
+
+Ours (`tools/make_bikelane.py`): the pack's own path tile recoloured to the lane's colour, keeping its slabs and joints, with white edge lines painted along every side that does not join more bike path (a short turn where two joined sides meet), the bike painted on every fourth straight cell, and white bars across a crossing, set along the lane, for the walkers. The pieces join up the sixteen ways a cell's sides can (the map's own reading of which sides join, as paths and roads), turned with the view (43). A dead end that runs into a footpath or a road is open there, so riders ride on and off it. The drawn pack's tile is a paid part, so its lane is in the private atlas only; the free pack's lane, from its plain slab, is in the public one.
+
+### 71.3 Riders on it
+
+- **Riders prefer it** when it is on their way: the way over footpaths and bike path (and the streets, on a trip from the town) that counts a cell of bike path as two thirds of a footpath's (`searchRide`, `src/game/afoot.ts`), taken when it rides at least three cells of bike path and is no more than 1.3 times the walk (and two cells). Who rides is decided with the route, by the same rule and rolls as before (64.6), so a rider already part of the way along when the view fills, and a commuter from the town, is on it too. Along it they go 12% faster, keep nearer its middle, and never step aside: nobody walks there to step round.
+- **Walkers never walk along it.** Their routes are over footpaths, and a bike path is not one; they cross at the crossings.
+- **Near misses and the bell** happen only where riders share a footpath: a rider on the bike path or one of its crossings has none. Tricks and the rare wipeout are where they fall.
+
+### 71.4 On Quadline
+
+The campus wants a cell of bike path for every ten cells of footpath. With fewer than half that, riders share the footpaths and students say so: two posts a game week under #BikeLanes ("bikes on the sidewalk again. nearly lost my coffee [sweat]"), at steady moments of the week so far. Within two real hours of a bike path opening, two students praise it ("finally a bike path. no more weaving round people on the sidewalk"), shown for a real day. These are the app's, as the bike-parking complaints are (64.6): never kept, never viral, moving nothing; the topic `lanes` is listed with the others so the feed can word it, no cause leads to it and the official account never answers it.
+
+| Decisions made here | Instead |
+|---|---|
+| The Path tool picks Footpath or Bike path above the bar | An eighth button, which would make the taps narrower than 44 points on the narrowest phone |
+| A crossing cell where a footpath meets a bike path, made by laying one over the other | Walkers crossing a bike path anywhere a footpath faces them across it, which the map could not show |
+| A bike path laid on open ground or over a footpath | Over a road, which would need a third shared cell |
+| Red (recommended) | Green, as most US bike lanes are: it reads less clearly beside the grass |
+| The pack's path tile recoloured, our lines, bike and bars | A drawn lane, which no pack has |
+| Riders take it when it is no more than 1.3 times the walk | Always, which would send riders round the campus for it |
+| A path's price, no upkeep | Its own upkeep, which would be a new line in the money |
+| One cell of bike path for every ten of footpath; complaints below half | Complaints counted from riders seen, which would change with the view |
+| The posts the app's own, moving nothing | Real posts in the web, which can go viral and move applicants |
+
+**Measured.** On the model campus on a fine afternoon at High, with four bike paths (29 cells) laid beside its busiest footpaths (the dev option `&bikes=4`, which counts trips between the campus's doors to find them): of 52 rider trips in a minute, 4 rode a bike path; no walker stood on one; the 4 bells were all on footpaths. Of 487 trips between the campus's places, 81 would ride a bike path if the student rode, at the median two cells longer than the walk. Frames on the slowed phone (47.2), back to back with main (2ca6424), three rounds of eight frames, the mean: an afternoon at Normal 17.2 ms against 17.3, the morning rush at High 21.5 against 21.2, an evening 17.0 against 17.7. Nothing that shows. Checked in pictures at 375, 390, 430 and 530 wide: the bar's seven buttons are 44 points or wider, and the chooser's two are 44 tall. While a chooser is up (Path or Tree) Build and Collect all step aside: on the narrowest phone they covered its right-hand choice.
+
+**The long run**: all 109 checks pass in 1,693 s, every number as after 70 (the long run's players never lay a bike path, and nothing else reads one); only the timings moved, the catch-up 227 ms to 505 ms.
+
+**Tested**: `tests/bikePaths.test.ts` (9): laid on open ground at a path's price and cleared for all of it in the undo minute; a crossing either way round, a road never on it, the crossing a footpath and the bike path not, a crossing cleared for both; a lot beside a bike path alone has no way in; nothing else in the game changes for one (looks, walk times, and a day on the same campus with one and without), nor for a footpath crossed by one (every footpath of a campus made a crossing, the same a day on); riders take the bike path when it is on their way and a little longer, keep to the footpath on a short hop, and go no further than allowed; #BikeLanes while short, two a week, never viral, and none with enough bike path; praise within two hours of one opening, shown for a day; every line inside the tone guide and its hard lines.
