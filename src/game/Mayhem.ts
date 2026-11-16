@@ -47,9 +47,9 @@ const FACE_OFF = 0.24;
 /** And this far out from the path's middle, away from the wall, so the cloud is clear of the building. */
 const FRONT_OUT = 0.3;
 const STEP_APART = 0.2;
-/** A medic comes from no further than this, in cells of their way, at a brisk walk; further, the bruise waits for the clinic. */
-const MEDIC_MOST = 12;
-const MEDIC_PACE = 1.35;
+/** A medic comes from no further than this, in cells of their way, hurrying (about twelve seconds at most); further, the bruise waits for the clinic. */
+const MEDIC_MOST = 18;
+const MEDIC_PACE = 1.5;
 const PATCH_MS = 3600;
 /** How long after the incident is over the two part, once Campus Safety is there. */
 const PART_MS = 900;
@@ -625,12 +625,14 @@ export class Mayhem {
     const t = timeMs / 1000;
     const at = this.iso.toWorld(show.mid.x, show.mid.y);
     const wobble = reduced ? 0 : 1;
+    const own = (this.iso.sum(show.mid.x, show.mid.y) - 1) * 4 + 2.8;
     cloud
       .setVisible(true)
       .setPosition(at.x + Math.sin(t * 23) * 1.5 * wobble, at.y - CLOUD_LIFT + Math.cos(t * 19) * 1.2 * wobble)
       .setScale(CLOUD_SCALE * (1 + Math.sin(t * 17) * 0.05 * wobble))
       .setRotation(Math.sin(t * 11) * 0.06 * wobble)
-      .setDepth((this.iso.sum(show.mid.x, show.mid.y) - 1) * 4 + 2.8)
+      // Sorted against the buildings beside it as the two in it are, so a corner does not cut it.
+      .setDepth(this.feet ? this.feet.depth(show.mid.x, show.mid.y, own) : own)
       .setAlpha(1);
   }
 

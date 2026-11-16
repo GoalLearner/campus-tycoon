@@ -9081,7 +9081,7 @@ To chaos, Campus Safety stays at the station until it is time and then runs (2.2
 
 ### 76.3 A bruise patched
 
-After a dust-up Campus Safety answered, the two look sheepish; one goes on their way at once. If a Medical building reaches the dorm and its medic is no more than 12 cells away on foot [T], the medic walks briskly over, the other turns to them, a plaster goes on (a few seconds), and each goes back the way they came. Without one in reach they simply part. Nothing worse than a bruise is ever shown. A plaster now and then is the medical treatment the rating plan already answers as infrequent (52.2).
+After a dust-up Campus Safety answered, the two look sheepish; one goes on their way at once. If a Medical building reaches the dorm and its medic is no more than 18 cells away on foot [T], the medic hurries over, the other turns to them, a plaster goes on (a few seconds), and each goes back the way they came. Without one in reach they simply part. Nothing worse than a bruise is ever shown. A plaster now and then is the medical treatment the rating plan already answers as infrequent (52.2).
 
 ### 76.4 The meter in the everyday crowd
 
