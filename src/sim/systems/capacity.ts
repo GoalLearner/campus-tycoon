@@ -11,7 +11,7 @@ import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { chapterBedsTaken, enrollment, openCapacity } from '../selectors';
 import type { GameState, Placed, Zone } from '../types';
-import { bedsWanted, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
+import { bedsWanted, classSize, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
 import { mealUse } from './food';
 import { roomUnderCap } from './goals';
 import { housedNote } from './policies';
@@ -94,7 +94,8 @@ export interface NextFall {
 
 /** Next fall, on today's campus: who stays, who applies, and how many of those the cap leaves room for. */
 export function nextFall(state: GameState): NextFall {
-  const applicants = fallApplicants(state).total;
+  // A fall's whole class: on a game with goals its first-years and its transfers (DESIGN.md 70.2).
+  const applicants = classSize(state, 'fall', false);
   // Those still to finish this year will be gone by then (DESIGN.md 65.2).
   const staying = state.clock.tick < FIRST_INTAKE_TICK ? 0 : enrollment(state) - (calendarAt(state.clock).tickInYear < GRADUATION_TICK_IN_YEAR ? commencementLeavers(state).students : 0);
   const admitted = Math.min(applicants, roomUnderCap(state, staying));

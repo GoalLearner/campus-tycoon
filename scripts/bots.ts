@@ -1,4 +1,6 @@
 import { suggestMain } from '../src/sim/systems/mc';
+import { chaosStepOf } from '../src/sim/systems/chaos';
+import { ROWDY } from '../src/sim/config/chaos';
 import {
   bigBuildOf,
   bigBuildsOffered,
@@ -1485,6 +1487,21 @@ let wild = false;
 const CALMING = ['quietHours', 'partyRegistration', 'alcoholEducation', 'antiBullying', 'antiHazing', 'greekOversight', 'dryCampus'];
 const DISLIKED = ['parkingFees', 'toughGrading'];
 
+/** Campus Safety over halls it does not reach, `most` on a visit, while `reserve` is left. */
+function coverHalls(state: GameState, reserve: number, most: number): { state: GameState; built: number } {
+  let current = state;
+  let built = 0;
+  for (; built < most; built++) {
+    const dorm = current.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !coverFor(current.map, 'safety', b.x, b.y));
+    if (!dorm || current.money.cash - placedCost('safety', scaleOf(current)) < reserve) break;
+    const spot = menuSpot(current, 'safety', dorm.x, dorm.y);
+    const placed = spot ? applyAction(current, { type: 'place', building: 'safety', x: spot[0], y: spot[1] }) : null;
+    if (!placed?.ok) break;
+    current = placed.state;
+  }
+  return { state: current, built };
+}
+
 /**
  * The chaos sandbox's two test players (DESIGN.md 68.7), each the once-a-day player with one difference. The Serene
  * player turns on every switch that calms. The Pandemonium player runs the campus for mayhem on purpose: no Campus
@@ -1508,14 +1525,7 @@ function chaosTurn(state: GameState, as: 'pandemonium' | 'serene'): TurnResult {
     for (const id of CALMING) if (id !== 'dryCampus') flip(id, true);
     for (const id of DISLIKED) flip(id, false);
     // Campus Safety over every hall, before anything else: up to six on a visit, while there is the money.
-    for (let n = 0; n < 6; n++) {
-      const dorm = current.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !coverFor(current.map, 'safety', b.x, b.y));
-      if (!dorm || current.money.cash - placedCost('safety', scaleOf(current)) < 0) break;
-      const spot = menuSpot(current, 'safety', dorm.x, dorm.y);
-      const placed = spot ? applyAction(current, { type: 'place', building: 'safety', x: spot[0], y: spot[1] }) : null;
-      if (!placed?.ok) break;
-      current = placed.state;
-    }
+    current = coverHalls(current, 0, 6).state;
     // And its yards staffed again, as the yards ask.
     current = tendGrounds(current, 0, 8).state;
     return { ...turn, state: current };
@@ -1687,6 +1697,14 @@ function takeTurnAfter(state: GameState, as: Style): TurnResult {
         purchases += 1;
       }
     }
+  }
+  // A player who reads the Chaos card answers it (DESIGN.md 70.6): while the trustees have written, or the meter reads
+  // Rowdy or worse, Campus Safety goes over a hall it does not reach, on a thrifty visit too, as the card asks. Before,
+  // the usual players never looked at the meter, and only the visits that shopped the Build menu ever covered a hall.
+  if (!wild && (current.chaos?.letter || chaosStepOf(current.chaos?.level ?? 0) >= ROWDY)) {
+    const covered = coverHalls(current, reserve, style === 'casual' ? 2 : 4);
+    current = covered.state;
+    purchases += covered.built;
   }
   // A place built on this visit gets its bin, and its yard the hands for it, before the player leaves.
   if (menu.built > 0) {

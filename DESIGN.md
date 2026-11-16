@@ -8659,3 +8659,94 @@ Nobody stands, sits or walks inside a building's footprint:
 | Each person sorted against the building next to them | Cutting each wide building's picture into one-cell slices |
 
 **Tested** (69.1 and 69.3): `tests/feelingShow.test.ts` (no feeling turns anyone; pacing turns only at its ends, never twice in two seconds; a figure's facing held for 650 ms, a real corner at once); `tests/looks.test.ts` (both packs tagged in full; a woman never in a man's look, a man never in a woman's; no student in a uniform, the helmets the varsity's alone; hijabs 1.5 to 2.5 in 100 women and turbans 0.4 to 1 in 100 men; everyday looks within 8% of even; an old figure kept wherever it fits; staff, parents and neighbours named to their figure; girlfriend, boyfriend and her, his or their by gender). Save version 34 adds nothing to a save (the save tests load every older version), with one upgrade note (`tests/web.test.ts`).
+
+## 70. Admissions at real figures (asked for 2026-11-15)
+
+The owner, from the panel of build 34: "Make sure the acceptance and applications per year are real stats...can't have 100% acceptance rate". It read "Acceptance rate 100%: 46,000 of the 46,000 who applied got a place" and "The next class is 2,364 students". The game counted as applicants the students who would enrol if there were a place for all of them, so with room for everyone every one got in. The real figures, from NCES IPEDS for fall 2024 (twenty large publics of 40,000 to 61,000 students), NCES Digest table 305.40 and Common Data Sets:
+
+| | Real |
+|---|---|
+| Admitted | A median 47.6% (9% to 86%); about 17% at the top ten publics, 61% at ranks 11 to 50, 66% at 51 to 100 |
+| Applications | A median 68,890 a year, 7.8 for every first-year who enrols; 98,000 to 146,000 at the top |
+| Yield | A median 26.6%; 42% to 50% at the most selective; 21% to 23% where half or more are admitted |
+| First-years | About 21% of undergraduates; transfers about 1,900 a year, 35% to 40% of their applicants admitted |
+| Spring | First-years about a hundredth of the fall's, or fewer |
+
+It runs on a game with goals only, as chaos does (68): the small campus counts as it always did.
+
+### 70.1 Applications, admitted, yield
+
+The game keeps counting what it counted: the first-years who would come if there were a place for all of them, the reach times its four causes (37.3). Around that number, an admissions office's figures, by the academic rank (a school not yet ranked counts as 200th) [T]:
+
+- **Applications**: for every first-year who takes a place, and for a quarter of those who would have come past the places, 6 far down the rankings, rising to 14 at first: 6 + 8 × e^−(rank − 1)/25. A full campus draws more who apply, but a real school holding its class at the top gets about fifteen for each place, not one for every would-be.
+- **Yield**, the share of those admitted who enrol: 20.5% far down, rising to 49% at first: 20.5% + 28.5% × e^−(rank − 1)/14.
+- **Admitted**: as many as fill the places the campus has, at that yield. With room for all, about four in five far down the rankings; a full campus, or one at its cap, admits fewer and is the more selective for it. Nobody is turned away at the door any more: those who would have been are not admitted.
+- **Transfers**, counted apart: a quarter of a first-year class a year, 37% of their applicants admitted and 60% of those coming.
+
+With room for all, for a class of 12,000 first-years (about what the model campus draws):
+
+| Rank | Applications | Admitted | Yield |
+|---|---|---|---|
+| 150th | 72,200 (6.0 each) | 81% | 20.5% |
+| 100th | 73,800 (6.2) | 79% | 20.5% |
+| 40th | 92,200 (7.7) | 58.5% | 22.3% |
+| 20th | 116,900 (9.7) | 37% | 27.8% |
+| 10th | 139,000 (11.6) | 24% | 35.5% |
+| 3rd | 160,600 (13.4) | 16.5% | 45.2% |
+| 1st | 168,000 (14.0) | 14.6% | 49.0% |
+
+A campus at its cap near the top, with about two who would come for every place, admits 11% to 13%, as the most selective publics do (9% to 18% among the top ten).
+
+A campus that opened with its students never says they applied: the panel says "The campus opened with its 46,000 students: nobody applied for those places." Until its first fall, its selectivity is the one a fall class would have at its rank with room for all (about 81% admitted), which earns no points, as the opening's 100% did not.
+
+### 70.2 A big fall and a small spring
+
+A fall brings the first-years who would come and nine in ten of the year's transfers: 1.225 for every first-year. A spring brings a few first-years (a hundredth of the fall's) and the rest of the transfers: 0.035 for every first-year of the fall, where it brought a fifth before. The year brings a little more than before (1.26 against 1.2), the fall most of it; a full campus at its cap takes only the room it has either way. Transfers are counted in with the class they arrive with: the game keeps its students by the year they came, and a transfer spends as long on campus as a first-year who arrives with them.
+
+The model campus fills at its second fall, where it filled at its second spring before: the fall class is the bigger by the spring's. It is a little under its cap through each spring (about 49,100 of 50,000), as a real campus is between its falls.
+
+### 70.3 Selectivity in the rating
+
+The academic rating's selectivity line (24.2, weight 10) now says the real share admitted: "57% of applicants are admitted; 1.3 would come for every place". Its level reads what it read before: of those who would have come this year, the fall's and the spring's together, the share who got a place, none at 100% and all at 30%. A campus that fills is the more selective for it, as before.
+
+The first long run read the real share admitted instead, against a real band (none at 80%, all at 15%). The real share falls as the rank rises, so each place gained brought more points: a campus left alone was still climbing after forty years (62.5 measured and 40th, where it had settled at 58.5 and 61st), and the check that rank, applicants and selectivity settle failed. Reading the old basis keeps the pace the rank had.
+
+### 70.4 Where it shows
+
+- **The student count's page** says, under the first-years who would come and their causes: next fall's Applications, Admitted (with its share), Enrolling (with its yield) and Transfers. A full campus "admits fewer of those who apply, and is ranked the higher for it".
+- **The bottleneck's card** says the last intake as an office counts it: "Last fall: 72,200 applied · 58,500 admitted (81%) · 12,000 enrolling (21% yield), and 2,700 transfers (37% of 12,200 admitted)", and next fall's after a spring.
+- **The Scorecard** (54.3): Applications are the real number; Acceptance rate "81% of first-year applicants admitted", with its cause the rank or a full campus; Yield is a real share, "21% of those admitted enrol", with an arrow now.
+- **The paper's** admissions story: "72,200 applied, 58,500 were admitted and 12,000 enrolled, with 2,700 transfers."
+- **The tour guide** quotes the real share admitted.
+
+Save version 35 changes nothing in a save; its one note: "Admissions now read like a real university's: how many apply, the share admitted and the share who come. Spring brings a small class now, most of them transfers."
+
+### 70.5 First-year classes larger than a real flagship's
+
+A real 46,000-student flagship takes about 9,500 first-years and 1,900 transfers a year: a quarter of its size. The model campus needs about 31% of its size new each year to stay full, as its population (65) runs; why it needs more is a question for that population, not for admissions. So its classes run about a quarter larger: about 12,000 first-years and 2,700 transfers at the opening, and applications in proportion (72,000 where a real school of its rank with 9,500 first-years gets 55,000 to 60,000). Every share (admitted, yield, applications for each first-year, transfers for each) is the real one. Making the classes real in size would mean students who stay longer, a change to the population of 65 and not to admissions: kept as it is here (the owner's "Hold").
+
+| Decisions made here | Instead |
+|---|---|
+| The forecast of who would come stays the game's number; applications, admitted and yield are worked out around it | A new pool of applicants, which would move every long-run line |
+| Transfers counted in with the class they arrive with | Transfers who arrive as sophomores, which needs class records of their own and shortens their stay |
+| Nine in ten transfers in the fall, a quarter of a first-year class a year | Six in ten and a fifth (the first try): the second spring's small class left the campus a year late to fill |
+| The rating's selectivity reads, as before, how many would come for each place; its line says the real share admitted | The real share against a real band (the first long run): each place gained in rank brought more points, and a campus left alone never settled |
+| Applications follow the places and a quarter of the demand past them, 14 for each at first | One for every would-be at the cap (the first long run): the top campuses admitted 6% to 9%, below any real public; half the demand past them and 15 at first (the second): still 9.5% to 11% |
+| The usual players answer a trustees' letter with Campus Safety (70.6) | Leaving the long run's players blind to the meter: one campus drew ten letters on the timing of its spending alone |
+| Classes a quarter larger than a real flagship's, and their applications | Classes of 9,500, which needs the students of 65 to stay longer |
+
+### 70.6 The long run's players read the Chaos meter
+
+The second long run's casual player on its second seed drew ten letters from the trustees (all of them met), where C1's drew none. Its money was the same over a year, but the big fall moved when it was short: its visits keep back money for faculty still to be hired (the fall stretches them now) and for a while kept under 15.2 of every $100, so the visit that had bought Campus Safety for its last halls in C1 did not shop the Build menu at all, and those halls went uncovered for four years (69% of the halls reached, against 100% from the first year in C1). The usual players had never looked at the meter; C1's passed on the timing of a spending visit. Now a usual player answers it as the card asks: while the trustees have written, or the meter reads Rowdy or worse, it puts Campus Safety over a hall it does not reach, two on a visit for the casual player and four for the others, thrifty or not. The same campus then draws one letter in 44 years and ends Calm. The Pandemonium player still never builds Campus Safety; the Serene player covers every hall as before. A player's rule, not the game's: nothing in the game changed for it.
+
+**Tested**: `tests/admissionsReal.test.ts` (5): a real flagship's figures at 150th, 40th, near the top and first, and never less selective higher up; fewer admitted at the cap, transfers apart, in the panel's words; a big fall, a small spring and the small campus as before; nobody who opened with the campus applied, and the first fall as an office counts it, its line in the rating with the real share and its level as before; the Scorecard's three rows. The capacity, goals, intake, newspaper, people and web tests follow the small spring class (a bigger class stretches faculty in the fall now, and the campus fills at its second fall). Save version 35 adds nothing to a save, with one note.
+
+**The long run**: all 109 checks pass in 1,699 s, the two new ones with them (the realism lines of R1: admitted by rank, and applications for each first-year). Against C1 (68), 51 checks moved in their numbers and pass:
+
+- **New**: campuses at their cap at second and third admit 12.0% to 13.6% and 12.9% to 13.8%, yield 47% and 45%; the campus left alone (122nd) admits 74% with a yield of 20.5%. Applications for each first-year who would come: 13.4 to 13.7 at the top, 6.1 far down; transfers a quarter of a first-year class.
+- **The bigger fall**: the campus left alone counts 17,721 who would come at the start of its last ten years (14,358 before; the fall class is first-years and transfers now) and ranks 43rd to 55th (56th to 61st), a full campus being the more selective for its bigger class; the rating moves 1.6 points (1.4), and its line reads 69% to 71% admitted where it read 74% to 77% got a place. With every building placed: 26,183 (21,323). The campus that grows fast holds 42,020 by its third fall (39,948). Left alone for five years its cash grows $546.2M ($551.1M): it is a little under its cap through each spring. Retention left alone 89.7% (90.0%); fifth- and sixth-year seniors 216 to 958 (1,113); the social web's catch-up counts 37,762 students (37,773).
+- **The money**: years 3 to 8 keep $13.7 to $15.8 of every $100 (casual; $14.0 to $15.7 before), $13.6 to $15.3 (once a day; $13.3 to $15.8) and $11.5 to $13.9 (striver, told beside the target as always; $12.7 to $14.5); the later weeks $12.9 to $15.7, $12.7 to $15.7 and $11.3 to $14.9; the endowments $3.28B to $3.73B at week 44 ($3.81B). The campus that shrinks keeps $15.9 two years on ($15.2).
+- **The pace**: the Top 10 at week 28 for the once-a-day player on seed 1 (29) and week 24 on seed 2 (27); the striver on seed 2 reaches the Top 50 at week 13 (14). The Top 10 still comes no sooner than week 24, and the full campus at week 2. Levels: the once-a-day player gains 5.9 and 5.9 a week in weeks 4 to 12 and 6.2 and 5.7 after (5.8, 6.4, 5.7, 6.2), under 7.00.
+- **The trustees** (70.6): letters 0, 0, 0, 1, 0, 0 (C1: 0, 0, 1, 0, 0, 6, the last at the check's limit); the meter's highest reading 42 (42).
+- **Catch-up**: 477 ms and 502 ms for 30 days, 228 ms and 394 ms on the model campus, 439 ms for the social web, all under a second.
+- **Everything a player does in a day** moves by a little, as the players' visits fall differently (when they are short of money, and the Campus Safety they now build): levels at week 44 255 to 277 (251 to 280), Seals 12.2 to 13.2 a week, orders 81% to 85% claimed, decorations 277 to 331 at week 44, collecting $265K to $336K a year, the eras' big builds (the Welcome Center bought on two campuses more), Greek names, labs, traditions, party calls, finals met, stories and drives. Each passes as before.

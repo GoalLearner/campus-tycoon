@@ -87,6 +87,7 @@ import { mcView } from './mcUi';
 import { studentFigure } from '../sim';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
+import { admissionsLines } from '../sim/systems/scorecard';
 import { buildEntries, happinessView, lotFacts, moneyView, placedFacts, placedSummary, placingLine } from './buildUi';
 import { openBuildMenu } from './buildMenu';
 import { labPage } from './labUi';
@@ -1179,7 +1180,7 @@ export function mountUi(root: HTMLElement): void {
       const cap = enrollmentCap(state);
       const applicants = nextApplicants(state);
       if (!add && cap !== null && plan.students < applicants) {
-        action = plan.students === 0 ? `The campus is full at ${headCount(cap)} students` : `The next class fills the campus: ${headCount(plan.students)} of ${headCount(applicants)} applicants`;
+        action = plan.students === 0 ? `The campus is full at ${headCount(cap)} students` : state.goals ? `The next class fills the campus: ${headCount(plan.students)} students` : `The next class fills the campus: ${headCount(plan.students)} of ${headCount(applicants)} applicants`;
       }
       later = coming;
     }
@@ -1208,12 +1209,18 @@ export function mountUi(root: HTMLElement): void {
         const applicants = nextApplicants(state);
         lead = `The next class is ${headCount(plan.students)} students.`;
         // At its cap a campus takes as many as the cap leaves room for.
-        if (cap !== null && plan.students < applicants) lead = plan.students === 0 ? `The campus is full at ${headCount(cap)} students. ${headCount(applicants)} will apply, and there is no place for them until commencement.` : `The next class is ${headCount(plan.students)} students, which fills the campus. ${headCount(applicants - plan.students)} more will apply and be turned away.`;
+        if (cap !== null && plan.students < applicants) {
+          lead = plan.students === 0 ? `The campus is full at ${headCount(cap)} students. ${headCount(applicants)} will apply, and there is no place for them until commencement.` : `The next class is ${headCount(plan.students)} students, which fills the campus. ${headCount(applicants - plan.students)} more will apply and be turned away.`;
+          // Real figures (DESIGN.md 70): a full campus admits fewer, and nobody is turned away at the door.
+          if (state.goals) lead = plan.students === 0 ? `The campus is full at ${headCount(cap)} students: it admits nobody until commencement.` : `The next class is ${headCount(plan.students)} students, which fills the campus: it admits fewer of those who apply.`;
+        }
       }
       card.append(el('p', '', lead));
       const rate = acceptanceRate(state);
       const lastIntake = state.admissions.lastIntake;
-      if (rate !== null && lastIntake) {
+      // Real figures on a game with goals (DESIGN.md 70): applications, admitted, yield and transfers.
+      if (state.goals) for (const line of admissionsLines(state)) card.append(el('p', 'fine', line));
+      else if (rate !== null && lastIntake) {
         const placed = lastIntake.admitted + state.admissions.waitlistAdmitted;
         card.append(el('p', 'fine', `Acceptance rate ${Math.round(rate * 100)}%: ${headCount(placed)} of the ${headCount(lastIntake.expected)} who applied got a place.`));
       }
@@ -1774,6 +1781,17 @@ export function mountUi(root: HTMLElement): void {
             for (const [name, value] of [['Admitted', size.places.admitted], ['Turned away', size.places.turnedAway]] as const) {
               const line = el('div', 'size-row places');
               line.append(el('span', '', name), el('span', 'size-value', value));
+              body.append(line);
+            }
+          }
+          // Next fall as an admissions office counts it (DESIGN.md 70).
+          if (size.pipeline) {
+            const head = el('div', 'size-row total');
+            head.append(el('span', '', 'Next fall'), el('span', 'size-value', ''));
+            body.append(head);
+            for (const row of size.pipeline) {
+              const line = el('div', 'size-row places');
+              line.append(el('span', '', row.name), el('span', 'size-value', row.value));
               body.append(line);
             }
           }

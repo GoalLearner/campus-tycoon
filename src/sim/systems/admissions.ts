@@ -27,6 +27,7 @@ import { closeSemester, stressLoss } from './season';
 import { callTimes, partiesOn, partyScene } from './parties';
 import { GRAD_SCHOOL, OFFER_BY_COMMENCEMENT, WRITE_UPS_IN_DORMS, WRITE_UPS_PER_THOUSAND } from '../config/fourYears';
 import { addWhy, anchorAt, lateFrom, leaveShares, semesterStays, splitCount, standingOf, survivalTo } from './population';
+import { admissionsRank, pipeline } from './selectivity';
 
 /**
  * Intakes, the waitlist, retention, graduation and promotion.
@@ -234,11 +235,30 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   const bottleneck = turnedAway > 0 ? plan.tightest : null;
 
   enrol(state, admitted, plan.off, tick === FIRST_INTAKE_TICK);
-  state.admissions.lastIntake = { tick, season, expected, admitted, turnedAway, bottleneck, ...(cap === null ? {} : { capped }) };
-  // The year's applicants and places, for selectivity: both classes of a year count, from the fall on.
-  if (season === 'fall') state.admissions.year = { applied: 0, admitted: 0 };
-  state.admissions.year.applied += expected;
-  state.admissions.year.admitted += admitted;
+  // On a game with goals, as an admissions office counts it (DESIGN.md 70.1): applications, offers, yield, transfers.
+  // Those waiting for a bed or a seat were offered a place too.
+  const real = state.goals && tick !== FIRST_INTAKE_TICK ? pipeline(expected, places, admissionsRank(state), season) : null;
+  state.admissions.lastIntake = {
+    tick,
+    season,
+    expected,
+    admitted,
+    turnedAway,
+    bottleneck,
+    ...(cap === null ? {} : { capped }),
+    ...(real ? { real: { applied: real.applied, offered: real.admitted, firstYears: real.enrolling, yield: real.yield, transfers: real.transfers.enrolling, transferApplied: real.transfers.applied, transferOffered: real.transfers.admitted } } : {}),
+  };
+  // The year's applicants and places, for selectivity: both classes of a year count, from the fall on. On a game with
+  // goals, its first-years' applications and offers, as a real acceptance rate is counted.
+  if (season === 'fall') state.admissions.year = state.goals ? { applied: 0, admitted: 0, wanted: 0, placed: 0 } : { applied: 0, admitted: 0 };
+  const counted = state.admissions.year;
+  counted.applied += real ? real.applied : expected;
+  counted.admitted += real ? real.admitted : admitted;
+  // What the rating reads (DESIGN.md 70.3): how many would have come, and how many got a place, as before.
+  if (real) {
+    counted.wanted = (counted.wanted ?? 0) + expected;
+    counted.placed = (counted.placed ?? 0) + admitted;
+  }
   // The first class arriving puts safety and medical staff on the payroll, whoever was admitted.
   markRatesDirty(state);
   state.admissions.waitlist = turnedAway;
@@ -248,7 +268,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 
   const { year } = calendarAt(state.clock);
   const label = season === 'fall' ? `The fall class of year ${year}` : `The spring class of year ${year}`;
-  const full = capped > 0 && cap !== null ? ` The campus is full at ${headCount(cap)}: ${headCount(capped)} more who applied were turned away.` : '';
+  // With real figures (DESIGN.md 70) a full campus admits fewer, and nobody is turned away at the door.
+  const full = capped > 0 && cap !== null ? (real ? ` The campus is full at ${headCount(cap)}: it admitted fewer for it.` : ` The campus is full at ${headCount(cap)}: ${headCount(capped)} more who applied were turned away.`) : '';
   log.push({
     tick,
     kind: 'intake',
@@ -278,8 +299,14 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 export function openWithStudents(state: GameState, count: number): number {
   const plan = admitPlan(state, count, localsAmong(count));
   enrol(state, plan.admitted, plan.off, true);
-  state.admissions.lastIntake = { tick: state.clock.tick, season: 'fall', expected: plan.admitted, admitted: plan.admitted, turnedAway: 0, bottleneck: null };
-  state.admissions.year = { applied: plan.admitted, admitted: plan.admitted };
+  state.admissions.lastIntake = { tick: state.clock.tick, season: 'fall', expected: plan.admitted, admitted: plan.admitted, turnedAway: 0, bottleneck: null, ...(state.goals ? { opening: true } : {}) };
+  // Nobody applied for the places it opened with (DESIGN.md 70.1). Its selectivity until the first fall is the one a
+  // fall class would have at its rank, with room for all: about 80% admitted, as far down the rankings as it starts.
+  if (state.goals) {
+    const wanted = classSize(state, 'fall', false);
+    const first = pipeline(wanted, wanted, admissionsRank(state), 'fall');
+    state.admissions.year = { applied: first.applied, admitted: first.admitted, wanted: plan.admitted, placed: plan.admitted };
+  } else state.admissions.year = { applied: plan.admitted, admitted: plan.admitted };
   // It opens with the faculty and staff its students need: they were hired for the opening.
   staffSemester(state, 'fall');
   markRatesDirty(state);
@@ -297,7 +324,10 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   a.waitlist -= count;
   a.waitlistLocals = Math.max(0, Math.min(a.waitlist, a.waitlistLocals - plan.locals));
   a.waitlistAdmitted += count;
-  a.year.admitted += count;
+  // On a game with goals they were offered their place at the intake, and counted then (DESIGN.md 70.1); they take
+  // their place now.
+  if (!state.goals) a.year.admitted += count;
+  else a.year.placed = (a.year.placed ?? a.year.admitted) + count;
   // Where faculty follow the students at once, they do so now. Elsewhere this changes nothing until the list closes.
   if (!hiresBehindNow(state)) planStaff(state);
   log.push({
@@ -671,8 +701,22 @@ export function yearAcceptance(state: GameState): number | null {
  */
 export function acceptanceRate(state: GameState): number | null {
   const last = state.admissions.lastIntake;
+  // On a game with goals, the year's first-years, as a real acceptance rate is counted (DESIGN.md 70.1).
+  if (state.goals) return yearAcceptance(state);
   if (!last || last.expected <= 0) return null;
   return Math.min(1, (last.admitted + state.admissions.waitlistAdmitted) / last.expected);
+}
+
+/**
+ * What the academic rating's selectivity reads on a game with goals (DESIGN.md 70.3): the share of those who would
+ * have come this year who got a place, the fall's and the spring's together, as it read before admissions counted as
+ * an office does. A save from before keeps its year as it was until its next fall. null before the first class.
+ */
+export function yearPlaced(state: GameState): number | null {
+  const year = state.admissions.year;
+  if (!state.admissions.lastIntake) return null;
+  if (year.wanted !== undefined && year.placed !== undefined) return year.wanted > 0 ? Math.min(1, year.placed / year.wanted) : null;
+  return yearAcceptance(state);
 }
 
 export function zoneName(zone: Zone): string {

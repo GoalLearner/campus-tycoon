@@ -352,10 +352,12 @@ describe('couples over the years', () => {
       seen.push(row);
     }
     const first = (year: number, phase: string): number => seen.find((one) => one.year === year && one.phase === phase)!.per1000;
+    // Within an eighth; the spring within a fifth, since admissions at real figures (DESIGN.md 70): year two's spring
+    // follows a fall class a quarter bigger than the opening year's, with almost nobody new since.
     for (const phase of ['fall', 'spring', 'graduation']) {
       const one = first(1, phase);
       const two = first(2, phase);
-      expect(Math.abs(two - one) / one, phase).toBeLessThan(0.12);
+      expect(Math.abs(two - one) / one, phase).toBeLessThan(phase === 'spring' ? 0.2 : 0.12);
     }
     // Lower as the fall begins (the first-years know no one yet), higher by spring.
     expect(first(2, 'spring')).toBeGreaterThan(first(2, 'fall') * 1.1);

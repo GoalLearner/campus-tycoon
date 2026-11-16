@@ -569,10 +569,13 @@ describe('Gold Seals and Finish now', () => {
     expect(waits(done).some((one) => one.id === 'faculty')).toBe(false);
     // They are on the payroll from today, as they would have been from the next semester.
     expect(budget(done).spending).toBeGreaterThan(budget(more).spending);
-    // The semester's own arrival finds them already there and brings nobody twice.
+    // The semester's own arrival finds them already there and brings nobody twice. Since admissions at real figures
+    // (DESIGN.md 70) the spring class is small, so the plan made at the semester's end can be a few under them: those
+    // stay until the next, and nobody is brought on top.
     const spring = advance(done, done.clock.lastSimulatedAt, T0 + 3 * DAY + 5 * MIN).state;
     const plain = advance(more, more.clock.lastSimulatedAt, T0 + 3 * DAY + 5 * MIN).state;
-    expect(spring.staffing.faculty).toBe(plain.staffing.faculty);
+    expect(spring.staffing.faculty).toBeGreaterThanOrEqual(plain.staffing.faculty);
+    expect(spring.staffing.faculty).toBe(more.staffing.faculty + coming);
   });
 
   it('opens a stadium tier that is going up, on the next minute', () => {
@@ -757,7 +760,7 @@ describe('a save from version 17', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(17);
+    expect(notes).toHaveLength(18);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

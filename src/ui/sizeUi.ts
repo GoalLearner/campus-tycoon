@@ -25,6 +25,7 @@ import {
   type NeedStatus,
 } from '../sim';
 import { eraNextLine } from './policyUi';
+import { fallPipeline } from '../sim/systems/scorecard';
 
 /**
  * Words for the screen that opens from the student count on the top bar
@@ -50,6 +51,11 @@ export interface SizeView {
   };
   /** Of this fall's applicants, how many the cap leaves a place for and how many it turns away. null on a game with no cap. */
   places: { admitted: string; turnedAway: string } | null;
+  /**
+   * On a game with goals (DESIGN.md 70): next fall as an admissions office counts it, applications, admitted, enrolling
+   * and transfers, in place of `places`. null on the small campus.
+   */
+  pipeline: Array<{ name: string; value: string }> | null;
   /** "No. 143 of 200 for academics". */
   rank: string;
   /** "Next goal: Top 125". '' when there are no goals or every one is reached. */
@@ -87,7 +93,7 @@ export function sizeView(state: GameState): SizeView {
         students > limit
           ? 'Nobody is admitted until commencement brings it back under. No student is asked to leave.'
           : reached
-            ? 'A full campus turns the rest of its applicants away, and is ranked the higher for it.'
+            ? 'A full campus admits fewer of those who apply, and is ranked the higher for it.'
             : 'A full campus is the first goal. It is counted when a class moves in.',
       percent: Math.round(100 * Math.max(0, Math.min(1, students / Math.max(1, limit)))),
     };
@@ -95,11 +101,24 @@ export function sizeView(state: GameState): SizeView {
     const fall = nextFall(state);
     places = { admitted: headCount(fall.admitted), turnedAway: headCount(fall.turnedAway) };
   }
+  // Real figures on a game with goals (DESIGN.md 70): a full campus admits fewer, and nobody is turned away at the door.
+  let pipeline: SizeView['pipeline'] = null;
+  if (goals) {
+    const p = fallPipeline(state);
+    const rate = p.applied > 0 ? Math.round((100 * p.admitted) / p.applied) : 0;
+    pipeline = [
+      { name: 'Applications', value: headCount(p.applied) },
+      { name: `Admitted (${rate}%)`, value: headCount(p.admitted) },
+      { name: `Enrolling (${Math.round(p.yield * 100)}% yield)`, value: headCount(p.enrolling) },
+      { name: 'Transfers', value: headCount(p.transfers.enrolling) },
+    ];
+    places = null;
+  }
   return {
     title: `${headCount(students)} students`,
     cap,
     applicants: {
-      head: "This fall's applicants",
+      head: goals ? 'First-years who would come next fall' : "This fall's applicants",
       total: headCount(applicants.total),
       rows: [
         { name: applicants.baseName, value: headCount(applicants.base) },
@@ -108,6 +127,7 @@ export function sizeView(state: GameState): SizeView {
       ],
     },
     places,
+    pipeline,
     rank: rank > 0 ? `No. ${rank} of 200 for academics` : 'Not yet ranked. The first rankings come out in the spring.',
     rankNext: goals && rankGoal !== null ? `Next goal: Top ${rankGoal}` : goals ? 'Every rank goal is reached.' : '',
     era: goals ? `Era: ${eraName(goals)}` : '',

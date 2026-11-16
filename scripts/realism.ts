@@ -10,6 +10,10 @@ import { drinkingFigures } from '../src/sim/systems/birthdays';
 import { LEAVE_WHYS } from '../src/sim/config/population';
 import { MAJORS } from '../src/sim/config/students';
 import { campusRates } from '../src/sim/systems/field';
+import { yearAcceptance } from '../src/sim/systems/admissions';
+import { fallPipeline } from '../src/sim/systems/scorecard';
+import { admissionsRank, applyPer } from '../src/sim/systems/selectivity';
+import { TRANSFERS } from '../src/sim/config/admissions';
 import { greekShare } from '../src/sim/systems/greek';
 import { rostersOf } from '../src/sim/systems/teams';
 import { catchUp, newWeb, webWeekOf } from '../src/sim/systems/web';
@@ -176,6 +180,26 @@ export function realismLines(tended: GameState[], alone: GameState): RealismLine
     'varsity athletes about 1 to 2 in 100 of a big campus, and Greek Row inside its room',
     read.every((one) => within(one.athletes, 0.008, 0.025) && one.greek <= 0.25),
     `athletes ${span(of('athletes'))}; in chapters ${span(of('greek'))}`,
+  );
+  // Admissions at real figures (DESIGN.md 70): each campus's year by its rank, against NCES IPEDS fall 2024 for large
+  // publics. A campus at its cap admits fewer, so the bands reach lower than an open campus would read.
+  const admissions = [...tended, alone].map((state) => {
+    const rank = admissionsRank(state);
+    const accept = yearAcceptance(state) ?? 1;
+    const p = fallPipeline(state);
+    const band = rank <= 10 ? [0.1, 0.22] : rank <= 50 ? [0.35, 0.7] : rank <= 100 ? [0.45, 0.8] : [0.5, 0.86];
+    const yieldBand = rank <= 10 ? [0.33, 0.5] : rank <= 50 ? [0.2, 0.3] : [0.19, 0.23];
+    return { rank, accept, ok: within(accept, band[0]!, band[1]!) && within(p.yield, yieldBand[0]!, yieldBand[1]!), yield: p.yield };
+  });
+  line(
+    'admitted by rank: about 15% in the top ten, 60% at 11th to 50th, 66% at 51st to 100th, 80% further down (fewer at the cap); yield 42% to 50% at the top, 21% to 23% elsewhere',
+    admissions.every((one) => one.ok),
+    admissions.map((one) => `No. ${one.rank}: ${pct(one.accept)} admitted, ${pct(one.yield)} yield`).join('; '),
+  );
+  line(
+    'applications for each first-year who would come: 6 to 16 (a median of 7.8); transfers a fifth to a quarter of a first-year class',
+    admissions.every((one) => within(applyPer(one.rank), 6, 16)) && within(TRANSFERS.share, 0.15, 0.3),
+    `${admissions.map((one) => applyPer(one.rank).toFixed(1)).join(', ')} applications each; transfers ${pct(TRANSFERS.share)} of a first-year class`,
   );
   return lines;
 }
