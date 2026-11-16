@@ -54,7 +54,8 @@ export function pointOn(trip: Trip, d: number): { x: number; y: number; ax: numb
 
 /** How strongly someone on a trip shows: fading only in the doorway at its start (in) or its end (out), over `fade` cells. */
 export function doorAlpha(trip: Trip, d: number, fade: number): number {
-  if (d <= 0) return 0;
+  // Before setting out: not yet come out of the door, or still standing in their place.
+  if (d <= 0) return trip.out ? 1 : 0;
   return trip.out ? Math.min(1, Math.max(0, (trip.total - d) / fade)) : Math.min(1, d / fade);
 }
 

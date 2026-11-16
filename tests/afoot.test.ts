@@ -81,6 +81,9 @@ describe('afoot', () => {
     expect(doorAlpha(way, 0.2, 0.35)).toBeCloseTo(0.2 / 0.35);
     for (let d = 0.35; d <= 7; d += 0.25) expect(doorAlpha(way, d, 0.35)).toBe(1);
     const away = tripOf([...pts].reverse(), 0, true);
+    // Waiting to set out on a way out, they still stand there.
+    expect(doorAlpha(away, 0, 0.35)).toBe(1);
+    expect(doorAlpha(away, -2, 0.35)).toBe(1);
     for (let d = 0.01; d <= 6.6; d += 0.25) expect(doorAlpha(away, d, 0.35)).toBe(1);
     expect(doorAlpha(away, 6.9, 0.35)).toBeLessThan(0.5);
     // Along the way, on the stretch it is on.

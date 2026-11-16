@@ -1156,7 +1156,8 @@ export class Walkers {
     let already = false;
     if (this.seen(first)) {
       already = this.fresh(first.x, first.y);
-      const outOfDoor = leg === 1 && !extra.at && this.hasDoor(from);
+      // Out of a door: the route starts at the stop's own door, or (a route given) at a door's edge (69.2).
+      const outOfDoor = leg === 1 && !extra.at && (extra.route ? this.atDoorEdge(route[0]!) : this.hasDoor(from));
       // Friends setting out with someone come out with them, from where they came out (63.8).
       const withLeader = extra.at !== undefined && leg === 1 && Math.hypot(extra.at.x - route[0]!.x, extra.at.y - route[0]!.y) < 0.05;
       if (!already && !outOfDoor && !withLeader) {
@@ -1848,7 +1849,8 @@ export class Walkers {
       const { at, walker } = found;
       walker.momentUntil = now + ms;
       walker.resume = walker.route.slice(walker.leg).map((one) => ({ ...one }));
-      if (walker.resume.length === 0) walker.resume = null;
+      // Already where they were going: out of the water and back there the way they came (69.5).
+      if (walker.resume.length === 0) walker.resume = [{ x: walker.x, y: walker.y }];
       walker.route = [{ x: walker.x, y: walker.y }, { x: at.x, y: at.y }];
       walker.leg = 1;
       walker.watchMs = FOUNTAIN_MS;
@@ -1885,8 +1887,9 @@ export class Walkers {
       const back = w.route[w.leg] ?? null;
       const clear = this.clearLine(w.x, w.y, spot.x, spot.y) && (!back || this.clearLine(spot.x, spot.y, back.x, back.y));
       if (i < most && !w.party && clear) {
+        // After, on along the way they were going; or, already where they were going, back there the way they came.
         const resume = w.route.slice(w.leg).map((one) => ({ ...one }));
-        w.resume = resume.length > 0 ? resume : null;
+        w.resume = resume.length > 0 ? resume : [{ x: w.x, y: w.y }];
         w.route = [{ x: w.x, y: w.y }, spot];
         w.leg = 1;
         w.lingerMs = 0;
@@ -1946,6 +1949,19 @@ export class Walkers {
   private hasDoor(stop: Stop): boolean {
     if (stop.kind === 'building' || stop.kind === 'house') return true;
     return stop.kind === 'place' && !stop.flat && stop.family !== undefined && DOOR_FAMILIES.has(stop.family);
+  }
+
+  /** True when a point is at the edge of a door: where someone comes out of a building (69.2). */
+  private atDoorEdge(at: { x: number; y: number }): boolean {
+    const cx = Math.floor(at.x);
+    const cy = Math.floor(at.y);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const edge = this.doorAt.get((cy + dy) * this.width + cx + dx);
+        if (edge && Math.hypot(edge.x - at.x, edge.y - at.y) < 0.3) return true;
+      }
+    }
+    return false;
   }
 
   /** True when a point of the map is on the screen, or near enough to it that a figure there would show. */
@@ -2675,7 +2691,9 @@ export class Walkers {
 
   /** Where a walker is drawn: their own spot, or their place beside the first of their party, across the way they go. */
   private placeOf(walker: Walker): { x: number; y: number } {
-    if (!walker.party) return walker;
+    // A copy, never the walker itself: the drawing steps a rider aside from it, and that step must not move them
+    // (DESIGN.md 69.1: it was added to where they were every frame, so riders drifted off the path and zigzagged back).
+    if (!walker.party) return { x: walker.x, y: walker.y };
     const [across, behind] = walker.place;
     // Walking along x (south-east or north-west) the party spreads along y, and the other way about.
     const alongX = walker.direction === 'se' || walker.direction === 'nw';
