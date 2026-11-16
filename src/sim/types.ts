@@ -368,9 +368,11 @@ export interface Admissions {
   /**
    * This year's applicants and how many of them got a place, the fall class and the spring class together. It
    * starts again at each fall intake. Selectivity is read from it, so one small spring class cannot speak for a
-   * year.
+   * year. On a game with goals (DESIGN.md 70) `applied` and `admitted` are first-years' applications and offers, as
+   * a real acceptance rate is counted, and `wanted` and `placed` keep what the rating reads: how many would have come
+   * and how many got a place.
    */
-  year: { applied: number; admitted: number };
+  year: { applied: number; admitted: number; wanted?: number; placed?: number };
 }
 
 

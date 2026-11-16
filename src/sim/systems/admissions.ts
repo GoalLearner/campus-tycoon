@@ -250,9 +250,15 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
   };
   // The year's applicants and places, for selectivity: both classes of a year count, from the fall on. On a game with
   // goals, its first-years' applications and offers, as a real acceptance rate is counted.
-  if (season === 'fall') state.admissions.year = { applied: 0, admitted: 0 };
-  state.admissions.year.applied += real ? real.applied : expected;
-  state.admissions.year.admitted += real ? real.admitted : admitted;
+  if (season === 'fall') state.admissions.year = state.goals ? { applied: 0, admitted: 0, wanted: 0, placed: 0 } : { applied: 0, admitted: 0 };
+  const counted = state.admissions.year;
+  counted.applied += real ? real.applied : expected;
+  counted.admitted += real ? real.admitted : admitted;
+  // What the rating reads (DESIGN.md 70.3): how many would have come, and how many got a place, as before.
+  if (real) {
+    counted.wanted = (counted.wanted ?? 0) + expected;
+    counted.placed = (counted.placed ?? 0) + admitted;
+  }
   // The first class arriving puts safety and medical staff on the payroll, whoever was admitted.
   markRatesDirty(state);
   state.admissions.waitlist = turnedAway;
@@ -262,7 +268,8 @@ export function runIntake(state: GameState, season: Season, log: LogEntry[]): vo
 
   const { year } = calendarAt(state.clock);
   const label = season === 'fall' ? `The fall class of year ${year}` : `The spring class of year ${year}`;
-  const full = capped > 0 && cap !== null ? ` The campus is full at ${headCount(cap)}: ${headCount(capped)} more who applied were turned away.` : '';
+  // With real figures (DESIGN.md 70) a full campus admits fewer, and nobody is turned away at the door.
+  const full = capped > 0 && cap !== null ? (real ? ` The campus is full at ${headCount(cap)}: it admitted fewer for it.` : ` The campus is full at ${headCount(cap)}: ${headCount(capped)} more who applied were turned away.`) : '';
   log.push({
     tick,
     kind: 'intake',
@@ -298,7 +305,7 @@ export function openWithStudents(state: GameState, count: number): number {
   if (state.goals) {
     const wanted = classSize(state, 'fall', false);
     const first = pipeline(wanted, wanted, admissionsRank(state), 'fall');
-    state.admissions.year = { applied: first.applied, admitted: first.admitted };
+    state.admissions.year = { applied: first.applied, admitted: first.admitted, wanted: plan.admitted, placed: plan.admitted };
   } else state.admissions.year = { applied: plan.admitted, admitted: plan.admitted };
   // It opens with the faculty and staff its students need: they were hired for the opening.
   staffSemester(state, 'fall');
@@ -317,8 +324,10 @@ export function fillFromWaitlist(state: GameState, log: LogEntry[]): void {
   a.waitlist -= count;
   a.waitlistLocals = Math.max(0, Math.min(a.waitlist, a.waitlistLocals - plan.locals));
   a.waitlistAdmitted += count;
-  // On a game with goals they were offered their place at the intake, and counted then (DESIGN.md 70.1).
+  // On a game with goals they were offered their place at the intake, and counted then (DESIGN.md 70.1); they take
+  // their place now.
   if (!state.goals) a.year.admitted += count;
+  else a.year.placed = (a.year.placed ?? a.year.admitted) + count;
   // Where faculty follow the students at once, they do so now. Elsewhere this changes nothing until the list closes.
   if (!hiresBehindNow(state)) planStaff(state);
   log.push({
@@ -696,6 +705,18 @@ export function acceptanceRate(state: GameState): number | null {
   if (state.goals) return yearAcceptance(state);
   if (!last || last.expected <= 0) return null;
   return Math.min(1, (last.admitted + state.admissions.waitlistAdmitted) / last.expected);
+}
+
+/**
+ * What the academic rating's selectivity reads on a game with goals (DESIGN.md 70.3): the share of those who would
+ * have come this year who got a place, the fall's and the spring's together, as it read before admissions counted as
+ * an office does. A save from before keeps its year as it was until its next fall. null before the first class.
+ */
+export function yearPlaced(state: GameState): number | null {
+  const year = state.admissions.year;
+  if (!state.admissions.lastIntake) return null;
+  if (year.wanted !== undefined && year.placed !== undefined) return year.wanted > 0 ? Math.min(1, year.placed / year.wanted) : null;
+  return yearAcceptance(state);
 }
 
 export function zoneName(zone: Zone): string {

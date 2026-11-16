@@ -21,8 +21,7 @@ import { GRADUATION_LEVEL, RETENTION_LEVEL } from '../config/population';
 import { nextFloat, nextInt } from '../rng';
 import type { Field, GameState, LogEntry, RngState, School } from '../types';
 import { OPENING_RANK, RANK_PULL, RANK_STEP } from '../config/goals';
-import { begunHere, yearAcceptance } from './admissions';
-import { SELECTIVE } from '../config/admissions';
+import { begunHere, yearAcceptance, yearPlaced } from './admissions';
 import { ratesOf } from './population';
 import { landRankGoals } from './goals';
 import { ratingShift } from './policies';
@@ -217,8 +216,10 @@ const levelIn = (x: number, band: { none: number; all: number }): number => 100 
 export function academicInputs(state: GameState): AcademicInput[] {
   const rates = campusRates(state);
   const { graduation, honors } = rates;
-  // Selectivity is the year's: its fall class and its spring class together.
+  // Selectivity is the year's: its fall class and its spring class together. On a game with goals the line says the
+  // real share admitted, and the level reads the share of those who would come who got a place (DESIGN.md 70.3).
   const accept = yearAcceptance(state);
+  const placed = state.goals ? yearPlaced(state) : accept;
   // Class size has two named causes, in equal parts: how full the seats are, and how many students there are
   // to a member of faculty (DESIGN.md 38.5). The one that weighs more is named first.
   const crowd = crowding(state);
@@ -244,8 +245,15 @@ export function academicInputs(state: GameState): AcademicInput[] {
     { id: 'classSize', name: 'Class size', weight: 15, level: 100 * room, detail: classes },
     { id: 'reputation', name: 'Reputation', weight: 15, level: state.field.rankYear > 0 ? state.field.reputation : null, detail: state.field.rankYear > 0 ? 'A slow average of past ratings' : 'Builds from the first rankings day' },
     { id: 'retention', name: 'Retention', weight: 10, level: retention === null ? null : levelIn(retention, RETENTION_LEVEL), detail: retention === null ? 'No class has begun a second year yet' : `${percentOf(retention)} of freshmen come back for a second year` },
-    // On a game with goals, read against real figures (DESIGN.md 70.3): none at 80% admitted, all at 15%.
-    { id: 'selectivity', name: 'Selectivity', weight: 10, level: accept === null ? null : state.goals ? levelIn(1 - accept, { none: 1 - SELECTIVE.none, all: 1 - SELECTIVE.all }) : 100 * Math.max(0, Math.min(1, (1 - accept) / 0.7)), detail: accept === null ? 'No class has been admitted yet' : `${Math.round(accept * 100)}% of applicants are admitted` },
+    // On a game with goals the line says the real share admitted (DESIGN.md 70.3), and the level reads, as before, how
+    // many would come for each place: a campus that fills is the more selective for it.
+    {
+      id: 'selectivity',
+      name: 'Selectivity',
+      weight: 10,
+      level: placed === null ? null : 100 * Math.max(0, Math.min(1, (1 - placed) / 0.7)),
+      detail: accept === null ? 'No class has been admitted yet' : state.goals && placed !== null && placed < 1 ? `${Math.round(accept * 100)}% of applicants are admitted; ${(1 / placed).toFixed(1)} would come for every place` : `${Math.round(accept * 100)}% of applicants are admitted`,
+    },
   ];
   // Alumni success (DESIGN.md 24.4, switched on with alumni giving in section 56): the latest classes' success, on a
   // game with goals. Elsewhere it has nothing to read, and its weight is shared among the others as before.

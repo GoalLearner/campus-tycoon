@@ -30,9 +30,3 @@ export const SPRING_FIRST_YEARS = 0.01;
  * the share of their applicants admitted and of those admitted who come.
  */
 export const TRANSFERS = { share: 0.25, fall: 0.9, admitted: 0.37, yield: 0.6 } as const;
-
-/**
- * Selectivity in the academic rating (DESIGN.md 24.2, 70.3) on a game with goals: no points at 80% admitted, all of
- * them at 15%. The small campus keeps the old reading (every point from 100% down to 30%).
- */
-export const SELECTIVE = { none: 0.8, all: 0.15 } as const;

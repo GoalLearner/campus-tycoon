@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advance, newGame, yearAcceptance } from '../src/sim';
 import { SPRING_SHARE } from '../src/sim/config/demand';
-import { SELECTIVE, TRANSFERS } from '../src/sim/config/admissions';
+import { TRANSFERS } from '../src/sim/config/admissions';
 import { classSize, fallClassDraw } from '../src/sim/systems/demand';
 import { academicInputs } from '../src/sim/systems/field';
 import { admissionsLines, fallPipeline, scorecard } from '../src/sim/systems/scorecard';
@@ -59,8 +59,10 @@ describe('admissions at real figures', () => {
     const wanted = Math.round(12_000 * FALL_SIZE);
     const all = pipeline(wanted, wanted, 120, 'fall');
     const full = pipeline(wanted, Math.round(wanted * 0.8), 120, 'fall');
-    expect(full.applied).toBe(all.applied);
-    expect(rate(full)).toBeLessThan(rate(all) * 0.85);
+    // Applications follow the places, and half of the demand past them.
+    expect(full.applied).toBeLessThan(all.applied);
+    expect(full.applied).toBeGreaterThan(all.applied * 0.85);
+    expect(rate(full)).toBeLessThan(rate(all) * 0.9);
     expect(full.enrolling / full.admitted).toBeCloseTo(all.yield, 2);
     // Transfers: about a quarter of the first-years a year, 35% to 40% of their applicants admitted.
     expect(all.transfers.enrolling / all.enrolling).toBeCloseTo(TRANSFERS.share * TRANSFERS.fall, 2);
@@ -106,15 +108,17 @@ describe('admissions at real figures', () => {
     expect(last.season).toBe('fall');
     const real = last.real!;
     expect(real.firstYears + real.transfers).toBe(last.expected - (last.capped ?? 0));
-    expect(fall.admissions.year).toEqual({ applied: real.applied, admitted: real.offered });
+    expect(fall.admissions.year).toEqual({ applied: real.applied, admitted: real.offered, wanted: last.expected, placed: last.admitted });
     expect(yearAcceptance(fall)).toBeCloseTo(real.offered / real.applied, 9);
     expect(real.yield).toBeGreaterThan(0.19);
     expect(real.yield).toBeLessThan(0.23);
     expect(admissionsLines(fall)[0]).toMatch(/^Last fall: [\d,]+ applied · [\d,]+ admitted \(\d+%\) · [\d,]+ enrolling \(\d+% yield\), and [\d,]+ transfers \(\d+% of [\d,]+ admitted\)\.$/);
-    // Selectivity reads the real rate: no points at 80% admitted, all of them at 15%.
+    // The rating's line says the real share admitted; its level reads, as before, the share of those who would come
+    // who got a place (DESIGN.md 70.3), so the rank keeps the pace it had.
     const selectivity = academicInputs(fall).find((input) => input.id === 'selectivity')!;
-    const accept = yearAcceptance(fall)!;
-    expect(selectivity.level).toBeCloseTo(100 * Math.max(0, Math.min(1, (SELECTIVE.none - accept) / (SELECTIVE.none - SELECTIVE.all))), 9);
+    const placed = fall.admissions.year.placed! / fall.admissions.year.wanted!;
+    expect(selectivity.level).toBeCloseTo(100 * Math.max(0, Math.min(1, (1 - placed) / 0.7)), 9);
+    expect(selectivity.detail).toMatch(new RegExp(`^${Math.round(yearAcceptance(fall)! * 100)}% of applicants are admitted`));
   });
 
   it('puts applications, the share admitted and yield on the Scorecard as real numbers', () => {

@@ -56,7 +56,9 @@ export function pipeline(wanted: number, placed: number, rank: number, season: S
   const wantedFirst = Math.round(wanted * share);
   const placedFirst = Math.min(wantedFirst, Math.round(placed * share));
   const y = yieldAt(rank);
-  const applied = Math.round(wantedFirst * applyPer(rank));
+  // Applications follow the class the campus takes, and half of the demand past it: a full campus draws more who apply,
+  // but a real school holding its class at the top gets ten to fifteen for each place, not one for every would-be.
+  const applied = Math.round((placedFirst + (wantedFirst - placedFirst) / 2) * applyPer(rank));
   const admitted = Math.min(applied, Math.round(placedFirst / y));
   const transfersIn = Math.max(0, placed - placedFirst);
   const transfersWanted = Math.max(transfersIn, wanted - wantedFirst);

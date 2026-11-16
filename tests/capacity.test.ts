@@ -391,7 +391,8 @@ describe('the cap on enrollment', () => {
     expect(state.admissions.waitlist).toBe(0);
     expect(enrollment(state)).toBe(50_000);
     const said = run.log.filter((entry) => entry.kind === 'intake').pop()!;
-    expect(said.text).toBe(`The fall class of year 3 moved in: ${headCount(last.admitted)} students. The campus is full at 50,000: ${headCount(last.capped!)} more who applied were turned away.`);
+    // With real figures (DESIGN.md 70) the campus admits fewer, and nobody is turned away at the door.
+    expect(said.text).toBe(`The fall class of year 3 moved in: ${headCount(last.admitted)} students. The campus is full at 50,000: it admitted fewer for it.`);
     // Real figures (DESIGN.md 70): at its cap the campus admits only as many first-years as fill its places, fewer
     // than the four in five it admits with room for all, and is read the more selective for it.
     const real = last.real!;
@@ -399,7 +400,8 @@ describe('the cap on enrollment', () => {
     expect(yearAcceptance(state)!).toBeLessThan(0.75);
     const selectivity = academicInputs(state).find((input) => input.id === 'selectivity')!;
     expect(selectivity.level).toBeGreaterThan(0);
-    expect(selectivity.detail).toBe(`${Math.round((100 * real.offered) / real.applied)}% of applicants are admitted`);
+    // The line says the real share admitted, and how many would come for each place, which its level reads (70.3).
+    expect(selectivity.detail).toMatch(new RegExp(`^${Math.round((100 * real.offered) / real.applied)}% of applicants are admitted; [0-9.]+ would come for every place$`));
   });
 
   it("reads selectivity from the year's two classes together, so one small spring class does not speak for it", () => {
