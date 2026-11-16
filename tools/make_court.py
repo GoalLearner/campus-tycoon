@@ -256,8 +256,9 @@ def hoop(facing_viewer):
     return im.crop(im.getbbox())
 
 
-# The basketball court's look the game uses (the owner's pick from the look sheet); the recipe reads basketball-2x3.png.
-CHOSEN = 'blue'
+# The basketball court's look the game uses: the owner's pick from the look sheet, "B, wood" (DESIGN.md 72; A, the
+# outdoor blue, is the alternative). The recipe reads basketball-2x3.png.
+CHOSEN = 'wood'
 
 
 def write():

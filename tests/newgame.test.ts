@@ -233,8 +233,9 @@ describe("the paper's first issue", () => {
     const state = model();
     const paper = welcomeEdition(state);
     expect(paper.headline).toMatch(/President/);
-    // Its cash is a share of a year's spending, so the second gym and the four basketball courts (DESIGN.md 72) add a little.
-    expect(paper.deck).toBe(`The campus is yours from today: 46,000 students, and ${dollars(40_752_000)} in the bank.`);
+    // Its cash is a share of a year's spending, so the second gym and the four basketball courts (DESIGN.md 72) add a little,
+    // with the crews that tend them.
+    expect(paper.deck).toBe(`The campus is yours from today: 46,000 students, and ${dollars(40_927_000)} in the bank.`);
     const kinds = paper.top.map((item) => item.kind);
     // The first goal leads, then the next class, the halls outside reach and the stadium. Four lines at the most.
     expect(kinds).toEqual(['news', 'intake', 'problem', 'game']);
