@@ -17,10 +17,11 @@
 export const YIELD = { floor: 0.205, top: 0.49, fade: 14 } as const;
 
 /**
- * Applications for every first-year who would enrol, by rank: about 6 far down, 7.9 at 40th, 12 in the top ten and 15
- * at first. floor + (top - floor) * e^-(rank - 1)/fade.
+ * Applications for every first-year who would enrol, by rank: about 6 far down, 7.7 at 40th, 11.6 at tenth and 14 at
+ * first. floor + (top - floor) * e^-(rank - 1)/fade. `past`: the share of those the campus has no place for who apply
+ * all the same, so a full campus at the top admits 11% to 13%, not fewer than the most selective publics.
  */
-export const APPLY = { floor: 6.0, top: 15, fade: 25 } as const;
+export const APPLY = { floor: 6.0, top: 14, fade: 25, past: 0.25 } as const;
 
 /** A spring's first-years, for every first-year of the fall. */
 export const SPRING_FIRST_YEARS = 0.01;

@@ -59,10 +59,10 @@ describe('admissions at real figures', () => {
     const wanted = Math.round(12_000 * FALL_SIZE);
     const all = pipeline(wanted, wanted, 120, 'fall');
     const full = pipeline(wanted, Math.round(wanted * 0.8), 120, 'fall');
-    // Applications follow the places, and half of the demand past them.
+    // Applications follow the places, and a quarter of the demand past them.
     expect(full.applied).toBeLessThan(all.applied);
-    expect(full.applied).toBeGreaterThan(all.applied * 0.85);
-    expect(rate(full)).toBeLessThan(rate(all) * 0.9);
+    expect(full.applied).toBeGreaterThan(all.applied * 0.8);
+    expect(rate(full)).toBeLessThan(rate(all) * 0.96);
     expect(full.enrolling / full.admitted).toBeCloseTo(all.yield, 2);
     // Transfers: about a quarter of the first-years a year, 35% to 40% of their applicants admitted.
     expect(all.transfers.enrolling / all.enrolling).toBeCloseTo(TRANSFERS.share * TRANSFERS.fall, 2);

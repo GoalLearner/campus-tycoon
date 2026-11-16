@@ -79,6 +79,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
+import { admissionsRank, pipeline } from '../src/sim/systems/selectivity';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
 import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos } from './helpers';
 
@@ -397,7 +398,8 @@ describe('the cap on enrollment', () => {
     // than the four in five it admits with room for all, and is read the more selective for it.
     const real = last.real!;
     expect(yearAcceptance(state)).toBeCloseTo(real.offered / real.applied, 9);
-    expect(yearAcceptance(state)!).toBeLessThan(0.75);
+    const roomForAll = pipeline(last.expected, last.expected, admissionsRank(state), 'fall');
+    expect(yearAcceptance(state)!).toBeLessThan(0.95 * (roomForAll.admitted / roomForAll.applied));
     const selectivity = academicInputs(state).find((input) => input.id === 'selectivity')!;
     expect(selectivity.level).toBeGreaterThan(0);
     // The line says the real share admitted, and how many would come for each place, which its level reads (70.3).
