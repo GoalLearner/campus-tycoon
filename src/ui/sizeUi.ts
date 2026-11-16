@@ -118,7 +118,7 @@ export function sizeView(state: GameState): SizeView {
     title: `${headCount(students)} students`,
     cap,
     applicants: {
-      head: goals ? 'First-years who would come this fall' : "This fall's applicants",
+      head: goals ? 'First-years who would come next fall' : "This fall's applicants",
       total: headCount(applicants.total),
       rows: [
         { name: applicants.baseName, value: headCount(applicants.base) },

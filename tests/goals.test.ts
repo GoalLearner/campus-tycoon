@@ -341,7 +341,7 @@ describe('the Goals page on a game with goals', () => {
     expect(enrolling! / admitted!).toBeLessThan(0.22);
     expect(enrolling).toBeLessThanOrEqual(number(view.applicants.total));
     expect(enrolling).toBeGreaterThan(number(view.applicants.total) * 0.9);
-    expect(view.applicants.head).toBe('First-years who would come this fall');
+    expect(view.applicants.head).toBe('First-years who would come next fall');
     expect(view.applicants.rows.map((row) => row.name)).toEqual(['Reach', 'How the campus looks', 'Marketing', 'Football', 'Academic rank']);
     expect(view.applicants.rows[0]!.value).toBe('11,000');
     expect(view.applicants.rows.reduce((sum, row) => sum + number(row.value), 0)).toBe(number(view.applicants.total));
