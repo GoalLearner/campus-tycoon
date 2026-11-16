@@ -9107,7 +9107,7 @@ On a game with chaos the meter's step sets how rowdy the crowd is, everywhere on
 - With Reduce effects: no icons, the cloud holds still, signs do not bob, nobody marks time.
 - Nothing is drawn for an incident out of sight; a scene that goes out of sight is gone at once.
 
-**Frames**: to be measured on the slowed phone against main once the PC is free.
+**Frames** on the slowed phone (47.2's method), back to back with main (8e281e1), three rounds of eight frames, the mean: the model campus's afternoon with the meter at Pandemonium and a rally of nine, a dust-up and a shouting match staged in view, 20.1 ms at High against 22.0 on main (which draws none of them), and 19.3 against 20.5 at Normal. Level with main, inside the rounds' own spread (17.9 to 22.9).
 
 ### 76.6 The art
 
