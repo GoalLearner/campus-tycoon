@@ -329,7 +329,7 @@ export function layModelCampus(map: MapState, seed: number): ModelDistrict[] {
   // gyms and basketball courts as well"), on open ground: no hall, path or road moved. Each with a bin beside it.
   put('gym', 30, 5, false);
   for (const [x, y] of [[6, 6], [29, 10], [18, 3], [13, 33]] as const) put('basketball', x, y, false);
-  small('bin', [[30, 4], [5, 7], [31, 11], [20, 4], [12, 34]]);
+  small('bin', [[31, 6], [5, 7], [31, 11], [20, 4], [12, 34]]);
 
   // ------------------------------------------------ lawn where nothing stands
   // What the game cannot draw yet (35.3) is left as lawn and trees.
