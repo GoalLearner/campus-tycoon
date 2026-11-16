@@ -8355,6 +8355,42 @@
     }
    ]
   },
+  "prop.couch.0": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/couch-0.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.2
+    }
+   ]
+  },
+  "prop.couch.1": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/couch-1.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.2
+    }
+   ]
+  },
+  "prop.goalpost": {
+   "layers": [
+    {
+     "file": "_rendered/ours/props/goalpost.png",
+     "stand": [
+      0.5,
+      0.5
+     ],
+     "scale": 0.25
+    }
+   ]
+  },
   "decoration.statue": {
    "layers": [
     {

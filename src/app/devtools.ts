@@ -832,6 +832,34 @@ export function installDevTools(): void {
       }
       store.adopt(stirred, { ephemeral: true });
     }
+    // Football's chaos (DESIGN.md 77), for pictures and frames: &footballchaos=goalposts,street,mascot puts the goalposts
+    // on their way out of the stadium, couches in the street by the dorm nearest &streetat=x,y, and the rival's mascot on
+    // campus; &rivalryday puts the rivalry at home this hour, so the fans (some of them the rival's) walk to the game.
+    // Each gives the campus its stadium at tier one at least.
+    const footballChaos = (params.get('footballchaos') ?? '').split(',').filter((one) => one !== '');
+    if ((footballChaos.length > 0 || params.has('rivalryday')) && store.hasGame && store.state.chaos) {
+      const wild = structuredClone(store.state);
+      const f = wild.football;
+      const tick = wild.clock.tick;
+      if (f.stadium.plot === null) {
+        const plot = wild.map.placed.findIndex((one) => one?.type === 'stadium');
+        if (plot >= 0) f.stadium.plot = plot;
+      }
+      f.stadium.tier = Math.max(1, f.stadium.tier);
+      if (footballChaos.includes('goalposts')) wild.chaos.storm = { at: tick - 6, goalposts: true };
+      if (footballChaos.includes('street')) {
+        const [sx, sy] = (params.get('streetat') ?? '24,7').split(',').map(Number) as [number, number];
+        const near = (b: { x: number; y: number }): number => Math.abs(b.x - sx) + Math.abs(b.y - sy);
+        const dorm = wild.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === 'housing' && b.stage > 0).sort((a, b) => near(a) - near(b))[0];
+        if (dorm) wild.chaos.street = { from: tick, until: tick + 90, dorm: dorm.id, won: true };
+      }
+      if (footballChaos.includes('mascot')) wild.chaos.mascot = { at: tick, until: tick + 240 };
+      if (params.has('rivalryday')) {
+        f.season ??= { year: Math.max(1, wild.clock.week.year), games: [], table: {}, pending: [], played: 0, champion: null, bowl: '', closed: false, streak: 0 };
+        f.season.games.push({ slot: 9, label: '', opp: f.rival, home: true, kick: tick + 30, us: [], them: [], crowd: 0, seats: 0, rating: 50, oppRating: 50, gap: '', done: false });
+      }
+      store.adopt(wild, { ephemeral: true });
+    }
     // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.
     const grow = Number(params.get('grow') ?? 0);
     if (grow > 0 && store.hasGame) {

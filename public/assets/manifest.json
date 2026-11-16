@@ -3497,6 +3497,28 @@
     1
    ]
   },
+  "prop.couch.0": {
+   "frame": "prop.couch.0",
+   "anchor": [
+    6,
+    -25
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.couch.1": {
+   "frame": "prop.couch.1",
+   "anchor": [
+    6,
+    -25
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
   "prop.dog": {
    "frame": "prop.dog",
    "anchor": [
@@ -3513,6 +3535,17 @@
    "anchor": [
     4,
     -29
+   ],
+   "footprint": [
+    1,
+    1
+   ]
+  },
+  "prop.goalpost": {
+   "frame": "prop.goalpost",
+   "anchor": [
+    7,
+    -18
    ],
    "footprint": [
     1,

@@ -15,7 +15,7 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf, rivalColour, RIVALRY_SLOT } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -718,6 +718,8 @@ export class CampusScene extends Phaser.Scene {
     // plot, and no game is heard from it. The tailgates in the car parks are the day's only sign on the map.
     const built = state.football.stadium.tier >= 1;
     this.walkers.setGameDay(built ? tint : null);
+    // The rivalry at home on a game with chaos (DESIGN.md 77.1): some of the fans are the rival's, in its colour.
+    this.walkers.setAwayFans(built && home && home.slot === RIVALRY_SLOT && chaosOn(state) ? softened(rivalColour(state).hex) : null);
     // The class changes, the meal rushes and the evening by the hour shown (DESIGN.md 75), the player's own or the
     // "View at" slider's, on the kind of day the game's calendar says.
     const today = todayOf(state, { weekend, weather: this.weather });

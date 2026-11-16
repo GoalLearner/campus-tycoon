@@ -274,6 +274,8 @@ const COMMUTE: Record<DayPeriod, { busy: number; inbound: number }> = {
 const NEIGHBOURS_OUT: Record<DayPeriod, number> = { morning: 7, afternoon: 6, evening: 7, night: 1 };
 /** How far from the middle of a street the middle of its sidewalk runs (DESIGN.md 59.1). */
 const SIDEWALK = 0.5 - KERB_MIDDLE;
+/** On the rivalry game day, this share of the fans walking to the game are the rival's (DESIGN.md 77.1). */
+const AWAY_SHARE = 0.3;
 /** A rally finds its lawn within this many cells of the lecture hall's door (DESIGN.md 76.4). */
 const RALLY_REACH = 7;
 /** A scene at a door stands no more than this many steps from it, and a building in front counts as this many steps. */
@@ -435,6 +437,8 @@ interface Walker {
   shownKey: string;
   /** True while the figure is drawn in the school's colour. */
   tinted: boolean;
+  /** A rival fan, in the rival's colour, on the rivalry game day (DESIGN.md 77.1). */
+  away: boolean;
   /** The party they walk with, or 0 for nobody, and their place in it: across the path and behind, in cells. */
   party: number;
   place: readonly [number, number];
@@ -630,6 +634,8 @@ export class Walkers {
   private day: DayFacts = ORDINARY_DAY;
   /** The school's colour while a home game is on, laid over the fans walking to it. null on any other day. */
   private fanTint: number | null = null;
+  /** The rival's colour, softened, on the rivalry game day at home: some of the fans are theirs (DESIGN.md 77.1). */
+  private awayTint: number | null = null;
   /** The feelings that show (DESIGN.md 64.3): each student's for the hour, the rings put away, today's news, the sky. */
   private felt = new Map<string, Known | null>();
   private feltStamp = '';
@@ -700,6 +706,11 @@ export class Walkers {
    * A home game day: fans walk to the stadium in the school's colour, and
    * more people are out. null when no game is on.
    */
+  /** The rivalry at home (DESIGN.md 77.1): a share of the fans walking to the game are the rival's, in its colour. */
+  setAwayFans(tint: number | null): void {
+    this.awayTint = tint;
+  }
+
   setGameDay(tint: number | null): void {
     this.fanTint = tint;
   }
@@ -1360,6 +1371,7 @@ export class Walkers {
       offscreenMs: 0,
       shownKey: '',
       tinted: false,
+      away: false,
       party: extra.party ?? 0,
       place: extra.place ?? [0, 0],
       talkMs: 0,
@@ -1602,9 +1614,12 @@ export class Walkers {
     walker.sprite.setAlpha(hidden ? 0 : walker.alpha);
     // A fan on the way to the game wears the school's colour: the figure itself is tinted, since none has a scarf.
     const fan = this.fanTint !== null && walker.kind === 'student' && walker.goal === this.stadiumStop;
-    if (fan !== walker.tinted) {
+    // On the rivalry game day a share of them are the rival's fans, in its colour (DESIGN.md 77.1).
+    const away = fan && this.awayTint !== null && (walker.student ? this.rollFor(walker.student, 7707) < AWAY_SHARE : false);
+    if (fan !== walker.tinted || away !== walker.away) {
       walker.tinted = fan;
-      if (fan) walker.sprite.setTint(this.fanTint!);
+      walker.away = away;
+      if (fan) walker.sprite.setTint(away ? this.awayTint! : this.fanTint!);
       else walker.sprite.clearTint();
     }
     if (walker.prop && walker.held) {
@@ -3373,6 +3388,17 @@ export class Walkers {
         this.showIcon(b, 'wave', 250);
         this.remember(b, `Waved at ${this.first(a)}`);
       }
+      return;
+    }
+    // The rivalry game day (DESIGN.md 77.1): a fan of ours and one of theirs, both on the way, trade taunts, a laugh
+    // and a scowl, and go on. No more than words.
+    if (a.tinted && b.tinted && a.away !== b.away) {
+      const ours = a.away ? b : a;
+      const theirs = a.away ? a : b;
+      this.showIcon(ours, 'laugh');
+      this.showIcon(theirs, 'anger', 300);
+      this.showIcon(ours, 'speech', 1300);
+      this.remember(ours, 'Traded taunts with a rival fan on the way to the game');
       return;
     }
     // On a rowdy campus, strangers passing bump and glare (DESIGN.md 76.5): short tempers, no more than that.
