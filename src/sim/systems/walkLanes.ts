@@ -8,10 +8,11 @@ import { isPathKind } from '../selectors';
  */
 
 /**
- * Whether a game saved before painted lanes gets a lane on every walk when it is opened (the one-time upgrade of save
- * version 36). Open: the owner has not said. Off, so a save keeps the campus its player built, until he does.
+ * Whether a game saved before painted lanes gets a lane on every walk when it is opened, once (the upgrade of save
+ * version 37). On: the owner, 2026-11-16, "I want bike lanes on the main campus .. bike lanes all over campus would be
+ * good" (DESIGN.md 74.6).
  */
-export const PAINT_SAVED_WALKS = false;
+export const PAINT_SAVED_WALKS = true;
 
 /**
  * Paints a lane on every walk of a map: every cell of footpath, but in a square of paving (a plaza, a forecourt) only

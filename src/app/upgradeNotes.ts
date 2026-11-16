@@ -127,5 +127,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 35) {
     notes.push("Admissions now read like a real university's: how many apply, the share admitted and the share who come. Spring brings a small class now, most of them transfers.");
   }
+  if (fromVersion < 37) {
+    notes.push('Bike lanes are painted on the walks all over your campus, free. Riders keep to them; the Path tool can take one off or paint more.');
+  }
   return notes;
 }
