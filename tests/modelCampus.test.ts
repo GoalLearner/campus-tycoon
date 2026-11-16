@@ -87,8 +87,16 @@ describe('the model campus is laid by a script', () => {
     const { width, height, cells } = map;
     const lane = (i: number): boolean => cells[i]!.kind === 'bike' || cells[i]!.kind === 'bikeCrossing';
     const cellsOf = cells.map((_, i) => i).filter(lane);
-    expect(cells.filter((cell) => cell.kind === 'bike').length).toBe(90);
-    expect(cells.filter((cell) => cell.kind === 'bikeCrossing').length).toBe(5);
+    expect(cells.filter((cell) => cell.kind === 'bike').length).toBe(105);
+    expect(cells.filter((cell) => cell.kind === 'bikeCrossing').length).toBe(4);
+    // One row back from the footpaths, so the ground beside them stays free for halls: it touches one only where riders
+    // get on and off and where it crosses one (DESIGN.md 73).
+    const beside = cellsOf.filter((i) => cells[i]!.kind === 'bike' && ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).some(([dx, dy]) => {
+      const x = (i % width) + dx;
+      const y = Math.floor(i / width) + dy;
+      return x >= 0 && y >= 0 && x < width && y < height && ['path', 'crossing', 'bikeCrossing'].includes(cells[y * width + x]!.kind);
+    }));
+    expect(beside.length).toBe(19);
     // One network.
     const seen = new Set([cellsOf[0]!]);
     const queue = [cellsOf[0]!];
