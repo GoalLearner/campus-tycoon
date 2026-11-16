@@ -8795,3 +8795,52 @@ The campus wants a cell of bike path for every ten cells of footpath. With fewer
 **The long run**: all 109 checks pass in 1,693 s, every number as after 70 (the long run's players never lay a bike path, and nothing else reads one); only the timings moved, the catch-up 227 ms to 505 ms.
 
 **Tested**: `tests/bikePaths.test.ts` (9): laid on open ground at a path's price and cleared for all of it in the undo minute; a crossing either way round, a road never on it, the crossing a footpath and the bike path not, a crossing cleared for both; a lot beside a bike path alone has no way in; nothing else in the game changes for one (looks, walk times, and a day on the same campus with one and without), nor for a footpath crossed by one (every footpath of a campus made a crossing, the same a day on); riders take the bike path when it is on their way and a little longer, keep to the footpath on a short hop, and go no further than allowed; #BikeLanes while short, two a week, never viral, and none with enough bike path; praise within two hours of one opening, shown for a day; every line inside the tone guide and its hard lines.
+
+## 73. Bike paths on the model campus (asked for 2026-11-15)
+
+The owner, after bike paths shipped in build 38 (71): "Put bike paths on the model". Built on the branch `life-7b`. The model campus every new game opens on (35) now has a bike network, laid as the planners would have: 105 cells of bike path and 4 crossings, one network.
+
+### 73.1 Where it runs
+
+Found from where the campus's trips go (the footpaths they take between the halls, the lecture halls, the places to eat and play, and from Lantern Avenue, counted over sample trips) and laid by hand on open ground **one row back** from the busiest of them, so the cells right beside each footpath stay free for halls (73.3):
+
+- **The west spine** (x 10), behind the walk by the west halls (x 8), north and south of the halls in the middle, with a way on at each end.
+- **The middle spine** (x 13), behind the walk to the lecture halls (x 15), joined to the west spine at y 10 and y 28.
+- **Over the north lawn** (y 8 and y 9) to **the east spine** (x 21), behind the walk by the north-east halls (x 23).
+- **Over the east walk and out to Lantern Avenue** (y 13, one row back from the walk to the avenue), where commuters ride in.
+- **Down the east side** (x 25 and x 26), over the walk to the avenue and behind the east walk by the lecture halls, with three ways on to it.
+- **Across the middle**, over the east walk, through the lawn and over the cross walk to the middle spine's south half, and back to the west spine's south half.
+
+It crosses a footpath at four cells (each a crossing, white bars, a footpath to everything that reads one): the east walk twice, the walk to the avenue, the cross walk. Besides those, it touches a footpath only where riders get on and off: 19 of its cells are beside one. The busiest walk of all, the long walk (y 19), has lecture halls along both sides and no open ground beside it, so the network runs round it.
+
+**Only on open ground**: no hall, building, road, path or lot moved, and every lot still touches a footpath. No tree was taken out. It stays inside the campus's land. **Free**: it is part of the model campus, as its footpaths are (the campus began with it, so clearing it gives nothing back). **New games only**: a save keeps its map exactly; there players lay bike paths with the tool.
+
+### 73.2 What it does
+
+Riders take it where it is on their way (71.3). Over sample trips between the campus's places, 33% would ride some of it (135 of 404): fewer than right beside the walks (60%, 73.3), and twice what the four hand-laid in 71 served (17%). On the map, with the view on the middle of the campus for a minute and a half, two runs of each: on a sunny afternoon at Normal 5 of 29 rider trips rode a lane, in the morning rush at High 2 of 38. Commuters from the town rode one on 4 of 29 trips, students on 3 of 38. Nobody walks along it: no walker stood on a bike-path cell in 88,820 samples over those four runs, once two ways a walker could follow a rider were closed (73.4).
+
+It is 0.63 cells of bike path for every cell of footpath (109 counting the crossings, against 173), far above the tenth the campus wants (71.4), so Quadline's line lands on the quiet side: on a new game nobody posts "bikes on the sidewalk again", true to life on a campus that has them. A player who clears the network sees them come back (they come below one cell in twenty).
+
+### 73.3 The first try, and why it moved back a row
+
+The network was first laid **right beside** the busiest footpaths, one side of each: 90 cells and 5 crossings, 60 of them beside a footpath, and 60% of sample trips would have ridden some of it. That took the ground halls want. A footpath's frontage is where a campus grows: the test players (and a player who follows the footpaths) put new halls on open cells beside a path, and the lanes had taken those cells along the busiest walks. In the long run the once-a-day player, with the switches in use, fell to $11.50 kept of every $100 in the later weeks (weeks 9 to 44, the low on seed 1), below the $12 floor, and that one check failed (108 of 109). The money rule the test players follow was **not** changed: the dip came with the lanes' frontage, not a timing quirk of the test players, so the lanes moved, as a real player would meet the same squeeze. Laid one row back, the network keeps off every cell beside a footpath except the 19 where riders get on and the four crossings. With it the once-a-day player keeps $12.80 to $15.90 of every $100 in the later weeks (the first try $11.50, before any bike path $12.70), and the long run passes in full.
+
+### 73.4 A fix on the way
+
+Friends walking out together with a student, and someone coming the other way to meet one, take that student's way. When the student rode a bike path, they walked it: on the model campus's network in the morning rush, a walker stood on a bike path in 1.8% of samples. A rider now goes alone, and nobody comes to meet one on their way. A rider also settles back to the middle of the bike path in a tenth of a second instead of a third, so none is seen stepping aside on it.
+
+| Decisions made here | Instead |
+|---|---|
+| Laid by hand from where the trips go | Laid by a rule on every new map, which would move with every change to the model campus |
+| One row back from the busiest walks | Right beside them (the first try, 73.3): more trips on it, but it took the ground halls are built on, and the once-a-day player's money fell below $12 |
+| The lanes moved; the test players' money rule kept | The test players taught to build away from the lanes, which would hide a cost a real player meets |
+| Round the long walk | On the long walk itself, which would turn the campus's main walk into a shared one |
+| Round each tree | Trees taken out for straighter runs |
+| New games only | A one-time upgrade adding the network to every save: it would change a campus the player built |
+| Free, as the footpaths are | Charged at the start, which would move the opening money |
+
+**Measured.** Frames on the slowed phone (47.2), back to back with main (35d2087), three rounds of eight frames, the mean: the morning rush at High 21.3 ms against 21.5, an afternoon at Normal 17.0 against 18.2. Nothing that shows. Checked in pictures at 375, 390, 430 and 530 wide. The atlas is unchanged.
+
+**The long run**: all 109 checks pass in 1,731 s. 48 lines moved against the run after 71, because the test players now build round a network their campuses did not have; each moved line is named here, old in brackets. The money, years 3 to 8: casual 14.0% to 15.8% (13.7% to 15.8%), once-a-day 14.0% to 16.1% (13.6% to 15.3%), striver 12.9% to 14.7% (11.5% to 13.9%); the later weeks: casual 12.2% to 15.7% (12.9% to 15.7%), once-a-day 12.8% to 15.9% (12.7% to 15.7%), striver 11.0% to 15.3% (11.3% to 14.9%); with every switch off, weeks 9 to 44: casual 14.0% to 16.3%, once-a-day 14.1% to 16.2%. The casual player's later-week low is the nearest to the floor, at $12.20. The rank: the Top 10 at week 24 at the earliest (24), Top 100 at week 7 for all. The level pace: the once-a-day player gains 6.0 and 5.8 levels a week in weeks 4 to 12 and 6.3 and 5.5 after (5.9, 5.9, 6.2, 5.7), under 7. Catch-up: 497 ms (478), 518 ms on a campus nobody tends (505), 230 and 385 ms on the model campus (227 and 394), the social web 435 ms (435). Also moved, each inside its line: how the reward buildings lift the looks (67.2 to 68.8, was 67.8 to 70.1), the levels and experience at week 44, Gold Seals (11.9 to 13.4 a week, was 12.2 to 13.2), collecting and the orders (cash under $0.06 of every $100), the board (76% to 82% of orders claimed, was 81% to 85%), when the big builds were bought, the labs' findings, the chapters' names, the paper's lines, the share of lines about drinking and heavy themes, the calls from parties, the drives, the main character's stories and plans, the year goals (65 to 75 of 132 met), the calendar moments met, decorations owned and on the map, the switches thrown, the thirty-year settling (looks 68.7, was 70.1), the shrinking campus (worst $-11.4, was $-12.0), the reading of the web (374 s, was 344), and the realism lines (seniors, leavers, majors, grades, sleep, ties, write-ups, senior work, athletes 1.3% to 1.6%: each within its band), admissions (No. 2 at 12.0% to 12.8% admitted) and the calm (no trustee letters, 37 at the most). The first try (73.3) passed 108 of 109.
+
+**Tested**: `tests/modelCampus.test.ts`: the network is one piece of 105 bike-path cells and 4 crossings, 19 of them beside a footpath, reaches the avenue, stays inside the campus's land, is the campus's own (nothing back for it), and every lot still touches a footpath; the walk to the avenue is a footpath all the way, one cell of it a crossing. `tests/bikePaths.test.ts`: the "bikes on the sidewalk" posts come on the same campus with its network taken away, and not on the model campus as it opens. `tests/scale.test.ts` builds its coffee shop a cell south, as (12,30) is bike path now.

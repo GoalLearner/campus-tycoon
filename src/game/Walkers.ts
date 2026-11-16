@@ -1691,7 +1691,7 @@ export class Walkers {
     // Smooth (DESIGN.md 69.1): once stepping round to one side they keep to it until clear, and ease over and back, so
     // a rider never wobbles from side to side. Within the path: the step and their own place on it stay inside its cell.
     if (target !== 0 && Math.abs(walker.weave) > 0.02 && Math.sign(target) !== Math.sign(walker.weave)) target = -target;
-    walker.weave += (target - walker.weave) * Math.min(1, dt / 380);
+    walker.weave += (target - walker.weave) * Math.min(1, dt / (lane ? 120 : 380));
     if (Math.abs(walker.weave) < 0.005 && target === 0) walker.weave = 0;
     if (!walker.ride || walker.rideDone || now < walker.rideAt || walker.fading !== null) return;
     // A bell or a near miss only where riders share a footpath with walkers (DESIGN.md 71).
@@ -2794,6 +2794,8 @@ export class Walkers {
   private bringCompanions(leader: Walker): void {
     const view = socialWeb.view;
     if (!view || !leader.student || !this.state || leader.kind !== 'student' || !leader.goal) return;
+    // A rider goes alone: friends walking with them would walk their way along the bike path (DESIGN.md 73).
+    if (leader.wheel || leader.laned) return;
     const all = companionsOf(view, this.state, leader.student);
     if (all.length === 0) return;
     const first = tieOf(view, leader.student, all[0]!);
@@ -2875,7 +2877,8 @@ export class Walkers {
   private meetUp(view: Phaser.Geom.Rectangle): boolean {
     const web = socialWeb.view;
     if (!web || !this.state) return false;
-    const walking = this.walkers.filter((one) => one.kind === 'student' && one.student && one.fading === null && one.lingerMs <= 0 && one.talkMs <= 0 && !one.party && one.goal && one.leg < one.route.length - 2 && this.inView(view, one.x, one.y, 0));
+    // Not a rider: whoever comes to meet them walks their way back, and a rider's way may be along the bike path.
+    const walking = this.walkers.filter((one) => one.kind === 'student' && one.student && one.fading === null && one.lingerMs <= 0 && one.talkMs <= 0 && !one.party && !one.wheel && !one.laned && one.goal && one.leg < one.route.length - 2 && this.inView(view, one.x, one.y, 0));
     // The student the player follows is who people come to meet, half the time: their day is the one being watched.
     const watched = walking.find((one) => one.key === this.marked && one.socialAt <= this.scene.time.now);
     const walker = watched && Math.random() < 0.5 ? watched : walking[Math.floor(Math.random() * walking.length)];
