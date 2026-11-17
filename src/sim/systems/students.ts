@@ -2,7 +2,7 @@ import { scaleOf, smallCount } from '../scale';
 import { rostersOf, teamAt, teamFor, type Rosters } from './teams';
 import type { VarsityTeam } from '../config/teams';
 import { fluOf, homesickOf } from './wellbeing';
-import { gradesOf, weekInClass } from './grades';
+import { gradesOf, tutoredThen, weekInClass } from './grades';
 import { GPA_FLOOR } from '../config/grades';
 import { WEB_WEEK_TICKS } from '../config/web';
 import { majorAt, majorPath, semestersIn, type MajorPath } from './majors';
@@ -12,8 +12,10 @@ import { stageSpec } from '../config/buildings';
 import { ON_CAMPUS_BY_YEAR } from '../config/fourYears';
 import { BASE_SCORE, GREEN_CAP } from '../config/desirability';
 import { PLACED, SOCIAL_SPOTS_PER_RECREATION } from '../config/placed';
-import { foodTypesAt, tutoringLift } from './food';
-import { crowdedNear, waitMinutes } from './play';
+import { PASTIME_WORDS, type Pastime } from '../config/amenities';
+import { campusMeals, eatsOnCampus, foodPlaceFor, foodTypesOnCampus, tutoringCover } from './food';
+import { habitsOf, playOf, playPlaceFor, waitMinutes, type StudentPlay } from './play';
+import { campusFed } from './placed';
 import {
   FAVOURITES,
   ALL_NIGHTER_SHARE,
@@ -62,8 +64,8 @@ import { genderOf } from './identity';
 import { figureFor, lookTags, type LookPack } from './looks';
 import type { LookGender } from '../config/looks';
 import { enrollment, openCapacity } from '../selectors';
-import type { GameState, Zone } from '../types';
-import { approvalAt, campusLevels, partLevel, type Approval, type Cause } from './happiness';
+import type { GameState, Placed, PlacedType, Zone } from '../types';
+import { approvalAt, type StudentUse, campusLevels, partLevel, type Approval, type Cause } from './happiness';
 import { athleteShare, superfanShare } from './football';
 import { dayRead, seasonLine, weatherAt, type SeasonLine } from './season';
 import { STRESS_GPA, STRESS_HAPPINESS, STRESS_TILT } from '../config/season';
@@ -579,8 +581,10 @@ export interface StudentCard {
   missesHome: boolean;
   /** The varsity team they are on (DESIGN.md 65.7), or null for most. */
   team: string | null;
-  /** True when a study center's tutoring reaches where they spend their days. It lifts the GPA above, and nothing else yet. */
+  /** True when they have tutoring this semester: their classes going badly, and a study center with room (DESIGN.md 83.4). */
   tutored: boolean;
+  /** What they use: what they do for fun, the Union, and where they eat (DESIGN.md 83). */
+  uses: StudentUses;
   /** Students to one member of faculty, as classes are taught now: the ratio, as this student meets it. */
   classSize: number;
   /** null for a student in no club. */
@@ -659,8 +663,8 @@ function archetypeNow(state: GameState, ref: StudentRef, classYear: number, natu
  * Approval over the places a student spends their days: each cause is the
  * average of its level at those places.
  */
-function approvalOver(state: GameState, spots: readonly number[], shifts?: readonly CauseShift[]): Approval {
-  const each = spots.map((spot) => approvalAt(state, spot, shifts));
+function approvalOver(state: GameState, spots: readonly number[], shifts?: readonly CauseShift[], who?: StudentUse): Approval {
+  const each = spots.map((spot) => approvalAt(state, spot, shifts, who));
   const first = each[0];
   if (!first) return { score: 0, causes: [], walkMinutes: -1 };
   const causes = first.causes.map((cause, i) => ({
@@ -675,26 +679,39 @@ function approvalOver(state: GameState, spots: readonly number[], shifts?: reado
   return { score: each.reduce((sum, one) => sum + one.score, 0) / each.length, causes, walkMinutes: first.walkMinutes };
 }
 
-/** The share of students in a crowded building's reach who have the wait on their mind. */
+/** Where a student sets out from for a meal or a game: their dorm, or for one who lives off campus their first lecture hall. */
+function setOutFrom(state: GameState, ref: StudentRef): { x: number; y: number } | null {
+  const width = state.map.width;
+  const spot = studentHome(state, ref) ?? placeAt(placeIndex(state, 'academic'), roll(state.seed, ref, SALT.room));
+  return spot === null ? null : { x: spot % width, y: Math.floor(spot / width) };
+}
+
+/**
+ * The place a student eats at, or goes to for one of the things they do for fun (DESIGN.md 83.5): most often the
+ * nearest, and another with room when theirs is full. What the followed student walks to, and what their thoughts name;
+ * it never decides what they get from it. null when the campus has none.
+ */
+export function placeUsedFor(state: GameState, ref: StudentRef, what: 'food' | Pastime): Placed | null {
+  const from = setOutFrom(state, ref);
+  if (!from) return null;
+  if (what === 'food') return foodPlaceFor(state, from.x, from.y, roll(state.seed, ref, SALT.favourite));
+  return playPlaceFor(state, from.x, from.y, roll(state.seed, ref, SALT.wait), what);
+}
+
+/** The share of students turned away from a full place to play who have it on their mind. */
 const WAIT_TALK_SHARE = 0.34;
 
 /** How a student names the recreation building they waited at. */
 const PLAY_NAMES: Partial<Record<string, string>> = { courts: 'a court', field: 'the field', pool: 'the pool', track: 'the track', gym: 'the gym', makerspace: 'a bench at the makerspace', basketball: 'the basketball court', tennis: 'the tennis court', volleyball: 'the volleyball court', soccer: 'the pitch' };
 
-function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], resident: boolean, approval: Approval, content: boolean): StudentReason | null {
-  // A line at a court is something people talk about, pleased with the place or not: about one in three
-  // of the students a crowded building reaches has the wait on their mind.
-  if (roll(state.seed, ref, SALT.wait) < WAIT_TALK_SHARE) {
-    const width = state.map.width;
-    for (const candidate of spots) {
-      const crowded = crowdedNear(state, candidate % width, Math.floor(candidate / width));
-      if (!crowded) continue;
-      const pool = resident ? THOUGHTS.recreationCrowded : THOUGHTS.commuterRecreationCrowded;
-      const place = PLAY_NAMES[crowded.placed.type] ?? PLACED[crowded.placed.type].name.toLowerCase();
-      const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
-      const at = crowded.placed.y * width + crowded.placed.x;
-      return { cause: 'life', part: 'recreation', positive: false, thought: line.replace('{w}', `${waitMinutes(crowded.use)} minutes`).replace('{place}', place), cell: at };
-    }
+function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], resident: boolean, approval: Approval, content: boolean, play: StudentPlay, eats: boolean): StudentReason | null {
+  const width = state.map.width;
+  // Turned away from a full place is something people talk about, pleased with the campus or not: about one in three
+  // of those it happened to has it on their mind (DESIGN.md 83.2).
+  if (play.full.length > 0 && roll(state.seed, ref, SALT.wait) < WAIT_TALK_SHARE) {
+    const activity = play.full[0]!;
+    const placed = placeUsedFor(state, ref, activity);
+    return { cause: 'life', part: 'recreation', positive: false, thought: fullThought(state, ref, resident, activity, placed), cell: placed ? placed.y * width + placed.x : spots[0]! };
   }
   // A content student names the biggest plus. Anyone else names what would help most.
   const size = (cause: Cause): number => cause.weight * (content ? cause.level : 1 - cause.level);
@@ -726,28 +743,87 @@ function reasonFor(state: GameState, ref: StudentRef, spots: readonly number[], 
   else if (part === 'clean') pool = resident ? (content ? THOUGHTS.cleanGood : THOUGHTS.cleanLow) : content ? THOUGHTS.commuterCleanGood : THOUGHTS.commuterCleanLow;
   else if (part === 'seating') pool = resident ? (content ? THOUGHTS.seatingGood : THOUGHTS.seatingLow) : content ? THOUGHTS.commuterSeatingGood : THOUGHTS.commuterSeatingLow;
   else pool = resident ? (content ? THOUGHTS.safetyGood : THOUGHTS.safetyLow) : content ? THOUGHTS.commuterSafetyGood : THOUGHTS.commuterSafetyLow;
-  // Something to do is in reach, and there is a line for it: the thought is the wait, not the lack.
+  // What they use and what keeps them from it (DESIGN.md 83): a kind of place the campus lacks, or one too full for them.
   let wait = '';
   let place = '';
+  let at = spot;
+  const words = (activity: Pastime, placed: Placed | null): void => {
+    const word = PASTIME_WORDS[activity];
+    place = placed ? playName(placed.type) : word.place;
+    pool = pool.map((one) => one.replace('{verb}', word.verb));
+    if (placed) at = placed.y * width + placed.x;
+  };
   if (part === 'recreation' && !content) {
-    const width = state.map.width;
-    const crowded = crowdedNear(state, spot % width, Math.floor(spot / width));
-    if (crowded) {
-      pool = resident ? THOUGHTS.recreationCrowded : THOUGHTS.commuterRecreationCrowded;
-      wait = `${waitMinutes(crowded.use)} minutes`;
-      place = PLAY_NAMES[crowded.placed.type] ?? PLACED[crowded.placed.type].name.toLowerCase();
+    if (play.full.length > 0) {
+      const activity = play.full[0]!;
+      const placed = placeUsedFor(state, ref, activity);
+      return { cause: 'life', part: 'recreation', positive: false, thought: fullThought(state, ref, resident, activity, placed), cell: placed ? placed.y * width + placed.x : spot };
+    }
+    const activity = play.missing[0];
+    if (activity) {
+      pool = resident ? THOUGHTS.recreationMissing : THOUGHTS.commuterRecreationMissing;
+      words(activity, null);
     }
   }
-  // Pleased with the food: they name a favourite, from the kinds of food in reach of that spot.
+  if (part === 'recreation' && content) {
+    const activity = play.got.length > 0 ? play.got[Math.floor(roll(state.seed, ref, SALT.tie) * play.got.length)]! : null;
+    if (activity) {
+      pool = resident ? THOUGHTS.recreationGood : THOUGHTS.commuterRecreationGood;
+      words(activity, placeUsedFor(state, ref, activity));
+    } else if (play.union) pool = THOUGHTS.unionGood;
+  }
+  if (part === 'dining' && !content && campusFed(state.map) && !eats) {
+    pool = resident ? THOUGHTS.diningCrowded : THOUGHTS.commuterDiningCrowded;
+    wait = `${waitMinutes({ waiting: 1, ratio: campusMeals(state).ratio })} minutes`;
+  }
+  // Pleased with the food: they name a favourite, the place they eat at most.
   if (part === 'dining' && content) {
-    const kinds = foodTypesAt(state.map, spot % state.map.width, Math.floor(spot / state.map.width));
-    if (kinds.length > 0) {
-      const lines = FAVOURITES[pickFrom(kinds, roll(state.seed, ref, SALT.favourite))];
-      if (lines) pool = lines;
-    }
+    const used = placeUsedFor(state, ref, 'food');
+    const kinds = foodTypesOnCampus(state.map);
+    const kind = used?.type ?? (kinds.length > 0 ? pickFrom(kinds, roll(state.seed, ref, SALT.favourite)) : null);
+    const lines = kind ? FAVOURITES[kind] : undefined;
+    if (lines) pool = lines;
   }
   const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
-  return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)).replace('{w}', wait).replace('{place}', place), cell: spot };
+  return { cause: chosen.id, part, positive: content, thought: line.replace('{m}', minutes(approval.walkMinutes)).replace('{w}', wait).replace('{place}', place), cell: at };
+}
+
+/** How a student names a place to play. */
+function playName(type: PlacedType): string {
+  return PLAY_NAMES[type] ?? PLACED[type].name.toLowerCase();
+}
+
+/** A student turned away from a full place to play, in their words: the place and how long the wait was. */
+function fullThought(state: GameState, ref: StudentRef, resident: boolean, activity: Pastime, placed: Placed | null): string {
+  const pool = resident ? THOUGHTS.recreationFull : THOUGHTS.commuterRecreationFull;
+  const name = placed ? playName(placed.type) : PASTIME_WORDS[activity].place;
+  const line = pickFrom(pool, roll(state.seed, ref, SALT.line));
+  return line.replace('{Place}', name.charAt(0).toUpperCase() + name.slice(1)).replace('{place}', name);
+}
+
+/**
+ * What a student uses, in a few words for their card (DESIGN.md 83.6): what they do for fun, where they eat, and a
+ * kind of place they want that the campus lacks or that was full. "The gym and basketball · eats at the taco stand".
+ */
+export function usesWords(uses: StudentUses): string {
+  const fun = [...uses.got, ...uses.full].map((activity) => PASTIME_WORDS[activity].uses);
+  if (uses.union) fun.push('the Union');
+  const listed = fun.length === 0 ? 'Nothing for fun' : fun.length === 1 ? fun[0]! : fun.length === 2 ? `${fun[0]} and ${fun[1]}` : `${fun.slice(0, -1).join(', ')} and ${fun[fun.length - 1]}`;
+  const head = listed.charAt(0).toUpperCase() + listed.slice(1);
+  const eats = uses.food ? ` · eats at the ${PLACED[uses.food].name.toLowerCase()}` : uses.fed ? '' : ' · nowhere to eat';
+  const wants = uses.missing.length > 0 ? ` · wants ${PASTIME_WORDS[uses.missing[0]!].place}` : uses.full.length > 0 ? ` · ${PASTIME_WORDS[uses.full[0]!].uses} was full` : '';
+  return `${head}${eats}${wants}`;
+}
+
+/** What a student uses (DESIGN.md 83): what they do for fun that the campus lets them, was full or lacks, the Union, and where they eat. */
+export interface StudentUses {
+  got: Pastime[];
+  full: Pastime[];
+  missing: Pastime[];
+  union: boolean;
+  /** Where they eat most, or null with nowhere to eat or no room for them. */
+  food: PlacedType | null;
+  fed: boolean;
 }
 
 /** The biggest of the week's parts, by its size either way, or null with none. */
@@ -795,6 +871,10 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
   // A breakup is a phase laid over their nature for the semester, as homesickness is (DESIGN.md 55).
   const archetype = relationship.breakup && phase === nature ? 'heartbroken' : phase;
 
+  // What they use (DESIGN.md 83): what they do for fun, from who they are, and whether the campus feeds them.
+  const play = playOf(state, ref, habitsOf(seed, ref, nature));
+  const eats = eatsOnCampus(state, ref);
+  const usedFood = eats ? placeUsedFor(state, ref, 'food') : null;
   // Happiness is read where the student spends their days: the dorm, or for a commuter two lecture halls.
   let spots: number[] = [];
   if (home !== null) {
@@ -829,19 +909,20 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
   const nudge = friends ? ownHappiness : relationship.points;
   if (spots.length > 0) {
     // A member feels their chapter's whole lift, where the campus feels it by their share.
-    const approval = approvalOver(state, spots, member ? causeShifts(state, 'housing', chapterLift(state, member.chapter).points) : undefined);
+    const approval = approvalOver(state, spots, member ? causeShifts(state, 'housing', chapterLift(state, member.chapter).points) : undefined, { recreation: play.level, dining: eats ? 1 : 0 });
     const temperament = (roll(seed, ref, SALT.mood) * 2 - 1) * TEMPERAMENT_SPREAD;
     // The status nudges this one student. It is never offered as the reason: that stays something the player can change.
     happiness = Math.max(0, Math.min(100, Math.round(approval.score + temperament + nudge + seasonal)));
-    reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD);
+    reason = reasonFor(state, ref, spots, resident, approval, moodOf(happiness) >= CONTENT_MOOD, play, eats);
   }
 
-  // Tutoring: a study center in reach of where they spend their days.
-  let tutoring = 0;
-  for (const spot of spots) tutoring = Math.max(tutoring, tutoringLift(state.map, spot % state.map.width, Math.floor(spot / state.map.width)));
+  // Tutoring (DESIGN.md 83.4): a student whose classes are going badly goes to any study center with room, wherever
+  // they live.
+  const taught = { archetype: phase, classYear, teaching: teachingQuality(state), tutoring: 0 };
+  const tutoring = tutoredThen(seed, ref, taught, tutoringCover(state)) ? 1 : 0;
   // Grades at the real spread (DESIGN.md 65.4): who they are, how often they go to class, how well the campus teaches,
-  // and a study center in reach. Exam Stress nudges them down a little, and lifts when the exams end.
-  const grades = gradesOf(seed, ref, { archetype: phase, classYear, teaching: teachingQuality(state), tutoring }, semesterOf(state));
+  // and tutoring. Exam Stress nudges them down a little, and lifts when the exams end.
+  const grades = gradesOf(seed, ref, { ...taught, tutoring }, semesterOf(state));
   // A study partner lifts grades a little; a messy breakup in an exam week takes some off (DESIGN.md 63.10).
   const ownGpa = friends ? (exams > 0 ? friends.gpaInExams : friends.gpa) : 0;
   const gpa = Math.round(Math.max(GPA_FLOOR, Math.min(4, grades.gpa - STRESS_GPA * (stress / 100) + ownGpa)) * 10) / 10;
@@ -893,6 +974,7 @@ export function studentCard(state: GameState, ref: StudentRef, friends?: Student
     missesHome,
     team: teamOf(state, ref)?.name ?? null,
     tutored: tutoring > 0,
+    uses: { got: play.got, full: play.full, missing: play.missing, union: play.union, food: usedFood?.type ?? null, fed: eats },
     classSize: Math.round(classSizeNow(state)),
     club: fixed.club,
     relationship,

@@ -3,8 +3,6 @@ import {
   COMMONS_POINTS,
   HONORS_RATE,
   SECOND_BUILDER_SEALS,
-  UNION_REACH,
-  UNION_STRENGTH,
   WELCOME_MORE,
   type BigBuildSpec,
 } from '../config/bigBuilds';
@@ -188,18 +186,15 @@ export function bigBuildsOpening(era: number): string {
 
 // ------------------------------------------------------------ their effects --
 
-/** Cells between a spot and the nearest edge of a building, counting diagonals as one. */
-function gap(placed: Placed, x: number, y: number): number {
-  return Math.max(Math.max(placed.x - x, 0, x - (placed.x + placed.w - 1)), Math.max(placed.y - y, 0, y - (placed.y + placed.h - 1)));
+/** The Student Union once it is open, wherever it stands. null before. */
+export function unionPlaced(map: MapState): Placed | null {
+  for (const placed of bigOnMap(map)) if (placed.type === 'studentUnion' && placed.done === undefined) return placed;
+  return null;
 }
 
-/** What the Student Union adds to the recreation at a spot: its strength within its reach, once it is open. */
-export function unionAt(map: MapState, x: number, y: number): number {
-  for (const placed of bigOnMap(map)) {
-    if (placed.type !== 'studentUnion' || placed.done !== undefined) continue;
-    if (gap(placed, x, y) <= UNION_REACH) return UNION_STRENGTH;
-  }
-  return 0;
+/** True once the Student Union is open: somewhere to meet for every student, part of Food & fun (DESIGN.md 45, 83.2). */
+export function unionOpen(map: MapState): boolean {
+  return unionPlaced(map) !== null;
 }
 
 /** Points of graduation rate the Honors College adds to what the academic rating reads. 0 when it is not open. */

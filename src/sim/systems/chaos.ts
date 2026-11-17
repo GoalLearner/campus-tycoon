@@ -40,7 +40,7 @@ import { scaleOf, smallCount } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
 import type { ChaosState, ChaosWeek, GameState, Incident, LogEntry } from '../types';
 import { meddleCalm, meddleRein, meddleTemper, newMeddle, prankWarDorms } from './meddle';
-import { foodKindsAt } from './food';
+import { campusFed } from './placed';
 import { homeGameNow } from './football';
 import { coverFor } from './incidents';
 import { mischiefTimes } from './policies';
@@ -230,10 +230,10 @@ function readInputs(state: GameState): void {
   const c = state.chaos;
   const dorms = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === 'housing' && b.stage > 0);
   let covered = 0;
-  let fed = 0;
+  // Every place to eat feeds the whole campus (DESIGN.md 83.3): a dorm is fed when the campus has somewhere to eat.
+  const fed = campusFed(state.map) ? dorms.length : 0;
   for (const dorm of dorms) {
     if (coverFor(state.map, 'safety', dorm.x, dorm.y)) covered += 1;
-    if (foodKindsAt(state.map, dorm.x, dorm.y) > 0) fed += 1;
   }
   c.covered = dorms.length > 0 ? covered / dorms.length : 1;
   // Students waiting for a bed: the halls are full and the next ones in are turned to a waitlist.
@@ -246,7 +246,7 @@ function readInputs(state: GameState): void {
   // What students would protest about: campus things only, the strongest.
   const topics: Array<{ topic: ProtestTopic; strength: number; words: string }> = [];
   if (waiting > 0) topics.push({ topic: 'beds', strength: Math.min(1, waiting * 5), words: 'more beds' });
-  if (dorms.length > 0 && fed < dorms.length) topics.push({ topic: 'food', strength: Math.min(1, ((dorms.length - fed) / dorms.length) * 1.5), words: 'food in reach of every hall' });
+  if (dorms.length > 0 && fed < dorms.length) topics.push({ topic: 'food', strength: Math.min(1, ((dorms.length - fed) / dorms.length) * 1.5), words: 'somewhere to eat on campus' });
   const hated = POLICIES.find((spec) => state.policies?.on.includes(spec.id) && spec.costs.some((cost) => cost.kind === 'cause' && cost.points < 0 && !cost.among));
   if (hated) topics.push({ topic: 'policy', strength: 0.35, words: `an end to ${hated.name.toLowerCase()}` });
   topics.sort((a, b) => b.strength - a.strength);

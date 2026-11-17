@@ -18,7 +18,7 @@ export interface BigBuildSpec {
 }
 
 export const BIG_BUILDS: readonly BigBuildSpec[] = [
-  { type: 'studentUnion', era: 2, hours: 24, does: 'things to do and somewhere to meet over a wide circle' },
+  { type: 'studentUnion', era: 2, hours: 24, does: 'things to do and somewhere to meet for every student' },
   { type: 'honorsCollege', era: 2, hours: 24, does: 'a higher graduation rate across the campus' },
   { type: 'welcomeCenter', era: 2, hours: 24, does: 'more from every step of marketing' },
   { type: 'foundersCommons', era: 3, hours: 72, does: 'better Grounds for every student' },
@@ -36,9 +36,9 @@ export const BIG_BUILDS_WAITING: ReadonlyArray<{ name: string; does: string }> =
 /** Gold Seals for a second builder, bought once: two big builds can then go up at once (DESIGN.md 42.7). */
 export const SECOND_BUILDER_SEALS = 20;
 
-/** The Student Union counts as this much recreation at every lot within its reach: Food & fun, never past full. */
+/** The Student Union counts as this much recreation for every student, with no line: Food & fun, never past full (83.2). */
 export const UNION_STRENGTH = 0.5;
-/** Cells from its wall. A gym reaches 8. */
+/** Cells from its wall within which living near it adds what living near a place to play does (83.2). A gym's is 8. */
 export const UNION_REACH = 16;
 
 /** Points of graduation rate the Honors College adds to what the academic rating reads, never past all of a class. */

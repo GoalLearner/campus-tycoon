@@ -46,7 +46,7 @@ export const GPA_Z_CLASS_YEAR: readonly number[] = [-0.12, 0, 0.06, 0.12, -0.1, 
 
 /**
  * [T] Teaching moves the whole campus: this many steps for all of the range from the worst taught to the best, from
- * a typical campus's teaching, where the campus has the real spread. A study center in reach lifts a student this
+ * a typical campus's teaching, where the campus has the real spread. Tutoring (83.4) lifts a student this
  * many steps. GPA_CENTRE is set so a typical model campus, with its tutoring and its natures, sits on the real spread.
  */
 export const TEACH_Z = 0.6;

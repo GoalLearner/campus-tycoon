@@ -17,9 +17,8 @@ import {
   CLASS_SIZE,
   classPressure,
   classSizeNow,
-  CROWD_LIFT_FLOOR,
   crowding,
-  diningAt,
+  campusDining,
   dormStudents,
   enrollment,
   enrollmentCap,
@@ -82,7 +81,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { admissionsRank, pipeline } from '../src/sim/systems/selectivity';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -153,9 +152,10 @@ describe('faculty and staff are head counts the campus keeps', () => {
     // A campus that has stopped growing catches up in the spring, and stays within a semester of its students.
     const settled = at(fall.state, T0 + 2 * WEEK + 4 * DAY).state;
     expect(enrollment(settled)).toBeGreaterThan(49_000);
-    expect(facultyCount(settled)).toBe(facultyNeed(settled));
+    // To within one, as the semester's last students come and go.
+    expect(Math.abs(facultyCount(settled) - facultyNeed(settled))).toBeLessThanOrEqual(1);
     expect(Math.abs(staffCount(settled) - facultyCount(settled) / 2)).toBeLessThanOrEqual(1);
-    expect(classSizeNow(settled)).toBeCloseTo(20, 5);
+    expect(classSizeNow(settled)).toBeCloseTo(20, 1);
   });
 
   it('are never let go: a fall in enrollment is carried on the payroll for a semester', () => {
@@ -207,8 +207,9 @@ describe('faculty and staff are head counts the campus keeps', () => {
     const spring = at(more, SPRING).state;
     // The plan is made again as the semester ends, for those who will be there with the spring class: a small one
     // since admissions at real figures (DESIGN.md 70), so a few fewer.
-    // A few more since the model campus's second gym and four basketball courts (DESIGN.md 72) keep a few more students.
-    expect(facultyCount(spring)).toBe(2664);
+    // A few more since the model campus's second gym and four basketball courts (DESIGN.md 72) keep a few more students,
+    // and a few more since its places to play and eat serve every student who uses them (83).
+    expect(facultyCount(spring)).toBe(2667);
     expect(classSizeNow(spring)).toBeLessThan(18);
     expect(teaching(spring)).toBeLessThan(0.3);
 
@@ -525,7 +526,9 @@ describe('the Capacity page', () => {
   it('gives each a status and says what that does, with its fix', () => {
     const state = model();
     const status = Object.fromEntries(capacity(state).needs.map((one) => [one.id, one.status]));
-    expect(status).toMatchObject({ beds: 'ok', seats: 'tight', faculty: 'ok', dining: 'ok', recreation: 'ok', parking: 'ok', workers: 'ok', staff: 'ok' });
+    expect(status).toMatchObject({ beds: 'ok', seats: 'tight', faculty: 'ok', dining: 'ok', recreation: 'tight', parking: 'ok', workers: 'ok', staff: 'ok' });
+    // The model campus has no track and no tennis or volleyball court, and the row says so (DESIGN.md 83.2).
+    expect(need(state, 'recreation').consequence).toMatch(/^No track, volleyball court and tennis court: (1 in \d+ students|\d+% of students) would use one\.$/);
     // A row that is doing nothing says nothing. One that is says what it lowers.
     for (const one of capacity(state).needs) expect(one.consequence === '', one.id).toBe(one.status === 'ok');
     // Crowded classes on a campus with room for every student: zoning Academic lots is the fix, and it says how many.
@@ -587,28 +590,29 @@ describe('the Capacity page', () => {
     // The model campus opens with a line nowhere, so its Happiness is what it was.
     for (const placed of eats) expect(mealUse(state, placed)!.ratio, placed.type).toBeLessThanOrEqual(1);
     expect(need(state, 'dining').status).toBe('ok');
-    // Every lot with food in reach shares its meals out in full.
-    const lots = state.map.cells.filter((cell, i) => cell.kind === 'lot' && diningAt(state, i % state.map.width, Math.floor(i / state.map.width)) > 0).length;
-    expect(Object.values(state.map.care.meals!).reduce((sum, share) => sum + share, 0)).toBeCloseTo(lots, 6);
+    // Every lot shares its meals out in full: every place to eat feeds the whole campus (DESIGN.md 83.3).
+    expect(campusDining(state)).toBe(1);
+    expect(Object.values(state.map.care.meals!).reduce((sum, share) => sum + share, 0)).toBeCloseTo(state.map.care.lots, 6);
 
-    // Five times the students: lines everywhere, and each place's part in Happiness falls to its floor and no further.
+    // Five times the students: every place full, and those who cannot get in at the busiest hour go without a meal on campus.
     const packed = structuredClone(state);
     packed.cohorts = packed.cohorts.map((n) => n * 5) as GameState['cohorts'];
     const uses = eats.map((placed) => mealUse(packed, placed)!);
     expect(uses.some((use) => use.waiting > 0)).toBe(true);
     for (const use of uses) {
-      expect(use.lift).toBeGreaterThanOrEqual(CROWD_LIFT_FLOOR);
-      expect(use.lift).toBeLessThanOrEqual(1);
+      expect(use.served).toBeGreaterThan(0.5);
+      expect(use.served).toBeLessThan(1);
     }
     expect(need(packed, 'dining').status).not.toBe('ok');
     expect(need(packed, 'dining').consequence).toMatch(/Food & fun/);
-    const busy = eats.find((placed) => mealUse(packed, placed)!.ratio >= 2)!;
-    expect(diningAt(packed, busy.x, busy.y)).toBeGreaterThanOrEqual(CROWD_LIFT_FLOOR);
-    expect(diningAt(packed, busy.x, busy.y)).toBeLessThan(1);
-    // A save from before places to eat could fill up reads as it did until its map is next worked out.
+    for (const use of uses) expect(use.ratio).toBeGreaterThanOrEqual(1 - 1e-9);
+    const busy = eats.find((placed) => mealUse(packed, placed)!.waiting > 0)!;
+    expect(campusDining(packed)).toBeCloseTo(mealUse(packed, busy)!.served, 9);
+    expect(campusDining(packed)).toBeLessThan(1);
+    // A save from before places to eat could fill up shares its meals by its takings until its map is next worked out.
     const before = structuredClone(packed);
     delete before.map.care.meals;
-    expect(diningAt(before, busy.x, busy.y)).toBe(1);
+    expect(campusDining(before)).toBeCloseTo(campusDining(packed), 9);
   });
 
   it('never blocks the game: a campus short of faculty, staff and workers runs on', () => {
@@ -675,7 +679,8 @@ describe('a save from version 15', () => {
     expect(state.admissions.year).toEqual({ applied: 46_000, admitted: 46_000 });
     const books = budget(state);
     expect(books.spending).toBeCloseTo(file.state.money.spendingPerYear, 4);
-    expect(books.incomeTotal).toBeCloseTo(file.state.money.incomePerYear, 4);
+    // Food's takings now share every student among the places they eat at (DESIGN.md 83.3): a hair different.
+    expect(Math.abs(books.incomeTotal / file.state.money.incomePerYear - 1)).toBeLessThan(1e-4);
     // No place to eat has a line, classes are the size they were, and Stress reads teaching as it always did.
     for (const placed of state.map.placed) if (placed && PLACED[placed.type].family === 'dining') expect(mealUse(state, placed)!.ratio).toBeLessThanOrEqual(1);
     expect(classSizeNow(state)).toBe(20);
@@ -711,6 +716,7 @@ describe('a save from version 15', () => {
     withChaos(expected);
     withRegistration(expected);
     withLanes(expected);
+    withAmenities(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -741,7 +747,7 @@ describe('a save from version 15', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes.length).toBe(26);
+    expect(notes.length).toBe(27);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

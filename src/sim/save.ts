@@ -16,7 +16,8 @@ import { LOCAL_SHARE, WORLD } from './config/town';
 import { recomputeDesirability } from './systems/desirability';
 import { buildTown, startingParcels } from './systems/town';
 import { PLACED } from './config/placed';
-import { mealLoads } from './systems/food';
+import { foodLoads, mealLoads } from './systems/food';
+import { playLoads } from './systems/play';
 import { backPay, newDaily, relevelXp } from './systems/daily';
 import { firstOrders, newOrders } from './systems/orders';
 import { newDecor } from './systems/decor';
@@ -38,7 +39,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 41;
+export const SAVE_VERSION = 42;
 
 export interface SaveFile {
   v: number;
@@ -54,6 +55,16 @@ export type Migration = (state: Record<string, unknown>) => Record<string, unkno
  * Add one whenever the state shape changes after a release, with a test
  * that loads an old fixture.
  */
+/** Who goes to which place to play and eat, worked out again with today's rules (DESIGN.md 83.5): for version 42. */
+export function reshareAmenities(map: MapState): void {
+  if (!map.care) return;
+  const all = map.placed.filter((placed): placed is Placed => !!placed);
+  const dining = all.filter((placed) => PLACED[placed.type].family === 'dining');
+  map.care.play = playLoads(map, all.filter((placed) => PLACED[placed.type].family === 'recreation'));
+  map.care.food = foodLoads(map, dining);
+  map.care.meals = mealLoads(map, dining);
+}
+
 export const MIGRATIONS: Record<number, Migration> = {
   // Version 2 added `variant` to every map cell, for the kind of tree planted there.
   1: (state) => {
@@ -489,6 +500,12 @@ export const MIGRATIONS: Record<number, Migration> = {
   // Version 41: grades by class (R4b, DESIGN.md 81). Nothing to move: a record without its teaching or the Honors
   // College is read with the campus as it stands, and every grade comes from the seed.
   40: (state) => state,
+  // Version 42: places students go to use serve those who use them, wherever they live (DESIGN.md 83). Who goes to which
+  // place to play and eat, the nearer the more, is worked out again; the rest of the map's care is as it was.
+  41: (state) => {
+    reshareAmenities(state.map as unknown as MapState);
+    return state;
+  },
 };
 
 /**

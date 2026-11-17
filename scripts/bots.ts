@@ -9,7 +9,6 @@ import {
   goingUp,
   upkeepComing,
   placedUpkeep,
-  recreationAt,
   SECOND_BUILDER_SEALS,
   LABS,
   LAB_SEAT_REACH,
@@ -77,11 +76,15 @@ import {
   placedCost,
   scaleOf,
   coverFor,
-  fedAt,
-  foodKindsAt,
-  foodTypesAt,
+  campusFed,
+  campusMeals,
+  campusPlay,
+  PASTIMES,
+  type Pastime,
+  foodKinds,
+  foodTypesOnCampus,
   libraryLift,
-  tutoredAt,
+  tutoringCover,
   VARIETY_KINDS,
   isMessSpot,
   isPathKind,
@@ -651,6 +654,62 @@ function menuSpot(state: GameState, type: PlacedType, x: number, y: number): Poi
   return best;
 }
 
+/**
+ * For a place students use, which serves the whole campus wherever it stands (DESIGN.md 83): where the grounds are
+ * already tended, as a tidy player builds, inside the circle of a Facilities Yard whose crew has room for it; failing
+ * that by the lot asked for, then
+ * beside another place that drops litter, then by the next built lot, dorms first. Anything else by the lot asked for.
+ */
+function anySpot(state: GameState, type: PlacedType, x: number, y: number): Point | null {
+  const family = PLACED[type].family;
+  if (family !== 'recreation' && family !== 'dining' && family !== 'tutoring') return menuSpot(state, type, x, y);
+  const placed = state.map.placed.filter((p): p is NonNullable<typeof p> => !!p);
+  // Inside the circle of a yard whose crew has room for another busy place, so it looks after it: the nearest free
+  // ground to each such yard in turn.
+  const spec = PLACED[type];
+  for (const yard of placed.filter((p) => p.type === 'yard')) {
+    const status = yardStatus(state, yard);
+    if (status.need + 2 > status.max) continue;
+    let best: Point | null = null;
+    let bestFar = Infinity;
+    const reach = PLACED.yard.radius;
+    for (let py = yard.y - reach; py <= yard.y + yard.h - 1 + reach - (spec.h - 1); py++) {
+      for (let px = yard.x - reach; px <= yard.x + yard.w - 1 + reach - (spec.w - 1); px++) {
+        const far = Math.max(Math.abs(px - yard.x), Math.abs(py - yard.y));
+        if (far >= bestFar) continue;
+        let clear = previewPlace(state, type, px, py).problem === null;
+        for (let cy = py; cy < py + spec.h && clear; cy++) for (let cx = px; cx < px + spec.w && clear; cx++) if (onStreetPlan(cx, cy)) clear = false;
+        if (!clear) continue;
+        best = [px, py];
+        bestFar = far;
+      }
+    }
+    if (best) return best;
+  }
+  const here = menuSpot(state, type, x, y);
+  if (here) return here;
+  const near: Array<{ x: number; y: number }> = placed.filter((p) => isMessSpot(p));
+  const lots = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.stage > 0);
+  lots.sort((a, b) => (a.zone === b.zone ? 0 : a.zone === 'housing' ? -1 : 1));
+  for (const at of [...near, ...lots].slice(0, 60)) {
+    const spot = menuSpot(state, type, at.x, at.y);
+    if (spot) return spot;
+  }
+  return null;
+}
+
+/** The place each pastime needs, the cheaper where there are two (DESIGN.md 83.2). */
+const PLACE_FOR: Record<Pastime, PlacedType> = {
+  workout: 'gym',
+  swim: 'pool',
+  run: 'track',
+  basketball: 'courts',
+  field: 'field',
+  volleyball: 'volleyball',
+  tennis: 'tennis',
+  making: 'makerspace',
+};
+
 /** The open building where one part of happiness is lowest: where a new building would help most. */
 function neediestLot(state: GameState, part: DriverId): { x: number; y: number; level: number } | null {
   let worst: { x: number; y: number; level: number } | null = null;
@@ -663,10 +722,7 @@ function neediestLot(state: GameState, part: DriverId): { x: number; y: number; 
 }
 
 const PLAY: readonly PlacedType[] = ['courts', 'gym', 'field', 'pool', 'track', 'makerspace'];
-/**
- * For variety: the kinds a dorm with food already in reach is offered, tried in turn until one is found
- * that it does not have. The two that feed a wide area come first, so one of them serves many dorms.
- */
+/** For variety: the kinds a campus with food is offered, tried in turn until one is found that it does not have. */
 const VARIETY: readonly PlacedType[] = ['burger', 'diner', 'taco', 'pizza', 'coffee', 'smoothie', 'convenience', 'truck'];
 /** The Academics buildings are bought once there is this much cash to spare. */
 const ACADEMICS_CASH = 400_000;
@@ -679,15 +735,18 @@ const ACADEMICS_CASH = 400_000;
  */
 function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedType; x: number; y: number }> {
   const wants: Array<{ type: PlacedType; x: number; y: number }> = [];
-  let hungry = 0;
-  for (const b of state.map.buildings) {
-    if (hungry >= 3) break;
-    if (b && b.zone === 'housing' && b.stage === 1 && !fedAt(state.map, b.x, b.y)) {
-      // A dining hall feeds four times the ground a coffee stand does and takes two cells. A campus that
-      // only ever buys the stand ends up with dozens of them where its Medical Centers should have gone.
-      wants.push({ type: state.money.cash >= placedCost('dining', scaleOf(state)) + 20_000 * scaleOf(state) ? 'dining' : 'coffee', x: b.x, y: b.y });
-      hungry += 1;
-    }
+  // A campus with nowhere to eat: its dorms cannot grow. Every place to eat feeds the whole campus (DESIGN.md 83.3), so
+  // one by the first dorm waiting is enough.
+  if (!campusFed(state.map)) {
+    const b = state.map.buildings.find((one) => one && one.zone === 'housing' && one.stage === 1);
+    // A dining hall feeds five times what a coffee stand does and takes two cells.
+    if (b) wants.push({ type: state.money.cash >= placedCost('dining', scaleOf(state)) + 20_000 * scaleOf(state) ? 'dining' : 'coffee', x: b.x, y: b.y });
+  }
+  // The Capacity page's Dining row (DESIGN.md 83.3): meals short at the busiest hour, and students go without. Another
+  // place to eat anywhere feeds them; the player reads it as they read a dorm held back.
+  if (campusFed(state.map) && campusMeals(state).served < 1) {
+    const b = state.map.buildings.find((one) => one && one.zone === 'housing' && one.stage > 0);
+    if (b) wants.push({ type: state.money.cash >= placedCost('dining', scaleOf(state)) + 20_000 * scaleOf(state) ? 'dining' : 'coffee', x: b.x, y: b.y });
   }
   // Beds and seats come first while students are waiting for them, and before anyone has moved in. The top
   // bar says so in as many words, and a gym or a Campus Safety office has staff to pay from the day it opens.
@@ -699,8 +758,14 @@ function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedTyp
     if (lot && lot.level < 0.85) {
       if (worst === 'dining') wants.push({ type: 'dining', x: lot.x, y: lot.y });
       else if (worst === 'recreation') {
-        const built = state.map.placed.filter((p) => p && PLACED[p.type].family === 'recreation').length;
-        wants.push({ type: PLAY[built % PLAY.length]!, x: lot.x, y: lot.y });
+        // What the Capacity page's Recreation row names (83.2): a kind of place full at the busiest hour, then the kind
+        // most students want that the campus lacks; otherwise the next in turn.
+        const play = campusPlay(state);
+        const full = PASTIMES.filter((p) => play.rooms[p].has && play.rooms[p].served < 1).sort((a, b) => play.rooms[a].served - play.rooms[b].served)[0];
+        const lacking = PASTIMES.filter((p) => !play.rooms[p].has).sort((a, b) => play.rooms[b].share - play.rooms[a].share)[0];
+        const have = state.map.placed.filter((p) => p && PLACED[p.type].family === 'recreation').map((p) => p!.type);
+        const pick = full ?? lacking;
+        wants.push({ type: pick ? PLACE_FOR[pick] : PLAY[have.length % PLAY.length]!, x: lot.x, y: lot.y });
       } else wants.push({ type: coverFor(state.map, 'medical', lot.x, lot.y) ? 'safety' : 'medical', x: lot.x, y: lot.y });
     }
   }
@@ -725,27 +790,22 @@ function wantsFromMenu(state: GameState, extras = true): Array<{ type: PlacedTyp
   if (wild) return wants.filter((want) => want.type !== 'safety');
   // Everything above is a need. What follows is a nicety, bought last and only on the visit's final pass.
   if (!extras) return wants;
-  // Variety: three kinds of food in reach lift Food & fun a little. A dorm with food but fewer kinds than
-  // that gets one it does not have yet.
-  let varied = 0;
-  for (const b of state.map.buildings) {
-    if (varied >= 1) break;
-    if (!b || b.zone !== 'housing' || b.stage < 1) continue;
-    const kinds = foodKindsAt(state.map, b.x, b.y);
-    if (kinds === 0 || kinds >= VARIETY_KINDS) continue;
-    const have = foodTypesAt(state.map, b.x, b.y);
+  // Variety: three kinds of food on the campus lift Food & fun a little (DESIGN.md 83.3). A campus with food but
+  // fewer kinds than that gets one it does not have yet, by a dorm.
+  const kinds = foodKinds(state.map);
+  if (kinds > 0 && kinds < VARIETY_KINDS) {
+    const have = foodTypesOnCampus(state.map);
     const next = VARIETY.find((type) => !have.includes(type));
-    if (!next) continue;
-    wants.push({ type: next, x: b.x, y: b.y });
-    varied += 1;
+    const b = state.map.buildings.find((one) => one && one.zone === 'housing' && one.stage > 0);
+    if (next && b) wants.push({ type: next, x: b.x, y: b.y });
   }
   // The Academics buildings, once there is money to spare: a computer lab for lecture halls no library
-  // reaches, and a study center by the dorms.
+  // reaches, and a study center by the dorms while the study centers have no room for some who need one (83.4).
   if (state.money.cash > ACADEMICS_CASH * scaleOf(state)) {
     const hall = state.map.buildings.find((b) => b && b.zone === 'academic' && b.stage > 0 && libraryLift(state.map, b.x, b.y) === 0);
     if (hall) wants.push({ type: 'computerLab', x: hall.x, y: hall.y });
-    const dorm = state.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0 && !tutoredAt(state.map, b.x, b.y));
-    if (dorm) wants.push({ type: 'studyCenter', x: dorm.x, y: dorm.y });
+    const dorm = state.map.buildings.find((b) => b && b.zone === 'housing' && b.stage > 0);
+    if (dorm && tutoringCover(state) < 1) wants.push({ type: 'studyCenter', x: dorm.x, y: dorm.y });
   }
   return wants;
 }
@@ -761,7 +821,7 @@ function buildFromMenu(state: GameState, reserve: number, most: number, extras =
         blocked = true;
         continue;
       }
-      const spot = menuSpot(current, want.type, want.x, want.y);
+      const spot = anySpot(current, want.type, want.x, want.y);
       if (!spot) continue;
       const result = applyAction(current, { type: 'place', building: want.type, x: spot[0], y: spot[1] });
       if (!result.ok) continue;
@@ -922,7 +982,8 @@ function bigBuildSpot(state: GameState, type: PlacedType): Point | null {
   const spec = PLACED[type];
   const admin = map.placed.find((one) => one?.type === 'admin');
   const [ax, ay] = admin ? [admin.x, admin.y] : [Math.floor(map.width / 2), Math.floor(map.height / 2)];
-  const lots = type === 'studentUnion' ? map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0 && recreationAt(state, lot.x, lot.y) < 1) : [];
+  // The Student Union serves every student wherever it stands (DESIGN.md 83.2): among the lots, where most students pass.
+  const lots = type === 'studentUnion' ? map.buildings.filter((lot): lot is NonNullable<typeof lot> => !!lot && lot.stage > 0) : [];
   let best: Point | null = null;
   let score = -Infinity;
   for (let y = 0; y < map.height; y++) {

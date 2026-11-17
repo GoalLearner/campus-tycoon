@@ -9,7 +9,7 @@ import {
   campusHappiness,
   coverFor,
   enrollment,
-  fedAt,
+  campusFed,
   FIRST_INTAKE_TICK,
   isMessSpot,
   MODEL_CASH_SHARE,
@@ -176,9 +176,10 @@ describe('the model campus follows the game\'s own rules', () => {
       expect(building.rebuild, at).toBeNull();
       expect(touchesPath(map, building.x, building.y), `${at} touches a path`).toBe(true);
       expect(map.score[building.y * map.width + building.x]!, `${at} is desirable enough`).toBeGreaterThanOrEqual(stageSpec(building.zone, MODEL_STAGE).desirabilityNeeded);
-      if (building.zone === 'housing') expect(fedAt(map, building.x, building.y), `${at} has food in reach`).toBe(true);
     }
     expect(lots).toBe(72);
+    // Every place to eat feeds the whole campus (DESIGN.md 83.3).
+    expect(campusFed(map)).toBe(true);
     expect(state.timers.filter((timer) => timer.kind === 'buildDone').length).toBe(0);
   });
 

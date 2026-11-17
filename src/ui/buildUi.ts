@@ -54,18 +54,23 @@ import {
   hasRoadAccess,
   townPlaces,
   dollarsShort,
-  fedAt,
+  campusFed,
   FOOD_INCOME_PER_STUDENT,
   STRESS_CAUSES,
   duration,
   MAX_TIER,
   NOISE_RADIUS,
-  foodKindsAt,
+  foodKinds,
   foodTrade,
+  mealUse,
+  placedMeals,
+  placedRoom,
+  tutoringRoom,
+  type MealUse,
   VARIETY_KINDS,
   inReach,
   PLACED,
-  recreationAt,
+  campusPlay,
   storeIncomePerYear,
   storePassers,
   type CauseId,
@@ -86,10 +91,8 @@ import {
   upkeepComing,
   honorsRate,
   marketingLift,
-  unionAt,
   welcomeMore,
   SECOND_BUILDER_SEALS,
-  UNION_REACH,
 } from '../sim';
 import type { BuildEntry } from './buildMenu';
 import { labEntries, labSummary } from './labUi';
@@ -298,12 +301,14 @@ function baseSummary(state: GameState, placed: Placed): string {
       return `Lifting ${plural(lotsInReach(state, placed, 'academic'), 'Academic lot', 'Academic lots')} within ${spec.radius} cells.`;
     case 'dining': {
       const trade = foodTrade(state, placed);
-      const fed = `Feeding ${plural(lotsInReach(state, placed, 'housing'), 'Housing lot', 'Housing lots')} within ${spec.radius} cells.`;
+      const use = mealUse(state, placed);
+      // It feeds the whole campus (DESIGN.md 83.3): how full it is at the busiest hour.
+      const fed = `Feeds students across campus.${use ? ` ${mealLine(use)}` : ''}`;
       // What it earns, and why a second stall beside it would not add to that.
       const earns =
         !trade || trade.income < 1
-          ? 'It earns nothing until students are in reach.'
-          : `It earns ${dollars(trade.income)} a year${trade.doubled ? ', double for the recreation beside it' : ''}: ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared with any other food that reaches them.`;
+          ? 'It earns nothing until students arrive.'
+          : `It earns ${dollars(trade.income)} a year${trade.doubled ? ', double for the recreation beside it' : ''}: ${dollars(FOOD_INCOME_PER_STUDENT)} for each student who eats here, shared with the other places they use.`;
       const moves = spec.fullRefund ? ' Clear it and the whole price comes back.' : '';
       return `${fed} ${earns}${moves}`;
     }
@@ -314,13 +319,16 @@ function baseSummary(state: GameState, placed: Placed): string {
         : `${plural(passers, 'student passes', 'students pass')} its door. It earns ${dollars(storeIncomePerYear(state, placed))} a year.`;
     }
     case 'recreation': {
-      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
+      // For every student who plays, wherever they live (DESIGN.md 83.2).
       const use = playUse(state, placed);
-      return `Raising happiness at ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells.${use ? ` ${playLine(use)}` : ''}`;
+      return `Raises happiness for students who use it.${use ? ` ${playLine(use)}` : ''}`;
     }
     case 'tutoring': {
-      const lots = lotsInReach(state, placed, 'housing') + lotsInReach(state, placed, 'academic');
-      return `Tutoring for the students of ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${spec.radius} cells. Their cards show a better GPA. It changes nothing else yet.`;
+      // Any student whose classes are going badly, from anywhere on campus, while there is room (DESIGN.md 83.4).
+      const { room, need } = tutoringRoom(state);
+      return room >= need
+        ? `Tutoring for the ${headCount(need)} students whose classes are going badly, from anywhere on campus. Room for ${headCount(room)} a semester.`
+        : `Room for ${headCount(room)} of the ${headCount(need)} students whose classes are going badly. Another study center would take the rest.`;
     }
     case 'water':
       return 'Counts as green space for the lots around it, like a quad.';
@@ -389,11 +397,8 @@ function bigBuildSummary(state: GameState, placed: Placed): string {
   const name = PLACED[placed.type].name;
   if (placed.done !== undefined) return `Being built. The ${name} opens in ${duration(placed.done - state.clock.tick)}. The Seals panel can finish it now.`;
   switch (placed.type) {
-    case 'studentUnion': {
-      let lots = 0;
-      for (const building of state.map.buildings) if (building && building.stage > 0 && unionAt(state.map, building.x, building.y) > 0) lots += 1;
-      return `Somewhere to meet for ${plural(lots, 'dorm or lecture hall', 'dorms and lecture halls')} within ${UNION_REACH} cells: it is part of Food & fun there, with no line to wait in.`;
-    }
+    case 'studentUnion':
+      return 'Somewhere to meet for every student: it is part of Food & fun, with no line to wait in.';
     case 'honorsCollege':
       return `The graduation rate the academic rating reads is ${Math.round(honorsRate(state) * 100)} points higher, across the campus. The Rankings page names it on that line.`;
     case 'welcomeCenter': {
@@ -463,6 +468,16 @@ function buildingCost(type: PlacedType, scale: number): number {
 function effectLine(type: PlacedType, scale: number): string {
   // A chapter house's beds follow the campus scale, as a car park's cars do (DESIGN.md 51).
   if (type === 'chapterHouse') return PLACED[type].effect.replace(`${CHAPTER_BEDS} beds`, `${(CHAPTER_BEDS * scale).toLocaleString('en-US')} beds`);
+  // Places to play and eat serve the whole campus, and say how many at once (DESIGN.md 83.6).
+  const room = placedRoom(type, scale);
+  if (room > 0) return `${PLACED[type].effect} · ${room.toLocaleString('en-US')} at a time`;
+  const meals = placedMeals(type, scale);
+  if (meals > 0) {
+    const effect = PLACED[type].effect;
+    const stop = effect.indexOf('. ');
+    const first = stop < 0 ? effect : effect.slice(0, stop);
+    return `${first} · ${meals.toLocaleString('en-US')} meals an hour${stop < 0 ? '' : effect.slice(stop)}`;
+  }
   const cars = placedCars(type, scale);
   return cars > 0 ? `Lets ${cars.toLocaleString('en-US')} locals drive in. Needs a road to a town street` : PLACED[type].effect;
 }
@@ -512,8 +527,8 @@ const PART_FIX: Record<DriverId, string> = {
   clean: 'Litter is building up. Put a Trash bin beside each place to eat or play, and a Facilities Yard with workers in reach.',
   seating: 'Students have nowhere to sit outside. Add benches or picnic tables near dorms and lecture halls.',
   noise: 'Dorms beside the stadium hear every home game. Clear the nearest ones and zone Housing further off.',
-  dining: 'Students have nowhere to eat nearby. Build a Dining hall, or anything else under Food, near dorms and lecture halls.',
-  recreation: 'Students have nothing to do nearby. Build a gym, courts, a field, a pool or a track near dorms and lecture halls.',
+  dining: 'Build a Dining hall, or anything else under Food: each one feeds the whole campus.',
+  recreation: 'Build what students do for fun. The Recreation row on the Capacity page names what they want that the campus lacks, or what is full.',
   safety: 'Build a Medical Center and Campus Safety so their circles cover dorms and lecture halls.',
 };
 
@@ -576,15 +591,25 @@ export function happinessView(state: GameState): HappinessView {
 /** Used by tests of wording: every cause has a fix that names something to build or change. */
 export const CAUSE_FIXES = PART_FIX;
 
-/** True when dining reaches a lot. For the inspector's facts line. */
+/** The campus's food, and what there is to do here. For the inspector's facts line. */
 export function lotFacts(state: GameState, x: number, y: number): string[] {
   const facts: string[] = [];
-  // Food, and how many kinds of it: three kinds or more is variety, which lifts Food & fun a little.
-  const kinds = foodKindsAt(state.map, x, y);
-  facts.push(!fedAt(state.map, x, y) ? 'No food in reach' : kinds >= VARIETY_KINDS ? `${kinds} kinds of food in reach: variety` : kinds === 1 ? '1 kind of food in reach' : `${kinds} kinds of food in reach`);
-  const fun = recreationAt(state, x, y);
-  facts.push(fun > 0 ? `Things to do ${Math.round(fun * 100)}%` : 'Nothing to do nearby');
+  // Food on the campus, and how many kinds of it: three kinds or more is variety, which lifts Food & fun a little.
+  const kinds = foodKinds(state.map);
+  facts.push(!campusFed(state.map) ? 'Nowhere to eat on campus' : kinds >= VARIETY_KINDS ? `${kinds} kinds of food on campus: variety` : kinds === 1 ? '1 kind of food on campus' : `${kinds} kinds of food on campus`);
+  // What students who do something for fun can do of it, on the whole campus (DESIGN.md 83.2).
+  const play = campusPlay(state);
+  facts.push(play.capacity > 0 || play.union ? `Things to do ${Math.round(play.level * 100)}%` : 'Nothing to do on campus');
   return facts;
+}
+
+/** One line for a place to eat's card: how full at the busiest hour, and who waits. */
+function mealLine(use: MealUse): string {
+  const eating = Math.round(Math.min(use.demand, use.capacity));
+  if (use.waiting > 0) return `Full, ${headCount(use.waiting)} in line at peak. Every place to eat is full: another anywhere on campus clears the line.`;
+  if (eating >= use.capacity) return 'Full at peak, and nobody in line.';
+  if (eating >= use.capacity * 0.6) return `Busy: ${headCount(eating)} of ${headCount(use.capacity)} meals at peak.`;
+  return eating > 0 ? `Room to spare: ${headCount(eating)} of ${headCount(use.capacity)} meals at peak.` : `Nobody eating here yet. It serves ${headCount(use.capacity)} an hour.`;
 }
 
 /** What the panel of a neighbourhood says: who lives there and how they get to class. */

@@ -33,7 +33,7 @@ export const CHAOS_LINES: Readonly<Record<Exclude<IncidentChaosKind, 'protest'>,
 /** A protest's lines (the owner's answer 11: campus things only), by what it is about. */
 export const PROTEST_LINES: Readonly<Record<ProtestTopic, readonly string[]>> = {
   beds: ['Students rally on {place} for more beds: signs, one chant, and a petition for the Dean.', 'A sit-in outside the housing office: students want more beds, and a room of their own.'],
-  food: ['A sit-in at the dining hall: students want food in reach of every hall.', 'Students rally on {place} for better food, with signs drawn in ketchup.'],
+  food: ['A sit-in outside Administration: students want somewhere to eat on campus.', 'Students rally on {place} for better food, with signs drawn in ketchup.'],
   parking: ['A rally about parking: students circle {place} on foot, as they say they must.'],
   policy: ['Students rally on {place} against a policy they dislike, with signs and a petition.', 'A sit-in outside Administration about a campus policy: polite, loud, and well attended.'],
 };

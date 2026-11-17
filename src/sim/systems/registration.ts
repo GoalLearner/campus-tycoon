@@ -3,7 +3,8 @@ import { ACTIVITIES, LATE_CREDIT, CALCULUS_FIELDS, BREADTH, CHAIN_NUMBERS, DEPAR
 import { CLASS_SPREAD, HONORS, MINOR } from '../config/coursework';
 import { DEANS_LIST_FROM, PROBATION_BELOW, TEACH_TYPICAL } from '../config/grades';
 import { averageOf, curvedCourse, gradeSemester, latinFor, professorFor, type Grade } from './coursework';
-import { gradesOf, normalCdf, standingZ, termAt, usualTerm } from './grades';
+import { gradesOf, normalCdf, standingZ, termAt, tutoredThen, usualTerm } from './grades';
+import { tutoringCover } from './food';
 import { bigBuildOpen } from './bigBuilds';
 import { CLASS_YEARS } from '../config/population';
 import { MAJORS, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
@@ -370,11 +371,12 @@ function registerSemester(state: GameState, ref: StudentRef, n: number, semester
 
 /**
  * Grade a semester (R4b, DESIGN.md 81.1): R1's average for it, read with the campus as it stood then (its record's
- * teaching), spread across its classes.
+ * teaching, and its study centers' room: 83.4), spread across its classes.
  */
-function gradePlan(state: GameState, ref: StudentRef, plan: SemesterPlan, teaching: number): void {
+function gradePlan(state: GameState, ref: StudentRef, plan: SemesterPlan, teaching: number, covered: number): void {
   const nature = natureOf(state.seed, ref, movedAway(state.seed, ref));
-  const inputs = { archetype: nature, classYear: Math.min(CLASS_YEARS - 1, Math.floor(plan.n / 2)), teaching, tutoring: 0 };
+  const untutored = { archetype: nature, classYear: Math.min(CLASS_YEARS - 1, Math.floor(plan.n / 2)), teaching, tutoring: 0 };
+  const inputs = { ...untutored, tutoring: tutoredThen(state.seed, ref, untutored, covered) ? 1 : 0 };
   const gpa = gradesOf(state.seed, ref, inputs, plan.semester + 1).gpa;
   const term = termAt(state.seed, ref, inputs, plan.semester + 1);
   // Their average, and this term's luck less their usual term's: a transcript's average then keeps R1's spread (NPSAS
@@ -446,8 +448,10 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
     const record = recordAt(state, g);
     const students = record ? record.students : Math.max(1, enrollment(state));
     const teaching = record?.teaching ?? teachingNow;
+    // The study centers' room that semester, as its record has it (DESIGN.md 83.4): none in a record from before.
+    const tutoring = record?.tutoring ?? 0;
     const honors = (record?.honors ?? honorsNow) && orders.standing >= 1 - HONORS.share;
-    const key = halls ? '' : `${state.seed}:${ref.entryYear}:${ref.index}:${g}:${record ? `${record.pFull}:${record.students}` : 'base'}:${teaching}:${honors ? 1 : 0}:${mcShiftOf(state, ref, g)}`;
+    const key = halls ? '' : `${state.seed}:${ref.entryYear}:${ref.index}:${g}:${record ? `${record.pFull}:${record.students}` : 'base'}:${teaching}:${tutoring}:${honors ? 1 : 0}:${mcShiftOf(state, ref, g)}`;
     const kept = key ? REGISTERED.get(key) : undefined;
     if (kept && kept.before === taken.size) {
       taken = new Set(kept.after);
@@ -455,7 +459,7 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
     }
     const before = taken.size;
     const plan = registerSemester(state, ref, n, g, taken, students, halls, orders, honors);
-    gradePlan(state, ref, plan, teaching);
+    gradePlan(state, ref, plan, teaching, tutoring);
     for (const course of plan.courses) if (course.grade?.passed) taken.add(course.course.code);
     if (key) {
       if (REGISTERED.size >= REGISTERED_MOST) REGISTERED.clear();
@@ -559,7 +563,7 @@ export function campusRegistration(state: GameState, semester: number): Registra
   const enough = Math.min(1, seats, faculty);
   const short = Math.min(REGISTRATION.shortMost, REGISTRATION.shortBase + REGISTRATION.shortSlope * (1 - enough));
   const pFull = baseFull(short);
-  const record: RegistrationRecord = { semester, students, seats: Math.min(9, seats), faculty: Math.min(9, faculty), pFull, short: 0, credits: 0, fifteen: 0, waitlisted: 0, cleared: 0, under20: 0, over50: 0, teaching: teachingQuality(state), honors: bigBuildOpen(state, 'honorsCollege') };
+  const record: RegistrationRecord = { semester, students, seats: Math.min(9, seats), faculty: Math.min(9, faculty), pFull, short: 0, credits: 0, fifteen: 0, waitlisted: 0, cleared: 0, under20: 0, over50: 0, teaching: teachingQuality(state), honors: bigBuildOpen(state, 'honorsCollege'), tutoring: tutoringCover(state) };
   // The sample: for the campus record only, registered against this record's own odds.
   const working = { ...state, registration: { records: [...(state.registration?.records.filter((one) => one.semester !== semester) ?? []), record] } } as GameState;
   let sampled = 0;
@@ -641,12 +645,13 @@ export const GPA_BANDS: readonly number[] = [1.75, 2.25, 2.75, 3.25, 3.75];
 
 /**
  * The campus's grades last semester (81.7), worked out once a semester from the sample registration already keeps: the
- * same students, so the cards and the campus agree. Null before a semester is over.
+ * same students, so the cards and the campus agree. Null before a semester is over. `sample` is how many of each class
+ * year are read: the long run reads more, for a steadier figure (DESIGN.md 83.12).
  */
-export function campusGrades(state: GameState): CampusGrades | null {
+export function campusGrades(state: GameState, sample = SAMPLE): CampusGrades | null {
   const now = semesterOf(state);
   const records = state.registration?.records ?? [];
-  const key = `${state.seed}:${now}:${termOver(state) ? 1 : 0}:${records.length}:${records.at(-1)?.semester ?? -1}:${enrollment(state) > 0 ? 1 : 0}`;
+  const key = `${state.seed}:${now}:${termOver(state) ? 1 : 0}:${records.length}:${records.at(-1)?.semester ?? -1}:${enrollment(state) > 0 ? 1 : 0}:${sample}`;
   if (GRADES_SEEN.has(key)) return GRADES_SEEN.get(key)!;
   let last = -Infinity;
   let graded = 0;
@@ -666,7 +671,7 @@ export function campusGrades(state: GameState): CampusGrades | null {
   for (let year = 0; year < CLASS_YEARS; year++) {
     const place = classPlaces(state, year);
     if (place.size <= 0) continue;
-    const take = Math.min(SAMPLE, place.size);
+    const take = Math.min(sample, place.size);
     const weight = place.size / take;
     for (let k = 0; k < take; k++) {
       const ref = { entryYear: place.entryYear, index: place.from + Math.floor(((k + 0.5) / take) * place.size) };

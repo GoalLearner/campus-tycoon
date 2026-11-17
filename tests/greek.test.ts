@@ -40,7 +40,7 @@ import { landRankGoals } from '../src/sim/systems/goals';
 import { approvalAt } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 /**
  * Greek Row (DESIGN.md 14.1, adapted and built in section 51): chapter houses
@@ -354,13 +354,14 @@ describe('saves', () => {
       withChaos(expected);
       withRegistration(expected);
       withLanes(expected);
+      withAmenities(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(16);
+      expect(notes).toHaveLength(17);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

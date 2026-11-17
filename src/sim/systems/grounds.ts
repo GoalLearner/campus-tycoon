@@ -29,13 +29,13 @@ import {
   YARD_MAX_WORKERS,
 } from '../config/grounds';
 import { stageSpec } from '../config/buildings';
-import { PLACED } from '../config/placed';
+import { PLACED, PLAY_SHARE } from '../config/placed';
 import { nextFloat } from '../rng';
 import { enrollment } from '../selectors';
 import type { GameState, LogEntry, MapState, Placed } from '../types';
-import { foodLoads, mealLoads } from './food';
+import { foodLoads, foodTrade, mealLoads } from './food';
 import { approvalAt } from './happiness';
-import { playLoads } from './play';
+import { campusPlay, playLoads } from './play';
 
 /**
  * Grounds. Students drop litter where they eat and play. Bins catch most of
@@ -182,10 +182,21 @@ export function wagesPerYear(state: GameState): number {
 
 // ---------------------------------------------------------------- litter --
 
+/**
+ * The students who use a spot, whose litter it is (DESIGN.md 83.5): those who eat at a place to eat, those who come first
+ * to a place to play, and at a store everyone within its reach, as it has always been.
+ */
+export function spotUsers(state: GameState, spot: Placed): number {
+  const family = PLACED[spot.type].family;
+  if (family === 'dining') return foodTrade(state, spot)?.students ?? 0;
+  if (family === 'recreation') return (campusPlay(state).firsts.get(spot.id) ?? 0) / PLAY_SHARE;
+  const care = state.map.care;
+  return care.lots > 0 ? (enrollment(state) * (care.users[spot.id] ?? 0)) / care.lots : 0;
+}
+
 /** Litter a spot drops at each check when nothing is lying there yet. */
 export function dropOf(state: GameState, spot: Placed): number {
-  const care = state.map.care;
-  const students = care.lots > 0 ? (enrollment(state) * (care.users[spot.id] ?? 0)) / care.lots : 0;
+  const students = spotUsers(state, spot);
   // How busy a place is, as the small game counts it: litter, bins and a worker's day are in its units at any scale.
   return Math.min(1, smallCount(state, students) / SPOT_FULL_AT) * messStrength(spot) * DROP_BUSY * litterTilt(state);
 }

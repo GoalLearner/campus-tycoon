@@ -166,13 +166,15 @@ describe('the student card', () => {
       const card = studentCard(state, ref)!;
       if (card.home === null) continue;
       expect(card.residence).toBe('dorm');
-      const approval = approvalAt(state, card.home);
+      // Read with what they use (DESIGN.md 83): what they do for fun that they can, and their meals.
+      const count = card.uses.got.length + card.uses.full.length + card.uses.missing.length + (card.uses.union ? 1 : 0);
+      const approval = approvalAt(state, card.home, undefined, { recreation: count > 0 ? (card.uses.got.length + (card.uses.union ? 1 : 0)) / count : null, dining: card.uses.fed ? 1 : 0 });
       // Their temperament, their relationship, and the everyday hum of Stress, which costs the most stressed a little
       // in an ordinary week since R1 (DESIGN.md 65.5): half of the most exams can take.
       expect(Math.abs(card.happiness - approval.score)).toBeLessThanOrEqual(TEMPERAMENT_SPREAD + RELATIONSHIP_POINTS + STRESS_HAPPINESS / 2 + 0.5);
       expect(approval.walkMinutes).toBe(state.map.walkMinutes[card.home]);
-      // The thought is about that dorm, and tapping it goes there.
-      expect(card.reason!.cell).toBe(card.home);
+      // The thought is about that dorm, and tapping it goes there; or about a place they eat or play at, and goes there.
+      if (card.reason!.part !== 'recreation' && card.reason!.part !== 'dining') expect(card.reason!.cell).toBe(card.home);
       if (card.reason!.cause === 'walk' && approval.walkMinutes >= 0) {
         expect(card.reason!.thought).toContain(`${Math.max(1, Math.round(approval.walkMinutes))} minute`);
       }

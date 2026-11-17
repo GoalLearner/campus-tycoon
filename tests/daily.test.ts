@@ -64,7 +64,7 @@ import { ticksToIntake } from '../src/sim/calendar';
 import { addTimer } from '../src/sim/timers';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { COLLECT_ALL_FROM, collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from '../src/ui/levelUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -693,12 +693,14 @@ describe('a save from version 17', () => {
     withChaos(expected);
     withRegistration(expected);
     withLanes(expected);
+    withAmenities(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // Its money is what it was the moment before.
     const books = budget(state);
     expect(books.spending).toBeCloseTo(file.state.money.spendingPerYear, 4);
-    expect(books.incomeTotal).toBeCloseTo(file.state.money.incomePerYear, 4);
+    // Food's takings now share every student among the places they eat at (DESIGN.md 83.3): a hair different.
+    expect(Math.abs(books.incomeTotal / file.state.money.incomePerYear - 1)).toBeLessThan(1e-4);
     // And every food place and store is full, so there is something to collect the day it loads.
     const ready = readyToCollect(state);
     expect(ready.length).toBeGreaterThan(5);
@@ -762,7 +764,7 @@ describe('a save from version 17', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(23);
+    expect(notes).toHaveLength(24);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

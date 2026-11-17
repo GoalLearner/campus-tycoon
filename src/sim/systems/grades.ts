@@ -19,6 +19,7 @@ import {
   TERM_NOISE,
   TUTOR_Z,
 } from '../config/grades';
+import { TUTOR_BELOW } from '../config/placed';
 import { hashInts } from '../rng';
 
 /**
@@ -34,7 +35,7 @@ interface Ref {
 }
 
 /** One salt per draw, apart from the card's and the majors'. */
-const SALT = { ability: 61, attend: 62, term: 63, week: 64, termBefore: 65 } as const;
+const SALT = { ability: 61, attend: 62, term: 63, week: 64, termBefore: 65, tutor: 66 } as const;
 
 const unit = (seed: number, ref: Ref, salt: number, more?: number): number =>
   ((more === undefined ? hashInts(seed, ref.entryYear, ref.index, salt) : hashInts(seed, ref.entryYear, ref.index, salt, more)) + 0.5) / 4294967297;
@@ -98,7 +99,7 @@ export interface GradeInputs {
   classYear: number;
   /** How good the campus's teaching is, 0 to 1. */
   teaching: number;
-  /** Points a study center in reach would add, as the card has always read it. */
+  /** 1 when they had tutoring that semester (DESIGN.md 83.4), 0 when not. */
   tutoring: number;
 }
 
@@ -115,6 +116,18 @@ export function standingZ(seed: number, ref: Ref, inputs: GradeInputs): number {
     TEACH_Z * (inputs.teaching - TEACH_TYPICAL) +
     TUTOR_Z * (inputs.tutoring > 0 ? 1 : 0)
   );
+}
+
+/**
+ * True when a student had tutoring, the campus's study centers having room for this share of the students who need it
+ * (DESIGN.md 83.4): a student whose classes are going badly, their usual average under TUTOR_BELOW before any tutoring,
+ * goes to any study center with room. Who gets a place when there is not room for all is their own luck, the same each
+ * semester.
+ */
+export function tutoredThen(seed: number, ref: Ref, inputs: GradeInputs, covered: number): boolean {
+  if (!(covered > 0)) return false;
+  if (gpaAt(normalCdf(standingZ(seed, ref, { ...inputs, tutoring: 0 }))) >= TUTOR_BELOW) return false;
+  return covered >= 1 || unit(seed, ref, SALT.tutor) < covered;
 }
 
 export interface Grades {

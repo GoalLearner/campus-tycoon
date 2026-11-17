@@ -9573,3 +9573,167 @@ No new version. The Main Character gains two optional things, each semester's sh
 **Seen in the game**, on the model campus two days in, at Thanksgiving: a sophomore's card with "Tense: Not getting on with Patrick · Family worried about grades" over "1.95 overall, on academic probation · 2.08 last term"; and the Capacity page's Faculty row opened, "Last spring, 41% of grades were A's and 1 in 10 a D, an F or a W (1 in 3 in the hard introductory courses)." At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends.
 
 **Tested**: `tests/transcript.test.ts` (8): one student's standing read from their transcript as the card reads it; no student on probation with a card at 3.5 or more, over 1,500; a family's worry only for a student on probation by their transcript; a line about someone's Dean's list only when they are on it, else the next; the spring over from commencement; the Main Character's semester moved by their study and classes, and their grades, Dean's list and probation read back from the transcript, the card agreeing; the two stories about grades for a student near either line, saying neither. `tests/hardLines.test.ts`: "psycho" and its forms kept out, "Psychology" let through. `tests/coursework.test.ts`: professors' departments now under the hard lines with the rest. `tests/fourYears.test.ts`: most families of a student on probation by their transcript worried, none of the rest.
+
+## 83. Amenities serve the students who use them (the owner's play notes, 2026-11-17)
+
+The owner, on build 49, looking at the Build menu's Recreation cards ("Raises happiness within 8 cells"): "Why within cells? These ammenties are available for all students on the campus. It should raise happiness to those who use the amenities not just from those that live by it". Of places to eat and study centers: "They should be campus wide too because every student has access to them and are walking distance". And, sharpening it: "It's whether the student actually uses these facilities or not". Built on the branch `amenities-by-use`.
+
+**His decisions:** everything students go to and use serves the whole campus: recreation (the gym, the track, the pool, the outdoor courts, the recreation field, the basketball, tennis and volleyball courts, the soccer pitch, and the Makerspace), the Student Union, every place to eat, and the study center. The lift is about use, not location: each student either uses a kind of place or does not, gets its lift when the campus has it with room for them, and misses it when the campus lacks it or is too full to fit them in. Where a student lives plays no part in whether they benefit; it only picks which building they walk to, and so where the lines form. A student who does not use something is neither helped nor hurt by it.
+
+### 83.1 What serves the students who use it, and what stays local
+
+| Serves the students who use it, wherever they live | Stays local, because it is |
+|---|---|
+| Places to play and the Makerspace: the recreation part of Food & fun | How the campus looks: decorations, the rank goals' buildings, ponds and quads |
+| The Student Union: somewhere to meet | Benches, bins, bike racks and picnic tables |
+| Places to eat: the dining part of Food & fun, variety, and a dorm's growth past its first stage | Campus Safety, the Medical Center and the Facilities Yard, which cover an area (who answers a call, who sweeps) |
+| The study center: tutoring | The library's and the computer lab's lift to Academic lots |
+| | The campus store's busy path and the smoothie bar's double takings beside recreation (foot traffic); a chapter house's likes |
+
+No hard radius and no nearness is left on any lift in the first column.
+
+### 83.2 Recreation: what each student does for fun
+
+Each student does some things for fun, or none (`habitsOf` in `src/sim/systems/play.ts`), each needing its kind of place (`PASTIME_OF` in `src/sim/config/amenities.ts`):
+
+| Pastime | Its place | Share of students [T] |
+|---|---|---|
+| Working out | The gym | about 45% |
+| Swimming | The pool | about 15% |
+| Running laps | The track | about 8% |
+| Basketball | Outdoor courts or a basketball court | about 13% |
+| Field games | The recreation field or the soccer pitch | about 12% |
+| Volleyball | A volleyball court | about 6% |
+| Tennis | A tennis court | about 5% |
+| Making things | The Makerspace | about 8% |
+| Any of them | | about 70% |
+
+They come from the student's own interests (fitness, sports, art: section 63's identity), which their nature leans (an athlete or a superfan always has fitness and sports), and their own luck: the same for all their years on campus. Eight in ten of the most outgoing meet friends at the Student Union once it is open, and a little under half of the rest. The figures: about three in four students use campus recreation and four in five of those weekly (Forrester for NIRSA, 2014, from the NIRSA/NASPA consortium survey), so about 60% regularly; of recreation's users about seven in ten use the cardio and weight equipment and three in ten the pool (a public university's NASPA consortium survey, 2019); about a quarter of students play intramural or club sports (a Canadian university's student survey, 2023). The rest is judgement.
+
+**A student's recreation** (`playOf`) is the lift of each thing they do that the campus lets them: its place's own lift, as each place has always had (a gym 0.6, the track 0.7, a pool, a soccer pitch or the Makerspace 0.5, a basketball court 0.45, outdoor courts, the field, tennis and volleyball courts 0.4; the best of its kind on the campus), and the Union's 0.5 for those who meet there, up to all of it. One they do that the campus lacks, or whose places are full when they come, is a lift they miss. A student who does nothing for fun has no recreation part at all: their Food & fun is their food alone.
+
+**Room.** Of the students who do a pastime, one in ten are at it at the busiest hour (`PLAY_SHARE`): four in five of recreation's users go at least once a week, a regular about three times for an hour and a half, so about one in twenty of them is in at any open hour, and twice that at the busiest. That is about 11% of all students at the busiest hour, where the owner's figure of 2026-11-11 was one in twenty of every student a building reached: his "recreation fills up", read now of the students who use each place. Over what a kind's places hold, the share who cannot get in (`servedShare`) miss it, each by their own luck. This replaces the old wait that took a little off everyone (the floor of 70%, 38.5): the owner's words are that a student who cannot get in misses that lift.
+
+**The campus** reads the same in shares (`campusPlay`): a sample of the game's own students by the same rules as their cards, and each one's Food & fun held at full as their card holds it (`campusLife`), so a student who misses something costs the campus what it costs them, and the campus number stays the average of the cards. The Happiness panel's "Things to do" is what students who do something for fun get of it, those who do nothing counting as their food.
+
+### 83.3 Food
+
+Every student eats (`eatsOnCampus`, `campusDining` in `src/sim/systems/food.ts`): the students who want a meal at the busiest hour (`MEAL_SHARE`, one in ten) against what the campus's places serve; over that, the share who cannot get in go without a meal on campus, and it is off their Food & fun. Variety is the campus's: three kinds of food on the campus (the food court counts as three) add to every student's Food & fun, never past full, and a fourth adds nothing (`varietyOn`). It adds 0.05 now, half the tenth it added when it reached only the lots with three kinds in reach: so its average stays where it was (0.03 across the model campus before, 0.026 now). A dorm grows past its first stage once the campus has anywhere to eat (`campusFed`); its panel says "Held back: nowhere to eat on campus" otherwise. Takings are $30 a year for each student, shared among the places they eat at, the nearer the more, so a second stall beside the first takes from it and ten stalls earn what one did.
+
+### 83.4 The study center
+
+A student whose classes are going badly, their usual average under 2.5 before any tutoring (`TUTOR_BELOW`, R4c's "shaky" line), goes to any study center with room, wherever they live (`tutoredThen` in `src/sim/systems/grades.ts`, `tutoringCover` in food.ts). Each study center tutors 400 students a semester in the small game (`TUTOR_ROOM`), 11,200 on the model campus's scale, against 9,890 of its 46,000 with classes going badly (21.5%, NPSAS's share under 2.5): one has room for them all, up to about 52,000 students, past the 50,000 cap. On a campus past that, a share of them get a place, each by their own luck, and a second study center takes the rest; its panel says so. Tutoring lifts a student a quarter of a step up the spread, as before (`TUTOR_Z`), and the card still says "with tutoring".
+
+Who it reaches changed: before, every student whose dorm or lecture halls had a study center within 6 cells, whatever their grades (42% of the model campus's cards); now every student whose classes are going badly, wherever they live, and nobody else (23%). R1's campus counts (the Dean's list, probation, who leaves for grades) never read tutoring and do not now.
+
+**The transcript carries it now (R4c's open point 2).** Since it no longer depends on where a student lived, each semester's registration record keeps the share the study centers had room for that semester (`RegistrationRecord.tutoring`), and that semester's grades read it. A record from before has none, so no term already written changes; a game upgraded mid-semester carries tutoring from its next registration on.
+
+### 83.5 Who goes where: the lines on the map, the walker, the card, the fix
+
+Who uses which place decides where the lines form, who the walkers are and where the Capacity page's fix points, never who is lifted:
+
+- **First.** Each lot's students share the places of each kind out the nearer the more, none out of reach (`drawWeight`: all of it beside a place, half at its draw distance, a fifth at twice it), a place to play by what it holds and a place to eat by how many it feeds (`playLoads`, `mealLoads`, `foodLoads`, worked out with the map's care when the player builds).
+- **Room.** Those who find the place they came to first full go on to one of its kind with room, in proportion to the room each has to spare; when every one is full the rest are turned away where they came first, so the lines form at the places most students reach first (`spillOver`).
+- **One student.** A student eats and plays at their own places (`placeUsedFor`, `choosePlace`): most often the nearest, by the same shares and their own luck, and another with room when theirs is full. A followed student's day has their own pastimes ("A swim", "Pickup basketball", "Laps on the track") and they walk to the place they use for each. Their thoughts name it: a favourite food is the place they eat at most; a pastime the campus lacks ("I would swim if the campus had a pool"); a full place ("The gym was full at the busy hour again. I gave up and went home"); or one they enjoy ("There is always room at the gym when I want it").
+- **The card** has a new row, Uses: "The gym, the pool and field games · eats at the dining hall · wants a tennis court".
+- **The fix.** The Capacity page's Recreation row reads the whole campus ("4,175 of 6,776 places at the busiest hour") and says which kinds students want that the campus lacks ("No track, volleyball court and tennis court: 1 in 6 students would use one"), Tight, or which are full and how many are turned away ("The gym is full at the busiest hour: 1 in 2 of those who come are turned away, and miss it", on the Larp University above, with one gym), Short. Its button still builds at the busiest place. The Dining row is the same for meals.
+
+On the model campus no place gets more students first than it holds, even at the 50,000 cap, so in an ordinary game nobody goes on to a second place: going on is for a campus short of room, and is tested (`tests/play.test.ts`), not pictured.
+
+### 83.6 Words
+
+| Where | Before | Now |
+|---|---|---|
+| A place to play's card | Raises happiness within 8 cells | Raises happiness for students who use it · 1,120 at a time |
+| The Makerspace | Things to do and somewhere to meet within 5 cells | Things to do and somewhere to meet for students who use it · 448 at a time |
+| A place to eat's card | Feeds Housing within 6 cells | Feeds students across campus · 2,240 meals an hour |
+| The study center | Tutoring: a better GPA on the cards of students within 6 cells. It changes only student cards for now | Tutoring for any student whose class is going badly |
+| The Student Union | Things to do and somewhere to meet, for every lot within 16 cells | Somewhere to meet for every student |
+| Their panels | Raising happiness at 9 dorms and lecture halls within 8 cells; Feeding 6 Housing lots within 6 cells | Raises happiness for students who use it. Busy: 1,064 of 1,120 playing at peak; Feeds students across campus. Room to spare: ... meals at peak |
+| A lot's facts | No food in reach; 3 kinds of food in reach: variety; Nothing to do nearby | Nowhere to eat on campus; 7 kinds of food on campus: variety; Things to do 64% |
+| A held-back dorm | Held back: no dining nearby | Held back: nowhere to eat on campus |
+| The Happiness panel's fix | Students have nothing to do nearby. Build a gym ... near dorms and lecture halls | Build what students do for fun. The Recreation row on the Capacity page names what they want that the campus lacks, or what is full |
+| Students' thoughts | "Nothing to do near my dorm but homework"; "Another one nearby would clear the line" | "I would swim if the campus had a pool"; "The gym was full at the busy hour again"; "I play basketball most days. Best part of being here" |
+| The upgrade note | | "Gyms, courts, the pool, the Makerspace, the Student Union, every place to eat and the study center now serve the students who use them, wherever they live. A student's card says what they use." |
+
+The previews of the Build menu in `src/app/lookPreview.ts` say the same. The counts follow the campus scale.
+
+### 83.7 What building and placing still get a player
+
+- **Build what students use.** A kind of place the campus lacks lifts every student who does it: on the model campus a track, a tennis court and a volleyball court are wanted by 1 in 6 of its students between them. A second of a kind the campus has adds room, which matters once its places are full and students are turned away.
+- **Placing picks where the crowds and lines are, and who walks where.** A place built where most students come first takes the crowd off the others.
+- **What stays local stays worth placing:** looks, benches and bins, Campus Safety and the Medical Center, the yard, the library, the store's busy path and the smoothie bar beside a court.
+
+### 83.8 Happiness, and how it was tuned
+
+Happiness rises, mostly because the reach rule's penalty is gone. Under it every dorm or lecture hall with no place to play in reach read nothing to do: 23 of the model campus's 72 halls, and 36 of 72 on a game saved at version 20 (a Larp University, the model campus as it opened then, with nine places to play). Measured, at the start of each game with the parties' three points in both:
+
+| Campus | Before | First build (share of what they do) | Each place's own lift | Shipped: also variety halved, the busiest hour at one in ten of each pastime's users |
+|---|---|---|---|---|
+| The model campus at open | 82.8 | 88.2 | 87.1 | 86.3 (base 84.8) |
+| A mature model campus (version 39) | 95.1 (base 88.8) | 100 (base 93.9) | 99.2 (base 92.9) | 98.6 (base 92.2) |
+| Larp University (version 20) | 77.7 | 86.2 | 85.1 | 83.2 |
+
+What drove the first build's rise, measured: the reach penalty going away, by far the most (half of Larp's halls); variety reaching every student, about 1.7 points (its average was 0.03 across the model campus, then 0.1); and a generous measure, the share of what a student does that they can, 85% on these campuses. Students who do nothing for fun were not a driver: leaving them out of the recreation average gives the same or higher. The tuning, main's decision of 2026-11-17 under the decision rule (B of three):
+
+- **Each place's own lift** (each pastime a student does gives the lift its place always had), the owner's "the lift of what they use"; a student who misses a kind or a full place loses exactly that.
+- **Variety halved**, so its average stays what it was now that it reaches every student.
+- **The busiest hour at one in ten of each pastime's users**, a real figure: it fills a campus with one gym, as Larp's is (half its gym's users turned away at the busiest hour).
+- **Considered and rejected (C):** scaling every place's lift down by about a third, with no figure behind it, to hold Larp to a few points. Larp's rise is the point of the owner's note: half its halls were being shortchanged by the reach rule, and a scale-down would put that penalty back.
+- **R1's Happiness gates moved with the scale** (main's decision, 2026-11-17): the rank's part in who stays counts in full from Happiness 93.5 and fades to nothing at 78.5 (`RANK_HAPPY_FULL`, `RANK_HAPPY_FROM`, 65.2), where they were 90 and 75. They were set on the old scale; the whole scale rose about 3.5 points when the reach penalty went, and a campus now feels the rank as it did. Left at 75 and 90, a model campus left alone for forty years fed its rank, retention and rating more strongly and was still climbing (rank 20 at year 40 where R4c's was 34).
+
+The model campus opens with Recreation Tight (no track, no tennis or volleyball court: 1 in 6 students would use one), every place with room for those who come first, and the Makerspace busy: its share is set at about 8% of students so that no seed opens with it full (across nine seeds, 302 to 394 of its 448 places wanted at the busiest hour).
+
+### 83.9 The test player, and whose litter it is
+
+The long run's players build what the Happiness panel asks for, and three of the long run's grounds checks failed at first. Traced, they were the test player's rules meeting the new model, and one grounds rule left reading reach:
+
+- **Feeding.** The reach rule made the casual player put a place to eat beside nearly every new dorm (29 by its eighth year). With every place to eat feeding the whole campus it built three, and as its campus grew its meals ran short at the busiest hour (a third of its students went without by the eighth year), with nothing in its rules to read that. It now builds somewhere to eat when the Capacity page's Dining row says meals are short.
+- **Playing.** It never once placed a place to play: its search for ground next to one hall failed every time. It now builds the kind the Recreation row names (full first, then the most wanted kind the campus lacks), and places what serves the whole campus where the grounds are tended, as a tidy player would: inside the circle of a Facilities Yard whose crew has room for another busy place, else by the hall asked for, else beside another place that drops litter, else by the next hall (`anySpot` in `scripts/bots.ts`). Without the crew's room it packed thirteen places under one yard, and a neglected campus took six days to come back.
+- **Litter by use.** A place's litter came from every lot within its litter reach (29.4). With places to eat and play now fewer and busier, side by side at a campus's core each counted the whole core as its own and dropped the most there is. A place's litter is now its own students' (`spotUsers` in `src/sim/systems/grounds.ts`): those who eat at a place to eat, as its takings share them; those who come first to a place to play; and at a store everyone within its reach, as before (foot traffic). Bins and yards stay local.
+
+With those, every grounds check passes as it stood, its figures unchanged: the casual player's twentieth year has 17 places that drop litter for 3 yards (5.7 a yard, inside six to eight's floor of five), wages with benefits 0.7% of income; the player who works every cause has 31 of its 32 places with a bin and a yard keeping up; and a campus left to rot is back to full in five days once its yards are staffed.
+
+### 83.10 The save
+
+Version 42. The migration works out again who goes to which place to play and eat (`reshareAmenities`), the rest of the map's care as it was; the takings follow on the next reading of the rates. A save's record of each semester gains its study centers' room from the next registration on. Its players are told once (the upgrade note above). On loading, the mature save's Happiness moves from 95.1 to 98.6, and Larp University's from 77.7 to 83.2: a rise, never a drop the player did not cause; a campus whose students want something it lacks shows it on the Capacity page.
+
+### 83.11 Decisions made here
+
+| Decisions made here | Instead |
+|---|---|
+| A student's lift is each place's own lift for what they do, up to all of it | The share of what they do that they can: generous, 85% on a well-stocked campus |
+| Students who do nothing for fun have no recreation part | Counted at a middle 0.5, or as satisfied: the same or higher either way |
+| Who cannot get in at the busiest hour misses the lift | The old wait off everyone, down to 70%: the owner's words are that they miss it |
+| Nearness picks only the building, never the lift | A mild nearness on the lift (85% far from everything), built first and dropped on the owner's "whether the student actually uses" |
+| The campus's Food & fun the average of every student's own, each held at full | The campus's parts averaged first: it hid a student's miss under the variety bonus |
+| The test player builds what the Capacity rows ask for, where a yard's crew has room | The grounds checks loosened: they were right, the player was not |
+| A place's litter its own students' | Every lot within its litter reach: places side by side each counted the whole core |
+| The Makerspace at about 8% of students | About 10%: most seeds would open with it full |
+| The study center's room at 400 a semester | 380: a sliver short at the 50,000 cap |
+| The transcript carries tutoring from each semester's record | Left out, as R4c had it |
+
+### 83.12 The long run, frames and pictures
+
+**The long run** (`npm run simulate`, 1,949 s): all 114 checks pass. Against R4c's (82.9):
+
+| | R4c | Now |
+|---|---|---|
+| Money, kept of every $100 in years 3 to 8 | casual 14.3 to 15.6, once-a-day 13.7 to 15.9, striver 12.5 to 14.1; opens 16.1 | casual 13.9 to 15.5, once-a-day 14.0 to 15.9, striver 11.5 to 13.8; opens 16.8 (smaller crews for the litter of its own students) |
+| The Top 10, earliest | week 24 | week 24 |
+| Levels a week | 5.6 to 6.4 | 5.3 to 5.8 |
+| A model campus left alone, rank at year 40 | 34 | 24 (2.4 points in its last ten years, 3.2 in the ten before) |
+| Catch-up, 30 days, at the most | 612 ms | 603 ms (564 on a campus nobody tends; the model campus 430 and 538) |
+| Grades (last semesters) | 41.1% A's, 11.4% D, F or W, 34.7% in the hard introductory courses; NPSAS off by 2.8 points | 48.2% A's, 8.0% D, F or W, 25.1% in the hard introductory courses; NPSAS off by 3.2 points; read now from 96 students a class year (below) |
+| The casual player's grounds | 34 places that drop litter, 24 bins, 4 yards | 17 places, 9 bins, 3 yards (5.7 a yard), wages 0.7% of income (83.9) |
+
+**Two checks changed, the rest as they stood.**
+
+- *"Rank, applicants and selectivity settle"* asked that a model campus left alone move its published rating two points at most in years 31 to 40. R4c met that exactly, at 2.0. With R1's gates moved (83.8) the rating moved 2.4 points in those ten years, after 3.2 in the ten before; the rank was 24 at year 40, where R4c's was 34. Main's fallback, applied: each ten years the rating moves less than the ten before, and the last ten three points at most; the line gives both figures.
+- *"Grades land on the real figures"* reads each run's last semester. It read the 24 students of each class year that registration samples (80.3), and swung from run to run: the same model campus a year and a half on reads 34% to 49% A's and 4% to 10% D, F or W across seeds. Moving the gates changed who those 24 were, and one run read 51.0% A's and 5.6% D, F or W, outside its bounds. It now reads 96 of each class year (`campusGrades(state, 96)`): the same figure, steadier. The Faculty row in the game keeps the registration sample. Tutoring in the transcript moves it little: over eight model campuses, 43.2% A's and 8.0% D, F or W with it, 42.6% and 9.4% without.
+
+**Frames** on the slowed phone (47.2's method), back to back with main (bc691e3): the model campus's afternoon at High by the stadium, 19.0 ms on main and 18.6 here (four rounds of eight frames); with a student followed, card tucked, 20.7 and 22.1 over six rounds, one of this branch's six at 30.1 and never again (without it 20.5). Inside the rounds' own spread.
+
+**Seen in the game**, on the model campus at Thanksgiving: the Build menu's Recreation and Food cards with no reach in them; the Capacity page's Recreation row, Tight, naming the track and the tennis and volleyball courts; and a student's card with its Uses row, "The gym, the pool and field games · eats at the dining hall · wants a tennis court". At 375 and 530 wide, nothing wider than the screen.
+
+**Tested:** `tests/play.test.ts` (rewritten): what students do for fun, their own and the same every time, at the real shares; the lift of what they use wherever they live, and nothing for what they do not; a pool anywhere lifting every swimmer; room, those turned away missing it, and a second place of the kind anywhere letting them in; who goes where, the nearest most and on from a full place; the card's Uses words; the save note. `tests/food.test.ts`: every place to eat feeding the whole campus and letting a dorm grow from anywhere; variety for every student; takings shared by use; the study center by need and room. `tests/capacity.test.ts`, `tests/placed.test.ts`, `tests/bigBuilds.test.ts`, `tests/students.test.ts`, `tests/grounds.test.ts` and the save tests of every version from 15 on (version 42's resharing, one more upgrade note).

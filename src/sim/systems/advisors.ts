@@ -33,8 +33,8 @@ const GAP: Record<DriverId, string> = {
   clean: 'litter. Bins, a Facilities Yard and workers close it',
   seating: 'somewhere to sit. Benches and picnic tables close it',
   noise: 'stadium noise, for the dorms beside it',
-  dining: 'food. More kinds of food near the dorms close it',
-  recreation: 'things to do. A gym, courts or a field in reach close it',
+  dining: 'food. More places and kinds of food on campus close it',
+  recreation: 'things to do. A gym, courts or a field anywhere on campus close it',
   safety: 'safety and health. A Medical Center and Campus Safety in reach close it',
 };
 

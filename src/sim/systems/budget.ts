@@ -186,7 +186,7 @@ export function budget(state: GameState): Budget {
   const food = foodIncomePerYear(state) * day.presence * (gameDay ? GAME_DAY_FOOD : 1);
   if (food > 0) {
     const places = foodPlaces(state);
-    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student in reach, shared among the places that reach them.${away}${gameDay ? ' Game day: the crowd is in' : ''}`.replace(/\.$/, '') });
+    income.push({ id: 'food', name: 'Food places', amount: food, detail: `${people(places, 'place', 'places')} to eat. ${dollars(FOOD_INCOME_PER_STUDENT)} for each student, shared among the places they eat at.${away}${gameDay ? ' Game day: the crowd is in' : ''}`.replace(/\.$/, '') });
   }
   // Football's income: tickets with what the crowd spends, and the TV deal.
   const ball = footballBooks(state);

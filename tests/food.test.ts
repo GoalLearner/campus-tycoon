@@ -7,13 +7,16 @@ import {
   budget,
   buildingAt,
   BUILD_ORDER,
+  campusFed,
   campusHappiness,
-  fedAt,
+  campusDining,
+  campusPlay,
   FOOD_INCOME_PER_STUDENT,
   foodIncomePerYear,
-  foodKindsAt,
+  foodKinds,
+  foodPlaceFor,
   foodTrade,
-  foodTypesAt,
+  foodTypesOnCampus,
   isFood,
   isMessSpot,
   libraryLift,
@@ -22,18 +25,19 @@ import {
   PLACED,
   playUse,
   previewPaint,
-  recreationAt,
   REFUND_SHARE,
   sampleStudents,
   SAVE_VERSION,
   serialize,
   socialLife,
   studentCard,
-  TUTORING_GPA,
-  tutoredAt,
+  TUTOR_BELOW,
+  TUTOR_ROOM,
+  tutoringCover,
+  tutoringRoom,
   VARIETY_BONUS,
   VARIETY_KINDS,
-  varietyAt,
+  varietyOn,
   type Action,
   type GameState,
   type Placed,
@@ -43,6 +47,7 @@ import {
 import { FAVOURITES, THOUGHTS } from '../src/sim/config/students';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { buildEntries, moneyView, placedSummary } from '../src/ui/buildUi';
+import { shareBelow } from '../src/sim/systems/grades';
 import { DAY, freshGame, MIN, T0 } from './helpers';
 
 /**
@@ -50,7 +55,8 @@ import { DAY, freshGame, MIN, T0 } from './helpers';
  * shared food income, and three Academics buildings with one effect each.
  *
  * The starter campus: dorms at 10 to 12, 13 with the dining hall just north of
- * them, and lecture halls at 19 to 21, 18, out of the dining hall's reach.
+ * them, and lecture halls at 19 to 21, 18, further off. Every place to eat feeds
+ * the whole campus (DESIGN.md 83.3).
  */
 
 function act(state: GameState, action: Action): GameState {
@@ -70,6 +76,8 @@ function campus(students: number): GameState {
 }
 
 const first = (state: GameState, type: PlacedType): Placed => state.map.placed.find((placed) => placed?.type === type)!;
+/** The starter campus with its dining hall cleared: nowhere to eat. */
+const unfed = (state: GameState): GameState => act(state, { type: 'paint', tool: 'clear', cells: [[10, 12]] });
 const life = (state: GameState, x: number, y: number) => approvalAt(state, y * state.map.width + x).causes.find((cause) => cause.id === 'life')!;
 
 const NEW_FOOD: readonly PlacedType[] = ['truck', 'convenience', 'taco', 'smoothie', 'pizza', 'burger', 'diner', 'foodcourt'];
@@ -78,7 +86,7 @@ const DORM = [11, 13] as const;
 const HALL = [20, 18] as const;
 
 describe('the eight new places to eat', () => {
-  it('are each the dining rule at their own size, price and reach', () => {
+  it('are each the dining rule at their own size and price, with the distance they count as near', () => {
     const table: Record<string, [number, number, number, number]> = {
       truck: [1, 1, 8_000, 2],
       convenience: [1, 1, 9_000, 2],
@@ -103,30 +111,35 @@ describe('the eight new places to eat', () => {
     expect([PLACED.pizza.w, PLACED.taco.w]).toEqual([2, 2]);
   });
 
-  it('feed the lots within their reach and no further', () => {
+  it('feed every student, wherever they live (DESIGN.md 83.3)', () => {
     for (const type of NEW_FOOD) {
-      const spec = PLACED[type];
-      // In open ground to the south-west, with a lot exactly at the edge of its reach and one a cell beyond.
-      let state = campus(100);
+      // On a campus with nowhere else to eat, in open ground in the far corner.
+      let state = unfed(campus(100));
+      expect(campusFed(state.map), type).toBe(false);
+      expect(campusDining(state), type).toBe(0);
       state = place(state, type, 4, 24);
-      const edge = 4 + spec.w - 1 + spec.radius;
-      expect(fedAt(state.map, edge, 24), type).toBe(true);
-      expect(fedAt(state.map, edge + 1, 24), type).toBe(false);
+      expect(campusFed(state.map), type).toBe(true);
       expect(isFood(first(state, type)), type).toBe(true);
+      // The dorms and the lecture halls alike: all of it, nowhere near it.
+      expect(campusDining(state), type).toBe(1);
+      for (const cell of [13 * state.map.width + 11, 18 * state.map.width + 20]) {
+        const dining = approvalAt(state, cell).causes.find((cause) => cause.id === 'life')!.parts.find((part) => part.id === 'dining')!;
+        expect(dining.level, type).toBe(1);
+      }
     }
   });
 
-  it('let Housing grow past its first stage: any of them, like the dining hall', () => {
+  it('let Housing grow past its first stage: any of them, anywhere on the campus', () => {
     for (const type of NEW_FOOD) {
-      let state = campus(100);
-      // Far from the starter dining hall, with a quad so desirability is not the problem.
+      let state = unfed(campus(100));
       state = act(state, { type: 'paint', tool: 'housing', cells: [[22, 13]] });
       state = act(state, { type: 'paint', tool: 'quad', cells: [[22, 12], [23, 12]] });
       state = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 5 * MIN).state;
       expect(buildingAt(state.map, 22, 13)?.stage, type).toBe(1);
       expect(lotStatus(state, 22, 13), type).toMatchObject({ kind: 'stalled', cause: 'noDining', nextStage: 2 });
-      state = place(state, type, 24, 12);
-      expect(fedAt(state.map, 22, 13), type).toBe(true);
+      // In the far corner, nowhere near it.
+      state = place(state, type, 4, 24);
+      expect(campusFed(state.map), type).toBe(true);
       expect(lotStatus(state, 22, 13)?.kind, type).not.toBe('stalled');
     }
   });
@@ -150,71 +163,72 @@ describe('the eight new places to eat', () => {
 });
 
 describe('variety', () => {
-  it('counts the kinds of food in reach: two dining halls are one kind, and the food court is three', () => {
+  it('counts the kinds of food on the campus: two dining halls are one kind, and the food court is three', () => {
     let state = campus(600);
-    expect(foodTypesAt(state.map, ...DORM)).toEqual(['dining']);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(1);
+    expect(foodTypesOnCampus(state.map)).toEqual(['dining']);
+    expect(foodKinds(state.map)).toBe(1);
     state = place(state, 'dining', 8, 11);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(1);
+    expect(foodKinds(state.map)).toBe(1);
     state = place(state, 'coffee', 9, 13);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(2);
-    // Nothing reaches the lecture halls until a food court does, and it is three kinds by itself.
-    expect(foodKindsAt(state.map, ...HALL)).toBe(0);
+    expect(foodKinds(state.map)).toBe(2);
+    expect(varietyOn(state.map)).toBe(0);
+    // A food court anywhere is three kinds by itself, for every dorm and lecture hall.
     state = place(state, 'foodcourt', 19, 20);
     expect(PLACED.foodcourt.kinds).toBe(3);
-    expect(foodKindsAt(state.map, ...HALL)).toBe(3);
-    expect(varietyAt(state.map, ...HALL)).toBe(VARIETY_BONUS);
+    expect(foodKinds(state.map)).toBe(5);
+    expect(varietyOn(state.map)).toBe(VARIETY_BONUS);
+    // On every student who has room for it: those already full of Food & fun stay full (DESIGN.md 83.2).
+    expect(life(state, ...DORM).bonus).toBeGreaterThan(0);
+    expect(life(state, ...DORM).bonus).toBeLessThanOrEqual(VARIETY_BONUS);
   });
 
-  it('adds a tenth to Food & fun at three kinds, and nothing more for a fourth', () => {
+  it("adds the variety bonus to a student's Food & fun at three kinds, and nothing more for a fourth", () => {
     expect(VARIETY_KINDS).toBe(3);
-    expect(VARIETY_BONUS).toBe(0.1);
+    // Half the tenth it was when it reached only the lots with three kinds in reach (DESIGN.md 83.3).
+    expect(VARIETY_BONUS).toBe(0.05);
+    // A student who can do half of what they do for fun, and eats on campus (DESIGN.md 83.2).
+    const who = { recreation: 0.5, dining: 1 };
+    const own = (state: GameState) => approvalAt(state, DORM[1] * state.map.width + DORM[0], undefined, who).causes.find((cause) => cause.id === 'life')!;
     let state = campus(600);
-    const one = life(state, ...DORM);
-    expect(varietyAt(state.map, ...DORM)).toBe(0);
+    const one = own(state);
+    expect(varietyOn(state.map)).toBe(0);
+    expect(one.level).toBeCloseTo(0.75, 9);
     expect(one.bonus ?? 0).toBe(0);
-
     state = place(state, 'coffee', 9, 13);
-    expect(life(state, ...DORM).level).toBeCloseTo(one.level, 9);
-    expect(varietyAt(state.map, ...DORM)).toBe(0);
-
-    const before = approvalAt(state, DORM[1] * state.map.width + DORM[0]).score;
+    expect(own(state).level).toBeCloseTo(one.level, 9);
+    expect(varietyOn(state.map)).toBe(0);
+    const before = approvalAt(state, DORM[1] * state.map.width + DORM[0], undefined, who).score;
+    const campusBefore = campusHappiness(state).score;
     state = place(state, 'taco', 8, 15);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(3);
-    const three = life(state, ...DORM);
-    expect(three.level).toBeCloseTo(one.level + 0.1, 9);
-    expect(three.bonus).toBeCloseTo(0.1, 9);
-    // Food & fun is one of four causes, so the whole bonus is two and a half points of that lot's Happiness.
-    expect(approvalAt(state, DORM[1] * state.map.width + DORM[0]).score - before).toBeCloseTo(2.5, 6);
-
+    expect(foodKinds(state.map)).toBe(3);
+    const three = own(state);
+    expect(three.level).toBeCloseTo(one.level + VARIETY_BONUS, 9);
+    expect(three.bonus).toBeCloseTo(VARIETY_BONUS, 9);
+    // Food & fun is one of four causes, so the whole bonus is a quarter of it in that student's Happiness.
+    expect(approvalAt(state, DORM[1] * state.map.width + DORM[0], undefined, who).score - before).toBeCloseTo(25 * VARIETY_BONUS, 6);
+    // The campus's Happiness rises too, by less: students already full of Food & fun stay full.
+    expect(campusHappiness(state).score).toBeGreaterThan(campusBefore);
     state = place(state, 'pizza', 11, 15);
     state = place(state, 'burger', 6, 11);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(5);
-    expect(life(state, ...DORM).level).toBeCloseTo(three.level, 9);
-    expect(life(state, ...DORM).bonus).toBeCloseTo(0.1, 9);
+    expect(foodKinds(state.map)).toBe(5);
+    expect(own(state).level).toBeCloseTo(three.level, 9);
+    expect(own(state).bonus).toBeCloseTo(VARIETY_BONUS, 9);
   });
 
   it('never lifts Food & fun past full', () => {
     let state = campus(600);
-    // Plenty to do: recreation in reach until that half is full too.
-    state = place(state, 'gym', 6, 11);
-    state = place(state, 'courts', 8, 15);
-    state = place(state, 'pool', 11, 15);
-    state = place(state, 'track', 4, 15);
-    state = structuredClone(state);
-    state.cohorts = [40, 0, 0, 0, 0, 0];
-    expect(recreationAt(state, ...DORM)).toBe(1);
-    expect(life(state, ...DORM).level).toBe(1);
     state = place(state, 'coffee', 9, 13);
     state = place(state, 'truck', 13, 13);
-    expect(foodKindsAt(state.map, ...DORM)).toBe(3);
-    const full = life(state, ...DORM);
+    expect(foodKinds(state.map)).toBe(3);
+    // A student who can do everything they do for fun is full already: variety adds nothing.
+    const full = approvalAt(state, DORM[1] * state.map.width + DORM[0], undefined, { recreation: 1, dining: 1 }).causes.find((cause) => cause.id === 'life')!;
     expect(full.level).toBe(1);
     expect(full.bonus ?? 0).toBe(0);
     for (const cause of campusHappiness(state).causes) expect(cause.level).toBeLessThanOrEqual(1);
+    for (const cause of approvalAt(state, DORM[1] * state.map.width + DORM[0]).causes) expect(cause.level).toBeLessThanOrEqual(1);
   });
 
-  it('shows in the campus number exactly as it does on the lots', () => {
+  it('shows in the campus number as the average of what it adds to each student', () => {
     let state = campus(600);
     const before = campusHappiness(state);
     state = place(state, 'coffee', 9, 13);
@@ -222,10 +236,11 @@ describe('variety', () => {
     state = place(state, 'foodcourt', 19, 20);
     const after = campusHappiness(state);
     const campusLife = after.causes.find((cause) => cause.id === 'life')!;
-    // Every dorm and every lecture hall now has three kinds in reach.
-    expect(campusLife.bonus).toBeCloseTo(0.1, 9);
+    // Some students are full of Food & fun already, so the campus's bonus is under a tenth, and more than nothing.
+    expect(campusLife.bonus!).toBeGreaterThan(0);
+    expect(campusLife.bonus!).toBeLessThanOrEqual(VARIETY_BONUS + 1e-9);
     const parts = campusLife.parts.reduce((sum, part) => sum + part.level, 0) / campusLife.parts.length;
-    expect(campusLife.level).toBeCloseTo(parts + 0.1, 9);
+    expect(campusLife.level).toBeCloseTo(parts + campusLife.bonus!, 9);
     // The campus score is still the average of where students spend their days.
     const width = state.map.width;
     const dorm = approvalAt(state, DORM[1] * width + DORM[0]).score;
@@ -237,14 +252,14 @@ describe('variety', () => {
 });
 
 describe('food income', () => {
-  it('is $30 a year for each student in reach of food', () => {
+  it('is $30 a year for each student on the campus, wherever they live', () => {
     expect(FOOD_INCOME_PER_STUDENT).toBe(30);
     const state = campus(600);
-    // The starter dining hall reaches the three dorms and not the three lecture halls: half the lots.
+    // The starter dining hall feeds the dorms beside it and the lecture halls across campus alike.
     const trade = foodTrade(state, first(state, 'dining'))!;
-    expect(trade.students).toBeCloseTo(300, 9);
-    expect(trade.income).toBeCloseTo(9_000, 6);
-    expect(foodIncomePerYear(state)).toBeCloseTo(9_000, 6);
+    expect(trade.students).toBeCloseTo(600, 9);
+    expect(trade.income).toBeCloseTo(18_000, 6);
+    expect(foodIncomePerYear(state)).toBeCloseTo(18_000, 6);
     expect(foodTrade(state, first(state, 'admin'))).toBeNull();
     // Nobody enrolled, nothing earned.
     const empty = structuredClone(state);
@@ -252,22 +267,19 @@ describe('food income', () => {
     expect(foodIncomePerYear(empty)).toBe(0);
   });
 
-  it('is shared equally by the places that reach a student: a second stall halves the first', () => {
+  it('is shared among the places students eat at, the nearer the more: a second stall beside the first takes from it', () => {
     let state = campus(600);
     state = place(state, 'coffee', 9, 13);
     const hall = foodTrade(state, first(state, 'dining'))!;
     const stand = foodTrade(state, first(state, 'coffee'))!;
-    expect(hall.income).toBeCloseTo(4_500, 6);
-    expect(stand.income).toBeCloseTo(4_500, 6);
+    expect(stand.income).toBeGreaterThan(0);
+    expect(hall.income).toBeLessThan(18_000);
     // The same students, so the campus earns no more for the second stall.
-    expect(foodIncomePerYear(state)).toBeCloseTo(9_000, 6);
-    // A third divides it again.
-    state = place(state, 'taco', 8, 15);
-    for (const type of ['dining', 'coffee', 'taco'] as const) expect(foodTrade(state, first(state, type))!.income, type).toBeCloseTo(3_000, 6);
-    expect(foodIncomePerYear(state)).toBeCloseTo(9_000, 6);
-    // Food where nobody could eat before is new custom: the lecture halls.
+    expect(hall.income + stand.income).toBeCloseTo(18_000, 6);
+    expect(foodIncomePerYear(state)).toBeCloseTo(18_000, 6);
+    // A truck by the lecture halls takes most of their lunches from the dining hall, and the campus still earns the same.
     state = place(state, 'truck', 20, 19);
-    expect(foodTrade(state, first(state, 'truck'))!.income).toBeCloseTo(9_000, 6);
+    expect(foodTrade(state, first(state, 'truck'))!.income).toBeGreaterThan(foodTrade(state, first(state, 'coffee'))!.income);
     expect(foodIncomePerYear(state)).toBeCloseTo(18_000, 6);
   });
 
@@ -276,7 +288,7 @@ describe('food income', () => {
     const before = budget(state);
     for (const [x, y] of [[9, 13], [13, 13], [8, 13], [9, 11], [12, 11], [13, 12], [8, 12], [13, 11]] as const) state = place(state, 'coffee', x, y);
     const after = budget(state);
-    expect(foodIncomePerYear(state)).toBeCloseTo(9_000, 6);
+    expect(foodIncomePerYear(state)).toBeCloseTo(18_000, 6);
     expect(after.incomeTotal).toBeCloseTo(before.incomeTotal, 6);
     expect(after.fullSpending).toBeGreaterThan(before.fullSpending + 8 * PLACED.coffee.upkeepPerYear - 1);
   });
@@ -287,7 +299,7 @@ describe('food income', () => {
     expect(lines).toContain('food');
     const food = budget(state).income.find((line) => line.id === 'food')!;
     expect(food.name).toBe('Food places');
-    expect(food.amount).toBeCloseTo(9_000, 6);
+    expect(food.amount).toBeCloseTo(18_000, 6);
     expect(food.detail).toMatch(/1 place to eat/);
     expect(moneyView(state).income.map((row) => row.name)).toContain('Food places');
     const spendingBefore = budget(state).fullSpending;
@@ -302,7 +314,7 @@ describe('food income', () => {
     state = place(state, 'truck', 20, 19);
     const a = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 5 * MIN).state;
     expect(a.money.incomePerYear).toBeCloseTo(budget(a).incomeTotal, 6);
-    expect(budget(a).incomeTotal).toBeGreaterThan(budget(campus(600)).incomeTotal);
+    expect(budget(a).income.find((line) => line.id === 'food')!.amount).toBeCloseTo(foodIncomePerYear(a), 6);
   });
 });
 
@@ -324,7 +336,7 @@ describe('the food truck', () => {
     expect(state.money.cash).toBeCloseTo(before + PLACED.truck.cost, 6);
     state = place(state, 'truck', 22, 19);
     expect(state.money.cash).toBeCloseTo(before, 6);
-    expect(fedAt(state.map, 21, 18)).toBe(true);
+    expect(campusFed(state.map)).toBe(true);
     expect(PLACED.truck.fullRefund).toBe(true);
     for (const type of BUILD_ORDER) if (type !== 'truck') expect(PLACED[type].fullRefund ?? false, type).toBe(false);
   });
@@ -336,7 +348,8 @@ describe('the smoothie and juice bar', () => {
     state = place(state, 'smoothie', 13, 13);
     const plain = foodTrade(state, first(state, 'smoothie'))!;
     expect(plain.doubled).toBe(false);
-    expect(plain.income).toBeCloseTo(4_500, 6);
+    expect(plain.income).toBeGreaterThan(0);
+    expect(plain.income).toBeLessThan(18_000);
     const hallBefore = foodTrade(state, first(state, 'dining'))!.income;
 
     // Three cells away is too far.
@@ -382,72 +395,87 @@ describe('the three Academics buildings', () => {
     expect(libraryLift(state.map, ...HALL)).toBeLessThan(library + lab);
   });
 
-  it('makerspace: things to do and somewhere to meet within five cells, with room for so many', () => {
+  it('makerspace: things to do and somewhere to meet for every student who makes things, with room for so many', () => {
     expect(PLACED.makerspace).toMatchObject({ family: 'recreation', w: 2, h: 1, cost: 28_000, radius: 5, category: 'Academics' });
     expect(PLACED.makerspace.capacity).toBeGreaterThan(0);
-    let state = campus(600);
-    expect(recreationAt(state, ...HALL)).toBe(0);
+    let state = campus(200);
+    expect(campusPlay(state).rooms.making.has).toBe(false);
     const social = socialLife(state);
     state = place(state, 'makerspace', 19, 20);
-    expect(recreationAt(state, ...HALL)).toBeCloseTo(PLACED.makerspace.strength, 9);
-    expect(recreationAt(state, 26, 20)).toBe(0);
+    expect(campusPlay(state).rooms.making).toMatchObject({ has: true, served: 1 });
     expect(socialLife(state)).toBeGreaterThan(social);
-    // It fills up like any place to play: half the lots, one student in twenty of them at the busiest hour.
+    // It fills up like any place to play: its share of the busiest hour's players, those who make things.
     const use = playUse(state, first(state, 'makerspace'))!;
     expect(use.capacity).toBe(PLACED.makerspace.capacity);
-    expect(use.demand).toBeCloseTo(15, 6);
+    expect(use.demand).toBeCloseTo(campusPlay(state).rooms.making.demand, 6);
     const crowded = structuredClone(state);
-    crowded.cohorts = [2400, 0, 0, 0, 0, 0];
+    crowded.cohorts = [8000, 0, 0, 0, 0, 0];
     expect(playUse(crowded, first(crowded, 'makerspace'))!.waiting).toBeGreaterThan(0);
-    expect(placedSummary(crowded, first(crowded, 'makerspace'))).toMatch(/waiting at peak/);
+    expect(placedSummary(crowded, first(crowded, 'makerspace'))).toMatch(/turned away at peak/);
   });
 
-  it('study center: a better GPA on the cards of students within six cells, and nothing else', () => {
-    expect(PLACED.studyCenter).toMatchObject({ family: 'tutoring', w: 2, h: 1, cost: 35_000, radius: 6, category: 'Academics' });
+  it('study center: tutoring for any student whose classes are going badly, wherever they live, and nothing else (DESIGN.md 83.4)', () => {
+    expect(PLACED.studyCenter).toMatchObject({ family: 'tutoring', w: 2, h: 1, cost: 35_000, category: 'Academics' });
     const before = campus(600);
     const after = place(before, 'studyCenter', 8, 15);
-    expect(tutoredAt(after.map, ...DORM)).toBe(true);
-    expect(tutoredAt(after.map, ...HALL)).toBe(false);
-    expect(tutoredAt(before.map, ...DORM)).toBe(false);
+    expect(tutoringCover(before)).toBe(0);
+    // Room for TUTOR_ROOM a semester, and fewer than that have classes going badly.
+    expect(tutoringRoom(after)).toEqual({ room: TUTOR_ROOM, need: Math.round(600 * shareBelow(TUTOR_BELOW)) });
+    expect(tutoringCover(after)).toBe(1);
 
-    let lifted = 0;
-    let residents = 0;
-    for (const ref of sampleStudents(before).slice(0, 300)) {
+    let tutored = 0;
+    let commuters = 0;
+    let n = 0;
+    for (const ref of sampleStudents(before).slice(0, 400)) {
       const was = studentCard(before, ref)!;
       const now = studentCard(after, ref)!;
-      if (was.home === null) {
-        // A commuter is read at the lecture halls, which it does not reach.
-        expect(now.tutored).toBe(false);
+      n += 1;
+      expect(was.tutored).toBe(false);
+      if (!now.tutored) {
         expect(now.gpa).toBe(was.gpa);
         continue;
       }
-      residents += 1;
-      expect(was.tutored).toBe(false);
-      expect(now.tutored).toBe(true);
+      tutored += 1;
+      if (now.home === null) commuters += 1;
+      // Their classes were going badly.
+      expect(was.gpa).toBeLessThan(TUTOR_BELOW + 0.3);
       expect(now.gpa).toBeGreaterThanOrEqual(was.gpa);
-      expect(now.gpa).toBeLessThanOrEqual(4);
-      // Better, by about a quarter of a point: a step up the real spread is worth more where it is steep (DESIGN.md 65.4).
-      expect(now.gpa - was.gpa).toBeLessThanOrEqual(TUTORING_GPA + 0.15);
-      if (now.gpa > was.gpa) lifted += 1;
-      // The card is otherwise the same student, whose better grades may put them on the Dean's list or off probation.
+      expect(now.gpa - was.gpa).toBeLessThanOrEqual(0.45);
+      // The card is otherwise the same student, whose better grades may take them off probation.
       expect({ ...now, gpa: 0, tutored: false, deansList: false, probation: false }).toEqual({ ...was, gpa: 0, tutored: false, deansList: false, probation: false });
     }
-    expect(residents).toBeGreaterThan(10);
-    expect(lifted).toBeGreaterThan(residents * 0.8);
+    // About the share below the line, and those who live off campus as much as anyone.
+    expect(tutored).toBeGreaterThan(n * 0.08);
+    expect(tutored).toBeLessThan(n * 0.4);
+    expect(commuters).toBeGreaterThan(0);
 
-    // Nothing reads GPA yet: Happiness, who stays, and what comes in are untouched.
+    // Happiness, who stays, and what comes in are untouched.
     expect(campusHappiness(after).score).toBe(campusHappiness(before).score);
     expect(retentionRate(after)).toBe(retentionRate(before));
     expect(budget(after).incomeTotal).toBe(budget(before).incomeTotal);
   });
 
-  it('study center: its menu card says it only changes student cards for now', () => {
+  it('study center: has room for so many, and a second takes the rest', () => {
+    let state = campus(6000);
+    state = place(state, 'studyCenter', 8, 15);
+    const one = tutoringCover(state);
+    expect(one).toBeGreaterThan(0);
+    expect(one).toBeLessThan(1);
+    const tutoredShare = (s: GameState): number => sampleStudents(s).slice(0, 400).filter((ref) => studentCard(s, ref)!.tutored).length;
+    const fewer = tutoredShare(state);
+    state = place(state, 'studyCenter', 22, 20);
+    expect(tutoringCover(state)).toBeCloseTo(Math.min(1, 2 * one), 9);
+    expect(tutoredShare(state)).toBeGreaterThan(fewer);
+    const lone = place(campus(6000), 'studyCenter', 8, 15);
+    expect(placedSummary(lone, first(lone, 'studyCenter'))).toMatch(/Another study center would take the rest/);
+  });
+
+  it('study center: its menu card says who it tutors, with no reach', () => {
     const card = buildEntries().find((entry) => entry.id === 'studyCenter')!;
     expect(card.category).toBe('Academics');
-    expect(card.effect).toMatch(/GPA/);
-    expect(card.effect).toMatch(/only student cards for now/);
+    expect(card.effect).toBe('Tutoring for any student whose class is going badly');
     const state = place(campus(600), 'studyCenter', 8, 15);
-    expect(placedSummary(state, first(state, 'studyCenter'))).toMatch(/changes nothing else yet/);
+    expect(placedSummary(state, first(state, 'studyCenter'))).toMatch(/students whose classes are going badly, from anywhere on campus/);
   });
 
   it('are in the Build menu under Academics, and the science lab is not built', () => {
@@ -460,7 +488,7 @@ describe('the three Academics buildings', () => {
 });
 
 describe('a favourite place to eat', () => {
-  it('is named by students who are pleased with the food, from the kinds in reach', () => {
+  it('is named by students who are pleased with the food: the place they eat at most', () => {
     let state = campus(600);
     // A tended corner, so plenty of students are content, with tacos and pizza beside the dorms.
     state = place(state, 'taco', 8, 15);
@@ -471,7 +499,6 @@ describe('a favourite place to eat', () => {
     state = place(state, 'medical', 3, 9);
     state = place(state, 'safety', 15, 9);
     state = act(state, { type: 'paint', tool: 'quad', cells: [[8, 13], [9, 13], [13, 13], [8, 12], [13, 12]] });
-    expect(recreationAt(state, ...DORM)).toBe(1);
     const allowed = new Set<string>([...THOUGHTS.diningGood, ...(FAVOURITES.taco ?? []), ...(FAVOURITES.pizza ?? [])]);
     const said = new Set<string>();
     for (const ref of sampleStudents(state).slice(0, 600)) {
@@ -484,6 +511,10 @@ describe('a favourite place to eat', () => {
     expect([...said].some((line) => (FAVOURITES.taco ?? []).includes(line))).toBe(true);
     expect([...said].some((line) => (FAVOURITES.pizza ?? []).includes(line))).toBe(true);
     expect(FAVOURITES.taco).toContain('Taco Tuesday is the only reason I go to class.');
+    // Where a student eats is their own: the same each time, most often the nearest.
+    const picks = Array.from({ length: 100 }, (_, i) => foodPlaceFor(state, ...DORM, (i + 0.5) / 100)!.type);
+    expect(foodPlaceFor(state, ...DORM, 0.42)).toEqual(foodPlaceFor(state, ...DORM, 0.42));
+    expect(picks.filter((type) => type === 'dining').length).toBeGreaterThan(picks.filter((type) => type === 'taco').length);
   });
 
   it('has a line for every kind of food but the dining hall, which keeps its own', () => {
@@ -547,7 +578,7 @@ describe('an older save', () => {
     if (!loaded.ok) return;
     expect(loaded.migratedFrom).toBe(10);
     expect(loaded.state.version).toBe(SAVE_VERSION);
-    expect(foodIncomePerYear(loaded.state)).toBeCloseTo(9_000, 6);
+    expect(foodIncomePerYear(loaded.state)).toBeCloseTo(18_000, 6);
     expect(upgradeNotes(10).some((note) => /places to eat/.test(note))).toBe(true);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);
   });

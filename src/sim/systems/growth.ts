@@ -8,7 +8,7 @@ import { cancelTimers } from '../timers';
 import { startBuild } from './construction';
 import { growthShortage } from './demand';
 import { scoreParts } from './desirability';
-import { fedAt } from './placed';
+import { campusFed } from './placed';
 
 /**
  * Organic growth. Inside its density tier a lot grows on its own when demand,
@@ -18,9 +18,9 @@ import { fedAt } from './placed';
 
 export type StallCause = 'noPath' | 'noDemand' | 'noDining' | 'lowDesirability';
 
-/** A Housing lot needs a dining hall or coffee stand in reach before it grows past its first stage. */
+/** A Housing lot needs somewhere to eat on the campus before it grows past its first stage (DESIGN.md 83.3). */
 function needsDining(map: MapState, x: number, y: number, zone: Zone, nextStage: number): boolean {
-  return zone === 'housing' && nextStage >= DINING_STAGE && !fedAt(map, x, y);
+  return zone === 'housing' && nextStage >= DINING_STAGE && !campusFed(map);
 }
 
 export type LotStatus =

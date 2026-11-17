@@ -138,10 +138,10 @@ describe('locals', () => {
     // Everyone pays tuition. Only those in a dorm pay the room fee. Six in ten in a dorm is the old flat $10,000.
     recomputeRates(state);
     expect(occupiedBeds(state)).toBe(36);
-    // The starter dining hall has half the lots, so 30 of the 60 students, to itself: $30 each (tests/food.test.ts).
+    // The starter dining hall feeds all 60 students: $30 each (tests/food.test.ts, DESIGN.md 83.3).
     // Football's ticket line is its own (tests/football.test.ts).
     const tickets = budget(state).income.find((line) => line.id === 'tickets')?.amount ?? 0;
-    expect(state.money.incomePerYear - tickets).toBeCloseTo(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR + 30 * 30, 6);
+    expect(state.money.incomePerYear - tickets).toBeCloseTo(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR + 60 * 30, 6);
     expect(60 * TUITION_PER_STUDENT_PER_YEAR + 36 * ROOM_FEE_PER_BED_PER_YEAR).toBe(60 * 10_000);
 
     // They show as living on that street, a house for every ten.

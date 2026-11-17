@@ -1,4 +1,5 @@
 import { dollars } from '../src/sim/format';
+import { PLACED } from '../src/sim/config/placed';
 import { describe, expect, it } from 'vitest';
 import {
   admissionsStory,
@@ -152,9 +153,10 @@ describe('the student poll', () => {
     expect(studentPoll(whole(1))).toEqual(poll);
   });
 
-  it('moves when the campus does: with no food near the dorms, food leads the complaints', () => {
+  it('moves when the campus does: with nowhere to eat on campus, food leads the complaints', () => {
     const state = structuredClone(whole(1));
-    state.map.placed = state.map.placed.map((placed) => (placed && (placed.type === 'dining' || placed.type === 'coffee') ? null : placed));
+    state.map.placed = state.map.placed.map((placed) => (placed && PLACED[placed.type].family === 'dining' ? null : placed));
+    delete state.map.care.byFamily;
     const before = studentPoll(whole(1));
     const after = studentPoll(state);
     const share = (poll: typeof after): number => poll.lines.find((line) => line.label === 'The food')?.share ?? 0;

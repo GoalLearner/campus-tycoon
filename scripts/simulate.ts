@@ -2391,14 +2391,19 @@ function assertModelCampus(seed: number): void {
       console.log([String(row.year).padStart(4), String(row.applicants).padStart(11), `${Math.round(row.accept * 100)}%`.padStart(9), row.measured.toFixed(1).padStart(9), row.published.toFixed(1).padStart(10), String(row.rank).padStart(5)].join(' '));
     }
     const late = rows.slice(-10);
-    const span = (pick: (row: (typeof rows)[number]) => number): number => Math.max(...late.map(pick)) - Math.min(...late.map(pick));
+    const prior = rows.slice(-20, -10);
+    const span = (pick: (row: (typeof rows)[number]) => number, of = late): number => Math.max(...of.map(pick)) - Math.min(...of.map(pick));
     const most = Math.max(...rows.map((row) => row.applicants));
     // The most the four causes could ever make of the reach: looks, marketing, football and the rank all at their best.
     const ceiling = (cap / 50_000) * 11_000 * 1.4 * 1.2 * 1.14 * 1.25;
+    // Settling: each ten years the rating moves less than the ten before, and the last ten three points at most. It was two
+    // points at most, which R4c met exactly; with places serving the students who use them the campus climbs higher, and
+    // reputation, a slow average of past ratings, leaves more of it to close at forty years (DESIGN.md 83.12).
+    const settled = span((row) => row.published) < span((row) => row.published, prior) && span((row) => row.published) <= 3;
     check(
       'rank, applicants and selectivity settle: left alone, the last ten of forty years barely move',
-      span((row) => row.published) <= 2 && span((row) => row.applicants) <= 0.05 * late[0]!.applicants && most < ceiling,
-      `years 31 to 40: the published rating moves ${span((row) => row.published).toFixed(1)} points, applicants ${span((row) => row.applicants)} (${late[0]!.applicants} to start with), the share admitted ${Math.round(Math.min(...late.map((row) => row.accept)) * 100)}% to ${Math.round(Math.max(...late.map((row) => row.accept)) * 100)}%; rank ${Math.min(...late.map((row) => row.rank))} to ${Math.max(...late.map((row) => row.rank))} as the field drifts; the most applicants in any year ${most}, and the four causes at their best could never make more than ${Math.round(ceiling)}`,
+      settled && span((row) => row.applicants) <= 0.05 * late[0]!.applicants && most < ceiling,
+      `years 31 to 40: the published rating moves ${span((row) => row.published).toFixed(1)} points (${span((row) => row.published, prior).toFixed(1)} in years 21 to 30), applicants ${span((row) => row.applicants)} (${late[0]!.applicants} to start with), the share admitted ${Math.round(Math.min(...late.map((row) => row.accept)) * 100)}% to ${Math.round(Math.max(...late.map((row) => row.accept)) * 100)}%; rank ${Math.min(...late.map((row) => row.rank))} to ${Math.max(...late.map((row) => row.rank))} as the field drifts; the most applicants in any year ${most}, and the four causes at their best could never make more than ${Math.round(ceiling)}`,
     );
   }
 
@@ -2587,7 +2592,8 @@ function assertModelCampus(seed: number): void {
   // Grades by class, R4b (DESIGN.md 81): each run's last semester's letters, against the real figures (Rojstaczer and
   // Healy; the Gardner Institute; NPSAS:16, R1's spread; about one in five with a minor).
   {
-    const all = runs.map((run) => ({ run: `${run.style} ${run.seed}`, grades: campusGrades(run.final) })).filter((one) => one.grades !== null);
+    // Four times the registration sample's students a class year, for a steadier figure than the game's own row (83.12).
+    const all = runs.map((run) => ({ run: `${run.style} ${run.seed}`, grades: campusGrades(run.final, 96) })).filter((one) => one.grades !== null);
     const mean = (pick: (g: NonNullable<(typeof all)[number]['grades']>) => number): number => all.reduce((sum, one) => sum + pick(one.grades!), 0) / Math.max(1, all.length);
     const a = mean((g) => g.a);
     const dfw = mean((g) => g.dfw);

@@ -400,7 +400,7 @@ export const PARTY_CARD = {
  */
 /**
  * A favourite place to eat, by its kind (DESIGN.md 30.2). A student who is
- * pleased with the food near them names one of the kinds in reach.
+ * pleased with the food names the place they eat at most (83.5).
  * Tone: light. Nothing here but food.
  */
 export const FAVOURITES: Partial<Record<string, readonly string[]>> = {
@@ -443,31 +443,48 @@ export const THOUGHTS = {
     'Between classes I stand on pavement. A quad by the lecture halls would help.',
   ],
   diningGood: [
-    'The dining hall is so close I go in my slippers.',
-    'Hot food a short walk from my bed. I may never learn to cook.',
+    'Hot food on campus whenever I want it. I may never learn to cook.',
+    'The food here is the best part of my week.',
   ],
+  /** Nowhere on the campus to eat (DESIGN.md 83.3). */
   diningLow: [
-    'There is nowhere to eat near my dorm. It has been cereal for three days.',
-    'No dining hall near my dorm. Even a coffee stand would do.',
+    'There is nowhere to eat on campus. It has been cereal for three days.',
+    'No dining hall on campus. Even a coffee stand would do.',
   ],
-  commuterDiningGood: ['I can get lunch right by my lecture hall.'],
-  commuterDiningLow: ['Nowhere to eat near my lecture hall. I pack two lunches.'],
+  /** Every place to eat was full when they came: {w} is the wait. */
+  diningCrowded: [
+    'Every place to eat was full at dinner, {w} in line. The campus needs another place to eat.',
+    'Gave up on lunch after {w} in line. One more place to eat would do it.',
+  ],
+  commuterDiningGood: ['I can always get lunch on campus between classes.'],
+  commuterDiningLow: ['Nowhere to eat on campus. I pack two lunches.'],
+  commuterDiningCrowded: ['Gave up on lunch between classes after {w} in line. The campus needs another place to eat.'],
+  /** Something they do for fun, with room for them (DESIGN.md 83.2): {verb} is what they do, {place} where. */
   recreationGood: [
-    'There is always a game on near my dorm.',
-    'The gym is two minutes from my room. I have run out of excuses.',
+    'I {verb} most days. Best part of being here.',
+    'There is always room at {place} when I want it.',
   ],
+  /** Nothing they do for fun on the campus at all. */
   recreationLow: [
-    'Nothing to do near my dorm but homework. A court or a field would help.',
-    'I would join a game if there were anywhere near my dorm to play one.',
+    'Nothing much to do on campus but homework. A court or a field would help.',
+    'I would join a game if the campus had anywhere to play one.',
   ],
-  /** A recreation building in reach is over what it holds. {w} is the wait and {place} the building. */
-  recreationCrowded: [
-    'Waited {w} for {place}. Another one nearby would clear the line.',
-    'The line at {place} was {w} long today. It needs a second one nearby.',
+  /** Something they do that the campus has no place for: {verb} is what they do, {place} what it needs. */
+  recreationMissing: [
+    'I would {verb} if the campus had {place}.',
+    'I used to {verb} back home. This campus has nowhere to do it.',
   ],
-  commuterRecreationCrowded: ['Waited {w} for {place} between classes. Another one by the lecture halls would clear the line.'],
-  commuterRecreationGood: ['Between classes there is always a game on by the lecture hall.'],
-  commuterRecreationLow: ['Nothing to do between classes. A field by the lecture halls would help.'],
+  /** Turned away from a full place at the busiest hour: {Place} or {place} is where. */
+  recreationFull: [
+    '{Place} was full at the busy hour again. I gave up and went home.',
+    'Could not get into {place} tonight. One more like it would do it.',
+  ],
+  /** Meets friends at the Student Union. */
+  unionGood: ['Everyone I know is at the Student Union at some point. I love it.'],
+  commuterRecreationGood: ['I {verb} between classes. It keeps me sane.'],
+  commuterRecreationLow: ['Nothing to do between classes. A field on campus would help.'],
+  commuterRecreationMissing: ['I would {verb} between classes if the campus had {place}.'],
+  commuterRecreationFull: ['{Place} was full between classes. I gave up.'],
   safetyGood: [
     'Help is two minutes away if I ever need it. I sleep well.',
     'Somebody always turns up when things go sideways around here.',

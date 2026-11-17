@@ -73,7 +73,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -388,8 +388,9 @@ describe('no fifth cause', () => {
     expect(cause(on, 'safety').policies).toBeUndefined();
     for (const id of ['life', 'grounds']) {
       const moved = (cause(on, id).policies ?? []).filter((note) => note.id !== 'parties').reduce((sum, note) => sum + note.delta, 0);
-      // A lot already full of Food & fun with the parties in it (DESIGN.md 55) keeps a little of a cost: to a thousandth.
-      expect(cause(on, id).level).toBeCloseTo(cause(off, id).level + moved, 2);
+      // A student already full of Food & fun with the parties in it (DESIGN.md 55) keeps a little of a cost, and since
+      // amenities serve those who use them (83.2) most students' Food & fun is full: to a hundredth.
+      expect(Math.abs(cause(on, id).level - Math.min(1, cause(off, id).level + moved))).toBeLessThan(0.012);
     }
     expect(cause(on, 'walk').level).toBeCloseTo(cause(off, 'walk').level, 9);
     // The four causes alone, with the rank, are what the share who stay follows, so a policy's cost reaches it (65.2).
@@ -572,9 +573,10 @@ describe('each policy, in its own numbers', () => {
     const line = budget(on).income.find((one) => one.id === 'tickets')!;
     expect(line.detail).toContain('Free student section: 25% of the seats are free');
     expect(budget(off).income.find((one) => one.id === 'tickets')!.detail).not.toContain('free');
-    // Three points of Food & fun at every lot that has room for them: a lot already full stays full.
-    expect(cause(on, 'life').level - cause(off, 'life').level).toBeGreaterThan(0.02);
+    // Three points of Food & fun where there is room for them: a campus already full of it stays full (DESIGN.md 83.2).
+    expect(cause(on, 'life').level - cause(off, 'life').level).toBeGreaterThan(0);
     expect(cause(on, 'life').level - cause(off, 'life').level).toBeLessThanOrEqual(0.03 + 1e-9);
+    expect(cause(on, 'life').level).toBeCloseTo(Math.min(1, cause(off, 'life').level + 0.03), 1);
     expect(campusHappiness(on).base).toBeGreaterThan(campusHappiness(off).base);
   });
 
@@ -688,7 +690,8 @@ describe('content is data', () => {
 describe('a save from version 16', () => {
   const text = readFileSync(new URL('./fixtures/save-v16-model.json', import.meta.url), 'utf8');
   /** Its Happiness when saved was 77.936. Parties (DESIGN.md 55) add 3 points of Food & fun where it has room. */
-  const PARTIED_V16 = 78.725;
+  // 78.725 before places to play and eat served every student who uses them, wherever they live (DESIGN.md 83).
+  const PARTIED_V16 = 83.642;
 
   it("comes through with nothing moved: the owner's own kind of game, early in year 1 with no era yet", () => {
     const file = JSON.parse(text) as { v: number; state: GameState };
@@ -730,13 +733,15 @@ describe('a save from version 16', () => {
     withChaos(expected);
     withRegistration(expected);
     withLanes(expected);
+    withAmenities(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // The numbers it read the moment before it was saved, at version 16.
     const books = budget(state);
     expect(books.spending).toBeCloseTo(file.state.money.spendingPerYear, 4);
-    expect(books.incomeTotal).toBeCloseTo(file.state.money.incomePerYear, 4);
-    expect(books.kept).toBeCloseTo(16.59, 2);
+    // Food's takings now share every student among the places they eat at (DESIGN.md 83.3): a hair different.
+    expect(Math.abs(books.incomeTotal / file.state.money.incomePerYear - 1)).toBeLessThan(1e-4);
+    expect(books.kept).toBeCloseTo(16.58, 2);
     // Version 26 brings parties (DESIGN.md 55): Food & fun 3 points higher everywhere, a quarter of that on Happiness.
     expect(campusHappiness(state).base).toBeCloseTo(PARTIED_V16, 3);
     // No era yet, so no page, no chip, and the Goals page says what Growth will open.
@@ -758,7 +763,7 @@ describe('a save from version 16', () => {
       expect(view.rows).toHaveLength(open);
       expect(view.rows.every((row) => !row.on && !row.locked)).toBe(true);
       // Nothing about its money or its Happiness moved on the day it loaded.
-      expect(budget(loaded.state).incomeTotal).toBeCloseTo(file.state.money.incomePerYear, 4);
+      expect(Math.abs(budget(loaded.state).incomeTotal / file.state.money.incomePerYear - 1)).toBeLessThan(1e-4);
       expect(campusHappiness(loaded.state).base).toBeCloseTo(PARTIED_V16, 3);
     }
   });
@@ -776,7 +781,7 @@ describe('a save from version 16', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
     // And R3's price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(24);
+    expect(notes).toHaveLength(25);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

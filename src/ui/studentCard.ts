@@ -14,6 +14,7 @@ import { socialWeb } from '../app/socialWeb';
 import { feedOf, followersOf, postsBy, postWords } from '../app/quadline';
 import { store } from '../app/store';
 import { studentCard, studentFigure, studentKey, type GameState, type StudentCard, type StudentRef } from '../sim';
+import { usesWords } from '../sim/systems/students';
 import { drawSprite, loadAtlas, type Atlas } from './atlas';
 
 /**
@@ -301,6 +302,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   let classesKey = '';
   let shownHistory: ReturnType<typeof courseHistory> | null = null;
   const club = row('Club');
+  // What they use (DESIGN.md 83.6): what they do for fun, where they eat, and what they want that the campus lacks.
+  const usesRow = row('Uses');
   // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
   const milestones = row('Four years');
   // Their money (R3, DESIGN.md 67): running short, a job, aid, loans, rent and books, the most telling first.
@@ -379,7 +382,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, classesRow.line, club.line, milestones.line, wallet.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, classesRow.line, club.line, usesRow.line, milestones.line, wallet.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -496,7 +499,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     inside.hidden = !home;
     if (home) follow.hidden = true;
 
-    // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
+    // Tutoring lifts it (DESIGN.md 83.4). The card says so, because nothing else shows the study center working yet.
     // The ratio as this student meets it: how many of them there are to a member of faculty (DESIGN.md 38).
     const classes = card.classSize > 0 ? ` · classes of ${card.classSize}` : '';
     // Their grades as their transcript has them (R4b, DESIGN.md 81): the average over the semesters already over, the
@@ -515,6 +518,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const latin = shownHistory.latin ? ` · on course for ${shownHistory.latin}` : '';
     setText(grades.value, `${standing}${card.tutored ? ' · with tutoring' : ''}${latin}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
+    setText(usesRow.value, usesWords(card.uses));
     const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
     milestones.line.hidden = years.length === 0;
     setText(milestones.value, years.join(' · '));

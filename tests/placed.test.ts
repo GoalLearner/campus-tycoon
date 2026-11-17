@@ -9,14 +9,14 @@ import {
   buildingAt,
   campusHappiness,
   enrollment,
-  fedAt,
+  campusFed,
   lotStatus,
   parseSave,
   partLevel,
   PLACED,
   placedAt,
   previewPlace,
-  recreationAt,
+  campusPlay,
   retentionRate,
   sampleStudents,
   SAVE_VERSION,
@@ -31,6 +31,8 @@ import {
   type Tool,
 } from '../src/sim';
 import { DAY, freshGame, MIN, T0 } from './helpers';
+import { habitsOf } from '../src/sim/systems/play';
+import { movedAway, natureOf } from '../src/sim/systems/students';
 
 function rich(state: GameState): GameState {
   const copy = structuredClone(state);
@@ -59,7 +61,7 @@ describe('placing buildings', () => {
     // And two trash bins beside the dining hall.
     expect(types).toEqual(['dining', 'admin', 'bin', 'bin', 'stadium']);
     // The first dorms are fed, so they can grow past their first stage.
-    expect(fedAt(state.map, 10, 13)).toBe(true);
+    expect(campusFed(state.map)).toBe(true);
   });
 
   it('takes the cost, covers its cells and adds its upkeep', () => {
@@ -123,9 +125,11 @@ describe('what the buildings do', () => {
     expect(scoreParts(state.map, 3, 6, 'housing', -1).green).toBe(40);
   });
 
-  it('holds a dorm at its first stage until dining is in reach', () => {
+  it('holds a dorm at its first stage until the campus has somewhere to eat, anywhere on it (DESIGN.md 83.3)', () => {
     let state = rich(freshGame());
-    // Far from the starter dining hall, with a quad so desirability is not the problem.
+    // The starter dining hall cleared, and a dorm with a quad so desirability is not the problem.
+    state = paint(state, 'clear', [[10, 12]]);
+    expect(campusFed(state.map)).toBe(false);
     state = paint(state, 'housing', [[22, 13]]);
     state = paint(state, 'quad', [[22, 12], [23, 12]]);
     state = advance(state, T0, T0 + 5 * MIN).state;
@@ -133,21 +137,29 @@ describe('what the buildings do', () => {
     expect(lotStatus(state, 22, 13)).toMatchObject({ kind: 'stalled', cause: 'noDining', nextStage: 2 });
 
     const now = state.clock.lastSimulatedAt;
-    state = place(state, 'coffee', 24, 13);
-    expect(fedAt(state.map, 22, 13)).toBe(true);
+    // A coffee stand far across the campus feeds it.
+    state = place(state, 'coffee', 4, 24);
+    expect(campusFed(state.map)).toBe(true);
     expect(lotStatus(state, 22, 13)?.kind).toBe('building');
     state = advance(state, now, now + 15 * MIN).state;
     expect(buildingAt(state.map, 22, 13)?.stage).toBe(2);
   });
 
-  it('adds recreation up to one cap', () => {
+  it('adds to what students can do, kind by kind, up to all of it (DESIGN.md 83.2)', () => {
     let state = rich(freshGame());
-    expect(recreationAt(state, 10, 13)).toBe(0);
+    state.cohorts = [300, 0, 0, 0, 0, 0];
+    expect(campusPlay(state).level).toBe(0);
     state = place(state, 'courts', 8, 10);
-    expect(recreationAt(state, 10, 13)).toBeCloseTo(PLACED.courts.strength);
+    const courts = campusPlay(state).level;
+    expect(courts).toBeGreaterThan(0);
     state = place(state, 'gym', 10, 11);
     state = place(state, 'track', 12, 10);
-    expect(recreationAt(state, 10, 13)).toBe(1);
+    expect(campusPlay(state).level).toBeGreaterThan(courts);
+    const three = campusPlay(state).level;
+    for (const type of ['pool', 'field', 'volleyball', 'tennis', 'makerspace'] as const) state = place(state, type, 2 + 3 * ['pool', 'field', 'volleyball', 'tennis', 'makerspace'].indexOf(type), 24);
+    // Every kind now: each student has the lift of everything they do, up to all of it.
+    expect(campusPlay(state).level).toBeGreaterThan(three);
+    expect(campusPlay(state).lacking).toBe(0);
   });
 
   it('earns more at a store beside a busier path', () => {
@@ -199,9 +211,10 @@ describe('happiness', () => {
     const named = before.causes.find((cause) => cause.id === before.worst)!;
     for (const cause of before.causes) expect(toGain(named)).toBeGreaterThanOrEqual(toGain(cause) - 1e-9);
     for (const part of named.parts) expect(partLevel(before.causes, before.worstPart!)).toBeLessThanOrEqual(part.level + 1e-9);
-    // The starter campus has a dining hall by its dorms and nothing to do: inside Food & fun, food is fine and fun is not.
+    // The starter campus has a dining hall and nothing to do: inside Food & fun, food is fine and fun is not, for the
+    // students who do something for fun (DESIGN.md 83.2).
     expect(partLevel(before.causes, 'dining')).toBeGreaterThan(0.5);
-    expect(partLevel(before.causes, 'recreation')).toBeLessThan(0.1);
+    expect(partLevel(before.causes, 'recreation')).toBeLessThan(0.4);
     state = place(state, 'gym', 11, 11);
     state = place(state, 'courts', 17, 19);
     const after = campusHappiness(state);
@@ -222,7 +235,8 @@ describe('happiness', () => {
 
   it('reads recreation and dining on a card as soon as they are built', () => {
     let state = rich(campus());
-    const resident = sampleStudents(state).find((ref) => studentHome(state, ref) !== null)!;
+    // A resident who works out: the gym is theirs (DESIGN.md 83.2).
+    const resident = sampleStudents(state).find((ref) => studentHome(state, ref) !== null && habitsOf(state.seed, ref, natureOf(state.seed, ref, movedAway(state.seed, ref))).activities.includes('workout'))!;
     const home = studentHome(state, resident)!;
     const before = approvalAt(state, home);
     // Four causes, never more, and every one counts the same.
