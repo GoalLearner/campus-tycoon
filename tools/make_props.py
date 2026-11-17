@@ -189,14 +189,15 @@ def goalpost():
     shade = (220, 160, 20, 255)
     # Two uprights and the crossbar, the post below and its curve, tilted a little as it is carried.
     parts = [((180, 140), (180, 560)), ((844, 140), (844, 560)), ((180, 560), (844, 560)), ((512, 560), (512, 760)), ((512, 760), (430, 900))]
+    # Thick, so the shape still reads as goalposts at map size and not as a pair of antlers.
     for a, b in parts:
-        d.line([a, b], fill=PLUM, width=110)
+        d.line([a, b], fill=PLUM, width=140)
     for a, b in parts:
-        d.line([a, b], fill=shade, width=60)
-        d.line([(a[0] - 8, a[1] - 8), (b[0] - 8, b[1] - 8)], fill=yellow, width=36)
+        d.line([a, b], fill=shade, width=84)
+        d.line([(a[0] - 10, a[1] - 10), (b[0] - 10, b[1] - 10)], fill=yellow, width=48)
     for x, y in ((180, 140), (844, 140)):
-        d.ellipse((x - 55, y - 55, x + 55, y + 55), fill=PLUM)
-        d.ellipse((x - 26, y - 26, x + 26, y + 26), fill=yellow)
+        d.ellipse((x - 70, y - 70, x + 70, y + 70), fill=PLUM)
+        d.ellipse((x - 34, y - 34, x + 34, y + 34), fill=yellow)
     return c.rotate(-12, resample=Image.BICUBIC, center=(512, 560))
 
 

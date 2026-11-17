@@ -3500,8 +3500,8 @@
   "prop.couch.0": {
    "frame": "prop.couch.0",
    "anchor": [
-    6,
-    -25
+    18,
+    -10
    ],
    "footprint": [
     1,
@@ -3511,8 +3511,8 @@
   "prop.couch.1": {
    "frame": "prop.couch.1",
    "anchor": [
-    6,
-    -25
+    18,
+    -10
    ],
    "footprint": [
     1,
@@ -3544,8 +3544,8 @@
   "prop.goalpost": {
    "frame": "prop.goalpost",
    "anchor": [
-    7,
-    -18
+    22,
+    12
    ],
    "footprint": [
     1,

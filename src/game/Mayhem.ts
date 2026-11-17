@@ -138,7 +138,7 @@ const GOALPOSTS_ID = -20;
 const MASCOT_ID = -30;
 /** The goalposts are held up this high over the feet, and couches stand this far apart either side of the middle. */
 const CARRY_LIFT = 34;
-const COUCH_APART = 0.36;
+const COUCH_APART = 0.5;
 
 export class Mayhem {
   private state: GameState | null = null;

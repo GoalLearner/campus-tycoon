@@ -490,8 +490,8 @@ for n in range(3):
     sprites[f'prop.partyhat.{n}'] = {'layers': [standing(f'_rendered/ours/props/partyhat-{n}.png', 0.5, 0.5, scale=0.19)]}
 # Football's chaos (DESIGN.md 77): a couch in two fabrics, dragged into the street, and a goalpost carried off. Ours.
 for n in range(2):
-    sprites[f'prop.couch.{n}'] = {'layers': [standing(f'_rendered/ours/props/couch-{n}.png', 0.5, 0.5, scale=0.2)]}
-sprites['prop.goalpost'] = {'layers': [standing('_rendered/ours/props/goalpost.png', 0.5, 0.5, scale=0.25)]}
+    sprites[f'prop.couch.{n}'] = {'layers': [standing(f'_rendered/ours/props/couch-{n}.png', 0.5, 0.5, scale=0.6)]}
+sprites['prop.goalpost'] = {'layers': [standing('_rendered/ours/props/goalpost.png', 0.5, 0.5, scale=0.75)]}
 
 # ----------------------------------------------------------- decorations --
 # The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
