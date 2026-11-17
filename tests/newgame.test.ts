@@ -22,6 +22,11 @@ vi.mock('../src/app/persistence', () => ({
     h.disk.backup = null;
   },
   requestPersistentStorage: async () => true,
+  // One campus here: the sandbox's slot (DESIGN.md 79) is tested in tests/sandbox.test.ts.
+  readSlots: async () => ({ open: 'real', names: {} }),
+  writeSlots: async () => {},
+  readWebRecord: async () => null,
+  writeWebRecord: async () => {},
 }));
 vi.mock('../src/app/clock', () => ({
   clock: { now: () => h.now, follow: () => {}, reset: () => {}, skip: () => {}, offset: () => 0, restore: () => {} },

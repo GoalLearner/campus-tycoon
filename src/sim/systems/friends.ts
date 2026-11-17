@@ -201,6 +201,8 @@ export function friendsEffectsOf(web: Web): SocialEffects | null {
     bullied: bullied / n,
     // Quadline's viral posts seen beyond campus, for the school's reach (63.14).
     viral: viralReachOf(web),
+    // What the web did with each ask from the Meddle menu, for the paper (78.3).
+    ...(web.asked.length > 0 ? { meddled: web.asked.slice(0, MEDDLED_KEPT) } : {}),
   };
 }
 
@@ -229,7 +231,11 @@ export function friendsStay(state: GameState, retention: number): number {
 export function effectsSound(effects: SocialEffects): boolean {
   const shares = [effects.alone, effects.group, effects.partnered, effects.split, effects.rival, effects.study, effects.bullied ?? 0];
   const viral = effects.viral ?? [];
+  const meddled = effects.meddled ?? [];
   return (
+    Array.isArray(meddled) &&
+    meddled.length <= MEDDLED_KEPT &&
+    meddled.every((one) => Number.isInteger(one.id) && WEB_DID.includes(one.did)) &&
     Array.isArray(viral) &&
     viral.length <= VIRAL_KEPT &&
     viral.every((one) => Number.isInteger(one.at) && Number.isFinite(one.size) && Math.abs(one.size) <= VIRAL_REACH_EACH + 1e-9) &&
@@ -245,3 +251,7 @@ export function effectsSound(effects: SocialEffects): boolean {
     shares.every((share) => Number.isFinite(share) && share >= 0 && share <= 1)
   );
 }
+
+/** The most results of meddling one reading carries back (DESIGN.md 78.3), and what each may say. */
+const MEDDLED_KEPT = 64;
+const WEB_DID: readonly string[] = ['couple', 'complicated', 'tense', 'split', 'feud', 'friends', 'awkward', 'none'];

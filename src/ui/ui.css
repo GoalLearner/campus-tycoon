@@ -489,6 +489,12 @@ button:active {
   flex: 1;
 }
 
+/* The Sandbox badge (DESIGN.md 79): the bar a visit uses, in the accent colour, there all the while. */
+.update-row.sandbox-row span {
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .update-button {
   padding: 7px 14px;
   font-size: 12.5px;

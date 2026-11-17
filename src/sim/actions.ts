@@ -7,7 +7,7 @@ import { effectsSound } from './systems/friends';
 import { mainPeopleSound } from './systems/mainWeb';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
-import { meddle } from './systems/meddle';
+import { meddle, meddleResults } from './systems/meddle';
 import type { MeddleId } from './config/meddle';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
 import { scaleOf } from './scale';
@@ -755,7 +755,10 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'socialEffects': {
       if (!effectsSound(action.effects)) return { ok: false, state, error: 'Those effects are out of range.' };
       const next = structuredClone(state);
-      next.web.effects = { ...action.effects };
+      // What the web did with the Meddle menu's asks is told in the paper now, and is not kept (DESIGN.md 78.3).
+      const { meddled, ...effects } = action.effects;
+      next.web.effects = effects;
+      if (meddled && meddled.length > 0) meddleResults(next, meddled);
       return { ok: true, state: next, cost: 0, changed: 0 };
     }
     case 'promoteRegular':
