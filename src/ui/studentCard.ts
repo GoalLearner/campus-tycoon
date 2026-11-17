@@ -1,4 +1,4 @@
-import { courseHistory } from '../sim/systems/registration';
+import { courseHistory, gpaWords } from '../sim/systems/registration';
 import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
@@ -299,6 +299,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   scheduleButton.addEventListener('click', () => session.openSchedule());
   classesRow.line.append(scheduleButton);
   let classesKey = '';
+  let shownHistory: ReturnType<typeof courseHistory> | null = null;
   const club = row('Club');
   // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
   const milestones = row('Four years');
@@ -498,18 +499,21 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     // A study center in reach lifts it. The card says so, because nothing else shows the study center working yet.
     // The ratio as this student meets it: how many of them there are to a member of faculty (DESIGN.md 38).
     const classes = card.classSize > 0 ? ` · classes of ${card.classSize}` : '';
-    // The Dean's list or probation, and this week's classes they went to (DESIGN.md 65.4).
-    const standing = card.deansList ? " · Dean's list" : card.probation ? ' · on academic probation' : '';
-    const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
-    setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
-    // Their classes: worked out from the seed and the campus's registration, once a semester for a card.
+    // Their grades as their transcript has them (R4b, DESIGN.md 81): the average over the semesters already over, the
+    // Dean's list for the last one at 3.5 and up, probation below 2.0; and this week's classes they went to (65.4).
+    // Worked out from the seed and the campus's registration, once a semester for a card.
     const regKey = `${ref.entryYear}:${ref.index}:${state.registration?.records.at(-1)?.semester ?? -1}`;
-    if (regKey !== classesKey) {
+    if (regKey !== classesKey || !shownHistory) {
       classesKey = regKey;
-      const plan = courseHistory(state, ref).semesters.at(-1);
+      shownHistory = courseHistory(state, ref);
+      const plan = shownHistory.semesters.at(-1);
       const missed = plan?.missed.filter((one) => one.needed).length ?? 0;
       setText(classesRow.value, plan && plan.courses.length > 0 ? `${plan.credits} credits: ${plan.courses.map((one) => one.course.code).join(', ')}${missed > 0 ? ` · could not get ${missed === 1 ? 'one they needed' : `${missed} they needed`}` : ''}` : 'None this semester');
     }
+    const standing = gpaWords(shownHistory);
+    const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
+    const latin = shownHistory.latin ? ` · on course for ${shownHistory.latin}` : '';
+    setText(grades.value, `${standing}${card.tutored ? ' · with tutoring' : ''}${latin}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
     const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
     milestones.line.hidden = years.length === 0;

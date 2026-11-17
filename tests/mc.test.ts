@@ -279,7 +279,7 @@ describe('saves', () => {
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(12);
+      expect(notes).toHaveLength(13);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

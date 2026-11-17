@@ -257,7 +257,7 @@ describe('saves', () => {
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(16);
+      expect(notes).toHaveLength(17);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

@@ -34,7 +34,7 @@ interface Ref {
 }
 
 /** One salt per draw, apart from the card's and the majors'. */
-const SALT = { ability: 61, attend: 62, term: 63, week: 64 } as const;
+const SALT = { ability: 61, attend: 62, term: 63, week: 64, termBefore: 65 } as const;
 
 const unit = (seed: number, ref: Ref, salt: number, more?: number): number =>
   ((more === undefined ? hashInts(seed, ref.entryYear, ref.index, salt) : hashInts(seed, ref.entryYear, ref.index, salt, more)) + 0.5) / 4294967297;
@@ -135,6 +135,37 @@ export function gradesOf(seed: number, ref: Ref, inputs: GradeInputs, semester: 
   const gpa = Math.max(GPA_FLOOR, gpaAt(normalCdf(z)));
   const term = Math.max(GPA_FLOOR, gpaAt(normalCdf(Math.sqrt(1 - TERM_NOISE * TERM_NOISE) * z + TERM_NOISE * luck)));
   return { gpa, term, deansList: term >= DEANS_LIST_FROM, probation: gpa < PROBATION_BELOW };
+}
+
+/**
+ * A term's grade point average for any semester (R4b, DESIGN.md 81.1), the game's `semester` as `gradesOf` takes it: R1's
+ * own term for the game's semesters and the one just before the campus's first (a card's last term in its first
+ * semester), and for each before that (a student who entered before the campus began) its own luck, where R1's would be
+ * that same first draw every time.
+ */
+export function termAt(seed: number, ref: Ref, inputs: GradeInputs, semester: number): number {
+  if (semester >= 0) return gradesOf(seed, ref, inputs, semester).term;
+  const luck = normalInv(unit(seed, ref, SALT.termBefore, 1 - semester));
+  return Math.max(GPA_FLOOR, gpaAt(normalCdf(Math.sqrt(1 - TERM_NOISE * TERM_NOISE) * standingZ(seed, ref, inputs) + TERM_NOISE * luck)));
+}
+
+/**
+ * A student's usual term, from where they stand (R4b, DESIGN.md 81.1): the average of their terms' grades over every
+ * luck a term can bring. It sits a little inside their average, since a term cannot go above 4.0 or below the floor.
+ * R4b's letters take each term as the student's average and this term's luck less their usual, so the average over a
+ * transcript keeps R1's spread (NPSAS:16 is of averages over all a student's terms).
+ */
+export function usualTerm(z: number): number {
+  const keep = Math.sqrt(1 - TERM_NOISE * TERM_NOISE);
+  let sum = 0;
+  let weights = 0;
+  for (let i = -12; i <= 12; i++) {
+    const x = i / 4;
+    const w = Math.exp((-x * x) / 2);
+    sum += w * Math.max(GPA_FLOOR, gpaAt(normalCdf(keep * z + TERM_NOISE * x)));
+    weights += w;
+  }
+  return sum / weights;
 }
 
 /** The share of a campus below the probation line, at its teaching: the real figure at typical teaching (DESIGN.md 65.4). */

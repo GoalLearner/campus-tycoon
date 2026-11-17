@@ -6,6 +6,10 @@ import { INTEREST } from '../sim/systems/identity';
 import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socialView';
 import { CLASS_LENGTH } from './campusDay';
 import { courseHistory } from '../sim/systems/registration';
+import { adviserOf, officeHabit, professorFor } from '../sim/systems/coursework';
+import { OFFICE_WEEK } from '../sim/config/coursework';
+import { majorAt, majorPath } from '../sim/systems/majors';
+
 import { clockText } from './clockText';
 
 /**
@@ -53,6 +57,8 @@ export interface DayItem {
   where: Where;
   words: string;
   with: StudentRef[];
+  /** The building it is in, when the day knows it: a class's own hall (R4b, DESIGN.md 81.6). */
+  at?: { x: number; y: number };
 }
 
 const first = (state: GameState, people: Person[]): string[] => firstNamesOf(state, people.map((one) => one.ref));
@@ -116,26 +122,73 @@ export function shiftDays(seed: number, ref: StudentRef, hours: number): number[
   return out;
 }
 
-/** A student's classes on a weekday this semester (R4a, DESIGN.md 80), earliest first: worked out once a semester. */
-function classesOn(state: GameState, ref: StudentRef, weekday: number): Array<{ from: number; to: number; words: string }> {
+interface ClassItem {
+  from: number;
+  to: number;
+  words: string;
+  at?: { x: number; y: number };
+  /** Office hours or an advising appointment (R4b): fitted round their classes, and let go rather than missed. */
+  help?: boolean;
+}
+
+/** A student's week this semester (R4a and R4b, DESIGN.md 80, 81): their classes by weekday, and the help around them. */
+interface Week {
+  days: ClassItem[][];
+  /** Their classes' professors' office hours, the classes going badly first (a grade below a C+, or withdrawn from). */
+  office: Array<{ code: string; professor: string; struggling: boolean; slots: Array<{ day: number; from: number; to: number }>; at?: { x: number; y: number } }>;
+  /** How often they go to office hours at all (Student Voice, 2022). */
+  habit: 'never' | 'some' | 'often';
+  /** Their adviser; an appointment before registration only for the 55% who have one (Student Voice, 2023). */
+  adviser: { name: string; guided: boolean; at?: { x: number; y: number } };
+}
+
+function weekOf(state: GameState, ref: StudentRef): Week {
   const records = state.registration?.records;
   const key = `${state.seed}:${ref.entryYear}:${ref.index}:${records?.length ?? 0}:${records?.at(-1)?.semester ?? -1}`;
   let week = WEEKS.get(key);
   if (!week) {
-    const plan = courseHistory(state, ref).semesters.at(-1);
-    week = [[], [], [], [], [], [], []];
+    const history = courseHistory(state, ref);
+    const plan = history.semesters.at(-1);
+    const days: ClassItem[][] = [[], [], [], [], [], [], []];
     for (const course of plan?.courses ?? []) {
       for (const m of course.meetings) {
-        for (const day of m.days) week[day]!.push({ from: m.from, to: m.to, words: `${course.course.code} ${course.course.title}${m.lab ? ' lab' : ''}` });
+        for (const day of m.days) days[day]!.push({ from: m.from, to: m.to, words: `${course.course.code} ${course.course.title}${m.lab ? ' lab' : ''}`, ...(course.hallAt ? { at: course.hallAt } : {}) });
       }
     }
-    for (const list of week) list.sort((a, b) => a.from - b.from);
+    for (const list of days) list.sort((a, b) => a.from - b.from);
+    const office = (plan?.courses ?? [])
+      .map((course) => ({ code: course.course.code, professor: course.professor, struggling: course.grade !== null && (course.grade.withdrawn || course.grade.points < 2.3), slots: professorFor(state.seed, course.course, course.section).officeHours, ...(course.hallAt ? { at: course.hallAt } : {}) }))
+      .sort((a, b) => Number(b.struggling) - Number(a.struggling));
+    const major = majorAt(majorPath(state.seed, ref), plan?.n ?? 0).subject;
+    const adviser = adviserOf(state.seed, ref, major, Math.floor((plan?.n ?? 0) / 2));
+    const majorHall = plan?.courses.find((course) => course.course.dept === major)?.hallAt;
+    week = { days, office, habit: officeHabit(state.seed, ref), adviser: { name: adviser.name, guided: adviser.guided, ...(majorHall ? { at: majorHall } : {}) } };
     if (WEEKS.size > 200) WEEKS.clear();
     WEEKS.set(key, week);
   }
-  return week[weekday] ?? [];
+  return week;
 }
-const WEEKS = new Map<string, Array<Array<{ from: number; to: number; words: string }>>>();
+const WEEKS = new Map<string, Week>();
+
+/**
+ * Their visit to office hours this week, if they make one (R4b, DESIGN.md 81.3): about once or twice a term for most who
+ * go at all, more for those who go often, and more when a class is going badly, to that class's professor.
+ */
+function officeVisit(state: GameState, ref: StudentRef, week: Week, weekNumber: number): { code: string; professor: string; slot: { day: number; from: number; to: number }; at?: { x: number; y: number } } | null {
+  if (week.habit === 'never' || week.office.length === 0) return null;
+  const struggling = week.office.filter((one) => one.struggling);
+  const chance = (struggling.length > 0 ? OFFICE_WEEK.struggling : OFFICE_WEEK.usual) * (week.habit === 'often' ? 2 : 1);
+  if ((hashInts(state.seed, 9601, ref.entryYear, ref.index, weekNumber) >>> 0) / 4294967296 >= chance) return null;
+  const list = struggling.length > 0 ? struggling : week.office;
+  const pick = hashInts(state.seed, 9602, ref.entryYear, ref.index, weekNumber) >>> 0;
+  const one = list[pick % list.length]!;
+  return { code: one.code, professor: one.professor, slot: one.slots[(pick >>> 9) & 1]!, ...(one.at ? { at: one.at } : {}) };
+}
+
+/** A student's classes on a weekday this semester, earliest first. */
+function classesOn(state: GameState, ref: StudentRef, weekday: number): ClassItem[] {
+  return weekOf(state, ref).days[weekday] ?? [];
+}
 
 /** The regular's day, waking to sleep. */
 export function regularDay(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard): DayItem[] {
@@ -149,9 +202,9 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   const wake = wakeAt % 24;
   const sleep = sleepAt % 24 <= wake ? (sleepAt % 24) + 24 : sleepAt % 24;
   const items: DayItem[] = [];
-  const put = (from: number, to: number, where: Where, words: string, people: Person[] = []): void => {
+  const put = (from: number, to: number, where: Where, words: string, people: Person[] = [], at?: { x: number; y: number }): void => {
     if (to - from < 0.25 || from >= sleep) return;
-    items.push({ from, to: Math.min(to, sleep), where, words, with: people.map((one) => one.ref) });
+    items.push({ from, to: Math.min(to, sleep), where, words, with: people.map((one) => one.ref), ...(at ? { at } : {}) });
   };
 
   // Down with the flu (DESIGN.md 65.5): in bed, out once for soup.
@@ -216,40 +269,86 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     // Their own classes this semester (R4a, DESIGN.md 80), as registration gave them: each at its hour (75.2: on the
     // hour on Mondays, Wednesdays and Fridays, on the half hour on Tuesdays and Thursdays), a lab in the afternoon.
     // Coffee before the first, lunch in the first gap round noon, and a class they slept through is missed.
-    const today = classesOn(state, ref, weekday);
+    const today: ClassItem[] = [...classesOn(state, ref, weekday)];
+    // Help with their classes (R4b, DESIGN.md 81.3), fitted round them: an advising appointment before registration for
+    // those who have one, and office hours in a professor's hours now and then (never for the 28% who never go).
+    const help = weekOf(state, ref);
+    const fitAt = (from: number, to: number, length: number): number | null => {
+      // On the half hour, as the campus's timetable is (75.2).
+      for (let at = Math.ceil(Math.max(from, wake + 1.25) * 2 - 1e-9) / 2; at + length <= to + 1e-9; at += 0.5) {
+        if (today.every((one) => at + length + PASSING_WALK <= one.from + 1e-9 || at >= one.to + PASSING_WALK - 1e-9)) return at;
+      }
+      return null;
+    };
+    const fitIn = (from: number | null, words: string, at?: { x: number; y: number }): void => {
+      if (from === null) return;
+      today.push({ from, to: from + 0.5, words, help: true, ...(at ? { at } : {}) });
+      today.sort((a, b) => a.from - b.from);
+    };
+    const date = dateAt(state.clock);
+    const adviseFrom = 6 + Math.floor(steady(40) * 14);
+    if (help.adviser.guided && (date.month === 10 || date.month === 3) && date.day >= adviseFrom && date.day < adviseFrom + 7 && weekday === 1 + Math.floor(steady(41) * 5)) {
+      fitIn(fitAt(10, 16, 0.5), `Advising appointment with ${help.adviser.name}, before registration`, help.adviser.at);
+    }
+    const visit = officeVisit(state, ref, help, Math.floor(day / 7));
+    if (visit && visit.slot.day === weekday) fitIn(fitAt(visit.slot.from, visit.slot.to, 0.5), `Office hours with ${visit.professor} about ${visit.code}`, visit.at);
     let lunched = false;
-    const lunchAt = (from: number): void => {
+    const lunchAt = (from: number, until = Infinity): void => {
       const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
-      put(from, from + CLASS_LENGTH, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
+      // A full day of classes from late morning: lunch once they are out.
+      put(from, from + CLASS_LENGTH, 'food', meal(`${from >= 14.5 ? 'A late lunch' : 'Lunch'}${withWords(state, lunch)}`, false), lunch);
       t = from + CLASS_LENGTH;
       lunched = true;
-      if (roll(30) < DETAILS.package) {
+      if (roll(30) < DETAILS.package && t + 0.5 <= until) {
         put(t, t + 0.5, 'food', 'Picking up a package at the mailroom');
         t += 0.5;
       }
     };
     let first = true;
+    let missed = false;
     for (const one of today) {
       if (one.from < t - 0.01) {
-        // Not up yet, or up too late: missed.
-        put(one.from, one.to, 'home', slept ? `Slept through ${one.words}` : `Missed ${one.words}`);
+        // Not up yet, or up too late: missed, from when they are up (a class before they woke is in the night before
+        // the day's first hour). Help they were not up for is let go.
+        if (one.help) continue;
+        const from = Math.max(one.from, t);
+        const to = Math.max(one.to, from + 0.25);
+        put(from, to, 'home', slept ? `Slept through ${one.words}` : `Missed ${one.words}`);
+        t = to;
+        missed = true;
         continue;
       }
       const gap = one.from - t;
       if (first) {
-        if (gap >= 0.25) put(t, one.from, 'food', one.from < 9 ? 'Coffee before an 8 AM class' : 'Coffee before class');
+        const coffee = one.from < 9 ? 'Coffee before an 8 AM class' : 'Coffee before class';
+        if (one.from >= 12.5 && gap >= CLASS_LENGTH + PASSING_WALK) {
+          // A first class after noon: the morning to themselves, lunch round noon, and studying until it.
+          const lunchFrom = Math.max(t, Math.min(12, one.from - CLASS_LENGTH - PASSING_WALK));
+          if (lunchFrom - t >= 0.25) put(t, lunchFrom, 'seat', missed ? 'Studying' : 'A morning with no classes: studying');
+          lunchAt(lunchFrom, one.from - PASSING_WALK);
+          if (one.from - t >= 0.5) put(t + PASSING_WALK, one.from, 'seat', one.from - t >= 1.5 ? 'Studying before class' : 'Before class');
+        } else if (gap >= 1.25) {
+          put(t, one.from - 0.5, 'seat', 'Studying before class');
+          put(one.from - 0.5, one.from, 'food', coffee);
+        } else if (gap >= 0.25) put(t, one.from, 'food', coffee);
       } else if (!lunched && one.from >= 12 && t <= 13.5 && gap >= CLASS_LENGTH + PASSING_WALK) {
-        lunchAt(Math.max(t + PASSING_WALK, 11.5));
+        const lunchFrom = Math.max(t + PASSING_WALK, 11.5);
+        if (lunchFrom - t >= 0.5) put(t + PASSING_WALK, lunchFrom, 'seat', 'Studying between classes');
+        lunchAt(lunchFrom, one.from - PASSING_WALK);
         if (one.from - t >= 0.5) put(t + PASSING_WALK, one.from, 'seat', 'Between classes');
+      } else if (!lunched && t >= 11.5 && t <= 14 && gap >= 0.5) {
+        // Too little time for a sit-down lunch: something to eat on the way to the next class.
+        put(t + PASSING_WALK, one.from, 'food', meal('Grabbing lunch between classes', false));
+        lunched = true;
       } else if (gap >= 1.5) put(t + PASSING_WALK, one.from, 'seat', 'Studying between classes');
       else if (gap >= 0.25) put(t + PASSING_WALK, one.from, 'seat', 'Between classes');
-      put(one.from, one.to, 'class', one.words);
+      put(one.from, one.to, 'class', one.words, [], one.at);
       t = one.to;
       first = false;
     }
     if (first) {
-      // No classes today: a morning of their own.
-      put(t, Math.max(t + 1, 11.5), 'seat', 'A morning with no classes: studying');
+      // No classes today (or none they made): a morning of their own.
+      put(t, Math.max(t + 1, 11.5), 'seat', missed ? 'Studying' : 'A morning with no classes: studying');
       t = Math.max(t + 1, 11.5);
     }
     if (!lunched) lunchAt(Math.max(12, t + (first ? 0 : PASSING_WALK)));
@@ -259,6 +358,17 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     t = Math.max(t, 10.5);
     put(t, t + 1.25, 'food', meal(`Brunch${withWords(state, brunch)}`, false), brunch);
     t += 1.5;
+  }
+
+  // Tutoring at the study center (R4b, DESIGN.md 81.3), twice a week after classes, for a class going badly, where there
+  // is a study center in reach.
+  if (!weekend) {
+    const tutoredFor = card.tutored ? weekOf(state, ref).office.find((one) => one.struggling) : undefined;
+    if (tutoredFor && (weekday === 1 || weekday === 3) && t <= 17) {
+      const at = Math.max(t + PASSING_WALK, 15);
+      put(at, at + 1, 'seat', `Tutoring for ${tutoredFor.code} at the study center`);
+      t = at + 1;
+    }
   }
 
   // The afternoon: a weekend shift, the gym, studying, or friends on a lawn. Clubs meet in the evening (75.2).

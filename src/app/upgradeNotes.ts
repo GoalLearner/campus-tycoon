@@ -139,5 +139,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 40) {
     notes.push("Students now register for classes each semester: real courses, full sections, waitlists. Tap Schedule on a student's card to see their week and their course record.");
   }
+  if (fromVersion < 41) {
+    notes.push("Classes now have grades: each with a syllabus, a professor with office hours, and letters on a student's course record. A failed class earns no credit and is taken again.");
+  }
   return notes;
 }

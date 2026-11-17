@@ -1,4 +1,4 @@
-import { registrationWords } from './registration';
+import { gradeWords, registrationWords } from './registration';
 import { calendarAt, GRADUATION_TICK_IN_YEAR } from '../calendar';
 import { commencementLeavers } from './population';
 import { MAX_STAGE, stageSpec } from '../config/buildings';
@@ -161,7 +161,8 @@ function peopleRow(state: GameState, which: 'faculty' | 'staff', fall: number): 
     status,
     line: students > 0 ? `${headCount(have)} of ${headCount(want)} · 1 to ${each}` : 'Nobody is enrolled yet',
     consequence,
-    forecast: `Next fall's students need ${headCount(need)}.`,
+    // What their teaching came to last semester (R4b, DESIGN.md 81.7).
+    forecast: `Next fall's students need ${headCount(need)}.${faculty && gradeWords(state) ? ` ${gradeWords(state)}` : ''}`,
     fixLabel: '',
     fix: faculty ? { kind: 'slider' } : { kind: 'none' },
   };

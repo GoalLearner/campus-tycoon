@@ -6,6 +6,7 @@ import { chaosStepName, chaosStepOf } from '../src/sim/systems/chaos';
 import { WEB_WEEK_TICKS as CHAOS_WEEK_TICKS } from '../src/sim/config/web';
 import { storySpec } from '../src/sim/systems/storyteller';
 import { realismLines } from './realism';
+import { campusGrades } from '../src/sim/systems/registration';
 import { KIND, WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { catchUp, census, newWeb, webWeekOf } from '../src/sim/systems/web';
 import { effectsSound, friendsEffectsOf } from '../src/sim/systems/friends';
@@ -2580,6 +2581,26 @@ function assertModelCampus(seed: number): void {
       "registration lands on the real figures: about 1 in 6 a semester without a course they needed (a quarter to a third in a year), about 14 credits with fewer than half at 15, and a flagship's sections",
       all.length >= runs.length * 10 && short >= 0.14 && short <= 0.25 && most <= 0.45 && credits >= 13.5 && credits <= 15 && fifteen > 0.3 && fifteen < 0.5 && under20 >= 0.28 && under20 <= 0.5 && over50 >= 0.08 && over50 <= 0.25,
       `${all.length} semesters over ${runs.length} runs: ${(100 * short).toFixed(1)}% without a needed course on average (at most ${(100 * most).toFixed(1)}%), ${(100 * (1 - (1 - short) * (1 - short))).toFixed(0)}% in a year; ${credits.toFixed(2)} credits, ${(100 * fifteen).toFixed(0)}% at 15 or more; sections ${(100 * under20).toFixed(0)}% under 20 and ${(100 * over50).toFixed(0)}% of 50 or more`,
+    );
+  }
+
+  // Grades by class, R4b (DESIGN.md 81): each run's last semester's letters, against the real figures (Rojstaczer and
+  // Healy; the Gardner Institute; NPSAS:16, R1's spread; about one in five with a minor).
+  {
+    const all = runs.map((run) => ({ run: `${run.style} ${run.seed}`, grades: campusGrades(run.final) })).filter((one) => one.grades !== null);
+    const mean = (pick: (g: NonNullable<(typeof all)[number]['grades']>) => number): number => all.reduce((sum, one) => sum + pick(one.grades!), 0) / Math.max(1, all.length);
+    const a = mean((g) => g.a);
+    const dfw = mean((g) => g.dfw);
+    const intros = mean((g) => g.hardIntroDfw);
+    const passed = mean((g) => g.passed);
+    const minors = mean((g) => g.minors);
+    const bands = [0, 1, 2, 3, 4, 5].map((i) => mean((g) => g.bands[i]!));
+    const real = [0.04, 0.08, 0.19, 0.29, 0.27, 0.13];
+    const off = Math.max(...bands.map((share, i) => Math.abs(share - real[i]!)));
+    check(
+      "grades land on the real figures: about 43% A's, about 1 in 10 a D, an F or a W, about 3 in 10 in the hard introductory courses, R1's spread of averages, and about one in five with a minor",
+      all.length === runs.length && a >= 0.36 && a <= 0.5 && dfw >= 0.06 && dfw <= 0.15 && intros >= 0.2 && intros <= 0.4 && passed >= 0.9 && minors >= 0.12 && minors <= 0.32 && off <= 0.08,
+      `${all.length} runs' last semesters: ${(100 * a).toFixed(1)}% A's, ${(100 * dfw).toFixed(1)}% D, F or W (${(100 * intros).toFixed(1)}% in the hard introductory courses), ${(100 * passed).toFixed(1)}% of credits passed; averages ${bands.map((share) => Math.round(100 * share)).join('/')} against NPSAS 4/8/19/29/27/13 (off by at most ${(100 * off).toFixed(1)} points); ${(100 * minors).toFixed(0)}% of third- and fourth-years with a minor`,
     );
   }
 
