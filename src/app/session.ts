@@ -75,6 +75,8 @@ class Session {
   room: StudentRef | null = null;
   /** The student whose network is open (DESIGN.md 63.12), or null. */
   network: StudentRef | null = null;
+  /** The student whose classes are open (R4a, DESIGN.md 80), or null. */
+  schedule: StudentRef | null = null;
   /** Quadline, the campus app (DESIGN.md 63.13): its page, the student whose profile it is, the tag the feed shows. */
   quad: { page: 'feed' | 'trending' | 'profile' | 'official'; ref: StudentRef | null; tag: string | null } | null = null;
   /** What that student is doing, as the map shows it. null when they have gone indoors. */
@@ -299,6 +301,19 @@ class Session {
   closeNetwork(): void {
     if (!this.network) return;
     this.network = null;
+    this.emit();
+  }
+
+  /** Open the classes of the student whose card is open (R4a, DESIGN.md 80): this week, registration, the record. */
+  openSchedule(): void {
+    if (!this.student) return;
+    this.schedule = { entryYear: this.student.entryYear, index: this.student.index };
+    this.emit();
+  }
+
+  closeSchedule(): void {
+    if (!this.schedule) return;
+    this.schedule = null;
     this.emit();
   }
 

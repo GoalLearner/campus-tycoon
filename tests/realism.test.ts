@@ -168,7 +168,9 @@ describe('a save from version 30', () => {
     expect(state.cohorts).toEqual([...old.cohorts, 0, 0]);
     expect(state.offCampus).toEqual([...old.offCampus, 0, 0]);
     // Version 33 adds the Chaos meter and its random stream (DESIGN.md 68), and moves nothing else.
-    const { cohorts: _a, offCampus: _b, version: _c, chaos: _g, rng: { chaos: _h, ...rng }, ...rest } = state;
+    // Version 40 adds registration's records (DESIGN.md 80), none yet.
+    expect(state.registration).toEqual({ records: [] });
+    const { cohorts: _a, offCampus: _b, version: _c, chaos: _g, registration: _i, rng: { chaos: _h, ...rng }, ...rest } = state;
     // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
     const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = painted(old);
     expect(rest).toEqual(was);

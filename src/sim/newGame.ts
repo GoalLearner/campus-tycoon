@@ -201,6 +201,7 @@ export function newGame(opts: NewGameOptions): GameState {
     stats: { graduates: 0, yearsCompleted: 0, peakEnrollment: 0 },
     incidents: { active: [], nextId: 1, handled: 0, missed: 0 },
     chaos: newChaos(),
+    registration: { records: [] },
     grounds: { litter: {}, bins: {}, broken: {}, brokenFrom: {}, lamps: {}, lampFrom: {}, workers: {}, lastBreak: {}, quietUntilTick: 0, overflowed: 0, repaired: 0 },
     term: newTerm(0),
     // Filled in just below, from the football random stream.

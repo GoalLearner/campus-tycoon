@@ -240,11 +240,11 @@ describe('the sandbox (C5, DESIGN.md 79)', () => {
     expect(store.hasSandbox).toBe(true);
   });
 
-  it('the fixture is a mature campus of the latest save version', () => {
+  it('the fixture is a mature campus, saved at version 39', () => {
     const parsed = parseSave(MATURE);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.migratedFrom).toBeNull();
+    expect(parsed.migratedFrom === null || parsed.migratedFrom === 39).toBe(true);
     expect(parsed.state.story?.mc).toBeTruthy();
     expect(parsed.state.daily.level).toBeGreaterThanOrEqual(20);
     expect(serialize(parsed.state, savedAt()).length).toBeGreaterThan(200_000);

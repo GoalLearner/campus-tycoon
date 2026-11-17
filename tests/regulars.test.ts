@@ -1,3 +1,4 @@
+import { courseHistory } from '../src/sim/systems/registration';
 import { describe, expect, it } from 'vitest';
 import { itemAt, MEAL_SWIPES, regularDay, shiftDays, sleepHours } from '../src/app/regularDay';
 import { firstNamesOf, happenedTo, peopleOf, viewOf } from '../src/app/socialView';
@@ -155,13 +156,21 @@ describe('a regular’s day', () => {
     }
   });
 
-  it('has classes on a weekday, none at the weekend, and only real people by name', () => {
+  it('has their own classes on a weekday, none at the weekend, and only real people by name', () => {
     const weekday = dateAt(MODEL.clock).weekday;
     expect(dayRead(MODEL.clock).kind === 'break' || dayRead(MODEL.clock).kind === 'summer').toBe(false);
     for (const { ref, day } of days) {
       const classes = day.filter((one) => one.where === 'class');
       if (weekday === 0 || weekday === 6) expect(classes).toHaveLength(0);
-      else expect(classes.length).toBeGreaterThanOrEqual(day[0]!.words === 'Slept through the alarm' ? 1 : 2);
+      else {
+        // Every class their schedule has that day (R4a, DESIGN.md 80): went to, or missed.
+        const plan = courseHistory(MODEL, ref).semesters.at(-1)!;
+        const meetings = plan.courses.flatMap((one) => one.meetings.filter((m) => m.days.includes(weekday)).map(() => one.course.code));
+        const missed = day.filter((one) => /^(Missed|Slept through) [A-Z]+ \d/.test(one.words));
+        // A shift at a campus job in a lab is at a class building too; their classes are the ones by a course code.
+        const theirs = classes.filter((item) => meetings.some((code) => item.words.startsWith(code)));
+        expect(theirs.length + missed.length).toBe(meetings.length);
+      }
       const theirs = new Set(peopleOf(VIEW, MODEL, ref).map((one) => key(one.ref)));
       for (const item of day) for (const one of item.with) expect(theirs.has(key(one))).toBe(true);
     }

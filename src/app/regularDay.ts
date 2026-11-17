@@ -5,6 +5,7 @@ import { semesterOf } from '../sim/systems/students';
 import { INTEREST } from '../sim/systems/identity';
 import { firstNamesOf, idIn, peopleOf, type Person, type WebView } from './socialView';
 import { CLASS_LENGTH } from './campusDay';
+import { courseHistory } from '../sim/systems/registration';
 import { clockText } from './clockText';
 
 /**
@@ -115,6 +116,27 @@ export function shiftDays(seed: number, ref: StudentRef, hours: number): number[
   return out;
 }
 
+/** A student's classes on a weekday this semester (R4a, DESIGN.md 80), earliest first: worked out once a semester. */
+function classesOn(state: GameState, ref: StudentRef, weekday: number): Array<{ from: number; to: number; words: string }> {
+  const records = state.registration?.records;
+  const key = `${state.seed}:${ref.entryYear}:${ref.index}:${records?.length ?? 0}:${records?.at(-1)?.semester ?? -1}`;
+  let week = WEEKS.get(key);
+  if (!week) {
+    const plan = courseHistory(state, ref).semesters.at(-1);
+    week = [[], [], [], [], [], [], []];
+    for (const course of plan?.courses ?? []) {
+      for (const m of course.meetings) {
+        for (const day of m.days) week[day]!.push({ from: m.from, to: m.to, words: `${course.course.code} ${course.course.title}${m.lab ? ' lab' : ''}` });
+      }
+    }
+    for (const list of week) list.sort((a, b) => a.from - b.from);
+    if (WEEKS.size > 200) WEEKS.clear();
+    WEEKS.set(key, week);
+  }
+  return week[weekday] ?? [];
+}
+const WEEKS = new Map<string, Array<Array<{ from: number; to: number; words: string }>>>();
+
 /** The regular's day, waking to sleep. */
 export function regularDay(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard): DayItem[] {
   const day = Math.floor(state.clock.tick / (24 * 60));
@@ -191,42 +213,46 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   }
 
   if (!weekend) {
-    // Classes as the campus keeps them (DESIGN.md 75.2): a lecture on the hour, a seminar on the half hour, each 50
-    // minutes, so a followed student walks in the class changes with everyone else. Lunch in the noon rush.
-    const onHour = (at: number): number => Math.ceil(at - 1e-6);
-    const onHalf = (at: number): number => Math.ceil(at * 2 - 1e-6) / 2;
-    if (slept) {
-      const late = Math.max(10.5, onHalf(t));
-      put(late, late + CLASS_LENGTH, 'class', `A ${card.subject} seminar, the morning lecture missed`);
-      t = late + CLASS_LENGTH;
-    } else {
-      const classFrom = eight ? 8 : Math.max(9, onHour(t));
-      if (classFrom > t) put(t, classFrom, 'food', eight ? 'Coffee before an 8 AM class' : 'Coffee before class');
-      put(classFrom, classFrom + CLASS_LENGTH, 'class', eight ? `An 8 AM ${card.subject} lecture` : `${card.subject} lecture`);
-      t = classFrom + CLASS_LENGTH;
-      // A seminar on the half hour after, when it is out before lunch.
-      const seminar = classFrom + 1.5;
-      if (seminar + CLASS_LENGTH <= 12) {
-        put(t + PASSING_WALK, seminar, 'seat', 'Between classes');
-        put(seminar, seminar + CLASS_LENGTH, 'class', `A ${card.subject} seminar`);
-        t = seminar + CLASS_LENGTH;
+    // Their own classes this semester (R4a, DESIGN.md 80), as registration gave them: each at its hour (75.2: on the
+    // hour on Mondays, Wednesdays and Fridays, on the half hour on Tuesdays and Thursdays), a lab in the afternoon.
+    // Coffee before the first, lunch in the first gap round noon, and a class they slept through is missed.
+    const today = classesOn(state, ref, weekday);
+    let lunched = false;
+    const lunchAt = (from: number): void => {
+      const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
+      put(from, from + CLASS_LENGTH, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
+      t = from + CLASS_LENGTH;
+      lunched = true;
+      if (roll(30) < DETAILS.package) {
+        put(t, t + 0.5, 'food', 'Picking up a package at the mailroom');
+        t += 0.5;
       }
+    };
+    let first = true;
+    for (const one of today) {
+      if (one.from < t - 0.01) {
+        // Not up yet, or up too late: missed.
+        put(one.from, one.to, 'home', slept ? `Slept through ${one.words}` : `Missed ${one.words}`);
+        continue;
+      }
+      const gap = one.from - t;
+      if (first) {
+        if (gap >= 0.25) put(t, one.from, 'food', one.from < 9 ? 'Coffee before an 8 AM class' : 'Coffee before class');
+      } else if (!lunched && one.from >= 12 && t <= 13.5 && gap >= CLASS_LENGTH + PASSING_WALK) {
+        lunchAt(Math.max(t + PASSING_WALK, 11.5));
+        if (one.from - t >= 0.5) put(t + PASSING_WALK, one.from, 'seat', 'Between classes');
+      } else if (gap >= 1.5) put(t + PASSING_WALK, one.from, 'seat', 'Studying between classes');
+      else if (gap >= 0.25) put(t + PASSING_WALK, one.from, 'seat', 'Between classes');
+      put(one.from, one.to, 'class', one.words);
+      t = one.to;
+      first = false;
     }
-    const noon = Math.max(12, t);
-    if (noon - t >= 0.5) put(t + PASSING_WALK, noon, 'seat', 'Between classes');
-    t = noon;
-    const lunch = pick(friends, roll(1) < 0.5 ? 2 : 1, 2);
-    put(t, t + CLASS_LENGTH, 'food', meal(`Lunch${withWords(state, lunch)}`, false), lunch);
-    t += CLASS_LENGTH;
-    if (roll(30) < DETAILS.package) {
-      put(t, t + 0.5, 'food', 'Picking up a package at the mailroom');
-      t += 0.5;
+    if (first) {
+      // No classes today: a morning of their own.
+      put(t, Math.max(t + 1, 11.5), 'seat', 'A morning with no classes: studying');
+      t = Math.max(t + 1, 11.5);
     }
-    if (card.classYear < 2) {
-      const after = onHour(t + PASSING_WALK);
-      put(after, after + CLASS_LENGTH, 'class', `A ${card.subject} class`);
-      t = after + CLASS_LENGTH;
-    }
+    if (!lunched) lunchAt(Math.max(12, t + (first ? 0 : PASSING_WALK)));
   } else {
     // A weekend starts late: brunch from 10:30 at the earliest (75.2).
     const brunch = pick(friends, 2, 3);

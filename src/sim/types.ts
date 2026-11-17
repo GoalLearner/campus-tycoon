@@ -674,6 +674,8 @@ export interface GameState {
   incidents: Incidents;
   /** The chaos sandbox (DESIGN.md 68): the Chaos meter and what it has set going. */
   chaos: ChaosState;
+  /** Registration, a record a semester (the realism pass, R4a, DESIGN.md 80). */
+  registration: { records: RegistrationRecord[] };
   grounds: Grounds;
   term: Term;
   field: Field;
@@ -1553,7 +1555,33 @@ export interface Term {
   fluYear?: number;
 }
 
+/**
+ * Registration for one semester across the campus (DESIGN.md 80.3): how it stood for seats and faculty, how often a
+ * section was full, and what a sample of students run through the cards' own function came away with.
+ */
+export interface RegistrationRecord {
+  semester: number;
+  students: number;
+  /** Seats and faculty against what the students need, 1 for enough. */
+  seats: number;
+  faculty: number;
+  /** The chance a section is full, before who registers first is taken into account. */
+  pFull: number;
+  /** The share who could not get a course they needed. */
+  short: number;
+  /** Credits on average, and the share at 15 or more. */
+  credits: number;
+  fifteen: number;
+  /** Seats waitlisted, and those let in from waitlists. */
+  waitlisted: number;
+  cleared: number;
+  /** The share of sections under 20 students, and of 50 or more. */
+  under20: number;
+  over50: number;
+}
+
 export type LogKind =
+  | 'courses'
   | 'mc'
   | 'alumni'
   | 'inbox'

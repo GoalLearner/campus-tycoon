@@ -15,6 +15,7 @@ import { countEnding, spawnChaos, stepChaos } from './systems/chaos';
 import { stepFootballChaos } from './systems/footballChaos';
 import { stepMeddle } from './systems/meddle';
 import { topUp } from './systems/sandbox';
+import { stepRegistration } from './systems/registration';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
 import { tellMovingOut } from './systems/fourYears';
@@ -131,6 +132,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   // Football's chaos (DESIGN.md 77): a game of ours just over, and the rival's mascot in rivalry week.
   stepFootballChaos(state, log);
   stepMeddle(state, log);
+  // Registration for the coming semester (R4a, DESIGN.md 80).
+  stepRegistration(state, log);
   // A sandbox's money never runs out (DESIGN.md 79).
   if (state.sandbox) topUp(state);
   stepGrounds(state, log);

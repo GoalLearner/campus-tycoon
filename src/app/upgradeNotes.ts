@@ -136,5 +136,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 39) {
     notes.push('New on a campus with goals: Meddle, behind the student count. Throw a campus-wide party, start a rumour, set two students up on a date or cancel classes; or calm things down with a counselling drive, extra security or therapy dogs.');
   }
+  if (fromVersion < 40) {
+    notes.push("Students now register for classes each semester: real courses, full sections, waitlists. Tap Schedule on a student's card to see their week and their course record.");
+  }
   return notes;
 }

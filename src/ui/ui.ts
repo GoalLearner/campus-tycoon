@@ -1,3 +1,4 @@
+import { mountScheduleView } from './scheduleView';
 import { drawMeddlePage } from './meddleUi';
 import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
@@ -581,6 +582,7 @@ export function mountUi(root: HTMLElement): void {
   const studentPanel = mountStudentCard();
   const roomPanel = mountRoomView();
   const networkPanel = mountNetworkView();
+  const schedulePanel = mountScheduleView();
   const quadApp = mountQuadline();
   const personPanel = mountPersonCard();
 
@@ -722,7 +724,7 @@ export function mountUi(root: HTMLElement): void {
 
   const toast = el('div', 'toast');
   const modalRoot = el('div', 'modal-root');
-  root.append(hud, toast, chip, treePicker, pathPicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, quadApp.node, modalRoot);
+  root.append(hud, toast, chip, treePicker, pathPicker, inspector, studentPanel.node, studentPanel.strip, roomPanel.node, networkPanel.node, schedulePanel.node, personPanel.node, placer, modeBar, clearer, buildButton, collectButton, toolbar, quadApp.node, modalRoot);
 
   // --------------------------------------------------------------- toasts --
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2754,6 +2756,7 @@ export function mountUi(root: HTMLElement): void {
       studentPanel.render(null);
       roomPanel.render(null);
       networkPanel.render(null);
+      schedulePanel.render(null);
       quadApp.render(null);
       personPanel.render(null);
       if (!modalOpen) openSetup();
@@ -2767,6 +2770,7 @@ export function mountUi(root: HTMLElement): void {
     studentPanel.render(state);
     roomPanel.render(state);
     networkPanel.render(state);
+    schedulePanel.render(state);
     quadApp.render(state);
     personPanel.render(state);
     renderModeBar();

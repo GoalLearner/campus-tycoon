@@ -354,6 +354,13 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         if (entry.data?.id === 'welcomeWeek' && entry.data?.begins === 1) out.push({ weight: 45, headline: 'Welcome Week: New Students Move In; Boxes Briefly Outnumber People', deck: entry.text });
         if (entry.data?.id === 'parentsWeekend' && entry.data?.begins === 1) out.push({ weight: 45, headline: "Parents' Weekend: Families Fill the Dining Halls; Rooms Tidied for the First Time", deck: entry.text });
         break;
+      case 'courses': {
+        // Registration (R4a, DESIGN.md 80.3): how many went without a course they needed.
+        const short = Number(entry.data?.short ?? 0);
+        const headline = short < 0.2 ? 'Registration Done: Most Get Their Classes, and the Big Introductions Fill First' : short < 0.35 ? 'Registration Crunch: One in Four Shut Out of a Class They Needed' : 'Registration Scramble: Classes Full Before Most Could Sign Up';
+        out.push({ weight: 46, headline, deck: entry.text });
+        break;
+      }
       case 'housing':
         // Moving off campus (R2, DESIGN.md 66.3).
         out.push({ weight: 47, headline: 'Returning Students Trade Halls for Apartments in Town; Moving Carts in Short Supply', deck: entry.text });
