@@ -120,7 +120,8 @@ async function withdraw(): Promise<void> {
 /** What would be handed to the phone if the app went to the background now. */
 export function plannedNotices(): Notice[] {
   const chosen = noticeSetting();
-  if (!chosen.on || !store.hasGame || store.visiting !== null) return [];
+  // None from a visit or the sandbox (DESIGN.md 79): what is ready there is nothing to wake the player for.
+  if (!chosen.on || !store.hasGame || store.visiting !== null || store.inSandbox) return [];
   const state = store.state;
   return planNotices(state, { perDay: chosen.perDay, wakeHour: wakeHourOf(state.clock.anchor), offsetMinutes: -new Date().getTimezoneOffset() });
 }

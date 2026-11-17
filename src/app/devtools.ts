@@ -3,6 +3,7 @@ import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS,
 import { addTimer, cancelTimers } from '../sim/timers';
 import { MEDDLE, type MeddleId } from '../sim/config/meddle';
 import { meddle } from '../sim/systems/meddle';
+import { makeSandbox } from '../sim/systems/sandbox';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
 import { socialWeb } from './socialWeb';
@@ -880,6 +881,15 @@ export function installDevTools(): void {
         meddle(stirred, id);
       }
       store.adopt(stirred, { ephemeral: true });
+    }
+    // &sandbox shows the campus as a sandbox (DESIGN.md 79), for pictures: its rules, the badge and its Menu. A demo is
+    // never written anywhere, so no slot is touched.
+    if (params.has('sandbox') && store.hasGame) {
+      const sand = structuredClone(store.state);
+      makeSandbox(sand);
+      store.adopt(sand, { ephemeral: true });
+      store.slot = 'sandbox';
+      store.slots = { open: 'sandbox', names: { real: 'Test University', sandbox: sand.school.name } };
     }
     // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.
     const grow = Number(params.get('grow') ?? 0);
