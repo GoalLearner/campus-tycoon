@@ -73,7 +73,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -728,6 +728,7 @@ describe('a save from version 16', () => {
     expected.web = webMetaFor(expected);
     sixClassYears(expected);
     withChaos(expected);
+    withRegistration(expected);
     withLanes(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();

@@ -40,7 +40,7 @@ import { landRankGoals } from '../src/sim/systems/goals';
 import { approvalAt } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 /**
  * Greek Row (DESIGN.md 14.1, adapted and built in section 51): chapter houses
@@ -352,6 +352,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();

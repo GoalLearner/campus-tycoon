@@ -146,6 +146,11 @@ export function withChaos(state: GameState): void {
   if (typeof state.rng.chaos !== 'number') state.rng.chaos = seedStreams(state.seed).chaos;
 }
 
+/** What version 40 adds to an older save (DESIGN.md 80): registration's records, none yet. */
+export function withRegistration(state: GameState): void {
+  if (!state.registration) state.registration = { records: [] };
+}
+
 /** What version 37 does to an older save (DESIGN.md 74.5): a lane painted on every walk, once, free. */
 export function withLanes(state: GameState): void {
   paintWalks(state.map);

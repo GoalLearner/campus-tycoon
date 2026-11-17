@@ -56,7 +56,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { captionLayout, photoFileName } from '../src/app/photo';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from '../src/ui/decorUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes, painted } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted } from './helpers';
 
 /**
  * Decorations, the Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6,
@@ -693,6 +693,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();

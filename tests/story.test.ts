@@ -24,7 +24,7 @@ import { budget } from '../src/sim/systems/budget';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 /**
  * The story system (DESIGN.md 53.3 to 53.6, as built in section 58): arcs and
@@ -261,6 +261,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();

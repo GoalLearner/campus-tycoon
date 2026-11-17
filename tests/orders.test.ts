@@ -51,7 +51,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { footballStat, inboxStat, policyStat, shortLeft } from '../src/ui/chips';
 import { ordersChip, ordersView, paidWords } from '../src/ui/ordersUi';
-import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes, painted } from './helpers';
+import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted } from './helpers';
 
 /**
  * The orders board (DESIGN.md 42.3, as built from 42.16). Things to do, where
@@ -834,6 +834,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();

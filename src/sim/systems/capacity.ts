@@ -1,3 +1,4 @@
+import { registrationWords } from './registration';
 import { calendarAt, GRADUATION_TICK_IN_YEAR } from '../calendar';
 import { commencementLeavers } from './population';
 import { MAX_STAGE, stageSpec } from '../config/buildings';
@@ -264,7 +265,8 @@ export function capacity(state: GameState): Capacity {
       status,
       line: `${headCount(students)} of ${headCount(have)} taken`,
       consequence,
-      forecast: `Next fall's students need ${headCount(Math.max(wanted, fall))}.`,
+      // What seats short or long mean when students register (R4a, DESIGN.md 80.3).
+      forecast: `Next fall's students need ${headCount(Math.max(wanted, fall))}.${registrationWords(state) ? ` ${registrationWords(state)}` : ''}`,
       fixLabel: zoning ? 'Zone Academic lots' : 'See the Academics plan',
       fix: zoning ? { kind: 'zone', zone: 'academic' } : { kind: 'plan', zone: 'academic' },
     });

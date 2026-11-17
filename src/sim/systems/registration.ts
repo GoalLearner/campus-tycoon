@@ -241,7 +241,8 @@ function meetingsOf(seed: number, course: Course, section: number): Meeting[] {
     ? [{ days: [2, 4], from: TTH_HOURS[Math.floor(h(2) * TTH_HOURS.length)]!, to: 0, lab: false }]
     : [{ days: [1, 3, 5], from: MWF_HOURS[Math.floor(h(2) * MWF_HOURS.length)]!, to: 0, lab: false }];
   out[0]!.to = out[0]!.from + 50 / 60;
-  if (course.lab) out.push({ days: [1 + Math.floor(h(3) * 4)], from: LAB.from, to: LAB.from + LAB.hours, lab: true });
+  // The lab on a day the lecture does not meet: a Tuesday or Thursday for a Monday-Wednesday-Friday course, else a Monday or Wednesday.
+  if (course.lab) out.push({ days: [tth ? (h(3) < 0.5 ? 1 : 3) : h(3) < 0.5 ? 2 : 4], from: LAB.from, to: LAB.from + LAB.hours, lab: true });
   return out;
 }
 
@@ -497,4 +498,15 @@ function percentWords(share: number): string {
 export function latestRegistration(state: GameState): RegistrationRecord | null {
   const records = state.registration?.records ?? [];
   return records.length > 0 ? records[records.length - 1]! : null;
+}
+
+/**
+ * The latest registration in a line, for the Capacity page's seats (80.3): "At registration for the spring, 1 in 6 could
+ * not get a course they needed and most took 14.2 credits." Empty before there is one.
+ */
+export function registrationWords(state: GameState): string {
+  const record = latestRegistration(state);
+  if (!record) return '';
+  const term = record.semester % 2 === 0 ? 'fall' : 'spring';
+  return `At registration for the ${term}, ${percentWords(record.short)} could not get a course they needed and most took ${record.credits.toFixed(1)} credits.`;
 }
