@@ -129,31 +129,40 @@ describe('football chaos', () => {
     expect(whistle(rented).some((entry) => entry.data?.football === 1 || entry.data?.football === 2)).toBe(false);
   });
 
-  it('storms the field after a win that is a moment: an upset, the sixth win (a bowl is certain), and the win that clinches the division', () => {
+  it("storms the field after a win that is a moment: an upset always, the season's clinching win (a bowl, the division) about half the time, once a season", () => {
     const stormedBy = (state: GameState): boolean => whistle(state).some((entry) => entry.data?.football === 1 || entry.data?.football === 2);
     // An upset: a team rated above ours, beaten at home.
     const upset = withStadium(false);
     played(upset, 3, true, 17, 14, true);
     expect(stormedBy(upset)).toBe(true);
-    // The sixth win of the regular season, at home: five before it, long over.
-    const sixth = withStadium(false);
-    for (let slot = 0; slot < 5; slot++) {
-      const old = played(sixth, slot, slot % 2 === 0, 21, 7);
-      old.kick = sixth.clock.tick - 3000 - slot;
+    // The sixth win of the regular season at home (a bowl is certain), and the division won for certain by a home win.
+    let sixths = 0;
+    let clinches = 0;
+    for (let seed = 0; seed < 40; seed++) {
+      const sixth = withStadium(false);
+      sixth.rng.chaos = seed * 7907 + 11;
+      for (let slot = 0; slot < 5; slot++) {
+        const old = played(sixth, slot, slot % 2 === 0, 21, 7);
+        old.kick = sixth.clock.tick - 3000 - slot;
+      }
+      played(sixth, 5, true, 21, 14);
+      if (stormedBy(sixth)) sixths += 1;
+      expect(sixth.chaos.clinchedSeason).toBe(1);
+      const clinch = withStadium(false);
+      clinch.rng.chaos = seed * 6151 + 29;
+      const mine = clinch.football.divisions.find((division) => division.includes(-1))!;
+      clinch.football.season!.table = Object.fromEntries(mine.map((team) => [String(team), team === -1 ? { w: 4, l: 0, cw: 4, cl: 0, dw: 3, dl: 0 } : { w: 1, l: 3, cw: 1, cl: 3, dw: 0, dl: 3 }]));
+      played(clinch, 4, true, 17, 13);
+      if (stormedBy(clinch)) clinches += 1;
+      expect(clinch.chaos.clinchedSeason).toBe(1);
+      // Once a season: a later home win with the season clinched is no storming.
+      played(clinch, 6, true, 17, 13).kick = clinch.clock.tick - 20;
+      expect(stormedBy(clinch)).toBe(false);
     }
-    played(sixth, 5, true, 21, 14);
-    expect(stormedBy(sixth)).toBe(true);
-    // The division won for certain by this home win: more division wins than any rival in it could still reach.
-    const clinch = withStadium(false);
-    const f = clinch.football;
-    const mine = f.divisions.find((division) => division.includes(-1))!;
-    clinch.football.season!.table = Object.fromEntries(mine.map((team) => [String(team), team === -1 ? { w: 4, l: 0, cw: 4, cl: 0, dw: 3, dl: 0 } : { w: 1, l: 3, cw: 1, cl: 3, dw: 0, dl: 3 }]));
-    played(clinch, 4, true, 17, 13);
-    expect(stormedBy(clinch)).toBe(true);
-    expect(clinch.chaos.clinchedSeason).toBe(1);
-    // Once a season: a later home win with the division long won is no storming.
-    played(clinch, 6, true, 17, 13).kick = clinch.clock.tick - 20;
-    expect(stormedBy(clinch)).toBe(false);
+    for (const count of [sixths, clinches]) {
+      expect(count).toBeGreaterThan(10);
+      expect(count).toBeLessThan(30);
+    }
   });
 
   it('brings couches into the street now and then after a big win or a rivalry loss, by a dorm, for a while, and pays to haul them back', () => {

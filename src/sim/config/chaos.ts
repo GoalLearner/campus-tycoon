@@ -90,7 +90,9 @@ export const LETTER = { days: 2, rest: 1, reward: 40_000, dip: 2, dipWeeks: 10 }
  * [T] Football chaos, stop C3 (DESIGN.md 77). Every number is checked in the long run: the usual players stay Calm to
  * Lively, and every effect is capped and fades (the owner's answer 8).
  *
- * - Goalposts: after a field storming (a big home win at the campus's own stadium), the chance they come down and are
+ * - Stormings (77.2): the season's clinching win at home is stormed this often; the rival beaten at home and an upset
+ *   always are.
+ * - Goalposts: after a field storming, the chance they come down and are
  *   carried off, by whether Campus Safety reaches the stadium; and what new ones cost, in the small game, times the
  *   campus scale.
  * - Street celebrations: after a big win, or a loss in the rivalry, the chance of couches dragged into the street outside
@@ -100,6 +102,7 @@ export const LETTER = { days: 2, rest: 1, reward: 40_000, dip: 2, dipWeeks: 10 }
  *   long until Campus Safety drives it home, in ticks.
  */
 export const FOOTBALL_CHAOS = {
+  clinchStorm: 0.5,
   goalposts: { reached: 0.15, none: 0.7 },
   goalpostBill: 25_000,
   street: { win: 0.4, rivalryLoss: 0.55, reached: 0.35, after: 45, lasts: 90 },

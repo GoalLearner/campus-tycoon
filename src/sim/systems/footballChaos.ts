@@ -117,12 +117,13 @@ function afterGame(state: GameState, game: Game, log: LogEntry[]): void {
   const big = bigWin(game);
   const plot = f.stadium.plot === null ? null : state.map.placed[f.stadium.plot];
   // The season's clinching win: the first time this season the division is won for certain (the way to the title game)
-  // or a bowl is (the sixth win), whichever comes first. Once a season, and stormed only if this game was a home win.
+  // or a bowl is (the sixth win), whichever comes first. Once a season; if it was a home win the crowd storms the field
+  // about half the time (a draw from chaos's own stream): not every clinch is a moment.
   const season = f.season;
   let clinched = false;
   if (season && c.clinchedSeason !== season.year && game.slot >= 0 && game.slot < 10 && (divisionClinched(state) || regularWins(state) >= BOWL_WINS)) {
     c.clinchedSeason = season.year;
-    clinched = won;
+    clinched = won && game.home && nextFloat(state.rng, 'chaos') < FOOTBALL_CHAOS.clinchStorm;
   }
   // The field stormed: a win that is a moment, at home, at the campus's own stadium.
   if (stormed(game, clinched) && f.stadium.tier >= 1 && plot) {
@@ -132,15 +133,17 @@ function afterGame(state: GameState, game: Game, log: LogEntry[]): void {
     c.storm = { at: tick, goalposts };
     const spirit = lift(state);
     const opp = teamName(state, game.opp);
+    // Why it was stormed, for the long run's count: the rival, an upset, or the season's clinch.
+    const why = game.slot === RIVALRY_SLOT ? 1 : clinched ? 3 : 2;
     const score = `${sum(game.us)}-${sum(game.them)}`;
     if (goalposts) {
       const bill = FOOTBALL_CHAOS.goalpostBill * scaleOf(state);
       state.money.cash -= bill;
       c.tally.goalposts += 1;
       if (!reached) c.missed.goalposts += 1;
-      log.push({ tick, kind: 'chaos', text: `Fans stormed the field after the ${score} win over ${opp}, and the goalposts came down and went for a walk across campus. New ones cost ${dollarsShort(bill)}.${spirit ? ' Spirit is up.' : ''}`, data: { football: 2, spirit: spirit ? 1 : 0 } });
+      log.push({ tick, kind: 'chaos', text: `Fans stormed the field after the ${score} win over ${opp}, and the goalposts came down and went for a walk across campus. New ones cost ${dollarsShort(bill)}.${spirit ? ' Spirit is up.' : ''}`, data: { football: 2, spirit: spirit ? 1 : 0, why, gap: game.oppRating - game.rating } });
     } else {
-      log.push({ tick, kind: 'chaos', text: `Fans stormed the field after the ${score} win over ${opp}${reached ? ', and Campus Safety kept the goalposts standing' : ''}.${spirit ? ' Spirit is up.' : ''}`, data: { football: 1, spirit: spirit ? 1 : 0 } });
+      log.push({ tick, kind: 'chaos', text: `Fans stormed the field after the ${score} win over ${opp}${reached ? ', and Campus Safety kept the goalposts standing' : ''}.${spirit ? ' Spirit is up.' : ''}`, data: { football: 1, spirit: spirit ? 1 : 0, why, gap: game.oppRating - game.rating } });
     }
   }
   // Couches in the street: after a big win, or a loss in the rivalry, wherever the game was.
