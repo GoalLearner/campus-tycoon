@@ -856,7 +856,8 @@ export function installDevTools(): void {
       if (footballChaos.includes('mascot')) wild.chaos.mascot = { at: tick, until: tick + 240 };
       if (params.has('rivalryday')) {
         f.season ??= { year: Math.max(1, wild.clock.week.year), games: [], table: {}, pending: [], played: 0, champion: null, bowl: '', closed: false, streak: 0 };
-        f.season.games.push({ slot: 9, label: '', opp: f.rival, home: true, kick: tick + 30, us: [], them: [], crowd: 0, seats: 0, rating: 50, oppRating: 50, gap: '', done: false });
+        // First, so the map reads it as today's home game before any other home game the calendar has near.
+        f.season.games.unshift({ slot: 9, label: '', opp: f.rival, home: true, kick: tick + 30, us: [], them: [], crowd: 0, seats: 0, rating: 50, oppRating: 50, gap: '', done: false });
       }
       store.adopt(wild, { ephemeral: true });
     }
