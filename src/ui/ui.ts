@@ -892,6 +892,12 @@ export function mountUi(root: HTMLElement): void {
       const remind = el('p', 'backup-reminder', '');
       const tellStorage = (): void => {
         void isStoragePersistent().then((kept) => {
+          // A sandbox has no backups to export (DESIGN.md 79): its reminders are the player's own campus's.
+          if (store.inSandbox) {
+            remind.classList.remove('show');
+            note.textContent = '';
+            return;
+          }
           if (isNative) {
             note.textContent = 'Your save is kept on this device. Export a save to move it to another one.';
             return;
