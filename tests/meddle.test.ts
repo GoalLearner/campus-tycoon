@@ -3,15 +3,16 @@ import { advance, applyAction, newGame, parseSave, serialize, toneProblem, TICK_
 import { MEDDLE, MEDDLE_BY_ID, MEDDLE_EFFECT, type MeddleId } from '../src/sim/config/meddle';
 import { hardLineProblem } from '../src/sim/config/hardLines';
 import { KIND } from '../src/sim/config/web';
-import { MEDDLE_HEADLINES } from '../src/sim/newspaper';
+import { MEDDLE_HEADLINES, MEDDLE_WEB_HEADLINES } from '../src/sim/newspaper';
+import { friendsEffectsOf } from '../src/sim/systems/friends';
 import { MIGRATIONS, SAVE_VERSION } from '../src/sim/save';
 import { scaleOf } from '../src/sim/scale';
 import { happyParts, stressOff, callsLift } from '../src/sim/systems/boosts';
 import { chaosReach } from '../src/sim/systems/chaos';
 import { campusLevels } from '../src/sim/systems/happiness';
-import { cooldownLeft, meddle, meddleShowing, meddleCalm, meddleProblem, meddleRein, meddleStress, meddleTemper, meddleView, prankWarDorms, stepMeddle } from '../src/sim/systems/meddle';
+import { WEB_LINES, cooldownLeft, meddle, meddleShowing, meddleCalm, meddleProblem, meddleRein, meddleStress, meddleTemper, meddleView, prankWarDorms, stepMeddle } from '../src/sim/systems/meddle';
 import { stressRead, weatherAt } from '../src/sim/systems/season';
-import { applyAsks, idOf, newWeb, catchUp, webWeekOf, type Web } from '../src/sim/systems/web';
+import { applyAsks, idOf, newWeb, catchUp, refAt, webWeekOf, type Web } from '../src/sim/systems/web';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chooseLawnKind, lawnWords, partyTonight, showingOut } from '../src/app/lawnLife';
 import type { LogEntry } from '../src/sim/types';
@@ -230,6 +231,7 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
 
   it('tells it all in comic words, inside the tone guide and its hard lines, and the paper has a headline for each', () => {
     const lines: string[] = [];
+    const allLines: string[] = [];
     for (const spec of MEDDLE) {
       for (const text of [spec.name, spec.line, spec.good, spec.bad]) lines.push(text);
       for (let k = 0; k < 6; k++) {
@@ -245,6 +247,15 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
       }
     }
     expect(MEDDLE_HEADLINES).toHaveLength(MEDDLE.length);
+    // Every line a rumour, a date or roommates can end with, and its headline.
+    for (const [tool, lines] of Object.entries(WEB_LINES)) {
+      for (const [did, line] of Object.entries(lines!)) {
+        const headline = MEDDLE_WEB_HEADLINES[MEDDLE.findIndex((spec) => spec.id === tool)]?.[did];
+        expect(headline, `${tool} ${did}`).toBeTruthy();
+        allLines.push(line, headline!);
+      }
+    }
+    lines.push(...allLines);
     for (const line of lines) {
       expect(toneProblem(line), line).toBeNull();
       expect(hardLineProblem(line), line).toBeNull();
@@ -252,18 +263,72 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
     }
   });
 
-  it('tells the paper the next tick, and an outcome that takes a night when the night is out', () => {
+  it('tells the paper the next tick, and an outcome that takes a while when it is over', () => {
     const state = model();
-    told(state, 'date');
+    told(state, 'prankWar');
     const log: LogEntry[] = [];
     state.clock.tick += 1;
     stepMeddle(state, log);
-    expect(log).toHaveLength(0);
-    state.clock.tick += 8 * 60;
-    stepMeddle(state, log);
     expect(log).toHaveLength(1);
     expect(log[0]!.kind).toBe('chaos');
+    state.clock.tick += 7 * DAY;
+    stepMeddle(state, log);
+    expect(log).toHaveLength(2);
+    expect(log[1]!.data?.outcome).toBe(2);
     expect(state.chaos.meddle.news).toHaveLength(0);
+  });
+
+  it('says what the social web did with a rumour, a date or roommates, never what was asked: the taken case is a complicated friendship', () => {
+    const state = advance(model(), T0, T0 + DAY * TICK_MS).state;
+    const week = webWeekOf(state);
+    const web: Web = newWeb(state.seed, 1024);
+    catchUp(web, state, week);
+    // Someone already dating, and someone single of their class: a rumour asks the web to make them a couple.
+    const kindAt = (id: number, k: number): number => web.kind[id * 12 + k]!;
+    const partnered = (id: number): boolean => Array.from({ length: 12 }, (_, k) => kindAt(id, k)).some((kind) => kind >= KIND.dating && kind <= KIND.longterm && web.other[id * 12 + Array.from({ length: 12 }, (_, j) => j).find((j) => kindAt(id, j) === kind)!]! >= 0);
+    let taken = -1;
+    for (let id = 0; id < web.n && taken < 0; id++) if (web.year[id]! >= 0 && id !== web.mainId && partnered(id)) taken = id;
+    expect(taken).toBeGreaterThanOrEqual(0);
+    let single = -1;
+    for (let id = taken + 1; id < web.n && single < 0; id++) if (web.year[id]! === web.year[taken]! && id !== web.mainId && !partnered(id)) single = id;
+    expect(single).toBeGreaterThanOrEqual(0);
+    const a = refAt(web, taken);
+    const b = refAt(web, single);
+    state.chaos.meddle.asks.push({ id: 4242, tool: 'rumour', kind: 'couple', a, b, week: week + 1 });
+    web.week += 1;
+    web.asked = [];
+    applyAsks(web, state.chaos.meddle.asks);
+    expect(web.asked).toEqual([{ id: 4242, did: 'complicated' }]);
+    expect(partnered(taken)).toBe(true);
+    // The campus reads it back: the paper says what was done, and the ask is gone.
+    const effects = friendsEffectsOf(web)!;
+    expect(effects.meddled).toEqual([{ id: 4242, did: 'complicated' }]);
+    const done = applyAction(state, { type: 'socialEffects', effects: { ...effects, week: week + 1 } });
+    expect(done.ok).toBe(true);
+    if (!done.ok) return;
+    expect(done.state.web.effects?.meddled).toBeUndefined();
+    expect(done.state.chaos.meddle.asks.find((one) => one.id === 4242)).toBeUndefined();
+    const line = done.state.chaos.meddle.news.at(-1)!;
+    expect(line.text).toMatch(/one of them is with someone else: they are friends, and it is complicated/);
+    expect(line.text).not.toMatch(/couple now/);
+    expect(line.data).toEqual({ meddle: MEDDLE.findIndex((spec) => spec.id === 'rumour') + 1, did: 'complicated' });
+    expect(MEDDLE_WEB_HEADLINES[1]!.complicated).toMatch(/Complicated/);
+    // Two single students with room for one more tie: a couple, and the paper says so.
+    const free = (id: number): boolean => Array.from({ length: 12 }, (_, k) => web.other[id * 12 + k]).some((other) => other === -1);
+    const singles: number[] = [];
+    for (let id = 0; id < web.n && singles.length < 2; id++) {
+      if (web.year[id]! === web.year[taken]! && id !== web.mainId && id !== taken && id !== single && !partnered(id) && free(id)) singles.push(id);
+    }
+    expect(singles).toHaveLength(2);
+    web.asked = [];
+    applyAsks(web, [{ id: 5151, tool: 'date', kind: 'couple', a: refAt(web, singles[0]!), b: refAt(web, singles[1]!), week: web.week }]);
+    expect(web.asked).toEqual([{ id: 5151, did: 'couple' }]);
+    // A player is never told how it landed before the web has done it.
+    for (const id of ['rumour', 'date', 'roommates'] as const) {
+      const fresh = model();
+      expect(told(fresh, id)).toMatch(/within a game week/);
+      expect(fresh.chaos.meddle.news).toHaveLength(0);
+    }
   });
 
   it('is an action: paid, noted, and the state as it was when it cannot be done', () => {

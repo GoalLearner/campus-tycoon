@@ -5,7 +5,7 @@ import { WEB_WEEK_TICKS } from '../config/web';
 import { dollarsShort, duration } from '../format';
 import { hashInts } from '../rng';
 import { scaleOf } from '../scale';
-import type { Boost, Building, GameState, LogEntry, MeddleRun, MeddleState, Placed, WebAsk } from '../types';
+import type { Boost, Building, GameState, LogEntry, MeddleRun, MeddleState, Placed, WebAsk, WebDid } from '../types';
 import { beginChaos, chaosOn } from './chaos';
 import { liftSpirit } from './footballChaos';
 import { isMessSpot } from './grounds';
@@ -102,8 +102,64 @@ function tell(state: GameState, at: number, text: string, tool: MeddleId, outcom
   state.chaos.meddle.news.push({ at, text, data: { meddle: INDEX[tool] + 1, outcome } });
 }
 
-function ask(state: GameState, kind: WebAsk['kind'], a: StudentRef, b: StudentRef): void {
-  state.chaos.meddle.asks.push({ kind, a, b, week: Math.floor(state.clock.tick / WEB_WEEK_TICKS) + 1 });
+/** An ask for the social web, carried out at its next week; numbered by the tick and the tool, so what it did can be told. */
+function ask(state: GameState, tool: MeddleId, kind: WebAsk['kind'], a: StudentRef, b: StudentRef): void {
+  const tick = state.clock.tick;
+  state.chaos.meddle.asks.push({ id: tick * 32 + INDEX[tool], tool, kind, a, b, week: Math.floor(tick / WEB_WEEK_TICKS) + 1 });
+}
+
+/**
+ * What the paper says once the web has carried out a rumour, a date or roommates (DESIGN.md 78.3): what the web did,
+ * never what was asked. Never a student's name. A tool missing here, or an outcome it cannot have, says nothing.
+ */
+export const WEB_LINES: Readonly<Partial<Record<MeddleId, Partial<Record<WebDid, string>>>>> = {
+  rumour: {
+    couple: 'A rumour about two students went round the dining halls, and it turned out to be true: they are a couple now.',
+    complicated: 'A rumour paired two students up, but one of them is with someone else: they are friends, and it is complicated.',
+    tense: 'A rumour went round the dining halls, and two students are not speaking for now.',
+    split: 'A rumour about a student reached their partner, and the couple split up; friends are picking sides.',
+    feud: 'A rumour about two students started a feud between them, and their friends are taking sides.',
+    none: 'A rumour about two students went round the dining halls and came to nothing.',
+  },
+  date: {
+    couple: 'Two students set up on a date clicked, and a second one is already planned.',
+    complicated: 'Two students set up on a date got on well, but one of them is with someone else: friends for now, and it is complicated.',
+    awkward: 'Two students set up on a date had an awkward night: polite talk, long pauses and an early goodnight.',
+    none: 'A date was set up for two students, and it never happened: one of them had a study group.',
+  },
+  roommates: {
+    friends: 'A night owl and an early riser were put in one room. Against every prediction, they are friends for life.',
+    tense: 'A night owl and an early riser were put in one room: the alarm goes at six, the music at two.',
+    feud: 'A night owl and an early riser were put in one room, and now their whole floor has chosen a side.',
+    none: 'Two students were put in one room, and so far they have hardly crossed paths.',
+  },
+};
+
+/**
+ * What the web did with the Meddle menu's asks, as it reads them back (78.3): each ask of a rumour, a date or roommates
+ * is told in the paper with what was done, and dropped. Roommates who fall out bring a shouting match at a dorm then.
+ */
+export function meddleResults(state: GameState, results: ReadonlyArray<{ id: number; did: WebDid }>): void {
+  const m = state.chaos?.meddle;
+  if (!m || m.asks.length === 0) return;
+  const tick = state.clock.tick;
+  for (const result of results) {
+    const at = m.asks.findIndex((one) => one.id === result.id);
+    if (at < 0) continue;
+    const one = m.asks[at]!;
+    m.asks.splice(at, 1);
+    const tool = one.tool;
+    const text = tool ? WEB_LINES[tool]?.[result.did] : undefined;
+    if (!tool || !text) continue;
+    if (tool === 'roommates' && result.did === 'feud' && chaosOn(state)) {
+      const halls = dorms(state);
+      if (halls.length > 0) {
+        const hall = halls[Math.floor(share(hashInts(state.seed, result.id, 11)) * halls.length)]!;
+        beginChaos(state, 'shouting', 0, share(hashInts(state.seed, result.id, 12)), [hall.id]);
+      }
+    }
+    m.news.push({ at: tick + 1, text, data: { meddle: INDEX[tool] + 1, did: result.did } });
+  }
 }
 
 /** Litter at the mess spots nearest the middle of the campus: the `spots` nearest, `amount` each, to their ceiling. */
@@ -154,60 +210,24 @@ export function meddle(state: GameState, id: MeddleId): string | Meddled {
       return { told: `The party is on: every hall and every quad, all night. Expect noise, mess and a call or two for Campus Safety.` };
     }
     case 'rumour': {
+      // What the web is asked to do; the paper says what it did once it has (78.3), so the player is told only that it is
+      // going round.
       const e = MEDDLE_EFFECT.rumour;
       const [a, b] = pair(state, h, false);
-      const who = `${name(a)} and ${name(b)}`;
-      if (roll < e.couple) {
-        ask(state, 'couple', a, b);
-        tell(state, tick + 12 * HOUR, 'A rumour about two students went round the dining halls, and it turned out to be true: they are a couple now.', id, 1);
-        return { told: `The rumour about ${who} went round, and it turned out to be true: they are a couple now.` };
-      }
-      if (roll < e.couple + e.tense) {
-        ask(state, 'tense', a, b);
-        tell(state, tick + 12 * HOUR, 'A rumour about two students went round the dining halls; they are not speaking for now.', id, 2);
-        return { told: `The rumour about ${who} went round. They are not speaking for now.` };
-      }
-      if (roll < e.couple + e.tense + e.split) {
-        ask(state, 'split', a, b);
-        tell(state, tick + 12 * HOUR, "A rumour about a student reached their partner, and the couple split up; friends are picking sides.", id, 3);
-        return { told: `The rumour about ${who} reached ${name(a)}'s partner. If they had one, they don't now.` };
-      }
-      ask(state, 'feud', a, b);
-      tell(state, tick + 12 * HOUR, 'A rumour about two students started a feud between them, and their friends are taking sides.', id, 4);
-      return { told: `The rumour about ${who} started a feud between them.` };
+      const kind: WebAsk['kind'] = roll < e.couple ? 'couple' : roll < e.couple + e.tense ? 'tense' : roll < e.couple + e.tense + e.split ? 'split' : 'feud';
+      ask(state, id, kind, a, b);
+      return { told: `A rumour about ${name(a)} and ${name(b)} is going round the dining halls. How it lands will be in the paper within a game week.` };
     }
     case 'date': {
       const [a, b] = pair(state, h, true);
-      const who = `${name(a)} and ${name(b)}`;
-      if (roll < MEDDLE_EFFECT.date.click) {
-        ask(state, 'couple', a, b);
-        tell(state, tick + 8 * HOUR, 'Two students set up on a date clicked, and a second one is already planned.', id, 1);
-        return { told: `${who} are on a date tonight. They clicked: a second date is already planned.` };
-      }
-      ask(state, 'awkward', a, b);
-      tell(state, tick + 8 * HOUR, 'Two students set up on a date had an awkward night: polite talk, long pauses and an early goodnight.', id, 2);
-      return { told: `${who} are on a date tonight. It was awkward: polite talk, long pauses, an early goodnight.` };
+      ask(state, id, roll < MEDDLE_EFFECT.date.click ? 'couple' : 'awkward', a, b);
+      return { told: `${name(a)} and ${name(b)} are set up on a date. How it goes will be in the paper within a game week.` };
     }
     case 'roommates': {
       const e = MEDDLE_EFFECT.roommates;
       const [a, b] = pair(state, h, true);
-      const who = `${name(a)} and ${name(b)}`;
-      if (roll < e.friends) {
-        ask(state, 'friends', a, b);
-        tell(state, tick + 24 * HOUR, 'A night owl and an early riser were put in one room. Against every prediction, they are friends for life.', id, 1);
-        return { told: `${who} share a room now. Against every prediction, they are friends for life.` };
-      }
-      if (roll < e.friends + e.tense) {
-        ask(state, 'tense', a, b);
-        tell(state, tick + 24 * HOUR, 'A night owl and an early riser were put in one room: the alarm goes at six, the music at two.', id, 2);
-        return { told: `${who} share a room now. It is tense: the alarm goes at six, the music at two.` };
-      }
-      ask(state, 'feud', a, b);
-      const halls = dorms(state);
-      const hall = halls[Math.floor(share(hashInts(h, 11)) * halls.length)]!;
-      beginChaos(state, 'shouting', 0, share(hashInts(h, 12)), [hall.id]);
-      tell(state, tick + 24 * HOUR, 'A night owl and an early riser were put in one room, and now their whole floor has chosen a side.', id, 3);
-      return { told: `${who} share a room now, and their whole floor has chosen a side.` };
+      ask(state, id, roll < e.friends ? 'friends' : roll < e.friends + e.tense ? 'tense' : 'feud', a, b);
+      return { told: `${name(a)} and ${name(b)} share a room now. How they get on will be in the paper within a game week.` };
     }
     case 'cancel': {
       const e = MEDDLE_EFFECT.cancel;
@@ -235,7 +255,7 @@ export function meddle(state: GameState, id: MeddleId): string | Meddled {
       if (two >= one) two += 1;
       run(state, 'war', e.hours, 1, { dorms: [halls[one]!.id, halls[two]!.id] });
       const [a, b] = pair(state, h, false);
-      ask(state, 'feud', a, b);
+      ask(state, id, 'feud', a, b);
       const spirit = liftSpirit(state);
       tell(state, next, `Two dorms have declared a prank war for the week: sticky notes, beach balls and rubber ducks expected.${spirit ? ' Spirit is up.' : ''}`, id, 1);
       tell(state, tick + e.hours * HOUR, 'The prank war is over: both dorms claim the win, the rubber ducks are out of the fountain and the repaints are done.', id, 2);

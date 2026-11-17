@@ -758,7 +758,12 @@ export interface SocialEffects {
    * narrows the school's reach. The campus fades them over two game weeks. Missing is none.
    */
   viral?: Array<{ at: number; size: number }>;
+  /** What the web did with each ask from the Meddle menu it carried out since it last answered (78.3). Missing is none. */
+  meddled?: Array<{ id: number; did: WebDid }>;
 }
+
+/** What the web did with an ask (DESIGN.md 78.3): what the paper then says, and nothing else. */
+export type WebDid = 'couple' | 'complicated' | 'tense' | 'split' | 'feud' | 'friends' | 'awkward' | 'none';
 
 /** A regular as the save keeps them: who, since when they were followed, and what the map showed happening to them. */
 export interface Regular {
@@ -1498,6 +1503,9 @@ export interface MeddleRun {
 
 /** A change the social web makes to one tie at its next week (DESIGN.md 78.3), from a meddle. */
 export interface WebAsk {
+  /** Which ask it is, so what the web did can be told against it, and the tool that made it. Missing in an older save. */
+  id?: number;
+  tool?: MeddleId;
   kind: 'couple' | 'tense' | 'split' | 'feud' | 'friends' | 'awkward';
   a: { entryYear: number; index: number };
   b: { entryYear: number; index: number };

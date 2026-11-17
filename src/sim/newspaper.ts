@@ -104,11 +104,36 @@ export { shortName };
  * The paper's headline for each tool of the Meddle menu (DESIGN.md 78), in the order of MEDDLE, by outcome: 0 when it is
  * set going, then each outcome its line names. Comic, and never at a student's expense (16.2).
  */
+export const MEDDLE_WEB_HEADLINES: readonly (Readonly<Record<string, string>> | undefined)[] = [
+  undefined,
+  {
+    couple: 'A Rumour Comes True: Two Students Make It Official',
+    complicated: "A Rumour Pairs Two Students Up; It's Complicated",
+    tense: 'The Rumour Mill Turns: Two Students Not Speaking',
+    split: 'A Rumour Ends a Couple; Friends Pick Sides',
+    feud: 'A Rumour Starts a Feud; Friends Take Sides',
+    none: 'A Rumour Goes Round the Dining Halls and Comes to Nothing',
+  },
+  {
+    couple: 'Set Up on a Date, Two Students Click',
+    complicated: 'A Date Set Up, a Spark, and a Complication',
+    awkward: 'A Date Set Up, an Awkward Night: Long Pauses, an Early Goodnight',
+    none: 'A Date Set Up Never Happens; a Study Group Wins',
+  },
+  {
+    friends: 'Odd-Couple Roommates Become Friends for Life',
+    tense: 'Night Owl, Early Riser, One Room: It Is Tense',
+    feud: 'A Roommate Standoff Splits a Whole Floor',
+    none: 'New Roommates, Different Hours: They Have Hardly Met',
+  },
+];
+
 export const MEDDLE_HEADLINES: readonly (readonly string[])[] = [
   ['Campus-Wide Party: Music Everywhere, Sleep Nowhere'],
-  ['', 'A Rumour Comes True: Two Students Make It Official', 'The Rumour Mill Turns: Two Students Not Speaking', 'A Rumour Ends a Couple; Friends Pick Sides', 'A Rumour Starts a Feud; Friends Take Sides'],
-  ['', 'Set Up on a Date, Two Students Click', 'A Date Set Up, an Awkward Night: Long Pauses, an Early Goodnight'],
-  ['', 'Odd-Couple Roommates Become Friends for Life', 'Night Owl, Early Riser, One Room: It Is Tense', 'A Roommate Standoff Splits a Whole Floor'],
+  // A rumour, a date and roommates are told by what the web did: MEDDLE_WEB_HEADLINES.
+  [],
+  [],
+  [],
   ['Classes Cancelled for the Day; the Quad Fills, the Professors Grumble'],
   ["The Rival's Mascot Loose on Campus; Half the Students Give Chase", '', 'The Rival Pays a Visit Back: the Statue Wears Their Colours'],
   ['', 'Prank War Declared: Two Dorms, One Week, Many Rubber Ducks', 'The Prank War Ends: Both Dorms Claim the Win'],
@@ -342,8 +367,10 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         // The Meddle menu and the calm tools (DESIGN.md 78): each covered when it is set going, and how it went.
         const meddled = Number(entry.data?.meddle ?? 0);
         if (meddled > 0) {
+          // A rumour, a date or roommates: what the social web did (78.3). The rest: when set going, and how it went.
+          const did = typeof entry.data?.did === 'string' ? entry.data.did : null;
           const lines = MEDDLE_HEADLINES[meddled - 1] ?? [];
-          const headline = lines[Number(entry.data?.outcome ?? 0)] ?? lines[0];
+          const headline = did ? MEDDLE_WEB_HEADLINES[meddled - 1]?.[did] : (lines[Number(entry.data?.outcome ?? 0)] ?? lines[0]);
           if (headline) out.push({ weight: 44, headline, deck: entry.text });
         } else if (letter === 1) out.push({ weight: 44, headline: 'The Trustees Write: Calm the Campus Down, and Soon', deck: entry.text });
         else if (letter === 2) out.push({ weight: 46, headline: 'Trustees Pleased as Campus Calms; a Small Gift Follows', deck: entry.text });

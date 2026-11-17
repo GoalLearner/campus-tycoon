@@ -48,7 +48,7 @@ import {
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
 import { bullyingTimes } from './policies';
-import type { GameState, WebAsk } from '../types';
+import type { GameState, WebAsk, WebDid } from '../types';
 import { TICKS_PER_YEAR } from '../config/time';
 import { rostersOf } from './teams';
 import { ATHLETE_WHERE } from '../config/teams';
@@ -141,6 +141,8 @@ export interface Web {
   postNext: number;
   /** The buildings open when the web last read the campus, so a new one is posted about once. Not saved: null after a load. */
   postSeen: Set<number> | null;
+  /** What the last catch-up did with each ask from the Meddle menu (DESIGN.md 78.3), for the campus to tell. Not saved. */
+  asked: Array<{ id: number; did: WebDid }>;
 }
 
 /** A happening's numbers: its week, its event, its campus year, its luck, then up to three students as entry year and index. */
@@ -218,6 +220,7 @@ export function newWeb(seed: number, classSlot: number, rings: number = RINGS): 
     ...newPosts(),
     postNext: 0,
     postSeen: null,
+    asked: [],
   };
 }
 
@@ -1107,6 +1110,7 @@ export function regrow(web: Web, state: GameState): void {
  * for a long absence, the web regrown and its last weeks lived (decision 2). Returns how it was done.
  */
 export function catchUp(web: Web, state: GameState, toWeek: number): { lived: number; regrown: boolean } {
+  web.asked = [];
   fitClasses(web, state);
   place(web, state);
   web.calYear = calendarAt(state.clock).year;
@@ -1157,27 +1161,36 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
 /**
  * The player's meddling (DESIGN.md 78.3), carried out at the web week each ask names: a couple, a tense tie, a couple
  * split by a rumour, a feud, friends for life, or an awkward acquaintance. Never the Main Character's ties, whose
- * romances are their story's (63.11); nobody already with a partner starts dating, and a pair with no slot free for one
- * more tie is left as it was. Told by name in the week's happenings, as the web's own are.
+ * romances are their story's (63.11); nobody already with a partner starts dating (it stays a complicated friendship),
+ * and a pair with no slot free for one more tie is left as it was. Told by name in the week's happenings, as the web's
+ * own are, and what it did with each is kept in `web.asked` for the paper: the paper says what the web did, never what
+ * was asked.
  */
 export function applyAsks(web: Web, asks: readonly WebAsk[]): void {
   for (const one of asks) {
     if (one.week !== web.week) continue;
+    const did = applyAsk(web, one);
+    if (one.id !== undefined) web.asked.push({ id: one.id, did });
+  }
+}
+
+function applyAsk(web: Web, one: WebAsk): WebDid {
+  {
     const a = idOf(web, one.a);
     const b = idOf(web, one.b);
-    if (a < 0 || b < 0 || a === b || a === web.mainId || b === web.mainId) continue;
+    if (a < 0 || b < 0 || a === b || a === web.mainId || b === web.mainId) return 'none';
     if (one.kind === 'split') {
-      rumourLands(web, a, 'seen', hash5(web.seed, 7801, a, b, web.week));
-      continue;
+      const landed = rumourLands(web, a, 'seen', hash5(web.seed, 7801, a, b, web.week));
+      return landed ?? 'none';
     }
     let s = slotOf(web, a, b);
     if (s < 0) {
       const made = link(web, a, b, KIND.met, MET_AT, 0);
-      if (!made) continue;
+      if (!made) return 'none';
       s = made[0];
     }
     const back = web.back[s]!;
-    if (back < 0) continue;
+    if (back < 0) return 'none';
     const strong = (at: number): void => {
       web.strength[s] = web.strength[back] = Math.max(web.strength[s]!, at);
     };
@@ -1191,35 +1204,36 @@ export function applyAsks(web: Web, asks: readonly WebAsk[]): void {
           // One of them is with someone else: it stays a friendship, and a complicated one.
           setBoth(web, s, back, web.kind[s]! > KIND.best ? web.kind[s]! : KIND.friend, FEEL.complicated);
           strong(FRIEND_AT);
-          break;
+          return 'complicated';
         }
         setBoth(web, s, back, KIND.dating, FEEL.warm);
         strong(DATE_FROM + 10);
         count(web, EVENT.dating);
         note(web, EVENT.dating, a, b);
-        break;
+        return 'couple';
       }
       case 'tense':
         web.feeling[s] = web.feeling[back] = FEEL.tense;
         web.strength[s] = web.strength[back] = Math.max(0, web.strength[s]! - RUMOUR.sting);
-        break;
+        return 'tense';
       case 'feud':
         setBoth(web, s, back, KIND.rival, FEEL.tense);
         strong(RIVAL_AT + 5);
         count(web, EVENT.rivals);
         note(web, EVENT.rivals, a, b);
-        break;
+        return 'feud';
       case 'friends':
         setBoth(web, s, back, KIND.best, FEEL.warm);
         strong(BEST_AT + 5);
         count(web, EVENT.best);
         note(web, EVENT.best, a, b);
-        break;
+        return 'friends';
       case 'awkward':
         web.feeling[s] = web.feeling[back] = FEEL.complicated;
-        break;
+        return 'awkward';
     }
   }
+  return 'none';
 }
 
 /**
