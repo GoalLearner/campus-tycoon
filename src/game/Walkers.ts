@@ -2255,6 +2255,18 @@ export class Walkers {
   }
 
   /**
+   * The stadium's way in, where the fans walk in on a game day (DESIGN.md 77.2): the edge of the stadium and the path
+   * in front of it, for the goalposts carried out. null with no stadium on the map.
+   */
+  stadiumFront(): { door: Spot; front: Spot } | null {
+    const stop = this.stadiumStop;
+    if (!stop) return null;
+    const front = { x: (stop.door % this.width) + 0.5, y: Math.floor(stop.door / this.width) + 0.5 };
+    const door = { x: front.x + (stop.cell.x + 0.5 - front.x) * 0.46, y: front.y + (stop.cell.y + 0.5 - front.y) * 0.46 };
+    return { door, front };
+  }
+
+  /**
    * How much the buildings in front of a cell hide it, in the view as it is turned (DESIGN.md 76.1): 0 when the player
    * sees it plainly, more the more buildings stand between. The cells one and two steps down the screen from it count.
    */

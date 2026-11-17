@@ -819,7 +819,8 @@ export class Mayhem {
     if (!plot || !this.art.has('prop.goalpost')) return false;
     const box = { x: plot.x, y: plot.y, w: plot.w, h: plot.h };
     if (!this.walkers.seen({ x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 })) return false;
-    const front = this.walkers.frontOf(box);
+    // Out the way the fans go in: the stadium has no door as a hall has.
+    const front = this.walkers.frontOf(box) ?? this.walkers.stadiumFront();
     if (!front) return false;
     // Off to a dorm a good way from the stadium: the walk across campus the paper tells.
     const dorms = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === 'housing' && b.stage > 0);
