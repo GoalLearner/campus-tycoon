@@ -38,7 +38,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 38;
+export const SAVE_VERSION = 39;
 
 export interface SaveFile {
   v: number;
@@ -471,6 +471,13 @@ export const MIGRATIONS: Record<number, Migration> = {
     for (const key of ['storm', 'street', 'mascot']) if (chaos[key] === undefined) chaos[key] = null;
     if (typeof chaos.mascotSeason !== 'number') chaos.mascotSeason = -1;
     if (typeof chaos.clinchedSeason !== 'number') chaos.clinchedSeason = -1;
+    return state;
+  },
+  // Version 39: the Meddle menu and the calm tools (DESIGN.md 78). Nothing used yet, nothing running, nothing asked.
+  38: (state) => {
+    const chaos = state.chaos as Record<string, unknown> | undefined;
+    if (!chaos || typeof chaos !== 'object') return state;
+    if (typeof chaos.meddle !== 'object' || chaos.meddle === null) chaos.meddle = { last: {}, used: {}, running: [], asks: [], news: [] };
     return state;
   },
 };

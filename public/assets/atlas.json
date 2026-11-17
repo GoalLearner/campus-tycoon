@@ -1102,7 +1102,7 @@
   },
   "emote.mood-embarrassed": {
    "frame": {
-    "x": 1259,
+    "x": 1946,
     "y": 753,
     "w": 21,
     "h": 12
@@ -1122,26 +1122,6 @@
   },
   "emote.mood-excited": {
    "frame": {
-    "x": 1946,
-    "y": 753,
-    "w": 21,
-    "h": 12
-   },
-   "rotated": false,
-   "trimmed": false,
-   "spriteSourceSize": {
-    "x": 0,
-    "y": 0,
-    "w": 21,
-    "h": 12
-   },
-   "sourceSize": {
-    "w": 21,
-    "h": 12
-   }
-  },
-  "emote.mood-flirty": {
-   "frame": {
     "x": 1701,
     "y": 754,
     "w": 21,
@@ -1160,7 +1140,7 @@
     "h": 12
    }
   },
-  "emote.mood-happy": {
+  "emote.mood-flirty": {
    "frame": {
     "x": 508,
     "y": 758,
@@ -1180,7 +1160,7 @@
     "h": 12
    }
   },
-  "emote.mood-lonely": {
+  "emote.mood-happy": {
    "frame": {
     "x": 678,
     "y": 761,
@@ -1200,10 +1180,30 @@
     "h": 12
    }
   },
+  "emote.mood-lonely": {
+   "frame": {
+    "x": 1946,
+    "y": 768,
+    "w": 21,
+    "h": 12
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 21,
+    "h": 12
+   },
+   "sourceSize": {
+    "w": 21,
+    "h": 12
+   }
+  },
   "emote.mood-sad": {
    "frame": {
-    "x": 1259,
-    "y": 768,
+    "x": 1701,
+    "y": 769,
     "w": 21,
     "h": 12
    },
@@ -1222,8 +1222,8 @@
   },
   "emote.mood-tense": {
    "frame": {
-    "x": 1946,
-    "y": 768,
+    "x": 508,
+    "y": 773,
     "w": 21,
     "h": 12
    },
@@ -6382,28 +6382,28 @@
   },
   "prop.dog": {
    "frame": {
-    "x": 616,
-    "y": 469,
-    "w": 13,
-    "h": 10
+    "x": 1259,
+    "y": 753,
+    "w": 22,
+    "h": 18
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 13,
-    "h": 10
+    "w": 22,
+    "h": 18
    },
    "sourceSize": {
-    "w": 13,
-    "h": 10
+    "w": 22,
+    "h": 18
    }
   },
   "prop.frisbee": {
    "frame": {
     "x": 1593,
-    "y": 482,
+    "y": 481,
     "w": 8,
     "h": 4
    },
@@ -6482,8 +6482,8 @@
   },
   "prop.partyhat.2": {
    "frame": {
-    "x": 733,
-    "y": 482,
+    "x": 616,
+    "y": 481,
     "w": 7,
     "h": 11
    },
@@ -6522,8 +6522,8 @@
   },
   "prop.tray": {
    "frame": {
-    "x": 616,
-    "y": 482,
+    "x": 789,
+    "y": 476,
     "w": 12,
     "h": 7
    },
@@ -8782,8 +8782,8 @@
   },
   "wheel.skates.nw": {
    "frame": {
-    "x": 789,
-    "y": 476,
+    "x": 1593,
+    "y": 470,
     "w": 12,
     "h": 8
    },
@@ -8802,8 +8802,8 @@
   },
   "wheel.skates.sw": {
    "frame": {
-    "x": 1593,
-    "y": 470,
+    "x": 616,
+    "y": 469,
     "w": 12,
     "h": 9
    },

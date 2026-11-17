@@ -133,5 +133,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 38) {
     notes.push("Football has its wild side now: fans storm the field after a big home win, the goalposts can go for a walk where Campus Safety does not reach the stadium, couches come out into the street after a big game, and in rivalry week the rival's mascot may pay you a visit.");
   }
+  if (fromVersion < 39) {
+    notes.push('New on a campus with goals: Meddle, behind the student count. Throw a campus-wide party, start a rumour, set two students up on a date or cancel classes; or calm things down with a counselling drive, extra security or therapy dogs.');
+  }
   return notes;
 }

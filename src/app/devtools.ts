@@ -1,6 +1,8 @@
 import { DECOR, gainXp, giveDecor, hurryCraft, LABS, labsOnMap, nextDay, readyToCollect, sampleStudents, traditionSpec } from '../sim';
 import { chapterBeds, chapters, coverFor, greekHazing, noiseAt, PROBATION_HOURS, suggestMain, WRITTEN } from '../sim';
 import { addTimer, cancelTimers } from '../sim/timers';
+import { MEDDLE, type MeddleId } from '../sim/config/meddle';
+import { meddle } from '../sim/systems/meddle';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
 import { socialWeb } from './socialWeb';
@@ -574,6 +576,11 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         const row = params.get('row');
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
+      // &panel=meddle opens the Meddle page behind the student count (DESIGN.md 78).
+      if (panel === 'meddle') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
+        setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.fb-tab')].find((b) => b.textContent === 'Meddle')?.click(), 1900);
+      }
       // &panel=orders opens the orders board as a tap on its button would. &claim=1 then taps the first Claim, and
       // &dismiss=1 the first Dismiss.
       if (panel === 'orders') {
@@ -860,6 +867,19 @@ export function installDevTools(): void {
         f.season.games.unshift({ slot: 9, label: '', opp: f.rival, home: true, kick: tick + 30, us: [], them: [], crowd: 0, seats: 0, rating: 50, oppRating: 50, gap: '', done: false });
       }
       store.adopt(wild, { ephemeral: true });
+    }
+    // The Meddle menu (DESIGN.md 78), for pictures and frames: &meddle=dogs,freeFood uses those tools now, free and
+    // whatever their cooldowns, on a campus with chaos.
+    const meddling = (params.get('meddle') ?? '').split(',').filter((one): one is MeddleId => MEDDLE.some((spec) => spec.id === one));
+    if (meddling.length > 0 && store.hasGame && store.state.chaos?.meddle) {
+      const stirred = structuredClone(store.state);
+      for (const id of meddling) {
+        stirred.money.cash += 1e9;
+        stirred.daily.seals += 10;
+        delete stirred.chaos.meddle.last[id];
+        meddle(stirred, id);
+      }
+      store.adopt(stirred, { ephemeral: true });
     }
     // &grow=58000 puts that many students on the campus before the time away, to show a goal or an era being reached.
     const grow = Number(params.get('grow') ?? 0);

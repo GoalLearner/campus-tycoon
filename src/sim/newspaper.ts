@@ -100,6 +100,29 @@ const sum = (values: readonly number[]): number => values.reduce((a, b) => a + b
 export { shortName };
 
 /** The paper's name. Picked once from the seed, so it never changes. */
+/**
+ * The paper's headline for each tool of the Meddle menu (DESIGN.md 78), in the order of MEDDLE, by outcome: 0 when it is
+ * set going, then each outcome its line names. Comic, and never at a student's expense (16.2).
+ */
+export const MEDDLE_HEADLINES: readonly (readonly string[])[] = [
+  ['Campus-Wide Party: Music Everywhere, Sleep Nowhere'],
+  ['', 'A Rumour Comes True: Two Students Make It Official', 'The Rumour Mill Turns: Two Students Not Speaking', 'A Rumour Ends a Couple; Friends Pick Sides', 'A Rumour Starts a Feud; Friends Take Sides'],
+  ['', 'Set Up on a Date, Two Students Click', 'A Date Set Up, an Awkward Night: Long Pauses, an Early Goodnight'],
+  ['', 'Odd-Couple Roommates Become Friends for Life', 'Night Owl, Early Riser, One Room: It Is Tense', 'A Roommate Standoff Splits a Whole Floor'],
+  ['Classes Cancelled for the Day; the Quad Fills, the Professors Grumble'],
+  ["The Rival's Mascot Loose on Campus; Half the Students Give Chase", '', 'The Rival Pays a Visit Back: the Statue Wears Their Colours'],
+  ['', 'Prank War Declared: Two Dorms, One Week, Many Rubber Ducks', 'The Prank War Ends: Both Dorms Claim the Win'],
+  ['Lights Out in One Dorm; Residents Gather by Lantern Light'],
+  ['Surprise Exams in Every Class: Groans at Dinner, Quiet Smiles from the Prepared'],
+  ['Free Food on the Quad: the Longest Lunch Line of the Year'],
+  ['A Flash Mob Takes the Main Path; the Video Travels Far'],
+  ['Snowball Battle on Every Quad; Medical Hands Out Ice Packs'],
+  ['Counsellors in Every Hall: Long Queues, a Quieter Evening'],
+  ['The Campus Festival Begins: Two Days of Music, Food and Games'],
+  ['Campus Safety on Every Path; Some Students Call It Heavy-Handed'],
+  ['Therapy Dogs on the Quad: the Calmest Line on Campus'],
+];
+
 export function paperName(state: GameState): string {
   return `The ${shortName(state.school.name)} ${PAPER_NAMES[hashInts(state.seed, 4242) % PAPER_NAMES.length]}`;
 }
@@ -316,7 +339,13 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         const step = Number(entry.data?.step ?? -1);
         const was = Number(entry.data?.was ?? -1);
         const letter = Number(entry.data?.letter ?? 0);
-        if (letter === 1) out.push({ weight: 44, headline: 'The Trustees Write: Calm the Campus Down, and Soon', deck: entry.text });
+        // The Meddle menu and the calm tools (DESIGN.md 78): each covered when it is set going, and how it went.
+        const meddled = Number(entry.data?.meddle ?? 0);
+        if (meddled > 0) {
+          const lines = MEDDLE_HEADLINES[meddled - 1] ?? [];
+          const headline = lines[Number(entry.data?.outcome ?? 0)] ?? lines[0];
+          if (headline) out.push({ weight: 44, headline, deck: entry.text });
+        } else if (letter === 1) out.push({ weight: 44, headline: 'The Trustees Write: Calm the Campus Down, and Soon', deck: entry.text });
         else if (letter === 2) out.push({ weight: 46, headline: 'Trustees Pleased as Campus Calms; a Small Gift Follows', deck: entry.text });
         else if (letter === 3) out.push({ weight: 44, headline: 'Trustees Unimpressed; Reputation Takes a Small Knock', deck: entry.text });
         // Football's chaos (DESIGN.md 77): a field storming, the goalposts, couches in the street, the rival's mascot.

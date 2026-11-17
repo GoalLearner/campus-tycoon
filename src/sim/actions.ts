@@ -7,6 +7,8 @@ import { effectsSound } from './systems/friends';
 import { mainPeopleSound } from './systems/mainWeb';
 import { cannotBuildLab, isLab, labCleared, labPlaced } from './systems/labs';
 import { chooseTradition } from './systems/traditions';
+import { meddle } from './systems/meddle';
+import type { MeddleId } from './config/meddle';
 import { cannotBuildChapter, chapterCleared, chapterOf, chapterPlaced, chapters, isChapterHouse } from './systems/greek';
 import { scaleOf } from './scale';
 import { placedCost } from './config/placed';
@@ -95,6 +97,8 @@ export type Action =
   | { type: 'setAsideMain' }
   /** Choose a tradition for an open place (DESIGN.md 50). */
   | { type: 'chooseTradition'; id: string }
+  /** Use a tool from the Meddle menu or a calm tool (DESIGN.md 78). */
+  | { type: 'meddle'; id: MeddleId }
   /** Finish a wait now, for its price in Gold Seals: 'stadium', 'faculty', or 'policy:' and a policy's id. */
   | { type: 'finish'; wait: string }
   /** Look at the orders board: new orders are given what they ask and their clocks start. */
@@ -792,6 +796,14 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       const next = structuredClone(state);
       const problem = chooseTradition(next, action.id);
       return problem ? { ok: false, state, error: problem } : { ok: true, state: next, cost: 0, changed: 1 };
+    }
+    case 'meddle': {
+      const next = structuredClone(state);
+      const before = next.money.cash;
+      const done = meddle(next, action.id);
+      if (typeof done === 'string') return { ok: false, state, error: done };
+      markRatesDirty(next);
+      return { ok: true, state: next, cost: before - next.money.cash, changed: 1, note: done.told };
     }
   }
 }

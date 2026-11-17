@@ -1,5 +1,6 @@
 import type { ActivityId, GoalId, LifeNeed, CastTrait } from './config/mc';
 import type { ChaosKind, IncidentChaosKind, ProtestTopic } from './config/chaos';
+import type { MeddleId } from './config/meddle';
 /**
  * The whole game state. Plain JSON only: no classes, Maps, Sets or Dates,
  * so cloning and saving are exact. See DESIGN.md section 17.5.
@@ -1467,6 +1468,41 @@ export interface ChaosState {
   mascotSeason: number;
   /** The football season last clinched (its division won for certain, or a bowl), so its clinching win is stormed once. */
   clinchedSeason: number;
+  /** The Meddle menu and the calm tools (DESIGN.md 78). */
+  meddle: MeddleState;
+}
+
+/** What the player has meddled with (DESIGN.md 78): when each tool was last used, what still runs, what the web is to do. */
+export interface MeddleState {
+  /** The tick each tool was last used, for its cooldown. */
+  last: Partial<Record<MeddleId, number>>;
+  /** How many times each has been used. */
+  used: Partial<Record<MeddleId, number>>;
+  /** What runs for a while: calm, extra security, a prank war at two dorms, tempers with the rival, a prank back to come. */
+  running: MeddleRun[];
+  /** What the social web is to do at its next week: the ties a rumour, a date, roommates or a prank war change. */
+  asks: WebAsk[];
+  /** Lines for the paper, each told at its tick: what was set going, and later how it went. */
+  news: Array<{ at: number; text: string; data: Record<string, number | string> }>;
+}
+
+export interface MeddleRun {
+  kind: 'calm' | 'security' | 'war' | 'temper' | 'prankBack' | 'stress';
+  from: number;
+  until: number;
+  /** What it multiplies by: a rate for calm and security, a temper for the rival; points of Stress for `stress`. */
+  amount: number;
+  /** A prank war's two dorms, by building id. */
+  dorms?: number[];
+}
+
+/** A change the social web makes to one tie at its next week (DESIGN.md 78.3), from a meddle. */
+export interface WebAsk {
+  kind: 'couple' | 'tense' | 'split' | 'feud' | 'friends' | 'awkward';
+  a: { entryYear: number; index: number };
+  b: { entryYear: number; index: number };
+  /** The web week it is applied in. */
+  week: number;
 }
 
 export interface Incidents {

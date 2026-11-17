@@ -48,7 +48,7 @@ import {
 } from '../config/web';
 import { enrollment, openCapacity } from '../selectors';
 import { bullyingTimes } from './policies';
-import type { GameState } from '../types';
+import type { GameState, WebAsk } from '../types';
 import { TICKS_PER_YEAR } from '../config/time';
 import { rostersOf } from './teams';
 import { ATHLETE_WHERE } from '../config/teams';
@@ -1131,9 +1131,12 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
   // What the campus holds for Quadline's posts, read once for every week lived (63.13), and what a rumour does (63.14).
   const posting = postContext(web, state, toWeek);
   posting.lands = rumourLands;
+  // What the player set going (DESIGN.md 78.3): a rumour, a date, roommates or a prank war's feud, each at its week.
+  const asks = state.chaos?.meddle?.asks ?? [];
   let lived = 0;
   while (web.week < toWeek) {
     stepWeek(web);
+    if (asks.length > 0) applyAsks(web, asks);
     lived += 1;
     if (!regrown || web.week > toWeek - 2) postWeek(web, posting, regrown);
   }
@@ -1149,6 +1152,74 @@ export function catchUp(web: Web, state: GameState, toWeek: number): { lived: nu
   findGroups(web);
   pickRation(web);
   return { lived, regrown };
+}
+
+/**
+ * The player's meddling (DESIGN.md 78.3), carried out at the web week each ask names: a couple, a tense tie, a couple
+ * split by a rumour, a feud, friends for life, or an awkward acquaintance. Never the Main Character's ties, whose
+ * romances are their story's (63.11); nobody already with a partner starts dating, and a pair with no slot free for one
+ * more tie is left as it was. Told by name in the week's happenings, as the web's own are.
+ */
+export function applyAsks(web: Web, asks: readonly WebAsk[]): void {
+  for (const one of asks) {
+    if (one.week !== web.week) continue;
+    const a = idOf(web, one.a);
+    const b = idOf(web, one.b);
+    if (a < 0 || b < 0 || a === b || a === web.mainId || b === web.mainId) continue;
+    if (one.kind === 'split') {
+      rumourLands(web, a, 'seen', hash5(web.seed, 7801, a, b, web.week));
+      continue;
+    }
+    let s = slotOf(web, a, b);
+    if (s < 0) {
+      const made = link(web, a, b, KIND.met, MET_AT, 0);
+      if (!made) continue;
+      s = made[0];
+    }
+    const back = web.back[s]!;
+    if (back < 0) continue;
+    const strong = (at: number): void => {
+      web.strength[s] = web.strength[back] = Math.max(web.strength[s]!, at);
+    };
+    switch (one.kind) {
+      case 'couple': {
+        const taken = (who: number): boolean => {
+          const p = partnered(web, who);
+          return p >= 0 && web.other[p] !== (who === a ? b : a);
+        };
+        if (taken(a) || taken(b)) {
+          // One of them is with someone else: it stays a friendship, and a complicated one.
+          setBoth(web, s, back, web.kind[s]! > KIND.best ? web.kind[s]! : KIND.friend, FEEL.complicated);
+          strong(FRIEND_AT);
+          break;
+        }
+        setBoth(web, s, back, KIND.dating, FEEL.warm);
+        strong(DATE_FROM + 10);
+        count(web, EVENT.dating);
+        note(web, EVENT.dating, a, b);
+        break;
+      }
+      case 'tense':
+        web.feeling[s] = web.feeling[back] = FEEL.tense;
+        web.strength[s] = web.strength[back] = Math.max(0, web.strength[s]! - RUMOUR.sting);
+        break;
+      case 'feud':
+        setBoth(web, s, back, KIND.rival, FEEL.tense);
+        strong(RIVAL_AT + 5);
+        count(web, EVENT.rivals);
+        note(web, EVENT.rivals, a, b);
+        break;
+      case 'friends':
+        setBoth(web, s, back, KIND.best, FEEL.warm);
+        strong(BEST_AT + 5);
+        count(web, EVENT.best);
+        note(web, EVENT.best, a, b);
+        break;
+      case 'awkward':
+        web.feeling[s] = web.feeling[back] = FEEL.complicated;
+        break;
+    }
+  }
 }
 
 /**

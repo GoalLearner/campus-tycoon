@@ -1,6 +1,7 @@
 import { suggestMain } from '../src/sim/systems/mc';
 import { chaosStepOf } from '../src/sim/systems/chaos';
 import { ROWDY } from '../src/sim/config/chaos';
+import { MEDDLE } from '../src/sim/config/meddle';
 import {
   bigBuildOf,
   bigBuildsOffered,
@@ -120,7 +121,7 @@ import {
  * 'striver' is a once-a-day player on a game with goals who works every cause of applicants: looks, marketing,
  * football and the academic rank (DESIGN.md 37.8). It shows what the best regular player can reach, and when.
  */
-export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver' | 'pandemonium' | 'serene';
+export type Style = 'absent' | 'daily' | 'casual' | 'optimizer' | 'striver' | 'pandemonium' | 'serene' | 'meddler' | 'soother';
 
 /**
  * On a game with goals a campus is run well when it keeps $12 to $17 of every $100 (the owner's target, 37.10).
@@ -1511,8 +1512,8 @@ function coverHalls(state: GameState, reserve: number, most: number): { state: G
  * player turns on every switch that calms. The Pandemonium player runs the campus for mayhem on purpose: no Campus
  * Safety, no new beds, its yards' crews sent home, every calming switch off and the disliked ones on.
  */
-function chaosTurn(state: GameState, as: 'pandemonium' | 'serene'): TurnResult {
-  wild = as === 'pandemonium';
+function chaosTurn(state: GameState, as: 'pandemonium' | 'serene' | 'meddler' | 'soother'): TurnResult {
+  wild = as === 'pandemonium' || as === 'meddler';
   let turn: TurnResult;
   try {
     turn = takeTurn(state, 'daily');
@@ -1525,13 +1526,15 @@ function chaosTurn(state: GameState, as: 'pandemonium' | 'serene'): TurnResult {
     const done = applyAction(current, { type: 'policy', id, on });
     if (done.ok) current = done.state;
   };
-  if (as === 'serene') {
+  if (as === 'serene' || as === 'soother') {
     for (const id of CALMING) if (id !== 'dryCampus') flip(id, true);
     for (const id of DISLIKED) flip(id, false);
     // Campus Safety over every hall, before anything else: up to six on a visit, while there is the money.
     current = coverHalls(current, 0, 6).state;
     // And its yards staffed again, as the yards ask.
     current = tendGrounds(current, 0, 8).state;
+    // The soother uses the calm tools too, while the meter reads Lively or worse (DESIGN.md 78.6).
+    if (as === 'soother' && chaosStepOf(current.chaos.level) >= 2) current = meddleAll(current, 'calm');
     return { ...turn, state: current };
   }
   for (const id of CALMING) flip(id, false);
@@ -1544,12 +1547,25 @@ function chaosTurn(state: GameState, as: 'pandemonium' | 'serene'): TurnResult {
     const sent = applyAction(current, { type: 'staff', yard: yard!.id, workers: 0 });
     if (sent.ok) current = sent.state;
   }
+  // The meddler stirs with every tool it can use on a visit as well (DESIGN.md 78.6).
+  if (as === 'meddler') current = meddleAll(current, 'stir');
   return { ...turn, state: current };
+}
+
+/** Every tool of one side of the Meddle menu that can be used now, in the menu's order (DESIGN.md 78). */
+export function meddleAll(state: GameState, side: 'stir' | 'calm'): GameState {
+  let current = state;
+  for (const spec of MEDDLE) {
+    if (spec.side !== side) continue;
+    const done = applyAction(current, { type: 'meddle', id: spec.id });
+    if (done.ok) current = done.state;
+  }
+  return current;
 }
 
 export function takeTurn(state: GameState, as: Style): TurnResult {
   if (as === 'absent') return { state, purchases: 0, blockedByCash: false };
-  if (as === 'pandemonium' || as === 'serene') return chaosTurn(state, as);
+  if (as === 'pandemonium' || as === 'serene' || as === 'meddler' || as === 'soother') return chaosTurn(state, as);
   // The once-a-day player follows a main character, the one the game suggests, and the next when one graduates
   // (DESIGN.md 53.2). They change nothing on the campus, so the campus's numbers are the same as without.
   if (botOptions.main && as === 'daily' && state.goals && state.story && !state.story.mc) {
