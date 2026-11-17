@@ -387,11 +387,12 @@ class Builder:
 
 def pack(sprites, width, height):
     """
-    Skyline packing, tallest first: each sprite goes where it sits lowest, then furthest left, on the line the sprites
-    placed so far make, so a short one fills the gap beside a taller one. Returns {name: (x, y)} or None if it does not
-    fit. (Shelf packing, used before, left the pack's atlas a few pixels over 4096 by 2048 in chaos C3.)
+    Skyline packing, longest side first: each sprite goes where it leaves the least empty space under it on the line
+    the sprites placed so far make, then lowest, then furthest left, so a small one fills the gap beside a bigger one.
+    Returns {name: (x, y)} or None if it does not fit. (Shelf packing, used before, left the pack's atlas a few pixels
+    over 4096 by 2048 in chaos C3; the pack's atlas is about 86% full, DESIGN.md 77.4.)
     """
-    order = sorted(sprites, key=lambda n: (-sprites[n][0].height, -sprites[n][0].width, n))
+    order = sorted(sprites, key=lambda n: (-max(sprites[n][0].width, sprites[n][0].height), -min(sprites[n][0].width, sprites[n][0].height), n))
     # The skyline: segments [x, y, w], left to right, y the top of what is packed below.
     sky = [[PADDING, PADDING, width - PADDING]]
     placed = {}
@@ -410,11 +411,17 @@ def pack(sprites, width, height):
                 j += 1
             if top + h > height:
                 continue
-            if best is None or (top, sx) < (best[0], best[1]):
-                best = (top, sx)
+            waste = 0
+            j = i
+            while j < len(sky) and sky[j][0] < sx + w:
+                gx, gy, gw = sky[j]
+                waste += (top - gy) * (min(gx + gw, sx + w) - max(gx, sx))
+                j += 1
+            if best is None or (waste, top, sx) < best:
+                best = (waste, top, sx)
         if best is None:
             return None
-        top, sx = best
+        _, top, sx = best
         end = sx + w
         nxt = []
         for gx, gy, gw in sky:

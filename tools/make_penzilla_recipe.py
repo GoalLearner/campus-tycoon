@@ -671,8 +671,9 @@ others = []
 for role, names in jobs:
     roles[role] = len(students) + len(others)
     others += names
-# The rival's mascot (DESIGN.md 77.4, the owner's decision 10, look A): the pack's Alien, its head white and its suit a
-# light grey (tools/make_mascot.py), which the map tints in the rival's colour: one figure for all eight colours.
+# The rival's mascot (DESIGN.md 77.4, the owner's decision 10, look A): the pack's Alien in each school colour, in the
+# order of SCHOOL_COLOURS, drawn by tools/make_mascot.py. The mascot of a rival in colour n is look roles.mascot + n.
+MASCOT_COLOURS = ('crimson', 'navy', 'forest', 'gold', 'purple', 'orange', 'teal', 'maroon')
 roles['mascot'] = len(students) + len(others)
 people = {
     'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The first looks are the student crowd. The rest each have a job, named under roles: a role with two looks uses its number and the next.',
@@ -693,7 +694,7 @@ people = {
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
     'roles': roles,
-    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + others] + ['_rendered/fallback/mascot/costume-base.png'],
+    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + others] + [f'_rendered/fallback/mascot/costume-{colour}.png' for colour in MASCOT_COLOURS],
 }
 
 recipe = {

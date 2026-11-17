@@ -195,14 +195,12 @@ describe('the art', () => {
     expect(read('../CREDITS.md')).toContain('four rally signs for the chaos sandbox');
   });
 
-  it("draws the rival's mascot (look A, the costume) once, to be tinted in the rival's colour, in the pack's atlas only", () => {
+  it("dresses the rival's mascot (look A, the costume, as drawn) in each school colour, in the order the game reads them, in the pack's atlas only", () => {
     const pack = JSON.parse(read('../art/recipes/penzilla.json')) as { people: { looks: string[]; roles: Record<string, number> } };
     const first = pack.people.roles.mascot!;
     expect(first).toBeGreaterThan(0);
-    // One figure for all eight colours: the atlas holds no more than it must on a phone.
-    expect(pack.people.looks[first]).toBe('_rendered/fallback/mascot/costume-base.png');
-    expect(pack.people.looks).toHaveLength(first + 1);
-    expect(SCHOOL_COLOURS.length).toBe(8);
+    SCHOOL_COLOURS.forEach((colour, n) => expect(pack.people.looks[first + n]).toBe(`_rendered/fallback/mascot/costume-${colour.id}.png`));
+    expect(pack.people.looks).toHaveLength(first + SCHOOL_COLOURS.length);
     expect(read('../art/recipes/kenney.json')).not.toContain('mascot');
   });
 });

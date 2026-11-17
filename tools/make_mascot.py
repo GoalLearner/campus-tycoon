@@ -6,9 +6,9 @@ pack, so it goes in the pack's own atlas only, never the public one.
     art/source/_rendered/fallback/mascot/<look>-<colour>.png    a full sheet, 8 frames by 5 rows, as the pack's own
 
 Looks:
-    base      what the game uses (look A): the head white and the suit a light grey, so the map tints it in the rival's
-              colour, the head that colour and the suit a shade darker; one figure for every colour, not eight
-    costume   the big head in the colour, the suit a shade darker; the face and outline as drawn (the look sheet's A)
+    costume   what the game uses (look A, the owner's pick): the big head in the colour, the suit a shade darker; the
+              face and outline as drawn. Eight, one for each school colour: a tint at run time would darken the outline
+              and the eyes, and could not lighten the dark colours' heads as A does
     helmet    the same, wearing the pack's football helmet recoloured to match
     tinted    the figure as drawn, multiplied by the colour, as the fans on game day are
 
@@ -99,18 +99,12 @@ def tinted(colour):
     return mult
 
 
-def base(colour):
-    """Look A for the game: tinted at run time, so the head is white and the suit 78% grey, the shade `costume` gives."""
-    return recolour(Image.open(pack_file('NpcReadymade_Alien.png')).convert('RGBA'), [(HEAD, (255, 255, 255)), (SUIT, (199, 199, 199))])
-
-
 LOOKS = {'costume': costume, 'helmet': helmet, 'tinted': tinted}
 
 
 def main():
-    looks = sys.argv[sys.argv.index('--looks') + 1].split(',') if '--looks' in sys.argv else []
+    looks = sys.argv[sys.argv.index('--looks') + 1].split(',') if '--looks' in sys.argv else ['costume']
     os.makedirs(OUT, exist_ok=True)
-    base(None).save(os.path.join(OUT, 'costume-base.png'))
     made = {}
     for look in looks:
         for name, hex_colour in COLOURS.items():
