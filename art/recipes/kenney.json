@@ -51,7 +51,7 @@
     "prop.frisbee": { "layers": [{ "file": "_rendered/ours/props/frisbee.png", "stand": [0.5, 0.5], "scale": 0.044 }] },
     "prop.phone": { "layers": [{ "file": "_rendered/ours/props/phone.png", "stand": [0.5, 0.5], "scale": 0.046 }] },
     "prop.tray": { "layers": [{ "file": "_rendered/ours/props/tray.png", "stand": [0.5, 0.5], "scale": 0.057 }] },
-    "prop.dog": { "layers": [{ "file": "_rendered/ours/props/dog.png", "stand": [0.5, 0.5], "scale": 0.062 }] },
+    "prop.dog": { "layers": [{ "file": "_rendered/ours/props/dog.png", "stand": [0.5, 0.5], "scale": 0.105 }] },
     "prop.bag": { "layers": [{ "file": "_rendered/ours/props/bag.png", "stand": [0.5, 0.5], "scale": 0.041 }] },
     "prop.umbrella": { "layers": [{ "file": "_rendered/ours/props/umbrella.png", "stand": [0.5, 0.5], "scale": 0.081 }] },
     "prop.partyhat.0": { "layers": [{ "file": "_rendered/ours/props/partyhat-0.png", "stand": [0.5, 0.5], "scale": 0.05 }] },

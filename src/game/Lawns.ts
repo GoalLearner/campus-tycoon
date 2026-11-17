@@ -699,10 +699,10 @@ export class Lawns {
         if (kind === 'dog') this.prop(group, 'prop.dog', x, y, false, 'dog');
         break;
       case 'petting':
-        // A therapy dog in the middle of a ring sitting round it, facing in (DESIGN.md 78.5).
+        // A therapy dog in the middle of a ring sitting round it, facing in, wide enough that the dog shows (DESIGN.md 78.5).
         this.prop(group, 'prop.dog', x, y);
         refs.forEach((ref, i) => {
-          const at = ring(0.34, i, Math.max(n, 3));
+          const at = ring(0.46, i, Math.max(n, 3));
           this.member(group, ref, at.x, at.y, 'sit', x, y);
         });
         break;

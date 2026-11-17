@@ -483,7 +483,7 @@ for mood in MOOD_RINGS:
     sprites[f'emote.mood-{mood}'] = {'layers': [standing(f'_rendered/ours/emotes/mood-{mood}.png', 0.5, 0.5, scale=0.33)]}
 # The living campus's props (DESIGN.md 64): ours, drawn in the pack's way by tools/make_props.py, for what the packs
 # do not have. Each about the size it is beside a figure 36 pixels tall: a frisbee, a phone, a dining tray, a dog.
-for prop, scale in (('frisbee', 0.17), ('phone', 0.18), ('tray', 0.22), ('dog', 0.24), ('bag', 0.16), ('umbrella', 0.315)):
+for prop, scale in (('frisbee', 0.17), ('phone', 0.18), ('tray', 0.22), ('dog', 0.41), ('bag', 0.16), ('umbrella', 0.315)):
     sprites[f'prop.{prop}'] = {'layers': [standing(f'_rendered/ours/props/{prop}.png', 0.5, 0.5, scale=scale)]}
 # A party night's hats (L6), ours, in three colours.
 for n in range(3):

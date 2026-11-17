@@ -576,6 +576,11 @@ ${sum(live.vehicles) - (live.vehicles.parked ?? 0)} driving, ${live.vehicles.par
         const row = params.get('row');
         if (row) setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.need')].find((b) => b.querySelector('.need-name')?.textContent === row)?.click(), 2300);
       }
+      // &panel=meddle opens the Meddle page behind the student count (DESIGN.md 78).
+      if (panel === 'meddle') {
+        setTimeout(() => document.querySelector<HTMLButtonElement>('button.students:not(.happy)')?.click(), 1400);
+        setTimeout(() => [...document.querySelectorAll<HTMLButtonElement>('.fb-tab')].find((b) => b.textContent === 'Meddle')?.click(), 1900);
+      }
       // &panel=orders opens the orders board as a tap on its button would. &claim=1 then taps the first Claim, and
       // &dismiss=1 the first Dismiss.
       if (panel === 'orders') {
