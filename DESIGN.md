@@ -9390,9 +9390,9 @@ Save version 40: registration's records, none in a save from before; this semest
 | A semester's odds from the lesser of seats and faculty, against the students | A seat count per course: the campus's buildings hold seats, not courses |
 | Nine courses a department, in a chain | A real catalog's dozens: a list to write and a chain no player reads |
 | The campus's record from a sample of 24 students a class year, through the cards' own function, and its share without a needed course the model's | A census of every student (too slow for catch-up), or the sample's own share (it swings) |
-| Sections meet at the timetable's 50 minutes, Tuesdays and Thursdays too | Real 75-minute Tuesday-Thursday classes: the campus's class changes come every hour (75.2) |
-| A professor by surname, from the course and section | Professors as people with cards: R4b's office hours may want it |
-| A credit counts once taken | Credits only for courses passed: grades by class are R4b's |
+| Sections meet at the timetable's 50 minutes, Tuesdays and Thursdays too (R4b: 75 minutes on Tuesdays and Thursdays, 81.6) | Real 75-minute Tuesday-Thursday classes: the campus's class changes come every hour (75.2) |
+| A professor by surname, from the course and section (R4b: a page each, 81.3) | Professors as people with cards: R4b's office hours may want it |
+| A credit counts once taken (R4b: only once passed, 81.2) | Credits only for courses passed: grades by class are R4b's |
 
 ### 80.7 The long run and frames
 
@@ -9411,3 +9411,97 @@ Save version 40: registration's records, none in a save from before; this semest
 **Seen in the game**, on the model campus with a dev option (`&schedule=7&scheduleyear=2`, a third-year's card and classes): the card's Classes row ("12 credits: NUTR 301, NUTR 302, PHIL 101, BUS 101") with its Schedule button; the week, ten classes from Monday to Friday, each with its hours, its code and title, its hall and room and its professor; the course record of four semesters before, "55 of 120 credits". At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends, which scrolls sideways as it always has.
 
 **Tested**: `tests/registration.test.ts` (8): a department of nine courses for every major, each needing the one before it, every code its own and every title inside the tone guide; every student's semesters from the seed, the same every time, full time and no more than 18 credits, prerequisites first, no course twice, a week with no clashes, on the hour or the half hour, a professor and a hall; the first-year seminar and College Writing tried in the first year; the campus at the real figures over four registrations, and students registered one by one going without a needed course as often as the record says; more shut out where faculty are short; registration in November or April with the paper's line, a card's next semester once registered; the same in one step or many; a stepped campus's record; a version 39 save. `tests/regulars.test.ts`: a followed student's weekday has their own classes, each went to or missed. The save tests that upgrade an older save by hand gain the records (`withRegistration` in `tests/helpers.ts`).
+
+## 81. The realism pass, R4b: grades by class and academic support (approved 2026-11-14)
+
+The second of R4's two stops (80). Main's brief of 2026-11-16: "grades by class rolling up to R1's GPA spread; syllabi, midterms, finals, papers, group projects, office hours, curves; advisors, tutoring, honors, minors; credits only for courses passed", with R4a's three rough edges where they fit: professors as people, with office hours; the walker going to the class's own named hall; Tuesday and Thursday classes at 75 minutes. Built on the branch `realism-4b`.
+
+The sources, by name: Rojstaczer and Healy (Teachers College Record, 2012, and its 2016 update) for the share of A's (43 to 45%) and of D's and F's (about 10%); the Gardner Institute's study of 36 institutions ("Digging into the Disciplines") for the big introductory courses (29% of students in chemistry to 34% in calculus get a D or an F or withdraw); Inside Higher Ed and College Pulse's Student Voice survey for office hours (2022: 28% never go, and 55% of those who do go once or twice a term) and advising (2023: 55% have had guidance on the courses they need, and 1 in 5 must meet an adviser); and, a single and weaker source, about 22% of bachelor's degrees with a minor (2021). R1's spread of grade point averages (NPSAS:16, 65.4) stays the campus's.
+
+### 81.1 Grades by class
+
+Each semester's grade point average comes from R1's (65.4), read with the campus as it stood: the semester's record keeps its teaching, so a transcript never changes once a semester is registered. It is the student's average and the term's luck less their usual term (`usualTerm` in `src/sim/systems/grades.ts`). Each term has its own luck (`termAt`): R1's for the game's semesters, and for each semester before the campus's first, where R1 would give every one the first's draw (a student who entered before the game began), its own. R1's terms alone cannot go above 4.0, so a strong student's terms sit a little under their average and a transcript's average over several of them bunches toward the middle: on the long run's campuses, taught better than a new one, 6% of averages at 3.75 and up against R1's 15%. NPSAS:16's spread is of averages over all a student's terms, so the luck is centred on the student and the average over a transcript keeps R1's spread. R4b spreads the semester's average across its classes (`gradeSemester` in `src/sim/systems/coursework.ts`). Each class sits off the semester's average by how it is graded and by the student's luck in it (a spread of 0.9 of a grade point); then all are held to the average inside 0 and 4 (a class at the top stays there and the rest move), turned to letters (A to D with pluses and minuses, and an F below 0.85), and the rounding held too: to within 0.06 of a point, and on the side of the Dean's list (3.5) that R1's term is on, so a card's last term and the campus's Dean's list agree.
+
+How each kind of class is graded against the semester's average: the big introductory courses (general chemistry and physics, calculus, the first biology, statistics, college algebra, the economics introductions, accounting and the first computer science) 1.25 points lower, and curved; another introduction 0.12 lower and a 200-level course 0.05; a 300-level course 0.12 higher, topics 0.25, a capstone 0.3, writing 0.12, a seminar 0.45, a studio 0.3, a one-credit activity 0.7 and late credit 0.45. A class going very badly (below 1.35) is withdrawn from four times in ten: a W, counted in no average.
+
+### 81.2 Credits only for courses passed
+
+An F or a W earns no credit, and the course does not count as a prerequisite: it is taken again when it is needed, and what needs it waits. A card's credits toward a degree's 120 are the ones passed, and its average is over every semester already over, W's left out and F's in at nothing.
+
+### 81.3 Syllabi, professors, office hours, advisers and tutoring
+
+- **A syllabus** by the kind of class (`SYLLABI` in `src/sim/config/coursework.ts`): a big introduction's homework and quizzes (20%), a midterm (25%), lab reports (15%) and a final (40%); a lecture's quizzes, a midterm, a paper and a final; a writing class's three papers and drafts; a seminar's response papers, a group project, a presentation and a final paper; a studio's projects, critiques and portfolio; a capstone's proposal, drafts, thesis or project and presentation; an activity's attendance; late credit's hours, journal and report. Midterms in October and March, finals in December and May. A part's mark shows once its month is past, spread around their grade in the class.
+- **Professors are people** (`professorFor`): the same for a course's section every semester, with a title (Professor 30%, Associate Professor 25%, Assistant Professor 25%, Lecturer 20%, a lecturer by first and last name), their department, two office hours a week of an hour and a half, and how they teach ("Holds review sessions before every exam"; the big introductions' "Curves the exams").
+- **Office hours**: 28% never go. The rest go about once or twice a term, those who go often about twice that, and more with a class going badly (below a C+), to that class's professor: a week's chance of a visit of 10%, 30% with a class going badly, doubled for those who go often. A followed student's day fits the visit into the professor's hours round their classes ("Office hours with Prof. Wrenley about NUTR 302").
+- **An adviser** in their major's department, the same each year. 55% have met them about their courses, and 1 in 5 must; those meet them before registration (in October for the spring, in March for the fall), fitted round their classes ("Advising appointment with Quinn Maplebrook, before registration").
+- **Tutoring** at the study center (R1's tutoring, a study center in reach), twice a week after classes, for a class going badly ("Tutoring for MATH 101 at the study center").
+
+### 81.4 The Honors College
+
+With the Honors College standing (34's big build), the strongest 8% by R1's standing are in it: their introductions in honors sections (never full for them) and an honors thesis in their last year (HON 499 Honors Thesis). The semester's record keeps whether it stood. With none, nobody is in it.
+
+### 81.5 Minors and Latin honors
+
+About 22% take a minor in another department, declared in the second year: its first five courses, one a semester. Latin honors follow the average (cum laude from 3.5, magna cum laude from 3.75, summa cum laude from 3.9), "on course for" from the fourth year.
+
+### 81.6 The week
+
+Tuesday and Thursday classes meet for 75 minutes, at 8, 9:30, 11, 12:30, 2 and 3:30; Monday, Wednesday and Friday classes stay 50 minutes on the hour. The campus's class changes (75.2) are the crowd's own rhythm and do not read the timetable, so the crowd at the hour does not move. A class in a followed student's day goes to its own hall: the walker heads for the lecture hall nearest the one the schedule names, one look over the campus's academic stops when the day's next place is chosen.
+
+A followed student's day had rough edges, fixed with it: a class before a late riser woke was put before their day began (now it is missed from when they are up); coffee before a late first class could last hours (now half an hour, with studying before it); a first class after noon has lunch round noon before it; a short gap round noon is "Grabbing lunch between classes"; and a lunch after a full day of classes says "A late lunch".
+
+### 81.7 The campus's grades
+
+Once a semester, from the same sample registration keeps (24 a class year, 80.3), so the cards and the campus agree (`campusGrades` in `src/sim/systems/registration.ts`): last semester's share of A's and of D's, F's and W's, the same in the big introductory courses, the credits passed, R1's bands of averages, and the shares with a minor and in the Honors College. The Capacity page's Faculty row says it ("Last spring, 41% of grades were A's and 1 in 11 a D, an F or a W (3 in 10 in the hard introductory courses)."). Nothing in it moves a campus number: R1's grades already carry teaching, crowding and tutoring.
+
+The sample is small, so one campus's figures swing: across three seeds at opening, 39 to 45% A's and 23 to 42% D, F or W in the big introductions. The long run reads them over all its runs.
+
+### 81.8 On the screen
+
+- **The card's GPA row** says which average is which: "3.30 overall · 3.62 last term, Dean's list"; "1.85 overall, on academic probation · 2.10 last term"; "3.62 in their first term, Dean's list"; then tutoring, "on course for magna cum laude", the class size and the week's classes as before. Main's ask of 2026-11-16: R4a's "GPA 3.3 · Dean's list" read as a contradiction, the Dean's list going by the term and the 3.3 overall.
+- **The schedule**: their adviser, their minor and the Honors College ("Adviser: Quinn Maplebrook, Nutrition, not met this year · Minor in Kinesiology"); each class's name and professor, a tap opening the professor (title and department, what they teach and where, how they teach, their office hours); each class's syllabus, with marks on what is done and the months of what is not, and "curved" for the big introductions; and the course record, each semester's letters and average, "GPA 3.24 · 58 of 120 credits · on course for cum laude".
+
+### 81.9 The save
+
+Save version 41: nothing to move. Every grade comes from the seed, and a record from before R4b, without its teaching or the Honors College, is read with the campus as it stands. One upgrade note: "Classes now have grades: each with a syllabus, a professor with office hours, and letters on a student's course record. A failed class earns no credit and is taken again."
+
+### 81.10 Decisions made here
+
+| Decisions made here | Instead |
+|---|---|
+| Letters held to R1's term average, the campus's spread R1's | Letters drawn on their own and R1's spread worked out from them: two models of one number |
+| The big introductory courses 1.25 points lower and curved, a capstone and an activity kinder | Every class graded alike: the gap between kinds of class is the real figure |
+| A term's letters on R1's side of the Dean's list | Rounding left alone: now and then a card's 3.48 on the Dean's list, or a 3.51 off it |
+| The campus's figures from registration's own sample, once a semester | A census of every grade (too slow for catch-up), or no campus figure |
+| Grades move no campus number | Grades as a new cause: R1's grades already carry teaching, crowding and tutoring |
+| Office hours, advising and tutoring in a followed student's day | Everyone's visits counted: nothing reads them |
+| Tuesday and Thursday at 75 minutes, the crowd unmoved | R4a's 50 minutes everywhere (80.6, now replaced) |
+| Credits only for courses passed | R4a's credit once taken (80.6, now replaced) |
+| Professors as people, a page each, from the course and section | A card each: a professor is not a student |
+| The walker to the lecture hall nearest the named one | A path to the building itself: walkers go to stops |
+| "the hard introductory courses" in the game's words | The sources' own name for them, which is on the reference map's list |
+| Minors from the second year, about one in five | Double majors only (80.2 has them) |
+| Every term its own luck, those before the campus began too | R1's draw for them, one for all: a transcript that repeats one lucky or unlucky term (R4b's first pictures: a card's 3.4 beside a transcript's 3.83) |
+| A term's luck centred on the student, the Dean's list R1's term's | R1's term as it stands: transcripts' averages bunch toward the middle on a better-taught campus (the first long run: 6% at 3.75 and up) |
+| The card's GPA row and the schedule show the transcript; R1's average (with a study center's lift, a study partner's and exam Stress) still drives the campus's counts, the Main Character's grades and a family's worry | R1's number on the card beside a transcript with another: two averages for one student on two screens. Near 2.0 a family's worry can now differ from the card's probation: open for the owner |
+| The transcript leaves out the study center's lift; R1's figures and the card's "with tutoring" keep it | The lift in every semester: a past term cannot know where the student lived then, and building a study center would rewrite their history and what they had passed |
+| The hard-line test reads professors' names, titles and styles, not their departments | Every word: "Psychology", a major since R1 (65.3), trips the hard lines' "psycho" |
+
+### 81.11 The long run and frames
+
+**The long run** (`npm run simulate`, 2,008 s): all 114 checks pass. Against main's run before R4b (`v60_sim.log`, R4a at fcc7093), no number moved but the new check, the catch-up times and one figure of registration's: sections under 20 students at 39% against 40% (courses taken again, and honors sections). Catch-up is slower by a few hundredths of a second: 622 and 618 ms at the most (594 and 606 before), still under the second. The first run failed the new check, 6% of averages at 3.75 and up on the long run's campuses against R1's 15%, which is what centring a term's luck on the student (81.1) put right; the third and last run came after each term's own luck. The semester just before the campus's first then took R1's own draw (81.1); it touches only students who entered before the campus began, none of them in the long run's last three years, and was not run again.
+
+| Measure | Real | Game |
+|---|---|---|
+| A's of all letter grades | 43 to 45% (Rojstaczer and Healy) | 44.4% |
+| D's and F's | About 10% (the same) | 8.2% D, F or W |
+| D, F or W in the big introductory courses | 29% (chemistry) to 34% (calculus) (Gardner Institute) | 34.5% |
+| Averages: below 1.75, to 2.25, 2.75, 3.25, 3.75, and up | 4, 8, 19, 29, 27, 13% (NPSAS:16) | 4, 9, 20, 23, 33, 11% |
+| Credits passed of those attempted | | 96.6% |
+| Third- and fourth-years with a minor | About 22% of degrees (a single source, 2021) | 21% |
+
+**Frames** on the slowed phone (47.2's method: four times slower, 390 by 844 at 3x), back to back with main (1a51175), four rounds of eight frames, the mean, the model campus's afternoon at High by the stadium: 20.4 ms on main and 20.1 with R4b; with a student in sight followed, card tucked (`&card=0,tuck`, their day planned with R4b's halls, office hours and lunch), 23.2 and 23.1. Inside the rounds' own spread (18.3 to 25.5).
+
+**Seen in the game**, on the model campus with a dev option (`&schedule=7&scheduleyear=2&days=2`, Leo Otterbrook, a third-year, at Thanksgiving): the card's "3.57 overall · 3.91 last term, Dean's list"; the schedule's "Adviser: Quinn Maplebrook, Nutrition, not met this year · Minor in Kinesiology"; Tuesday and Thursday classes from 9:30 to 10:45 and from 11 to 12:15; each class's syllabus with its midterm marked ("Midterm exam 25% · A"); the course record ("GPA 3.57 · 56 of 120 credits", "Second-year spring · GPA 3.91 · 13 credits"); and a lecturer's page ("Charlie Alderdale", "Lecturer · Nutrition", "Starts every class with a story", office hours on Wednesday from 3 to 4:30 PM and Friday from 3:30 to 5 PM, in Bramstead Hall). At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends, which scrolls sideways as it always has.
+
+**Tested**: `tests/coursework.test.ts` (17): a semester's letters come back to its average and stay on its side of the Dean's list; the big introductory courses curved and graded hardest; the campus's A's, D's, F's and W's, the big introductions' and R1's spread of averages; the spread on a campus taught better; every term its own luck, the ones before the campus began too, and a transcript on the student's own average; no credit for an F or a W, and a course failed taken again before what needs it; minors and Latin honors; the Honors College only where it stands, its sections and its thesis; Tuesday and Thursday at 75 minutes; a card and the campus's sample the same; syllabi weighed to the whole and marked once done; professors and advisers the same every time and inside the tone guide and the hard lines; a followed student's days in order, their classes in their own halls, office hours a few in a hundred on a weekday, coffee short and lunch round noon; the card's GPA row; the campus's grades on the Faculty row; a version 40 save. `tests/registration.test.ts`: a lecturer by name, and prerequisites from courses passed. `tests/capacity.test.ts`: the Faculty row's line. The save tests that count the upgrade notes count one more.
