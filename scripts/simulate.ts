@@ -1,6 +1,7 @@
 import { partyCallChance } from '../src/sim/systems/parties';
 import { hazingRisk } from '../src/sim/systems/greek';
 import { CHAOS_FROM, ROWDY } from '../src/sim/config/chaos';
+import { MEDDLE } from '../src/sim/config/meddle';
 import { chaosStepName, chaosStepOf } from '../src/sim/systems/chaos';
 import { WEB_WEEK_TICKS as CHAOS_WEEK_TICKS } from '../src/sim/config/web';
 import { storySpec } from '../src/sim/systems/storyteller';
@@ -222,6 +223,9 @@ const CHECK_IN_MS: Record<Style, number> = {
   // The chaos sandbox's two (DESIGN.md 68.7) look in once a day as well.
   pandemonium: 24 * 60 * TICK_MS,
   serene: 24 * 60 * TICK_MS,
+  // And the two who use the Meddle menu (DESIGN.md 78.6).
+  meddler: 24 * 60 * TICK_MS,
+  soother: 24 * 60 * TICK_MS,
 };
 
 interface YearRow {
@@ -2597,6 +2601,34 @@ function assertModelCampus(seed: number): void {
       'a campus run for Pandemonium on purpose gets there, and is below Rowdy within a few game weeks of being run well again',
       chaosStepOf(most) === 5 && weeks <= 6 && chaosStepOf(wild.state.chaos.level) <= 2,
       `${Math.round(most)} at the most (${chaosStepName(most)}) in two real days with no Campus Safety, no new beds, its yards' crews sent home and every calming switch off; below Rowdy ${Number.isFinite(weeks) ? `${weeks} game weeks` : 'never'} after the Serene player's first visit, and ${chaosStepName(wild.state.chaos.level)} two days on; ${wild.state.chaos.letters.sent} letters from the trustees, ${wild.state.chaos.letters.missed} ignored`,
+    );
+    // The Meddle menu, stop C4 (DESIGN.md 78.6): the same two days with every stirring tool as well, then two with the
+    // calm tools as well. Stirring gets there no later; the calm tools bring it below Rowdy no later than the switches.
+    const stirred = chaosDays('meddler', 2, 'soother', 2);
+    const peakAt = (run: typeof wild, style: Style): number => run.levels.findIndex((one) => one.style === style && chaosStepOf(one.level) === 5);
+    const recover = (run: typeof wild, style: Style): number => {
+      const from = run.levels.findIndex((one) => one.style === style) + Math.round(DAY_MS / TICK_MS / CHAOS_WEEK_TICKS);
+      const at = run.levels.findIndex((one, i) => i >= from && chaosStepOf(one.level) < ROWDY);
+      return at >= 0 ? at - from : Infinity;
+    };
+    const stirredMost = Math.max(...stirred.levels.filter((one) => one.style === 'meddler').map((one) => one.level));
+    const used = stirred.state.chaos.meddle.used;
+    const usedWords = MEDDLE.filter((spec) => (used[spec.id] ?? 0) > 0).map((spec) => `${spec.id} ${used[spec.id]}`).join(', ');
+    check(
+      'the Meddle menu: stirring with every tool reaches Pandemonium no later than the switches alone, and the calm tools bring it below Rowdy no later',
+      chaosStepOf(stirredMost) === 5 && peakAt(stirred, 'meddler') >= 0 && peakAt(stirred, 'meddler') <= peakAt(wild, 'pandemonium') && recover(stirred, 'soother') <= recover(wild, 'serene') && chaosStepOf(stirred.state.chaos.level) <= 2,
+      `stirred: Pandemonium from week ${peakAt(stirred, 'meddler')} (the switches alone: ${peakAt(wild, 'pandemonium')}), ${Math.round(stirredMost)} at the most; below Rowdy ${recover(stirred, 'soother')} game weeks after the first calm visit (the switches alone: ${recover(wild, 'serene')}), ${chaosStepName(stirred.state.chaos.level)} at the end; tools used: ${usedWords}`,
+    );
+    // What the paid tools would cost a year, each used every time it is ready, against the campus's income then.
+    const costs = runs.map((run) => {
+      const income = budget(run.final).incomeTotal;
+      const perYear = MEDDLE.reduce((sum, spec) => sum + ((spec.cash ?? 0) * scaleOf(run.final) * TICKS_PER_YEAR) / spec.cooldown, 0);
+      return { name: `${run.style} ${run.seed}`, share: income > 0 ? (100 * perYear) / income : 0 };
+    });
+    check(
+      'the Meddle menu costs real money but never the campus: every paid tool used every time it is ready is under 3 of every $100 coming in',
+      costs.every((one) => one.share > 0.1 && one.share < 3),
+      costs.map((one) => `${one.name}: ${one.share.toFixed(2)} of every $100`).join('; '),
     );
     // Football's chaos, stop C3 (DESIGN.md 77): it happens, and stays light for the usual players.
     const football = runs.map((run) => {
