@@ -9304,6 +9304,7 @@ The player's own campus keeps the keys it has always had in storage (`save`, `ba
 - A tester's skip of the clock made in the sandbox stays with the sandbox: the real campus's clock is put back when it is opened.
 - Notifications (36.6) are not planned from the sandbox.
 - Export, import and the account are for the player's own campus; a sandbox's save cannot be imported as it ("That save is a sandbox: its money is unlimited, so it cannot become your own campus.").
+- **A rule for the Gold Seals store, when it is built** (main's review, 2026-11-16): buying is refused in a sandbox. The store offers nothing to buy there, and the purchase itself refuses a campus with the sandbox's flag before any payment is asked for, so a real-money purchase can never land in a sandbox save. The store stop's tests must show both.
 
 ### 79.3 The sandbox's rules
 
