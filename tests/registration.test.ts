@@ -59,10 +59,12 @@ describe('courses and registration (R4a, DESIGN.md 80)', () => {
             if (m.days.includes(1)) expect(MWF_HOURS as readonly number[]).toContain(m.from);
             else expect(TTH_HOURS as readonly number[]).toContain(m.from);
           }
-          expect(one.professor).toMatch(/^Prof\. [A-Z][a-z]+$/);
+          // A professor by title and surname, or a lecturer by name (R4b, DESIGN.md 81.3).
+          expect(one.professor).toMatch(/^(Prof\. [A-Z][a-z]+|[A-Z][a-z]+ [A-Z][a-z]+)$/);
           expect(one.hall).toMatch(/ Hall$/);
         }
-        for (const one of plan.courses) taken.add(one.course.code);
+        // Only a course passed counts: one failed or withdrawn from is taken again (R4b, DESIGN.md 81.2).
+        for (const one of plan.courses) if (one.grade?.passed) taken.add(one.course.code);
       }
       // A first-year's first fall has the first-year seminar, unless it was full or clashed; College Writing is
       // registered for in the first year, or was full and is tried again.

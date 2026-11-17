@@ -859,7 +859,7 @@ describe('saves', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(21);
+      expect(notes).toHaveLength(22);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

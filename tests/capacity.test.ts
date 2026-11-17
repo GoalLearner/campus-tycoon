@@ -1,3 +1,4 @@
+import { gradeWords } from '../src/sim/systems/registration';
 import { dollars, dollarsShort } from '../src/sim/format';
 import { newGreek } from '../src/sim/systems/greek';
 import { commencementLeavers } from '../src/sim/systems/population';
@@ -560,7 +561,8 @@ describe('the Capacity page', () => {
     const fall = nextFall(state);
     expect(fall.staying).toBe(46_000 - commencementLeavers(state).students);
     expect(capacity(state).nextFall).toBe(fall.students);
-    expect(need(state, 'faculty').forecast).toBe(`Next fall's students need ${headCount(facultyNeed(state, fall.students))}.`);
+    // The faculty's row adds what their teaching came to last semester (R4b, DESIGN.md 81.7).
+    expect(need(state, 'faculty').forecast).toBe(`Next fall's students need ${headCount(facultyNeed(state, fall.students))}.${gradeWords(state) ? ` ${gradeWords(state)}` : ''}`);
     expect(need(state, 'staff').forecast).toBe(`Next fall's students need ${headCount(staffNeed(state, fall.students))}.`);
     // Twice the students ask twice as much of everything counted by the student.
     const twice = structuredClone(state);
@@ -739,7 +741,7 @@ describe('a save from version 15', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes.length).toBe(25);
+    expect(notes.length).toBe(26);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

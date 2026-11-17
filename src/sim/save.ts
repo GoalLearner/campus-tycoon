@@ -38,7 +38,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 40;
+export const SAVE_VERSION = 41;
 
 export interface SaveFile {
   v: number;
@@ -486,6 +486,9 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof state.registration !== 'object' || state.registration === null) state.registration = { records: [] };
     return state;
   },
+  // Version 41: grades by class (R4b, DESIGN.md 81). Nothing to move: a record without its teaching or the Honors
+  // College is read with the campus as it stands, and every grade comes from the seed.
+  40: (state) => state,
 };
 
 /**

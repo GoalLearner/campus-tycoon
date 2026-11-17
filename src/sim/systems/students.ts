@@ -607,7 +607,7 @@ export interface StudentCard {
   friends: { happiness: number; stress: number; gpa: number } | null;
 }
 
-function natureOf(seed: number, ref: StudentRef, resident: boolean): ArchetypeId {
+export function natureOf(seed: number, ref: StudentRef, resident: boolean): ArchetypeId {
   const at = roll(seed, ref, SALT.nature);
   if (resident) return pickWeighted(NATURE_WEIGHTS, at);
   // Commuters are mostly Commuters, and never Resident Advisors.

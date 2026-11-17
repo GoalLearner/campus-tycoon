@@ -3060,6 +3060,20 @@ export class Walkers {
                 : home && home !== origin
                   ? [home]
                   : [];
+    // A class in its own hall (R4b, DESIGN.md 81.6): the lecture hall nearest the one the schedule names.
+    if (item.where === 'class' && item.at && list.length > 0) {
+      const at = item.at;
+      let best = list[0]!;
+      let near = Infinity;
+      for (const stop of list) {
+        const d = Math.abs(stop.cell.x - at.x) + Math.abs(stop.cell.y - at.y);
+        if (d < near) {
+          near = d;
+          best = stop;
+        }
+      }
+      return best;
+    }
     return pick(list);
   }
 

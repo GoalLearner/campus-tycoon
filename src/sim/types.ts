@@ -1578,6 +1578,13 @@ export interface RegistrationRecord {
   /** The share of sections under 20 students, and of 50 or more. */
   under20: number;
   over50: number;
+  /**
+   * How well the campus taught that semester, 0 to 1, and whether the Honors College stood (R4b, DESIGN.md 81): a
+   * semester's grades read these, so a transcript never changes once written. Missing in a record from before: the
+   * campus as it is now.
+   */
+  teaching?: number;
+  honors?: boolean;
 }
 
 export type LogKind =

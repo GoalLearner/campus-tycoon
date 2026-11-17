@@ -3169,6 +3169,21 @@ button.students {
   font-size: 12.5px;
   margin: 3px 0 0;
 }
+/* A class's name and its professor (R4b, DESIGN.md 81): a tap opens who they are. */
+.schedule-prof {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
 .room-head {
   display: flex;
   align-items: center;

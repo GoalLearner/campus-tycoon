@@ -101,6 +101,8 @@ export const GEN_EDS: readonly GenEdSpec[] = [
   { code: 'IDS 390', title: 'Internship for Credit', credits: 3, cap: 15 },
   { code: 'IDS 395', title: 'Undergraduate Research', credits: 3, cap: 12 },
   { code: 'IDS 399', title: 'Independent Study', credits: 3, cap: 10 },
+  // The Honors College's thesis, in a member's last year (R4b, DESIGN.md 81.4).
+  { code: 'HON 499', title: 'Honors Thesis', credits: 3, cap: 12 },
 ];
 
 /** The one-credit activities a load is rounded up with. */
@@ -151,9 +153,16 @@ export const REGISTRATION = {
   priority: [1.35, 1.1, 0.85, 0.65, 0.6, 0.6],
 } as const;
 
-/** The days and times sections meet (75.2): Monday, Wednesday and Friday on the hour, Tuesday and Thursday on the half hour. */
+/**
+ * The days and times sections meet (75.2): Monday, Wednesday and Friday on the hour for 50 minutes; Tuesday and
+ * Thursday for 75 minutes, starting on the hour or the half hour (8, 9:30, 11, 12:30, 2, 3:30), so each starts in one
+ * of the campus's class changes and lets out a few minutes before the next (R4b, DESIGN.md 81.6).
+ */
 export const MWF_HOURS = [8, 9, 10, 11, 13, 14, 15, 16] as const;
-export const TTH_HOURS = [8.5, 9.5, 10.5, 11.5, 13.5, 14.5, 15.5] as const;
+export const TTH_HOURS = [8, 9.5, 11, 12.5, 14, 15.5] as const;
+/** How long each meets, in hours. */
+export const MWF_LENGTH = 50 / 60;
+export const TTH_LENGTH = 75 / 60;
 /** A lab is one afternoon a week, nearly three hours. */
 export const LAB = { from: 13.5, hours: 2.8 } as const;
 /** A first-year seminar meets once a week, Wednesday at four. */
