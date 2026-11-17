@@ -110,3 +110,9 @@ export const CALM_MOST = 0.45;
 export const MEDDLE_STRESS_MOST = 8;
 /** Asks kept for the social web: it applies them at its next week, and drops any older than this many weeks. */
 export const ASKS_KEPT_WEEKS = 4;
+
+/**
+ * How long the map shows a tool (view only, DESIGN.md 78.5), in hours from when it was used: what the lawns lean to
+ * while it runs. A party is the night's; the festival its two days.
+ */
+export const MEDDLE_SHOW: Partial<Record<MeddleId, number>> = { party: 10, cancel: 10, freeFood: 3, flashMob: 1, snowball: 6, festival: 48, dogs: 6 };

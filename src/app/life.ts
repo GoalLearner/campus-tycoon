@@ -111,6 +111,8 @@ export interface LifeFacts {
   presence?: number;
   /** True in midterm and finals weeks: more study groups, and no games on the quads. */
   exams?: boolean;
+  /** How much fuller the lawns are for something the player set going (DESIGN.md 78.5). 1 when left out. */
+  out?: number;
   /** True from an hour before a home game's kickoff to its final whistle. */
   gameDay?: boolean;
 }

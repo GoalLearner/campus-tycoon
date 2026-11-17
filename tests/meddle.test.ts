@@ -9,10 +9,11 @@ import { scaleOf } from '../src/sim/scale';
 import { happyParts, stressOff, callsLift } from '../src/sim/systems/boosts';
 import { chaosReach } from '../src/sim/systems/chaos';
 import { campusLevels } from '../src/sim/systems/happiness';
-import { cooldownLeft, meddle, meddleCalm, meddleProblem, meddleRein, meddleStress, meddleTemper, meddleView, prankWarDorms, stepMeddle } from '../src/sim/systems/meddle';
+import { cooldownLeft, meddle, meddleShowing, meddleCalm, meddleProblem, meddleRein, meddleStress, meddleTemper, meddleView, prankWarDorms, stepMeddle } from '../src/sim/systems/meddle';
 import { stressRead, weatherAt } from '../src/sim/systems/season';
 import { applyAsks, idOf, newWeb, catchUp, webWeekOf, type Web } from '../src/sim/systems/web';
 import { upgradeNotes } from '../src/app/upgradeNotes';
+import { chooseLawnKind, lawnWords, partyTonight, showingOut } from '../src/app/lawnLife';
 import type { LogEntry } from '../src/sim/types';
 import { spawnChaos } from '../src/sim/systems/chaos';
 import { INCIDENT_EVAL_TICKS } from '../src/sim/config/incidents';
@@ -292,6 +293,31 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
     expect(typeof MIGRATIONS[38]).toBe('function');
     expect(upgradeNotes(38)).toHaveLength(1);
     expect(upgradeNotes(38)[0]).toMatch(/Meddle/);
+  });
+
+  it('shows on the map while it runs (view only): therapy dogs bring groups round a dog, a campus-wide party any night, a snowball battle brings everyone out', () => {
+    const state = model();
+    expect(meddleShowing(state)).toEqual([]);
+    told(state, 'dogs');
+    told(state, 'party');
+    expect(meddleShowing(state).sort()).toEqual(['dogs', 'party']);
+    const group = { size: 3, couple: false, vibe: null, likes: new Set<string>(), exams: false };
+    const kinds = (showing: ReadonlySet<string>): string[] => Array.from({ length: 200 }, (_, k) => chooseLawnKind({ ...group, showing }, 'afternoon', 'clear', (k + 0.5) / 200));
+    const with_ = kinds(new Set(['dogs']));
+    const without = kinds(new Set());
+    expect(without.filter((kind) => kind === 'petting')).toHaveLength(0);
+    expect(with_.filter((kind) => kind === 'petting').length).toBeGreaterThan(60);
+    expect(lawnWords('petting', 'the quad', ['Mia'])).toBe('Petting a therapy dog with Mia on the quad');
+    // A Monday evening is no party night, unless the player threw one.
+    const monday = { weekday: 1, period: 'evening' as const, weather: 'clear' as const, term: true, parties: true };
+    expect(partyTonight(monday)).toBe(false);
+    expect(partyTonight({ ...monday, campusWide: true })).toBe(true);
+    expect(showingOut(new Set(['snowball']), 'snow', 'afternoon')).toBe(4);
+    expect(showingOut(new Set(['dogs']), 'clear', 'night')).toBe(1);
+    state.clock.tick += 6 * 60;
+    expect(meddleShowing(state)).toEqual(['party']);
+    state.clock.tick += 4 * 60;
+    expect(meddleShowing(state)).toEqual([]);
   });
 
   it('is the same in one step or many after meddling', () => {

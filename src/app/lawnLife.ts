@@ -30,8 +30,10 @@ export type LawnKind =
   | 'dance'
   | 'dog'
   | 'stroll'
-  | 'party';
-export const LAWN_KINDS: readonly LawnKind[] = ['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'frisbee', 'catch', 'kick', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug', 'jog', 'goof', 'dance', 'dog', 'stroll', 'party'];
+  | 'party'
+  /** Round a therapy dog on the grass, while the player's Therapy dogs are out (DESIGN.md 78.5). */
+  | 'petting';
+export const LAWN_KINDS: readonly LawnKind[] = ['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'frisbee', 'catch', 'kick', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug', 'jog', 'goof', 'dance', 'dog', 'stroll', 'party', 'petting'];
 
 /**
  * Kinds the lawns place themselves, never chosen by `chooseLawnKind`: people crossing a quad between the groups on it
@@ -62,6 +64,7 @@ export const LAWN_SIZE: Record<LawnKind, readonly [number, number]> = {
   dog: [1, 1],
   stroll: [1, 3],
   party: [6, 40],
+  petting: [2, 5],
 };
 
 /** The share of the crowd step's lawn figures out in each part of the day, in fine weather. */
@@ -82,6 +85,7 @@ export function lawnShare(facts: LifeFacts): number {
   share *= facts.weekend ? 1.15 : 1;
   share *= here < 0.5 ? Math.max(0.2, here) : 1;
   if (facts.reduced) share *= 0.5;
+  share *= facts.out ?? 1;
   return Math.max(0, Math.min(1, share));
 }
 
@@ -104,6 +108,8 @@ export interface LawnGroup {
   mood?: 'up' | 'down' | 'tense' | null;
   /** Their traits on average, 0 to 3. */
   traits?: Partial<Record<'outgoing' | 'funny' | 'laidBack' | 'ambitious', number>>;
+  /** What the player has set going that the lawns show now (DESIGN.md 78.5): 'dogs', 'freeFood', 'festival' and so on. */
+  showing?: ReadonlySet<string>;
 }
 
 /**
@@ -128,6 +134,7 @@ export function chooseLawnKind(group: LawnGroup, period: DayPeriod, weather: Wea
     add('sun', fine && period === 'afternoon' ? 1 : 0);
     add('frisbee', fine && day ? 0.4 : 0);
     add('study', group.exams ? 1.2 : 0.3);
+    showing(w, add, group, period, weather);
     return pick(tilted(w, group), roll, group.size);
   }
   add('circle', 3);
@@ -150,7 +157,49 @@ export function chooseLawnKind(group: LawnGroup, period: DayPeriod, weather: Wea
   add('goof', likes('partying') || likes('gaming') ? 1 : 0.4);
   add('dance', fine && period !== 'morning' ? (likes('partying') || likes('music') ? 1.4 : 0.25) : 0);
   add('dog', 0.35);
+  showing(w, add, group, period, weather);
   return pick(tilted(w, group), roll, group.size);
+}
+
+/**
+ * What the player set going leans the lawns its way while the map shows it (DESIGN.md 78.5): therapy dogs bring groups
+ * round a dog; free food and the festival bring picnics, the festival and a flash mob dancing; a day off brings games
+ * and sun; a snowball battle brings games out in the snow, which otherwise keeps them in.
+ */
+function showing(w: Partial<Record<LawnKind, number>>, add: (kind: LawnKind, weight: number) => void, group: LawnGroup, period: DayPeriod, weather: Weather): void {
+  const on = group.showing;
+  if (!on || on.size === 0 || period === 'night') return;
+  const times = (kinds: readonly LawnKind[], by: number): void => {
+    for (const kind of kinds) if (w[kind] !== undefined) w[kind] = w[kind]! * by;
+  };
+  const fine = weather === 'clear';
+  if (on.has('dogs') && fine) {
+    add('petting', 8);
+    add('dog', 3);
+  }
+  if (on.has('freeFood') && fine) {
+    add('picnic', 3);
+    times(['picnic'], 3);
+  }
+  if (on.has('festival') && fine) {
+    add('dance', 2);
+    times(['dance', 'music'], 3);
+    times(['picnic'], 2);
+  }
+  if (on.has('flashMob') && fine) add('dance', 8);
+  if (on.has('cancel') && fine) times(['frisbee', 'catch', 'kick', 'sun', 'circle'], 1.5);
+  if (on.has('snowball') && weather === 'snow') {
+    add('catch', 5);
+    add('goof', 4);
+  }
+}
+
+/** How much fuller the lawns are while the map shows something the player set going: a snowball battle brings everyone out into the snow. */
+export function showingOut(on: ReadonlySet<string>, weather: Weather, period: DayPeriod): number {
+  if (on.size === 0 || period === 'night') return 1;
+  if (on.has('snowball') && weather === 'snow') return 4;
+  if (weather !== 'clear') return 1;
+  return on.has('cancel') || on.has('festival') || on.has('freeFood') || on.has('dogs') || on.has('flashMob') ? 1.4 : 1;
 }
 
 const SOCIAL: readonly LawnKind[] = ['circle', 'selfie', 'dance', 'goof', 'hug'];
@@ -236,6 +285,7 @@ export const LAWN_POSE: Record<LawnKind, LawnPose> = {
   dog: 'move',
   stroll: 'move',
   party: 'stand',
+  petting: 'sit',
 };
 
 /** The "Doing now" line of someone in a group on the grass. `with` is who else is there, by first name. */
@@ -284,6 +334,8 @@ export function lawnWords(kind: LawnKind, where: string, with_: readonly string[
       return `Walking across ${where}${others}`;
     case 'party':
       return `At a party${others} on ${where}`;
+    case 'petting':
+      return `Petting a therapy dog${others} on ${where}`;
   }
 }
 
@@ -305,10 +357,13 @@ export interface PartyFacts {
   term: boolean;
   /** A campus with a party scene: a game with goals. */
   parties: boolean;
+  /** The player's campus-wide party (DESIGN.md 78.5): tonight, whatever the day. */
+  campusWide?: boolean;
 }
 
 export function partyTonight(facts: PartyFacts): boolean {
-  return facts.parties && facts.term && facts.weekday >= 4 && facts.weekday <= 6 && (facts.period === 'evening' || facts.period === 'night') && facts.weather === 'clear';
+  const night = facts.weekday >= 4 && facts.weekday <= 6;
+  return facts.parties && facts.term && (night || facts.campusWide === true) && (facts.period === 'evening' || facts.period === 'night') && facts.weather === 'clear';
 }
 
 /**

@@ -15,7 +15,7 @@ import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf, rivalColour, RIVALRY_SLOT } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf, rivalColour, RIVALRY_SLOT, meddleShowing } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -23,7 +23,7 @@ import { Lawns } from './Lawns';
 import { Moments } from './Moments';
 import { Mayhem } from './Mayhem';
 import { alongBy, chaosCrowd, RUN, setOff } from '../app/mayhemShow';
-import { lawnShare, partyTonight, RESTING_AT_FULL, type LawnKind } from '../app/lawnLife';
+import { lawnShare, partyTonight, RESTING_AT_FULL, showingOut, type LawnKind } from '../app/lawnLife';
 import { seasonCurve } from '../sim/systems/season';
 import { IN_TERM_FROM } from '../sim/config/season';
 import { partiesOn } from '../sim/systems/parties';
@@ -730,8 +730,12 @@ export class CampusScene extends Phaser.Scene {
     this.walkers.setHour(hour, today);
     this.activity.setHour(hour, weekend);
     this.walkers.setPresence(day.walkers);
-    // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them.
-    const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers });
+    // The lawns fill in fine weather (DESIGN.md 64), and as they fill a share of the walking crowd stays on them. What
+    // the player set going leans them its way while it runs (78.5): therapy dogs, free food, the festival.
+    const showing = meddleShowing(state);
+    const out = showingOut(new Set(showing), this.weather, this.light.period);
+    const lawns = lawnShare({ period: this.light.period, weekend, month: date.month, day: date.day, term, weather: this.weather, students: enrollment(state), reduced, presence: day.walkers, out });
+    this.lawns.setShowing(showing);
     this.lawns.setLife(lawns, this.light.period, this.weather, day.kind === 'midterms' || day.kind === 'finals', reduced);
     // Welcome week and parents' weekend (R2, DESIGN.md 66). In welcome week of every fall after the founding one, new
     // students keep arriving with a parent and their boxes while the player watches, and orientation groups go round
@@ -750,7 +754,7 @@ export class CampusScene extends Phaser.Scene {
     }
     // A party night (L6): Thursday to Saturday evenings in term, in fine weather, on a game with parties. A crowd on the
     // grass by a hall or on Greek Row, and friend groups out for the night head there.
-    const partying = partyTonight({ weekday: date.weekday, period: this.light.period, weather: this.weather, term: seasonCurve(state.clock) >= IN_TERM_FROM, parties: partiesOn(state) });
+    const partying = partyTonight({ weekday: date.weekday, period: this.light.period, weather: this.weather, term: seasonCurve(state.clock) >= IN_TERM_FROM, parties: partiesOn(state), campusWide: showing.includes('party') });
     // The night is the game's date, so each party night has its own spot and size.
     this.lawns.setParty(partying ? { night: calendarAt(state.clock).year * 400 + date.month * 31 + date.day, weekday: date.weekday, hour: Math.floor(shownHour()) } : null);
     this.walkers.setPartySpots(this.lawns.partySpots());

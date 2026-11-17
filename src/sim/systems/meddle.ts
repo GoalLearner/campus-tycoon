@@ -1,4 +1,4 @@
-import { ASKS_KEPT_WEEKS, CALM_MOST, MEDDLE, MEDDLE_BY_ID, MEDDLE_EFFECT, MEDDLE_STRESS_MOST, type MeddleId, type MeddleSpec } from '../config/meddle';
+import { ASKS_KEPT_WEEKS, CALM_MOST, MEDDLE, MEDDLE_BY_ID, MEDDLE_EFFECT, MEDDLE_SHOW, MEDDLE_STRESS_MOST, type MeddleId, type MeddleSpec } from '../config/meddle';
 import { LITTER_CEILING } from '../config/grounds';
 import { TICKS_PER_HOUR } from '../config/time';
 import { WEB_WEEK_TICKS } from '../config/web';
@@ -378,6 +378,19 @@ export function stepMeddle(state: GameState, log: LogEntry[]): void {
   if (m.running.some((one) => one.until <= tick)) m.running = m.running.filter((one) => one.until > tick);
   const week = Math.floor(tick / WEB_WEEK_TICKS);
   if (m.asks.some((one) => one.week < week - ASKS_KEPT_WEEKS)) m.asks = m.asks.filter((one) => one.week >= week - ASKS_KEPT_WEEKS);
+}
+
+/** The tools the map shows now (view only, 78.5): each used less than its show's hours ago. */
+export function meddleShowing(state: GameState): MeddleId[] {
+  const m = state.chaos?.meddle;
+  if (!m || !chaosOn(state)) return [];
+  const tick = state.clock.tick;
+  const out: MeddleId[] = [];
+  for (const [id, hours] of Object.entries(MEDDLE_SHOW) as Array<[MeddleId, number]>) {
+    const last = m.last[id];
+    if (last !== undefined && tick >= last && tick - last < hours * HOUR) out.push(id);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- the page --

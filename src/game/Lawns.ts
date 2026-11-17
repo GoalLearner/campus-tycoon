@@ -118,6 +118,7 @@ const ICONS: Partial<Record<LawnKind, readonly string[]>> = {
   dance: ['music', 'laugh', 'music'],
   goof: ['laugh'],
   dog: ['heart'],
+  petting: ['heart', 'heart', 'laugh'],
 };
 
 const INTEREST_NAMES = Object.keys(INTEREST) as Array<keyof typeof INTEREST>;
@@ -228,7 +229,7 @@ interface Beat {
 }
 
 /** The kinds where nobody moves and nothing flies: once faded in they are left as drawn (DESIGN.md 64.2, frames). */
-const STILL: ReadonlySet<LawnKind> = new Set<LawnKind>(['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug']);
+const STILL: ReadonlySet<LawnKind> = new Set<LawnKind>(['circle', 'picnic', 'sun', 'nap', 'study', 'guitar', 'couple', 'phone', 'reading', 'music', 'selfie', 'hug', 'petting']);
 
 interface Spot {
   x: number;
@@ -264,6 +265,8 @@ export class Lawns {
   private period: DayPeriod = 'afternoon';
   private weather: Weather = 'clear';
   private exams = false;
+  /** What the player set going that the lawns show now (DESIGN.md 78.5). */
+  private showing: ReadonlySet<string> = new Set();
   private reduced = false;
   private recountAt = 0;
   /** The update's clock. */
@@ -305,6 +308,14 @@ export class Lawns {
     this.weather = weather;
     this.exams = exams;
     this.reduced = reduced;
+  }
+
+  /** What the player set going that the lawns show now (DESIGN.md 78.5): a change regroups the lawns at once. */
+  setShowing(showing: readonly string[]): void {
+    const same = showing.length === this.showing.size && showing.every((one) => this.showing.has(one));
+    if (same) return;
+    this.showing = new Set(showing);
+    this.recountAt = 0;
   }
 
   setStep(step: number): void {
@@ -687,6 +698,14 @@ export class Lawns {
         refs.forEach((ref, i) => this.member(group, ref, x, y, 'move', x, y));
         if (kind === 'dog') this.prop(group, 'prop.dog', x, y, false, 'dog');
         break;
+      case 'petting':
+        // A therapy dog in the middle of a ring sitting round it, facing in (DESIGN.md 78.5).
+        this.prop(group, 'prop.dog', x, y);
+        refs.forEach((ref, i) => {
+          const at = ring(0.34, i, Math.max(n, 3));
+          this.member(group, ref, at.x, at.y, 'sit', x, y);
+        });
+        break;
     }
   }
 
@@ -763,7 +782,7 @@ export class Lawns {
       // On a quad some cross it, from one side to the other and back, between the groups (L6).
       const crossing = spot.quad ? STROLL_SHARE : spot.big ? BIG_STROLL_SHARE : 0;
       const route = mix(hashInts(state.seed, slot, 4739), cell(spot)) < crossing && !this.exams && this.period !== 'night' ? this.strollRoute(spot, slot) : null;
-      const kind: LawnKind = route ? 'stroll' : chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs) }, this.period, this.weather, roll);
+      const kind: LawnKind = route ? 'stroll' : chooseLawnKind({ size: refs.length, couple, vibe, likes: this.likesOf(refs), exams: this.exams, ...this.natureOf(refs), showing: this.showing }, this.period, this.weather, roll);
       if ((spot.quad || spot.big) && WIDE.has(kind) && crowded(spot, true)) continue;
       const [, most] = LAWN_SIZE[kind];
       const members = refs.slice(0, most);
