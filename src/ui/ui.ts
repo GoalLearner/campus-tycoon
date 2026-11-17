@@ -1627,6 +1627,7 @@ export function mountUi(root: HTMLElement): void {
         head.textContent = '';
         head.append(el('h1', '', 'Money'), el('p', 'money-lead', view.lead));
         if (view.phase) head.append(el('p', 'fine', view.phase));
+        if (view.coming) head.append(el('p', 'fine', view.coming));
 
         body.textContent = '';
         body.append(el('div', 'money-head', `Coming in · ${view.incomeTotal} a year`));

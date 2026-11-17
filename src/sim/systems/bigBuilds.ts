@@ -9,9 +9,10 @@ import {
   type BigBuildSpec,
 } from '../config/bigBuilds';
 import { ERA_AT_RANK, ERAS, RANK_GOALS } from '../config/goals';
-import { PLACED } from '../config/placed';
+import { PLACED, placedUpkeep } from '../config/placed';
 import { TICKS_PER_HOUR } from '../config/time';
 import { duration } from '../format';
+import { scaleOf } from '../scale';
 import { addTimer, cancelTimers } from '../timers';
 import type { BigBuilds, GameState, LogEntry, MapState, Placed, PlacedType } from '../types';
 import { eraOf } from './goals';
@@ -69,6 +70,20 @@ export function goingUp(state: GameState): Placed[] {
   return bigOnMap(state.map)
     .filter((placed) => placed.done !== undefined)
     .sort((a, b) => a.done! - b.done!);
+}
+
+/**
+ * What the big builds going up will cost to run once they open (DESIGN.md 77.7): a year, and as dollars of every $100
+ * that comes in (`incomeTotal`, the Money panel's), with the builds themselves. A big build pays no separate utilities,
+ * so this is the "Runs at" its card showed. The Money panel and the Build menu say it, and the test players count it.
+ */
+export function upkeepComing(state: GameState, incomeTotal: number): { perYear: number; share: number; builds: Placed[] } {
+  const builds = goingUp(state);
+  const scale = scaleOf(state);
+  const perYear = builds.reduce((sum, placed) => sum + placedUpkeep(placed.type, scale), 0);
+  // Each build's share added in turn, as the test players have always summed it, so the two agree to the last digit.
+  const share = incomeTotal > 0 ? builds.reduce((sum, placed) => sum + (100 * placedUpkeep(placed.type, scale)) / incomeTotal, 0) : 0;
+  return { perYear, share, builds };
 }
 
 /** The big builds this game may buy: those its eras have opened. None on a game with no goals. */

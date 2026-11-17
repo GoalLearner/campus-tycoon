@@ -6,6 +6,7 @@ import {
   bigBuildsOffered,
   cannotStart,
   goingUp,
+  upkeepComing,
   placedUpkeep,
   recreationAt,
   SECOND_BUILDER_SEALS,
@@ -835,7 +836,7 @@ function bigBuildsWanted(state: GameState): PlacedType[] {
   const scale = scaleOf(state);
   // What the big builds already going up will cost to run once they open: the Money panel's player counts them too,
   // or two bought a visit apart open in the same week and the campus keeps too little until the slider catches up.
-  const coming = goingUp(state).reduce((sum, placed) => sum + (100 * placedUpkeep(placed.type, scale)) / books.incomeTotal, 0);
+  const coming = upkeepComing(state, books.incomeTotal).share;
   return bigBuildsOffered(state)
     .map((spec) => spec.type)
     .filter((type) => !bigBuildOf(state, type))
