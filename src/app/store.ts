@@ -9,6 +9,7 @@ import {
   campusHappiness,
   enrollment,
   groundsLine,
+  makeSandbox,
   newGame,
   parseSave,
   scaleOf,
@@ -21,7 +22,7 @@ import {
 import { mergeAway, readSavedApp, type AwayReport, type SavedApp } from './away';
 import { clock } from './clock';
 import { sound } from './sound';
-import { clearSaves, readSaves, requestPersistentStorage, writeSave } from './persistence';
+import { clearSaves, readSaves, readSlots, readWebRecord, requestPersistentStorage, writeSave, writeSlots, writeWebRecord, type SaveSlot, type SlotRecord } from './persistence';
 
 /**
  * Holds the one game state and is the only thing that changes it.
@@ -78,6 +79,13 @@ export class Store {
    */
   visiting: string | null = null;
   private visitClock = 0;
+  /**
+   * Which campus is open (DESIGN.md 79): the player's own, or the sandbox beside it. Everything the store writes goes
+   * under this slot's keys, and nothing done in the sandbox is ever written under the real campus's.
+   */
+  slot: SaveSlot = 'real';
+  /** Which is open at the next launch, and each one's name, kept with the saves. */
+  slots: SlotRecord = { open: 'real', names: {} };
 
   get state(): GameState {
     if (!this.current) throw new Error('No game is loaded.');
@@ -124,10 +132,36 @@ export class Store {
     for (const listener of this.newCampusListeners) listener();
   }
 
-  /** Load the saved game, falling back to the backup. Returns whether a game was loaded. */
+  /** True while the sandbox is open (DESIGN.md 79). */
+  get inSandbox(): boolean {
+    return this.slot === 'sandbox';
+  }
+
+  /** The player's own campus's name, when there is one, for the way back from the sandbox. */
+  get realName(): string | null {
+    return this.slots.names.real ?? null;
+  }
+
+  /** True when there is a sandbox to open. */
+  get hasSandbox(): boolean {
+    return this.slots.names.sandbox !== undefined;
+  }
+
+  /** Load the campus that was open last (the player's own, or the sandbox), falling back to its backup. */
   async load(): Promise<boolean> {
     if (this.current) return true;
-    const stored = await readSaves();
+    this.slots = await readSlots();
+    if (this.slots.open === 'sandbox') {
+      if (await this.loadSlot('sandbox')) return true;
+      // A sandbox that cannot be read: the player's own campus opens.
+      this.slots.open = 'real';
+    }
+    return this.loadSlot('real');
+  }
+
+  /** Load one campus's save, falling back to its backup. Returns whether a game was loaded. */
+  private async loadSlot(slot: SaveSlot): Promise<boolean> {
+    const stored = await readSaves(slot);
     for (const [label, text] of [
       ['save', stored.save],
       ['backup', stored.backup],
@@ -136,6 +170,8 @@ export class Store {
       const result = parseSave(text);
       if (result.ok) {
         this.current = result.state;
+        this.slot = slot;
+        this.slots.names[slot] = result.state.school.name;
         if (result.migratedFrom !== null) this.upgradeNotes = upgradeNotes(result.migratedFrom);
         const kept = readSavedApp(result.app);
         this.away = kept.away;
@@ -173,6 +209,92 @@ export class Store {
     this.upgradeNotes.push(
       `New: every day of the campus week now begins at ${hourName(DEFAULT_WAKE_HOUR + 2)} your time, so classes arrive and home games kick off while you are up. Nothing is cut short: this summer runs ${duration(longer)} longer, and the new hours start with the fall. If your day starts earlier or later than ${hourName(DEFAULT_WAKE_HOUR)}, change it in the Menu.`,
     );
+  }
+
+  /**
+   * Copy the player's campus into a sandbox and open it (DESIGN.md 79). The player's own is saved first and then left
+   * as it is: the copy is written only under the sandbox's keys, with a copy of its social web, and replaces any
+   * sandbox there was. Returns why not, or null.
+   */
+  async copyToSandbox(): Promise<string | null> {
+    const own = this.current;
+    if (!own || this.slot !== 'real' || this.visiting !== null || this.ephemeral) return 'Only your own campus can be copied into a sandbox.';
+    await this.flush();
+    const copy = structuredClone(own);
+    makeSandbox(copy);
+    const web = await readWebRecord('real');
+    await clearSaves('sandbox');
+    if (web) await writeWebRecord(web, 'sandbox');
+    this.slots = { open: 'sandbox', names: { ...this.slots.names, real: own.school.name, sandbox: copy.school.name }, realClock: clock.offset() };
+    this.enter('sandbox', copy);
+    await this.flush();
+    await writeSlots(this.slots);
+    this.emit();
+    return null;
+  }
+
+  /**
+   * Found a sandbox campus (DESIGN.md 79): the model campus, as a new university, with the sandbox's rules, under the
+   * sandbox's keys. A campus of the player's own, if there is one, is saved first and left as it is.
+   */
+  async foundSandbox(name: string, wakeHour: number = DEFAULT_WAKE_HOUR, colour?: string): Promise<void> {
+    if (this.current && this.slot === 'real' && !this.ephemeral && this.visiting === null) {
+      await this.flush();
+      this.slots.names.real = this.current.school.name;
+      this.slots.realClock = clock.offset();
+    }
+    const seed = crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
+    let state = newGame({ seed, name, now: clock.now(), anchor: anchorFor(wakeHour), campus: 'model' });
+    if (colour) {
+      const picked = applyAction(state, { type: 'colour', colour });
+      if (picked.ok) state = picked.state;
+    }
+    makeSandbox(state);
+    await clearSaves('sandbox');
+    this.slots = { ...this.slots, open: 'sandbox', names: { ...this.slots.names, sandbox: name } };
+    this.ephemeral = false;
+    this.visiting = null;
+    this.enter('sandbox', state);
+    this.welcome = enrollment(state) > 0;
+    await this.flush();
+    await writeSlots(this.slots);
+    this.emit();
+  }
+
+  /**
+   * Open the other campus (DESIGN.md 79): the one open now is saved under its own keys first, then the other is read
+   * from its save and caught up to now. A skip of the tester clock made in the sandbox stays with the sandbox.
+   */
+  async switchTo(slot: SaveSlot): Promise<boolean> {
+    if (this.visiting !== null) return false;
+    if (slot === this.slot && this.current) return true;
+    await this.flush();
+    if (this.slot === 'real' && this.current) this.slots.realClock = clock.offset();
+    this.current = null;
+    this.away = null;
+    this.welcome = false;
+    this.recent = [];
+    this.upgradeNotes = [];
+    this.loadProblem = null;
+    if (slot === 'real' && this.slots.realClock !== undefined) clock.restore(this.slots.realClock);
+    this.slots.open = slot;
+    this.slot = slot;
+    await writeSlots(this.slots);
+    const ok = await this.loadSlot(slot);
+    this.emit();
+    return ok;
+  }
+
+  /** A campus put in place by the store itself: the sandbox's copy or its founding. Nothing is carried over. */
+  private enter(slot: SaveSlot, state: GameState): void {
+    this.slot = slot;
+    this.current = state;
+    this.away = null;
+    this.welcome = false;
+    this.recent = [];
+    this.upgradeNotes = [];
+    this.loadProblem = null;
+    this.lastSavedTick = -1;
   }
 
   /** Show a game that was built elsewhere, such as the dev demo. */
@@ -232,6 +354,10 @@ export class Store {
     clock.reset();
     this.ephemeral = false;
     this.visiting = null;
+    this.slot = 'real';
+    this.slots = { ...this.slots, open: 'real', names: { ...this.slots.names, real: name } };
+    delete this.slots.realClock;
+    void writeSlots(this.slots);
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
     this.current = newGame({ seed, name, now: clock.now(), anchor: anchorFor(wakeHour), campus });
     if (colour) {
@@ -268,6 +394,7 @@ export class Store {
 
   /** Replace the game with one read from a save file. Returns an error message, or null on success. */
   importSave(text: string): string | null {
+    if (this.slot !== 'real') return 'A save file is loaded into your own campus: go back to it first.';
     const result = parseSave(text);
     if (!result.ok) return result.reason;
     this.current = result.state;
@@ -291,6 +418,7 @@ export class Store {
    * its own clock, as a save opened on the phone is. Returns an error message, or null on success.
    */
   adoptCloudSave(text: string): string | null {
+    if (this.slot !== 'real') return 'A campus from the cloud goes into your own campus: go back to it first.';
     const result = parseSave(text);
     if (!result.ok) return result.reason;
     this.current = result.state;
@@ -309,13 +437,28 @@ export class Store {
   }
 
   async deleteGame(): Promise<void> {
+    if (this.slot === 'sandbox') {
+      // The sandbox only: the player's own campus is opened again, untouched.
+      await clearSaves('sandbox');
+      delete this.slots.names.sandbox;
+      this.current = null;
+      this.recent = [];
+      if (this.slots.names.real !== undefined && (await this.switchTo('real'))) return;
+      this.slot = 'real';
+      this.slots.open = 'real';
+      await writeSlots(this.slots);
+      this.emit();
+      return;
+    }
     this.current = null;
     this.away = null;
     this.welcome = false;
     this.lastExportAt = null;
     this.recent = [];
     this.newCampus();
-    await clearSaves();
+    await clearSaves('real');
+    delete this.slots.names.real;
+    await writeSlots(this.slots);
     this.emit();
   }
 
@@ -418,12 +561,16 @@ export class Store {
     }
     if (!this.current || this.ephemeral) return;
     this.lastSavedTick = this.current.clock.tick;
+    // Under the open campus's own keys: the sandbox's never go under the real campus's (DESIGN.md 79).
+    const slot = this.slot;
+    if (slot === 'sandbox' && this.current.sandbox !== true) return;
     try {
-      await writeSave(serialize(this.current, clock.now(), this.appData()));
+      await writeSave(serialize(this.current, clock.now(), this.appData()), slot);
     } catch {
       // Storage can fail in private browsing. The game keeps running in memory.
     }
-    if (tell) for (const listener of this.savedListeners) listener(puttingAway);
+    // Cloud saves upload the player's own campus only.
+    if (tell && slot === 'real') for (const listener of this.savedListeners) listener(puttingAway);
   }
 
   /** Start the once-a-second heartbeat and save whenever the app is put away. */

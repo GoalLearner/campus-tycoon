@@ -2,7 +2,7 @@ import type { Action, GameState } from '../sim';
 import { KIND, SLOTS } from '../sim/config/web';
 import type { StudentRef } from '../sim/systems/students';
 import { webWeekOf } from '../sim/systems/web';
-import { readWebRecord, writeWebRecord } from './persistence';
+import { readWebRecord, writeWebRecord, type SaveSlot } from './persistence';
 import type { WebReply, WebRequest } from './webWorker';
 import { idIn, type WebView } from './socialView';
 
@@ -16,6 +16,8 @@ interface Host {
   state: GameState;
   hasGame: boolean;
   isEphemeral: boolean;
+  /** Which campus is open: the web's record is kept for each apart (DESIGN.md 79). */
+  slot: SaveSlot;
   subscribe(listener: () => void): () => void;
   dispatch(action: Action): unknown;
 }
@@ -42,15 +44,22 @@ let busy = false;
 let wanted: WebRequest | null = null;
 let campus = '';
 let posted = -1;
+/** The campus (and its slot) the job in hand and the one waiting are for: an answer for another is not kept. */
+let sentFor = '';
+let wantedFor = '';
 
 function send(request: WebRequest): void {
   if (!worker) return;
   if (busy) {
     // One job at a time: the latest waits, any older one is dropped.
-    wanted = request.type === 'start' || wanted?.type !== 'start' ? request : wanted;
+    if (request.type === 'start' || wanted?.type !== 'start') {
+      wanted = request;
+      wantedFor = campus;
+    }
     return;
   }
   busy = true;
+  sentFor = campus;
   worker.postMessage(request);
 }
 
@@ -61,6 +70,20 @@ export function startSocialWeb(host: Host): void {
   worker.onmessage = (event: MessageEvent<WebReply>) => {
     busy = false;
     const reply = event.data;
+    // An answer for a campus no longer open (the sandbox and the player's own share a seed) is dropped, and its record
+    // never written under the other's keys (DESIGN.md 79).
+    const current = sentFor === campus;
+    const slot: SaveSlot = sentFor.endsWith(':sandbox') ? 'sandbox' : 'real';
+    if (!current) {
+      const next = wanted;
+      wanted = null;
+      if (next) {
+        busy = true;
+        sentFor = wantedFor;
+        worker!.postMessage(next);
+      }
+      return;
+    }
     socialWeb.view = reply.view;
     socialWeb.stats = reply.stats;
     socialWeb.recordBytes = reply.record.length;
@@ -72,22 +95,26 @@ export function startSocialWeb(host: Host): void {
     const main = host.state.story?.mc;
     const people = reply.mainPeople;
     if (people && main && host.hasGame && people.for.entryYear === main.ref.entryYear && people.for.index === main.ref.index && main.webPeople?.week !== people.week) host.dispatch({ type: 'mainPeople', people });
-    if (!host.isEphemeral) void writeWebRecord(reply.record);
+    if (!host.isEphemeral) void writeWebRecord(reply.record, slot);
     for (const listener of listeners) listener();
     const next = wanted;
     wanted = null;
-    if (next) send(next);
+    if (next) {
+      busy = true;
+      sentFor = wantedFor;
+      worker!.postMessage(next);
+    }
   };
   const follow = async (): Promise<void> => {
     if (!host.hasGame) return;
     const state = host.state;
-    const id = `${state.seed}:${state.clock.createdAt}`;
+    const id = `${state.seed}:${state.clock.createdAt}:${host.slot}`;
     const week = webWeekOf(state);
     if (id !== campus) {
       campus = id;
       posted = week;
       // The saved web, for this campus only: another campus's record is not read.
-      const record = host.isEphemeral ? null : await readWebRecord();
+      const record = host.isEphemeral ? null : await readWebRecord(host.slot);
       send({ type: 'start', state, record, week });
       return;
     }

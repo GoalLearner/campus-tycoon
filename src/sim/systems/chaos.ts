@@ -341,7 +341,8 @@ function consequences(state: GameState, log: LogEntry[], before: number, after: 
       c.dipUntil = tick + LETTER.dipWeeks * WEB_WEEK_TICKS;
       log.push({ tick, kind: 'chaos', text: `The trustees are unimpressed: the campus is still ${name}. Reputation is ${LETTER.dip} points lower in the academic rating for a while.`, data: { letter: 3 } });
     }
-  } else if (after >= ROWDY && before >= ROWDY && tick - c.letters.lastClosed >= LETTER.rest * day) {
+  } else if (after >= ROWDY && before >= ROWDY && tick - c.letters.lastClosed >= LETTER.rest * day && !state.sandbox) {
+    // A sandbox has no trustees (DESIGN.md 79).
     // Two Rowdy readings in a row: the trustees do not write over one wild week.
     c.letter = { from: tick, until: tick + LETTER.days * day };
     c.letters.sent += 1;

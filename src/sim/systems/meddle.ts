@@ -39,11 +39,15 @@ export function meddleOn(state: GameState): boolean {
 
 /** What the tool costs here: dollars at the campus's scale, or Gold Seals. */
 export function meddleCost(state: GameState, spec: MeddleSpec): { cash: number; seals: number } {
+  // Free in a sandbox (DESIGN.md 79).
+  if (state.sandbox) return { cash: 0, seals: 0 };
   return { cash: spec.cash ? Math.round(spec.cash * scaleOf(state)) : 0, seals: spec.seals ?? 0 };
 }
 
 /** Ticks until the tool can be used again; 0 when it is ready. */
 export function cooldownLeft(state: GameState, id: MeddleId): number {
+  // A sandbox's tools never rest (DESIGN.md 79).
+  if (state.sandbox) return 0;
   const last = state.chaos.meddle?.last[id];
   if (last === undefined) return 0;
   return Math.max(0, last + MEDDLE_BY_ID[id].cooldown - state.clock.tick);
@@ -430,7 +434,7 @@ export interface MeddleRow {
   used: number;
 }
 
-export function meddleView(state: GameState): { rows: MeddleRow[]; seals: number } | null {
+export function meddleView(state: GameState): { rows: MeddleRow[]; seals: number; sandbox: boolean } | null {
   if (!meddleOn(state)) return null;
   const rows = MEDDLE.map((spec): MeddleRow => {
     const cost = meddleCost(state, spec);
@@ -442,10 +446,10 @@ export function meddleView(state: GameState): { rows: MeddleRow[]; seals: number
       good: spec.good,
       bad: spec.bad,
       cost: cost.cash > 0 ? dollarsShort(cost.cash) : cost.seals > 0 ? `${cost.seals} Gold Seals` : 'Free',
-      rests: spec.cooldown >= 7 * 24 * HOUR ? 'a week' : 'a day',
+      rests: state.sandbox ? 'never' : spec.cooldown >= 7 * 24 * HOUR ? 'a week' : 'a day',
       problem: meddleProblem(state, spec.id),
       used: state.chaos.meddle.used[spec.id] ?? 0,
     };
   });
-  return { rows, seals: state.daily.seals };
+  return { rows, seals: state.daily.seals, sandbox: state.sandbox === true };
 }

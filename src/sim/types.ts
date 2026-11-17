@@ -639,6 +639,11 @@ export interface GameState {
   rng: RngState;
   clock: Clock;
   school: { name: string };
+  /**
+   * A sandbox campus (DESIGN.md 79): kept in a save of its own, its money unlimited, no trustees' letters, the Meddle
+   * menu free. Missing on every real campus.
+   */
+  sandbox?: true;
   money: Money;
   map: MapState;
   /** Headcount by class year: freshmen, sophomores, juniors, seniors, fifth- and sixth-year seniors (DESIGN.md 65.2). */

@@ -31,7 +31,8 @@ export function cloudSync(): CloudSync | null {
 
 /** The game's own snapshot: the save as the Export button makes it (the game only), and what it says about itself. */
 export function snapshotOf(store: Store): Snapshot | null {
-  if (!store.hasGame || store.visiting !== null) return null;
+  // Never the sandbox (DESIGN.md 79): only the player's own campus goes to the cloud.
+  if (!store.hasGame || store.visiting !== null || store.inSandbox) return null;
   return { text: () => store.exportText(), meta: metaOf(store.state) };
 }
 
