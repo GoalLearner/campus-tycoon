@@ -1,9 +1,9 @@
 import { dateAt } from '../calendar';
 import { ACTIVITIES, LATE_CREDIT, CALCULUS_FIELDS, BREADTH, CHAIN_NUMBERS, DEPARTMENTS, DEPT_SIZE, EARLY_SHARE, GEN_EDS, LAB, LAB_DEPARTMENTS, LOADS, MWF_HOURS, MWF_LENGTH, REGISTRATION, SECTION_CAP, SEMINAR_SLOT, STUDIO_DEPARTMENTS, TOPICS, TTH_HOURS, TTH_LENGTH, WRITING_FIRST_FALL } from '../config/courses';
-import { HONORS, MINOR } from '../config/coursework';
+import { CLASS_SPREAD, HONORS, MINOR } from '../config/coursework';
 import { DEANS_LIST_FROM, PROBATION_BELOW, TEACH_TYPICAL } from '../config/grades';
 import { averageOf, curvedCourse, gradeSemester, latinFor, professorFor, type Grade } from './coursework';
-import { gradesOf, normalCdf, standingZ } from './grades';
+import { gradesOf, normalCdf, standingZ, usualTerm } from './grades';
 import { bigBuildOpen } from './bigBuilds';
 import { CLASS_YEARS } from '../config/population';
 import { MAJORS, SURNAME_ENDS, SURNAME_STARTS } from '../config/students';
@@ -374,8 +374,13 @@ function registerSemester(state: GameState, ref: StudentRef, n: number, semester
  */
 function gradePlan(state: GameState, ref: StudentRef, plan: SemesterPlan, teaching: number): void {
   const nature = natureOf(state.seed, ref, movedAway(state.seed, ref));
-  const target = gradesOf(state.seed, ref, { archetype: nature, classYear: Math.min(CLASS_YEARS - 1, Math.floor(plan.n / 2)), teaching, tutoring: 0 }, plan.semester + 1).term;
-  const grades = gradeSemester(state.seed, ref, plan.semester, plan.courses.map((one) => one.course), target);
+  const inputs = { archetype: nature, classYear: Math.min(CLASS_YEARS - 1, Math.floor(plan.n / 2)), teaching, tutoring: 0 };
+  const r1 = gradesOf(state.seed, ref, inputs, plan.semester + 1);
+  // Their average, and this term's luck less their usual term's: a transcript's average then keeps R1's spread (NPSAS
+  // is of averages over all a student's terms), where R1's terms alone, held under 4.0, bunch toward the middle. The
+  // Dean's list stays R1's term's.
+  const target = Math.max(0, Math.min(4, r1.gpa + r1.term - usualTerm(standingZ(state.seed, ref, inputs))));
+  const grades = gradeSemester(state.seed, ref, plan.semester, plan.courses.map((one) => one.course), target, CLASS_SPREAD, r1.deansList);
   plan.courses.forEach((one, i) => {
     one.grade = grades[i] ?? null;
   });

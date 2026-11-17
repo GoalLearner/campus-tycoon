@@ -70,7 +70,7 @@ function letterFor(points: number): readonly [string, number] {
  * classes by how each is graded and the student's luck in each, then held to the average: the letters, weighed by
  * credits, come out at it, to within the rounding of a letter. A class going very badly is now and then withdrawn from.
  */
-export function gradeSemester(seed: number, ref: StudentRef, semester: number, courses: readonly CourseLike[], target: number, spread = CLASS_SPREAD): Grade[] {
+export function gradeSemester(seed: number, ref: StudentRef, semester: number, courses: readonly CourseLike[], target: number, spread = CLASS_SPREAD, deans = target >= DEANS_LIST_FROM): Grade[] {
   if (courses.length === 0) return [];
   const raw = courses.map((course) => target + GRADED[kindOf(course)] + spread * normalInv(Math.min(0.999, Math.max(0.001, u(seed, ref.entryYear, ref.index, semester, codeHash(course.code), 8201)))));
   // Held to the average inside 0 and 4: a class already at the top (or the bottom) is held there, and the rest move
@@ -119,20 +119,25 @@ export function gradeSemester(seed: number, ref: StudentRef, semester: number, c
     });
     if (w <= 0) break;
     const off = target - sum / w;
-    if (Math.abs(off) <= 0.06 && (target >= DEANS_LIST_FROM) === (sum / w >= DEANS_LIST_FROM)) break;
+    const side = sum / w >= DEANS_LIST_FROM;
+    if (Math.abs(off) <= 0.06 && side === deans) break;
+    // Toward the average; or, on the wrong side of the Dean's list, across it.
+    const dir = side !== deans ? (deans ? 1 : -1) : Math.sign(off);
     let pick = -1;
-    let most = 0;
+    let most = side !== deans ? -Infinity : 0;
     courses.forEach((_, i) => {
       if (withdrawn[i]) return;
-      const residual = raw[i]! - letters[i]![1];
-      if (Math.sign(residual) === Math.sign(off) && Math.abs(residual) > most) {
-        most = Math.abs(residual);
+      const at = LETTERS.findIndex((one) => one[0] === letters[i]![0]);
+      if (dir > 0 ? at <= 0 : at >= LETTERS.length - 1) return;
+      const leaning = (raw[i]! - letters[i]![1]) * dir;
+      if (leaning > most) {
+        most = leaning;
         pick = i;
       }
     });
     if (pick < 0) break;
     const at = LETTERS.findIndex((one) => one[0] === letters[pick]![0]);
-    const step = off > 0 ? Math.max(0, at - 1) : Math.min(LETTERS.length - 1, at + 1);
+    const step = dir > 0 ? at - 1 : at + 1;
     letters[pick] = LETTERS[step]!;
     raw[pick] = letters[pick]![1];
   }

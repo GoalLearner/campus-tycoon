@@ -137,6 +137,25 @@ export function gradesOf(seed: number, ref: Ref, inputs: GradeInputs, semester: 
   return { gpa, term, deansList: term >= DEANS_LIST_FROM, probation: gpa < PROBATION_BELOW };
 }
 
+/**
+ * A student's usual term, from where they stand (R4b, DESIGN.md 81.1): the average of their terms' grades over every
+ * luck a term can bring. It sits a little inside their average, since a term cannot go above 4.0 or below the floor.
+ * R4b's letters take each term as the student's average and this term's luck less their usual, so the average over a
+ * transcript keeps R1's spread (NPSAS:16 is of averages over all a student's terms).
+ */
+export function usualTerm(z: number): number {
+  const keep = Math.sqrt(1 - TERM_NOISE * TERM_NOISE);
+  let sum = 0;
+  let weights = 0;
+  for (let i = -12; i <= 12; i++) {
+    const x = i / 4;
+    const w = Math.exp((-x * x) / 2);
+    sum += w * Math.max(GPA_FLOOR, gpaAt(normalCdf(keep * z + TERM_NOISE * x)));
+    weights += w;
+  }
+  return sum / weights;
+}
+
 /** The share of a campus below the probation line, at its teaching: the real figure at typical teaching (DESIGN.md 65.4). */
 export function probationShare(teaching: number): number {
   return normalCdf(normalInv(shareBelow(PROBATION_BELOW)) - TEACH_Z * (teaching - TEACH_TYPICAL));

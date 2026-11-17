@@ -12,6 +12,7 @@ import { CATALOG, campusGrades, gpaWords, campusRegistration, COURSE_BY_CODE, co
 import { classPlaces, semesterOf, type StudentRef } from '../src/sim/systems/students';
 import { dateAt } from '../src/sim/calendar';
 import { DAY, T0 } from './helpers';
+import { gpaAt, normalCdf, usualTerm } from '../src/sim/systems/grades';
 
 const MODEL = newGame({ seed: 77, name: 'Test University', now: T0, campus: 'model' });
 
@@ -113,6 +114,23 @@ describe('grades by class (R4b, DESIGN.md 81)', () => {
     for (const gpa of gpas) bands[GPA_BANDS.filter((from) => gpa >= from).length]!++;
     const real = [0.04, 0.08, 0.19, 0.29, 0.27, 0.13];
     bands.forEach((count, i) => expect(Math.abs(count / gpas.length - real[i]!), `band ${i}: ${(count / gpas.length).toFixed(3)}`).toBeLessThan(0.07));
+  });
+
+  it("keeps R1's spread of averages on a campus taught better too, where a term's grades bunch under 4.0", () => {
+    // A term cannot go above 4.0: a strong student's usual term sits inside their average, a weak one's above it.
+    expect(usualTerm(2)).toBeLessThan(gpaAt(normalCdf(2)));
+    expect(usualTerm(-2)).toBeGreaterThan(gpaAt(normalCdf(-2)));
+    const now = semesterOf(MODEL);
+    const records = [];
+    for (let g = now - 8; g <= now; g++) records.push({ ...campusRegistration(MODEL, g), teaching: 0.95 });
+    const taught = { ...MODEL, registration: { records } } as GameState;
+    const gpas = students(taught, 200).map((ref) => courseHistory(taught, ref, now, false).gpa).filter((gpa): gpa is number => gpa !== null);
+    const top = gpas.filter((gpa) => gpa >= 3.75).length / gpas.length;
+    const bottom = gpas.filter((gpa) => gpa < 2.25).length / gpas.length;
+    expect(top).toBeGreaterThan(0.1);
+    expect(top).toBeLessThan(0.24);
+    expect(bottom).toBeGreaterThan(0.04);
+    expect(bottom).toBeLessThan(0.17);
   });
 
   it('gives no credit for an F or a W, and has a course failed taken again before what needs it', () => {
