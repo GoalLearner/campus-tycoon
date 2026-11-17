@@ -1,6 +1,7 @@
 import { BULLIED_REASON } from '../sim/config/bullying';
 import { lonelyOf } from '../sim/systems/wellbeing';
 import { semesterOf } from '../sim/systems/students';
+import { standingOf, TRANSCRIPT_BELOW } from '../sim/systems/registration';
 import { BULLIED_FROM } from '../sim/config/web';
 import type { GameState, StudentCard, StudentRef } from '../sim';
 import { FAMILY, PARENTS_VISITING, RHYTHM_FEELINGS } from '../sim/config/fourYears';
@@ -159,7 +160,8 @@ export function moodletsOf(view: WebView | null, state: GameState, ref: StudentR
   // One day in the week it arrives, if it does this week.
   if (thisWeek(2) < (busy ? FAMILY.packageBusy : FAMILY.packageOther) && Math.floor(thisWeek(3) * 7) === date.weekday) add('happy', 'Care package from home', 2.2, 'package');
   if ((date.weekday === 6 || date.weekday === 0) && day.special !== 'parents' && thisWeek(4) < FAMILY.visitWeekend) add('happy', 'Family visiting', 1.4);
-  if (card.probation && thisWeek(5) < FAMILY.pressureGrades) add('tense', 'Family worried about grades', 1.5);
+  // The probation their card shows, their transcript's (R4c, DESIGN.md 82.2); worked out only where it could be.
+  if (thisWeek(5) < FAMILY.pressureGrades && card.gpa < TRANSCRIPT_BELOW && standingOf(state, ref).probation) add('tense', 'Family worried about grades', 1.5);
   else if ((card.majorNote?.startsWith('Switched') || ['letters', 'arts', 'music'].includes(MAJOR_GROUP[card.subject] ?? '')) && (hashInts(state.seed, 4847, ref.entryYear, ref.index) >>> 0) / 4294967296 < FAMILY.pressureMajor) add('tense', 'Family wants a different major', 0.9);
   if ((card.relationship.id === 'distanceHappy' || card.relationship.id === 'distanceStruggling') && (date.weekday === 5 || date.weekday === 6) && thisWeek(6) < FAMILY.partnerVisit) add('happy', 'Partner visiting from home', 2, 'heart');
   // A senior's last year (R2, DESIGN.md 66.5): the job hunt, an offer, graduate school, and commencement itself.

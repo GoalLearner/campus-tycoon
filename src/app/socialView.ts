@@ -1,5 +1,6 @@
 import { peopleForMain } from '../sim/systems/mainWeb';
 import type { MainPeople } from '../sim/types';
+import { standingOf } from '../sim/systems/registration';
 import { BULLYING_LINES, BULLYING_ROLES } from '../sim/config/bullying';
 import type { GameState } from '../sim';
 import { calendarAt } from '../sim/calendar';
@@ -377,7 +378,10 @@ export function happeningLine(state: GameState, one: Happening): string | null {
     case EVENT.reported: {
       const lines = BULLYING_LINES[BULLYING_KEY[one.event]!];
       if (one.event === EVENT.pileOn && !c) return null;
-      const line = lines[Math.abs(one.luck) % lines.length]!;
+      let line = lines[Math.abs(one.luck) % lines.length]!;
+      // A line about their Dean's list only when their transcript has them on it (R4c, DESIGN.md 82.2): else the next.
+      const target = one.people[1];
+      if (/Dean.s list/.test(line) && target && !standingOf(state, target).deansList) line = lines[(Math.abs(one.luck) + 1) % lines.length]!;
       return line.replace('{a}', a).replace('{b}', b).replace('{c}', c ?? '');
     }
     // A rumour on Quadline that reached someone close to the one it was about (DESIGN.md 63.14).

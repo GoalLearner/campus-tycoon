@@ -272,9 +272,10 @@ describe('syllabi, professors and advisers (R4b, DESIGN.md 81.3)', () => {
           expect(slot.day).toBeLessThanOrEqual(5);
           expect(slot.to).toBeGreaterThan(slot.from);
         }
-        for (const text of [one.name, one.title, one.department, one.style]) expect(toneProblem(text), text).toBeNull();
-        // The department is a major's name, already in the game (Psychology is one): the rest is new.
-        for (const text of [one.name, one.title, one.style]) expect(hardLineProblem(text), text).toBeNull();
+        for (const text of [one.name, one.title, one.department, one.style]) {
+          expect(toneProblem(text), text).toBeNull();
+          expect(hardLineProblem(text), text).toBeNull();
+        }
         if (curvedCourse(course)) expect(one.style).toBe('Curves the exams');
       }
     }

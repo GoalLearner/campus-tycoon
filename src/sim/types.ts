@@ -869,6 +869,14 @@ export interface MainCharacter {
   probation?: number;
   /** This semester so far: the study need summed at each step, the steps, classes attended and classes there were. */
   term: { study: number; steps: number; attended: number; classes: number };
+  /**
+   * Their own part in each semester's grades since they were chosen, once it is over (R4c, DESIGN.md 82.1): the game's
+   * semester and the points their study, their classes and their story moved its average. Their transcript reads it.
+   * Missing in a save from before: none.
+   */
+  termShifts?: Array<[number, number]>;
+  /** Their last semester's average, from their transcript (R4c); missing until a semester closes after R4c. */
+  lastTerm?: number;
   /** Hours of each activity in today, for the day's line. */
   today: Partial<Record<ActivityId, number>>;
   job: string | null;

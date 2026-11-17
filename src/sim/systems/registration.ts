@@ -1,4 +1,4 @@
-import { dateAt } from '../calendar';
+import { calendarAt, dateAt } from '../calendar';
 import { ACTIVITIES, LATE_CREDIT, CALCULUS_FIELDS, BREADTH, CHAIN_NUMBERS, DEPARTMENTS, DEPT_SIZE, EARLY_SHARE, GEN_EDS, LAB, LAB_DEPARTMENTS, LOADS, MWF_HOURS, MWF_LENGTH, REGISTRATION, SECTION_CAP, SEMINAR_SLOT, STUDIO_DEPARTMENTS, TOPICS, TTH_HOURS, TTH_LENGTH, WRITING_FIRST_FALL } from '../config/courses';
 import { CLASS_SPREAD, HONORS, MINOR } from '../config/coursework';
 import { DEANS_LIST_FROM, PROBATION_BELOW, TEACH_TYPICAL } from '../config/grades';
@@ -380,8 +380,11 @@ function gradePlan(state: GameState, ref: StudentRef, plan: SemesterPlan, teachi
   // Their average, and this term's luck less their usual term's: a transcript's average then keeps R1's spread (NPSAS
   // is of averages over all a student's terms), where R1's terms alone, held under 4.0, bunch toward the middle. The
   // Dean's list stays R1's term's.
-  const target = Math.max(0, Math.min(4, gpa + term - usualTerm(standingZ(state.seed, ref, inputs))));
-  const grades = gradeSemester(state.seed, ref, plan.semester, plan.courses.map((one) => one.course), target, CLASS_SPREAD, term >= DEANS_LIST_FROM);
+  // The Main Character's own part in a semester once it is over (R4c, DESIGN.md 82.1): how much they studied, the classes
+  // they went to and what their story did. Their Dean's list is then their own letters'.
+  const shift = mcShiftOf(state, ref, plan.semester);
+  const target = Math.max(0, Math.min(4, gpa + term - usualTerm(standingZ(state.seed, ref, inputs)) + shift));
+  const grades = gradeSemester(state.seed, ref, plan.semester, plan.courses.map((one) => one.course), target, CLASS_SPREAD, shift !== 0 ? target >= DEANS_LIST_FROM : term >= DEANS_LIST_FROM);
   plan.courses.forEach((one, i) => {
     one.grade = grades[i] ?? null;
   });
@@ -389,9 +392,24 @@ function gradePlan(state: GameState, ref: StudentRef, plan: SemesterPlan, teachi
   plan.earned = plan.courses.reduce((sum, one) => sum + (one.grade?.passed ? one.course.credits : 0), 0);
 }
 
+/** The Main Character's own part in a semester's grades, once it is over (R4c): 0 for anyone else. */
+function mcShiftOf(state: GameState, ref: StudentRef, semester: number): number {
+  const mc = state.story?.mc;
+  if (!mc || mc.ref.entryYear !== ref.entryYear || mc.ref.index !== ref.index || !mc.termShifts) return 0;
+  return mc.termShifts.find((one) => one[0] === semester)?.[1] ?? 0;
+}
+
+/** True once this semester's classes are over: the spring, from commencement until the fall begins (R4c). */
+export function termOver(state: GameState): boolean {
+  const phase = calendarAt(state.clock).phase;
+  return phase === 'graduation' || phase === 'summer';
+}
+
 export interface CourseHistory {
   /** Every semester registered so far, the first first: the latest is this semester. */
   semesters: SemesterPlan[];
+  /** How many of them are over: all but this one, or all of them once the spring is over (R4c). */
+  over: number;
   /** Credits passed in the semesters already over: an F or a W earns none (R4b). */
   earned: number;
   /** The grade point average over the semesters already over, from their letters; null before the first is over. */
@@ -429,7 +447,7 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
     const students = record ? record.students : Math.max(1, enrollment(state));
     const teaching = record?.teaching ?? teachingNow;
     const honors = (record?.honors ?? honorsNow) && orders.standing >= 1 - HONORS.share;
-    const key = halls ? '' : `${state.seed}:${ref.entryYear}:${ref.index}:${g}:${record ? `${record.pFull}:${record.students}` : 'base'}:${teaching}:${honors ? 1 : 0}`;
+    const key = halls ? '' : `${state.seed}:${ref.entryYear}:${ref.index}:${g}:${record ? `${record.pFull}:${record.students}` : 'base'}:${teaching}:${honors ? 1 : 0}:${mcShiftOf(state, ref, g)}`;
     const kept = key ? REGISTERED.get(key) : undefined;
     if (kept && kept.before === taken.size) {
       taken = new Set(kept.after);
@@ -445,20 +463,22 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
     }
     return plan;
   };
+  // The semesters over: all before this one, and this one too once the spring is over (R4c).
+  const overN = now === semesterOf(state) && termOver(state) ? nowN + 1 : nowN;
   for (let n = 0; n <= nowN; n++) {
     const plan = semesterOfPlan(n);
     semesters.push(plan);
-    if (n < nowN) earned += plan.earned;
+    if (n < overN) earned += plan.earned;
   }
   const registered = state.registration?.records.some((one) => one.semester === now + 1) ?? false;
   const next = registered ? semesterOfPlan(nowN + 1) : null;
   // Only the semesters over count toward the average: this one's grades are still being earned.
-  const over = semesters.slice(0, -1).flatMap((plan) => plan.courses.map((one) => ({ credits: one.course.credits, grade: one.grade })));
+  const over = semesters.slice(0, overN).flatMap((plan) => plan.courses.map((one) => ({ credits: one.course.credits, grade: one.grade })));
   const gpa = averageOf(over);
   const nowHonors = (recordAt(state, now)?.honors ?? honorsNow) && orders.standing >= 1 - HONORS.share;
   const minorTaken = orders.minor >= 0 ? (CHAINS[orders.minor] ?? []).slice(0, MINOR.courses).filter((course) => taken.has(course.code)).length : 0;
   const minor = orders.minor >= 0 && (minorTaken > 0 || nowN >= MINOR.from) ? (MAJORS[orders.minor]?.name ?? null) : null;
-  return { semesters, earned, gpa, next, honors: nowHonors, minor, latin: gpa !== null && nowN >= 6 ? latinFor(gpa) : null };
+  return { semesters, over: overN, earned, gpa, next, honors: nowHonors, minor, latin: gpa !== null && nowN >= 6 ? latinFor(gpa) : null };
 }
 
 /**
@@ -467,14 +487,53 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
  * on academic probation · 2.10 last term"; "3.62 in their first term, Dean's list"; "No grades yet".
  */
 export function gpaWords(history: CourseHistory): string {
-  const over = history.semesters.length - 1;
-  const lastTerm = history.semesters.at(-2)?.gpa ?? null;
+  const over = history.over;
+  const lastTerm = history.semesters[over - 1]?.gpa ?? null;
   const average = history.gpa;
   if (average === null) return 'No grades yet';
   const deans = lastTerm !== null && lastTerm >= DEANS_LIST_FROM ? ", Dean's list" : '';
   const probation = average < PROBATION_BELOW ? ', on academic probation' : '';
   if (over <= 1 && lastTerm !== null) return `${average.toFixed(2)} in their first term${deans}${probation}`;
   return `${average.toFixed(2)} overall${probation}${lastTerm !== null ? ` · ${lastTerm.toFixed(2)} last term${deans}` : ''}`;
+}
+
+/** One student's grades as their transcript has them (R4c, DESIGN.md 82): what anything about them alone reads. */
+export interface Standing {
+  /** Their average over the semesters over, and the last of them's; null before the first is over. */
+  gpa: number | null;
+  lastTerm: number | null;
+  deansList: boolean;
+  probation: boolean;
+}
+
+const STANDINGS = new Map<string, Standing>();
+
+/**
+ * R1's average a student's card shows, under which their transcript can be under 2.0 (R4c): the two differ by a study
+ * center's lift, a study partner's, exam Stress and a few terms' luck, never by a point and a half. Anything that reads a
+ * student's probation works out the transcript only below it.
+ */
+export const TRANSCRIPT_BELOW = 3.5;
+const STANDINGS_MOST = 6000;
+
+/**
+ * One student's standing from their transcript, worked out once a semester (R4c, DESIGN.md 82): the Main Character's
+ * grades, a family's worry, a student failing in exams and a line about one student's Dean's list read it, as the card
+ * does. The campus's counts stay R1's (65.4).
+ */
+export function standingOf(state: GameState, ref: StudentRef): Standing {
+  const records = state.registration?.records;
+  const mc = state.story?.mc;
+  const mine = mc && mc.ref.entryYear === ref.entryYear && mc.ref.index === ref.index ? `:${mc.termShifts?.length ?? 0}:${mc.termShifts?.at(-1)?.[1] ?? 0}` : '';
+  const key = `${state.seed}:${ref.entryYear}:${ref.index}:${semesterOf(state)}:${termOver(state) ? 1 : 0}:${records?.length ?? 0}:${records?.at(-1)?.semester ?? -1}${mine}`;
+  const kept = STANDINGS.get(key);
+  if (kept) return kept;
+  const history = courseHistory(state, ref, semesterOf(state), false);
+  const lastTerm = history.semesters[history.over - 1]?.gpa ?? null;
+  const out: Standing = { gpa: history.gpa, lastTerm, deansList: lastTerm !== null && lastTerm >= DEANS_LIST_FROM, probation: history.gpa !== null && history.gpa < PROBATION_BELOW };
+  if (STANDINGS.size >= STANDINGS_MOST) STANDINGS.clear();
+  STANDINGS.set(key, out);
+  return out;
 }
 
 /** What the campus's sample has registered, by student and semester: a semester's plan never changes once made. */
@@ -485,6 +544,7 @@ const REGISTERED_MOST = 40_000;
 
 /** Students sampled from each class year for the campus's record. */
 const SAMPLE = 24;
+
 
 /**
  * Registration for a semester across the campus (80.3): how short it is of seats and faculty, and from that how often
@@ -557,6 +617,7 @@ export function campusRegistration(state: GameState, semester: number): Registra
 
 /** The campus's grades in the semester just over (81.7): the letters of the same sample registration uses. */
 export interface CampusGrades {
+  /** The semester read: the last one over. */
   semester: number;
   /** Letter grades given, the sample weighed up to the campus. */
   graded: number;
@@ -585,8 +646,9 @@ export const GPA_BANDS: readonly number[] = [1.75, 2.25, 2.75, 3.25, 3.75];
 export function campusGrades(state: GameState): CampusGrades | null {
   const now = semesterOf(state);
   const records = state.registration?.records ?? [];
-  const key = `${state.seed}:${now}:${records.length}:${records.at(-1)?.semester ?? -1}:${enrollment(state) > 0 ? 1 : 0}`;
+  const key = `${state.seed}:${now}:${termOver(state) ? 1 : 0}:${records.length}:${records.at(-1)?.semester ?? -1}:${enrollment(state) > 0 ? 1 : 0}`;
   if (GRADES_SEEN.has(key)) return GRADES_SEEN.get(key)!;
+  let last = -Infinity;
   let graded = 0;
   let a = 0;
   let dfw = 0;
@@ -615,20 +677,22 @@ export function campusGrades(state: GameState): CampusGrades | null {
         upper += weight;
         if (history.minor) minors += weight;
       }
-      const plan = history.semesters.at(-2);
-      if (!plan) continue;
-      for (const one of plan.courses) {
-        const grade = one.grade;
-        if (!grade) continue;
-        graded += weight;
-        tried += one.course.credits * weight;
-        if (grade.passed) passed += one.course.credits * weight;
-        const bad = grade.withdrawn || grade.letter.startsWith('D') || grade.letter === 'F';
-        if (grade.letter.startsWith('A')) a += weight;
-        if (bad) dfw += weight;
-        if (curvedCourse(one.course)) {
-          intros += weight;
-          if (bad) hardIntroDfw += weight;
+      // The last semester over: the spring's from commencement (R4c).
+      for (const plan of history.semesters.slice(Math.max(0, history.over - 1), history.over)) {
+        last = Math.max(last, plan.semester);
+        for (const one of plan.courses) {
+          const grade = one.grade;
+          if (!grade) continue;
+          graded += weight;
+          tried += one.course.credits * weight;
+          if (grade.passed) passed += one.course.credits * weight;
+          const bad = grade.withdrawn || grade.letter.startsWith('D') || grade.letter === 'F';
+          if (grade.letter.startsWith('A')) a += weight;
+          if (bad) dfw += weight;
+          if (curvedCourse(one.course)) {
+            intros += weight;
+            if (bad) hardIntroDfw += weight;
+          }
         }
       }
       // Their average over every semester over, in R1's bands (NPSAS:16's, 65.4).
@@ -642,7 +706,7 @@ export function campusGrades(state: GameState): CampusGrades | null {
   const out: CampusGrades | null =
     graded > 0
       ? {
-          semester: now - 1,
+          semester: last,
           graded: Math.round(graded),
           a: a / graded,
           dfw: dfw / graded,
