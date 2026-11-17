@@ -136,9 +136,10 @@ describe('grades by class (R4b, DESIGN.md 81)', () => {
   it("follows each student's own average: every term its own luck, the ones before the campus began too", () => {
     const ref = SAMPLE[0]!;
     const inputs = { archetype: 'average' as const, classYear: 1, teaching: 0.75, tutoring: 0 };
-    const before = [-3, -2, -1, 0].map((g) => termAt(77, ref, inputs, g));
-    expect(new Set(before).size).toBe(4);
-    expect(termAt(77, ref, inputs, 5)).toBe(gradesOf(77, ref, inputs, 5).term);
+    const before = [-4, -3, -2, -1, 0].map((g) => termAt(77, ref, inputs, g));
+    expect(new Set(before).size).toBe(5);
+    // R1's own for the game's semesters, and for the one just before its first: a card's last term in the first semester.
+    for (const g of [0, 1, 5]) expect(termAt(77, ref, inputs, g)).toBe(gradesOf(77, ref, inputs, g).term);
     // A transcript of three terms or more sits on R1's average for the student, give or take a term's luck.
     const diffs: number[] = [];
     for (const { ref: one, history } of HISTORIES) {

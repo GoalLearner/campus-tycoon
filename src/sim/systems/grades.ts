@@ -139,11 +139,12 @@ export function gradesOf(seed: number, ref: Ref, inputs: GradeInputs, semester: 
 
 /**
  * A term's grade point average for any semester (R4b, DESIGN.md 81.1), the game's `semester` as `gradesOf` takes it: R1's
- * own term for the game's semesters, and for each before the campus's first (a student who entered before it began)
- * its own luck, where R1's would be the first's every time.
+ * own term for the game's semesters and the one just before the campus's first (a card's last term in its first
+ * semester), and for each before that (a student who entered before the campus began) its own luck, where R1's would be
+ * that same first draw every time.
  */
 export function termAt(seed: number, ref: Ref, inputs: GradeInputs, semester: number): number {
-  if (semester >= 1) return gradesOf(seed, ref, inputs, semester).term;
+  if (semester >= 0) return gradesOf(seed, ref, inputs, semester).term;
   const luck = normalInv(unit(seed, ref, SALT.termBefore, 1 - semester));
   return Math.max(GPA_FLOOR, gpaAt(normalCdf(Math.sqrt(1 - TERM_NOISE * TERM_NOISE) * standingZ(seed, ref, inputs) + TERM_NOISE * luck)));
 }
