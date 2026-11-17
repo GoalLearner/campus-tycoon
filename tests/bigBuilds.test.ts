@@ -1,3 +1,5 @@
+import { upkeepComing } from '../src/sim/systems/bigBuilds';
+import { buildEntries, moneyView } from '../src/ui/buildUi';
 import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -338,8 +340,46 @@ describe('saves', () => {
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(15);
+      expect(notes).toHaveLength(16);
       expect(notes[0]).toMatch(/big builds/);
     });
+  });
+});
+
+describe('what a big build going up will cost to run (DESIGN.md 77.7)', () => {
+  it('says it on the Money panel: when it opens, what it costs a year, and what the campus would keep then', () => {
+    const state = flagship();
+    expect(moneyView(state).coming).toBeNull();
+    const [x, y] = spotFor(state, 'studentUnion');
+    const one = act(state, { type: 'place', building: 'studentUnion', x, y });
+    const view = moneyView(one);
+    const books = budget(one);
+    const coming = upkeepComing(one, books.incomeTotal);
+    expect(coming.builds.map((placed) => placed.type)).toEqual(['studentUnion']);
+    expect(coming.perYear).toBe(placedUpkeep('studentUnion', scaleOf(one)));
+    expect(view.coming).toMatch(/^Going up: the Student Union opens in .+, about \$[\d.]+[KMB]? a year to run \(you'd keep about \$\d+\.\d\d of every \$100\)\.$/);
+    expect(view.coming).toContain(`$${(books.kept - coming.share).toFixed(2)}`);
+    // Two going up: one line, the two together.
+    one.bigBuilds.slots = 2;
+    const [x2, y2] = spotFor(one, 'honorsCollege');
+    const two = act(one, { type: 'place', building: 'honorsCollege', x: x2, y: y2 });
+    expect(moneyView(two).coming).toMatch(/^Going up: the Student Union and the Honors College, open within .+, about .+ a year to run between them \(you'd keep about \$\d+\.\d\d of every \$100\)\.$/);
+    // Short enough for the panel at 375 wide: two or three lines of small print.
+    for (const line of [view.coming!, moneyView(two).coming!]) expect(line.length).toBeLessThan(150);
+  });
+
+  it("says it on another big build's card: what the campus would keep with both running, the sum the test players read", () => {
+    const state = flagship();
+    state.bigBuilds.slots = 2;
+    const [x, y] = spotFor(state, 'studentUnion');
+    const one = act(state, { type: 'place', building: 'studentUnion', x, y });
+    const books = budget(one);
+    const card = buildEntries(scaleOf(one), one).find((entry) => entry.id === 'honorsCollege')!;
+    const after = books.kept - upkeepComing(one, books.incomeTotal).share - (100 * placedUpkeep('honorsCollege', scaleOf(one))) / books.incomeTotal;
+    expect(card.upkeep).toContain(`With the Student Union going up too: you'd keep about $${after.toFixed(2)} of every $100`);
+    // Nothing going up: the card is as it was.
+    const plain = buildEntries(scaleOf(state), state).find((entry) => entry.id === 'honorsCollege')!;
+    expect(plain.upkeep).not.toContain('going up too');
+    expect(card.upkeep.length).toBeLessThan(170);
   });
 });

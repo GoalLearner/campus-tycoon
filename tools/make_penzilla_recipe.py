@@ -51,6 +51,40 @@ sprites['ground.grass'] = {'layers': [GRASS]}
 for mask in range(16):
     sprites[f'path.{mask}'] = {'layers': [GRASS, on_grid(TILES + 'Sidewalk_Tile9.png')]}
 
+# Bike paths (DESIGN.md 71): our lane, by tools/make_bikelane.py, on the grass, one picture for each of the 16 ways a
+# cell joins its neighbours; the bike sign on a straight run (5 and 10), and where a bike path crosses a footpath.
+LANE = '_rendered/fallback/bikelane/'
+for mask in range(16):
+    sprites[f'bike.{mask}'] = {'layers': [GRASS, on_grid(LANE + f'm{mask}.png')]}
+for run in (5, 10):
+    sprites[f'bike.sym.{run}'] = {'layers': [GRASS, on_grid(LANE + f'sym{run}.png')]}
+for run in (5, 10):
+    sprites[f'bike.cross.{run}'] = {'layers': [GRASS, on_grid(LANE + f'cross{run}.png')]}
+# Bike lanes painted on the walks (DESIGN.md 74), by tools/make_walklane.py: look A down one side, a set for each way the
+# view is turned, and look B down the middle. A painted walk on its own ground (a straight run, with or without the
+# sign), and the paint alone laid over the walk for every way a cell joins.
+WALKLANE = '_rendered/fallback/walklane/'
+SIDEWALK = on_grid(TILES + 'Sidewalk_Tile9.png')
+LOOKS = [('a.nw', 'a-nw'), ('a.ne', 'a-ne'), ('a.se', 'a-se'), ('a.sw', 'a-sw'), ('b', 'b')]
+for name, file in LOOKS:
+    for run in (5, 10):
+        sprites[f'walkground.{name}.{run}'] = {'layers': [GRASS, SIDEWALK, on_grid(WALKLANE + f'{file}-m{run}.png')]}
+    for run in (5, 10):
+        sprites[f'walkground.{name}.sym.{run}'] = {'layers': [GRASS, SIDEWALK, on_grid(WALKLANE + f'{file}-sym{run}.png')]}
+for name, file in LOOKS:
+    for mask in range(16):
+        sprites[f'walklane.{name}.{mask}'] = {'layers': [on_grid(WALKLANE + f'{file}-m{mask}.png')]}
+    for run in (5, 10):
+        sprites[f'walklane.{name}.sym.{run}'] = {'layers': [on_grid(WALKLANE + f'{file}-sym{run}.png')]}
+# Real games (DESIGN.md 72): the four full-size courts, ours by tools/make_court.py, each on its own lawn, and the
+# basketball hoops stood at each end.
+COURTS = {'basketball': (2, 3), 'tennis': (2, 3), 'volleyball': (2, 3), 'soccer': (3, 4)}
+for court, (w, h) in COURTS.items():
+    lawn = [on_grid(TILES + 'Grass.png', swap='rim', shift=[x, y]) for x in range(w) for y in range(h)]
+    sprites[f'build.{court}'] = {'layers': [*lawn, on_grid(f'_rendered/ours/court/{court}-{w}x{h}.png', w, h)]}
+for end in ('far', 'near'):
+    sprites[f'court.hoop.{end}'] = {'layers': [standing(f'_rendered/ours/court/hoop-{end}.png', 0.5, 0.5)]}
+
 sprites['lot.empty'] = {'layers': [DIRT]}
 sprites['lot.site'] = {'layers': [DIRT, on_grid(PUBLIC + 'Construction_1x1.png')]}
 sprites['lot.works'] = {'layers': [standing(DECOR + 'EmergencyCone.png', 0.22, 0.96), standing(DECOR + 'EmergencyCone.png', 0.96, 0.22)]}
@@ -454,6 +488,10 @@ for prop, scale in (('frisbee', 0.17), ('phone', 0.18), ('tray', 0.22), ('dog', 
 # A party night's hats (L6), ours, in three colours.
 for n in range(3):
     sprites[f'prop.partyhat.{n}'] = {'layers': [standing(f'_rendered/ours/props/partyhat-{n}.png', 0.5, 0.5, scale=0.19)]}
+# Football's chaos (DESIGN.md 77): a couch in two fabrics, dragged into the street, and a goalpost carried off. Ours.
+for n in range(2):
+    sprites[f'prop.couch.{n}'] = {'layers': [standing(f'_rendered/ours/props/couch-{n}.png', 0.5, 0.5, scale=0.6)]}
+sprites['prop.goalpost'] = {'layers': [standing('_rendered/ours/props/goalpost.png', 0.5, 0.5, scale=0.75)]}
 
 # ----------------------------------------------------------- decorations --
 # The decorations of DESIGN.md 42.5, as the owner chose them from one sheet on 2026-11-13. Each is the pack's own
@@ -633,6 +671,10 @@ others = []
 for role, names in jobs:
     roles[role] = len(students) + len(others)
     others += names
+# The rival's mascot (DESIGN.md 77.4, the owner's decision 10, look A): the pack's Alien in each school colour, in the
+# order of SCHOOL_COLOURS, drawn by tools/make_mascot.py. The mascot of a rival in colour n is look roles.mascot + n.
+MASCOT_COLOURS = ('crimson', 'navy', 'forest', 'gold', 'purple', 'orange', 'teal', 'maroon')
+roles['mascot'] = len(students) + len(others)
 people = {
     'comment': 'Penzilla Giant NPC Sprite Pack. Each sheet is 8 frames by 5 rows. Row 1 faces south-west and row 3 north-west; the other two directions are mirrored. The first looks are the student crowd. The rest each have a job, named under roles: a role with two looks uses its number and the next.',
     'frames': 8,
@@ -652,7 +694,7 @@ people = {
     'flip': {'se': 'sw', 'ne': 'nw'},
     'crowd': len(students),
     'roles': roles,
-    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + others],
+    'looks': [f'{NPC}NpcReadymade_{name}.png' for name in students + others] + [f'_rendered/fallback/mascot/costume-{colour}.png' for colour in MASCOT_COLOURS],
 }
 
 recipe = {
@@ -697,6 +739,7 @@ recipe = {
         'reward.fountain': [2, 2], 'reward.post': [2, 1], 'reward.cinema': [2, 2], 'reward.radio': [2, 1], 'reward.museum': [2, 2], 'reward.alumni': [2, 1],
         'era.union': [2, 2], 'era.honors': [2, 1], 'era.welcome': [2, 1], 'era.commons': [3, 3], 'build.site.wide': [2, 1],
         'lab.sciences': [2, 2], 'lab.engineering': [2, 2], 'lab.health': [2, 2],
+        **{f'build.{court}': [w, h] for court, (w, h) in COURTS.items()},
     },
     'menuCredit': 'Graphics created by Penzilla Design.',
     'credits': [

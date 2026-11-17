@@ -319,6 +319,12 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         if (letter === 1) out.push({ weight: 44, headline: 'The Trustees Write: Calm the Campus Down, and Soon', deck: entry.text });
         else if (letter === 2) out.push({ weight: 46, headline: 'Trustees Pleased as Campus Calms; a Small Gift Follows', deck: entry.text });
         else if (letter === 3) out.push({ weight: 44, headline: 'Trustees Unimpressed; Reputation Takes a Small Knock', deck: entry.text });
+        // Football's chaos (DESIGN.md 77): a field storming, the goalposts, couches in the street, the rival's mascot.
+        else if (entry.data?.football === 1) out.push({ weight: 41, headline: 'Fans Storm the Field After the Big Win', deck: entry.text });
+        else if (entry.data?.football === 2) out.push({ weight: 43, headline: 'Fans Storm the Field, and the Goalposts Go for a Walk', deck: entry.text });
+        else if (entry.data?.football === 3) out.push({ weight: 45, headline: entry.data.won === 1 ? 'Couches in the Street After the Win; All Back by Morning' : 'After the Rivalry Loss, Couches in the Street; All Back by Morning', deck: entry.text });
+        else if (entry.data?.football === 4) out.push({ weight: 48, headline: "The Rival's Mascot Pays an Unplanned Visit", deck: entry.text });
+        else if (entry.data?.football === 5) out.push({ weight: 40, headline: 'Mascot Home Safe; Campus Safety Drove', deck: entry.text });
         else if (entry.data?.spirit === 1) out.push({ weight: 42, headline: 'Most Spirited Campus? A Legendary Night Has Everyone Talking', deck: entry.text });
         else if (entry.data?.protest === 1) {
           const about: Record<string, string> = { beds: 'More Beds', food: 'Better Food', parking: 'Parking', policy: 'a Campus Policy' };

@@ -81,11 +81,11 @@ function texts(): string[] {
 
 describe('the library', () => {
   it('ships about 26 arcs and 60 events, every category of the owner’s list covered', () => {
-    // And chaos's two arcs and three events (DESIGN.md 68.6).
+    // And chaos's two arcs and three events (DESIGN.md 68.6), and C3's field storming (77.5).
     expect(ARCS).toHaveLength(28);
-    expect(EVENTS).toHaveLength(63);
+    expect(EVENTS).toHaveLength(64);
     expect(ARCS.filter((spec) => spec.category === 'chaos')).toHaveLength(2);
-    expect(EVENTS.filter((spec) => spec.category === 'chaos')).toHaveLength(3);
+    expect(EVENTS.filter((spec) => spec.category === 'chaos')).toHaveLength(4);
     const categories: StoryCategory[] = ['roommates', 'classes', 'dating', 'partying', 'social', 'money', 'greek', 'teams', 'good'];
     for (const category of categories) {
       expect(ARCS.some((spec) => spec.category === category), category).toBe(true);
@@ -266,7 +266,7 @@ describe('saves', () => {
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(28);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(8);
+      expect(notes).toHaveLength(9);
       expect(notes[0]).toMatch(/stor/i);
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(newStory().arcs).toEqual([]);

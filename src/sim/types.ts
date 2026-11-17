@@ -1,5 +1,5 @@
 import type { ActivityId, GoalId, LifeNeed, CastTrait } from './config/mc';
-import type { ChaosKind, ProtestTopic } from './config/chaos';
+import type { ChaosKind, IncidentChaosKind, ProtestTopic } from './config/chaos';
 /**
  * The whole game state. Plain JSON only: no classes, Maps, Sets or Dates,
  * so cloning and saving are exact. See DESIGN.md section 17.5.
@@ -1411,7 +1411,7 @@ export interface Incident {
   /** A call from a party (DESIGN.md 55): its line is from the party lines. */
   party?: true;
   /** Chaos (DESIGN.md 68): a dust-up, a shouting match, a prank, graffiti or a protest. Its line is from chaos's lines. */
-  chaos?: Exclude<ChaosKind, 'party'>;
+  chaos?: IncidentChaosKind;
   /** What a protest is about. */
   topic?: ProtestTopic;
 }
@@ -1454,6 +1454,19 @@ export interface ChaosState {
   dipUntil: number;
   /** The last legendary night. */
   spiritAt: number;
+  /**
+   * Football chaos (DESIGN.md 77). `lastKick`: the kickoff of the last game of ours whose whistle chaos has read. The field
+   * stormed after a big home win, and whether the goalposts came down; couches in the street outside a dorm after a big
+   * win or a rivalry loss, from when to when; and the rival's mascot on campus, until Campus Safety drives it home, with
+   * the football season it was taken in (once a season).
+   */
+  lastKick: number;
+  storm: { at: number; goalposts: boolean } | null;
+  street: { from: number; until: number; dorm: number; won: boolean } | null;
+  mascot: { at: number; until: number } | null;
+  mascotSeason: number;
+  /** The football season last clinched (its division won for certain, or a bowl), so its clinching win is stormed once. */
+  clinchedSeason: number;
 }
 
 export interface Incidents {

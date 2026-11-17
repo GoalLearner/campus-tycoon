@@ -12,8 +12,12 @@ import type { ProtestTopic } from '../sim/config/chaos';
  * the words are comic.
  */
 
-/** The kinds of chaos incident the map stages. */
-export type ShowKind = 'dustUp' | 'shouting' | 'prank' | 'graffiti' | 'protest';
+/**
+ * The kinds of chaos incident the map stages, and football's (C3, DESIGN.md 77): couches in the street, the goalposts
+ * carried off after a field storming, and the rival's mascot shown round campus.
+ */
+export type IncidentShowKind = 'dustUp' | 'shouting' | 'prank' | 'graffiti' | 'protest';
+export type ShowKind = IncidentShowKind | 'street' | 'goalposts' | 'mascot';
 
 /** No more incidents staged at once than this, the nearest the middle of the view first: the frame budget. */
 export const SHOWS_AT_ONCE = 3;
@@ -132,7 +136,7 @@ export const RALLY_WATCH_MS = 30_000;
  * Which incidents to stage: chaos's, where the player is looking, nearest the middle of the view first, a few at most.
  * `far` is how far each is from the middle of the view, or null when it is out of sight.
  */
-export function showsFor<T extends { id: number; chaos?: ShowKind }>(incidents: readonly T[], far: (incident: T) => number | null, most = SHOWS_AT_ONCE): T[] {
+export function showsFor<T extends { id: number; chaos?: IncidentShowKind }>(incidents: readonly T[], far: (incident: T) => number | null, most = SHOWS_AT_ONCE): T[] {
   const seen: Array<{ incident: T; far: number }> = [];
   for (const incident of incidents) {
     if (!incident.chaos) continue;
@@ -146,7 +150,7 @@ export function showsFor<T extends { id: number; chaos?: ShowKind }>(incidents: 
 // ------------------------------------------------------------ the cards --
 
 /** What someone in a staged incident is doing, on their card. */
-export type ShowRole = 'dustUp' | 'shouting' | 'prank' | 'graffiti' | 'protest' | 'patched';
+export type ShowRole = 'dustUp' | 'shouting' | 'prank' | 'graffiti' | 'protest' | 'patched' | 'street' | 'goalposts' | 'mascot';
 
 const RALLY_WORDS: Record<ProtestTopic, string> = {
   beds: 'At a rally for more beds',
@@ -169,5 +173,33 @@ export function showWords(role: ShowRole, topic: ProtestTopic | null = null): st
       return RALLY_WORDS[topic ?? 'beds'];
     case 'patched':
       return 'Getting a bruise patched up';
+    case 'street':
+      return 'Out on a couch in the street after the game';
+    case 'goalposts':
+      return 'Carrying the goalposts across campus';
+    case 'mascot':
+      return "Showing the rival's mascot round campus";
   }
 }
+
+// ------------------------------------------------------------- football --
+
+/** Couches in the street (DESIGN.md 77.3): people out with them by the crowd step, and the two couches. */
+export const STREET_AT_STEP: readonly number[] = [3, 5, 7, 8];
+
+export function streetSize(step: number): number {
+  return STREET_AT_STEP[Math.max(0, Math.min(STREET_AT_STEP.length - 1, step))]!;
+}
+
+/**
+ * The goalposts carried off (77.2): this many carry them, at this pace, setting off from the stadium once the fans on
+ * the field have gone (the storming's five minutes, CampusScene's STORM_TICKS), for a while after.
+ */
+export const CARRIERS = 6;
+export const CARRY_PACE = 0.7;
+export const CARRY_FROM_TICKS = 5;
+export const CARRY_UNTIL_TICKS = 25;
+
+/** The rival's mascot shown round campus (77.4): those with it, and the pace of a slow lap of a lawn. */
+export const PARADE = 4;
+export const PARADE_PACE = 0.55;

@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { findStudent, type Stander } from '../app/activityPeople';
 import { clock } from '../app/clock';
 import { effectsSetting } from '../app/life';
-import { CHANT_MS, CHASE_CELLS, dustupBeat, FLEE, FLEE_BEFORE_MS, LEFT_ALONE_MS, rallySize, RALLY_WATCH_MS, shoutTurn, showsFor, showWords, signKey, SHOWS_AT_ONCE, type ShowKind, type ShowRole } from '../app/mayhemShow';
+import { CARRIERS, CARRY_FROM_TICKS, CARRY_PACE, CARRY_UNTIL_TICKS, CHANT_MS, CHASE_CELLS, dustupBeat, FLEE, FLEE_BEFORE_MS, LEFT_ALONE_MS, PARADE, PARADE_PACE, rallySize, RALLY_WATCH_MS, shoutTurn, showsFor, showWords, signKey, SHOWS_AT_ONCE, streetSize, type ShowKind, type ShowRole } from '../app/mayhemShow';
 import type { ProtestTopic } from '../sim/config/chaos';
-import { coverFor, everydayLook, sampleStudents, studentFigure, studentKey, TICK_MS, type GameState, type Incident, type StudentRef } from '../sim';
+import { coverFor, everydayLook, footballChaosNow, rivalColour, sampleStudents, SCHOOL_COLOURS, studentFigure, studentKey, TICK_MS, type GameState, type Incident, type StudentRef } from '../sim';
 import { doorAlpha, pointOn, tripOf, type Trip } from './afoot';
 import type { Art, PeopleSpec } from './art';
 import type { Footprints } from './footprints';
@@ -75,6 +75,8 @@ interface Person {
   phase: number;
   shownKey: string;
   sign: Phaser.GameObjects.Image | null;
+  /** On a lap of a lawn, showing the rival's mascot round (77.4): the loop, how far behind the first they walk. */
+  loop: { trip: Trip; startMs: number; lag: number } | null;
 }
 
 interface Show {
@@ -104,6 +106,9 @@ interface Show {
   /** The medic's way in, walked back the other way, and until when they patch the bruise (0 before they arrive). */
   medicWay: Array<{ x: number; y: number }> | null;
   patchUntil: number;
+  /** Football's (77): the couches in the street, and the goalposts held up over those carrying them. */
+  props: Array<{ sprite: Phaser.GameObjects.Image; x: number; y: number }>;
+  carried: Phaser.GameObjects.Image | null;
 }
 
 interface Icon {
@@ -125,7 +130,15 @@ function mix(a: number, b: number): number {
 /** How many of the seed's students are tried for someone in a scene, for one whose figure nobody else there has. */
 const CAST_TRIES = 12;
 
-const KIND_SALT: Record<ShowKind, number> = { dustUp: 1, shouting: 2, prank: 3, graffiti: 4, protest: 5 };
+const KIND_SALT: Record<ShowKind, number> = { dustUp: 1, shouting: 2, prank: 3, graffiti: 4, protest: 5, street: 6, goalposts: 7, mascot: 8 };
+
+/** Football's scenes have ids of their own, below any incident's. */
+const STREET_ID = -10;
+const GOALPOSTS_ID = -20;
+const MASCOT_ID = -30;
+/** The goalposts are held up this high over the feet, and couches stand this far apart either side of the middle. */
+const CARRY_LIFT = 34;
+const COUCH_APART = 0.5;
 
 export class Mayhem {
   private state: GameState | null = null;
@@ -140,6 +153,8 @@ export class Mayhem {
   private feet: Footprints | null = null;
   private step = 2;
   private recountAt = 0;
+  /** The storming whose goalposts have been carried off already: they go once, not again each time they reach the dorm. */
+  private carriedAt = -1;
 
   constructor(
     private scene: Phaser.Scene,
@@ -229,14 +244,16 @@ export class Mayhem {
   private recount(state: GameState, timeMs: number): void {
     const active = new Map<number, Incident>();
     for (const incident of state.incidents.active) if (incident.chaos) active.set(incident.id, incident);
+    const football = this.footballOn(state);
     // Over in the simulation: the scene plays out its end. Out of sight: it goes at once.
     for (const show of [...this.shows.values()]) {
       if (!this.walkers.seen(show.front) && !this.walkers.seen(show.mid)) {
         this.drop(show);
         continue;
       }
-      if (show.phase !== 'over' && !active.has(show.id)) this.finish(show, timeMs);
+      if (show.phase !== 'over' && !active.has(show.id) && !football.has(show.id)) this.finish(show, timeMs);
     }
+    this.stageFootball(state, football, timeMs);
     // A scene whose people have gone (nobody came, they parted) holds no place, and is not staged again while it lingers.
     const live = [...this.shows.values()].filter((show) => !show.parted).length;
     if (!this.people || live >= SHOWS_AT_ONCE) return;
@@ -289,6 +306,8 @@ export class Mayhem {
       parted: false,
       medicWay: null,
       patchUntil: 0,
+      props: [],
+      carried: null,
     };
     const places: Array<{ place: { x: number; y: number }; face: { x: number; y: number }; role: ShowRole; marches?: boolean }> = [];
     // Out of the door to the path in front, or on to open ground near it the player can see (76.1).
@@ -356,7 +375,10 @@ export class Mayhem {
     const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
     let student: StudentRef | null = null;
     let look = role === 'medic' ? (people.roles?.medic ?? 0) : everydayLook(people, mix(show.id, n), mix(n, show.id));
-    if (role !== 'medic') {
+    // The rival's mascot (77.4): the costume in the rival's colour, nobody's card.
+    const costume = role === 'mascot' && n === 0 && this.state ? this.mascotLook(this.state) : null;
+    if (costume !== null) look = costume;
+    if (role !== 'medic' && costume === null) {
       // Each one a different figure from the others in the scene: the pack has a dozen everyday figures, and two
       // students drawn the same in one dust-up read as clones (DESIGN.md 76.1). The seed's next students are tried.
       const taken = new Set(show.people.map((one) => one.look));
@@ -380,7 +402,7 @@ export class Mayhem {
       this.art.apply(sign, signKey(show.topic));
       sign.setScale(SIGN_SCALE);
     }
-    return { sprite, role, student, look, place: { ...place }, face, trip: null, pace: WALK, gone: false, at: { ...place }, hidden: false, marches, phase: mix(show.id * 7 + n, 911), shownKey: '', sign };
+    return { sprite, role, student, look, place: { ...place }, face, trip: null, pace: WALK, gone: false, at: { ...place }, hidden: false, marches, phase: mix(show.id * 7 + n, 911), shownKey: '', sign, loop: null };
   }
 
   // ------------------------------------------------------------ playing --
@@ -397,8 +419,10 @@ export class Mayhem {
     for (const person of show.people) this.draw(person, people, timeMs, reduced);
     if (show.medic) this.draw(show.medic, people, timeMs, reduced);
     this.drawCloud(show, timeMs, reduced);
+    this.drawProps(show, timeMs, reduced);
     const everyoneGone = show.people.every((one) => one.gone) && (!show.medic || show.medic.gone);
-    if (show.phase === 'over' && everyoneGone) this.drop(show);
+    // Couches left in the street stay until nobody is looking; everything else goes with the last of its people.
+    if (show.phase === 'over' && everyoneGone && (show.props.length === 0 || !this.walkers.seen(show.mid))) this.drop(show);
   }
 
   /** What each kind does while it is on. */
@@ -449,6 +473,19 @@ export class Mayhem {
       }
       // Campus Safety is nearly there: they bolt (76.3).
       if (show.arrives !== null && !show.flee && clock.now() >= show.arrives - FLEE_BEFORE_MS) this.bolt(show, a, timeMs);
+    } else if (show.kind === 'street' || show.kind === 'goalposts' || show.kind === 'mascot') {
+      // Cheering in turn: music and high spirits on the couches, a shout from those carrying the goalposts.
+      if (timeMs >= show.nextAt && show.people.length > 0) {
+        show.nextAt = timeMs + (show.kind === 'street' ? 1900 : 1500);
+        const k = Math.floor(ms / 1500);
+        const who = show.people[(k * 5 + 1) % show.people.length]!;
+        const cheers = show.kind === 'street' ? ['music', 'laugh', 'highfive', 'exclaim'] : ['exclaim', 'laugh', 'exclaim', 'music'];
+        if (!who.gone) this.icon(who.sprite, cheers[k % cheers.length]!);
+      }
+      if (timeMs >= show.watchAt) {
+        show.watchAt = timeMs + 25_000;
+        this.walkers.watch(show.mid, 'prank', 5000, show.people.map((one) => one.look));
+      }
     } else if (show.kind === 'protest') {
       if (timeMs >= show.nextAt && show.people.length > 0) {
         show.nextAt = timeMs + CHANT_MS;
@@ -572,6 +609,15 @@ export class Mayhem {
     let moving = false;
     let face = person.face;
     const trip = person.trip;
+    if (!trip && person.loop) {
+      // Round and round the lawn, each a little behind the one before.
+      const loop = person.loop.trip;
+      const d = ((((timeMs - person.loop.startMs) / 1000) * person.pace - person.loop.lag) % loop.total + loop.total) % loop.total;
+      const on = pointOn(loop, d);
+      person.at = { x: on.x, y: on.y };
+      face = { x: on.bx - on.ax, y: on.by - on.ay };
+      moving = true;
+    }
     if (trip) {
       const d = ((timeMs - trip.startMs) / 1000) * person.pace;
       if (d >= trip.total) {
@@ -684,6 +730,199 @@ export class Mayhem {
     this.icons = keep;
   }
 
+  // ---------------------------------------------------------- football --
+
+  /** Football's scenes the simulation has on now (DESIGN.md 77), by their ids. */
+  private footballOn(state: GameState): Set<number> {
+    const on = new Set<number>();
+    const now = footballChaosNow(state);
+    const tick = state.clock.tick;
+    if (now.street) on.add(STREET_ID);
+    if (now.storm?.goalposts && tick - now.storm.at >= CARRY_FROM_TICKS && tick - now.storm.at < CARRY_UNTIL_TICKS) on.add(GOALPOSTS_ID);
+    if (now.mascot && this.mascotLook(state) !== null) on.add(MASCOT_ID);
+    return on;
+  }
+
+  /** The figure of the rival's mascot in the rival's colour (look A, drawn in all eight), or null where the atlas in use has none (77.4). */
+  private mascotLook(state: GameState): number | null {
+    const first = this.people?.roles?.mascot;
+    if (first === undefined) return null;
+    const index = SCHOOL_COLOURS.findIndex((one) => one.id === rivalColour(state).id);
+    return index < 0 ? null : first + index;
+  }
+
+  private stageFootball(state: GameState, on: ReadonlySet<number>, timeMs: number): void {
+    if (!this.people) return;
+    const now = footballChaosNow(state);
+    if (on.has(STREET_ID) && !this.shows.has(STREET_ID) && now.street) this.stageStreet(state, now.street.dorm, timeMs);
+    if (on.has(GOALPOSTS_ID) && !this.shows.has(GOALPOSTS_ID) && now.storm && now.storm.at !== this.carriedAt && this.stageGoalposts(state, timeMs)) this.carriedAt = now.storm.at;
+    if (on.has(MASCOT_ID) && !this.shows.has(MASCOT_ID)) this.stageMascot(state, timeMs);
+  }
+
+  /** A show of football's, set up as the incidents' are. */
+  private footballShow(id: number, kind: ShowKind, door: { x: number; y: number }, front: { x: number; y: number }, mid: { x: number; y: number }): Show {
+    return { id, kind, topic: null, door, front, mid, people: [], medic: null, phase: 'coming', readyAt: 0, overAt: 0, arrives: null, flee: null, cloud: null, beat: -1, nextAt: 0, watchAt: 0, parted: false, medicWay: null, patchUntil: 0, props: [], carried: null };
+  }
+
+  /** Couches in the street by a dorm (77.3): two couches out on the path in front, and friends round them. */
+  private stageStreet(state: GameState, dormId: number, timeMs: number): void {
+    const dorm = state.map.buildings[dormId];
+    if (!dorm) return;
+    const box = { x: dorm.x, y: dorm.y, w: dorm.w, h: dorm.h };
+    if (!this.walkers.seen({ x: dorm.x + 0.5, y: dorm.y + 0.5 })) return;
+    const front = this.walkers.frontOf(box);
+    if (!front) return;
+    const stand = this.walkers.standBy(front.door, front.front);
+    const mid = stand.at;
+    const show = this.footballShow(STREET_ID, 'street', front.door, front.front, mid);
+    const a0 = stand.way[stand.way.length - 2] ?? front.door;
+    const len = Math.max(1e-6, Math.hypot(mid.x - a0.x, mid.y - a0.y));
+    const ux = (mid.x - a0.x) / len;
+    const uy = (mid.y - a0.y) / len;
+    // The two couches, side by side across the way, facing each other a little.
+    for (const [k, side] of [[0, -1], [1, 1]] as const) {
+      const key = `prop.couch.${k}`;
+      if (!this.art.has(key)) continue;
+      const sprite = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
+      this.art.apply(sprite, key);
+      sprite.setOrigin(0.5, 0.85);
+      show.props.push({ sprite, x: mid.x - uy * COUCH_APART * side, y: mid.y + ux * COUCH_APART * side });
+    }
+    const already = !this.walkers.seen(mid) || this.walkers.fresh(mid.x, mid.y);
+    const size = streetSize(this.step);
+    for (let n = 0; n < size; n++) {
+      const angle = (n / size) * Math.PI * 2 + 0.3;
+      const place = { x: mid.x + Math.cos(angle) * 0.62, y: mid.y + Math.sin(angle) * 0.62 };
+      const person = this.person(state, show, 'street', place, { x: mid.x - place.x, y: mid.y - place.y }, n, n % 2 === 0);
+      if (!already) {
+        person.trip = tripOf([...stand.way.slice(0, -1), place], timeMs + n * STAGGER_MS, false);
+        person.at = { ...stand.way[0]! };
+      }
+      show.people.push(person);
+    }
+    if (already) {
+      show.phase = 'on';
+      show.readyAt = timeMs;
+    }
+    this.shows.set(show.id, show);
+  }
+
+  /**
+   * The goalposts carried off (77.2): out of the stadium once the fans on the field have gone, held up over the heads
+   * of those carrying them, off across campus to a dorm some way off, cheering.
+   */
+  private stageGoalposts(state: GameState, timeMs: number): boolean {
+    const plot = state.football.stadium.plot === null ? null : state.map.placed[state.football.stadium.plot];
+    if (!plot || !this.art.has('prop.goalpost')) return false;
+    const box = { x: plot.x, y: plot.y, w: plot.w, h: plot.h };
+    if (!this.walkers.seen({ x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 })) return false;
+    // Out the way the fans go in: the stadium has no door as a hall has.
+    const front = this.walkers.frontOf(box) ?? this.walkers.stadiumFront();
+    if (!front) return false;
+    // Off to a dorm a good way from the stadium: the walk across campus the paper tells.
+    const dorms = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.zone === 'housing' && b.stage > 0);
+    const far = (b: { x: number; y: number }): number => Math.abs(b.x - plot.x) + Math.abs(b.y - plot.y);
+    const to = dorms.filter((b) => far(b) >= 8).sort((a, b) => far(a) - far(b))[0] ?? dorms[0];
+    const way = to ? this.walkers.wayBetween(front.door.x, front.door.y, { x: to.x, y: to.y, w: to.w, h: to.h }) : this.walkers.approach(front.front.x, front.front.y)?.reverse() ?? null;
+    if (!way || way.length < 2) return false;
+    const show = this.footballShow(GOALPOSTS_ID, 'goalposts', front.door, front.front, { ...front.front });
+    for (let n = 0; n < CARRIERS; n++) {
+      const person = this.person(state, show, 'goalposts', way[0]!, { x: 1, y: 0 }, n, false);
+      person.trip = tripOf(way.map((one) => ({ ...one })), timeMs + n * 330, true);
+      person.pace = CARRY_PACE;
+      person.at = { ...way[0]! };
+      show.people.push(person);
+    }
+    const carried = this.scene.add.image(0, 0, '__DEFAULT').setAlpha(0);
+    this.art.apply(carried, 'prop.goalpost');
+    carried.setOrigin(0.5, 0.9);
+    show.carried = carried;
+    // Already on their way: the scene is over in the simulation's terms, and ends when the last of them is gone.
+    show.phase = 'over';
+    show.overAt = timeMs;
+    show.parted = true;
+    this.shows.set(show.id, show);
+    return true;
+  }
+
+  /** The rival's mascot shown round campus (77.4): a slow lap of the lawn nearest the middle of the view, round and round. */
+  private stageMascot(state: GameState, timeMs: number): void {
+    const view = this.scene.cameras.main.worldView;
+    // The lawn: a rally's ground finder, from the middle of the view.
+    const centre = this.mapPointAt(view.centerX, view.centerY);
+    const ground = this.walkers.groundBy(centre, 8);
+    if (ground.length < 4) return;
+    const xs = ground.map((one) => one.x);
+    const ys = ground.map((one) => one.y);
+    const x0 = Math.min(...xs) - 0.1;
+    const x1 = Math.max(...xs) + 0.1;
+    const y0 = Math.min(...ys) - 0.1;
+    const y1 = Math.max(...ys) + 0.1;
+    const loop = tripOf([{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 }], timeMs, false, true);
+    const mid = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+    const show = this.footballShow(MASCOT_ID, 'mascot', { x: x0, y: y0 }, mid, mid);
+    const already = !this.walkers.seen(mid) || this.walkers.fresh(mid.x, mid.y);
+    const way = already ? null : this.walkers.approach(x0, y0);
+    if (!already && !way) return;
+    for (let n = 0; n <= PARADE; n++) {
+      const person = this.person(state, show, 'mascot', { x: x0, y: y0 }, { x: 1, y: 0 }, n, false);
+      person.pace = PARADE_PACE;
+      person.loop = { trip: loop, startMs: timeMs + (way ? way.length * 1000 : 0), lag: n * 0.42 };
+      if (way) {
+        person.trip = tripOf(way.map((one) => ({ ...one })), timeMs + n * STAGGER_MS, false);
+        person.at = { ...way[0]! };
+      }
+      show.people.push(person);
+    }
+    show.phase = 'on';
+    show.readyAt = timeMs;
+    this.shows.set(show.id, show);
+  }
+
+  /** The map point under a point of the world, near enough for choosing a lawn. */
+  private mapPointAt(worldX: number, worldY: number): { x: number; y: number } {
+    let best = { x: 0, y: 0 };
+    let nearest = Infinity;
+    const state = this.state;
+    if (!state) return best;
+    for (let y = 0; y < state.map.height; y += 1) {
+      for (let x = 0; x < state.map.width; x += 1) {
+        const at = this.iso.toWorld(x + 0.5, y + 0.5);
+        const d = Math.hypot(at.x - worldX, at.y - worldY);
+        if (d < nearest) {
+          nearest = d;
+          best = { x: x + 0.5, y: y + 0.5 };
+        }
+      }
+    }
+    return best;
+  }
+
+  /** The couches where they stand, and the goalposts over those carrying them. */
+  private drawProps(show: Show, timeMs: number, reduced: boolean): void {
+    for (const prop of show.props) {
+      const at = this.iso.toWorld(prop.x, prop.y);
+      const own = (this.iso.sum(prop.x, prop.y) - 1) * 4 + 2.4;
+      // A couch shows once someone is there with it; when they have all gone it stays until nobody is looking.
+      const there = show.people.some((one) => !one.gone && !one.trip) || show.phase === 'over';
+      prop.sprite.setPosition(at.x, at.y).setDepth(this.feet ? this.feet.depth(prop.x, prop.y, own) : own).setAlpha(there ? 1 : 0);
+    }
+    const carried = show.carried;
+    if (!carried) return;
+    const a = show.people[1];
+    const b = show.people[CARRIERS - 2];
+    if (!a || !b || a.gone || b.gone || a.sprite.alpha <= 0) {
+      carried.setAlpha(0);
+      return;
+    }
+    const x = (a.at.x + b.at.x) / 2;
+    const y = (a.at.y + b.at.y) / 2;
+    const at = this.iso.toWorld(x, y);
+    const bob = reduced ? 0 : Math.sin(timeMs / 260) * 1.4;
+    carried.setPosition(at.x, at.y - CARRY_LIFT + bob).setDepth(Math.max(a.sprite.depth, b.sprite.depth) + 0.02).setAlpha(Math.min(a.sprite.alpha, b.sprite.alpha));
+    show.mid = { x, y };
+  }
+
   // ------------------------------------------------------------- cards --
 
   /** Someone in a staged incident at a point of the world, or null: a tap on them opens their card. */
@@ -729,6 +968,8 @@ export class Mayhem {
       person.sign?.destroy();
     }
     show.cloud?.destroy();
+    for (const prop of show.props) prop.sprite.destroy();
+    show.carried?.destroy();
     this.shows.delete(show.id);
     const now = this.scene.time.now;
     for (const [id, kept] of this.fled) if (kept.until <= now) this.fled.delete(id);
@@ -741,5 +982,6 @@ export class Mayhem {
     this.icons = [];
     this.doorless.clear();
     this.fled.clear();
+    this.carriedAt = -1;
   }
 }

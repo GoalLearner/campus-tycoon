@@ -9,6 +9,7 @@ import {
   CHAOS_WEIGHT,
   DRAMA_WEIGHT,
   GAME_DAY_TEMPER,
+  RIVALRY_TEMPER,
   GRAFFITI_BILL,
   HEADLINE_REACH,
   LETTER,
@@ -23,10 +24,12 @@ import {
   SPIRIT_REACH,
   TENSION,
   type ChaosKind,
+  type IncidentChaosKind,
   type ChaosStep,
   type ProtestTopic,
 } from '../config/chaos';
 import { CHAOS_LINES, PROTEST_LINES } from '../config/chaosLines';
+import { RIVALRY_SLOT } from '../config/football';
 import { INCIDENT_EVAL_TICKS, RESPONSE_BASE_TICKS, RESPONSE_TICKS_PER_CELL } from '../config/incidents';
 import { POLICIES } from '../config/policies';
 import { WEB_WEEK_TICKS } from '../config/web';
@@ -51,7 +54,7 @@ import { mischiefTimes } from './policies';
  * of its own and keeps its incidents apart from the incidents of before, so nothing else turns out differently.
  */
 
-const ZERO = (): Record<ChaosKind, number> => ({ dustUp: 0, shouting: 0, prank: 0, graffiti: 0, protest: 0, party: 0 });
+export const ZERO = (): Record<ChaosKind, number> => ({ dustUp: 0, shouting: 0, prank: 0, graffiti: 0, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 });
 
 export function newChaos(): ChaosState {
   return {
@@ -68,6 +71,12 @@ export function newChaos(): ChaosState {
     letters: { sent: 0, met: 0, missed: 0, lastClosed: -1_000_000 },
     dipUntil: -1,
     spiritAt: -1_000_000,
+    lastKick: -1,
+    storm: null,
+    street: null,
+    mascot: null,
+    mascotSeason: -1,
+    clinchedSeason: -1,
   };
 }
 
@@ -120,10 +129,12 @@ export function spawnChaos(state: GameState): void {
   const scale = smallCount(state, students) / 1000;
   // Free rein where Campus Safety does not reach the dorms.
   const rein = FREE_REIN.reached + (FREE_REIN.none - FREE_REIN.reached) * (1 - c.covered);
-  const temper = homeGameNow(state) ? GAME_DAY_TEMPER : 1;
+  // A home game day runs tempers high, the rivalry's higher still (C3, DESIGN.md 77.1).
+  const game = homeGameNow(state);
+  const temper = game ? (game.slot === RIVALRY_SLOT ? RIVALRY_TEMPER : GAME_DAY_TEMPER) : 1;
   const quiet = mischiefTimes(state);
   const half = 0.5 + 0.5 * c.tension;
-  const chances: Array<[Exclude<ChaosKind, 'party'>, number]> = [
+  const chances: Array<[IncidentChaosKind, number]> = [
     ['dustUp', CHAOS_RATE.dustUp * scale * c.tension * rein * temper],
     ['shouting', CHAOS_RATE.shouting * scale * c.tension * temper * quiet],
     ['prank', CHAOS_RATE.prank * scale * half * rein * quiet * (rivalryWeek(state) ? RIVALRY_PRANKS : 1)],
@@ -140,7 +151,7 @@ export function spawnChaos(state: GameState): void {
 }
 
 /** Begin a chaos incident at a dorm, or for a protest on the quad by a lecture hall. */
-function begin(state: GameState, kind: Exclude<ChaosKind, 'party'>, pick: number, line: number): void {
+function begin(state: GameState, kind: IncidentChaosKind, pick: number, line: number): void {
   const zone = kind === 'protest' ? 'academic' : 'housing';
   const places = state.map.buildings.filter((b) => b && b.zone === zone && b.stage > 0);
   if (places.length === 0) return;
@@ -372,6 +383,12 @@ function causeText(state: GameState, kind: ChaosKind, uncovered: boolean): strin
     }
     case 'party':
       return 'Calls from parties: party registration, alcohol education or a dry campus cut them';
+    case 'goalposts':
+      return 'Goalposts carried off after a field storming: Campus Safety in reach of the stadium keeps them up';
+    case 'street':
+      return 'Couches in the street after a big game: Campus Safety near the halls keeps the street clear';
+    case 'mascot':
+      return "The rival's mascot taken in rivalry week: Campus Safety near the halls keeps it at home";
   }
 }
 

@@ -83,6 +83,7 @@ import {
   cannotStart,
   commonsLift,
   goingUp,
+  upkeepComing,
   honorsRate,
   marketingLift,
   unionAt,
@@ -148,6 +149,15 @@ function bigBuildEntries(state: GameState, scale: number): BuildEntry[] {
       effect: placed.effect,
     };
     const busy = goingUp(state);
+    // Another going up: what the campus would keep with both running (77.7), the sum the test players read.
+    if (!there && busy.length > 0) {
+      const books = budget(state);
+      if (books.incomeTotal > 0) {
+        const coming = upkeepComing(state, books.incomeTotal);
+        const after = books.kept - coming.share - (100 * placedUpkeep(spec.type, scale)) / books.incomeTotal;
+        card.upkeep += `. With ${namesOf(coming.builds)} going up too: you'd keep about ${perHundred(after, 2)} of every $100`;
+      }
+    }
     if (there) card.locked = `Being built: it opens in ${duration(there.done! - state.clock.tick)}`;
     else if (busy.length >= state.bigBuilds.slots) {
       // The card says only when a builder is free. The second builder's own card says what it costs.
@@ -633,6 +643,8 @@ export interface MoneyView {
   lead: string;
   /** Set while a save from before these costs is climbing to them. */
   phase: string | null;
+  /** Big builds going up (DESIGN.md 77.7): what they will cost to run, and what would be kept then. null with none. */
+  coming: string | null;
   incomeTotal: string;
   income: MoneyRow[];
   spendingTotal: string;
@@ -642,6 +654,12 @@ export interface MoneyView {
   endowment: { line: string; payIn: number[] };
   /** The alumni pool in one line (DESIGN.md 54.3): how many, and what the last drive raised. null on a game with no drive. */
   alumni: string | null;
+}
+
+/** The big builds named in a line: "the Student Union", "the Student Union and the Honors College". */
+function namesOf(builds: readonly Placed[]): string {
+  const names = builds.map((placed) => `the ${PLACED[placed.type].name}`);
+  return names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /** A round sum to offer: two figures, rounded down. */
@@ -666,6 +684,18 @@ export function moneyView(state: GameState): MoneyView {
     ? `New running costs are coming in over ${b.phase.of} days. This is step ${b.phase.step} of ${b.phase.of}: you pay ${dollarsShort(b.spending)} this year, and about ${dollarsShort(b.fullSpending)} once they are all in.`
     : null;
 
+  // Big builds going up (77.7): what they will cost to run once they open, and what the campus would keep then.
+  const upcoming = upkeepComing(state, b.incomeTotal);
+  let coming: string | null = null;
+  if (upcoming.builds.length > 0 && b.incomeTotal > 0) {
+    const opens = duration(upcoming.builds[upcoming.builds.length - 1]!.done! - state.clock.tick);
+    const keep = `you'd keep about ${perHundred(b.kept - upcoming.share, 2)} of every $100`;
+    coming =
+      upcoming.builds.length === 1
+        ? `Going up: the ${PLACED[upcoming.builds[0]!.type].name} opens in ${opens}, about ${dollarsShort(upcoming.perYear)} a year to run (${keep}).`
+        : `Going up: ${namesOf(upcoming.builds)}, open within ${opens}, about ${dollarsShort(upcoming.perYear)} a year to run between them (${keep}).`;
+  }
+
   const row = (line: BudgetLine): MoneyRow => ({ name: line.name, detail: line.detail, amount: dollarsShort(line.amount) });
   const step = m.marketing;
   const max = MARKETING_LIFT.length - 1;
@@ -686,6 +716,7 @@ export function moneyView(state: GameState): MoneyView {
   return {
     lead,
     phase,
+    coming,
     incomeTotal: dollarsShort(b.incomeTotal),
     income: b.income.map(row),
     spendingTotal: dollarsShort(b.spending),

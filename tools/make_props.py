@@ -159,10 +159,53 @@ def partyhat(colours):
     return c
 
 
+# The chaos sandbox, C3 (DESIGN.md 77): a couch dragged into the street after a big game (dragged, never burned), in
+# two fabrics, and a goalpost carried off after a field storming, held up over the heads of those carrying it.
+COUCHES = ((214, 150, 60, 255), (70, 150, 150, 255))
+
+
+def couch(fabric):
+    c = canvas()
+    d = ImageDraw.Draw(c)
+    dark = tuple(max(0, int(v * 0.72)) for v in fabric[:3]) + (255,)
+    light = tuple(min(255, int(v * 1.15)) for v in fabric[:3]) + (255,)
+    # The back, the seat in three cushions, an arm at each end, and two stubby feet.
+    for x in (210, 790):
+        outlined_round(d, (x - 40, 760, x + 40, 880), 16, (90, 60, 40, 255), 26)
+    outlined_round(d, (150, 380, 874, 640), 60, dark)
+    outlined_round(d, (150, 560, 874, 800), 50, fabric)
+    for k in range(3):
+        x0 = 230 + k * 190
+        d.rounded_rectangle((x0, 590, x0 + 170, 690), 30, fill=light)
+    for x0 in (90, 794):
+        outlined_round(d, (x0, 470, x0 + 140, 820), 50, fabric)
+    return c
+
+
+def goalpost():
+    c = Image.new('RGBA', (BIG, BIG), (0, 0, 0, 0))
+    d = ImageDraw.Draw(c)
+    yellow = (255, 214, 64, 255)
+    shade = (220, 160, 20, 255)
+    # Two uprights and the crossbar, the post below and its curve, tilted a little as it is carried.
+    parts = [((180, 140), (180, 560)), ((844, 140), (844, 560)), ((180, 560), (844, 560)), ((512, 560), (512, 760)), ((512, 760), (430, 900))]
+    # Thick, so the shape still reads as goalposts at map size and not as a pair of antlers.
+    for a, b in parts:
+        d.line([a, b], fill=PLUM, width=140)
+    for a, b in parts:
+        d.line([a, b], fill=shade, width=84)
+        d.line([(a[0] - 10, a[1] - 10), (b[0] - 10, b[1] - 10)], fill=yellow, width=48)
+    for x, y in ((180, 140), (844, 140)):
+        d.ellipse((x - 70, y - 70, x + 70, y + 70), fill=PLUM)
+        d.ellipse((x - 34, y - 34, x + 34, y + 34), fill=yellow)
+    return c.rotate(-12, resample=Image.BICUBIC, center=(512, 560))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     hats = tuple((f'partyhat-{n}', (lambda colours=colours: partyhat(colours))) for n, colours in enumerate(PARTY_HATS))
-    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog), ('bag', bag), ('umbrella', umbrella)) + hats:
+    couches = tuple((f'couch-{n}', (lambda fabric=fabric: couch(fabric))) for n, fabric in enumerate(COUCHES))
+    for name, draw in (('frisbee', frisbee), ('phone', phone), ('tray', tray), ('dog', dog), ('bag', bag), ('umbrella', umbrella), ('goalpost', goalpost)) + hats + couches:
         im = draw()
         box = im.getbbox()
         # Standing on the bottom middle of the picture, as the art build expects a prop to.

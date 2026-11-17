@@ -6,6 +6,7 @@ import {
   bigBuildsOffered,
   cannotStart,
   goingUp,
+  upkeepComing,
   placedUpkeep,
   recreationAt,
   SECOND_BUILDER_SEALS,
@@ -833,6 +834,9 @@ function bigBuildsWanted(state: GameState): PlacedType[] {
   const books = budget(state);
   if (books.incomeTotal <= 0) return [];
   const scale = scaleOf(state);
+  // What the big builds already going up will cost to run once they open: the Money panel's player counts them too,
+  // or two bought a visit apart open in the same week and the campus keeps too little until the slider catches up.
+  const coming = upkeepComing(state, books.incomeTotal).share;
   return bigBuildsOffered(state)
     .map((spec) => spec.type)
     .filter((type) => !bigBuildOf(state, type))
@@ -840,7 +844,7 @@ function bigBuildsWanted(state: GameState): PlacedType[] {
     .filter((type) => {
       const share = (100 * placedUpkeep(type, scale)) / books.incomeTotal;
       // Under half a dollar of every $100 a year, as the landmark is, it is judged by its price alone.
-      return share < 0.5 || keeps(state) - share >= KEEPS_ENOUGH;
+      return share < 0.5 || keeps(state) - coming - share >= KEEPS_ENOUGH;
     });
 }
 

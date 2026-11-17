@@ -1,4 +1,5 @@
 import { partyCallChance } from '../src/sim/systems/parties';
+import { hazingRisk } from '../src/sim/systems/greek';
 import { CHAOS_FROM, ROWDY } from '../src/sim/config/chaos';
 import { chaosStepName, chaosStepOf } from '../src/sim/systems/chaos';
 import { WEB_WEEK_TICKS as CHAOS_WEEK_TICKS } from '../src/sim/config/web';
@@ -337,6 +338,14 @@ interface Seen {
   mostStudents: number;
   /** The most the Chaos meter read at a visit (DESIGN.md 68). */
   chaosMost: number;
+  /** Football's chaos (DESIGN.md 77): field stormings, goalposts carried off, couches in the street, the rival's mascot, by football season. */
+  storms: number;
+  /** Stormings by the game year they came in, and our games by year, for the seasons played. */
+  stormsByYear: Record<number, number>;
+  gamesByYear: Record<number, number>;
+  goalposts: number;
+  streets: number;
+  mascots: Record<number, number>;
   /** By game year: what the research labs took of the yearly allowance, and what all of its takers did (DESIGN.md 49). */
   labPaid: Record<number, number>;
   allowancePaid: Record<number, number>;
@@ -421,6 +430,12 @@ const newSeen = (): Seen => ({
   goalsUnsaid: 0,
   mostStudents: 0,
   chaosMost: 0,
+  storms: 0,
+  stormsByYear: {},
+  gamesByYear: {},
+  goalposts: 0,
+  streets: 0,
+  mascots: {},
   greekWeeks: [],
   greekRush: [],
   drives: [],
@@ -491,6 +506,19 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     if (entry.kind === 'greek' && entry.data?.scandal === 1) seen.scandals += 1;
     // Alumni giving (DESIGN.md 56): a drive at each commencement.
     if (entry.kind === 'graduation') seen.commencements += 1;
+    // Football's chaos (DESIGN.md 77).
+    if (entry.kind === 'chaos' && (entry.data?.football === 1 || entry.data?.football === 2)) {
+      seen.storms += 1;
+      seen.stormsByYear[entry.year ?? -1] = (seen.stormsByYear[entry.year ?? -1] ?? 0) + 1;
+    }
+    if (entry.kind === 'game') seen.gamesByYear[entry.year ?? -1] = (seen.gamesByYear[entry.year ?? -1] ?? 0) + 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 2) seen.goalposts += 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 3) seen.streets += 1;
+    if (entry.kind === 'chaos' && entry.data?.football === 4) {
+      // By the game year it happened in: a season's rivalry week is in its year.
+      const year = entry.year ?? -1;
+      seen.mascots[year] = (seen.mascots[year] ?? 0) + 1;
+    }
     // The Main Character (DESIGN.md 57).
     if (entry.kind === 'mc') {
       seen.mcLines += 1;
@@ -2229,6 +2257,10 @@ function assertModelCampus(seed: number): void {
       ['a campus with half its cover gone', eras(stripped(alone.final))],
     ];
     const signed = (n: number, digits = 2): string => `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(digits)}`;
+    const meanHazing = (s: GameState): number => {
+      const list = chapters(s);
+      return list.length === 0 ? 0 : list.reduce((sum, chapter) => sum + hazingRisk(s, chapter).risk, 0) / list.length;
+    };
     let moved = true;
     const told: string[] = [];
     console.log('WHAT EACH POLICY IS WORTH: one switch on for six years, against the same campus with it off');
@@ -2256,6 +2288,7 @@ function assertModelCampus(seed: number): void {
         console.log(`      - ${spec.takes}: ${words.cost.join('; ')}`);
         // What the switch does to Happiness the moment it is thrown, before anything it sets going (DESIGN.md 63.10).
         const atOnce = campusHappiness(result.state).base - campusHappiness(base).base;
+        if (spec.id === 'antiHazing' || spec.id === 'greekOversight') console.log(`      at once: each chapter's hazing risk ${meanHazing(result.state).toFixed(3)} with it on, ${meanHazing(base).toFixed(3)} with it off`);
         if (spec.greek) console.log(`      at once: Happiness ${signed(atOnce, 3)}; chapters keeping their lift (not on probation or suspended), a day's average over six years: ${on.lifted.toFixed(2)} with it on, ${off.lifted.toFixed(2)} with it off`);
         console.log(`      over six years: ${signed(d.calls, 0)} calls from parties a year, ${signed(d.reports, 0)} hazing reports, keeps ${signed(d.kept)} of every $100 (income ${signed(d.income / 1e6)}M, spending ${signed(d.spending / 1e6)}M a year), Happiness ${signed(d.happy)}, semester Stress ${signed(d.stress)}, ${signed(d.left, 0)} leave a year, ${signed(d.incidents, 0)} incidents unanswered a year, rating ${signed(d.rating, 1)} (published ${signed(d.published, 1)}, ${d.rank === 0 ? 'same rank' : `${Math.abs(d.rank)} ${Math.abs(d.rank) === 1 ? 'place' : 'places'} ${d.rank < 0 ? 'better' : 'worse'}`})`);
         // Each moves the number it names, the way it says.
@@ -2278,7 +2311,10 @@ function assertModelCampus(seed: number): void {
           // read on and off at the same moment; the six-year count is printed above.
           partyRegistration: partyCallChance(result.state, 1, 1, 0).chance * (1 - partyCallChance(result.state, 1, 1, 0).medical) < partyCallChance(base, 1, 1, 0).chance * (1 - partyCallChance(base, 1, 1, 0).medical) && d.spending > 0,
           alcoholEducation: d.stress <= 0 && d.spending > 0,
-          antiHazing: d.reports <= 0,
+          // Its number is each chapter's hazing risk. Reports are a handful in six years, too few for two histories to show
+          // the switch every time once football's chaos (C3, DESIGN.md 77) makes them drift apart, so the risk is read on
+          // and off at the same moment, with the same chapters; the six-year count is printed above.
+          antiHazing: meanHazing(result.state) < meanHazing(base) && meanHazing(base) > 0,
           // What its switch says: fewer hazing reports, and members a little less happy the moment it is on. Over six
           // years two histories of one campus drift apart by more than its cost to a few members, so its Happiness then
           // is printed and not asked for (DESIGN.md 63.10: since stop 6 it came out +0.07 on the once-a-day campus).
@@ -2561,6 +2597,17 @@ function assertModelCampus(seed: number): void {
       'a campus run for Pandemonium on purpose gets there, and is below Rowdy within a few game weeks of being run well again',
       chaosStepOf(most) === 5 && weeks <= 6 && chaosStepOf(wild.state.chaos.level) <= 2,
       `${Math.round(most)} at the most (${chaosStepName(most)}) in two real days with no Campus Safety, no new beds, its yards' crews sent home and every calming switch off; below Rowdy ${Number.isFinite(weeks) ? `${weeks} game weeks` : 'never'} after the Serene player's first visit, and ${chaosStepName(wild.state.chaos.level)} two days on; ${wild.state.chaos.letters.sent} letters from the trustees, ${wild.state.chaos.letters.missed} ignored`,
+    );
+    // Football's chaos, stop C3 (DESIGN.md 77): it happens, and stays light for the usual players.
+    const football = runs.map((run) => {
+      const seasons = Object.keys(run.seen.gamesByYear).map(Number);
+      const per = seasons.map((year) => run.seen.stormsByYear[year] ?? 0);
+      return { name: `${run.style} ${run.seed}`, storms: run.seen.storms, seasons: seasons.length, most: Math.max(0, ...per), none: per.filter((n) => n === 0).length, goalposts: run.seen.goalposts, streets: run.seen.streets, mascots: Object.values(run.seen.mascots) };
+    });
+    check(
+      "football's chaos shows and stays light: a storming about once a season (the rival beaten at home, an upset, a clinching win), the goalposts down only after one, couches now and then, the rival's mascot once a season at most",
+      football.some((one) => one.storms > 0) && football.every((one) => one.seasons > 0 && one.storms / one.seasons >= 0.3 && one.storms / one.seasons <= 1.6 && one.most <= 3 && one.goalposts <= one.storms && one.mascots.every((n) => n <= 1) && one.streets <= 3 * one.seasons),
+      football.map((one) => `${one.name}: ${one.storms} stormings in ${one.seasons} seasons (${(one.storms / Math.max(1, one.seasons)).toFixed(2)} a season, at most ${one.most}, none in ${Math.round((100 * one.none) / Math.max(1, one.seasons))}%), ${one.goalposts} with the goalposts, ${one.streets} couch nights, ${one.mascots.reduce((a, b) => a + b, 0)} mascots`).join('; '),
     );
     const calm = chaosDays('serene', 3, null, 0);
     const later = calm.levels.slice(Math.floor(calm.levels.length / 3));

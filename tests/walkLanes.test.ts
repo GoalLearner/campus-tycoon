@@ -143,7 +143,7 @@ describe('a game saved before painted lanes', () => {
   const lanes = (state: GameState): number => state.map.cells.filter((cell) => cell.lane !== undefined).length;
 
   it('paints every walk of a save from before lanes, and of one already upgraded with nothing painted', () => {
-    expect(SAVE_VERSION).toBe(37);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(37);
     expect(PAINT_SAVED_WALKS).toBe(true);
     const fresh = model();
     for (const v of [35, 36]) {

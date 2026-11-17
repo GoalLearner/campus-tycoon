@@ -44,7 +44,7 @@ describe('the Chaos meter, C1', () => {
     // One wild week moves it part of the way, not all of it.
     const state = model();
     state.chaos.level = 15;
-    state.chaos.tally = { dustUp: 40, shouting: 0, prank: 0, graffiti: 0, protest: 0, party: 0 };
+    state.chaos.tally = { dustUp: 40, shouting: 0, prank: 0, graffiti: 0, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
     const after = nextWeek(state).state;
     expect(after.chaos.last!.raw).toBe(100);
     expect(after.chaos.level).toBeGreaterThan(15);
@@ -53,10 +53,10 @@ describe('the Chaos meter, C1', () => {
 
   it('reads chaos for every thousand students, so a big campus is not punished for being big', () => {
     const a = model();
-    a.chaos.tally = { dustUp: 3, shouting: 2, prank: 1, graffiti: 0, protest: 0, party: 0 };
+    a.chaos.tally = { dustUp: 3, shouting: 2, prank: 1, graffiti: 0, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
     a.chaos.level = 0;
     const b = structuredClone(a);
-    b.chaos.tally = { dustUp: 6, shouting: 4, prank: 2, graffiti: 0, protest: 0, party: 0 };
+    b.chaos.tally = { dustUp: 6, shouting: 4, prank: 2, graffiti: 0, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
     b.cohorts = b.cohorts.map((n) => n * 2) as GameState['cohorts'];
     expect(nextWeek(b).state.chaos.last!.raw).toBeCloseTo(nextWeek(a).state.chaos.last!.raw, 0);
   });
@@ -107,7 +107,7 @@ describe('the Chaos meter, C1', () => {
     state.chaos.letter = null;
     state.chaos.letters.lastClosed = -1_000_000;
     state.chaos.reach = [];
-    state.chaos.tally = { dustUp: 40, shouting: 10, prank: 10, graffiti: 10, protest: 0, party: 0 };
+    state.chaos.tally = { dustUp: 40, shouting: 10, prank: 10, graffiti: 10, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
     const read = nextWeek(state);
     state = read.state;
     expect(chaosStepOf(state.chaos.level)).toBeGreaterThanOrEqual(ROWDY);
@@ -134,7 +134,7 @@ describe('the Chaos meter, C1', () => {
     // Ignored: past its day and still Rowdy.
     const missed = structuredClone(asked);
     missed.chaos.letter = { from: missed.clock.tick - 3000, until: missed.clock.tick };
-    missed.chaos.tally = { dustUp: 60, shouting: 20, prank: 20, graffiti: 20, protest: 0, party: 0 };
+    missed.chaos.tally = { dustUp: 60, shouting: 20, prank: 20, graffiti: 20, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
     const ignored = nextWeek(missed).state;
     expect(ignored.chaos.letters.missed).toBe(asked.chaos.letters.missed + 1);
     expect(trusteesDip(ignored)).toBe(LETTER.dip);
@@ -151,7 +151,7 @@ describe('the Chaos meter, C1', () => {
       state.chaos.level = (CHAOS_FROM[2]! + CHAOS_FROM[3]!) / 2;
       state.chaos.covered = 1;
       state.admissions.lastSemester = { ...(state.admissions.lastSemester ?? { tick: 0, stayed: 0, left: 0 }), happiness: 80 } as never;
-      state.chaos.tally = { dustUp: 0, shouting: 3, prank: 1, graffiti: 0, protest: 0, party: 0 };
+      state.chaos.tally = { dustUp: 0, shouting: 3, prank: 1, graffiti: 0, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
       state.chaos.level = 28;
       const read = nextWeek(state);
       if (read.log.some((entry) => entry.data?.spirit === 1)) {
@@ -167,7 +167,7 @@ describe('the Chaos meter, C1', () => {
 
   it('is on the Scorecard with its step and its three biggest causes, each saying what would ease it', () => {
     const state = model();
-    state.chaos.last = { tally: { dustUp: 4, shouting: 2, prank: 3, graffiti: 1, protest: 0, party: 1 }, missed: { dustUp: 3, shouting: 0, prank: 2, graffiti: 1, protest: 0, party: 0 }, drama: 0.05, thousands: 1.5, raw: 50, topic: null };
+    state.chaos.last = { tally: { dustUp: 4, shouting: 2, prank: 3, graffiti: 1, protest: 0, party: 1, goalposts: 0, street: 0, mascot: 0 }, missed: { dustUp: 3, shouting: 0, prank: 2, graffiti: 1, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 }, drama: 0.05, thousands: 1.5, raw: 50, topic: null };
     state.chaos.level = 50;
     const view = chaosView(state)!;
     expect(view.step).toBe('Rowdy');

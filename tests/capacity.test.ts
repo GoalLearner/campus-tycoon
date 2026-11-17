@@ -738,7 +738,7 @@ describe('a save from version 15', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes.length).toBe(22);
+    expect(notes.length).toBe(23);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

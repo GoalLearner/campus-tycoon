@@ -21,11 +21,20 @@ import {
   signKey,
   SHOWS_AT_ONCE,
   WATCH_RUN,
+  CARRIERS,
+  CARRY_FROM_TICKS,
+  CARRY_UNTIL_TICKS,
+  CARRY_PACE,
+  PARADE,
+  PARADE_PACE,
+  STREET_AT_STEP,
+  streetSize,
   type ShowRole,
 } from '../src/app/mayhemShow';
 import { toneProblem } from '../src/sim';
 import { hardLineProblem } from '../src/sim/config/hardLines';
 import type { ProtestTopic } from '../src/sim/config/chaos';
+import { SCHOOL_COLOURS } from '../src/sim/config/football';
 
 /**
  * The chaos sandbox, C2 (DESIGN.md 76): the crowd shows it. The plain rules for staging chaos's incidents where they
@@ -141,7 +150,7 @@ describe('a staged incident', () => {
   });
 
   it('says what each is doing on their card in comic words, inside the tone guide and its hard lines', () => {
-    const roles: ShowRole[] = ['dustUp', 'shouting', 'prank', 'graffiti', 'protest', 'patched'];
+    const roles: ShowRole[] = ['dustUp', 'shouting', 'prank', 'graffiti', 'protest', 'patched', 'street', 'goalposts', 'mascot'];
     const lines = [...roles.map((role) => showWords(role)), ...TOPICS.map((topic) => showWords('protest', topic))];
     for (const kind of MOMENT_KINDS) lines.push(watchWords(kind), actorWords(kind, 'Sasha'), actorWords(kind, null));
     for (const line of lines) {
@@ -155,16 +164,43 @@ describe('a staged incident', () => {
   });
 });
 
+describe("football's scenes (DESIGN.md 77)", () => {
+  it('puts more out on the couches at a higher crowd setting, a few at the least', () => {
+    for (let step = 1; step < STREET_AT_STEP.length; step++) expect(streetSize(step)).toBeGreaterThanOrEqual(streetSize(step - 1));
+    expect(streetSize(0)).toBeGreaterThanOrEqual(3);
+    expect(streetSize(9)).toBe(STREET_AT_STEP[STREET_AT_STEP.length - 1]);
+  });
+
+  it('carries the goalposts off once the fans on the field have gone, slowly, and the mascot round a lawn more slowly still', () => {
+    // The storming shows for five minutes (CampusScene's STORM_TICKS); the carry follows it.
+    expect(CARRY_FROM_TICKS).toBe(5);
+    expect(CARRY_UNTIL_TICKS).toBeGreaterThan(CARRY_FROM_TICKS);
+    expect(CARRIERS).toBeGreaterThanOrEqual(4);
+    expect(CARRY_PACE).toBeLessThan(0.85);
+    expect(PARADE_PACE).toBeLessThan(CARRY_PACE);
+    expect(PARADE).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('the art', () => {
   it('has the plaster and the four signs in the built-in atlas, named in both recipes and credited', () => {
     const atlas = JSON.parse(read('../public/assets/atlas.json')) as { frames: Record<string, unknown> };
     const kenney = read('../art/recipes/kenney.json');
     const penzilla = read('../art/recipes/penzilla.json');
-    for (const key of ['emote.bandage', ...TOPICS.map(signKey)]) {
+    for (const key of ['emote.bandage', ...TOPICS.map(signKey), 'prop.couch.0', 'prop.couch.1', 'prop.goalpost']) {
       expect(atlas.frames[key], key).toBeDefined();
       expect(kenney).toContain(`"${key}"`);
       expect(penzilla).toContain(`"${key}"`);
     }
     expect(read('../CREDITS.md')).toContain('four rally signs for the chaos sandbox');
+  });
+
+  it("dresses the rival's mascot (look A, the costume, as drawn) in each school colour, in the order the game reads them, in the pack's atlas only", () => {
+    const pack = JSON.parse(read('../art/recipes/penzilla.json')) as { people: { looks: string[]; roles: Record<string, number> } };
+    const first = pack.people.roles.mascot!;
+    expect(first).toBeGreaterThan(0);
+    SCHOOL_COLOURS.forEach((colour, n) => expect(pack.people.looks[first + n]).toBe(`_rendered/fallback/mascot/costume-${colour.id}.png`));
+    expect(pack.people.looks).toHaveLength(first + SCHOOL_COLOURS.length);
+    expect(read('../art/recipes/kenney.json')).not.toContain('mascot');
   });
 });

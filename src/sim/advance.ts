@@ -12,6 +12,7 @@ import { openRoutine, stepInbox } from './systems/inbox';
 import { stepGrounds } from './systems/grounds';
 import { spawnIncidents, stepIncidents } from './systems/incidents';
 import { countEnding, spawnChaos, stepChaos } from './systems/chaos';
+import { stepFootballChaos } from './systems/footballChaos';
 import { calendarAt, dateAt, eventsAt, rollWeek, type CalendarEvent } from './calendar';
 import { GROWTH_EVAL_TICKS, MAX_CATCHUP_TICKS, TICK_MS, TICKS_PER_HOUR, TICKS_PER_YEAR } from './config/time';
 import { tellMovingOut } from './systems/fourYears';
@@ -125,6 +126,8 @@ function tick(state: GameState, log: LogEntry[]): void {
   spawnIncidents(state);
   spawnChaos(state);
   stepChaos(state, log);
+  // Football's chaos (DESIGN.md 77): a game of ours just over, and the rival's mascot in rivalry week.
+  stepFootballChaos(state, log);
   stepGrounds(state, log);
   // Each chapter's standing, once an hour (DESIGN.md 51).
   if (clock.tick % TICKS_PER_HOUR === 0) stepGreek(state, log);

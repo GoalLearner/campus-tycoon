@@ -130,5 +130,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 37) {
     notes.push('Bike lanes are painted on the walks all over your campus, free. Riders keep to them; the Path tool can take one off or paint more.');
   }
+  if (fromVersion < 38) {
+    notes.push("Football has its wild side now: fans storm the field after a big home win, the goalposts can go for a walk where Campus Safety does not reach the stadium, couches come out into the street after a big game, and in rivalry week the rival's mascot may pay you a visit.");
+  }
   return notes;
 }

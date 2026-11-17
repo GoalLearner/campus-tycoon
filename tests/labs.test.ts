@@ -306,7 +306,7 @@ describe('saves', () => {
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(14);
+      expect(notes).toHaveLength(15);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });
