@@ -4,6 +4,7 @@ import { addTimer, cancelTimers } from '../sim/timers';
 import { MEDDLE, type MeddleId } from '../sim/config/meddle';
 import { meddle } from '../sim/systems/meddle';
 import { makeSandbox } from '../sim/systems/sandbox';
+import { classPlaces } from '../sim/systems/students';
 import { roomFor, roomShared } from './room';
 import { setRoomClock } from '../ui/roomView';
 import { socialWeb } from './socialWeb';
@@ -333,6 +334,17 @@ function applyViewParams(params: URLSearchParams): void {
         return card !== null && card.archetype === 'party' && (party === 'over' ? card.classYear >= 2 : card.classYear < 2);
       });
       if (ref) session.openStudent(ref);
+    }, 2800);
+  }
+  // &schedule=5 opens the card of a student of a class year (&scheduleyear=2, a third-year) and their classes (R4a,
+  // DESIGN.md 80); &cardonly leaves the classes closed, for the card's Classes row.
+  const scheduleAt = Number(params.get('schedule') ?? NaN);
+  if (Number.isInteger(scheduleAt) && scheduleAt >= 0) {
+    setTimeout(() => {
+      const place = classPlaces(store.state, Number(params.get('scheduleyear') ?? 2));
+      if (place.size <= 0) return;
+      session.openStudent({ entryYear: place.entryYear, index: place.from + (scheduleAt % place.size) });
+      if (!params.has('cardonly')) session.openSchedule();
     }, 2800);
   }
   const roomAt = Number(params.get('room') ?? NaN);

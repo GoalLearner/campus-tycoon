@@ -45,7 +45,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 /**
  * The daily and seasonal rhythm (DESIGN.md 42.8, as built in section 44):
@@ -345,6 +345,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
@@ -354,7 +355,7 @@ describe('saves', () => {
       expect(day.rhythm.year?.goals).toHaveLength(3);
       const notes = upgradeNotes(20);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(18);
+      expect(notes).toHaveLength(19);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

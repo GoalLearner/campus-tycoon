@@ -31,7 +31,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 /**
  * Traditions (DESIGN.md 14.2, adapted and built in section 50): places that
@@ -248,6 +248,7 @@ describe('saves', () => {
       expected.web = webMetaFor(expected);
       sixClassYears(expected);
       withChaos(expected);
+      withRegistration(expected);
       withLanes(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
@@ -256,7 +257,7 @@ describe('saves', () => {
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(15);
+      expect(notes).toHaveLength(16);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

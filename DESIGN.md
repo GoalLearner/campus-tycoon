@@ -9304,6 +9304,7 @@ The player's own campus keeps the keys it has always had in storage (`save`, `ba
 - A tester's skip of the clock made in the sandbox stays with the sandbox: the real campus's clock is put back when it is opened.
 - Notifications (36.6) are not planned from the sandbox.
 - Export, import and the account are for the player's own campus; a sandbox's save cannot be imported as it ("That save is a sandbox: its money is unlimited, so it cannot become your own campus.").
+- **A rule for the Gold Seals store, when it is built** (main's review, 2026-11-16): buying is refused in a sandbox. The store offers nothing to buy there, and the purchase itself refuses a campus with the sandbox's flag before any payment is asked for, so a real-money purchase can never land in a sandbox save. The store stop's tests must show both.
 
 ### 79.3 The sandbox's rules
 
@@ -9340,3 +9341,73 @@ A flag in the game itself, `sandbox`, missing on every real campus (`src/sim/sys
 **Seen in the game**, in the app's own storage (a fresh browser profile): a university founded from the first screen, copied into a sandbox from the Menu (the money "Unlimited", the badge "Sandbox. Larp University is untouched."), back from the sandbox's Menu to the same money to the dollar, and the Menu then offering "Open the sandbox". The founding screen, both Menus, the badge and the Meddle page in the sandbox at 375, 390, 430 and 530 wide: nothing wider than the screen, no button under 44 points. Found there: the sandbox's Menu still showed the reminder to export a backup, with nothing to export; it is gone there now.
 
 **Tested**: `tests/sandbox.test.ts` (5): in the game, money topped up every minute, every Meddle tool free and never resting, and no trustees' letter after Rowdy weeks that bring one on a real campus; the round trip of 79.4 on the mature save, the real campus's save text and social web record as they were, nothing written under its keys, the cloud never told, and the real campus the same whole state as a phone with no sandbox, the sandbox still as it was left; reopening in the sandbox, a sandbox's save refused as the player's own and nothing loaded into the sandbox, and deleting the sandbox going home untouched; a sandbox founded from the first screen leaving the phone with no campus of its own, and a real one founded after under its own keys; the fixture a mature campus of the latest version. `tests/newgame.test.ts` and `tests/reopen.test.ts` as before, with the slot functions in their stand-in for the disk.
+
+## 80. The realism pass, R4a: registration and the schedule (approved 2026-11-14)
+
+The last of the realism pass's parts (65), approved with the rest on 2026-11-14 ("Yes, all ten"), the owner's answer 9: courses later, as R4, after chaos. The brief: "Registration with full classes, waitlists, prerequisites and 12-18 credits. Classes with professors, syllabi, midterms, finals, papers, group projects, labs, office hours, curves and grades. Advisors, tutoring, honors, minors." The gap report put it at two sessions, so it is two stops: **R4a**, registration and the schedule (this section), and **R4b**, grades by class and academic support (syllabi, midterms, finals, papers, group projects, office hours, curves, a grade for each class rolling up to R1's spread of grade point averages, advisors, tutoring, honors, minors). Built on the branch `realism-4`.
+
+The sources, by name: Inside Higher Ed and College Pulse's Student Voice survey (2023) for students who could not get a course they needed; Complete College America ("Full-Time Finishers" and "How Full-Time Are 'Full-Time' Students?", 2013-14) for credit loads; the University of Kansas's Common Data Set (2025-26, section I) for a public flagship's section sizes; and the usual 120 credits for a bachelor's degree.
+
+### 80.1 The catalog
+
+Every major's department (34, one for each of R1's majors, 65.3) has nine courses: two introductions (101, 102), two at the 200 level, two at the 300 level, "Topics in" its subject (350) and "Advanced Topics in" it (450), and a capstone (490), each needing the one before it at its level (the 200s an introduction, the 300s a 200, the capstone a 300). Biology's run Principles of Biology I and II, Genetics, Cell Biology, Ecology, Evolution, Topics and Advanced Topics in Biology, and a Senior Seminar. Introductions in the lab sciences and Spanish are four credits with a weekly lab; the rest three. Beside them, the general education courses: a one-credit First-Year Seminar, College Writing and Writing in the Disciplines, College Algebra, Introduction to Statistics, Public Speaking, and breadth courses (World Civilizations, Critical Thinking, Cultural Anthropology, Art History, Music Appreciation, Earth Science with a lab, Astronomy, Fitness and Wellness); one-credit activities (Yoga, Swimming, Tennis, Running, Rock Climbing); and, for juniors and seniors with the rest done, credit for an internship, undergraduate research or an independent study. Course titles avoid every word the hard lines and the tone guide keep out (`src/sim/config/courses.ts`).
+
+A section's size follows how a course is taught: an introduction in a big department (3% of degrees or more) up to 200, a middling one 90, a small one 45; the 200s 40, the 300s 26, topics 18, a capstone 15, a studio 16, a Spanish class 22; the general courses by kind (writing 19, a first-year seminar 18, the big breadth lectures 90 to 120). The campus's sections then land where a flagship's do: about 39% under 20 students and 14% of 50 or more, against Kansas's 39% and 18%.
+
+### 80.2 A student's semesters
+
+Each student's courses are worked out from the seed, semester by semester from the one they entered (`courseHistory` in `src/sim/systems/registration.ts`), as R1 works out their major (65.3): the same every time.
+
+- **The load**: 12 to 18 credits, full time. Fewer than half at 15 or more (Complete College America): 12 for 17 in 100, 13 for 15, 14 for 21, 15 for 29, 16 for 10, 17 for 5, 18 for 3. A course that would take them past the load they meant waits once they are full time, and a one-credit activity rounds a load up. About 14.1 credits on average.
+- **What they want, the most needed first**: the First-Year Seminar in the first fall and College Writing in the first year (six in ten in the fall); Writing in the Disciplines by the third year; calculus in the first year for engineering, computer science, mathematics, chemistry and physics, else statistics (or college algebra for the arts, English, Spanish, philosophy and education) by the third; their major's next courses (one a semester in the first two years, two after; the 300s from the third year, the 400s and the capstone in the last), and one of a second major's from the junior year; then breadth, then electives from other departments, then late credit. A course whose prerequisite they have not taken is not offered to them. An undeclared student takes their intended major's introductions.
+- **Registration**: each course they want can be full, more often the later they register (seniors first: a first-year 1.35 times as likely to find it full as the campus's odds, a senior 0.65). A full section puts them on its waitlist, which lets half in by the first week; the rest take the next course on their list. A section is chosen that clashes with nothing they have, and not at 8 AM for the two in three who are not early risers (R3's early risers, 67.4) when another fits.
+- **The week**: Monday, Wednesday and Friday sections meet on the hour, Tuesday and Thursday on the half hour, 50 minutes each (75.2); a lab one afternoon a week, nearly three hours, on a day its lecture does not meet; the First-Year Seminar Wednesday at four. Each section has a professor ("Prof. Alderwick") and meets in one of the campus's own lecture halls, by name, in a numbered room.
+
+### 80.3 The campus's registration
+
+For the spring in November and the fall in April, once (`stepRegistration`): the campus's record for the coming semester. How short of seats (Academic capacity, 38) and of faculty (the Instruction slider's hiring, 38) it is sets how many go without a course they needed: about 1 in 6 a semester with both enough (Student Voice, 2023: "over a quarter" in a year, closer to a third at four-year schools; 1 in 6 a semester is about 3 in 10 a year), and 0.9 more for each whole short of the lesser of the two, at most 60%. From that, how often a section is full. A sample of students from every class year (24 each) is registered through the same function the cards use, for the record's other totals: the load, the share at 15 or more, the seats waitlisted and let in, and the sections' size bands. A semester with no record yet (a new campus, an older save) is registered at once, with no line in the paper.
+
+Levels of detail, as the social web has them: the record is the campus, statistically; a card opened works out that one student's every semester in full, named. They agree: a semester's registration reads only its own record, the campus's size then included, so a student's history never changes once registered, and the sample's semesters are kept (by student and semester) so a new record works out only the newest. About 16 ms a record.
+
+Nothing in it moves a campus number: crowded classes already raise Stress and lower grades and the academic rating (38). The records say what the crowding means at registration. The paper tells each ("Registration for the spring is done: 1 in 6 of students (about 7,600) could not get a course they needed, 31,155 sat on waitlists and 14,030 got in from them. Most took 14.3 credits."), headlined by how short it ran ("Registration Done: Most Get Their Classes, and the Big Introductions Fill First", "Registration Crunch: One in Four Shut Out of a Class They Needed", "Registration Scramble: Classes Full Before Most Could Sign Up"). The Capacity page's seats row says the latest ("At registration for the spring, 1 in 6 could not get a course they needed and most took 14.3 credits.").
+
+### 80.4 On the screen
+
+- **The card**: a Classes row, "15 credits: BIOL 201, CHEM 102, WRIT 201, STAT 200, KINS 112", with "could not get one they needed" when registration shut them out, and a Schedule button.
+- **The schedule**: the week day by day, each class with its hours, its code and title, its hall and room and its professor; what registration did ("Got into BIOL 202 Cell Biology off the waitlist.", "Could not get HIST 110 World Civilizations: full, and they needed it."); next semester's classes once registered; and the course record, semester by semester ("Second-year fall · 16 credits") with the credits toward a degree's 120.
+- **A followed student's day** (63.9): their own classes on a weekday, each at its hour with its code and title, coffee before the first ("Coffee before an 8 AM class"), lunch in the first gap round noon, and a class they slept through or were up too late for missed ("Slept through BIOL 201 Genetics"). A day with no classes is a morning of their own.
+
+### 80.5 The save
+
+Save version 40: registration's records, none in a save from before; this semester's is made on its first hour. One upgrade note: "Students now register for classes each semester: real courses, full sections, waitlists. Tap Schedule on a student's card to see their week and their course record."
+
+### 80.6 Decisions made here
+
+| Decisions made here | Instead |
+|---|---|
+| R4 in two stops: R4a registration and the schedule, R4b grades by class and support | One stop: the gap report's two sessions |
+| Registration moves no campus number; the records say what crowding means | A shortfall of courses costing retention or time to degree: crowding already costs Stress, grades and the rating (38), and twice would double it |
+| A semester's odds from the lesser of seats and faculty, against the students | A seat count per course: the campus's buildings hold seats, not courses |
+| Nine courses a department, in a chain | A real catalog's dozens: a list to write and a chain no player reads |
+| The campus's record from a sample of 24 students a class year, through the cards' own function, and its share without a needed course the model's | A census of every student (too slow for catch-up), or the sample's own share (it swings) |
+| Sections meet at the timetable's 50 minutes, Tuesdays and Thursdays too | Real 75-minute Tuesday-Thursday classes: the campus's class changes come every hour (75.2) |
+| A professor by surname, from the course and section | Professors as people with cards: R4b's office hours may want it |
+| A credit counts once taken | Credits only for courses passed: grades by class are R4b's |
+
+### 80.7 The long run and frames
+
+**The long run** (`npm run simulate`, 1,818 s): all 113 checks pass. Against main's run before R4a (`v59_sim.log`, C5 at fe14e30), two lines moved and no number: one more line in the log of the check that one call to advance equals a thousand small ones (the registration's line in the paper), and the new check. Over the six model-campus runs' last three years (84 semesters): 16.1% a semester without a course they needed (at most 20.5%), so 30% in a year; 14.07 credits, 43% at 15 or more; sections 40% under 20 students and 14% of 50 or more. Catch-up is slower by about a tenth of a second, the registrations a long absence makes: 573 and 595 ms at the most (477 and 504 before), still under the second.
+
+| Measure | Real | Game |
+|---|---|---|
+| Could not get a course they needed | Over a quarter, closer to a third at four-year schools, in a year (Student Voice, 2023) | 16% a semester, 30% a year |
+| Credits a semester, full time | 12 to 18; fewer than half take 15 or more (Complete College America) | 14.07; 43% at 15 or more |
+| Sections under 20 students | 39% (University of Kansas, Common Data Set 2025-26) | 40% |
+| Sections of 50 or more | 18% (the same) | 14% |
+| Credits for a degree | 120 | 120 |
+
+**Frames** on the slowed phone (47.2's method: four times slower, 390 by 844 at 3x), back to back with main (f4e8f8b), four rounds of eight frames, the mean, the model campus's afternoon at High by the stadium: 17.4 ms on main, 17.3 with R4a, and 18.4 with a student's classes open over the map (`&schedule=7`). Inside the rounds' own spread (16.4 to 19.2).
+
+**Seen in the game**, on the model campus with a dev option (`&schedule=7&scheduleyear=2`, a third-year's card and classes): the card's Classes row ("12 credits: NUTR 301, NUTR 302, PHIL 101, BUS 101") with its Schedule button; the week, ten classes from Monday to Friday, each with its hours, its code and title, its hall and room and its professor; the course record of four semesters before, "55 of 120 credits". At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends, which scrolls sideways as it always has.
+
+**Tested**: `tests/registration.test.ts` (8): a department of nine courses for every major, each needing the one before it, every code its own and every title inside the tone guide; every student's semesters from the seed, the same every time, full time and no more than 18 credits, prerequisites first, no course twice, a week with no clashes, on the hour or the half hour, a professor and a hall; the first-year seminar and College Writing tried in the first year; the campus at the real figures over four registrations, and students registered one by one going without a needed course as often as the record says; more shut out where faculty are short; registration in November or April with the paper's line, a card's next semester once registered; the same in one step or many; a stepped campus's record; a version 39 save. `tests/regulars.test.ts`: a followed student's weekday has their own classes, each went to or missed. The save tests that upgrade an older save by hand gain the records (`withRegistration` in `tests/helpers.ts`).

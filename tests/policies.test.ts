@@ -73,7 +73,7 @@ import { newGreek } from '../src/sim/systems/greek';
 import { happinessView } from '../src/ui/buildUi';
 import { eraNextLine, policiesView, policyChip } from '../src/ui/policyUi';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, freshGame, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -728,6 +728,7 @@ describe('a save from version 16', () => {
     expected.web = webMetaFor(expected);
     sixClassYears(expected);
     withChaos(expected);
+    withRegistration(expected);
     withLanes(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
@@ -775,7 +776,7 @@ describe('a save from version 16', () => {
     // Its own, and the ones versions 18 to 20 added after it (the daily, orders and decor tests).
     const notes = upgradeNotes(16);
     // And R3's price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(22);
+    expect(notes).toHaveLength(23);
     expect(notes[0]).toContain('Policies');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

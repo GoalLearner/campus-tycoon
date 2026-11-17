@@ -38,7 +38,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 39;
+export const SAVE_VERSION = 40;
 
 export interface SaveFile {
   v: number;
@@ -478,6 +478,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     const chaos = state.chaos as Record<string, unknown> | undefined;
     if (!chaos || typeof chaos !== 'object') return state;
     if (typeof chaos.meddle !== 'object' || chaos.meddle === null) chaos.meddle = { last: {}, used: {}, running: [], asks: [], news: [] };
+    return state;
+  },
+  // Version 40: registration (R4a, DESIGN.md 80). No record yet: this semester's is made on the next tick that reads it,
+  // and the semesters before it were registered at the base odds, as a new campus's were.
+  39: (state) => {
+    if (typeof state.registration !== 'object' || state.registration === null) state.registration = { records: [] };
     return state;
   },
 };

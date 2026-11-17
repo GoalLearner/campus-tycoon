@@ -51,7 +51,7 @@ import { seasonCurve, stressRead } from '../src/sim/systems/season';
 import { campusLevels } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
 
 /**
  * Real-life college content (DESIGN.md 52, as built in section 55): parties
@@ -450,6 +450,7 @@ describe('saves', () => {
     expected.web = webMetaFor(expected);
     sixClassYears(expected);
     withChaos(expected);
+    withRegistration(expected);
     withLanes(expected);
     expect(loaded.state).toEqual(expected);
     expect(validate(loaded.state)).toBeNull();
@@ -457,7 +458,7 @@ describe('saves', () => {
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(13);
+    expect(notes).toHaveLength(14);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

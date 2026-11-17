@@ -3115,6 +3115,60 @@ button.students {
 .room-sheet.show {
   display: block;
 }
+
+/* A student's classes (R4a, DESIGN.md 80): the week day by day, then the record. It scrolls inside the sheet. */
+.schedule-body {
+  max-height: calc(100dvh - var(--safe-top) - 150px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.schedule-week {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.schedule-day-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.schedule-none {
+  font-size: 13px;
+  color: var(--muted);
+}
+.schedule-class {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  margin-top: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.schedule-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+.schedule-what {
+  font-size: 14px;
+  font-weight: 700;
+}
+.schedule-where {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.schedule-term {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.schedule-term-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.schedule-codes {
+  font-size: 12.5px;
+  margin: 3px 0 0;
+}
 .room-head {
   display: flex;
   align-items: center;

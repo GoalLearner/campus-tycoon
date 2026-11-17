@@ -1,3 +1,4 @@
+import { courseHistory } from '../sim/systems/registration';
 import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
@@ -291,6 +292,13 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
 
   // 3 and 4.
   const grades = row('GPA');
+  // Their classes this semester (R4a, DESIGN.md 80), and the way to their week and their record.
+  const classesRow = row('Classes');
+  const scheduleButton = el('button', 'student-follow student-schedule', 'Schedule');
+  scheduleButton.type = 'button';
+  scheduleButton.addEventListener('click', () => session.openSchedule());
+  classesRow.line.append(scheduleButton);
+  let classesKey = '';
   const club = row('Club');
   // Their milestones of four years (R2, DESIGN.md 66.4): an internship, study abroad, research, senior work.
   const milestones = row('Four years');
@@ -370,7 +378,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     if (!result.ok) session.notify(result.error, 'error');
     else session.notify('Your main character is chosen. Their portrait is on the top bar.');
   });
-  node.append(head, doing.line, feelingRow.line, grades.line, club.line, milestones.line, wallet.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
+  node.append(head, doing.line, feelingRow.line, grades.line, classesRow.line, club.line, milestones.line, wallet.line, relationship.line, peopleRow.line, quadRow, friendsRow.line, todayRow.line, latelyRow.line, stress.line, weekends.line, reason, makeMain);
 
   let atlas: Atlas | null = null;
   let shownKey = '';
@@ -494,6 +502,14 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     const standing = card.deansList ? " · Dean's list" : card.probation ? ' · on academic probation' : '';
     const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
     setText(grades.value, `${card.gpa.toFixed(1)}${card.tutored ? ', with tutoring' : ''}${standing}${classes}${went}`);
+    // Their classes: worked out from the seed and the campus's registration, once a semester for a card.
+    const regKey = `${ref.entryYear}:${ref.index}:${state.registration?.records.at(-1)?.semester ?? -1}`;
+    if (regKey !== classesKey) {
+      classesKey = regKey;
+      const plan = courseHistory(state, ref).semesters.at(-1);
+      const missed = plan?.missed.filter((one) => one.needed).length ?? 0;
+      setText(classesRow.value, plan && plan.courses.length > 0 ? `${plan.credits} credits: ${plan.courses.map((one) => one.course.code).join(', ')}${missed > 0 ? ` · could not get ${missed === 1 ? 'one they needed' : `${missed} they needed`}` : ''}` : 'None this semester');
+    }
     setText(club.value, card.club ?? 'None');
     const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
     milestones.line.hidden = years.length === 0;
@@ -547,8 +563,8 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
 
     // Looking inside their room, the card waits behind it (DESIGN.md 46). Put away, its strip shows instead (61).
     // So does it behind their network (63.12).
-    node.classList.toggle('show', session.room === null && session.network === null && !session.tucked);
-    strip.classList.toggle('show', session.room === null && session.network === null && session.tucked);
+    node.classList.toggle('show', session.room === null && session.network === null && session.schedule === null && !session.tucked);
+    strip.classList.toggle('show', session.room === null && session.network === null && session.schedule === null && session.tucked);
   }
 
   // ------------------------------------------------------------ their day --

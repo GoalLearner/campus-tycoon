@@ -345,7 +345,7 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
   });
 
   it('comes through a version 38 save with nothing used, nothing running and nothing asked', () => {
-    expect(SAVE_VERSION).toBe(39);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(39);
     const state = model();
     const file = JSON.parse(serialize(state, T0));
     file.v = 38;
@@ -356,7 +356,7 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
     expect(loaded.migratedFrom).toBe(38);
     expect(loaded.state).toEqual(state);
     expect(typeof MIGRATIONS[38]).toBe('function');
-    expect(upgradeNotes(38)).toHaveLength(1);
+    expect(upgradeNotes(38)).toHaveLength(2);
     expect(upgradeNotes(38)[0]).toMatch(/Meddle/);
   });
 
