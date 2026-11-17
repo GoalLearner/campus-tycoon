@@ -2565,6 +2565,24 @@ function assertModelCampus(seed: number): void {
   console.log('THE REAL FIGURES (DESIGN.md 65)');
   for (const one of realismLines(runs.map((run) => run.final), alone.final)) check(one.name, one.ok, one.detail);
 
+  // Courses and registration, R4a (DESIGN.md 80): the campus's records over each run's last three years, against the
+  // real figures (Student Voice 2023, Complete College America, a flagship's Common Data Set).
+  {
+    const all = runs.flatMap((run) => run.final.registration.records.map((record) => ({ run: `${run.style} ${run.seed}`, record })));
+    const mean = (pick: (r: (typeof all)[number]['record']) => number): number => all.reduce((sum, one) => sum + pick(one.record), 0) / Math.max(1, all.length);
+    const most = Math.max(0, ...all.map((one) => one.record.short));
+    const short = mean((r) => r.short);
+    const credits = mean((r) => r.credits);
+    const fifteen = mean((r) => r.fifteen);
+    const under20 = mean((r) => r.under20);
+    const over50 = mean((r) => r.over50);
+    check(
+      "registration lands on the real figures: about 1 in 6 a semester without a course they needed (a quarter to a third in a year), about 14 credits with fewer than half at 15, and a flagship's sections",
+      all.length >= runs.length * 10 && short >= 0.14 && short <= 0.25 && most <= 0.45 && credits >= 13.5 && credits <= 15 && fifteen > 0.3 && fifteen < 0.5 && under20 >= 0.28 && under20 <= 0.5 && over50 >= 0.08 && over50 <= 0.25,
+      `${all.length} semesters over ${runs.length} runs: ${(100 * short).toFixed(1)}% without a needed course on average (at most ${(100 * most).toFixed(1)}%), ${(100 * (1 - (1 - short) * (1 - short))).toFixed(0)}% in a year; ${credits.toFixed(2)} credits, ${(100 * fifteen).toFixed(0)}% at 15 or more; sections ${(100 * under20).toFixed(0)}% under 20 and ${(100 * over50).toFixed(0)}% of 50 or more`,
+    );
+  }
+
   // The chaos sandbox, stop C1 (DESIGN.md 68.7): the usual players, and the two who play for chaos and for calm.
   console.log('');
   console.log('THE CHAOS METER (DESIGN.md 68)');
