@@ -1,3 +1,4 @@
+import { drawMeddlePage } from './meddleUi';
 import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
 import { shownHour, viewedHour } from '../app/daylight';
@@ -87,7 +88,7 @@ import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords
 import { sharePhoto } from '../app/photo';
 import { drawSprite, loadAtlas } from './atlas';
 import { mcView } from './mcUi';
-import { studentFigure } from '../sim';
+import { meddleView, studentFigure } from '../sim';
 import { openFootball } from './footballPanels';
 import { capacityView, instructionView, sizeView, type CapacityRow } from './sizeUi';
 import { admissionsLines } from '../sim/systems/scorecard';
@@ -1724,10 +1725,10 @@ export function mountUi(root: HTMLElement): void {
   }
 
   /** The page the Goals and Capacity screen was last on, kept for the visit. */
-  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard' = 'goals';
+  let campusPage: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'meddle' | 'scorecard' = 'goals';
 
   /** Goals and Capacity: one screen with two pages, opened from the student count (DESIGN.md 38.2). */
-  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard' = campusPage): void {
+  function openSize(page: 'goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'meddle' | 'scorecard' = campusPage): void {
     campusPage = page;
     /** The row of the Capacity page that is open. One at a time. */
     let openRow: string | null = null;
@@ -1776,14 +1777,18 @@ export function mountUi(root: HTMLElement): void {
         // Campus social (DESIGN.md 63.6): once the social web has answered.
         const web = socialWeb.view;
         if (campusPage === 'social' && !web) campusPage = 'goals';
+        // Meddle (DESIGN.md 78): on a game with chaos.
+        const meddling = meddleView(state);
+        if (campusPage === 'meddle' && !meddling) campusPage = 'goals';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'meddle' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
         if (policies) pages.push(['policies', 'Policies']);
         if (traditions) pages.push(['traditions', 'Traditions']);
         if (web) pages.push(['social', 'Social']);
+        if (meddling) pages.push(['meddle', 'Meddle']);
         // The Scorecard last: on a phone the row scrolls sideways, and the open page is brought into view.
         if (card7) pages.push(['scorecard', 'Scorecard']);
         for (const [id, label] of pages) {
@@ -1875,8 +1880,23 @@ export function mountUi(root: HTMLElement): void {
             box.append(top, el('p', 'fine', row.limit));
             // The Chaos meter's next causes and a letter from the trustees, a line each (DESIGN.md 68.3).
             for (const line of row.more ?? []) box.append(el('p', 'fine', line));
+            // And the way to stir it up or calm it down (DESIGN.md 78).
+            if (row.id === 'chaos' && meddling) {
+              box.append(button('Meddle or calm things', 'policy-switch score-go', () => {
+                campusPage = 'meddle';
+                body.scrollTop = 0;
+                draw();
+              }));
+            }
             body.append(box);
           }
+        } else if (campusPage === 'meddle' && meddling) {
+          drawMeddlePage(body, meddling, (id) => {
+            const result = store.dispatch({ type: 'meddle', id });
+            if (!result.ok) session.notify(result.error, 'error');
+            else if (result.note) session.notify(result.note);
+            draw();
+          });
         } else if (campusPage === 'policies' && policies) {
           for (const row of policies.rows) {
             const box = el('div', row.on ? 'policy on' : 'policy');

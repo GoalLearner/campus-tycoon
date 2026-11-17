@@ -3275,6 +3275,15 @@ button.students {
   border-color: var(--warn, #f0c36a);
 }
 
+/* Meddle (DESIGN.md 78): a card each, like a policy's. A tool resting says why in the warning colour. */
+.policy.meddle.resting {
+  border-style: dashed;
+}
+.score-go {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
 /* A chapter of Greek Row (DESIGN.md 51): its house, its standing in the colour of how it stands, and its rows. */
 .chapter-picture {
   display: block;

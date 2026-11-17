@@ -99,8 +99,8 @@ export function stepFootballChaos(state: GameState, log: LogEntry[]): void {
   if (tick % INCIDENT_EVAL_TICKS === 0) takeMascot(state, log);
 }
 
-/** Spirit is up (68.3): Happiness a little higher for some real days, and the word is out, at most once a real day. */
-function lift(state: GameState): boolean {
+/** Spirit is up (68.3): Happiness a little higher for some real days, and the word is out, at most once a real day. Meddling lifts it too (78). */
+export function liftSpirit(state: GameState): boolean {
   const c = state.chaos;
   const tick = state.clock.tick;
   if (tick - c.spiritAt < DAY) return false;
@@ -131,7 +131,7 @@ function afterGame(state: GameState, game: Game, log: LogEntry[]): void {
     const roll = nextFloat(state.rng, 'chaos');
     const goalposts = roll < (reached ? FOOTBALL_CHAOS.goalposts.reached : FOOTBALL_CHAOS.goalposts.none);
     c.storm = { at: tick, goalposts };
-    const spirit = lift(state);
+    const spirit = liftSpirit(state);
     const opp = teamName(state, game.opp);
     // Why it was stormed, for the long run's count: the rival, an upset, or the season's clinch.
     const why = game.slot === RIVALRY_SLOT ? 1 : clinched ? 3 : 2;
@@ -185,7 +185,7 @@ function takeMascot(state: GameState, log: LogEntry[]): void {
   c.mascotSeason = season.year;
   c.tally.mascot += 1;
   if (c.covered < 0.6) c.missed.mascot += 1;
-  const spirit = lift(state);
+  const spirit = liftSpirit(state);
   const rival = teamName(state, state.football.rival);
   log.push({ tick, kind: 'chaos', text: `The ${rival} mascot has turned up on our campus, in ${rivalColour(state).name.toLowerCase()} and in good spirits, and is being shown round by some very proud students. Campus Safety is arranging the trip home.${spirit ? ' Spirit is up.' : ''}`, data: { football: 4, spirit: spirit ? 1 : 0 } });
 }

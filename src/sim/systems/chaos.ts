@@ -31,6 +31,7 @@ import {
 import { CHAOS_LINES, PROTEST_LINES } from '../config/chaosLines';
 import { RIVALRY_SLOT } from '../config/football';
 import { INCIDENT_EVAL_TICKS, RESPONSE_BASE_TICKS, RESPONSE_TICKS_PER_CELL } from '../config/incidents';
+import { MEDDLE_EFFECT } from '../config/meddle';
 import { POLICIES } from '../config/policies';
 import { WEB_WEEK_TICKS } from '../config/web';
 import { dollarsShort } from '../format';
@@ -38,6 +39,7 @@ import { nextFloat } from '../rng';
 import { scaleOf, smallCount } from '../scale';
 import { enrollment, openCapacity } from '../selectors';
 import type { ChaosState, ChaosWeek, GameState, Incident, LogEntry } from '../types';
+import { meddleCalm, meddleRein, meddleTemper, newMeddle, prankWarDorms } from './meddle';
 import { foodKindsAt } from './food';
 import { homeGameNow } from './football';
 import { coverFor } from './incidents';
@@ -77,6 +79,7 @@ export function newChaos(): ChaosState {
     mascot: null,
     mascotSeason: -1,
     clinchedSeason: -1,
+    meddle: newMeddle(),
   };
 }
 
@@ -131,29 +134,42 @@ export function spawnChaos(state: GameState): void {
   const rein = FREE_REIN.reached + (FREE_REIN.none - FREE_REIN.reached) * (1 - c.covered);
   // A home game day runs tempers high, the rivalry's higher still (C3, DESIGN.md 77.1).
   const game = homeGameNow(state);
-  const temper = game ? (game.slot === RIVALRY_SLOT ? RIVALRY_TEMPER : GAME_DAY_TEMPER) : 1;
+  // Tempers with the rival run higher for a week after its mascot was let loose (C4, DESIGN.md 78).
+  const temper = (game ? (game.slot === RIVALRY_SLOT ? RIVALRY_TEMPER : GAME_DAY_TEMPER) : 1) * meddleTemper(state);
   const quiet = mischiefTimes(state);
   const half = 0.5 + 0.5 * c.tension;
+  // What the player has set going (78): calm tools ease tempers, extra security stops most mischief, a prank war at two
+  // dorms brings more pranks and graffiti there. Each is 1 with nothing running, so a campus left alone is as it was.
+  const calm = meddleCalm(state);
+  const watched = meddleRein(state);
+  const war = prankWarDorms(state);
+  const warPranks = war ? MEDDLE_EFFECT.prankWar.pranks : 1;
+  const warGraffiti = war ? MEDDLE_EFFECT.prankWar.graffiti : 1;
   const chances: Array<[IncidentChaosKind, number]> = [
-    ['dustUp', CHAOS_RATE.dustUp * scale * c.tension * rein * temper],
-    ['shouting', CHAOS_RATE.shouting * scale * c.tension * temper * quiet],
-    ['prank', CHAOS_RATE.prank * scale * half * rein * quiet * (rivalryWeek(state) ? RIVALRY_PRANKS : 1)],
-    ['graffiti', CHAOS_RATE.graffiti * scale * half * rein],
+    ['dustUp', CHAOS_RATE.dustUp * scale * c.tension * rein * temper * calm * watched],
+    ['shouting', CHAOS_RATE.shouting * scale * c.tension * temper * quiet * calm],
+    ['prank', CHAOS_RATE.prank * scale * half * rein * quiet * (rivalryWeek(state) ? RIVALRY_PRANKS : 1) * watched * warPranks],
+    ['graffiti', CHAOS_RATE.graffiti * scale * half * rein * watched * warGraffiti],
     ['protest', protesting || !c.grievance ? 0 : CHAOS_RATE.protest * scale * c.grievance.strength],
   ];
   // One a check at most: the first that comes up.
   for (let k = 0; k < chances.length; k++) {
     const [kind, chance] = chances[k]!;
     if (rolls[k]! >= Math.min(0.9, chance)) continue;
-    begin(state, kind, pick, line);
+    beginChaos(state, kind, pick, line, war && (kind === 'prank' || kind === 'graffiti') ? war : undefined);
     return;
   }
 }
 
-/** Begin a chaos incident at a dorm, or for a protest on the quad by a lecture hall. */
-function begin(state: GameState, kind: IncidentChaosKind, pick: number, line: number): void {
+/**
+ * Begin a chaos incident at a dorm, or for a protest on the quad by a lecture hall. `only`, building ids: at one of
+ * those (a prank war's two dorms, DESIGN.md 78), when any of them stands.
+ */
+export function beginChaos(state: GameState, kind: IncidentChaosKind, pick: number, line: number, only?: readonly number[]): void {
   const zone = kind === 'protest' ? 'academic' : 'housing';
-  const places = state.map.buildings.filter((b) => b && b.zone === zone && b.stage > 0);
+  const all = state.map.buildings.filter((b) => b && b.zone === zone && b.stage > 0);
+  const named = only ? all.filter((b) => only.includes(b!.id)) : [];
+  const places = named.length > 0 ? named : all;
   if (places.length === 0) return;
   const where = places[Math.min(places.length - 1, Math.floor(pick * places.length))]!;
   const book = state.incidents;

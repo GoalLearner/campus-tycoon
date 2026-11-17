@@ -136,6 +136,8 @@ export * from './systems/capacity';
 export * from './config/staffing';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
 export { chaosOn, chaosStepOf } from './systems/chaos';
+export { meddleView, meddleOn, type MeddleRow } from './systems/meddle';
+export { MEDDLE, type MeddleId } from './config/meddle';
 export { footballChaosNow, rivalColour } from './systems/footballChaos';
 export * from './config/incidents';
 export {

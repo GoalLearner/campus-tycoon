@@ -1,4 +1,5 @@
 import { happyParts, stressOff } from './boosts';
+import { meddleStress } from './meddle';
 import { fluShare } from './wellbeing';
 import { tellPractices } from './fourYears';
 import { tellSpringBreak } from './studentMoney';
@@ -303,7 +304,9 @@ export function stressRead(state: GameState, levels: CampusLevels, season = seas
   const late = Math.round(lateNightStress(state, season));
   // Friends see each other through exams, and a breakup or a fight makes them harder (DESIGN.md 63.10).
   const friends = friendsStress(state, season);
-  const raw = Math.max(0, Math.round(100 * season * factor) + late + friends);
+  // A power cut or a surprise exam the player set going adds a little, for its night (DESIGN.md 78).
+  const meddled = meddleStress(state);
+  const raw = Math.max(0, Math.round(100 * season * factor) + late + friends + meddled);
   const off = help.points + Math.round(policy.points);
   const by = [help.label, ...policy.by].filter((label) => label !== '').join(', ');
   return { late, friends, score: Math.max(0, raw - off), season, pressure, relief, crowding: crowded, teaching: taught, strain: pressure, unwind, support, cause, factor, eased: Math.min(raw, off), easedBy: by, policy: Math.min(raw, Math.round(policy.points)), policyBy: policy.by };

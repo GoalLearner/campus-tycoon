@@ -130,6 +130,31 @@ function begin(state: GameState, kind: IncidentKind, x: number, y: number, place
 }
 
 /**
+ * A bruise or two for Medical from something the player set going (a snowball battle, DESIGN.md 78), at a place they
+ * name: no draw from the incident stream, so nothing else turns out differently. Not when the incidents are full.
+ */
+export function beginBruise(state: GameState, x: number, y: number, place: string, line: number): Incident | null {
+  if (ordinary(state) >= MAX_ACTIVE_INCIDENTS) return null;
+  const book = state.incidents;
+  const cover = coverFor(state.map, NEEDS.injury, x, y);
+  const tick = state.clock.tick;
+  const incident: Incident = {
+    id: book.nextId,
+    kind: 'injury',
+    x,
+    y,
+    place,
+    line: line % INCIDENT_LINES.injury.length,
+    startTick: tick,
+    responder: cover ? cover.placed.id : null,
+    endTick: tick + (cover ? RESPONSE_BASE_TICKS + Math.ceil(cover.cells * RESPONSE_TICKS_PER_CELL) : LINGER_TICKS),
+  };
+  book.active.push(incident);
+  book.nextId += 1;
+  return incident;
+}
+
+/**
  * A call from a party (DESIGN.md 55), on a game with goals only, so the small campus's stream of draws is as it was.
  * The same draws are made whatever happens. It comes from a chapter house as often as its members party, else a dorm.
  */
