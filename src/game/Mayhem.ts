@@ -4,7 +4,7 @@ import { clock } from '../app/clock';
 import { effectsSetting } from '../app/life';
 import { CARRIERS, CARRY_FROM_TICKS, CARRY_PACE, CARRY_UNTIL_TICKS, CHANT_MS, CHASE_CELLS, dustupBeat, FLEE, FLEE_BEFORE_MS, LEFT_ALONE_MS, PARADE, PARADE_PACE, rallySize, RALLY_WATCH_MS, shoutTurn, showsFor, showWords, signKey, SHOWS_AT_ONCE, streetSize, type ShowKind, type ShowRole } from '../app/mayhemShow';
 import type { ProtestTopic } from '../sim/config/chaos';
-import { coverFor, everydayLook, footballChaosNow, rivalColour, sampleStudents, SCHOOL_COLOURS, studentFigure, studentKey, TICK_MS, type GameState, type Incident, type StudentRef } from '../sim';
+import { coverFor, everydayLook, footballChaosNow, rivalColour, sampleStudents, studentFigure, studentKey, TICK_MS, type GameState, type Incident, type StudentRef } from '../sim';
 import { doorAlpha, pointOn, tripOf, type Trip } from './afoot';
 import type { Art, PeopleSpec } from './art';
 import type { Footprints } from './footprints';
@@ -377,7 +377,12 @@ export class Mayhem {
     let look = role === 'medic' ? (people.roles?.medic ?? 0) : everydayLook(people, mix(show.id, n), mix(n, show.id));
     // The rival's mascot (77.4): the costume in the rival's colour, nobody's card.
     const costume = role === 'mascot' && n === 0 && this.state ? this.mascotLook(this.state) : null;
-    if (costume !== null) look = costume;
+    if (costume !== null) {
+      look = costume;
+      // Look A: the head white and the suit light grey in the atlas, so the rival's colour tints the head that colour and
+      // the suit a shade darker; the outline and the face stay as drawn.
+      sprite.setTint(rivalColour(state).hex);
+    }
     if (role !== 'medic' && costume === null) {
       // Each one a different figure from the others in the scene: the pack has a dozen everyday figures, and two
       // students drawn the same in one dust-up read as clones (DESIGN.md 76.1). The seed's next students are tried.
@@ -743,12 +748,10 @@ export class Mayhem {
     return on;
   }
 
-  /** The figure of the rival's mascot in the rival's colour, or null until its look is in the pack's atlas (77.4). */
+  /** The figure of the rival's mascot, or null where its look is not in the atlas in use (77.4): tinted in the rival's colour. */
   private mascotLook(state: GameState): number | null {
-    const first = this.people?.roles?.mascot;
-    if (first === undefined) return null;
-    const index = SCHOOL_COLOURS.findIndex((one) => one.id === rivalColour(state).id);
-    return index < 0 ? null : first + index;
+    void state;
+    return this.people?.roles?.mascot ?? null;
   }
 
   private stageFootball(state: GameState, on: ReadonlySet<number>, timeMs: number): void {

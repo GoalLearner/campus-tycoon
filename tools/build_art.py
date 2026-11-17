@@ -386,22 +386,56 @@ class Builder:
 
 
 def pack(sprites, width, height):
-    """Shelf packing, tallest first. Returns {name: (x, y)} or None if it does not fit."""
-    order = sorted(sprites, key=lambda n: (-sprites[n][0].height, n))
-    x = y = PADDING
-    shelf = 0
+    """
+    Skyline packing, tallest first: each sprite goes where it sits lowest, then furthest left, on the line the sprites
+    placed so far make, so a short one fills the gap beside a taller one. Returns {name: (x, y)} or None if it does not
+    fit. (Shelf packing, used before, left the pack's atlas a few pixels over 4096 by 2048 in chaos C3.)
+    """
+    order = sorted(sprites, key=lambda n: (-sprites[n][0].height, -sprites[n][0].width, n))
+    # The skyline: segments [x, y, w], left to right, y the top of what is packed below.
+    sky = [[PADDING, PADDING, width - PADDING]]
     placed = {}
     for name in order:
         im = sprites[name][0]
-        if x + im.width + PADDING > width:
-            x = PADDING
-            y += shelf + PADDING
-            shelf = 0
-        if y + im.height + PADDING > height:
+        w = im.width + PADDING
+        h = im.height + PADDING
+        best = None
+        for i, (sx, _, _) in enumerate(sky):
+            if sx + w > width:
+                break
+            top = 0
+            j = i
+            while j < len(sky) and sky[j][0] < sx + w:
+                top = max(top, sky[j][1])
+                j += 1
+            if top + h > height:
+                continue
+            if best is None or (top, sx) < (best[0], best[1]):
+                best = (top, sx)
+        if best is None:
             return None
-        placed[name] = (x, y)
-        x += im.width + PADDING
-        shelf = max(shelf, im.height)
+        top, sx = best
+        end = sx + w
+        nxt = []
+        for gx, gy, gw in sky:
+            gend = gx + gw
+            if gend <= sx or gx >= end:
+                nxt.append([gx, gy, gw])
+                continue
+            if gx < sx:
+                nxt.append([gx, gy, sx - gx])
+            if gend > end:
+                nxt.append([end, gy, gend - end])
+        nxt.append([sx, top + h, w])
+        nxt.sort()
+        merged = []
+        for seg in nxt:
+            if merged and merged[-1][1] == seg[1] and merged[-1][0] + merged[-1][2] == seg[0]:
+                merged[-1][2] += seg[2]
+            else:
+                merged.append(seg)
+        sky = merged
+        placed[name] = (sx, top)
     return placed
 
 
