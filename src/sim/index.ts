@@ -36,12 +36,13 @@ export { desirabilityHint, lotStatus, touchesPath, type LotStatus, type StallCau
 export { scoreParts, walkPenalty, type ScoreParts } from './systems/desirability';
 export { admitPlan, roomForNewStudents, zoneName, type Admit } from './systems/admissions';
 export { occupiedBeds } from './systems/money';
-export { crowdedNear, crowdLift, playCapacity, playLine, playLoads, playUse, recreationAt, waitMinutes, type PlayUse } from './systems/play';
+export { pastimeOf, campusPlay, campusRecreation, habitsOf, playCapacity, playLine, playLoads, playOf, playPlaceFor, playUse, servedShare, spillOver, waitMinutes, type PastimeRoom, type CampusPlay, type PlayHabits, type PlayUse, type StudentPlay } from './systems/play';
+export * from './config/amenities';
 export { dormName, hallName, peopleCounts, personCard, personKey, personName, type PersonCard, type PersonRef } from './systems/people';
 export * from './config/people';
 export * from './config/looks';
 export { everydayLook, lookGender, lookOdds, lookTags, type LookPack } from './systems/looks';
-export { besideRecreation, diningAt, foodIncomePerYear, foodKindsAt, foodLoads, foodPlaces, foodTrade, foodTypesAt, isFood, mealLoads, mealUse, tutoredAt, tutoringLift, varietyAt, type FoodTrade, type MealUse } from './systems/food';
+export { besideRecreation, campusDining, campusMeals, eatsOnCampus, foodIncomePerYear, foodKinds, foodLoads, foodPlaceFor, foodPlaces, foodTrade, foodTypesOnCampus, isFood, mealLoads, mealUse, tutoringCover, tutoringRoom, varietyOn, type CampusMeals, type FoodTrade, type MealUse } from './systems/food';
 export {
   budget,
   careStaffAt,
@@ -61,7 +62,7 @@ export {
 export { housingFixes, roomPlan, waitlistOpen, type HousingFixes, type RoomPlan, type ZonePlan } from './systems/plan';
 export { approvalAt, campusHappiness, partLevel, retentionRate, type Approval, type CampusHappiness, type Cause, type CausePart } from './systems/happiness';
 export {
-  fedAt,
+  campusFed,
   inReach,
   libraryLift,
   rewardLift,

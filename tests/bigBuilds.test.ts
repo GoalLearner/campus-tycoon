@@ -28,7 +28,6 @@ import {
   placedCost,
   placedUpkeep,
   previewPlace,
-  recreationAt,
   SAVE_VERSION,
   scaleOf,
   SECOND_BUILDER_SEALS,
@@ -36,7 +35,7 @@ import {
   serialize,
   TICKS_PER_HOUR,
   toneProblem,
-  UNION_REACH,
+  campusPlay,
   UNION_STRENGTH,
   validate,
   waits,
@@ -48,7 +47,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 /**
  * The big builds of the eras (DESIGN.md 41.3, 41.4, as built in section 45):
@@ -146,9 +145,9 @@ describe('a big build', () => {
     expect(budget(state).kept).toBeCloseTo(keptBefore, 6);
     // No opening bonus to collect from a building site: it comes when the building opens.
     expect(state.daily.opened.some((one) => one.kind === 'placed' && one.id === placed.id)).toBe(false);
-    // Going up, nothing reaches the lots around it.
-    const lot = state.map.buildings.find((b) => b && b.stage > 0 && Math.max(Math.abs(b.x - placed.x), Math.abs(b.y - placed.y)) <= UNION_REACH)!;
-    expect(recreationAt(state, lot.x, lot.y)).toBe(recreationAt(before, lot.x, lot.y));
+    // Going up, it does nothing for anyone yet.
+    expect(campusPlay(state).union).toBe(false);
+    expect(campusHappiness(state).score).toBe(campusHappiness(before).score);
     // Started: the paper says so on the next tick.
     const next = later(state, 2 * 60_000);
     expect(next.log.some((entry) => entry.kind === 'bigBuild' && /^Work has begun on the Student Union\. It opens in/.test(entry.text))).toBe(true);
@@ -157,7 +156,7 @@ describe('a big build', () => {
     expect(bigBuildOf(day.state, 'studentUnion')!.done).toBeUndefined();
     expect(day.state.daily.opened.some((one) => one.kind === 'placed' && one.id === placed.id)).toBe(true);
     const line = day.log.find((entry) => entry.kind === 'bigBuild' && entry.data?.keep === 1)!;
-    expect(line.text).toBe('The Student Union is open: things to do and somewhere to meet over a wide circle.');
+    expect(line.text).toBe('The Student Union is open: things to do and somewhere to meet for every student.');
     expect(toneProblem(line.text)).toBeNull();
     expect(budget(day.state).kept).toBeLessThan(budget(next.state).kept);
     // In the paper.
@@ -228,24 +227,17 @@ describe('a big build', () => {
 });
 
 describe('each moves one number the game already has', () => {
-  it('the Student Union: recreation, part of Food & fun, at every lot in its wide reach', () => {
+  it('the Student Union: somewhere to meet for every student, part of Food & fun, wherever they live (DESIGN.md 83.2)', () => {
+    // The model campus lacks a track and tennis and volleyball courts, so some students miss what they do.
     const before = flagship();
+    expect(campusPlay(before).level).toBeLessThan(1);
     const state = opened(before, 'studentUnion');
-    const union = bigBuildOf(state, 'studentUnion')!;
-    let lifted = 0;
-    for (const lot of state.map.buildings) {
-      if (!lot || lot.stage <= 0) continue;
-      const far = Math.max(Math.max(union.x - lot.x, 0, lot.x - (union.x + union.w - 1)), Math.max(union.y - lot.y, 0, lot.y - (union.y + union.h - 1)));
-      const was = recreationAt(before, lot.x, lot.y);
-      const now = recreationAt(state, lot.x, lot.y);
-      if (far <= UNION_REACH) {
-        expect(now).toBeCloseTo(Math.min(1, was + UNION_STRENGTH), 6);
-        if (now > was) lifted += 1;
-      } else expect(now).toBe(was);
-    }
-    expect(lifted).toBeGreaterThan(0);
+    expect(campusPlay(state).union).toBe(true);
+    // Those who meet friends there have one more thing they can do, wherever they live.
+    expect(campusPlay(state).users).toBeGreaterThan(campusPlay(before).users);
+    expect(campusPlay(state).level).toBeGreaterThan(campusPlay(before).level);
     const life = (s: GameState) => campusHappiness(s).causes.find((cause) => cause.id === 'life')!.level;
-    expect(life(state)).toBeGreaterThan(life(before));
+    expect(life(state)).toBeGreaterThanOrEqual(life(before));
   });
 
   it('the Honors College: the graduation rate the academic rating reads, named on its line', () => {
@@ -334,6 +326,7 @@ describe('saves', () => {
       withChaos(expected);
       withRegistration(expected);
       withLanes(expected);
+      withAmenities(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.
@@ -341,7 +334,7 @@ describe('saves', () => {
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(19);
+      expect(notes).toHaveLength(20);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

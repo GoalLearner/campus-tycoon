@@ -6,7 +6,7 @@ import {
   applyAction,
   buildingAt,
   COST,
-  fedAt,
+  campusFed,
   FIRST_INTAKE_TICK,
   nearestSpot,
   parseSave,
@@ -114,13 +114,13 @@ describe('refunds', () => {
 });
 
 describe('the dining shortcut', () => {
-  it('finds free ground from which a dining hall would reach the dorm', () => {
-    let state = paint(freshGame(), 'housing', [[22, 13]]);
-    expect(fedAt(state.map, 22, 13)).toBe(false);
+  it('finds free ground beside a dorm for a dining hall, on a campus with nowhere to eat', () => {
+    let state = paint(paint(freshGame(), 'clear', [[10, 12]]), 'housing', [[22, 13]]);
+    expect(campusFed(state.map)).toBe(false);
     const spot = nearestSpot(state, 'dining', 22, 13)!;
     expect(spot).not.toBeNull();
     state = place(state, 'dining', spot.x, spot.y);
-    expect(fedAt(state.map, 22, 13)).toBe(true);
+    expect(campusFed(state.map)).toBe(true);
   });
 });
 

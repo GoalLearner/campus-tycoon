@@ -22,7 +22,7 @@ import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
 import { edition } from '../src/sim/newspaper';
 import { toneProblem } from '../src/sim/config/tone';
-import { DAY, painted, T0 } from './helpers';
+import { DAY, painted, T0, withAmenities } from './helpers';
 
 /**
  * The realism pass, R1 (DESIGN.md 65): the numbers match. Who stays, who finishes and when, and why the others leave,
@@ -61,12 +61,13 @@ describe('a class’s path', () => {
 
   it('rises with the rank and with Happiness, and a model campus opens as a flagship', () => {
     expect(standingOf(10, 90).q).toBeGreaterThan(standingOf(100, 90).q);
-    // The rank counts in full on a happy campus, half at 82.5, and not at all at 75 or below (DESIGN.md 65.2).
-    expect(standingOf(10, 82.5).q - standingOf(100, 82.5).q).toBeCloseTo((standingOf(10, 90).q - standingOf(100, 90).q) / 2, 9);
-    expect(standingOf(10, 75).q).toBeCloseTo(standingOf(100, 75).q, 9);
+    // The rank counts in full on a happy campus, half at 86, and not at all at 78.5 or below (DESIGN.md 65.2): 75, 82.5 and
+    // 90 before the whole scale rose 3.5 points with places serving the students who use them (83.8).
+    expect(standingOf(10, 86).q - standingOf(100, 86).q).toBeCloseTo((standingOf(10, 93.5).q - standingOf(100, 93.5).q) / 2, 9);
+    expect(standingOf(10, 78.5).q).toBeCloseTo(standingOf(100, 78.5).q, 9);
     expect(standingOf(5, 60).q).toBeCloseTo(standingOf(200, 60).q, 9);
     expect(standingOf(100, 80).q).toBeGreaterThan(standingOf(100, 60).q);
-    expect(standingOf(5, 90).q).toBeCloseTo(1, 9);
+    expect(standingOf(5, 93.5).q).toBeCloseTo(1, 9);
     expect(standingOf(200, 40).q).toBeCloseTo(0, 9);
     const opening = campusRates(MODEL);
     expect(opening.second!).toBeGreaterThan(0.88);
@@ -171,8 +172,11 @@ describe('a save from version 30', () => {
     // Version 40 adds registration's records (DESIGN.md 80), none yet.
     expect(state.registration).toEqual({ records: [] });
     const { cohorts: _a, offCampus: _b, version: _c, chaos: _g, registration: _i, rng: { chaos: _h, ...rng }, ...rest } = state;
-    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5).
-    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = painted(old);
+    // Version 37 paints a lane on every walk, once (DESIGN.md 74.5); version 42 shares the places to play and eat out
+    // again (DESIGN.md 83.5).
+    const upgraded = painted(old);
+    withAmenities(upgraded);
+    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = upgraded;
     expect(rest).toEqual(was);
     expect(rng).toEqual(was_rng);
   });

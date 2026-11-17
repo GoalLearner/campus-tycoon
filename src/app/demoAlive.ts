@@ -66,7 +66,7 @@ export function playCampus(students = 1500): GameState {
  *
  * - West, by the dorms: a burger grill, a taco stand and a pizza place in a
  *   row, with picnic tables and bins in front of them. With the dining hall
- *   that is four kinds of food in reach of every dorm.
+ *   that is four kinds of food beside the dorms.
  * - East, by the lecture halls: the food court, the computer lab, the study
  *   center and the makerspace along a walk of their own.
  * - A smoothie bar beside a court, a convenience store, and a food truck.

@@ -1593,6 +1593,11 @@ export interface RegistrationRecord {
    */
   teaching?: number;
   honors?: boolean;
+  /**
+   * The share of the students whose classes were going badly that the study centers had room to tutor that semester,
+   * 0 to 1 (DESIGN.md 83.4). Missing in a record from before: none, so no term already written changes.
+   */
+  tutoring?: number;
 }
 
 export type LogKind =

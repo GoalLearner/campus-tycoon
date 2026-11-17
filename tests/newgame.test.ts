@@ -239,8 +239,8 @@ describe("the paper's first issue", () => {
     const paper = welcomeEdition(state);
     expect(paper.headline).toMatch(/President/);
     // Its cash is a share of a year's spending, so the second gym and the four basketball courts (DESIGN.md 72) add a little,
-    // with the crews that tend them.
-    expect(paper.deck).toBe(`The campus is yours from today: 46,000 students, and ${dollars(40_927_000)} in the bank.`);
+    // with the crews that tend them; and since a place's litter is its own students' (83.9), a little less for those crews.
+    expect(paper.deck).toBe(`The campus is yours from today: 46,000 students, and ${dollars(40_578_000)} in the bank.`);
     const kinds = paper.top.map((item) => item.kind);
     // The first goal leads, then the next class, the halls outside reach and the stadium. Four lines at the most.
     expect(kinds).toEqual(['news', 'intake', 'problem', 'game']);
@@ -248,8 +248,9 @@ describe("the paper's first issue", () => {
     expect(paper.top[1]!.text).toMatch(/^The next class is [\d,]+ strong\. (The campus is [\d,]+ (beds|classroom seats)( and [\d,]+ classroom seats)? short of fitting them|There is room for all of them)\.$/);
     expect(paper.top[2]!.text).toMatch(/^A Medical Center and Campus Safety both reach \d+ of the 36 residence halls\. The other \d+ are on their own\.$/);
     expect(paper.top[3]!.text).toBe('The team plays on a rented field of 3,000 seats. The stadium plot stands bare.');
-    // The student poll is on the front, and nothing is folded away.
-    expect(paper.poll.length).toBeGreaterThan(0);
+    // The student poll is on the front, and nothing is folded away. Since places to play and eat serve every student who
+    // uses them (DESIGN.md 83), the model campus opens with nearly everyone it asks content.
+    expect(paper.poll.length).toBeLessThanOrEqual(3);
     expect(paper.folded).toBe(0);
     expect(paper.scores).toEqual([]);
     expect(welcomeEdition(state)).toEqual(paper);

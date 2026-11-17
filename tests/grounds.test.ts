@@ -369,12 +369,14 @@ describe('breakage', () => {
     tidy.grounds.litter = {};
     expect(moodNear(tidy, dining(tidy))!).toBeGreaterThan(near + 1);
     expect(breakChance(tidy, dining(tidy))).toBeLessThan(breakChance(state, hall));
-    // A mess at the far end of the campus changes the campus's Happiness and leaves this spot's alone.
+    // A mess at the far end of the campus changes the campus's Happiness and leaves this spot's alone. (The court itself
+    // lifts everyone who plays basketball, wherever they live: DESIGN.md 83.2.)
     let far = act(state, { type: 'paint', tool: 'path', cells: rowBetween([19, 19], [21, 19]) });
     far = act(far, { type: 'place', building: 'courts', x: 19, y: 20 });
+    const clean = moodNear(far, dining(far))!;
     far.grounds.litter[ofType(far, 'courts')[0]!.id] = LITTER_CEILING;
     expect(campusHappiness(far).score).not.toBeCloseTo(campusHappiness(state).score, 6);
-    expect(moodNear(far, dining(far))!).toBeCloseTo(near, 9);
+    expect(moodNear(far, dining(far))!).toBeCloseTo(clean, 9);
   });
 
   it('falls back on the campus where nobody lives or studies in reach yet', () => {

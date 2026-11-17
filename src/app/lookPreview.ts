@@ -292,12 +292,12 @@ export function lookItems(roles: Record<string, number>): LookScene {
  */
 export const LOOK_MENU: BuildEntry[] = [
   { key: 'build.library', name: 'Library', category: 'Academics', cost: dollarsShort(60_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(4_000)} a year`, effect: 'Lifts nearby Academic lots' },
-  { key: 'build.dining', name: 'Dining hall', category: 'Campus life', cost: dollarsShort(45_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(6_000)} a year`, effect: 'Feeds Housing within 6 cells' },
+  { key: 'build.dining', name: 'Dining hall', category: 'Campus life', cost: dollarsShort(45_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(6_000)} a year`, effect: 'Feeds students across campus' },
   { key: 'build.store', name: 'Campus store', category: 'Campus life', cost: dollarsShort(35_000), footprint: '2 x 1', upkeep: 'Pays for itself', effect: 'Earns more on a busy path' },
   { key: 'build.parking', name: 'Parking lot', category: 'Campus life', cost: dollarsShort(20_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(1_000)} a year`, effect: 'Fewer beds needed. Neighbours like it less' },
   { key: 'build.gym', name: 'Gym', category: 'Recreation', cost: dollarsShort(55_000), footprint: '2 x 1', upkeep: `Upkeep ${dollarsShort(5_000)} a year`, effect: 'Raises student happiness' },
-  { key: 'build.track', name: 'Track and field', category: 'Recreation', cost: dollarsShort(120_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(8_000)} a year`, effect: 'Raises happiness for nearby Housing' },
-  { key: 'build.courts', name: 'Outdoor courts', category: 'Recreation', cost: dollarsShort(18_000), footprint: '1 x 2', upkeep: `Upkeep ${dollarsShort(1_000)} a year`, effect: 'Raises happiness nearby. Students play here' },
+  { key: 'build.track', name: 'Track and field', category: 'Recreation', cost: dollarsShort(120_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(8_000)} a year`, effect: 'Raises happiness for students who use it' },
+  { key: 'build.courts', name: 'Outdoor courts', category: 'Recreation', cost: dollarsShort(18_000), footprint: '1 x 2', upkeep: `Upkeep ${dollarsShort(1_000)} a year`, effect: 'Raises happiness for students who use it' },
   { key: 'pond.medium', name: 'Pond', category: 'Recreation', cost: `From ${dollarsShort(8_000)}`, footprint: '3 sizes', upkeep: 'No upkeep', effect: 'Every zone likes being near water' },
   { key: 'build.medical', name: 'Medical Center', category: 'Safety & health', cost: dollarsShort(90_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(9_000)} a year`, effect: 'Treats injuries within 8 cells' },
   { key: 'build.safety', name: 'Campus Safety', category: 'Safety & health', cost: dollarsShort(80_000), footprint: '2 x 2', upkeep: `Upkeep ${dollarsShort(8_000)} a year`, effect: 'Handles mischief within 8 cells' },

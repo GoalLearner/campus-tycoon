@@ -396,7 +396,7 @@ export const WRITTEN: readonly Written[] = [
         title: 'A visiting food cart',
         body: 'Food is what students here grumble about most. A travelling noodle cart will set up outside the dorms for a few days, for a fee.',
         options: [
-          option('yes', `Invite the cart: ${dollars(cost)}`, `Happiness is ${points(1.5)} higher for ${days(4)}. A second kind of food near the dorms would last.`, -cost, [happy(1.5, 4, 'Visiting food cart')]),
+          option('yes', `Invite the cart: ${dollars(cost)}`, `Happiness is ${points(1.5)} higher for ${days(4)}. A second kind of food on campus would last.`, -cost, [happy(1.5, 4, 'Visiting food cart')]),
           option('no', 'No cart', 'Nothing changes.'),
         ],
         fallback: 'no',

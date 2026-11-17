@@ -1,3 +1,4 @@
+import { reshareAmenities } from '../src/sim/save';
 import { newChaos } from '../src/sim/systems/chaos';
 import { paintWalks } from '../src/sim/systems/walkLanes';
 import { seedStreams } from '../src/sim/rng';
@@ -154,6 +155,13 @@ export function withRegistration(state: GameState): void {
 /** What version 37 does to an older save (DESIGN.md 74.5): a lane painted on every walk, once, free. */
 export function withLanes(state: GameState): void {
   paintWalks(state.map);
+}
+
+/**
+ * What version 42 does to an older save (DESIGN.md 83): who goes to which place to play and eat is worked out again.
+ */
+export function withAmenities(state: GameState): void {
+  reshareAmenities(state.map);
 }
 
 /** A copy of a state as version 37 leaves it: every walk painted, nothing else changed. */

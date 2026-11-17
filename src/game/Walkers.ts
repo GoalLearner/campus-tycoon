@@ -15,7 +15,7 @@ import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
 import { itemAt, regularDay } from '../app/regularDay';
 import { shownHour } from '../app/daylight';
 import { KIND, SLOTS } from '../sim/config/web';
-import { firstNameOf } from '../sim/systems/students';
+import { firstNameOf, placeUsedFor } from '../sim/systems/students';
 import { dateAt } from '../sim/calendar';
 import { INTEREST } from '../sim/systems/identity';
 import { BULLYING_PASSING } from '../sim/config/bullying';
@@ -3063,6 +3063,13 @@ export class Walkers {
                 : home && home !== origin
                   ? [home]
                   : [];
+    // A meal, or a game or a workout, at the place they use for it (DESIGN.md 83.5): most often the nearest, another when
+    // theirs is full.
+    if (item.where === 'food' || (item.where === 'play' && item.pastime)) {
+      const used = placeUsedFor(this.state, student, item.where === 'food' ? 'food' : item.pastime!);
+      const stop = used ? list.find((one) => one.placedId === used.id) : undefined;
+      if (stop) return stop;
+    }
     // A class in its own hall (R4b, DESIGN.md 81.6): the lecture hall nearest the one the schedule names.
     if (item.where === 'class' && item.at && list.length > 0) {
       const at = item.at;

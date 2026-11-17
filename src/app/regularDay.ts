@@ -1,4 +1,4 @@
-import { dateAt, type GameState, type StudentCard, type StudentRef } from '../sim';
+import { dateAt, PASTIME_WORDS, type GameState, type Pastime, type StudentCard, type StudentRef } from '../sim';
 import { hashInts } from '../sim/rng';
 import { dayRead } from '../sim/systems/season';
 import { semesterOf } from '../sim/systems/students';
@@ -59,6 +59,8 @@ export interface DayItem {
   with: StudentRef[];
   /** The building it is in, when the day knows it: a class's own hall (R4b, DESIGN.md 81.6). */
   at?: { x: number; y: number };
+  /** What they do there, for a game or a workout: the place they use for it (DESIGN.md 83.5). */
+  pastime?: Pastime;
 }
 
 const first = (state: GameState, people: Person[]): string[] => firstNamesOf(state, people.map((one) => one.ref));
@@ -229,7 +231,14 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     return [...list.slice(start), ...list.slice(0, start)].slice(0, count);
   };
   const exams = read.kind === 'finals' || read.kind === 'midterms';
-  const fit = likes(view, ref, INTEREST.fitness) || card.archetype === 'athlete';
+  // What they do for fun that the campus has room for them to do (DESIGN.md 83.2): one of them, on a day they play.
+  const fun = card.uses.got;
+  const funToday = fun.length > 0 ? fun[Math.floor(roll(23) * fun.length)]! : null;
+  const play = (pastime: Pastime, words: string): void => {
+    const before = items.length;
+    put(t, t + 1.5, 'play', words);
+    if (items.length > before) items[items.length - 1]!.pastime = pastime;
+  };
   const gamer = likes(view, ref, INTEREST.gaming);
   const studious = card.archetype === 'scholar' || card.archetype === 'stressed' || exams;
 
@@ -360,8 +369,8 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
     t += 1.5;
   }
 
-  // Tutoring at the study center (R4b, DESIGN.md 81.3), twice a week after classes, for a class going badly, where there
-  // is a study center in reach.
+  // Tutoring at the study center (R4b, DESIGN.md 81.3), twice a week after classes, for a class going badly, where a
+  // study center has room for them (83.4).
   if (!weekend) {
     const tutoredFor = card.tutored ? weekOf(state, ref).office.find((one) => one.struggling) : undefined;
     if (tutoredFor && (weekday === 1 || weekday === 3) && t <= 17) {
@@ -377,8 +386,8 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   else if (exams || (studious && roll(4) < 0.6)) {
     const mates = exams ? pick(friends, 1, 5) : [];
     put(t, t + 2.5, 'seat', exams ? `Studying for ${read.name ?? 'exams'}${withWords(state, mates)}` : 'Studying', mates);
-  } else if (gymPhase && roll(6) < 0.8) put(t, t + 1.5, 'play', 'A workout, in a gym phase');
-  else if (fit && roll(6) < 0.7) put(t, t + 1.5, 'play', 'A workout');
+  } else if (gymPhase && fun.includes('workout') && roll(6) < 0.8) play('workout', 'A workout, in a gym phase');
+  else if (funToday && roll(6) < 0.7) play(funToday, PASTIME_WORDS[funToday].doing);
   else {
     const out = pick(friends, 2, 7);
     put(t, t + 2, 'quad', out.length > 0 ? `Hanging out${withWords(state, out)}` : 'Some time on the lawn', out);

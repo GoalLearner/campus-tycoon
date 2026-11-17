@@ -142,5 +142,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 41) {
     notes.push("Classes now have grades: each with a syllabus, a professor with office hours, and letters on a student's course record. A failed class earns no credit and is taken again.");
   }
+  if (fromVersion < 42) {
+    notes.push("Gyms, courts, the pool, the Makerspace, the Student Union, every place to eat and the study center now serve the students who use them, wherever they live. A student's card says what they use.");
+  }
   return notes;
 }

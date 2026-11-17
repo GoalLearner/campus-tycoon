@@ -24,7 +24,7 @@ import { budget } from '../src/sim/systems/budget';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
 
 /**
  * The story system (DESIGN.md 53.3 to 53.6, as built in section 58): arcs and
@@ -263,11 +263,12 @@ describe('saves', () => {
       withChaos(expected);
       withRegistration(expected);
       withLanes(expected);
+      withAmenities(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(28);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(12);
+      expect(notes).toHaveLength(13);
       expect(notes[0]).toMatch(/stor/i);
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(newStory().arcs).toEqual([]);

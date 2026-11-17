@@ -134,7 +134,7 @@ export const SUMMER_START_LINE = 'The summer term begins. About {share}% of stud
 export const STRESS_CAUSES = {
   crowding: { name: 'crowded classes', fix: 'More Academic seats would have eased it.' },
   teaching: { name: 'too few faculty', fix: 'More faculty would have eased it. They arrive a semester after they are hired.' },
-  unwind: { name: 'too few places to unwind', fix: 'Recreation, a quad or a pond in reach of the dorms would have eased it.' },
+  unwind: { name: 'too few places to unwind', fix: 'More to do on campus, or a quad or a pond near the dorms, would have eased it.' },
   support: { name: 'too little support', fix: 'A library and a Medical Center in reach, and staff at full strength, would have eased it.' },
   season: { name: 'the exams themselves', fix: 'The campus did all it could.' },
 } as const;

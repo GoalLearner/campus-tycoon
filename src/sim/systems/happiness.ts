@@ -1,18 +1,18 @@
 import { BED_NEED } from '../config/demand';
 import { semesterStay } from './population';
 import { GREEN_CAP, WALK_MAX_PENALTY } from '../config/desirability';
-import { VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
 import { CAUSE_OF, CAUSE_WEIGHTS, PART_WEIGHTS, type CauseId, type DriverId } from '../config/students';
 import { stageSpec } from '../config/buildings';
 import type { GameState, Zone } from '../types';
 import { scoreParts } from './desirability';
-import { diningAt, foodKindsAt } from './food';
+import { campusDining, varietyOn } from './food';
+import { campusFed } from './placed';
 import { noiseAt } from './football';
 import { causeShifts, type CauseShift } from './policies';
 import { chapterNoiseAt } from './greek';
 import { cleanAt, seatingAt } from './grounds';
 import { safetyAt } from './incidents';
-import { recreationAt } from './play';
+import { campusLife, campusRecreation } from './play';
 import { seasonLine, type CampusLevels, type SeasonLine } from './season';
 
 /**
@@ -46,8 +46,8 @@ export interface Cause {
   parts: CausePart[];
   /**
    * What was added on top of the average of its parts, already inside `level`.
-   * Only Food & fun has one: a tenth where three kinds of food are in reach,
-   * and never past full (DESIGN.md 30.2). Left out when nothing was added.
+   * Only Food & fun has one: a tenth on a campus with three kinds of food,
+   * and never past full (DESIGN.md 30.2, 83.3). Left out when nothing was added.
    */
   bonus?: number;
   /**
@@ -107,11 +107,22 @@ export function partLevel(causes: readonly Cause[], id: DriverId): number | unde
 }
 
 /**
+ * What one student uses (DESIGN.md 83): their own recreation, the lift of what they do for fun that the campus lets
+ * them (null when they do nothing for fun), and their food, 1 when they get a meal on campus.
+ */
+export interface StudentUse {
+  recreation: number | null;
+  dining: number;
+}
+
+/**
  * Happiness at one lot, with its causes. `shifts` is what the policies add to
  * or take from the causes at a lot of this zone: the campus average passes
- * it in, having worked it out once, and a single lot asks for it here.
+ * it in, having worked it out once, and a single lot asks for it here. `who`
+ * is one student's own use, for their card; without it a lot reads the
+ * campus's students in shares (DESIGN.md 83.2).
  */
-export function approvalAt(state: GameState, cell: number, shifts?: readonly CauseShift[]): Approval {
+export function approvalAt(state: GameState, cell: number, shifts?: readonly CauseShift[], who?: StudentUse): Approval {
   const map = state.map;
   const zone = map.cells[cell]?.zone ?? null;
   if (zone === null) return { score: 0, causes: [], walkMinutes: -1 };
@@ -136,20 +147,23 @@ export function approvalAt(state: GameState, cell: number, shifts?: readonly Cau
   } else if (chapters > 0) {
     felt.push({ id: 'noise', level: 1 - chapters });
   }
-  // Food in reach, and how many kinds of it: read once, for the dining part and for variety below.
-  const kinds = foodKindsAt(map, x, y);
-  // A place to eat with a long line is worth a little less (DESIGN.md 38.5).
-  felt.push({ id: 'dining', level: kinds > 0 ? diningAt(state, x, y) : 0 });
-  felt.push({ id: 'recreation', level: recreationAt(state, x, y) });
+  // Food and things to do: what students use, wherever they live (DESIGN.md 83). One student's own, or the campus's
+  // in shares; a student who does nothing for fun has no recreation part, and their Food & fun is their food.
+  const dining = who ? who.dining : campusDining(state);
+  felt.push({ id: 'dining', level: dining });
+  const variety = varietyOn(map);
+  const recreation = who ? who.recreation : campusRecreation(state, dining);
+  if (recreation !== null) felt.push({ id: 'recreation', level: recreation });
   // Medical Center and Campus Safety coverage are read together, as one level.
   felt.push({ id: 'safety', level: safetyAt(state, x, y) });
   const causes = gathered(felt);
-  // Variety: three kinds of food in reach add a tenth to Food & fun, never past full.
-  const variety = kinds >= VARIETY_KINDS ? VARIETY_BONUS : 0;
-  if (variety > 0) {
-    for (const cause of causes) {
-      if (cause.id !== 'life') continue;
-      const lifted = Math.min(1, cause.level + variety);
+  // Variety: three kinds of food on the campus add a tenth to Food & fun, never past full.
+  // A lot read for the campus takes every student's own Food & fun, each held at full (DESIGN.md 83.2), so a student
+  // who misses something counts as they feel it, and variety shows only what it adds.
+  for (const cause of causes) {
+    if (cause.id !== 'life' || (who && variety <= 0)) continue;
+    const lifted = who ? Math.min(1, cause.level + variety) : Math.max(cause.level, campusLife(state, dining, variety));
+    if (lifted > cause.level + 1e-9) {
       cause.bonus = lifted - cause.level;
       cause.level = lifted;
     }
@@ -309,7 +323,7 @@ const LEVEL_SAMPLE = 40;
 
 /**
  * What the campus offers against Stress and bad weather: recreation, green
- * space, safety and food in reach, each from 0 to 1.
+ * space, safety and food, each from 0 to 1.
  *
  * The academic year asks for this a few times every game year, catch-up
  * included, so it is kept light: only these four things are read, and on a
@@ -323,6 +337,8 @@ export function campusLevels(state: GameState): CampusLevels {
     housing: { people: 0, recreation: 0, green: 0, safety: 0, dining: 0 },
     academic: { people: 0, recreation: 0, green: 0, safety: 0, dining: 0 },
   };
+  const fed = campusFed(map);
+  const things = campusRecreation(state, campusDining(state));
   for (const zone of ['housing', 'academic'] as const) {
     const built = map.buildings.filter((building): building is NonNullable<typeof building> => !!building && building.zone === zone && building.stage >= 1);
     const stride = Math.max(1, Math.ceil(built.length / LEVEL_SAMPLE));
@@ -335,9 +351,9 @@ export function campusLevels(state: GameState): CampusLevels {
       const walk = zone === 'housing' ? (map.walkMinutes[y * map.width + x] ?? -1) : -1;
       sum.people += size;
       sum.green += size * Math.min(1, scoreParts(map, x, y, zone, walk).green / GREEN_CAP[zone]);
-      sum.recreation += size * recreationAt(state, x, y);
+      sum.recreation += size * things;
       sum.safety += size * safetyAt(state, x, y);
-      sum.dining += size * (foodKindsAt(map, x, y) > 0 ? 1 : 0);
+      sum.dining += size * (fed ? 1 : 0);
     }
   }
   const dorms = sums.housing;

@@ -56,7 +56,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { captionLayout, photoFileName } from '../src/app/photo';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from '../src/ui/decorUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted, withAmenities } from './helpers';
 
 /**
  * Decorations, the Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6,
@@ -695,6 +695,7 @@ describe('saves', () => {
       withChaos(expected);
       withRegistration(expected);
       withLanes(expected);
+      withAmenities(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its money, its level, its Seals and its orders are what they were.
@@ -720,7 +721,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(21);
+      expect(notes).toHaveLength(22);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

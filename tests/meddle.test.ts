@@ -356,7 +356,7 @@ describe('the Meddle menu and the calm tools (C4, DESIGN.md 78)', () => {
     expect(loaded.migratedFrom).toBe(38);
     expect(loaded.state).toEqual(state);
     expect(typeof MIGRATIONS[38]).toBe('function');
-    expect(upgradeNotes(38)).toHaveLength(3);
+    expect(upgradeNotes(38)).toHaveLength(4);
     expect(upgradeNotes(38)[0]).toMatch(/Meddle/);
   });
 

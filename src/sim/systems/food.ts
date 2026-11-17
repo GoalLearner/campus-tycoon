@@ -1,34 +1,29 @@
-import { FOOD_INCOME_PER_STUDENT, PLACED, placedMeals, SMOOTHIE_CELLS, SMOOTHIE_TIMES, TUTORING_GPA, VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
+import { FOOD_INCOME_PER_STUDENT, PLACED, placedMeals, SMOOTHIE_CELLS, SMOOTHIE_TIMES, TUTOR_BELOW, TUTOR_ROOM, VARIETY_BONUS, VARIETY_KINDS } from '../config/placed';
+import { hashInts } from '../rng';
 import { MEAL_SHARE } from '../config/staffing';
 import { scaleOf } from '../scale';
-import { crowdLift } from './play';
+import { choosePlace, servedShare, spillOver } from './play';
 import { enrollment } from '../selectors';
 import type { GameState, MapState, Placed, PlacedType } from '../types';
-import { inReach } from './placed';
+import { shareBelow } from './grades';
+import { drawWeight, ofFamily } from './placed';
+import type { StudentRef } from './students';
 
 /**
- * Places to eat, beyond feeding the lots in reach (DESIGN.md section 30).
+ * Places to eat (DESIGN.md sections 30 and 83). Every student eats, and every place to eat feeds every student who uses
+ * it, wherever they live (the owner, 2026-11-17: "every student has access to them and are walking distance"):
  *
- * Every food place is the dining rule at its own size. Two small rules sit on
- * top, and both have a ceiling:
+ * - Room. The students who want a meal at the busiest hour against the meals the campus's places can serve. Over that,
+ *   those who cannot get in miss a meal on campus: Food & fun's dining for them, a share of the campus.
+ * - Variety. A campus with three or more different kinds of food gets a tenth added to Food & fun, never past full. A
+ *   fourth kind adds nothing.
+ * - Income. Each student is worth a little a year, shared among the places they eat at, the nearest most. A second
+ *   stall beside the first halves what each earns, so stalls cannot be stacked for money.
  *
- * - Variety. A lot with three or more different kinds of food in reach gets a
- *   tenth added to its Food & fun, never past full. A fourth kind adds nothing.
- * - Income. Each student in reach of food is worth a little a year, shared
- *   equally among the places that reach them. A second stall beside the first
- *   halves what each earns, so stalls cannot be stacked for money.
- *
- * When a place is busy is seen on the map and never counted: nothing here, or
- * anywhere in the simulation, reads the time of day (28.1).
- *
- * Nothing is stored but the geometry (`map.care.food`), which changes only
- * when the player builds.
+ * Who eats where (`map.care.food` and `map.care.meals`, the nearer the more) decides only the lines on the map, the
+ * takings and the followed student's walk; never who is fed. When a place is busy is seen on the map and never
+ * counted: nothing here, or anywhere in the simulation, reads the time of day (28.1).
  */
-
-/** Cells between a lot and the nearest cell of a building. */
-function gap(placed: Placed, x: number, y: number): number {
-  return Math.max(Math.max(placed.x - x, 0, x - (placed.x + placed.w - 1)), Math.max(placed.y - y, 0, y - (placed.y + placed.h - 1)));
-}
 
 /** Cells between two footprints. 0 when they touch. */
 function gapBetween(a: Placed, b: Placed): number {
@@ -42,64 +37,61 @@ export function isFood(placed: Placed): boolean {
   return PLACED[placed.type].family === 'dining';
 }
 
-/** The kinds of food that reach a spot, each named once. */
-export function foodTypesAt(map: MapState, x: number, y: number): PlacedType[] {
+/** The kinds of food on the campus, each named once (DESIGN.md 83.3). */
+export function foodTypesOnCampus(map: MapState): PlacedType[] {
   const types: PlacedType[] = [];
-  for (const placed of inReach(map, 'dining', x, y)) if (!types.includes(placed.type)) types.push(placed.type);
+  for (const placed of ofFamily(map, 'dining')) if (!types.includes(placed.type)) types.push(placed.type);
   return types;
 }
 
-/** Every kind of food, each with a bit of its own, so the kinds in reach of a lot can be counted without a list. */
-const FOOD_TYPES = (Object.keys(PLACED) as PlacedType[]).filter((type) => PLACED[type].family === 'dining');
-const FOOD_BIT: Partial<Record<PlacedType, number>> = {};
-FOOD_TYPES.forEach((type, n) => (FOOD_BIT[type] = 1 << n));
-
-/**
- * How many kinds of food reach a spot. Two dining halls are one kind. The
- * food court counts as three. 0 means nothing to eat is in reach. This is
- * read for every lot whose Happiness is read, so it makes no lists.
- */
-export function foodKindsAt(map: MapState, x: number, y: number): number {
-  let seen = 0;
-  const ids = map.care?.byFamily?.dining;
-  if (ids) {
-    for (const id of ids) {
-      const placed = map.placed[id];
-      if (placed && gap(placed, x, y) <= PLACED[placed.type].radius) seen |= FOOD_BIT[placed.type] ?? 0;
-    }
-  } else {
-    for (const placed of map.placed) {
-      if (placed && PLACED[placed.type].family === 'dining' && gap(placed, x, y) <= PLACED[placed.type].radius) seen |= FOOD_BIT[placed.type] ?? 0;
-    }
-  }
-  if (seen === 0) return 0;
+/** How many kinds of food the campus has: two dining halls are one kind, the food court counts as three, 0 is none. */
+export function foodKinds(map: MapState): number {
   let kinds = 0;
-  for (let n = 0; n < FOOD_TYPES.length; n++) if (seen & (1 << n)) kinds += PLACED[FOOD_TYPES[n]!].kinds ?? 1;
+  for (const type of foodTypesOnCampus(map)) kinds += PLACED[type].kinds ?? 1;
   return kinds;
 }
 
-/** What variety adds to Food & fun at a spot: a tenth with three kinds or more in reach, nothing with fewer. */
-export function varietyAt(map: MapState, x: number, y: number): number {
-  return foodKindsAt(map, x, y) >= VARIETY_KINDS ? VARIETY_BONUS : 0;
+/** What variety adds to Food & fun: a tenth with three kinds of food or more on the campus, nothing with fewer. */
+export function varietyOn(map: MapState): number {
+  return foodKinds(map) >= VARIETY_KINDS ? VARIETY_BONUS : 0;
 }
 
 /**
- * Share the lots out among the places to eat that reach them, equally. The
- * result, for each place, is how many lots' worth of students it has to
- * itself. Called after every action, with the rest of `care`.
+ * Share every lot's students out among the places to eat, the nearer the more and none out of reach (DESIGN.md 83.5).
+ * The result, for each place, is how many lots' worth of students it has to itself: what it earns. Called after every
+ * action, with the rest of `care`.
  */
 export function foodLoads(map: MapState, places: readonly Placed[]): Record<number, number> {
+  return shareLots(map, places, () => 1);
+}
+
+/**
+ * Share every lot's students out among the places to eat, in proportion to how many each can feed, the nearer the
+ * more: a dining hall takes more of a dorm's meals than the coffee stand beside it. The result, for each place, is how
+ * many lots' worth of students come to it first for a meal. Called after every action, with the rest of `care`.
+ */
+export function mealLoads(map: MapState, places: readonly Placed[]): Record<number, number> {
+  return shareLots(map, places, (placed) => placedMeals(placed.type, 1));
+}
+
+function shareLots(map: MapState, places: readonly Placed[], size: (placed: Placed) => number): Record<number, number> {
   const load: Record<number, number> = {};
   for (const placed of places) load[placed.id] = 0;
   if (places.length === 0) return load;
   const { width, height, cells } = map;
-  const near: Placed[] = [];
+  const weights = new Array<number>(places.length).fill(0);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (cells[y * width + x]!.kind !== 'lot') continue;
-      near.length = 0;
-      for (const placed of places) if (gap(placed, x, y) <= PLACED[placed.type].radius) near.push(placed);
-      for (const placed of near) load[placed.id]! += 1 / near.length;
+      let sum = 0;
+      for (let i = 0; i < places.length; i++) {
+        const placed = places[i]!;
+        const w = size(placed) * drawWeight(placed, x, y, PLACED[placed.type].radius);
+        weights[i] = w;
+        sum += w;
+      }
+      if (sum <= 0) continue;
+      for (let i = 0; i < places.length; i++) load[places[i]!.id]! += weights[i]! / sum;
     }
   }
   return load;
@@ -107,83 +99,104 @@ export function foodLoads(map: MapState, places: readonly Placed[]): Record<numb
 
 // ------------------------------------------------------------- capacity --
 
-/**
- * Share the lots out among the places to eat that reach them, in proportion
- * to how many each can feed: a dining hall takes more of a dorm's meals than
- * the coffee stand beside it. The result, for each place, is how many lots'
- * worth of students eat there. Called after every action, with the rest of
- * `care`.
- */
-export function mealLoads(map: MapState, places: readonly Placed[]): Record<number, number> {
-  const load: Record<number, number> = {};
-  for (const placed of places) load[placed.id] = 0;
-  if (places.length === 0) return load;
-  const { width, height, cells } = map;
-  const near: Placed[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (cells[y * width + x]!.kind !== 'lot') continue;
-      near.length = 0;
-      let feeds = 0;
-      for (const placed of places) {
-        if (gap(placed, x, y) > PLACED[placed.type].radius) continue;
-        near.push(placed);
-        feeds += placedMeals(placed.type, 1);
-      }
-      if (feeds <= 0) continue;
-      for (const placed of near) load[placed.id]! += placedMeals(placed.type, 1) / feeds;
-    }
+export interface CampusMeals {
+  /** Meals the campus's places can serve at the busiest hour. */
+  capacity: number;
+  /** Students who want a meal at the busiest hour: every student's share, wherever they live. */
+  demand: number;
+  ratio: number;
+  /** The share of those who want a meal at the busiest hour who get one: 0 with nowhere to eat. */
+  served: number;
+  /** Who each place has at the busiest hour, by its id, and who came to it first. */
+  demands: Map<number, number>;
+  firsts: Map<number, number>;
+}
+
+let memo: { map: MapState; care: unknown; students: number; scale: number; placed: number; value: CampusMeals } | null = null;
+
+/** The campus's meals at the busiest hour against who wants one (DESIGN.md 38.5, 83.3), the same for every student. */
+export function campusMeals(state: GameState): CampusMeals {
+  const map = state.map;
+  const students = enrollment(state);
+  const scale = scaleOf(state);
+  if (memo && memo.map === map && memo.care === map.care && memo.students === students && memo.scale === scale && memo.placed === map.placed.length) return memo.value;
+  const places = ofFamily(map, 'dining');
+  let capacity = 0;
+  for (const placed of places) capacity += placedMeals(placed.type, scale);
+  const demand = places.length > 0 ? students * MEAL_SHARE : 0;
+  const ratio = capacity > 0 ? demand / capacity : 0;
+  const care = map.care;
+  // A save from before a place to eat could fill up shares its meals as its takings, until its map is next worked out.
+  const shares = care?.meals ?? care?.food;
+  const firsts = new Map<number, number>();
+  const bases: number[] = [];
+  const caps: number[] = [];
+  for (const placed of places) {
+    const first = care && care.lots > 0 ? ((shares?.[placed.id] ?? 0) * demand) / care.lots : 0;
+    firsts.set(placed.id, first);
+    bases.push(first);
+    caps.push(placedMeals(placed.type, scale));
   }
-  return load;
+  const spilled = spillOver(bases, caps);
+  const demands = new Map<number, number>();
+  places.forEach((placed, i) => demands.set(placed.id, spilled[i]!));
+  const value: CampusMeals = { capacity, demand, ratio, served: places.length > 0 ? servedShare(capacity, demand) : 0, demands, firsts };
+  memo = { map, care: map.care, students, scale, placed: map.placed.length, value };
+  return value;
 }
 
 export interface MealUse {
   /** Students it can feed at the busiest hour. */
   capacity: number;
-  /** Students who want a meal there at the busiest hour. */
+  /** Students who eat here at the busiest hour, those who came first and those who went on from a full one. */
   demand: number;
   /** Demand over capacity. */
   ratio: number;
-  /** In line at the busiest hour. */
+  /** Turned away at the busiest hour: only when every place on the campus is full. */
   waiting: number;
-  /** What is left of its part in Happiness, from a floor to 1: a long line takes a little off. */
-  lift: number;
+  /** The share of those who want a meal who get one: the same for every place. */
+  served: number;
 }
 
 /**
- * How busy a place to eat is at the busiest hour (DESIGN.md 38.5). null for
- * anything else. It is the recreation rule: over what it can feed, the rest
- * wait, and a long line takes a little off what the place is worth to the
- * students near it. It never blocks anything, and the loss has a floor.
+ * How busy a place to eat is at the busiest hour (DESIGN.md 38.5, 83.3). null for anything else. Over what the campus
+ * can feed, those who cannot get in miss a meal on campus. It never blocks anything.
  */
 export function mealUse(state: GameState, placed: Placed): MealUse | null {
   const capacity = placedMeals(placed.type, scaleOf(state));
   if (capacity <= 0) return null;
-  const care = state.map.care;
-  const lots = care.lots > 0 ? (care.meals?.[placed.id] ?? 0) : 0;
-  const demand = care.lots > 0 ? (lots * enrollment(state) * MEAL_SHARE) / care.lots : 0;
+  const campus = campusMeals(state);
+  const demand = campus.demands.get(placed.id) ?? 0;
   const ratio = demand / capacity;
-  return { capacity, demand, ratio, waiting: Math.max(0, Math.round(demand) - capacity), lift: crowdLift(ratio) };
+  return { capacity, demand, ratio, waiting: Math.max(0, Math.round(demand) - capacity), served: campus.served };
 }
 
 /**
- * What the food in reach of a spot is worth, 0 to 1: nothing with none in
- * reach, all of it where any place in reach has room, and a little less where
- * every one of them has a line.
+ * Food & fun's dining as the campus's halls read it (DESIGN.md 83.3): the share of its students who get a meal at the
+ * busiest hour. Nothing on a campus with nowhere to eat.
  */
-export function diningAt(state: GameState, x: number, y: number): number {
-  const map = state.map;
-  // A save from before a place to eat could fill up reads as it always did until its map is next worked out.
-  if (!map.care?.meals) return foodKindsAt(map, x, y) > 0 ? 1 : 0;
-  const ids = map.care.byFamily?.dining ?? [];
-  let best = 0;
-  for (const id of ids) {
-    const placed = map.placed[id];
-    if (!placed || gap(placed, x, y) > PLACED[placed.type].radius) continue;
-    best = Math.max(best, mealUse(state, placed)?.lift ?? 1);
-    if (best >= 1) return 1;
-  }
-  return best;
+export function campusDining(state: GameState): number {
+  return campusMeals(state).served;
+}
+
+/** True when a student gets a meal on campus (83.3): somewhere to eat with room for them, by their own luck. */
+export function eatsOnCampus(state: GameState, ref: StudentRef): boolean {
+  const served = campusMeals(state).served;
+  if (served >= 1) return true;
+  if (served <= 0) return false;
+  return ((hashInts(state.seed, 9601, ref.entryYear, ref.index) >>> 0) + 0.5) / 4294967297 < served;
+}
+
+/**
+ * The place to eat a student at a spot goes to (DESIGN.md 83.5), from their own `luck` (0 to 1): most often the
+ * nearest, by how many each can feed, and another with room when the one they came to first is full. null with nowhere
+ * to eat.
+ */
+export function foodPlaceFor(state: GameState, x: number, y: number, luck: number): Placed | null {
+  const scale = scaleOf(state);
+  const campus = campusMeals(state);
+  const share = (placed: Placed, px: number, py: number): number => placedMeals(placed.type, 1) * drawWeight(placed, px, py, PLACED[placed.type].radius);
+  return choosePlace(ofFamily(state.map, 'dining'), x, y, luck, share, (placed) => placedMeals(placed.type, scale), campus.firsts, campus.served < 1);
 }
 
 /** True when a recreation building stands within two cells of this place. It doubles what a smoothie bar earns. */
@@ -195,7 +208,7 @@ export function besideRecreation(map: MapState, placed: Placed): boolean {
 }
 
 export interface FoodTrade {
-  /** Students it has to itself, once everyone in reach has been shared among the places that reach them. */
+  /** Students it has to itself, once every student has been shared among the places they eat at, the nearest most. */
   students: number;
   /** Dollars a game year. */
   income: number;
@@ -235,12 +248,18 @@ export function foodPlaces(state: GameState): number {
   return count;
 }
 
-/** True when a study center's tutoring reaches a spot. */
-export function tutoredAt(map: MapState, x: number, y: number): boolean {
-  return inReach(map, 'tutoring', x, y).length > 0;
+/**
+ * The share of the students whose classes are going badly that the campus's study centers have room to tutor this
+ * semester, 0 to 1 (DESIGN.md 83.4): every study center takes students from anywhere on the campus.
+ */
+export function tutoringCover(state: GameState): number {
+  const centers = ofFamily(state.map, 'tutoring').length;
+  if (centers === 0) return 0;
+  const need = enrollment(state) * shareBelow(TUTOR_BELOW);
+  return need > 0 ? Math.min(1, (centers * TUTOR_ROOM * scaleOf(state)) / need) : 1;
 }
 
-/** What tutoring in reach adds to the GPA on a student's card. It changes nothing else until layer 2. */
-export function tutoringLift(map: MapState, x: number, y: number): number {
-  return tutoredAt(map, x, y) ? TUTORING_GPA : 0;
+/** Students the campus's study centers can tutor a semester, and how many have classes going badly. */
+export function tutoringRoom(state: GameState): { room: number; need: number } {
+  return { room: ofFamily(state.map, 'tutoring').length * TUTOR_ROOM * scaleOf(state), need: Math.round(enrollment(state) * shareBelow(TUTOR_BELOW)) };
 }

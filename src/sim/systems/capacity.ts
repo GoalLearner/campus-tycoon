@@ -4,7 +4,7 @@ import { commencementLeavers } from './population';
 import { MAX_STAGE, stageSpec } from '../config/buildings';
 import { WORK_PER_WORKER, YARD_MAX_WORKERS } from '../config/grounds';
 import { STUDENTS_PER_STAFF } from '../config/money';
-import { PLACED } from '../config/placed';
+import { BUSY_FROM, PLACED } from '../config/placed';
 import { CROWDING_FROM } from '../config/season';
 import { COVER_OK, COVER_SHORT, RATIO_SHORT, RATIO_TIGHT } from '../config/staffing';
 import { FIRST_INTAKE_TICK } from '../config/time';
@@ -13,12 +13,13 @@ import { scaleOf } from '../scale';
 import { chapterBedsTaken, enrollment, openCapacity } from '../selectors';
 import type { GameState, Placed, Zone } from '../types';
 import { bedsWanted, classSize, dormStudents, fallApplicants, localsNeedingBeds, nextIntakeSeason, seatsForRoom, studentsWanted } from './demand';
-import { mealUse } from './food';
+import { campusMeals, mealUse } from './food';
 import { roomUnderCap } from './goals';
 import { housedNote } from './policies';
 import { workersAt, yardStatus } from './grounds';
 import { coverFor } from './incidents';
-import { playUse } from './play';
+import { campusPlay, playUse } from './play';
+import { PASTIMES, PASTIME_WORDS } from '../config/amenities';
 import { classSizeNow, facultyNeed, facultyStretched, facultyWorking, nextSemesterStaff, ratioTarget, staffNeed, staffWorking } from './staffing';
 import { driversNow, offCampusNow, townPlaces } from './town';
 
@@ -168,40 +169,88 @@ function peopleRow(state: GameState, which: 'faculty' | 'staff', fall: number): 
   };
 }
 
-/** A row for places to eat or places to play: what they hold at the busiest hour against who wants in. */
-function crowdRow(state: GameState, which: 'dining' | 'recreation', growth: number): Need {
-  const dining = which === 'dining';
-  let have = 0;
-  let want = 0;
-  let lines = 0;
+/** "1 in 6" or "12%": a share of students, as the page says them. */
+function shareWords(share: number): string {
+  const one = Math.round(1 / Math.max(0.01, share));
+  return share >= 0.095 && one <= 10 ? `1 in ${one}` : `${Math.max(1, Math.round(share * 100))}%`;
+}
+
+/** A list in words: "a, b and c". */
+function listed(items: readonly string[]): string {
+  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** The busiest building of a family, when it is over what it holds. */
+function busiest(state: GameState, which: 'dining' | 'recreation'): { x: number; y: number } | null {
   let worst: { placed: Placed; ratio: number } | null = null;
   for (const placed of state.map.placed) {
     if (!placed || PLACED[placed.type].family !== which) continue;
-    const use = dining ? mealUse(state, placed) : playUse(state, placed);
-    if (!use) continue;
-    have += use.capacity;
-    want += use.demand;
-    if (use.ratio > 1) lines += 1;
-    if (!worst || use.ratio > worst.ratio) worst = { placed, ratio: use.ratio };
+    const use = which === 'dining' ? mealUse(state, placed) : playUse(state, placed);
+    if (use && (!worst || use.ratio > worst.ratio)) worst = { placed, ratio: use.ratio };
   }
-  want = Math.round(want);
-  const status: NeedStatus = want > have ? 'short' : lines > 0 ? 'tight' : 'ok';
-  const noun = dining ? plural(lines, 'place to eat has', 'places to eat have') : plural(lines, 'place to play has', 'places to play have');
-  const unit = dining ? 'meals' : 'places';
+  return worst && worst.ratio > 1 ? { x: worst.placed.x, y: worst.placed.y } : null;
+}
+
+/**
+ * The Dining row (DESIGN.md 38.5, 83.3): the meals the whole campus serves at the busiest hour against every student who
+ * wants one, wherever they live. Short means some go without a meal on campus.
+ */
+function diningRow(state: GameState, growth: number): Need {
+  const campus = campusMeals(state);
+  const have = campus.capacity;
+  const want = Math.round(campus.demand);
+  const status: NeedStatus = have > 0 && want > have ? 'short' : have > 0 && want >= have * BUSY_FROM ? 'tight' : 'ok';
   let consequence = '';
-  if (status === 'short') consequence = `More students want ${dining ? 'a meal' : 'to play'} at the busiest hour than the campus can take. The wait takes a little off Food & fun for the students near.`;
-  else if (status === 'tight') consequence = `${noun} a line at the busiest hour. It takes a little off Food & fun for the students near. Another nearby shares the crowd.`;
+  if (status === 'short') consequence = `More students want a meal at the busiest hour than the campus can serve: ${shareWords(1 - campus.served)} of them go without one on campus, and it takes off their Food & fun. Another place to eat anywhere on campus feeds them.`;
+  else if (status === 'tight') consequence = 'Nearly full at the busiest hour. A few more students and some will go without a meal on campus.';
   return {
-    id: which,
-    name: dining ? 'Dining' : 'Recreation',
+    id: 'dining',
+    name: 'Dining',
     have,
     want,
     status,
-    line: have > 0 ? `${headCount(want)} of ${headCount(have)} ${unit} at the busiest hour` : dining ? 'Nowhere to eat yet' : 'Nowhere to play yet',
+    line: have > 0 ? `${headCount(want)} of ${headCount(have)} meals at the busiest hour` : 'Nowhere to eat yet',
     consequence,
     forecast: `Next fall's students will want ${headCount(Math.round(want * growth))}.`,
-    fixLabel: dining ? 'Build somewhere to eat' : 'Build somewhere to play',
-    fix: { kind: 'build', label: dining ? 'Food' : 'Recreation', at: worst && worst.ratio > 1 ? { x: worst.placed.x, y: worst.placed.y } : null },
+    fixLabel: 'Build somewhere to eat',
+    fix: { kind: 'build', label: 'Food', at: busiest(state, 'dining') },
+  };
+}
+
+/**
+ * The Recreation row (DESIGN.md 38.5, 83.2): what students do for fun against the places the campus has for it, at the
+ * busiest hour. Short when a kind of place is full and turns students away; Tight when students do something the
+ * campus has no place for, or its places are nearly full. Each says which.
+ */
+function recreationRow(state: GameState, growth: number): Need {
+  const campus = campusPlay(state);
+  const have = campus.capacity;
+  const want = Math.round(campus.demand);
+  const full = PASTIMES.filter((activity) => campus.rooms[activity].has && campus.rooms[activity].served < 1);
+  const missing = PASTIMES.filter((activity) => !campus.rooms[activity].has && campus.rooms[activity].share >= 0.01);
+  const status: NeedStatus = full.length > 0 ? 'short' : missing.length > 0 || (have > 0 && want >= have * BUSY_FROM) ? 'tight' : 'ok';
+  const parts: string[] = [];
+  if (full.length > 0) {
+    const worst = full.reduce((a, b) => (campus.rooms[a].served < campus.rooms[b].served ? a : b));
+    const names = listed(full.map((activity) => PASTIME_WORDS[activity].uses));
+    parts.push(`${names.charAt(0).toUpperCase()}${names.slice(1)} ${full.length === 1 ? 'is' : 'are'} full at the busiest hour: ${shareWords(1 - campus.rooms[worst].served)} of those who come are turned away, and miss it.`);
+  }
+  if (missing.length > 0) {
+    const share = shareWords(campus.lacking);
+    parts.push(`No ${listed(missing.map((activity) => PASTIME_WORDS[activity].place.replace(/^an? /, '')))}: ${share.startsWith('1 in') ? `${share} students` : `${share} of students`} would use one.`);
+  }
+  if (parts.length === 0 && status === 'tight') parts.push('Nearly full at the busiest hour. A few more students and some will be turned away.');
+  return {
+    id: 'recreation',
+    name: 'Recreation',
+    have,
+    want,
+    status,
+    line: have > 0 ? `${headCount(want)} of ${headCount(have)} places at the busiest hour` : 'Nowhere to play yet',
+    consequence: parts.join(' '),
+    forecast: `Next fall's students will want ${headCount(Math.round(want * growth))}.`,
+    fixLabel: 'Build somewhere to play',
+    fix: { kind: 'build', label: 'Recreation', at: busiest(state, 'recreation') },
   };
 }
 
@@ -274,8 +323,8 @@ export function capacity(state: GameState): Capacity {
   }
 
   needs.push(peopleRow(state, 'faculty', fall));
-  needs.push(crowdRow(state, 'dining', growth));
-  needs.push(crowdRow(state, 'recreation', growth));
+  needs.push(diningRow(state, growth));
+  needs.push(recreationRow(state, growth));
 
   // ---- safety and health coverage
   {

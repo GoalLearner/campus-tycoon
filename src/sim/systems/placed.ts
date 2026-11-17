@@ -136,10 +136,38 @@ export function inReach(map: MapState, family: PlacedFamily, x: number, y: numbe
   return out;
 }
 
-/** True when a dining hall or a coffee stand reaches this spot. */
-export function fedAt(map: MapState, x: number, y: number): boolean {
-  return inReach(map, 'dining', x, y).length > 0;
+/** The placed things of one family, wherever they stand. */
+export function ofFamily(map: MapState, family: PlacedFamily): Placed[] {
+  const out: Placed[] = [];
+  const ids = map.care?.byFamily?.[family];
+  if (ids) {
+    for (const id of ids) {
+      const placed = map.placed[id];
+      if (placed) out.push(placed);
+    }
+    return out;
+  }
+  for (const placed of map.placed) if (placed && PLACED[placed.type].family === family) out.push(placed);
+  return out;
 }
+
+/** True when the campus has somewhere to eat (DESIGN.md 83.3): every place to eat feeds the whole campus. */
+export function campusFed(map: MapState): boolean {
+  const ids = map.care?.byFamily?.dining;
+  if (ids) return ids.some((id) => !!map.placed[id]);
+  return map.placed.some((placed) => !!placed && PLACED[placed.type].family === 'dining');
+}
+
+/**
+ * How strongly the students of a lot are drawn to one place of its kind (DESIGN.md 83.5): all of it beside it, half at
+ * its draw, and less the further off, never nothing. A share of who goes where, for the map's lines and the takings;
+ * never whether a student benefits.
+ */
+export function drawWeight(placed: Placed, x: number, y: number, draws: number): number {
+  const far = cellsFrom(placed, x, y) / Math.max(1, draws);
+  return 1 / (1 + far * far);
+}
+
 
 /** Points of desirability a library adds to an Academic lot here. The best one in reach counts, fading with distance. */
 export function libraryLift(map: MapState, x: number, y: number): number {

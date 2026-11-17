@@ -4,30 +4,40 @@ import {
   applyAction,
   approvalAt,
   campusHappiness,
-  CROWD_LIFT_FLOOR,
+  campusPlay,
   CROWD_WORST_AT,
-  crowdedNear,
-  crowdLift,
+  habitsOf,
   parseSave,
   partLevel,
+  PASTIME_OF,
+  PASTIMES,
   PLACED,
   PLAY_SHARE,
   playCapacity,
   playLine,
+  playOf,
+  playPlaceFor,
   playUse,
-  recreationAt,
   sampleStudents,
   SAVE_VERSION,
   serialize,
+  spillOver,
   studentCard,
   waitMinutes,
   type Action,
   type GameState,
   type Placed,
+  type StudentRef,
 } from '../src/sim';
+import { movedAway, natureOf, usesWords } from '../src/sim/systems/students';
 import { placedSummary } from '../src/ui/buildUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DAY, freshGame, HOUR, MIN, T0 } from './helpers';
+
+/**
+ * Places to play serve the students who use them, wherever they live (the owner, 2026-11-17: "It's whether the student
+ * actually uses these facilities or not"; DESIGN.md 83.2).
+ */
 
 function act(state: GameState, action: Action): GameState {
   const result = applyAction(state, action);
@@ -35,7 +45,7 @@ function act(state: GameState, action: Action): GameState {
   return result.state;
 }
 
-/** The starter campus with a given number of students and money to build. Its dorms stand at 10 to 12, 13. */
+/** The starter campus with a given number of students and money to build. Its dorms stand at 10 to 12, 13; its lecture halls at 19 to 21, 18. */
 function campus(students: number): GameState {
   const state = structuredClone(advance(freshGame(), T0, T0 + 20 * MIN).state);
   state.money.cash = 10_000_000;
@@ -46,14 +56,13 @@ function campus(students: number): GameState {
 
 const first = (state: GameState, type: string): Placed => state.map.placed.find((placed) => placed?.type === type)!;
 const all = (state: GameState, type: string): Placed[] => state.map.placed.filter((placed): placed is Placed => placed?.type === type);
-/**
- * A court just south of the starter dorms. The three dorms are within its four
- * cells and the three lecture halls are not, so it has half the campus's lots:
- * one student in forty wants it at the busiest hour.
- */
+/** A court just south of the starter dorms: basketball. */
 const withCourt = (state: GameState): GameState => act(state, { type: 'place', building: 'courts', x: 9, y: 15 });
-/** Students on campus for this many to want the court at peak. */
-const wanting = (players: number): number => (players * 2) / PLAY_SHARE;
+const habits = (state: GameState, ref: StudentRef) => habitsOf(state.seed, ref, natureOf(state.seed, ref, movedAway(state.seed, ref)));
+/** Students on campus for this many to want the courts at the busiest hour. */
+function wanting(players: number): number {
+  return Math.round(players / (PLAY_SHARE * campusPlay(campus(1000)).rooms.basketball.share));
+}
 
 describe('how many a recreation building holds', () => {
   it('fits a game or two on a court, more on the track and in the pool, and most in the gym', () => {
@@ -69,159 +78,209 @@ describe('how many a recreation building holds', () => {
     expect(playUse(state, first(state, 'dining'))).toBeNull();
   });
 
-  it('takes its demand from the students around it: a share of them at the busiest hour', () => {
-    const state = withCourt(campus(200));
-    const use = playUse(state, first(state, 'courts'))!;
-    // Half the campus's lots are in the court's reach, and it is the only place to play.
-    expect(use.demand).toBeCloseTo(200 * 0.5 * PLAY_SHARE, 9);
-    expect(use.playing).toBe(5);
-    expect(use.waiting).toBe(0);
-    expect(use.lift).toBe(1);
-    // Twice the students, twice the demand.
-    expect(playUse(withCourt(campus(400)), first(state, 'courts'))!.demand).toBeCloseTo(400 * 0.5 * PLAY_SHARE, 9);
-    // Nobody enrolled, nobody playing.
-    expect(playUse(withCourt(campus(0)), first(state, 'courts'))!.demand).toBe(0);
+  it('is for one thing students do: every place to play has its pastime', () => {
+    for (const type of Object.keys(PLACED) as Array<keyof typeof PLACED>) {
+      if (PLACED[type].family === 'recreation') expect(PASTIME_OF[type], type).toBeDefined();
+    }
+    expect(PASTIME_OF.courts).toBe('basketball');
+    expect(PASTIME_OF.soccer).toBe('field');
   });
 });
 
-describe('when more want to play than fit', () => {
-  it('lets everyone play, with the whole lift, while demand is under what it holds', () => {
-    const state = withCourt(campus(wanting(8)));
-    const use = playUse(state, first(state, 'courts'))!;
-    expect(use.demand).toBeCloseTo(8, 9);
-    expect(use.waiting).toBe(0);
-    expect(use.lift).toBe(1);
-    expect(waitMinutes(use)).toBe(0);
-    expect(recreationAt(state, 10, 13)).toBeCloseTo(PLACED.courts.strength, 9);
-    expect(crowdedNear(state, 10, 13)).toBeNull();
+describe('what students do for fun', () => {
+  const state = campus(2000);
+  const refs = sampleStudents(state).slice(0, 2000);
+
+  it('is their own, from who they are, and the same every time', () => {
+    for (const ref of refs.slice(0, 50)) expect(habits(state, ref)).toEqual(habits(state, ref));
+    // The same student a year on does the same things.
+    const later = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 3 * DAY).state;
+    for (const ref of refs.slice(0, 50)) expect(habitsOf(later.seed, ref, natureOf(later.seed, ref, movedAway(later.seed, ref)))).toEqual(habits(state, ref));
   });
 
-  it('makes the rest wait, and takes a little off the lift, never below its floor', () => {
-    // Twelve want the court and it holds eight.
-    const busy = withCourt(campus(wanting(12)));
+  it('is at the real shares: most work out, some swim or play, a third do nothing at the rec at all', () => {
+    const share = (test: (one: ReturnType<typeof habits>) => boolean): number => refs.filter((ref) => test(habits(state, ref))).length / refs.length;
+    expect(share((one) => one.activities.includes('workout'))).toBeGreaterThan(0.36);
+    expect(share((one) => one.activities.includes('workout'))).toBeLessThan(0.54);
+    expect(share((one) => one.activities.includes('swim'))).toBeGreaterThan(0.08);
+    expect(share((one) => one.activities.includes('swim'))).toBeLessThan(0.22);
+    expect(share((one) => one.activities.includes('tennis'))).toBeLessThan(0.1);
+    const any = share((one) => one.activities.length > 0);
+    expect(any).toBeGreaterThan(0.55);
+    expect(any).toBeLessThan(0.78);
+  });
+});
+
+describe('who it lifts', () => {
+  it('lifts those who play basketball, wherever they live, and nobody else', () => {
+    const state = withCourt(campus(200));
+    let players = 0;
+    for (const ref of sampleStudents(state).slice(0, 300)) {
+      const own = habits(state, ref);
+      const play = playOf(state, ref, own);
+      if (own.activities.length === 0) {
+        // Doing nothing for fun, they are neither helped nor hurt: no recreation part at all.
+        expect(play.level).toBeNull();
+        const card = studentCard(state, ref)!;
+        expect(card.uses.got).toEqual([]);
+        continue;
+      }
+      // What they can do is basketball, and only for those who play it.
+      expect(play.got).toEqual(own.activities.filter((one) => one === 'basketball'));
+      expect(play.missing).toEqual(own.activities.filter((one) => one !== 'basketball'));
+      // Its own lift: an outdoor court's 0.4, to those who play basketball, and nothing for the rest of what they do.
+      expect(play.level).toBeCloseTo(play.got.length > 0 ? PLACED.courts.strength : 0, 9);
+      if (play.got.length > 0) players += 1;
+    }
+    expect(players).toBeGreaterThan(5);
+  });
+
+  it('gives a student the same Food & fun in a dorm beside it as in a lecture hall across campus', () => {
+    const state = withCourt(campus(200));
+    const who = { recreation: 0.5, dining: 1 };
+    const life = (cell: number) => approvalAt(state, cell, undefined, who).causes.find((cause) => cause.id === 'life')!;
+    expect(life(13 * state.map.width + 10)).toEqual(life(18 * state.map.width + 20));
+    // No recreation part for one who does nothing for fun: their Food & fun is their food.
+    const none = approvalAt(state, 13 * state.map.width + 10, undefined, { recreation: null, dining: 1 });
+    expect(partLevel(none.causes, 'recreation')).toBeUndefined();
+  });
+
+  it('pays to build what students use: a pool anywhere lifts every swimmer, and a second court of the same kind adds nothing while there is room', () => {
+    const court = withCourt(campus(200));
+    const pool = act(court, { type: 'place', building: 'pool', x: 3, y: 28 });
+    expect(campusPlay(pool).rooms.swim.has).toBe(true);
+    expect(campusPlay(pool).level).toBeGreaterThan(campusPlay(court).level);
+    expect(campusHappiness(pool).score).toBeGreaterThan(campusHappiness(court).score);
+    const swimmer = sampleStudents(court).find((ref) => habits(court, ref).activities.includes('swim'))!;
+    expect(playOf(court, swimmer, habits(court, swimmer)).missing).toContain('swim');
+    expect(playOf(pool, swimmer, habits(pool, swimmer)).got).toContain('swim');
+    const two = act(court, { type: 'place', building: 'courts', x: 3, y: 28 });
+    expect(campusPlay(two).level).toBeCloseTo(campusPlay(court).level, 9);
+  });
+});
+
+describe('when more want to play than the campus holds', () => {
+  it('lets everyone play while there is room', () => {
+    const state = withCourt(campus(wanting(7)));
+    const use = playUse(state, first(state, 'courts'))!;
+    expect(use.waiting).toBe(0);
+    expect(use.served).toBe(1);
+    expect(waitMinutes(use)).toBe(0);
+  });
+
+  it('turns the rest away when every place of its kind is full, and they miss it', () => {
+    const busy = withCourt(campus(wanting(16)));
+    const room = campusPlay(busy).rooms.basketball;
+    expect(room.demand).toBeGreaterThan(14);
+    expect(room.served).toBeCloseTo(8 / room.demand, 9);
     const use = playUse(busy, first(busy, 'courts'))!;
     expect(use.playing).toBe(8);
-    expect(use.waiting).toBe(4);
-    expect(use.ratio).toBeCloseTo(1.5, 9);
-    expect(use.lift).toBeCloseTo(1 - (1 - CROWD_LIFT_FLOOR) / 2, 9);
-    expect(waitMinutes(use)).toBe(10);
-    expect(recreationAt(busy, 10, 13)).toBeCloseTo(PLACED.courts.strength * use.lift, 9);
-    // Twice what it holds is as bad as it gets. Ten times is no worse.
-    const full = playUse(withCourt(campus(wanting(16))), first(busy, 'courts'))!;
-    const swamped = playUse(withCourt(campus(3000)), first(busy, 'courts'))!;
-    expect(full.lift).toBeCloseTo(CROWD_LIFT_FLOOR, 9);
-    expect(swamped.lift).toBe(CROWD_LIFT_FLOOR);
-    expect(swamped.waiting).toBe(Math.round(3000 * 0.5 * PLAY_SHARE) - 8);
-    expect(waitMinutes(swamped)).toBe(20);
-    expect(crowdLift(CROWD_WORST_AT)).toBeCloseTo(CROWD_LIFT_FLOOR, 9);
-    for (const ratio of [0, 0.5, 1, 1.2, 1.7, 2, 5, 50]) {
-      expect(crowdLift(ratio)).toBeGreaterThanOrEqual(CROWD_LIFT_FLOOR);
-      expect(crowdLift(ratio)).toBeLessThanOrEqual(1);
+    expect(use.waiting).toBe(Math.round(room.demand) - 8);
+    expect(waitMinutes(use)).toBeGreaterThan(0);
+    expect(waitMinutes({ waiting: 1, ratio: CROWD_WORST_AT })).toBe(20);
+    // About half of those who play basketball are turned away, and miss it; the rest play.
+    let full = 0;
+    let got = 0;
+    for (const ref of sampleStudents(busy).slice(0, 800)) {
+      const play = playOf(busy, ref, habits(busy, ref));
+      if (play.full.includes('basketball')) full += 1;
+      if (play.got.includes('basketball')) got += 1;
     }
+    expect(full / (full + got)).toBeGreaterThan(1 - room.served - 0.15);
+    expect(full / (full + got)).toBeLessThan(1 - room.served + 0.15);
   });
 
-  it('costs Happiness only a little, and touches nothing else', () => {
-    const quiet = withCourt(campus(wanting(8)));
-    const swamped = withCourt(campus(3000));
-    // The same campus with the same students, once with a court that could hold them all.
-    const roomy = structuredClone(swamped);
-    roomy.map.care.play = { [first(roomy, 'courts').id]: 0 };
-    const cell = 13 * swamped.map.width + 10;
-    const lost = approvalAt(roomy, cell).score - approvalAt(swamped, cell).score;
-    expect(lost).toBeGreaterThan(0);
-    // Things to do is half of one of four causes, and the court is 0.4 of that: 30% of it is 1.5 points.
-    expect(lost).toBeLessThan(2);
-    expect(partLevel(approvalAt(swamped, cell).causes, 'recreation')).toBeCloseTo(PLACED.courts.strength * CROWD_LIFT_FLOOR, 9);
-    expect(partLevel(approvalAt(quiet, cell).causes, 'recreation')).toBeCloseTo(PLACED.courts.strength, 9);
-    // Money, room and growth do not ask about the line.
-    const before = advance(swamped, swamped.clock.lastSimulatedAt, swamped.clock.lastSimulatedAt + HOUR).state;
-    const after = advance(roomy, roomy.clock.lastSimulatedAt, roomy.clock.lastSimulatedAt + HOUR).state;
-    expect(before.money).toEqual(after.money);
-    expect(before.cohorts).toEqual(after.cohorts);
-    expect(before.map.buildings).toEqual(after.map.buildings);
-  });
-
-  it('clears the line when a second court is built beside the first, each with its own game', () => {
+  it('lets them in again when a second court goes up anywhere on the campus, even far from everyone', () => {
     const one = withCourt(campus(wanting(12)));
-    expect(playUse(one, first(one, 'courts'))!.waiting).toBe(4);
-    const two = act(one, { type: 'place', building: 'courts', x: 11, y: 15 });
-    const courts = all(two, 'courts');
-    expect(courts.length).toBe(2);
-    for (const court of courts) {
-      const use = playUse(two, court)!;
-      expect(use.demand).toBeCloseTo(6, 9);
-      expect(use.playing).toBe(6);
-      expect(use.waiting).toBe(0);
-      expect(use.lift).toBe(1);
-    }
-    // The lift at the dorm is whole again, and there are now two of them.
-    expect(recreationAt(two, 10, 13)).toBeCloseTo(2 * PLACED.courts.strength, 9);
+    expect(campusPlay(one).rooms.basketball.served).toBeLessThan(1);
+    const two = act(one, { type: 'place', building: 'courts', x: 3, y: 28 });
+    expect(campusPlay(two).rooms.basketball.served).toBe(1);
+    for (const court of all(two, 'courts')) expect(playUse(two, court)!.waiting).toBe(0);
+    expect(campusPlay(two).level).toBeGreaterThan(campusPlay(one).level);
     // Demand is shared, never made: the two together are asked for what the one was.
-    expect(courts.reduce((sum, court) => sum + playUse(two, court)!.demand, 0)).toBeCloseTo(playUse(one, first(one, 'courts'))!.demand, 9);
+    expect(all(two, 'courts').reduce((sum, court) => sum + playUse(two, court)!.demand, 0)).toBeCloseTo(playUse(one, first(one, 'courts'))!.demand, 9);
   });
 
-  it('shares by size: a gym beside a court takes most of the crowd', () => {
-    let state = withCourt(campus(wanting(48)));
-    expect(playUse(state, first(state, 'courts'))!.waiting).toBe(40);
-    // A gym whose eight cells reach the same three dorms and no lecture hall.
-    state = act(state, { type: 'place', building: 'gym', x: 5, y: 13 });
-    const court = playUse(state, first(state, 'courts'))!;
-    const gym = playUse(state, first(state, 'gym'))!;
-    // 48 want to play. The court holds 8 of the 48 places and the gym 40.
-    expect(court.demand).toBeCloseTo(8, 9);
-    expect(gym.demand).toBeCloseTo(40, 9);
-    expect(court.waiting).toBe(0);
-    expect(gym.waiting).toBe(0);
-    // A court out of everyone's reach shares nothing and has nobody.
-    state = act(state, { type: 'place', building: 'courts', x: 3, y: 28 });
+  it('shares a kind out by size and nearness: the court beside the dorms has more who come first than one in the far corner', () => {
+    const state = act(withCourt(campus(wanting(4))), { type: 'place', building: 'courts', x: 3, y: 28 });
+    const near = first(state, 'courts');
     const far = all(state, 'courts').find((placed) => placed.y === 28)!;
-    expect(playUse(state, far)!.demand).toBe(0);
-    expect(playUse(state, first(state, 'gym'))!.demand).toBeCloseTo(40, 9);
+    expect(campusPlay(state).firsts.get(far.id)!).toBeGreaterThan(0);
+    expect(campusPlay(state).firsts.get(far.id)!).toBeLessThan(campusPlay(state).firsts.get(near.id)!);
+  });
+
+  it('sends a student most often to the nearest, on from a full one to one with room, and has them wait where they came first when all are full', () => {
+    const state = act(withCourt(campus(wanting(14))), { type: 'place', building: 'courts', x: 3, y: 28 });
+    const near = first(state, 'courts');
+    const far = all(state, 'courts').find((placed) => placed.y === 28)!;
+    expect(campusPlay(state).firsts.get(near.id)!).toBeGreaterThan(8);
+    const picks = (one: GameState): number[] => Array.from({ length: 200 }, (_, i) => playPlaceFor(one, 10, 13, (i + 0.5) / 200, 'basketball')!.id);
+    const roomy = picks(state);
+    const wentOn = roomy.filter((id) => id === far.id).length;
+    expect(wentOn).toBeGreaterThan(0);
+    expect(roomy.filter((id) => id === near.id).length).toBeGreaterThan(wentOn);
+    const swamped = act(withCourt(campus(3000)), { type: 'place', building: 'courts', x: 3, y: 28 });
+    expect(picks(swamped).filter((id) => id === far.id).length).toBeLessThan(wentOn);
+    // Nobody goes to a place for a pastime it is not for.
+    expect(playPlaceFor(state, 10, 13, 0.5, 'swim')).toBeNull();
+  });
+
+  it('spills what one place cannot take to those with room, and waits where it came first only when every one is full', () => {
+    expect(spillOver([12, 0], [8, 8])).toEqual([8, 4]);
+    expect(spillOver([6, 2], [8, 8])).toEqual([6, 2]);
+    const over = spillOver([18, 2], [8, 8]);
+    expect(over[0]).toBeCloseTo(12, 9);
+    expect(over[1]).toBeCloseTo(8, 9);
   });
 });
 
 describe('what the player is told', () => {
-  it('says on the building how full it is at peak, who waits, and when to build another', () => {
-    const line = (students: number): string => {
-      const state = withCourt(campus(students));
+  it('says on the building how full it is at peak, who is turned away, and that another of its kind lets them in', () => {
+    const line = (players: number): string => {
+      const state = withCourt(campus(wanting(players)));
       return playLine(playUse(state, first(state, 'courts'))!);
     };
-    expect(line(0)).toBe('Nobody near enough to use it yet. It holds 8.');
-    expect(line(wanting(3))).toBe('Room to spare: 3 of 8 playing at peak.');
-    expect(line(wanting(6))).toBe('Busy: 6 of 8 playing at peak.');
-    expect(line(wanting(8))).toBe('Full at peak, and nobody waiting.');
-    expect(line(wanting(9))).toBe('Full, 1 waiting at peak.');
-    expect(line(wanting(16))).toBe('Full, 8 waiting at peak. Build another nearby to share the crowd.');
-    // The card carries it.
+    expect(playLine(playUse(withCourt(campus(0)), first(withCourt(campus(0)), 'courts'))!)).toBe('Nobody playing here yet. It holds 8.');
+    expect(line(3)).toMatch(/^Room to spare: 3 of 8 playing at peak\.$/);
+    expect(line(16)).toMatch(/^Full, \d+ turned away at peak\. Every place of its kind is full: another anywhere on campus lets them in\.$/);
     const state = withCourt(campus(wanting(16)));
-    expect(placedSummary(state, first(state, 'courts'))).toMatch(/Full, 8 waiting at peak\. Build another nearby to share the crowd\./);
+    const summary = placedSummary(state, first(state, 'courts'));
+    expect(summary).toMatch(/^Raises happiness for students who use it\. Full, \d+ turned away at peak\./);
+    expect(summary.split('. ').slice(0, 2).join('. ')).not.toMatch(/within|cells/);
   });
 
-  it('has about a third of the students near a crowded court say they waited, and nobody when there is room', () => {
-    const state = withCourt(campus(3000));
-    const court = first(state, 'courts');
-    const cards = sampleStudents(state).slice(0, 600).map((ref) => studentCard(state, ref)!);
-    const waited = cards.filter((card) => /Waited|line at/.test(card.reason?.thought ?? ''));
-    // Only those who live in the dorms beside it: a commuter's lecture hall is out of the court's reach.
-    const residents = cards.filter((card) => card.residence === 'dorm');
-    expect(residents.length).toBeGreaterThan(100);
-    expect(waited.length).toBeGreaterThan(residents.length * 0.2);
-    expect(waited.length).toBeLessThan(residents.length * 0.5);
-    for (const card of waited) {
-      expect(card.residence).toBe('dorm');
-      expect(card.reason!.thought).toMatch(/^(Waited 20 minutes for a court\. Another one nearby would clear the line\.|The line at a court was 20 minutes long today\. It needs a second one nearby\.)$/);
-      expect(card.reason).toMatchObject({ cause: 'life', part: 'recreation', positive: false });
-      // Tapping the thought goes to the court itself.
-      expect(card.reason!.cell).toBe(court.y * state.map.width + court.x);
+  it('has a student say what they miss: a kind the campus lacks, or a full place, and names it', () => {
+    const state = withCourt(campus(wanting(16)));
+    const said: string[] = [];
+    for (const ref of sampleStudents(state).slice(0, 800)) {
+      const card = studentCard(state, ref)!;
+      if (card.reason?.part !== 'recreation' || card.reason.positive) continue;
+      said.push(card.reason.thought);
+      // Never about a pastime they do not have.
+      if (/swim/.test(card.reason.thought)) expect([...card.uses.missing, ...card.uses.full]).toContain('swim');
     }
-    // With room for everyone nobody mentions a line.
-    const calm = withCourt(campus(100));
-    for (const ref of sampleStudents(calm).slice(0, 100)) expect(studentCard(calm, ref)!.reason?.thought ?? '').not.toMatch(/Waited|line at/);
+    expect(said.some((line) => /full|Could not get into/.test(line))).toBe(true);
+    expect(said.some((line) => /if the campus had|nowhere to do it/.test(line))).toBe(true);
+    // A student who does nothing for fun never names it.
+    for (const ref of sampleStudents(state).slice(0, 800)) {
+      const card = studentCard(state, ref)!;
+      if (card.uses.got.length + card.uses.full.length + card.uses.missing.length === 0) expect(card.reason?.part).not.toBe('recreation');
+    }
+  });
+
+  it('says on a card, briefly, what the student uses', () => {
+    expect(usesWords({ got: ['workout', 'basketball'], full: [], missing: [], union: false, food: 'taco', fed: true })).toBe('The gym and basketball · eats at the taco stand');
+    expect(usesWords({ got: [], full: [], missing: ['swim'], union: false, food: 'dining', fed: true })).toBe('Nothing for fun · eats at the dining hall · wants a pool');
+    expect(usesWords({ got: ['workout'], full: ['swim'], missing: [], union: true, food: null, fed: false })).toBe('The gym, the pool and the Union · nowhere to eat · the pool was full');
+    const state = withCourt(campus(200));
+    const card = studentCard(state, sampleStudents(state)[0]!)!;
+    expect(usesWords(card.uses).length).toBeLessThan(90);
   });
 
   it('tells a player with an older save, once', () => {
     expect(upgradeNotes(9).some((note) => /hold so many students at once/.test(note))).toBe(true);
-    expect(upgradeNotes(10).some((note) => /hold so many students at once/.test(note))).toBe(false);
+    expect(upgradeNotes(41).some((note) => /students who use them, wherever they live/.test(note))).toBe(true);
+    expect(upgradeNotes(42)).toEqual([]);
   });
 });
 
@@ -243,16 +302,16 @@ describe('the numbers behind it', () => {
   });
 
   it('never ask what time it is', () => {
-    // The same campus at four hours of the day and night: the simulation's own clock moves, the answer does not.
     const state = withCourt(campus(wanting(12)));
     const use = playUse(state, first(state, 'courts'));
+    const level = campusPlay(state).level;
     for (const hours of [0, 6, 13, 21]) {
       const later = structuredClone(state);
       later.clock.tick += hours * 60;
       later.clock.lastSimulatedAt += hours * HOUR;
       later.clock.nextTickAt += hours * HOUR;
       expect(playUse(later, first(later, 'courts'))).toEqual(use);
-      expect(recreationAt(later, 10, 13)).toBe(recreationAt(state, 10, 13));
+      expect(campusPlay(later).level).toBe(level);
     }
   });
 });
