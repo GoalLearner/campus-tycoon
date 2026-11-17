@@ -36,12 +36,12 @@ export const DEPARTMENTS: ReadonlyArray<{ code: string; courses: readonly string
   { code: 'ENGL', courses: ['Introduction to Literature', 'British Literature', 'American Literature', 'Shakespeare', 'Creative Writing', 'Literary Theory', 'Senior Seminar in English'] },
   { code: 'SPAN', courses: ['Elementary Spanish I', 'Elementary Spanish II', 'Intermediate Spanish', 'Spanish Conversation', 'Spanish Literature', 'Spanish Linguistics', 'Senior Seminar in Spanish'] },
   { code: 'PHIL', courses: ['Introduction to Philosophy', 'Logic', 'Ethics', 'Ancient Philosophy', 'Philosophy of Mind', 'Political Philosophy', 'Senior Seminar in Philosophy'] },
-  { code: 'KIN', courses: ['Introduction to Kinesiology', 'Anatomy and Movement', 'Exercise Physiology', 'Biomechanics', 'Motor Learning', 'Strength and Conditioning', 'Senior Seminar in Kinesiology'] },
+  { code: 'KIN', courses: ['Introduction to Kinesiology', 'Anatomy and Movement', 'Physiology of Movement', 'Biomechanics', 'Motor Learning', 'Strength and Conditioning', 'Senior Seminar in Kinesiology'] },
   { code: 'CRJ', courses: ['Introduction to Criminal Justice', 'Policing', 'Courts and Society', 'Corrections', 'Criminology', 'Juvenile Justice', 'Senior Seminar in Criminal Justice'] },
   { code: 'SW', courses: ['Introduction to Social Work', 'Human Behavior and the Social Environment', 'Social Welfare Policy', 'Practice with Individuals', 'Practice with Groups', 'Field Practicum', 'Social Work Field Seminar'] },
   { code: 'ENVS', courses: ['Introduction to Environmental Science', 'Earth Systems', 'Environmental Chemistry', 'Conservation Biology', 'Climate and Society', 'Mapping and GIS', 'Senior Seminar in Environmental Science'] },
   { code: 'ARCH', courses: ['Architectural Design I', 'Architectural Design II', 'History of Architecture', 'Building Technology', 'Design Studio III', 'Urban Design', 'Thesis Studio'] },
-  { code: 'LIBS', courses: ['Introduction to Liberal Studies', 'Ideas That Shaped the World', 'Interdisciplinary Methods', 'Science and Society', 'Arts and Culture', 'Topics in Liberal Studies', 'Liberal Studies Capstone'] },
+  { code: 'LIBS', courses: ['Introduction to Liberal Studies', 'Ideas That Shaped the World', 'Methods Across the Fields', 'Science and Society', 'Arts and Culture', 'Topics in Liberal Studies', 'Liberal Studies Capstone'] },
 ];
 
 /** The course numbers of the seven, in the chain's order: each needs the one before it at its level, the capstone the 300s. */
@@ -54,13 +54,13 @@ export const TOPICS = [
 /** The share of first-years who take College Writing in their first fall; the rest take it in the spring. */
 export const WRITING_FIRST_FALL = 0.6;
 
-/** Departments whose introductions are four credits, with a weekly lab (the lab sciences and a language's first year). */
+/** Departments whose introductions are four credits, with a weekly lab (the lab sciences, and Spanish in its first year). */
 export const LAB_DEPARTMENTS: ReadonlySet<string> = new Set(['BIOL', 'CHEM', 'PHYS', 'ENVS', 'SPAN']);
 /** Departments taught in studios: every section small. */
 export const STUDIO_DEPARTMENTS: ReadonlySet<string> = new Set(['ART', 'ARCH', 'MUS', 'FILM']);
 
 /** Most students in each, by how they are taught: an introduction is a big lecture in a big department. */
-export const SECTION_CAP = { introBig: 200, introMid: 90, introSmall: 45, level200: 40, level300: 26, topics: 18, capstone: 15, studio: 16, language: 22 } as const;
+export const SECTION_CAP = { introBig: 200, introMid: 90, introSmall: 45, level200: 40, level300: 26, topics: 18, capstone: 15, studio: 16, spanish: 22 } as const;
 /** A department is big at this share of degrees (percent) and up, middling from the second. */
 export const DEPT_SIZE = { big: 3, mid: 1 } as const;
 

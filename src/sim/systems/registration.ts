@@ -46,11 +46,11 @@ function buildCatalog(): Course[] {
       const intro = k < 2;
       const lab = intro && LAB_DEPARTMENTS.has(dept.code);
       const studio = STUDIO_DEPARTMENTS.has(dept.code);
-      const language = dept.code === 'SPAN';
+      const spanish = dept.code === 'SPAN';
       const cap = studio
         ? SECTION_CAP.studio
-        : language && k < 4
-          ? SECTION_CAP.language
+        : spanish && k < 4
+          ? SECTION_CAP.spanish
           : k === 6
             ? SECTION_CAP.capstone
             : intro
