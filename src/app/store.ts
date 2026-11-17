@@ -397,6 +397,8 @@ export class Store {
     if (this.slot !== 'real') return 'A save file is loaded into your own campus: go back to it first.';
     const result = parseSave(text);
     if (!result.ok) return result.reason;
+    // A sandbox's save never becomes the player's own campus (DESIGN.md 79).
+    if (result.state.sandbox) return 'That save is a sandbox: its money is unlimited, so it cannot become your own campus.';
     this.current = result.state;
     this.upgradeNotes = result.migratedFrom !== null ? upgradeNotes(result.migratedFrom) : [];
     clock.follow(result.state.clock.lastSimulatedAt);

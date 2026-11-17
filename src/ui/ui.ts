@@ -444,7 +444,7 @@ export function mountUi(root: HTMLElement): void {
   // Shown while the model campus is being visited: where the player is, and the way home.
   const visitRow = el('div', 'update-row visit-row');
   const visitText = el('span', '', '');
-  const visitButton = button('Back', 'update-button', () => void store.leaveVisit());
+  const visitButton = button('Back', 'update-button', () => void (store.inSandbox ? store.switchTo('real') : store.leaveVisit()));
   visitRow.append(visitText, visitButton);
   hud.append(top, calendar, today.node, chips, bars, status, upcoming, updateRow, visitRow);
 
@@ -843,6 +843,23 @@ export function mountUi(root: HTMLElement): void {
         if (e.key === 'Enter') start();
       });
       card.append(input, pick('When does your day usually start?', wake), pick('School colour', colour), button('Open the gates', 'primary', start));
+      // Or a sandbox (DESIGN.md 79): a campus to try things on, kept apart from any of the player's own.
+      card.append(
+        button('Start a sandbox instead', 'wide', () => {
+          const name = input.value.trim() || DEFAULT_SCHOOL_NAME;
+          close();
+          void store.foundSandbox(name, Number(wake.value), colour.value);
+        }),
+        el('p', 'fine', 'A sandbox has money without end, no letters from the trustees and every Meddle tool free. It is kept apart from any campus of your own.'),
+      );
+      if (store.hasSandbox && !store.inSandbox) {
+        card.append(
+          button('Open your sandbox', 'wide', () => {
+            close();
+            void store.switchTo('sandbox');
+          }),
+        );
+      }
       if (store.loadProblem) card.append(el('p', 'fine', store.loadProblem));
     }, false);
   }
@@ -907,6 +924,42 @@ export function mountUi(root: HTMLElement): void {
         );
       }
 
+      // The sandbox (DESIGN.md 79): into it from the player's own campus, and back.
+      if (store.visiting === null && store.inSandbox) {
+        const home = store.realName;
+        if (home) {
+          card.append(
+            button(`Back to ${home}`, 'primary', () => {
+              close();
+              void store.switchTo('real');
+            }),
+          );
+        }
+        card.append(el('p', 'fine', 'This is your sandbox: money without end, no letters from the trustees, every Meddle tool free. Nothing done here touches your own campus.'));
+      } else if (store.visiting === null && !store.isEphemeral) {
+        if (store.hasSandbox) {
+          card.append(
+            button('Open the sandbox', 'wide', () => {
+              close();
+              void store.switchTo('sandbox');
+            }),
+          );
+        }
+        const copy = button('Copy this campus into a sandbox', 'wide', () => {
+          if (store.hasSandbox && copy.dataset.armed !== 'yes') {
+            copy.dataset.armed = 'yes';
+            copy.textContent = 'Tap again to replace the sandbox';
+            return;
+          }
+          close();
+          void store.copyToSandbox().then((problem) => {
+            if (problem) pushToast(problem, 'error');
+            else pushToast('This is a copy of your campus to try things on. Your own is untouched.');
+          });
+        });
+        card.append(copy, el('p', 'fine', 'A copy to try things on: money without end, no letters from the trustees, every Meddle tool free. Your campus stays exactly as it is.'));
+      }
+
       // Photo mode (DESIGN.md 42.5): the bars go away, and the campus can be shared as a picture.
       card.append(
         button('Photo', 'wide', () => {
@@ -914,7 +967,7 @@ export function mountUi(root: HTMLElement): void {
           session.setPhoto(true);
         }),
       );
-      if (store.visiting === null) card.append(
+      if (store.visiting === null && !store.inSandbox) card.append(
         button('Export save', 'wide', () => {
           void exportSave(store.exportText(), store.state.school.name).then((how) => {
             if (how === 'downloaded') pushToast('Save file downloaded.');
@@ -936,7 +989,7 @@ export function mountUi(root: HTMLElement): void {
           });
         }),
       );
-      if (store.visiting === null && account !== null) {
+      if (store.visiting === null && !store.inSandbox && account !== null) {
         const page = account;
         card.append(
           button('Account', 'wide', () => {
@@ -1061,15 +1114,17 @@ export function mountUi(root: HTMLElement): void {
       });
       card.append(pick('School colour', colour));
 
-      const startOver = button('Start a new university', 'wide danger', () => {
+      const sandbox = store.inSandbox;
+      const startOver = button(sandbox ? 'Delete the sandbox' : 'Start a new university', 'wide danger', () => {
         if (startOver.dataset.armed !== 'yes') {
           startOver.dataset.armed = 'yes';
-          startOver.textContent = 'Tap again to erase this one';
+          startOver.textContent = sandbox ? 'Tap again to delete the sandbox' : 'Tap again to erase this one';
           return;
         }
         void store.deleteGame().then(() => {
           close();
-          openSetup();
+          // Deleting the sandbox goes home to the player's own campus, when there is one.
+          if (!store.hasGame) openSetup();
         });
       });
       if (store.visiting === null) card.append(startOver, note);
@@ -1114,7 +1169,8 @@ export function mountUi(root: HTMLElement): void {
   // --------------------------------------------------------------- render --
 
   function renderHud(state: GameState): void {
-    setText(cash, dollarsTop(state.money.cash));
+    // A sandbox's money never runs out (DESIGN.md 79).
+    setText(cash, state.sandbox ? 'Unlimited' : dollarsTop(state.money.cash));
     const perHour = netPerRealHour(state);
     setText(rate, `${perHour >= 0 ? '+' : '-'}${dollarsShort(Math.abs(perHour))}/hr`);
     rate.className = perHour >= 0 ? 'rate up' : 'rate down';
@@ -2714,8 +2770,12 @@ export function mountUi(root: HTMLElement): void {
     renderTools();
 
     updateRow.classList.toggle('show', updates.ready);
-    visitRow.classList.toggle('show', store.visiting !== null);
+    // The Sandbox badge (DESIGN.md 79): always there in the sandbox, with the way home when there is one.
+    visitRow.classList.toggle('show', store.visiting !== null || store.inSandbox);
+    visitRow.classList.toggle('sandbox-row', store.inSandbox);
     if (store.visiting !== null) setText(visitText, 'Visiting the model campus. Nothing here is saved.');
+    else if (store.inSandbox) setText(visitText, store.realName ? `Sandbox. ${store.realName} is untouched.` : 'Sandbox');
+    visitButton.classList.toggle('hidden', store.inSandbox && !store.realName);
     // Toasts sit just under the HUD, however tall it is.
     const hudBottom = `${Math.round(hud.getBoundingClientRect().bottom)}px`;
     if (root.style.getPropertyValue('--hud-bottom') !== hudBottom) root.style.setProperty('--hud-bottom', hudBottom);
