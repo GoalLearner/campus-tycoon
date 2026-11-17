@@ -12,7 +12,7 @@ import { CATALOG, campusGrades, gpaWords, campusRegistration, COURSE_BY_CODE, co
 import { classPlaces, semesterOf, type StudentRef } from '../src/sim/systems/students';
 import { dateAt } from '../src/sim/calendar';
 import { DAY, T0 } from './helpers';
-import { gpaAt, normalCdf, usualTerm } from '../src/sim/systems/grades';
+import { gpaAt, gradesOf, normalCdf, termAt, usualTerm } from '../src/sim/systems/grades';
 
 const MODEL = newGame({ seed: 77, name: 'Test University', now: T0, campus: 'model' });
 
@@ -131,6 +131,28 @@ describe('grades by class (R4b, DESIGN.md 81)', () => {
     expect(top).toBeLessThan(0.24);
     expect(bottom).toBeGreaterThan(0.04);
     expect(bottom).toBeLessThan(0.17);
+  });
+
+  it("follows each student's own average: every term its own luck, the ones before the campus began too", () => {
+    const ref = SAMPLE[0]!;
+    const inputs = { archetype: 'average' as const, classYear: 1, teaching: 0.75, tutoring: 0 };
+    const before = [-3, -2, -1, 0].map((g) => termAt(77, ref, inputs, g));
+    expect(new Set(before).size).toBe(4);
+    expect(termAt(77, ref, inputs, 5)).toBe(gradesOf(77, ref, inputs, 5).term);
+    // A transcript of three terms or more sits on R1's average for the student, give or take a term's luck.
+    const diffs: number[] = [];
+    for (const { ref: one, history } of HISTORIES) {
+      if (history.gpa === null || history.semesters.length < 4) continue;
+      const card = studentCard(MODEL, one);
+      if (card) diffs.push(history.gpa - card.gpa);
+    }
+    const mean = diffs.reduce((sum, d) => sum + d, 0) / diffs.length;
+    const sd = Math.sqrt(diffs.reduce((sum, d) => sum + (d - mean) ** 2, 0) / diffs.length);
+    expect(diffs.length).toBeGreaterThan(100);
+    // The card's average has a study center's and a study partner's lift on it, which a transcript leaves out.
+    expect(mean).toBeGreaterThan(-0.2);
+    expect(mean).toBeLessThan(0.05);
+    expect(sd).toBeLessThan(0.3);
   });
 
   it('gives no credit for an F or a W, and has a course failed taken again before what needs it', () => {
