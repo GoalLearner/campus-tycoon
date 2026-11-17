@@ -3,6 +3,7 @@ import { fitOnMap } from './propSize';
 import { chemistryOf, companionsOf, greetingFor, reactionFor, stopsToTalk, tieOf, topicFor, type Reaction, type TieSeen } from '../app/crowdTies';
 import { effectsSetting, moodRingsSetting, type Weather } from '../app/life';
 import { feelingOf, type Emotion } from '../app/emotion';
+import { standingOf, TRANSCRIPT_BELOW } from '../sim/systems/registration';
 import { LANE_LINE, LANE_LOOK, PARKS, rideMomentOf, WALK_LINE, WHEEL_NAMES, WHEEL_SPEED, wheelOf, type RideMoment, type Wheel } from '../app/wheels';
 import { actorWords, WATCH_REACH, WATCH_REACTIONS, WATCHERS_AT_STEP, watchWords, type MomentKind } from '../app/crowdMoments';
 import { NO_CHAOS, WATCH_RUN, type ChaosCrowd } from '../app/mayhemShow';
@@ -1442,7 +1443,9 @@ export class Walkers {
     if (kept !== undefined) return kept;
     const card = studentCard(state, student);
     const feeling = card ? feelingOf(web, state, student, card, hour) : null;
-    const known: Known | null = card && feeling ? { emotion: feeling.emotion, reasons: feeling.reasons, motion: motionOf(feeling.emotion, feeling.reasons), chapter: card.chapter, classYear: card.classYear, gpa: card.gpa, quirk: card.quirk } : null;
+    // In exams, a student failing is one whose transcript is below 2.0, as their card shows it (R4c, DESIGN.md 82.2).
+    const gpa = card && this.today.exams && card.gpa < TRANSCRIPT_BELOW ? (standingOf(state, student).gpa ?? card.gpa) : (card?.gpa ?? 3);
+    const known: Known | null = card && feeling ? { emotion: feeling.emotion, reasons: feeling.reasons, motion: motionOf(feeling.emotion, feeling.reasons), chapter: card.chapter, classYear: card.classYear, gpa, quirk: card.quirk } : null;
     this.felt.set(key, known);
     return known;
   }

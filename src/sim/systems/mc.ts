@@ -45,7 +45,9 @@ import { hashInts } from '../rng';
 import type { CastMember, FameEntry, GameState, LogEntry, MainCharacter, MainPeople, MainPerson, MemoryEntry, PlanItem, Story } from '../types';
 import { partiesInTown, partiesOn } from './parties';
 import { dayRead, libraryShare } from './season';
-import { classYearOf, sampleStudents, socialLife, studentCard, type StudentRef } from './students';
+import { classYearOf, sampleStudents, semesterOf, socialLife, studentCard, type StudentRef } from './students';
+import { courseHistory } from './registration';
+import { averageOf } from './coursework';
 import { approvalAt } from './happiness';
 
 /**
@@ -491,18 +493,30 @@ function newDay(state: GameState, mc: MainCharacter, log: LogEntry[]): void {
   makePlan(state, mc, log);
 }
 
-/** A semester has closed: its grades, from the card's own grades, how much they studied and the classes they went to. */
-export function mcOnSemester(state: GameState, log?: LogEntry[]): void {
+/**
+ * A semester has closed: its grades. How much they studied, the classes they went to and the story's part (DESIGN.md 58:
+ * a passed midterm, a failed final) move that semester's average on their transcript (R4c, DESIGN.md 82.1), and their
+ * grades are then the transcript's: the semester's letters, and their average over every semester over. `fall` is the
+ * semester that closed: the fall at the spring's intake, the spring at commencement.
+ */
+export function mcOnSemester(state: GameState, log?: LogEntry[], fall = true): void {
   const mc = state.story?.mc;
   if (!mc || mc.term.steps === 0) return;
   const card = studentCard(state, mc.ref);
   if (!card) return;
   const study = mc.term.study / mc.term.steps;
   const attended = mc.term.classes > 0 ? mc.term.attended / mc.term.classes : 1;
-  // The story's part this semester (DESIGN.md 58): a passed midterm, a failed final.
-  const grade = Math.round(clamp(card.gpa + GPA_FROM_STUDY * (study - GPA_STUDY_MIDDLE) + GPA_FROM_CLASSES * (attended - 0.9) + (mc.gpaBonus ?? 0), 1.5, 4) * 100) / 100;
+  const shift = Math.round((GPA_FROM_STUDY * (study - GPA_STUDY_MIDDLE) + GPA_FROM_CLASSES * (attended - 0.9) + (mc.gpaBonus ?? 0)) * 1000) / 1000;
+  const closed = semesterOf(state) - (fall ? 1 : 0);
+  mc.termShifts = [...(mc.termShifts ?? []).filter((one) => one[0] !== closed), [closed, shift] as [number, number]].slice(-16);
+  const history = courseHistory(state, mc.ref, semesterOf(state), false);
+  const plan = history.semesters.find((one) => one.semester === closed);
+  const through = history.semesters.filter((one) => one.semester <= closed).flatMap((one) => one.courses.map((c) => ({ credits: c.course.credits, grade: c.grade })));
+  const average = averageOf(through);
+  const grade = Math.round((plan?.gpa ?? average ?? card.gpa) * 100) / 100;
   mc.gpaBonus = 0;
-  mc.gpa = mc.gpa === null ? grade : Math.round(((mc.gpa * mc.semesters + grade) / (mc.semesters + 1)) * 100) / 100;
+  mc.gpa = average === null ? grade : Math.round(average * 100) / 100;
+  mc.lastTerm = grade;
   mc.semesters += 1;
   mc.term = { study: 0, steps: 0, attended: 0, classes: 0 };
   if (grade >= DEANS_LIST) remember(state, mc, `${mc.name} made the Dean's list with a ${grade.toFixed(2)} this semester.`, true, log);
@@ -539,8 +553,11 @@ export function mcStress(state: GameState, mc: MainCharacter): number {
 export function goalStatus(mc: MainCharacter): Array<{ name: string; status: string }> {
   return mc.goals.map((goal) => {
     switch (goal) {
-      case 'deansList':
-        return { name: GOALS.deansList.name, status: mc.gpa === null ? 'No grades yet' : mc.gpa >= DEANS_LIST ? `On it: ${mc.gpa.toFixed(2)}` : `${mc.gpa.toFixed(2)} so far` };
+      case 'deansList': {
+        // The Dean's list goes by the semester (R4c): their last one's average, from their transcript.
+        const last = mc.lastTerm ?? mc.gpa;
+        return { name: GOALS.deansList.name, status: last === null ? 'No grades yet' : last >= DEANS_LIST ? `On it: ${last.toFixed(2)} last semester` : `${last.toFixed(2)} last semester` };
+      }
       case 'friends': {
         const close = mc.cast.filter((one) => one.role === 'friend' && one.closeness >= CLOSE_FRIEND).length;
         return { name: GOALS.friends.name, status: close > 0 ? `${close} close ${close === 1 ? 'friend' : 'friends'}` : 'Getting to know people' };

@@ -1,4 +1,4 @@
-import { courseHistory, gpaWords } from '../sim/systems/registration';
+import { courseHistory, gpaWords, termOver } from '../sim/systems/registration';
 import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
@@ -502,7 +502,7 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
     // Their grades as their transcript has them (R4b, DESIGN.md 81): the average over the semesters already over, the
     // Dean's list for the last one at 3.5 and up, probation below 2.0; and this week's classes they went to (65.4).
     // Worked out from the seed and the campus's registration, once a semester for a card.
-    const regKey = `${ref.entryYear}:${ref.index}:${state.registration?.records.at(-1)?.semester ?? -1}`;
+    const regKey = `${ref.entryYear}:${ref.index}:${state.registration?.records.at(-1)?.semester ?? -1}:${termOver(state) ? 1 : 0}:${state.story?.mc?.termShifts?.length ?? 0}`;
     if (regKey !== classesKey || !shownHistory) {
       classesKey = regKey;
       shownHistory = courseHistory(state, ref);

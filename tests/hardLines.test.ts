@@ -36,6 +36,11 @@ describe('the hard lines', () => {
     expect(hardLineProblem('called them a try-hard in front of the class')).toBeNull();
   });
 
+  it('keep the word psycho out, and not a major whose name starts with it (R4c, DESIGN.md 82.4)', () => {
+    for (const line of ['called them a psycho', 'a pair of psychos', 'said they were psychotic', 'called them a psychopath']) expect(hardLineProblem(line)?.id, line).toBe('disability');
+    for (const line of ['Psychology', 'PSYC 101 Introduction to Psychology', 'a psychology major', 'psychological']) expect(hardLineProblem(line), line).toBeNull();
+  });
+
   it('hold for every template that says how someone picks on someone, and for the names anyone is called', () => {
     expect(TEMPLATES.length).toBeGreaterThan(25);
     for (const template of TEMPLATES) {

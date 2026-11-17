@@ -29,7 +29,7 @@ export const HARD_LINES: readonly HardLine[] = [
   {
     id: 'disability',
     why: 'disability',
-    pattern: /\b(disab\w*|handicap\w*|wheelchair|blind|deaf|mute|autis\w*|adhd|retard\w*|crippl\w*|lame|dumb|stupid|idiot\w*|moron\w*|mental\w*|crazy|insane|psycho\w*|spaz\w*)\b/i,
+    pattern: /\b(disab\w*|handicap\w*|wheelchair|blind|deaf|mute|autis\w*|adhd|retard\w*|crippl\w*|lame|dumb|stupid|idiot\w*|moron\w*|mental\w*|crazy|insane|psycho(?:s|tic\w*|path\w*)?|spaz\w*)\b/i,
   },
   {
     id: 'body',

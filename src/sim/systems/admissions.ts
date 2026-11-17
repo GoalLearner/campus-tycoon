@@ -469,7 +469,7 @@ export function semesterEnd(state: GameState, log?: LogEntry[], fall = true): vo
   // The semester's Happiness is part of its classes' affinity (DESIGN.md 54.1).
   alumniOnSemester(state, calendarAt(state.clock).year, mood.base);
   // The Main Character's grades for the semester (DESIGN.md 53.2).
-  mcOnSemester(state, log);
+  mcOnSemester(state, log, fall);
   ordersMark(state, 'semesterLeft', left);
   if (!hiresBehindNow(state)) planStaff(state);
   markRatesDirty(state);

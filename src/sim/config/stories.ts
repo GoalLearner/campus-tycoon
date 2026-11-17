@@ -123,6 +123,9 @@ export interface Stage {
 
 /** What must be true for a story to begin. */
 export type StoryNeed =
+  // Their transcript's average below 2.5, or 3.0 and up (R4c, DESIGN.md 82.2); before any is over, their card's.
+  | 'shakyGrades'
+  | 'goodGrades'
   | 'roommate'
   | 'partner'
   | 'crush'

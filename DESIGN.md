@@ -9434,7 +9434,7 @@ An F or a W earns no credit, and the course does not count as a prerequisite: it
 - **Professors are people** (`professorFor`): the same for a course's section every semester, with a title (Professor 30%, Associate Professor 25%, Assistant Professor 25%, Lecturer 20%, a lecturer by first and last name), their department, two office hours a week of an hour and a half, and how they teach ("Holds review sessions before every exam"; the big introductions' "Curves the exams").
 - **Office hours**: 28% never go. The rest go about once or twice a term, those who go often about twice that, and more with a class going badly (below a C+), to that class's professor: a week's chance of a visit of 10%, 30% with a class going badly, doubled for those who go often. A followed student's day fits the visit into the professor's hours round their classes ("Office hours with Prof. Wrenley about NUTR 302").
 - **An adviser** in their major's department, the same each year. 55% have met them about their courses, and 1 in 5 must; those meet them before registration (in October for the spring, in March for the fall), fitted round their classes ("Advising appointment with Quinn Maplebrook, before registration").
-- **Tutoring** at the study center (R1's tutoring, a study center in reach), twice a week after classes, for a class going badly ("Tutoring for MATH 101 at the study center").
+- **Tutoring** at the study center (R1's tutoring, a study center in reach), twice a week after classes, for a class going badly ("Tutoring for MATH 101 at the study center"). Its lift on R1's grades stays out of the transcript, past terms and the game's own alike: whether a student had tutoring in a term is where they lived that term, which the game does not keep (82.6).
 
 ### 81.4 The Honors College
 
@@ -9505,3 +9505,71 @@ Save version 41: nothing to move. Every grade comes from the seed, and a record 
 **Seen in the game**, on the model campus with a dev option (`&schedule=7&scheduleyear=2&days=2`, Leo Otterbrook, a third-year, at Thanksgiving): the card's "3.57 overall · 3.91 last term, Dean's list"; the schedule's "Adviser: Quinn Maplebrook, Nutrition, not met this year · Minor in Kinesiology"; Tuesday and Thursday classes from 9:30 to 10:45 and from 11 to 12:15; each class's syllabus with its midterm marked ("Midterm exam 25% · A"); the course record ("GPA 3.57 · 56 of 120 credits", "Second-year spring · GPA 3.91 · 13 credits"); and a lecturer's page ("Charlie Alderdale", "Lecturer · Nutrition", "Starts every class with a story", office hours on Wednesday from 3 to 4:30 PM and Friday from 3:30 to 5 PM, in Bramstead Hall). At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends, which scrolls sideways as it always has.
 
 **Tested**: `tests/coursework.test.ts` (17): a semester's letters come back to its average and stay on its side of the Dean's list; the big introductory courses curved and graded hardest; the campus's A's, D's, F's and W's, the big introductions' and R1's spread of averages; the spread on a campus taught better; every term its own luck, the ones before the campus began too, and a transcript on the student's own average; no credit for an F or a W, and a course failed taken again before what needs it; minors and Latin honors; the Honors College only where it stands, its sections and its thesis; Tuesday and Thursday at 75 minutes; a card and the campus's sample the same; syllabi weighed to the whole and marked once done; professors and advisers the same every time and inside the tone guide and the hard lines; a followed student's days in order, their classes in their own halls, office hours a few in a hundred on a weekday, coffee short and lunch round noon; the card's GPA row; the campus's grades on the Faculty row; a version 40 save. `tests/registration.test.ts`: a lecturer by name, and prerequisites from courses passed. `tests/capacity.test.ts`: the Faculty row's line. The save tests that count the upgrade notes count one more.
+
+## 82. The realism pass, R4c: one student's grades from their transcript (approved 2026-11-17)
+
+A short follow-up to R4b (81), main's answers of 2026-11-17 to R4b's open points: "Anything the player reads about ONE student follows the transcript: the Main Character's grades, the 'family worried about grades' feeling, and any probation or Dean's list line in stories or the paper. Campus counts stay on R1's number (money and rank are tuned on it)." With it: R1's "psycho" kept to the word itself, the Faculty row's figure steadied if cheap, and the study center's lift in the transcript if cheap and rewriting no past term. Built on the branch `realism-4c`.
+
+### 82.1 The Main Character
+
+When a semester closes (the fall at the spring's intake, the spring at commencement), the Main Character's own part in it (how much they studied, the classes they went to and what their story did, as 53.2 and 58 have it) is kept as that semester's shift (`termShifts`), and their transcript grades that semester with it: their letters move, and so may what they passed. Their grades are then the transcript's: the semester's average ("made the Dean's list with a 3.62 this semester", "had a hard semester: a 1.84"), their average over every semester over (probation below 2.0, the hall of fame's "graduated with a 3.41"), and the Dean's list goal by their last semester ("On it: 3.62 last semester"). The card's GPA row, the schedule and the Main Character's page agree.
+
+### 82.2 One student's lines
+
+- **A family's worry** ("Family worried about grades", 66.6) comes to a student their card shows on probation: their transcript's average below 2.0. The transcript is worked out only for a student whose card's R1 average is under 3.5, the only ones it could be: the two differ by a study center's lift, a study partner's, exam Stress and a few terms' luck, never by a point and a half (`TRANSCRIPT_BELOW`, tested over 1,500 students).
+- **A student failing in exams** (63.7's big moment) is one whose transcript is below 2.0, the same way.
+- **A line about one student's Dean's list** ("{a} called {b} a show-off for making the Dean's list.", 63.11) is said only of a student whose last semester has them on it; otherwise the next line of its kind.
+- **Two stories about grades** (58): "A failing class and the way back" (was "Probation and the way back") comes only to a Main Character whose transcript is below 2.5, and "The Dean's list run" only to one at 3.0 or more. Neither says any longer that they are on probation, off it or on the Dean's list ("the class could pull their average below 2.0", "Passed", "Failed the final", "Aced the finals", "The Dean's list will be close"): the semester's close says that, from the transcript.
+- Each student's standing is worked out once a semester and kept (`standingOf`). The campus's counts (the paper's "Grades are in", students suspended for grades, rank and money) stay R1's.
+
+### 82.3 The Faculty row, not steadied
+
+R4b's line ("Last spring, 41% of grades were A's and 1 in 11 a D, an F or a W (3 in 10 in the hard introductory courses)") reads the 24 students a class year registration samples (80.3). Its hard introductory figure swings from campus to campus: 16 to 36% across ten new model campuses, where a near-census of their first two years (about 1,800 letters each) sits at 28 to 31% on every one. Tried and measured:
+
+| Tried | The figure across ten campuses |
+|---|---|
+| R4b: one semester, the registration sample | 16 to 36% (spread 5.8 points) |
+| The last two semesters | 15 to 34% (6.1) |
+| The sample spread across the class by ability, two semesters | 19 to 35% (4.9) |
+| 96 first- and second-years a class year, two semesters | 23 to 39% (4.9) |
+
+A term's luck moves all of a student's classes together, so the figure has about as many chances to swing as students sampled, not letters. Steadying it to within two points would take about 400 students a class year, five times the sample's work, once a semester; the sim reads the Capacity rows as it runs (the official's letters, Quadline, orders), so that work would fall in catch-up. Not cheap: left as R4b had it, one semester and the registration sample. The long run reads the campus's figures over all its runs.
+
+### 82.4 The hard lines' "psycho"
+
+The disability line's "psycho" and every word beginning with it (R1's major Psychology among them, 65.3) is now the word and its own forms: psycho, psychos, psychotic, psychopath. "Psychology", "psychological" and "PSYC 101 Introduction to Psychology" pass, and the R4b test's exemption for departments is gone.
+
+### 82.5 The spring's end
+
+The spring's classes are over at commencement, though its semester runs on to the fall: from commencement until the fall begins its grades count as over, on the card ("3.41 overall · 3.62 last term"), on the schedule ("Last semester", every part of its syllabus marked, in the course record), in the campus's grades and in one student's standing. The Main Character's spring closes at commencement too.
+
+### 82.6 The study center's lift, still out of the transcript
+
+The game's own semesters do not carry it either. Whether a student had tutoring is whether a study center was in reach of where they spent their days that semester, and the game keeps where a student lives now, not where they lived each term. Using today's for a semester would rewrite it whenever they moved or a study center opened or closed: not without keeping each student's every semester. Left out, as 81.10 records; R1's numbers and the card's "with tutoring" keep the lift.
+
+### 82.7 The save
+
+No new version. The Main Character gains two optional things, each semester's shift and their last semester's average; a save from before has neither, and its Main Character's grades are their transcript's from the next semester's close.
+
+### 82.8 Decisions made here
+
+| Decisions made here | Instead |
+|---|---|
+| Anything about one student reads the transcript; the campus's counts stay R1's | The two left apart (R4b): a family worried about a student whose card shows no probation |
+| The Main Character's own part kept as a semester's shift their transcript reads | Their old average of their own semesters only: a number the card never shows |
+| The transcript worked out only under a card's 3.5 | For every student a feeling reads: a transcript for every student in view each hour |
+| Two stories about grades for a student near either line, saying neither | Their old words for anyone: "on track for academic probation" to a 3.8 |
+| The Faculty row left as R4b had it | Two semesters, a sample spread by ability, a wider sample: none steadier, the wider five times the work in catch-up |
+| "psycho" as the word and its own forms | The word's every beginning, with an exemption for departments |
+| The spring over from commencement | The spring over only when the fall begins: a summer of last semester's grades still "this semester" |
+| No save version | A version for two optional things a save from before can go without |
+
+### 82.9 The long run and frames
+
+**The long run** (`npm run simulate`, 1,988 s): all 114 checks pass. Against R4b's (81.11), no Happiness and no money moved. What moved is the Main Character's and what reads the semesters over: the two followed Main Characters' graduates at 3.32 and 3.17 (3.43 and 3.26 before, their own old averages); a handful of their lines in the paper and their stories (one daily run's 16,271 lines read against 16,277); and the campus's grades, read now with the spring over from commencement, at 41.1% A's, 11.4% D, F or W (34.7% in the hard introductory courses), 96.4% of credits passed, averages 5/8/21/26/28/12 against NPSAS 4/8/19/29/27/13 (off by at most 2.8 points), 21% with a minor. Catch-up 600 and 612 ms at the most (622 and 618 before).
+
+**Frames** on the slowed phone (47.2's method), back to back with main (0eb606c), four rounds of eight frames, the mean: the model campus's afternoon at High by the stadium, 19.0 ms on main and 18.0 with R4c; with a student followed, card tucked, 19.3 and 18.4. Inside the rounds' own spread (14.0 to 25.1).
+
+**Seen in the game**, on the model campus two days in, at Thanksgiving: a sophomore's card with "Tense: Not getting on with Patrick · Family worried about grades" over "1.95 overall, on academic probation · 2.08 last term"; and the Capacity page's Faculty row opened, "Last spring, 41% of grades were A's and 1 in 10 a D, an F or a W (1 in 3 in the hard introductory courses)." At 375, 390, 430 and 530 wide, nothing wider than the screen but the card's own row of friends.
+
+**Tested**: `tests/transcript.test.ts` (8): one student's standing read from their transcript as the card reads it; no student on probation with a card at 3.5 or more, over 1,500; a family's worry only for a student on probation by their transcript; a line about someone's Dean's list only when they are on it, else the next; the spring over from commencement; the Main Character's semester moved by their study and classes, and their grades, Dean's list and probation read back from the transcript, the card agreeing; the two stories about grades for a student near either line, saying neither. `tests/hardLines.test.ts`: "psycho" and its forms kept out, "Psychology" let through. `tests/coursework.test.ts`: professors' departments now under the hard lines with the rest. `tests/fourYears.test.ts`: most families of a student on probation by their transcript worried, none of the rest.

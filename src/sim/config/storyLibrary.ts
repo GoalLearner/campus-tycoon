@@ -193,13 +193,14 @@ export const ARCS: readonly StorySpec[] = [
   ARC({
     id: 'failingMidterm',
     category: 'classes',
-    title: 'Probation and the way back',
+    title: 'A failing class and the way back',
     weight: 1,
     heavy: true,
-    needs: ['term'],
+    // A student whose transcript is near the line (R4c, DESIGN.md 82.2); whether they go on probation is the semester's.
+    needs: ['term', 'shakyGrades'],
     stages: [
       {
-        text: 'After the failed midterm, {name} gets an email from the academic advisor: they are on track for academic probation.',
+        text: 'After the failed midterm, {name} gets an email from the academic advisor: the class could pull their average below 2.0.',
         hours: 2,
         choices: [
           choice('meets the advisor and makes a plan', odds(0.65, TEACHING, NEAR_LIBRARY, CLASSES), O('A plan', 'Tutoring twice a week, a lighter club schedule, and a weekly check-in.', [need('study', 12), stress(-4)]), O('A plan on paper', 'The plan is good. Keeping to it is harder.', [stress(4)])),
@@ -209,9 +210,9 @@ export const ARCS: readonly StorySpec[] = [
       {
         text: 'The final exam decides it.',
         hours: 36,
-        cliff: 'The final that decides {name}’s probation is tomorrow.',
+        cliff: 'The final that decides {name}’s class is tomorrow.',
         choices: [
-          choice('sits the final', odds(0.55, STUDY, STEADY, NEAR_LIBRARY, TEACHING), O('Off probation', '{name} passed the final and the class. Off probation, and proud of it.', [gpa(0.25), mood(10), stress(-10)], { big: true }), O('On probation', '{name} failed the class and is on academic probation next semester. It is a setback, not the end: retaking it is allowed.', [gpa(-0.2), mood(-8), stress(8)], { big: true })),
+          choice('sits the final', odds(0.55, STUDY, STEADY, NEAR_LIBRARY, TEACHING), O('Passed', '{name} passed the final and the class, and is proud of it.', [gpa(0.25), mood(10), stress(-10)], { big: true }), O('Failed the final', '{name} failed the final, and the class will pull their average down. It is a setback, not the end: a class can be taken again.', [gpa(-0.2), mood(-8), stress(8)], { big: true })),
         ],
       },
     ],
@@ -628,10 +629,11 @@ export const ARCS: readonly StorySpec[] = [
     title: 'The Dean’s list run',
     weight: 2,
     good: true,
-    needs: ['term'],
+    // A student whose transcript has them in reach (R4c, DESIGN.md 82.2); whether they make it is the semester's.
+    needs: ['term', 'goodGrades'],
     stages: [
       {
-        text: '{name} has an A in three classes and a shot at the Dean’s list.',
+        text: '{name}’s grades are strong this semester: a shot at the Dean’s list.',
         hours: 2,
         choices: [
           choice('builds a study routine', odds(0.65, NEAR_LIBRARY, STUDY, TEACHING), O('A routine', 'Library at four, dinner at seven, review at nine. It works.', [need('study', 15), gpa(0.08)]), O('A messy routine', 'The routine lasts a week. Still, the grades are good.', [need('study', 5)]), { goals: ['deansList'] }),
@@ -641,7 +643,7 @@ export const ARCS: readonly StorySpec[] = [
         text: 'Finals.',
         hours: 40,
         choices: [
-          choice('sits the finals', odds(0.6, STUDY, GRADES, CLASSES, TEACHING), O('The Dean’s list', '{name} made the Dean’s list. Home is getting a copy of the letter.', [gpa(0.15), mood(12)], { big: true }), O('Close', 'One B plus kept them off the list. Next semester.', [gpa(0.05), mood(-2)])),
+          choice('sits the finals', odds(0.6, STUDY, GRADES, CLASSES, TEACHING), O('Aced the finals', '{name} aced the finals. The Dean’s list is in reach, and home is waiting to hear.', [gpa(0.15), mood(12)], { big: true }), O('Close', 'One hard final. The Dean’s list will be close.', [gpa(0.05), mood(-2)])),
         ],
       },
     ],

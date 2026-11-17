@@ -31,6 +31,11 @@ import { castMember, placesFor, remember, traitsFor } from './mc';
 import { callTimes } from './parties';
 import { classPressure, dayRead, seasonCurve } from './season';
 import { classYearOf, studentCard, teachingQuality } from './students';
+import { standingOf } from './registration';
+
+/** A Main Character's transcript near the probation line, and one with the Dean's list in reach (R4c, DESIGN.md 82.2). */
+const SHAKY_BELOW = 2.5;
+const GOOD_FROM = 3.0;
 
 /**
  * The storyteller (DESIGN.md 53.3 and 53.5, as built in section 58). Once a
@@ -209,6 +214,11 @@ function meets(state: GameState, mc: MainCharacter, need: StoryNeed): boolean {
       return mc.club !== null;
     case 'term':
       return kind === 'term' || kind === 'midterms' || kind === 'finals';
+    case 'shakyGrades':
+    case 'goodGrades': {
+      const gpa = standingOf(state, mc.ref).gpa ?? studentCard(state, mc.ref)?.gpa ?? 3;
+      return need === 'shakyGrades' ? gpa < SHAKY_BELOW : gpa >= GOOD_FROM;
+    }
     case 'lively':
       return chaosOn(state) && chaosStepOf(state.chaos.level) >= 2;
     case 'rowdy':

@@ -12,6 +12,7 @@ import { MAJORS, type MajorGroup } from '../src/sim/config/students';
 import { BY_SENIOR_YEAR, GRAD_SCHOOL, OFFER_BY_COMMENCEMENT } from '../src/sim/config/fourYears';
 import { calendarAt } from '../src/sim/calendar';
 import { moodletsOf } from '../src/app/emotion';
+import { standingOf } from '../src/sim/systems/registration';
 
 /** R2 of the realism pass, four years (DESIGN.md 66). */
 
@@ -249,12 +250,12 @@ describe('family and life outside, R2', () => {
     const week = { ...model.clock.week };
     return { ...model, clock: { ...model.clock, tick: tickOfDate(week, date) + 10, week } };
   };
-  const shareFeeling = (state: typeof model, reason: string, hour: number, only?: (card: NonNullable<ReturnType<typeof studentCard>>) => boolean): number => {
+  const shareFeeling = (state: typeof model, reason: string, hour: number, only?: (card: NonNullable<ReturnType<typeof studentCard>>, ref: (typeof sample)[number]) => boolean): number => {
     let n = 0;
     let of = 0;
     for (const ref of sample) {
       const card = studentCard(state, ref);
-      if (!card || (only && !only(card))) continue;
+      if (!card || (only && !only(card, ref))) continue;
       of += 1;
       if (moodletsOf(null, state, ref, card, hour).some((one) => one.reason === reason)) n += 1;
     }
@@ -285,7 +286,8 @@ describe('family and life outside, R2', () => {
 
   it('has most families of a student on probation worried about their grades', () => {
     const fall = onDate([10, 27, 0]);
-    expect(shareFeeling(fall, 'Family worried about grades', 12, (card) => card.probation)).toBeGreaterThan(0.45);
-    expect(shareFeeling(fall, 'Family worried about grades', 12, (card) => !card.probation)).toBe(0);
+    // On probation as their card shows it: their transcript's average below 2.0 (R4c, DESIGN.md 82.2).
+    expect(shareFeeling(fall, 'Family worried about grades', 12, (_card, ref) => standingOf(fall, ref).probation)).toBeGreaterThan(0.45);
+    expect(shareFeeling(fall, 'Family worried about grades', 12, (_card, ref) => !standingOf(fall, ref).probation)).toBe(0);
   });
 });

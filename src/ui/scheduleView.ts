@@ -3,7 +3,7 @@ import { dateAt } from '../sim/calendar';
 import { DEGREE_CREDITS } from '../sim/config/courses';
 import { adviserOf, curvedCourse, professorFor, syllabusOf } from '../sim/systems/coursework';
 import { majorAt, majorPath } from '../sim/systems/majors';
-import { courseHistory, type Enrolled, type SemesterPlan } from '../sim/systems/registration';
+import { courseHistory, termOver, type Enrolled, type SemesterPlan } from '../sim/systems/registration';
 import { studentName } from '../sim/systems/students';
 import { session } from '../app/session';
 import { clockText } from '../app/clockText';
@@ -116,7 +116,7 @@ export function mountScheduleView(): { node: HTMLElement; render: (state: GameSt
     }
     // Worked out once a semester and a month: the same every time it is opened (from the seed and the records).
     const date = dateAt(state.clock);
-    const key = `${ref.entryYear}:${ref.index}:${state.registration?.records.length ?? 0}:${state.registration?.records.at(-1)?.semester ?? -1}:${date.month}`;
+    const key = `${ref.entryYear}:${ref.index}:${state.registration?.records.length ?? 0}:${state.registration?.records.at(-1)?.semester ?? -1}:${date.month}:${termOver(state) ? 1 : 0}`;
     if (key === drawn) return;
     drawn = key;
     const history = courseHistory(state, ref);
@@ -134,7 +134,9 @@ export function mountScheduleView(): { node: HTMLElement; render: (state: GameSt
     if (history.minor) about.push(`Minor in ${history.minor}`);
     if (history.honors) about.push('In the Honors College');
     body.append(el('p', 'schedule-codes', about.join(' · ')));
-    body.append(el('div', 'money-head', `This semester · ${semesterWords(now)} · ${now.credits} credits`));
+    // The spring is over from commencement until the fall begins (R4c): its classes are then last semester's, marked.
+    const ended = history.over === history.semesters.length;
+    body.append(el('div', 'money-head', `${ended ? 'Last semester' : 'This semester'} · ${semesterWords(now)} · ${now.credits} credits`));
     body.append(week(now));
     for (const line of notes(now)) body.append(el('p', 'fine', line));
     // Each class: its professor (tap for who they are), its syllabus, and their marks on what is done.
@@ -149,7 +151,7 @@ export function mountScheduleView(): { node: HTMLElement; render: (state: GameSt
         render(state);
       });
       item.append(name);
-      const parts = syllabusOf(state.seed, ref, now.semester, one.course, one.grade, spring, date.month, false).map((line) => `${line.name} ${Math.round(line.weight * 100)}%${line.mark ? ` · ${line.mark}` : ` · ${MONTHS[line.month]}`}`);
+      const parts = syllabusOf(state.seed, ref, now.semester, one.course, one.grade, spring, date.month, ended).map((line) => `${line.name} ${Math.round(line.weight * 100)}%${line.mark ? ` · ${line.mark}` : ` · ${MONTHS[line.month]}`}`);
       item.append(el('p', 'schedule-codes', `${parts.join(' · ')}${curvedCourse(one.course) ? ' · curved' : ''}`));
       body.append(item);
     }
@@ -159,7 +161,7 @@ export function mountScheduleView(): { node: HTMLElement; render: (state: GameSt
       for (const line of notes(history.next)) body.append(el('p', 'fine', line));
     }
     // The transcript: every semester over, its letters and its average; the average over all and the credits passed.
-    const past = history.semesters.slice(0, -1);
+    const past = history.semesters.slice(0, history.over);
     const latin = history.latin ? ` · on course for ${history.latin}` : '';
     body.append(el('div', 'money-head', `Course record · GPA ${avg(history.gpa)} · ${history.earned} of ${DEGREE_CREDITS} credits${latin}`));
     if (past.length === 0) body.append(el('p', 'fine', 'This is their first semester: no grades yet.'));
