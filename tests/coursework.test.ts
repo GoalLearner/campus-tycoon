@@ -8,7 +8,7 @@ import { MAJORS } from '../src/sim/config/students';
 import { MIGRATIONS, SAVE_VERSION } from '../src/sim/save';
 import { adviserOf, averageOf, curvedCourse, gradeSemester, kindOf, officeHabit, professorFor, syllabusOf } from '../src/sim/systems/coursework';
 import { capacity } from '../src/sim/systems/capacity';
-import { CATALOG, campusGrades, campusRegistration, COURSE_BY_CODE, courseHistory, GPA_BANDS, gradeWords, type CourseHistory } from '../src/sim/systems/registration';
+import { CATALOG, campusGrades, gpaWords, campusRegistration, COURSE_BY_CODE, courseHistory, GPA_BANDS, gradeWords, type CourseHistory } from '../src/sim/systems/registration';
 import { classPlaces, semesterOf, type StudentRef } from '../src/sim/systems/students';
 import { dateAt } from '../src/sim/calendar';
 import { DAY, T0 } from './helpers';
@@ -38,6 +38,7 @@ describe('grades by class (R4b, DESIGN.md 81)', () => {
     const courses = ['CHEM 101', 'WRIT 101', 'BIOL 201', 'PSYC 101', 'KINS 100'].map((code) => COURSE_BY_CODE.get(code)!);
     let near = 0;
     let n = 0;
+    let side = 0;
     for (let index = 0; index < 400; index++) {
       const target = 1.6 + (index % 23) * 0.1;
       const grades = gradeSemester(5, { entryYear: 2024, index }, 3, courses, target);
@@ -48,9 +49,34 @@ describe('grades by class (R4b, DESIGN.md 81)', () => {
       if (gpa === null) continue;
       n++;
       if (Math.abs(gpa - target) <= 0.07) near++;
+      // On R1's side of the Dean's list, so a card's term and the campus's Dean's list agree.
+      if (gpa >= 3.5 === target >= 3.5) side++;
       expect(Math.abs(gpa - target)).toBeLessThan(0.35);
     }
     expect(near / n).toBeGreaterThan(0.9);
+    expect(side / n).toBeGreaterThan(0.99);
+  });
+
+  it("says on a card which average is which: probation by the average over all, the Dean's list by the last term", () => {
+    let both = 0;
+    for (const { history } of HISTORIES) {
+      const words = gpaWords(history);
+      expect(toneProblem(words), words).toBeNull();
+      const over = history.semesters.length - 1;
+      const last = history.semesters.at(-2)?.gpa ?? null;
+      if (history.gpa === null) {
+        expect(words).toBe('No grades yet');
+        continue;
+      }
+      expect(words.includes("Dean's list")).toBe(last !== null && last >= 3.5);
+      expect(words.includes('on academic probation')).toBe(history.gpa < 2);
+      if (over >= 2 && last !== null) {
+        expect(words).toMatch(/^\d\.\d\d overall(, on academic probation)? · \d\.\d\d last term(, Dean's list)?$/);
+        if (words.includes("Dean's list") && history.gpa < 3.5) both++;
+      }
+    }
+    // Leo's case: on the Dean's list for the last term with an average over all below it, said so plainly.
+    expect(both).toBeGreaterThan(0);
   });
 
   it('grades the hard introductory courses hardest and on a curve, a one-credit activity kindest', () => {

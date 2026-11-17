@@ -2,6 +2,7 @@ import { CLASS_SPREAD, FAIL_BELOW, HARD_INTROS, GRADED, LATIN, LETTERS, OFFICE_H
 import { LATE_CREDIT, STUDIO_DEPARTMENTS } from '../config/courses';
 import { MAJORS, SURNAME_ENDS, SURNAME_STARTS, FIRST_NAMES } from '../config/students';
 import { hashInts } from '../rng';
+import { DEANS_LIST_FROM } from '../config/grades';
 import { normalInv } from './grades';
 import type { StudentRef } from './students';
 
@@ -106,8 +107,9 @@ export function gradeSemester(seed: number, ref: StudentRef, semester: number, c
   const kept = withdrawn.map((w) => !w);
   if (kept.some((k) => k)) hold(kept);
   const letters = raw.map((points) => letterFor(Math.max(0, Math.min(4, points))));
-  // The rounding to letters is held to the average too: the class furthest from its letter moves a step toward it.
-  for (let pass = 0; pass < 4; pass++) {
+  // The rounding to letters is held to the average too: the class furthest from its letter moves a step toward it. And
+  // the letters stay on R1's side of the Dean's list, so the card's term and its Dean's list agree with the campus's.
+  for (let pass = 0; pass < 6; pass++) {
     let w = 0;
     let sum = 0;
     courses.forEach((course, i) => {
@@ -117,7 +119,7 @@ export function gradeSemester(seed: number, ref: StudentRef, semester: number, c
     });
     if (w <= 0) break;
     const off = target - sum / w;
-    if (Math.abs(off) <= 0.06) break;
+    if (Math.abs(off) <= 0.06 && (target >= DEANS_LIST_FROM) === (sum / w >= DEANS_LIST_FROM)) break;
     let pick = -1;
     let most = 0;
     courses.forEach((_, i) => {

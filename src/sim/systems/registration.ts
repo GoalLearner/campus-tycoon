@@ -1,7 +1,7 @@
 import { dateAt } from '../calendar';
 import { ACTIVITIES, LATE_CREDIT, CALCULUS_FIELDS, BREADTH, CHAIN_NUMBERS, DEPARTMENTS, DEPT_SIZE, EARLY_SHARE, GEN_EDS, LAB, LAB_DEPARTMENTS, LOADS, MWF_HOURS, MWF_LENGTH, REGISTRATION, SECTION_CAP, SEMINAR_SLOT, STUDIO_DEPARTMENTS, TOPICS, TTH_HOURS, TTH_LENGTH, WRITING_FIRST_FALL } from '../config/courses';
 import { HONORS, MINOR } from '../config/coursework';
-import { TEACH_TYPICAL } from '../config/grades';
+import { DEANS_LIST_FROM, PROBATION_BELOW, TEACH_TYPICAL } from '../config/grades';
 import { averageOf, curvedCourse, gradeSemester, latinFor, professorFor, type Grade } from './coursework';
 import { gradesOf, normalCdf, standingZ } from './grades';
 import { bigBuildOpen } from './bigBuilds';
@@ -453,6 +453,22 @@ export function courseHistory(state: GameState, ref: StudentRef, now = semesterO
   const minorTaken = orders.minor >= 0 ? (CHAINS[orders.minor] ?? []).slice(0, MINOR.courses).filter((course) => taken.has(course.code)).length : 0;
   const minor = orders.minor >= 0 && (minorTaken > 0 || nowN >= MINOR.from) ? (MAJORS[orders.minor]?.name ?? null) : null;
   return { semesters, earned, gpa, next, honors: nowHonors, minor, latin: gpa !== null && nowN >= 6 ? latinFor(gpa) : null };
+}
+
+/**
+ * A card's grades in a line (R4b, DESIGN.md 81.1), each with what goes by it so the two never read as one: probation by
+ * the average over all, the Dean's list by the last term. "3.30 overall · 3.62 last term, Dean's list"; "1.85 overall,
+ * on academic probation · 2.10 last term"; "3.62 in their first term, Dean's list"; "No grades yet".
+ */
+export function gpaWords(history: CourseHistory): string {
+  const over = history.semesters.length - 1;
+  const lastTerm = history.semesters.at(-2)?.gpa ?? null;
+  const average = history.gpa;
+  if (average === null) return 'No grades yet';
+  const deans = lastTerm !== null && lastTerm >= DEANS_LIST_FROM ? ", Dean's list" : '';
+  const probation = average < PROBATION_BELOW ? ', on academic probation' : '';
+  if (over <= 1 && lastTerm !== null) return `${average.toFixed(2)} in their first term${deans}${probation}`;
+  return `${average.toFixed(2)} overall${probation}${lastTerm !== null ? ` · ${lastTerm.toFixed(2)} last term${deans}` : ''}`;
 }
 
 /** What the campus's sample has registered, by student and semester: a semester's plan never changes once made. */

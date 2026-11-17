@@ -1,4 +1,4 @@
-import { courseHistory } from '../sim/systems/registration';
+import { courseHistory, gpaWords } from '../sim/systems/registration';
 import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
 import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
@@ -510,12 +510,10 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
       const missed = plan?.missed.filter((one) => one.needed).length ?? 0;
       setText(classesRow.value, plan && plan.courses.length > 0 ? `${plan.credits} credits: ${plan.courses.map((one) => one.course.code).join(', ')}${missed > 0 ? ` · could not get ${missed === 1 ? 'one they needed' : `${missed} they needed`}` : ''}` : 'None this semester');
     }
-    const lastTerm = shownHistory.semesters.at(-2)?.gpa ?? null;
-    const average = shownHistory.gpa;
-    const standing = average === null ? '' : lastTerm !== null && lastTerm >= 3.5 ? " · Dean's list" : average < 2 ? ' · on academic probation' : '';
+    const standing = gpaWords(shownHistory);
     const went = card.classes ? ` · went to ${card.classes.went} of ${card.classes.of} classes this week` : '';
-    const latin = shownHistory.latin ? ` · ${shownHistory.latin}` : '';
-    setText(grades.value, `${average === null ? 'No grades yet' : average.toFixed(2)}${card.tutored ? ', with tutoring' : ''}${standing}${latin}${classes}${went}`);
+    const latin = shownHistory.latin ? ` · on course for ${shownHistory.latin}` : '';
+    setText(grades.value, `${standing}${card.tutored ? ' · with tutoring' : ''}${latin}${classes}${went}`);
     setText(club.value, card.club ?? 'None');
     const years = [...(card.outcome ? [card.outcome.line] : []), ...card.milestones.lines];
     milestones.line.hidden = years.length === 0;
