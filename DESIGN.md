@@ -8559,6 +8559,8 @@ The long run adds two players on the model campus, each the once-a-day player wi
 
 **Changed by 78 (2026-11-16):** the player can stir chaos up and calm it down from the Meddle page (78); calm tools ease tempers and extra security stops most mischief for a while, a prank war brings more pranks to two dorms, and the soother and the meddler join the test players (78.6).
 
+**Changed by 79 (2026-11-16):** a sandbox has no trustees: none writes, and a campus copied into one forgets a letter that was open (79.3).
+
 **Tested** (see 68.6 for the long run): `tests/chaos.test.ts` (13): a game with goals only; the six steps, smoothed; for every thousand students; free rein where Campus Safety does not reach and the cap of its own; protests with no responder that never make a place feel unsafe; headlines capped, and the trustees' letter; the letter met and ignored, Reputation's line; a legendary night's spirit; the Scorecard's row and causes; comic words, the tone guide and the hard lines, and the paper's headlines; a version 32 save; the same in one step or many. Save version 33 adds the meter and chaos's random stream and nothing else (every save test checks it), with one upgrade note.
 
 ### 68.6 The long run and frames
@@ -9280,3 +9282,61 @@ The long run adds two test players beside 68.5's: the **meddler**, the Pandemoni
 **Frames** on the slowed phone (47.2's method: four times slower, 390 by 844 at 3x), back to back with main (efad452), four rounds of eight frames, the mean, on the model campus's afternoon at High: by the stadium, 19.1 ms against 19.7 on main; over the quads with therapy dogs, the festival and free food running (4 to 7 groups round a dog, 9 or 10 dancing, 12 to 24 picnics, against main's plain afternoon with none of them), 21.4 ms against 19.9. Level with main, inside the rounds' own spread (16.9 to 24.3).
 
 **Tested**: `tests/meddle.test.ts` (16): a game with goals only, the small campus with no page and no tools; each tool's cost, cash at the campus scale or Gold Seals, and its rest, a day or a week; why a tool cannot be used (money, Seals, no snow, the mascot out already); Happiness and Stress through the desk's boosts inside their caps, ending when they should; Stress for a power cut and a surprise exam, within its cap; calm tools, together never below the floor, and extra security, each for its while; a prank war's pranks and graffiti at its two dorms, the mascot with tempers and the prank back, spirit and the headline's reach; litter from a party, free food and the festival, and a snowball battle's bruises; the web's asks for a rumour, a date, roommates and a prank war at its next week, a feud and friends for life made on a web, and never the Main Character's; every line, name, good and bad in comic words inside the tone guide and its hard lines, and a headline for each outcome; the paper the next tick and an outcome when it is over; what the web did with a rumour told by what it did, the taken case a complicated friendship and never "a couple", a couple when both are free, and the player told only that it is under way; the action paid, noted and refused when it cannot be done; a version 38 save; the map's shows (groups round a therapy dog, a party any night, the snow); the same in one step or many. In the game, on the model campus with dev options (`&meddle=prankWar,dogs,rumour&panel=meddle`, `&meddle=dogs`, `&meddle=festival,freeFood`): the page at 375, 390, 430 and 530 wide, nothing wider than the screen and no button under 44 points, the rumour and therapy dogs resting with their lines in the warning colour; three students sitting round a dog with a heart over them. Found there: the dog, 13 by 10 pixels against a student 30 wide, hid behind those sitting round it, and is drawn bigger now (78.5).
+
+## 79. The chaos sandbox, C5: the Sandbox (approved 2026-11-14)
+
+The last of the chaos sandbox's five stops (68), approved with the rest on 2026-11-14 ("Yes, all twelve"). The design (`docs/handoff/chaos-design.html`, "Sandbox mode"): "At founding: a Sandbox choice next to a normal campus. Unlimited money, no trustees' letters, meddle tools free. In Settings: 'Copy this campus into a sandbox'. Your real campus stays untouched and you switch between the two." The owner's answer 12, Copy: a separate sandbox campus, the real one untouched (the alternative, flipping the real campus to sandbox, would have had to be one-way). Built on the branch `chaos-5`, with main's rule above all: nothing done in the sandbox may ever touch the real save.
+
+### 79.1 Two campuses on one phone
+
+The player's own campus keeps the keys it has always had in storage (`save`, `backup`, `web`); the sandbox has keys of its own (`sandbox-save`, `sandbox-backup`, `sandbox-web`), and a small record says which is open and what each is called (`slots`). Every function that reads or writes a campus names its slot (`src/app/persistence.ts`), and the store writes only under the open campus's (`src/app/store.ts`). A sandbox is one at a time; a new copy replaces it.
+
+- **Copy this campus into a sandbox** (the Menu): the player's own campus is saved first, as it is, then copied, made a sandbox, and written under the sandbox's keys with a copy of its social web; the sandbox opens. With a sandbox already there the button asks again ("Tap again to replace the sandbox").
+- **A sandbox at founding**: the founding screen has "Start a sandbox instead" beside "Open the gates": the model campus (35.6) as a new university with the sandbox's rules, under the sandbox's keys. A phone that has no campus of its own still has none.
+- **The switch**: the Menu has "Open the sandbox" on the player's own campus and "Back to Larp University" in the sandbox; the badge's bar has "Back" too. The campus open is saved under its own keys, the other read from its save and caught up to now, as a save opened on the phone is. The app opens on whichever was open last.
+- **Delete the sandbox** (the Menu's "Start a new university" becomes it in the sandbox): its keys alone are cleared, and the player's own campus opens. Starting a new university of one's own leaves any sandbox as it was.
+
+### 79.2 Kept apart
+
+- Levels, goals, Gold Seals, orders, traditions, the Main Character, the paper: the sandbox is another campus, a state of its own from the moment it is copied, so nothing it earns or spends reaches the player's own.
+- Cloud saves (48) upload the player's own campus only: the store tells them of a save only on the real slot, and a switch is not a new campus to them (that would forget the real campus's place in the cloud).
+- The social web (63) keeps a record for each, and its worker's answer for a campus no longer open is dropped, never written under the other's keys (the two share a seed).
+- A tester's skip of the clock made in the sandbox stays with the sandbox: the real campus's clock is put back when it is opened.
+- Notifications (36.6) are not planned from the sandbox.
+- Export, import and the account are for the player's own campus; a sandbox's save cannot be imported as it ("That save is a sandbox: its money is unlimited, so it cannot become your own campus.").
+
+### 79.3 The sandbox's rules
+
+A flag in the game itself, `sandbox`, missing on every real campus (`src/sim/systems/sandbox.ts`): no save version, since a real campus never has it.
+
+- **Unlimited money**: the purse is kept at a trillion dollars, topped up every minute; the top bar says "Unlimited". The Money panel's numbers are the campus's own, as ever.
+- **No trustees' letters**: none is ever sent, and a copy forgets one that was open and any dip it left (68.3).
+- **Free meddling**: every Meddle tool costs nothing and never rests (78); the page says so.
+- **The Sandbox badge**: the bar a model-campus visit uses, there all the while, in the accent colour: "Sandbox. Larp University is untouched." with "Back".
+
+### 79.4 The round trip
+
+`tests/sandbox.test.ts` opens a mature save as the player's own (`tests/fixtures/save-v39-mature-model.json`: a model campus played once a day for two game years by the once-a-day test player, its social web read each game week, University Level 24 with a Main Character; made by `scripts/make-mature-fixture.ts`), copies it into a sandbox and does everything a player might there: every Meddle tool twice, a dorm cleared, the colour, the Instruction and marketing sliders, a policy, collecting, the gift, two days passing. While the sandbox is open nothing is written under the real campus's keys, its save text and social web record are as they were, and the cloud hears nothing. Back home, the player's own campus is exactly what a phone that never had a sandbox makes of the same save at the same moment, compared as whole states. The sandbox is still there as it was left.
+
+### 79.5 Decisions made here
+
+| Decisions made here | Instead |
+|---|---|
+| One sandbox at a time, a new copy replacing it after a second tap | Several, each named: a list to manage for something meant to be thrown away |
+| The sandbox keeps the school's name, and the badge says it is the sandbox | "Sandbox of ...": the paper and the cards would say it everywhere |
+| The money topped up to a trillion every minute, shown as Unlimited | Money taken out of every check: dozens of places, and the Money panel's own numbers would lose their meaning |
+| Meddling free and never resting | Free but resting as on a real campus: the sandbox is for trying things |
+| No save version: a flag only a sandbox has | A version for a field no real save holds |
+| A sandbox founded from the first screen is the model campus, as every new game is (35.6) | The small campus |
+| Notifications off in the sandbox | Planned from the real campus's save while the sandbox is open: a second campus read at every backgrounding |
+| A switch is not a new campus to the cloud, and the sandbox is never uploaded | The sandbox in the cloud too, beside the real campus |
+
+### 79.6 The long run and frames
+
+**The long run** (`npm run simulate`, 1,711 s): all 112 checks pass, and against main's run before C5 (`v58_sim.log`, C4 at b46cc25) not one line moved but timings: no real campus has the sandbox's flag, and the test players never open one. The rumour fix of 78.3 moved nothing there either: the meddler's two days never read the social web, so its asks are never carried out, and what the paper says was never counted. Catch-up 490 to 519 ms (501 to 530 before).
+
+**Frames** on the slowed phone (47.2's method: four times slower, 390 by 844 at 3x), back to back with main (6320544), four rounds of eight frames, the mean, the model campus's afternoon at High by the stadium: 16.6 ms on main, 16.6 with C5, and 16.8 as a sandbox (`&sandbox`). The sandbox draws nothing new on the map: the badge is a line of the top bar. Inside the rounds' own spread (15.0 to 18.2).
+
+**Seen in the game**, in the app's own storage (a fresh browser profile): a university founded from the first screen, copied into a sandbox from the Menu (the money "Unlimited", the badge "Sandbox. Larp University is untouched."), back from the sandbox's Menu to the same money to the dollar, and the Menu then offering "Open the sandbox". The founding screen, both Menus, the badge and the Meddle page in the sandbox at 375, 390, 430 and 530 wide: nothing wider than the screen, no button under 44 points. Found there: the sandbox's Menu still showed the reminder to export a backup, with nothing to export; it is gone there now.
+
+**Tested**: `tests/sandbox.test.ts` (5): in the game, money topped up every minute, every Meddle tool free and never resting, and no trustees' letter after Rowdy weeks that bring one on a real campus; the round trip of 79.4 on the mature save, the real campus's save text and social web record as they were, nothing written under its keys, the cloud never told, and the real campus the same whole state as a phone with no sandbox, the sandbox still as it was left; reopening in the sandbox, a sandbox's save refused as the player's own and nothing loaded into the sandbox, and deleting the sandbox going home untouched; a sandbox founded from the first screen leaving the phone with no campus of its own, and a real one founded after under its own keys; the fixture a mature campus of the latest version. `tests/newgame.test.ts` and `tests/reopen.test.ts` as before, with the slot functions in their stand-in for the disk.
