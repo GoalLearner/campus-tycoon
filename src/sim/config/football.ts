@@ -123,11 +123,12 @@ export const TITLE_DATE: CalDate = [12, 5, 0];
 export const BOWL_DATE: CalDate = [12, 26, 0];
 export const TOP_BOWL_DATE: CalDate = [1, 18, 1];
 /**
- * A game is forty real minutes, shown a quarter at a time. It kicks off at noon on its Saturday by the game's clock
- * (DESIGN.md 84.4); forty real minutes are about a day and a half of that clock, so the stadium is full from Saturday
- * noon to Sunday night, under the lights through the night between.
+ * A game is forty real minutes, shown a quarter at a time. It kicks off at this hour of its Saturday by the game's clock
+ * (DESIGN.md 84.4): 0, the first minute of the Saturday, as it always has. Forty real minutes are about a day and a half
+ * of that clock, so the stadium is full from Saturday's first hour to Sunday morning. 12 would kick off at noon, about
+ * 14 real minutes later, and moves the long run (84.4).
  */
-export const KICKOFF_HOUR = 12;
+export const KICKOFF_HOUR = 0;
 export const GAME_TICKS = 40;
 export const QUARTER_TICKS = 10;
 /** The founding scrimmage kicks off this long after the first class moves in, if the founding day is at least this long. */

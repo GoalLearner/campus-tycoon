@@ -107,19 +107,27 @@ describe('the hour of the game day', () => {
 });
 
 describe('football on the game clock', () => {
-  it('kicks off at noon on its Saturday, and the whistle blows forty real minutes later, a day and a half on', () => {
+  it('kicks off at its hour on its Saturday, and the whistle blows forty real minutes later, on the Sunday', () => {
     for (const slot of SLOTS) {
       const kick = tickOfMoment(PLAIN, slot.date, KICKOFF_HOUR);
       const moment = momentAt(at(kick));
       expect(moment.date.weekday).toBe(6);
-      expect(moment.hour).toBeGreaterThanOrEqual(12);
-      expect(moment.hour).toBeLessThan(13);
-      // Half a game day after the first tick of that Saturday.
-      expect(kick - tickOfDate(PLAIN, slot.date)).toBeGreaterThanOrEqual(13);
-      expect(kick - tickOfDate(PLAIN, slot.date)).toBeLessThanOrEqual(15);
+      expect(moment.hour).toBeGreaterThanOrEqual(KICKOFF_HOUR);
+      expect(moment.hour).toBeLessThan(KICKOFF_HOUR + 1);
+      // That share of a game day (about 28 real minutes) after the first tick of the Saturday.
+      expect(Math.abs(kick - tickOfDate(PLAIN, slot.date) - (KICKOFF_HOUR / 24) * 28.2)).toBeLessThanOrEqual(1);
       const whistle = momentAt(at(kick + 40));
       expect(whistle.index - moment.index).toBe(1);
       expect(whistle.date.weekday).toBe(0);
+    }
+  });
+
+  it('noon is one hour away: half a game day after the Saturday begins', () => {
+    for (const slot of SLOTS) {
+      const noon = tickOfMoment(PLAIN, slot.date, 12);
+      expect(Math.floor(hourAt(at(noon)))).toBe(12);
+      expect(noon - tickOfDate(PLAIN, slot.date)).toBeGreaterThanOrEqual(13);
+      expect(noon - tickOfDate(PLAIN, slot.date)).toBeLessThanOrEqual(15);
     }
   });
 

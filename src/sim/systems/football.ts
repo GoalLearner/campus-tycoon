@@ -239,7 +239,7 @@ export function hasSeason(state: GameState): boolean {
   return state.clock.week.year >= state.football.firstYear;
 }
 
-/** The tick a slot's game kicks off this year: noon of its Saturday on the game's clock (DESIGN.md 84.4). */
+/** The tick a slot's game kicks off this year: its Saturday at the kickoff hour of the game's clock (DESIGN.md 84.4). */
 export function slotKick(state: GameState, slot: number): number {
   const week = state.clock.week;
   if (slot === 10) return tickOfMoment(week, TITLE_DATE, KICKOFF_HOUR);

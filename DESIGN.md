@@ -9757,7 +9757,7 @@ The owner, on a screenshot of the HUD reading "Fri, Aug 21 · 9:58 AM · Year 1"
 | The founding day | Move-in week, as before (Aug 12 to 18), now from 8 AM on its first date to midnight at the end of its last, so a new campus is first seen in the morning. It runs at whatever pace its length gives: a founding day of 13 real hours is a game day of nearly two real hours. A game made off the model campus holds 8 AM until its first class arrives |
 | What follows it | The light, the lamps and the night; the campus's day (75.2: classes, class changes, meals, the gym and courts, weekends, party nights and finals); a followed student's day and "Doing now"; the Main Character's doings on the map and their page's "Doing now" (84.6); Today on campus and its View at slider (75.3, 75.4), which shows any hour of the game's day; the bell (84.8) |
 | What stays in real time | Everything that says when to come back: the countdowns ("Spring class arrives in 1 d"), build timers, notices, the football chip's "next in", the anchor hour that puts intakes and big games in the player's waking hours (4.2, 4.8), and the Main Character's story pacing (53.1) |
-| The simulation | Its rules still never read the hour: money, Happiness and the rest stay on the busiest-hour numbers. The one change is when a game kicks off (84.4) |
+| The simulation | Its rules still never read the hour: money, Happiness and the rest stay on the busiest-hour numbers. It runs exactly as before (84.12) |
 
 The map reads the game's date with the hour, so a weekend, a party night and the student's day turn over at game midnight with the clock, a moment before the next tick does.
 
@@ -9784,17 +9784,16 @@ A class change comes about every 70 real seconds and lasts about twelve. Walkers
 
 ### 84.4 Football on the game clock
 
-Each game kicks off at noon on its Saturday by the game's clock (`KICKOFF_HOUR`), half a game day, about 14 real minutes, after that date's first tick, where it kicked off before (at game midnight).
+A game kicks off at the first tick of its Saturday, as it always has, which on the game's clock is in its first hour, by about 12:50 AM (`KICKOFF_HOUR`, 0).
 
 | Part | On the game's clock |
 |---|---|
-| A game | Still forty real minutes, shown a quarter at a time (10 real minutes each), so it can be watched live. On the clock that is about a day and a half: Saturday noon to about 10 PM on Sunday, under the lights through the night between. The first quarter is Saturday afternoon and evening |
-| The turnout | An hour of real time before kickoff, as before: from about Thursday morning on the clock, so the game is a long weekend |
+| A game | Still forty real minutes, shown a quarter at a time (10 real minutes each), so it can be watched live. On the clock that is about a day and a half: from Saturday's first hour to about 10 AM on Sunday. The first quarter is the small hours under the lights, the second Saturday's daylight, the third the evening and the fourth Sunday's small hours |
+| The turnout | An hour of real time before kickoff, as before: from about Wednesday evening on the clock, so the game is a long weekend |
 | The C3 chaos and the stadium crowd | Unchanged: they read the same ticks from kickoff to the whistle |
 | The celebration after a home win (64.3) | From the whistle to the end of the Monday after, about half an hour of real time. It was six real hours, nearly a fortnight on the game's clock |
-| A season under way | Keeps the kickoffs it was given; the next fall's are at noon. No save version |
 
-This is the one change to the simulation. With kickoff left at midnight the branch matches main to the cent: three game years of a casual player and two of a once-a-day player, every figure the same. With it at noon a game day's lift to the food places, the turnout and the whistle all come 14 real minutes later, so the long run's figures move a little (84.12). Setting `KICKOFF_HOUR` to 0 puts every game back at midnight.
+**Kickoff at noon was built and measured, and is not on.** `KICKOFF_HOUR` 12 kicks every game off at noon, half a game day, about 14 real minutes, after its Saturday begins, and the first quarter is Saturday afternoon. It moves the simulation: a game day's lift to the food places, the turnout and the whistle all come 14 real minutes later, money half a year in differs by about 1%, and the long run's diligent player builds a different campus (10,170 students where it had 10,084) on which only 9 of 31 places to eat and play end up with a bin and a grounds crew keeping up, so the check that well-staffed places stay clean fails. The game's results themselves do not change. With 0 the long run is exactly as before. Noon is one constant away, with that check to answer first.
 
 ### 84.5 A student's day
 
@@ -9827,7 +9826,7 @@ Nothing stored a real hour, so nothing moves: the save version stays 42.
 | The hour is the fraction of the same day count that gives the date | The two can never disagree, and the date at a whole tick is exactly as it was | A separate hour clock, which drifts from the date at the calendar's knots |
 | The map runs the clock on between ticks | A tick is about 51 game minutes in the fall; without it the clock and the light would jump once a real minute | Ticks only |
 | Daylight about half the day, a night of six and a half real minutes | Mostly seen in daylight, and the night is still a night | The old table, a third in full night |
-| Kickoff at noon | A game should start at a time a game starts | Midnight, the first tick of its Saturday, which keeps the long run to the cent |
+| Kickoff stays at the first tick of its Saturday, in the clock's first hour | The simulation and the long run stay exactly as they were | Noon (`KICKOFF_HOUR` 12), built and measured: the long run moves and its grounds check fails (84.4) |
 | A game stays forty real minutes | It can be watched; the chaos and the crowd need it | A game of three and a half game hours, four real minutes |
 | The bell at 8 AM, noon and 6 PM | Every game hour would be every seventy seconds | Every hour; no bell |
 | The Main Character's life keeps the real day | Story pacing stays real, as the note says; only their doings are seen on the game's clock | Their whole life on the game's day |
@@ -9836,3 +9835,19 @@ Nothing stored a real hour, so nothing moves: the save version stays 42.
 ### 84.11 What it replaces
 
 28.1 (the hour follows the player's real local clock), 75.1 (the hour is the player's own, read together with the game's date), and in 75.4 "your own clock" and "your own hour": closing the strip now puts the game's clock back. 33.6's bell on every hour is 84.8. 63.9's day is a game day (84.5).
+
+### 84.12 The long run, frames and pictures
+
+**Long run: all 114 checks pass in 2,058 s, and its log is amenities-by-use's line for line** (83.12): every figure the same, only the times differ. Catch-up 642 ms with 514 buildings, 602 ms untended, 440 and 549 ms on the model campus. The run with kickoff at noon passed 113: the grounds check in 84.4 failed, money moved by 0.1 to 0.2 points of every $100, and the Top 10 week and the level pace held.
+
+**Frames** on the slowed phone (four times slower, 390 by 844 at three times, GPU), the model campus at High by the lecture halls, against main, four rounds:
+
+| Scene | Main | The game's clock |
+|---|---|---|
+| A class change mid-rush, both clocks at 10:51 AM | 24.6 ms | 23.9 ms |
+| Night, 11 PM | 17.9 ms | 18.7 ms |
+| Each running its own clock (main the PC's afternoon, here the game's) | 20.5 ms | 17.5 ms |
+
+The rush has 125 to 147 walkers in view on both.
+
+**Pictures** (the page `docs/handoff/game-clock.html`): the top bar at 9:30 AM, 7:15 PM and 11:30 PM of Thu, Oct 8; Today on campus at 10:51 AM ("Class change: classes start at 11 AM"); one student's card at 10:15 AM ("Studying before class", then coffee and two classes) and at 7:30 PM of the same game day ("Dinner with Arjun and Vivian"); a class change at High.
