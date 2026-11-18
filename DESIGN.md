@@ -9859,7 +9859,7 @@ Nothing stored a real hour, so nothing moves: the save version stays 42.
 
 ### 84.12 The long run, frames and pictures
 
-**Long run: all 114 checks pass in 2,058 s, and its log is amenities-by-use's line for line** (83.12): every figure the same, only the times differ. Catch-up 642 ms with 514 buildings, 602 ms untended, 440 and 549 ms on the model campus. The run with kickoff at noon passed 113: the grounds check in 84.4 failed, money moved by 0.1 to 0.2 points of every $100, and the Top 10 week and the level pace held.
+**The game clock's long run** (kickoff at the Saturday's first tick): all 114 checks pass in 2,058 s, and its log is amenities-by-use's line for line (83.12): every figure the same, only the times differ. Catch-up 642 ms with 514 buildings, 602 ms untended, 440 and 549 ms on the model campus. A run with kickoff at noon and the test player as it was passed 113: the grounds check failed (84.4).
 
 **Frames** on the slowed phone (four times slower, 390 by 844 at three times, GPU), the model campus at High by the lecture halls, against main, four rounds:
 
@@ -9872,3 +9872,15 @@ Nothing stored a real hour, so nothing moves: the save version stays 42.
 The rush has 125 to 147 walkers in view on both.
 
 **Pictures** (the page `docs/handoff/game-clock.html`): the top bar at 9:30 AM, 7:15 PM and 11:30 PM of Thu, Oct 8; Today on campus at 10:51 AM ("Class change: classes start at 11 AM"); one student's card at 10:15 AM ("Studying before class", then coffee and two classes) and at 7:30 PM of the same game day ("Dinner with Arjun and Vivian"); a class change at High.
+
+**Kickoff at noon, its long run** (the branch `kickoff-noon`): all 114 checks pass in 2,072 s. Against the game clock's run above, 56 checks read different figures, all inside their bounds, for three reasons:
+
+| Why | What moved |
+|---|---|
+| Each game day's turnout, food lift and whistle come 14 real minutes later, so what follows from a game day falls a little differently. The casual players of both seeds and the first once-a-day player move most; the striver and the second once-a-day player barely move | Kept of every $100 in years 3 to 8: casual $14.0 to $15.3 (was $13.9 to $15.5), once a day $14.0 to $15.9 and the striver $11.5 to $13.8 as before; a new game opens at $16.8. Levels a week 5.3 to 5.9 (was 5.4 to 5.9). The earliest Top 10 still week 24. Catch-up 669 ms with 512 buildings (642), 550 ms untended (602), 446 and 547 on the model campus (440, 549). Everything that follows a campus moves with it: Seals, orders, decorations, labs, Greek chapters, the paper's lines, the Main Character's stories, grades (A's 45.8%, were 48.2%; D, F or W 7.7%, was 8.0%) |
+| The test player's yards (84.4) | The grounds check: 35 of 36 places tended (31 of 32), none dirty. The casual player's grounds: 17 places on 2 yards, 8.5 a yard (3 yards, 5.7, one of them at the map's edge looking after nothing), wages 0.5% of income (0.7%), still 100% clean. A campus left to rot: 3 bins broken after six days (2), back to 100% in five days. The diligent player's endowment $416.6M ($426.3M) |
+| Football's chaos rolls from its own stream in order, and the whistle now comes at a different point among chaos's other rolls, so the same wins draw different rolls. Football's results are the same: no football check moved | Stormings 45 in 44 seasons (46), the goalposts down 3 times (8), couches in the street 60 nights (51) |
+
+**Frames at the stadium** on the slowed phone, at High, four rounds: main's game seventeen minutes in (its second quarter, about 2:30 PM on the clock) 15.7 ms; the noon kickoff's first quarter at 12:55 PM 15.8 ms; 40 to 56 walkers in view on both.
+
+**Pictures** (the page `docs/handoff/kickoff-noon.html`), the football demo's home opener: the football chip at 9:31 AM on Saturday ("Football 0-0 · next in 4 m"); the top bar and the stadium at 12:55 PM, live in the first quarter; the first quarter at 7:43 PM, at dusk. The third quarter falls on Sunday morning by the clock, so the evening light is shown in the first.

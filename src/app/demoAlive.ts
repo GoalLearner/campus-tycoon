@@ -159,15 +159,20 @@ export function lifeCampus(students = 1200): GameState {
  *
  * The life campus with a stadium on its plot beside the east walk, a car park
  * for tailgates, and a campus big enough to fill it. `at` picks the moment:
- * gameday (the crowd walking in before the home opener), live (its second
- * quarter), season (the middle of the fall), finals, break (the winter
- * break), decisions (the spring, with choices open) and summer.
+ * gameday (the crowd walking in before the home opener), pregame (three minutes before it kicks off, on Saturday
+ * morning by the game's clock), kickoff (just after noon on Saturday), dusk (its first quarter at Saturday dusk), live
+ * (its second quarter), season (the middle of the fall), finals, break (the winter break), decisions (the spring, with
+ * choices open) and summer. A game kicks off at noon of its Saturday, 14 minutes after the Saturday begins (DESIGN.md
+ * 84.4): the opener at 8 h 14, the rivalry at 47 h 46.
  */
 export const FOOTBALL_MOMENTS: Record<string, number> = {
-  gameday: 8 * 60 - 22,
-  live: 8 * 60 + 17,
+  gameday: 8 * 60 + 14 - 22,
+  pregame: 8 * 60 + 14 - 3,
+  kickoff: 8 * 60 + 15,
+  dusk: 8 * 60 + 23,
+  live: 8 * 60 + 14 + 17,
   season: 24 * 60 + 9 * 60,
-  rivalry: 2 * 24 * 60 - 20,
+  rivalry: 2 * 24 * 60 + 14 - 20,
   finals: 2 * 24 * 60 + 6 * 60 + 50,
   break: 2 * 24 * 60 + 13 * 60,
   decisions: 5 * 24 * 60 + 45,
