@@ -10,6 +10,7 @@ import {
   budget,
   calendarAt,
   dateAt,
+  hourAt,
   datedDays,
   driftField,
   expectedCrowd,
@@ -225,9 +226,16 @@ describe('the conference and its schedule', () => {
     const state = run(fresh(), FIRST_INTAKE_TICK).state;
     const start = state.clock.week.start;
     const minutes = SLOTS.map((_, slot) => slotKick(state, slot) - start);
-    // DESIGN.md 4.8: anchor + 8 h 00, 11 h 18, 14 h 35, 17 h 53, then day 2 at 0 h 28, 7 h 04, 10 h 21, 16 h 56, 20 h 14 and 23 h 32.
+    // DESIGN.md 4.8: each Saturday begins at anchor + 8 h 00, 11 h 18, 14 h 35, 17 h 53, then day 2 at 0 h 28, 7 h 04,
+    // 10 h 21, 16 h 56, 20 h 14 and 23 h 32, and its game kicks off at noon on the game's clock, half a game day or about
+    // 14 real minutes later (84.4).
     const table = [8 * 60, 11 * 60 + 18, 14 * 60 + 35, 17 * 60 + 53, 24 * 60 + 28, 31 * 60 + 4, 34 * 60 + 21, 40 * 60 + 56, 44 * 60 + 14, 47 * 60 + 32];
-    minutes.forEach((minute, slot) => expect(Math.abs(minute - table[slot]!), `game ${slot + 1}`).toBeLessThanOrEqual(1));
+    minutes.forEach((minute, slot) => expect(Math.abs(minute - table[slot]! - 14), `game ${slot + 1}`).toBeLessThanOrEqual(1));
+    for (let slot = 0; slot < SLOTS.length; slot++) {
+      const hour = hourAt({ tick: slotKick(state, slot), week: state.clock.week });
+      expect(hour, `game ${slot + 1}`).toBeGreaterThanOrEqual(12);
+      expect(hour, `game ${slot + 1}`).toBeLessThan(13);
+    }
     for (let slot = 0; slot < SLOTS.length; slot++) {
       const clock = { tick: slotKick(state, slot), week: state.clock.week };
       expect(dateAt(clock).weekday).toBe(6);

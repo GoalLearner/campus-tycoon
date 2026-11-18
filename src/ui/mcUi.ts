@@ -43,7 +43,11 @@ export interface McView {
 const ROLE: Record<string, string> = { roommate: 'Roommate', friend: 'Friend', crush: 'Crush', partner: 'Partner' };
 const STATUS: Record<string, string> = { graduated: 'Graduated', transferred: 'Transferred', left: 'Left', setAside: 'Set aside' };
 
-export function mcView(state: GameState): McView {
+/**
+ * `now` is what they are doing at this moment of the game's clock (DESIGN.md 84), as the map shows them: their needs,
+ * their plan and their story keep the real day (53.1). Left out, the line is what their life system last chose.
+ */
+export function mcView(state: GameState, now?: string | null): McView {
   const story = state.story;
   const fame = (story?.fame ?? [])
     .slice()
@@ -70,7 +74,7 @@ export function mcView(state: GameState): McView {
       name: mc.name,
       about: `${card?.classYearName ?? 'Student'} · ${mc.major} · ${card?.archetypeName ?? ''}`.replace(/ · $/, ''),
       ref: mc.ref,
-      doing: `${spec.doing}: ${mc.doing.why}`,
+      doing: now ?? `${spec.doing}: ${mc.doing.why}`,
       rows,
       needs: NEEDS.map((need) => ({ name: NEED_NAMES[need], level: Math.round(mc.needs[need]), low: mc.needs[need] < NEED_LOW })),
       plan: (mc.plan?.items ?? []).map((item) => ({ text: `${ACTIVITIES[item.activity].name}: ${item.why}`, done: item.done })),

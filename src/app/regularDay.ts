@@ -1,4 +1,4 @@
-import { dateAt, PASTIME_WORDS, type GameState, type Pastime, type StudentCard, type StudentRef } from '../sim';
+import { dateAt, dateOfDay, dayIndexAt, PASTIME_WORDS, type GameDate, type GameState, type Pastime, type StudentCard, type StudentRef } from '../sim';
 import { hashInts } from '../sim/rng';
 import { dayRead } from '../sim/systems/season';
 import { semesterOf } from '../sim/systems/students';
@@ -13,7 +13,8 @@ import { majorAt, majorPath } from '../sim/systems/majors';
 import { clockText } from './clockText';
 
 /**
- * A regular's day (DESIGN.md 63.9): what they do from waking to sleep on the player's own real day, and with whom,
+ * A regular's day (DESIGN.md 63.9): what they do from waking to sleep on a day of the game's clock (DESIGN.md 84), and
+ * with whom,
  * worked out from their card, their people in the social web and the calendar, the same every time for the same day.
  * Classes on a weekday, meals with their friends, the gym, their club, studying, a date, a party, a game night with
  * their roommate; on a weekend a late brunch and an afternoon out; in exams, the library; on a break, home. Each item
@@ -51,7 +52,7 @@ export const SLEEP = { bed: 24.75, bedSpread: 0.75, hours: 6.45, hoursSpread: 0.
 export type Where = 'home' | 'class' | 'food' | 'play' | 'seat' | 'quad' | 'away';
 
 export interface DayItem {
-  /** Hours of the player's day, from 0 up to 24 and past it for the hours after midnight. */
+  /** Hours of the game's day, from 0 up to 24 and past it for the hours after midnight. */
   from: number;
   to: number;
   where: Where;
@@ -73,7 +74,7 @@ function withWords(state: GameState, people: Person[]): string {
   return people.length > 0 ? ` with ${names(first(state, people))}` : '';
 }
 
-/** "9 AM", "12:30 PM", "1 AM": a time of the player's day as the card says it, on the device's own clock (75.1). */
+/** "9 AM", "12:30 PM", "1 AM": a time of the game's day as the card says it, written as the device writes times (75.1). */
 export function clockWords(hour: number): string {
   return clockText(hour, true);
 }
@@ -96,8 +97,8 @@ export const MEAL_SWIPES = 14;
 const PASSING_WALK = 10 / 60;
 export const CLUBS_FROM = 19;
 export const PARTY_FROM = 21;
-/** A gym phase lasts this many of the player's days (about three and a half months of the game's), then comes or goes. */
-export const GYM_PHASE_DAYS = 2;
+/** A gym phase lasts this many game days, about three and a half months, then comes or goes. */
+export const GYM_PHASE_DAYS = 105;
 
 /** Where a job on campus is, as the map knows places. */
 const JOB_WHERE: Readonly<Record<string, Where>> = {
@@ -192,12 +193,23 @@ function classesOn(state: GameState, ref: StudentRef, weekday: number): ClassIte
   return weekOf(state, ref).days[weekday] ?? [];
 }
 
-/** The regular's day, waking to sleep. */
-export function regularDay(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard): DayItem[] {
-  const day = Math.floor(state.clock.tick / (24 * 60));
+/** A day of the game's clock: its running count and its date. */
+export interface OnDay {
+  index: number;
+  date: GameDate;
+}
+
+/** The game's day the simulation is on now: the date of its last tick. */
+export function dayNow(state: GameState): OnDay {
+  return { index: dayIndexAt(state.clock), date: dateAt(state.clock) };
+}
+
+/** The regular's day, waking to sleep, on a day of the game's clock: today's by default. */
+export function regularDay(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard, on: OnDay = dayNow(state)): DayItem[] {
+  const day = on.index;
   const roll = (salt: number): number => (hashInts(state.seed, 9500 + salt, ref.entryYear, ref.index, day) >>> 0) / 4294967296;
   const read = dayRead(state.clock);
-  const weekday = dateAt(state.clock).weekday;
+  const weekday = on.date.weekday;
   const weekend = weekday === 0 || weekday === 6;
   const [sleepAt, wakeAt] = sleepHours(card, weekend);
   // Wake to sleep in one run of hours: the hours they woke this morning, and those they go to bed tonight.
@@ -260,7 +272,7 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   // An 8 AM class: on two weekdays a week this term, for those up early enough to make it.
   const eights = (hashInts(state.seed, 9531, ref.entryYear, ref.index, semesterOf(state)) >>> 0) / 4294967296 < DETAILS.eightAm;
   const eight = !weekend && !slept && eights && wake <= 6.75 && (weekday === 2 || weekday === 4);
-  const gymPhase = (hashInts(state.seed, 9532, ref.entryYear, ref.index, Math.floor(day / GYM_PHASE_DAYS)) >>> 0) / 4294967296 < (dateAt(state.clock).month === 1 ? DETAILS.gymJanuary : DETAILS.gym);
+  const gymPhase = (hashInts(state.seed, 9532, ref.entryYear, ref.index, Math.floor(day / GYM_PHASE_DAYS)) >>> 0) / 4294967296 < (on.date.month === 1 ? DETAILS.gymJanuary : DETAILS.gym);
   const meal = (words: string, last: boolean): string => (mealPlan ? `${words}${last ? (swipesLeft > 0 ? `, ${swipesLeft} meal swipes left this week` : ', the last meal swipe of the week') : ', a meal swipe'}` : words);
 
   let t = wake;
@@ -294,7 +306,7 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
       today.push({ from, to: from + 0.5, words, help: true, ...(at ? { at } : {}) });
       today.sort((a, b) => a.from - b.from);
     };
-    const date = dateAt(state.clock);
+    const date = on.date;
     const adviseFrom = 6 + Math.floor(steady(40) * 14);
     if (help.adviser.guided && (date.month === 10 || date.month === 3) && date.day >= adviseFrom && date.day < adviseFrom + 7 && weekday === 1 + Math.floor(steady(41) * 5)) {
       fitIn(fitAt(10, 16, 0.5), `Advising appointment with ${help.adviser.name}, before registration`, help.adviser.at);
@@ -446,7 +458,24 @@ export function regularDay(view: WebView | null, state: GameState, ref: StudentR
   return items;
 }
 
-/** What they are doing at an hour of the player's day, or null between items. */
+/**
+ * A student's own day at a moment of the game's clock (DESIGN.md 84): until they wake, they are still in the night
+ * before, so a party or a late study session runs on past midnight. The hour comes back counted on from that day's
+ * start, so 1 AM of the night before is 25.
+ */
+export function studentDayAt(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard, at: OnDay & { hour: number }): { day: DayItem[]; hour: number } {
+  const wake = sleepHours(card, at.date.weekday === 0 || at.date.weekday === 6)[1] % 24;
+  if (at.hour < wake) return { day: regularDay(view, state, ref, card, { index: at.index - 1, date: dateOfDay(at.index - 1) }), hour: at.hour + 24 };
+  return { day: regularDay(view, state, ref, card, at), hour: at.hour };
+}
+
+/** What they are doing at a moment of the game's clock, or null between items. */
+export function doingAt(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard, at: OnDay & { hour: number }): DayItem | null {
+  const { day, hour } = studentDayAt(view, state, ref, card, at);
+  return itemAt(day, hour);
+}
+
+/** What they are doing at an hour of a day, or null between items. */
 export function itemAt(day: DayItem[], hour: number): DayItem | null {
   for (const h of [hour, hour + 24]) {
     const item = day.find((one) => one.from <= h && h < one.to);

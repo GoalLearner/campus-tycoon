@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/app/platform', () => ({ isNative: false, hasTimeSkip: false }));
 
-import { currentDaylight, daylightAt, forceHour, periodAt, shownHour, viewAt, viewedHour } from '../src/app/daylight';
+import { currentDaylight, daylightAt, forceClock, forceHour, periodAt, shownHour, viewAt, viewedHour } from '../src/app/daylight';
 import { HOME_SCREEN_TIP, homeScreenTipDue } from '../src/app/homeScreenTip';
 
 describe('the time of day', () => {
@@ -40,35 +40,37 @@ describe('the time of day', () => {
   });
 
   it('lights the street lamps through the evening and the night, and puts them out after dawn', () => {
-    expect(daylightAt(17).lamps).toBe(0);
-    expect(daylightAt(18).lamps).toBeCloseTo(0.5, 5);
-    expect(daylightAt(19).lamps).toBe(1);
+    expect(daylightAt(18).lamps).toBe(0);
+    expect(daylightAt(19).lamps).toBeCloseTo(0.5, 5);
+    expect(daylightAt(19.5).lamps).toBe(1);
     expect(daylightAt(0).lamps).toBe(1);
-    expect(daylightAt(5.9).lamps).toBe(1);
-    expect(daylightAt(7).lamps).toBe(0);
+    expect(daylightAt(4.9).lamps).toBe(1);
+    expect(daylightAt(6).lamps).toBe(0);
   });
 
-  it("reads the player's own clock, unless the View at slider shows another hour (DESIGN.md 75.4)", () => {
-    const lateEvening = new Date(2026, 10, 11, 22, 30, 0);
-    expect(shownHour(lateEvening)).toBe(22.5);
-    expect(currentDaylight(lateEvening).period).toBe('night');
+  it("reads the game's clock, unless the View at slider shows another hour (DESIGN.md 75.4, 84)", () => {
+    // The game's clock at 10:30 PM (a dev page can set it; tests/gameClock.test.ts reads a real game's).
+    forceClock(22.5);
+    expect(shownHour()).toBe(22.5);
+    expect(currentDaylight().period).toBe('night');
 
     expect(viewedHour()).toBe(null);
     viewAt(7 + 50 / 60);
-    expect(shownHour(lateEvening)).toBeCloseTo(7.8333, 3);
-    expect(currentDaylight(lateEvening).period).toBe('morning');
+    expect(shownHour()).toBeCloseTo(7.8333, 3);
+    expect(currentDaylight().period).toBe('morning');
     viewAt(12);
-    expect(currentDaylight(lateEvening).strength).toBe(0);
-    expect(currentDaylight(lateEvening).period).toBe('afternoon');
-    // Closing the strip puts the player's own clock back.
+    expect(currentDaylight().strength).toBe(0);
+    expect(currentDaylight().period).toBe('afternoon');
+    // Closing the strip puts the game's clock back.
     viewAt(null);
     expect(viewedHour()).toBe(null);
-    expect(currentDaylight(lateEvening).period).toBe('night');
+    expect(currentDaylight().period).toBe('night');
 
     // A screenshot can ask for any hour.
     forceHour(6);
-    expect(currentDaylight(lateEvening).period).toBe('morning');
+    expect(currentDaylight().period).toBe('morning');
     forceHour(null);
+    forceClock(null);
   });
 });
 

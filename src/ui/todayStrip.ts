@@ -6,7 +6,7 @@ import { clockHour, shownHour, viewAt, viewedHour } from '../app/daylight';
  * "Today on campus" (DESIGN.md 75.3, 75.4), opened by tapping the clock on the HUD: the day's curve of how busy the
  * paths are, what is happening now, what comes next, and a "View at" slider that shows the campus at another hour.
  * The slider changes the light and the crowd only, never the simulation or income, and closing the strip puts the
- * player's own clock back.
+ * game's clock back (DESIGN.md 84).
  */
 
 const SVG = 'http://www.w3.org/2000/svg';

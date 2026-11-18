@@ -21,6 +21,7 @@ import {
 } from '../sim';
 import { mergeAway, readSavedApp, type AwayReport, type SavedApp } from './away';
 import { clock } from './clock';
+import { followGame } from './daylight';
 import { sound } from './sound';
 import { clearSaves, readSaves, readSlots, readWebRecord, requestPersistentStorage, writeSave, writeSlots, writeWebRecord, type SaveSlot, type SlotRecord } from './persistence';
 
@@ -609,3 +610,6 @@ export function hourName(hour: number): string {
 }
 
 export const store = new Store();
+
+// The map's light, crowds and cards read the hour of the game's own day from this game (DESIGN.md 84).
+followGame(() => (store.hasGame ? store.state.clock : null));

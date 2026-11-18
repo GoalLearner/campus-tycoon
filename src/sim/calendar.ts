@@ -216,6 +216,11 @@ export interface GameDate {
 
 /** The founding day shows the week before classes: move-in week, Aug 12 to Aug 18. */
 const FOUNDING_DAYS = 7;
+/**
+ * The game's clock (DESIGN.md 84) opens the founding day at 8 AM on its first date, so a new campus is first seen in
+ * the morning. The hour the first class arrives, and the hour before it while they are on their way.
+ */
+const FOUNDING_OPENS = 8 / 24;
 
 const dayNumber = (calendar: AcademicCalendar, [month, day, year]: CalDate): number => daysFromCivil(calendar.startYear + year, month, day);
 
@@ -235,34 +240,77 @@ function toGameDate(days: number): GameDate {
 }
 
 /**
+ * Where a moment stands in the game's days: a whole day number and how far past it, in days. The date is the whole
+ * day of `base + offset` and the hour its fraction, so the two always turn over together at game midnight (DESIGN.md
+ * 84). Kept as two parts so the date at a whole tick is worked out exactly as it always was.
+ */
+function placeAt(at: At, calendar: AcademicCalendar): { base: number; offset: number } {
+  const tick = tickOf(at);
+  const week = weekOf(at);
+  const knots = calendar.knots;
+  const first = dayNumber(calendar, knots[0]![1]);
+  // Before the first class arrives: the morning of the first day of the fall.
+  if (tick < FIRST_INTAKE_TICK) return { base: first, offset: FOUNDING_OPENS };
+  if (tick < week.start) {
+    // Move-in week, spread evenly over the founding day whatever its length: from 8 AM on its first date to midnight
+    // at the end of its last.
+    const length = week.start - FIRST_INTAKE_TICK;
+    return { base: first - FOUNDING_DAYS, offset: FOUNDING_OPENS + ((tick - FIRST_INTAKE_TICK) / length) * (FOUNDING_DAYS - FOUNDING_OPENS) };
+  }
+  // A whole tick past the year's end reads its last tick, as it always has. A moment between ticks, which only the
+  // map's clock asks for, runs on to the next year's first midnight.
+  const t = Math.min(tick - week.start, Number.isInteger(tick) ? yearLength(week) - 1 : yearLength(week) - 1e-6);
+  const ticks = knotTicks(week, calendar);
+  for (let i = 0; i < knots.length - 1; i++) {
+    if (t >= ticks[i]! && t < ticks[i + 1]!) {
+      const from = dayNumber(calendar, knots[i]![1]);
+      const to = dayNumber(calendar, knots[i + 1]![1]);
+      return { base: from, offset: ((t - ticks[i]!) / (ticks[i + 1]! - ticks[i]!)) * (to - from) };
+    }
+  }
+  return { base: first, offset: 0 };
+}
+
+/**
  * The date in the academic year at a tick. It moves steadily with the real
  * week, about two game days to a real hour, and every game year shows the
  * same dates on the same weekdays. Before the first class arrives it is the
  * first day of the fall semester. During a founding day it is move-in week.
  */
 export function dateAt(at: At, calendar: AcademicCalendar = ACADEMIC_CALENDAR): GameDate {
-  const tick = tickOf(at);
-  const week = weekOf(at);
-  const knots = calendar.knots;
-  const first = dayNumber(calendar, knots[0]![1]);
-  if (tick < FIRST_INTAKE_TICK) return toGameDate(first);
-  if (tick < week.start) {
-    // Spread evenly over the founding day, whatever its length.
-    const length = week.start - FIRST_INTAKE_TICK;
-    return toGameDate(first - FOUNDING_DAYS + Math.floor(((tick - FIRST_INTAKE_TICK) / length) * FOUNDING_DAYS));
-  }
-  const t = Math.min(tick - week.start, yearLength(week) - 1);
-  const ticks = knotTicks(week, calendar);
-  let days = first;
-  for (let i = 0; i < knots.length - 1; i++) {
-    if (t >= ticks[i]! && t < ticks[i + 1]!) {
-      const from = dayNumber(calendar, knots[i]![1]);
-      const to = dayNumber(calendar, knots[i + 1]![1]);
-      days = from + Math.floor(((t - ticks[i]!) / (ticks[i + 1]! - ticks[i]!)) * (to - from));
-      break;
-    }
-  }
-  return toGameDate(days);
+  const { base, offset } = placeAt(at, calendar);
+  return toGameDate(base + Math.floor(offset));
+}
+
+/**
+ * The hour of the game's day at a moment, from 0 up to 24 (DESIGN.md 84): the game's own clock, read from the same
+ * calendar as the date. A game day is about 28 real minutes in the fall, so a game hour is about 70 real seconds. A
+ * tick may be fractional, for the map's clock between one real minute and the next.
+ */
+export function hourAt(at: At, calendar: AcademicCalendar = ACADEMIC_CALENDAR): number {
+  const { offset } = placeAt(at, calendar);
+  return (offset - Math.floor(offset)) * 24;
+}
+
+/**
+ * The date and the hour of a moment together, so the map's clock never shows one a step ahead of the other, and the
+ * day as a running count that goes up by one at each game midnight.
+ */
+export function momentAt(at: At, calendar: AcademicCalendar = ACADEMIC_CALENDAR): { date: GameDate; hour: number; index: number } {
+  const { base, offset } = placeAt(at, calendar);
+  const whole = Math.floor(offset);
+  return { date: toGameDate(base + whole), hour: (offset - whole) * 24, index: base + whole };
+}
+
+/** The date of a day in the running count `dayIndexAt` and `momentAt` give. */
+export function dateOfDay(index: number): GameDate {
+  return toGameDate(index);
+}
+
+/** The game's day at a moment as a running count: one more at each game midnight, the same for a whole game day. */
+export function dayIndexAt(at: At, calendar: AcademicCalendar = ACADEMIC_CALENDAR): number {
+  const { base, offset } = placeAt(at, calendar);
+  return base + Math.floor(offset);
 }
 
 /**
@@ -270,14 +318,19 @@ export function dateAt(at: At, calendar: AcademicCalendar = ACADEMIC_CALENDAR): 
  * calendar begins in this year. The other way round from `dateAt`.
  */
 export function tickOfDate(week: Week, date: CalDate, calendar: AcademicCalendar = ACADEMIC_CALENDAR): number {
+  return tickOfMoment(week, date, 0, calendar);
+}
+
+/** The first tick, counted from the year's first day, at which the game's clock has reached an hour of a date. */
+export function tickOfMoment(week: Week, date: CalDate, hour: number, calendar: AcademicCalendar = ACADEMIC_CALENDAR): number {
   const knots = calendar.knots;
   const ticks = knotTicks(week, calendar);
-  const want = dayNumber(calendar, date);
+  const want = dayNumber(calendar, date) + hour / 24;
   for (let i = 0; i < knots.length - 1; i++) {
     const from = dayNumber(calendar, knots[i]![1]);
     const to = dayNumber(calendar, knots[i + 1]![1]);
     if (want >= from && want < to) {
-      // The first tick whose date is this day: the same rounding as dateAt, turned round.
+      // The first tick whose date is this day (and hour): the same rounding as dateAt, turned round.
       return week.start + ticks[i]! + Math.ceil(((want - from) / (to - from)) * (ticks[i + 1]! - ticks[i]!) - 1e-9);
     }
   }

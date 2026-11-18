@@ -8,14 +8,14 @@ import { SETTLE_MS, settleDegrees, settling, twistMove, twistStart, type Twist }
 import { CROWD_STEPS, crowdSetting, FrameBudget, stepOf } from '../app/crowd';
 import { effectsSetting, scenesFor, type Scenes as LifeScenes, type Weather } from '../app/life';
 import { sound } from '../app/sound';
-import { currentDaylight, shownHour, type Daylight } from '../app/daylight';
+import { currentDaylight, gameNow, shownHour, type Daylight } from '../app/daylight';
 import { todayOf } from '../app/campusDay';
 import { feelingOf } from '../app/emotion';
 import { regularWhy } from '../sim/systems/regulars';
 import { socialWeb } from '../app/socialWeb';
 import { session } from '../app/session';
 import { store } from '../app/store';
-import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dateAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf, rivalColour, RIVALRY_SLOT, meddleShowing } from '../sim';
+import { previewPaint, readyToCollect, rowBetween, stageSpec, TICK_MS, type Building, type GameState, type Point, type Tool, type Zone, personKey, studentKey, type PersonRef, type StudentRef, studentCard, PLACED, previewPlace, craftsReady, decorSprite, reachCells, incidentText, hoodAt, parcelAt, driversNow, hasRoadAccess, isPathKind, isRoadKind, roadsByAccess, binState, enrollment, isBrokenThing, isMessSpot, isPathKind as isWalk, isBikeKind, isBrokenLamp, lampAt, LITTER_CEILING, spotClean, workersAt, yardOver, START_LAND, TOWN_X, calendarAt, dayIndexAt, dayRead, homeGameNow, pledgeSeason, chapters, SCHOOL_COLOURS, weatherAt, townHints, townLiving, townPlaces, type Incident, type Placed, placedCars, decorSpec, chaosOn, chaosStepOf, rivalColour, RIVALRY_SLOT, meddleShowing } from '../sim';
 import { Activity } from './Activity';
 import { Ambient } from './Ambient';
 import { Scenes } from './Scenes';
@@ -452,8 +452,8 @@ export class CampusScene extends Phaser.Scene {
       this.syncMap(state);
       this.feet.setMap(state);
       this.walkers.setMap(state);
-      // A Saturday or Sunday in the game's own calendar is quieter on the paths.
-      const weekday = dateAt(state.clock).weekday;
+      // A Saturday or Sunday on the game's clock is quieter on the paths.
+      const weekday = gameNow().date.weekday;
       this.walkers.setWeekend(this.weekendHeld || weekday === 0 || weekday === 6);
       this.cars.setMap(state);
       this.crew.setMap(state);
@@ -662,7 +662,7 @@ export class CampusScene extends Phaser.Scene {
   }
 
   /**
-   * The light of the hour, from the player's own clock: a tint over the map,
+   * The light of the hour, from the game's clock (DESIGN.md 84): a tint over the map,
    * the street lamps, and how busy the paths and roads are. For show only.
    */
   private showLight(): void {
@@ -684,11 +684,11 @@ export class CampusScene extends Phaser.Scene {
   /**
    * Life and sound, a few times a second: which small scenes are on, how much
    * the trees sway, and what the soundscape should be for what is on screen.
-   * The hour is the player's own and is only seen. The season and the weekday
-   * are the game's.
+   * The hour, the weekday and the season are the game's clock's (DESIGN.md 84),
+   * and are only seen.
    */
   private showLife(state: GameState): void {
-    const date = dateAt(state.clock);
+    const date = gameNow().date;
     const weekend = this.weekendHeld || date.weekday === 0 || date.weekday === 6;
     const term = calendarAt(state.clock).phase !== 'summer';
     // The calendar and the sky, from the game: who is on campus, exam weeks, a home game, and the weather.
@@ -723,9 +723,9 @@ export class CampusScene extends Phaser.Scene {
     this.walkers.setGameDay(built ? tint : null);
     // The rivalry at home on a game with chaos (DESIGN.md 77.1): some of the fans are the rival's, in its colour.
     this.walkers.setAwayFans(built && home && home.slot === RIVALRY_SLOT && chaosOn(state) ? softened(rivalColour(state).hex) : null);
-    // The class changes, the meal rushes and the evening by the hour shown (DESIGN.md 75), the player's own or the
+    // The class changes, the meal rushes and the evening by the hour shown (DESIGN.md 75), the game's clock's or the
     // "View at" slider's, on the kind of day the game's calendar says.
-    const today = todayOf(state, { weekend, weather: this.weather });
+    const today = todayOf(state, { weekend, weather: this.weather, date });
     const hour = shownHour();
     this.walkers.setHour(hour, today);
     this.activity.setHour(hour, weekend);
@@ -2622,12 +2622,16 @@ export class CampusScene extends Phaser.Scene {
   }
 }
 
-/** A home game won, from its kickoff to six hours after: the campus is still celebrating (DESIGN.md 64.3). */
+/**
+ * A home game won, from its whistle to the end of the Monday after on the game's clock: the campus is still celebrating
+ * (DESIGN.md 64.3, 84.4). It was six real hours, which on the game's clock would be nearly a fortnight.
+ */
 function homeWinLately(state: GameState): boolean {
   const season = state.football.season;
   if (!season) return false;
   const tick = state.clock.tick;
-  return season.games.some((game) => game.home && game.done && tick >= game.kick && tick - game.kick < 6 * 60 && sum(game.us) > sum(game.them));
+  const today = gameNow().index;
+  return season.games.some((game) => game.home && game.done && tick >= game.kick && today <= dayIndexAt({ tick: game.kick, week: state.clock.week }) + 2 && sum(game.us) > sum(game.them));
 }
 
 function sum(values: readonly number[]): number {

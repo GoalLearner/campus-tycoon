@@ -1,9 +1,9 @@
 import { courseHistory } from '../src/sim/systems/registration';
 import { describe, expect, it } from 'vitest';
-import { itemAt, MEAL_SWIPES, regularDay, shiftDays, sleepHours } from '../src/app/regularDay';
+import { doingAt, itemAt, MEAL_SWIPES, regularDay, shiftDays, sleepHours, studentDayAt } from '../src/app/regularDay';
 import { firstNamesOf, happenedTo, peopleOf, viewOf } from '../src/app/socialView';
 import { advance, applyAction, newGame, parseSave, sampleStudents, serialize, studentCard, studentFigure, toneProblem, type GameState, type StudentRef } from '../src/sim';
-import { calendarAt, dateAt } from '../src/sim/calendar';
+import { calendarAt, dateAt, dateOfDay, dayIndexAt } from '../src/sim/calendar';
 import { HEAVY_WORDS } from '../src/sim/config/tone';
 import { HEAVY_EVENTS } from '../src/sim/config/web';
 import { FOLLOWED_KEPT, MEMORY_KEPT, NAMED_FROM, NAMED_PER_CLASS, namedRegulars, promoteRegular, regularRecord, regularsNow, regularWhy, rememberRegular } from '../src/sim/systems/regulars';
@@ -310,4 +310,44 @@ describe('what happened to them', () => {
     expect(HEAVY_EVENTS.length).toBe(6);
     // A model campus's web grown and lived: several seconds on a quiet PC, more when it is busy.
   }, 60_000);
+});
+
+describe("a student's day on the game's clock (DESIGN.md 84)", () => {
+  const index = dayIndexAt(MODEL.clock);
+  const on = (hour: number, day = index) => ({ index: day, date: dateOfDay(day), hour });
+
+  it('is one game day: watching for about half a real hour shows waking, classes, meals and home', () => {
+    let seen = 0;
+    for (const ref of SAMPLE.slice(0, 12)) {
+      const card = studentCard(MODEL, ref)!;
+      const where = new Set<string>();
+      for (let hour = 0; hour < 24; hour += 0.25) where.add(doingAt(VIEW, MODEL, ref, card, on(hour))?.where ?? 'none');
+      if (where.has('home') && (where.has('class') || where.has('food'))) seen += 1;
+    }
+    expect(seen).toBeGreaterThan(8);
+  });
+
+  it('until they wake it is still the night before, so its late hours run on past midnight', () => {
+    const ref = SAMPLE[0]!;
+    const card = studentCard(MODEL, ref)!;
+    const early = studentDayAt(VIEW, MODEL, ref, card, on(1));
+    expect(early.hour).toBe(25);
+    expect(early.day).toEqual(regularDay(VIEW, MODEL, ref, card, { index: index - 1, date: dateOfDay(index - 1) }));
+    const noon = studentDayAt(VIEW, MODEL, ref, card, on(12));
+    expect(noon.hour).toBe(12);
+    expect(noon.day).toEqual(regularDay(VIEW, MODEL, ref, card, { index, date: dateOfDay(index) }));
+    // The day the simulation is on is the default.
+    expect(regularDay(VIEW, MODEL, ref, card)).toEqual(noon.day);
+  });
+
+  it('a new game day is a new day: the same student does not repeat it exactly every day', () => {
+    let differ = 0;
+    for (const ref of SAMPLE.slice(0, 10)) {
+      const card = studentCard(MODEL, ref)!;
+      const a = regularDay(VIEW, MODEL, ref, card, { index: index + 7, date: dateOfDay(index + 7) });
+      const b = regularDay(VIEW, MODEL, ref, card, { index: index + 14, date: dateOfDay(index + 14) });
+      if (JSON.stringify(a) !== JSON.stringify(b)) differ += 1;
+    }
+    expect(differ).toBeGreaterThan(3);
+  });
 });

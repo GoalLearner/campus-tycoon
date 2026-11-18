@@ -3,7 +3,7 @@ import { lonelyOf } from '../sim/systems/wellbeing';
 import { semesterOf } from '../sim/systems/students';
 import { standingOf, TRANSCRIPT_BELOW } from '../sim/systems/registration';
 import { BULLIED_FROM } from '../sim/config/web';
-import type { GameState, StudentCard, StudentRef } from '../sim';
+import { dayIndexAt, type GameState, type StudentCard, type StudentRef } from '../sim';
 import { FAMILY, PARENTS_VISITING, RHYTHM_FEELINGS } from '../sim/config/fourYears';
 import { MAJORS } from '../sim/config/students';
 
@@ -84,8 +84,8 @@ export interface Feeling {
 /** Below this, nothing pulls hard enough: they are fine. */
 const FINE_BELOW = 1.2;
 
-/** The game day: a day of the player's own clock, for what changes once a day. */
-const dayOf = (state: GameState): number => Math.floor(state.clock.tick / (24 * 60));
+/** The game day, for what changes once a day: a day of the game's clock (DESIGN.md 84). */
+const dayOf = (state: GameState): number => dayIndexAt(state.clock);
 
 /** The reasons pulling at a student now. */
 export function moodletsOf(view: WebView | null, state: GameState, ref: StudentRef, card: StudentCard, hour: number): Moodlet[] {

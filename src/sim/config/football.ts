@@ -122,7 +122,12 @@ export const DIVISION_ROUNDS: ReadonlyArray<ReadonlyArray<readonly [number, numb
 export const TITLE_DATE: CalDate = [12, 5, 0];
 export const BOWL_DATE: CalDate = [12, 26, 0];
 export const TOP_BOWL_DATE: CalDate = [1, 18, 1];
-/** A game is forty real minutes, shown a quarter at a time. */
+/**
+ * A game is forty real minutes, shown a quarter at a time. It kicks off at noon on its Saturday by the game's clock
+ * (DESIGN.md 84.4); forty real minutes are about a day and a half of that clock, so the stadium is full from Saturday
+ * noon to Sunday night, under the lights through the night between.
+ */
+export const KICKOFF_HOUR = 12;
 export const GAME_TICKS = 40;
 export const QUARTER_TICKS = 10;
 /** The founding scrimmage kicks off this long after the first class moves in, if the founding day is at least this long. */

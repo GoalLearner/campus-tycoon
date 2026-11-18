@@ -22,7 +22,7 @@ import { periodAt } from './daylight';
  * A peek inside a student's room (DESIGN.md sections 46 and 60). For show
  * only, like the walkers: a room is worked out when it is opened, from the
  * student's seeded identity, the live campus numbers and the hour on the
- * player's clock. Nothing here is saved, and nothing in src/sim reads it.
+ * game's clock (DESIGN.md 84). Nothing here is saved, and nothing in src/sim reads it.
  *
  * The room is a small grid of its own, three cells along its right-hand wall
  * and two along its left, seen from the front with those two back walls
@@ -347,7 +347,7 @@ export function roomActivity(state: GameState, card: StudentCard, hour: number, 
 }
 
 /**
- * Whether a student the map has not seen is at home at an hour of the player's day, and if so what at: asleep, getting
+ * Whether a student the map has not seen is at home at an hour of the game's day, and if so what at: asleep, getting
  * ready in the morning, or in for the evening. null when they would be in class.
  */
 export function homeActivity(state: GameState, card: StudentCard, hour: number): RoomActivity | null {
@@ -505,7 +505,7 @@ function mateRound(activity: RoomActivity, plan: Plan, r: (salt: number) => numb
 }
 
 /**
- * The room of a student at an hour of the player's day: in their dorm, their chapter house or their house in town. A
+ * The room of a student at an hour of the game's day: in their dorm, their chapter house or their house in town. A
  * room away from the dorms has no roommate. null for anyone with no home to look into.
  */
 export function roomFor(state: GameState, ref: StudentRef, hour: number, figures: { crowd: number; look: (ref: StudentRef) => number }): Room | null {

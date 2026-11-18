@@ -39,7 +39,7 @@ export function findStudent(seed: number, pool: readonly StudentRef[], place: nu
   return pool[hashInts(seed, place, spot, 0, SALT) % pool.length]!;
 }
 
-/** What someone is doing at a seat, by the part of the player's day. They sit at it, in a pose made from the pack (DESIGN.md 64). */
+/** What someone is doing at a seat, by the part of the game's day. They sit at it, in a pose made from the pack (DESIGN.md 64). */
 const AT_SEAT: Record<'bench' | 'table', Record<DayPeriod, string>> = {
   bench: { morning: 'Having coffee at a bench', afternoon: 'Reading at a bench', evening: 'Talking with friends at a bench', night: 'Out late at a bench' },
   table: { morning: 'Having breakfast at a picnic table', afternoon: 'Studying at a picnic table', evening: 'Talking with friends at a picnic table', night: 'Out late at a picnic table' },

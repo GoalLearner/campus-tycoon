@@ -12,11 +12,10 @@ import type { Footprints } from './footprints';
 import { ANGER_MARK_MS, BIG_KEY, bigMomentOf, cheeringAt, heldFacing, heldOf, HELD_KEY, laughingAt, motionAt, motionOf, MOTION_PACE, pacingAt, RING, type BigMoment, type Held, type Motion, type Pose, type Today, type Trip } from '../app/feelingShow';
 import { socialWeb } from '../app/socialWeb';
 import { firstNamesOf, idIn, refIn, type WebView } from '../app/socialView';
-import { itemAt, regularDay } from '../app/regularDay';
-import { shownHour } from '../app/daylight';
+import { doingAt } from '../app/regularDay';
+import { shownHour, shownMoment } from '../app/daylight';
 import { KIND, SLOTS } from '../sim/config/web';
 import { firstNameOf, placeUsedFor } from '../sim/systems/students';
-import { dateAt } from '../sim/calendar';
 import { INTEREST } from '../sim/systems/identity';
 import { BULLYING_PASSING } from '../sim/config/bullying';
 import { CROWD_STEPS, othersWanted, TOUR_SIZE, walkersWanted } from '../app/crowd';
@@ -52,7 +51,7 @@ import type { Iso } from './iso';
  * People walking. Purely for show: nothing here is saved, nothing here
  * touches the simulation, and catch-up never runs it. The crowd is a sample
  * sized from enrollment, from how much of the campus is on screen, from the
- * part of the player's day and from the crowd setting.
+ * part of the game's day and from the crowd setting.
  *
  * A walker steps out of a building, follows the paths to another building, a
  * quad or somewhere to eat or play, and steps inside or lingers. Every sprite
@@ -250,6 +249,13 @@ const THIN_FROM_LEGS = 6;
 /** [T] How many a second head in: the extra over this many seconds, at least one and at most six a second. */
 const THIN_PER_SECOND = [1, 6] as const;
 const THIN_OVER_SECONDS = 8;
+/**
+ * [T] On the game's clock a class change comes about every seventy real seconds and lasts about twelve (DESIGN.md
+ * 84.3). How full the paths should be follows the hour over this many real seconds, rising and falling, so a change
+ * swells out of the doors and ebbs back into them: a campus day sped up, never a flicker.
+ */
+const LEVEL_RISE_S = 2.5;
+const LEVEL_FALL_S = 4;
 const OFFSCREEN_LIMIT_MS = 3500;
 /**
  * Nobody appears or disappears in view (DESIGN.md 69.2, the owner's "they gotta come out of a house/building"): how far
@@ -627,12 +633,15 @@ export class Walkers {
   private crossingNow = new Set<number>();
   private marked: string | null = null;
   private ring: Phaser.GameObjects.Ellipse | null = null;
-  /** The part of the player's own day. It sets how many are out and where they go. */
+  /** The part of the game's day. It sets how many are out and where they go. */
   private period: DayPeriod = 'afternoon';
   private weekend = false;
   /** The hour shown and the kind of day (DESIGN.md 75): the class changes, the meal rushes, where people head. */
   private hour = 15;
   private day: DayFacts = ORDINARY_DAY;
+  /** How full of people the paths are aiming to be, eased toward the hour's (84.3). Negative until first asked. */
+  private level = -1;
+  private levelAt = 0;
   /** The school's colour while a home game is on, laid over the fans walking to it. null on any other day. */
   private fanTint: number | null = null;
   /** The rival's colour, softened, on the rivalry game day at home: some of the fans are theirs (DESIGN.md 77.1). */
@@ -691,7 +700,7 @@ export class Walkers {
     this.period = period;
   }
 
-  /** Told by the map: the hour shown, the player's own or the "View at" slider's, and the kind of day (DESIGN.md 75). */
+  /** Told by the map: the hour shown, the game's clock's or the "View at" slider's, and the kind of day (DESIGN.md 75, 84). */
   setHour(hour: number, day: DayFacts): void {
     this.hour = hour;
     this.day = day;
@@ -3039,12 +3048,12 @@ export class Walkers {
     }
   }
 
-  /** Where a student's day sends them next, from their schedule at the player's hour; undefined to choose as usual. */
+  /** Where a student's day sends them next, from their schedule at the game's hour; undefined to choose as usual. */
   private plannedFrom(origin: Stop, student: StudentRef): Stop | undefined {
     if (!this.state) return undefined;
     const card = studentCard(this.state, student);
     if (!card) return undefined;
-    const item = itemAt(regularDay(socialWeb.view, this.state, student, card), shownHour());
+    const item = doingAt(socialWeb.view, this.state, student, card, shownMoment());
     if (!item) return undefined;
     const others = this.stops.filter((stop) => stop !== origin);
     const places = others.filter((stop) => stop.kind === 'place');
@@ -3091,7 +3100,7 @@ export class Walkers {
   private staysAt(stop: Stop, student: StudentRef): boolean {
     if (!this.state) return false;
     const card = studentCard(this.state, student);
-    const item = card ? itemAt(regularDay(socialWeb.view, this.state, student, card), shownHour()) : null;
+    const item = card ? doingAt(socialWeb.view, this.state, student, card, shownMoment()) : null;
     if (!item) return false;
     if (item.where === 'food') return stop.kind === 'place' && stop.use === 'food';
     if (item.where === 'play') return stop.kind === 'place' && stop.use === 'play';
@@ -3511,7 +3520,7 @@ export class Walkers {
   /** A party night: Thursday to Saturday on the game's calendar (as a regular's day has it, 63.9). */
   private partyNight(): boolean {
     if (!this.state) return false;
-    const weekday = dateAt(this.state.clock).weekday;
+    const weekday = shownMoment().date.weekday;
     return weekday === 4 || weekday === 5 || weekday === 6;
   }
 
@@ -3523,9 +3532,23 @@ export class Walkers {
       const x = i % this.width;
       if (this.inView(view, x + 0.5, (i - x) / this.width + 0.5, 0)) visible += 1;
     }
-    const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, level: pathsAt(this.hour, this.day), step: this.step });
+    const wanted = walkersWanted({ students: this.students, pathCells: this.pathCells, visiblePathCells: visible, level: this.easedLevel(), step: this.step });
     // Fewer on a break, half as many again on a home game day, and never an empty campus.
     return Math.max(Math.min(wanted, 3), Math.round(wanted * this.presence * (1 - this.resting) * (this.fanTint !== null ? GAME_DAY_CROWD : 1)));
+  }
+
+  /**
+   * How full the paths are aiming to be now: the hour's fullness (75.2), followed over a few real seconds (84.3). The
+   * first look, or a look back after a few seconds away, takes the hour's as it is.
+   */
+  private easedLevel(): number {
+    const target = pathsAt(this.hour, this.day);
+    const now = this.scene.time.now;
+    const seconds = (now - this.levelAt) / 1000;
+    this.levelAt = now;
+    if (this.level < 0 || seconds < 0 || seconds > 5) this.level = target;
+    else this.level += (target - this.level) * (1 - Math.exp(-seconds / (target > this.level ? LEVEL_RISE_S : LEVEL_FALL_S)));
+    return this.level;
   }
 
   /** How many walkers are alive. For tests and the dev console. */

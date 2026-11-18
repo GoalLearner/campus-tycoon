@@ -2,7 +2,8 @@ import { mountScheduleView } from './scheduleView';
 import { drawMeddlePage } from './meddleUi';
 import { clock } from '../app/clock';
 import { backupReminder } from '../app/away';
-import { shownHour, viewedHour } from '../app/daylight';
+import { gameNow, shownHour, shownMoment, viewedHour } from '../app/daylight';
+import { doingAt } from '../app/regularDay';
 import { todayOf } from '../app/campusDay';
 import { clockText } from '../app/clockText';
 import { makeTodayStrip } from './todayStrip';
@@ -19,7 +20,6 @@ import {
   bottleneck,
   buildingAt,
   calendarAt,
-  dateAt,
   formatDate,
   capacityWanted,
   BENEFITS_SHARE,
@@ -75,6 +75,7 @@ import {
   weatherAt,
   enrollmentCap,
   nextApplicants,
+  studentCard,
 } from '../sim';
 import { craftsReady, decorSpec, giftReady, hasMakerspace, previewDecor, scorecard, waits as waitsNow } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
@@ -193,6 +194,17 @@ const TESTER_TAPS = 7;
 const TESTER_KEY = 'campus-tycoon.testerTools';
 
 /** Dev builds always show the time-skip panel. Tester builds show it only after the hidden switch. */
+/**
+ * What the Main Character is doing at this moment of the game's clock, as the map shows them walking it (DESIGN.md 84):
+ * their own day, like any followed student's. null with none chosen, or between one thing and the next.
+ */
+function mainDoingNow(state: GameState): string | null {
+  const ref = state.story?.mc?.ref;
+  const card = ref ? studentCard(state, ref) : null;
+  if (!ref || !card) return null;
+  return doingAt(socialWeb.view, state, ref, card, shownMoment())?.words ?? null;
+}
+
 function testerToolsOn(): boolean {
   if (import.meta.env.DEV) return true;
   if (!hasTimeSkip) return false;
@@ -1211,8 +1223,10 @@ export function mountUi(root: HTMLElement): void {
     const day = dayRead(state.clock);
     setText(when, day.kind === 'term' || day.name === null ? (day.rhythm ?? NOW_LABEL[pos.phase]) : day.name);
     const sky = SKY_WORD[weatherAt(state.seed, state.clock)];
-    setText(dateText, formatDate(dateAt(state.clock)));
-    // The hour shown: the player's own, or the "View at" slider's while the Today strip shows another (75.4).
+    // The game's own date and hour (DESIGN.md 84), which turn over together at game midnight.
+    const clockNow = gameNow();
+    setText(dateText, formatDate(clockNow.date));
+    // The hour shown: the game's clock, or the "View at" slider's while the Today strip shows another (75.4).
     const viewing = viewedHour() !== null;
     setText(clockButton, clockText(shownHour()));
     clockButton.classList.toggle('viewing', viewing);
@@ -1220,7 +1234,7 @@ export function mountUi(root: HTMLElement): void {
     clockButton.setAttribute('aria-expanded', today.isOpen() ? 'true' : 'false');
     hud.classList.toggle('today-open', today.isOpen());
     setText(dateRest, pos.year === 0 ? '' : ` · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
-    today.render(todayOf(state));
+    today.render(todayOf(state, { date: clockNow.date }));
     footballButton.set(footballStat(state), footballChip(state) ?? 'Football');
     inboxButton.set(inboxStat(state), inboxChip(state).text);
     const board = ordersChip(state);
@@ -2442,7 +2456,7 @@ export function mountUi(root: HTMLElement): void {
       const body = el('div', 'card-scroll');
       card.append(head, body, button('Close', 'wide', close));
       const draw = (): void => {
-        const view = mcView(store.state);
+        const view = mcView(store.state, mainDoingNow(store.state));
         head.textContent = '';
         body.textContent = '';
         const fame = (): void => {

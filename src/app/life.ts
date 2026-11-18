@@ -6,8 +6,8 @@ import type { DayPeriod } from './daylight';
  *
  * All of it is for show. Nothing here is saved, nothing here changes a
  * number, and nothing here runs while the game is closed. The hour comes from
- * the player's own clock and is only ever seen. The season and the weekday
- * come from the date in the game. The weather comes from the calendar layer
+ * the game's clock (DESIGN.md 84) and is only ever seen. The season and the
+ * weekday come from the date in the game. The weather comes from the calendar layer
  * when it is built: until then it is always clear, and everything here
  * already answers to it.
  *
@@ -306,9 +306,19 @@ export function soundMix(facts: SoundFacts): SoundMix {
   };
 }
 
-/** True when the bell should chime: the hour of the player's clock has just changed while the game is on screen. */
+/**
+ * The hours of the game's day the bell chimes (DESIGN.md 84): the first classes, noon and the evening. A game hour is
+ * about seventy real seconds, so a bell every hour would never stop.
+ */
+export const BELL_HOURS: readonly number[] = [8, 12, 18];
+
+/** True when the bell should chime: the game's clock has just reached one of its hours while the game is on screen. */
 export function bellDue(lastHour: number | null, hour: number, hidden: boolean): boolean {
-  return !hidden && lastHour !== null && Math.floor(hour) !== Math.floor(lastHour);
+  if (hidden || lastHour === null) return false;
+  const was = Math.floor(lastHour);
+  const now = Math.floor(hour);
+  // Forward by an hour or two, as the clock runs: never when it is set back.
+  return now !== was && BELL_HOURS.includes(now) && (now - was + 24) % 24 <= 2;
 }
 
 // ---------------------------------------------------------------- volumes --

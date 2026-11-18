@@ -20,7 +20,7 @@ import { Game, type Area, type Sport } from '../app/games';
  *
  * How many are there comes from the simulation's own numbers: each
  * building's demand at the busiest hour and what it holds (see
- * `src/sim/systems/play.ts`), scaled by the part of the player's day.
+ * `src/sim/systems/play.ts`), scaled by the part of the game's day.
  * Afternoons and evenings are busiest. Where each figure stands and how it
  * moves is only for show. Nothing here is saved, nothing here changes a
  * number, and nothing here runs while the game is closed.

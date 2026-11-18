@@ -1,10 +1,10 @@
-import { currentDaylight } from './daylight';
+import { clockHour, currentDaylight } from './daylight';
 import { bellDue, heardMusic, heardSound, SILENT, soundMix, type SoundFacts, type SoundMix } from './life';
 
 /**
  * Sound (DESIGN.md section 33.6 and 33.9). An ambient soundscape that follows
- * what is on screen, soft sounds for taps, a bell on the hour of the player's
- * own clock, and light music.
+ * what is on screen, soft sounds for taps, a bell at the first classes, noon
+ * and the evening of the game's clock (DESIGN.md 84), and light music.
  *
  * The soundscape, the bell, the busker and the music are made here, in code,
  * from tones and filtered noise: there is no free ambience pack, and nobody
@@ -49,8 +49,6 @@ const FILES = { tap: 0.16, built: 0.3, cannot: 0.3, win: 0.5, loss: 0.5, reward:
 type FileName = keyof typeof FILES;
 export type Jingle = 'win' | 'loss' | 'reward';
 
-/** The hour on the player's own clock. The bell follows it whatever light the map is showing. */
-const clockHour = (): number => new Date().getHours();
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
@@ -272,7 +270,7 @@ class SoundEngine {
       this.music(now);
       this.next.beat = now + BEAT_S;
     }
-    // A bell on the hour of the player's own clock.
+    // The bell, on the game's clock whatever hour the View at slider shows (DESIGN.md 84).
     const hour = clockHour();
     if (bellDue(this.lastHour, hour, this.hidden)) this.bell(now + 0.05);
     this.lastHour = hour;
