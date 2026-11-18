@@ -251,6 +251,18 @@ describe('the conference and its schedule', () => {
     expect(state.timers.filter((timer) => timer.kind === 'kickoff' && timer.ref < 100).length).toBe(10);
   });
 
+  it("the title game and both bowls kick off in the player's waking hours too, at noon on the game clock (DESIGN.md 4.8, 84.4)", () => {
+    const state = run(fresh(), FIRST_INTAKE_TICK).state;
+    const start = state.clock.week.start;
+    for (const slot of [10, 11, 12]) {
+      const kick = slotKick(state, slot);
+      const hour = ((kick - start) / 60) % 24;
+      expect(hour < 14 || hour >= 22, `slot ${slot} at anchor + ${hour.toFixed(1)} h`).toBe(true);
+      expect(dateAt({ tick: kick, week: state.clock.week }).weekday, `slot ${slot}`).toBeGreaterThanOrEqual(0);
+      expect(Math.floor(hourAt({ tick: kick, week: state.clock.week })), `slot ${slot}`).toBe(KICKOFF_HOUR);
+    }
+  });
+
   it("tells a game's result under the Saturday it kicked off, though the whistle blows a date or two later", () => {
     const start = run(fresh(), FIRST_INTAKE_TICK).state;
     const { log } = to(start, slotKick(start, 9) + GAME_TICKS + 5);

@@ -539,22 +539,47 @@ function yardSpot(state: GameState, spot: Placed, nearest: boolean): Point | nul
 }
 
 /**
- * Where a second yard goes when one has more places than a full crew can hold:
- * beside the place furthest from the first, so the far half of its circle
- * changes hands. The nearer yard always looks after a place.
+ * Where a second yard goes when one has more places than a full crew can hold: on the free ground where it takes over
+ * the most of that work, as evenly as can be, so neither is left beyond a full crew if it can help it. The nearer
+ * yard always looks after a place. A spot that would take over nothing is no help, and no yard is built there: on a
+ * campus with no such ground, the player instead stops adding busy places to that yard (`anySpot`).
  */
 function splitSpot(state: GameState, yard: Placed): Point | null {
-  let far: Placed | null = null;
-  let most = -1;
-  for (const p of state.map.placed) {
-    if (!p || !isMessSpot(p) || state.map.care.yard[p.id] !== yard.id) continue;
-    const gap = Math.max(Math.max(p.x - (yard.x + yard.w - 1), yard.x - (p.x + p.w - 1), 0), Math.max(p.y - (yard.y + yard.h - 1), yard.y - (p.y + p.h - 1), 0));
-    if (gap > most) {
-      most = gap;
-      far = p;
+  const mine = state.map.placed.filter((p): p is Placed => !!p && isMessSpot(p) && state.map.care.yard[p.id] === yard.id);
+  if (mine.length === 0) return null;
+  const reach = PLACED.yard.radius;
+  const spec = PLACED.yard;
+  const left = Math.min(...mine.map((p) => p.x)) - reach;
+  const right = Math.max(...mine.map((p) => p.x + p.w - 1)) + reach;
+  const top = Math.min(...mine.map((p) => p.y)) - reach;
+  const bottom = Math.max(...mine.map((p) => p.y + p.h - 1)) + reach;
+  const free: Point[] = [];
+  for (let py = Math.max(0, top); py <= Math.min(state.map.height - spec.h, bottom); py++) {
+    for (let px = Math.max(0, left); px <= Math.min(state.map.width - spec.w, right); px++) {
+      let clear = previewPlace(state, 'yard', px, py).problem === null;
+      for (let cy = py; cy < py + spec.h && clear; cy++) for (let cx = px; cx < px + spec.w && clear; cx++) if (onStreetPlan(cx, cy)) clear = false;
+      if (clear) free.push([px, py]);
     }
   }
-  return far ? menuSpot(state, 'yard', far.x, far.y) : null;
+  // The nearest to the middle of its places first, and no more than a few dozen tried.
+  const mx = mine.reduce((sum, p) => sum + p.x, 0) / mine.length;
+  const my = mine.reduce((sum, p) => sum + p.y, 0) / mine.length;
+  free.sort((a, b) => Math.max(Math.abs(a[0] - mx), Math.abs(a[1] - my)) - Math.max(Math.abs(b[0] - mx), Math.abs(b[1] - my)));
+  let best: Point | null = null;
+  let bestWorst = yardStatus(state, yard).need;
+  for (const at of free.slice(0, 40)) {
+    const tried = applyAction(state, { type: 'place', building: 'yard', x: at[0], y: at[1] });
+    if (!tried.ok) continue;
+    const fresh = tried.state.map.placed.find((p): p is Placed => !!p && p.type === 'yard' && p.x === at[0] && p.y === at[1]);
+    if (!fresh) continue;
+    const old = yardStatus(tried.state, tried.state.map.placed[yard.id]!).need;
+    const worst = Math.max(old, yardStatus(tried.state, fresh).need);
+    if (old < bestWorst - 1e-9 && worst < bestWorst - 1e-9) {
+      best = at;
+      bestWorst = worst;
+    }
+  }
+  return best;
 }
 
 /**
@@ -655,21 +680,52 @@ function menuSpot(state: GameState, type: PlacedType, x: number, y: number): Poi
 }
 
 /**
- * For a place students use, which serves the whole campus wherever it stands (DESIGN.md 83): where the grounds are
- * already tended, as a tidy player builds, inside the circle of a Facilities Yard whose crew has room for it; failing
- * that by the lot asked for, then
- * beside another place that drops litter, then by the next built lot, dorms first. Anything else by the lot asked for.
+ * [T] A yard has room for another busy place while its work, with one more, stays within this many units: under half a
+ * full crew's (`YARD_MAX_WORKERS` x `WORK_PER_WORKER`, 13.2), so a tidy player fills a light yard first.
  */
-function anySpot(state: GameState, type: PlacedType, x: number, y: number): Point | null {
+const LIGHT_WORK = 6;
+const PLACE_WORK = 2;
+/**
+ * [T] And no busy place goes where the yard that would look after it then has more litter falling than this share of
+ * a full crew clears: the rest is room for the fall class, which brings more.
+ */
+const FULL_CREW_WORK = YARD_MAX_WORKERS * WORK_PER_WORKER;
+const KEEP_ROOM = 0.9;
+
+/**
+ * True when a busy place at a spot could be looked after: put down, the yard that would look after it has no more
+ * falling on it than most of a full crew clears, or no yard reaches it yet (the grounds pass then builds one).
+ */
+function fits(state: GameState, type: PlacedType, at: Point): boolean {
+  const tried = applyAction(state, { type: 'place', building: type, x: at[0], y: at[1] });
+  if (!tried.ok) return false;
+  const fresh = tried.state.map.placed.find((p): p is Placed => !!p && p.type === type && p.x === at[0] && p.y === at[1]);
+  const yardId = fresh ? (tried.state.map.care.yard[fresh.id] ?? -1) : -1;
+  const yard = yardId >= 0 ? tried.state.map.placed[yardId] : null;
+  return !yard || yardStatus(tried.state, yard).falling <= FULL_CREW_WORK * KEEP_ROOM + 1e-9;
+}
+
+/**
+ * For a place students use, which serves the whole campus wherever it stands (DESIGN.md 83), as a tidy player builds:
+ * inside the circle of a Facilities Yard with room for it, the nearest free ground to it; failing that by the lot asked
+ * for, then beside another place that drops litter, then by the next built lot, dorms first. Each spot is taken only
+ * where the yard that would look after it can (`fits`). Where none can, beside a new yard on free ground that would
+ * look after it (`yard`, built first); and where there is no such ground, nowhere: a yard is never given more than a
+ * full crew can clear. Anything else by the lot asked for.
+ */
+function anySpot(state: GameState, type: PlacedType, x: number, y: number): { at: Point; yard?: Point } | null {
   const family = PLACED[type].family;
-  if (family !== 'recreation' && family !== 'dining' && family !== 'tutoring') return menuSpot(state, type, x, y);
+  if (family !== 'recreation' && family !== 'dining' && family !== 'tutoring') {
+    const at = menuSpot(state, type, x, y);
+    return at ? { at } : null;
+  }
   const placed = state.map.placed.filter((p): p is NonNullable<typeof p> => !!p);
   // Inside the circle of a yard whose crew has room for another busy place, so it looks after it: the nearest free
   // ground to each such yard in turn.
   const spec = PLACED[type];
   for (const yard of placed.filter((p) => p.type === 'yard')) {
     const status = yardStatus(state, yard);
-    if (status.need + 2 > status.max) continue;
+    if (status.need + PLACE_WORK > LIGHT_WORK) continue;
     let best: Point | null = null;
     let bestFar = Infinity;
     const reach = PLACED.yard.radius;
@@ -684,18 +740,76 @@ function anySpot(state: GameState, type: PlacedType, x: number, y: number): Poin
         bestFar = far;
       }
     }
-    if (best) return best;
+    if (best && fits(state, type, best)) return { at: best };
   }
   const here = menuSpot(state, type, x, y);
-  if (here) return here;
+  if (here && fits(state, type, here)) return { at: here };
   const near: Array<{ x: number; y: number }> = placed.filter((p) => isMessSpot(p));
   const lots = state.map.buildings.filter((b): b is NonNullable<typeof b> => !!b && b.stage > 0);
   lots.sort((a, b) => (a.zone === b.zone ? 0 : a.zone === 'housing' ? -1 : 1));
+  const tried = new Set<string>();
   for (const at of [...near, ...lots].slice(0, 60)) {
     const spot = menuSpot(state, type, at.x, at.y);
-    if (spot) return spot;
+    if (!spot || tried.has(`${spot[0]},${spot[1]}`)) continue;
+    tried.add(`${spot[0]},${spot[1]}`);
+    if (fits(state, type, spot)) return { at: spot };
+  }
+  // Every yard in reach is as full as it should be: a new yard on free ground, nearest the lot asked for, with room
+  // beside it for the place, that it and no other yard would look after.
+  const yardSpec = PLACED.yard;
+  const ground: Point[] = [];
+  for (let py = 0; py <= state.map.height - yardSpec.h; py++) {
+    for (let px = 0; px <= state.map.width - yardSpec.w; px++) {
+      let clear = previewPlace(state, 'yard', px, py).problem === null;
+      for (let cy = py; cy < py + yardSpec.h && clear; cy++) for (let cx = px; cx < px + yardSpec.w && clear; cx++) if (onStreetPlan(cx, cy)) clear = false;
+      if (clear) ground.push([px, py]);
+    }
+  }
+  ground.sort((a, b) => Math.max(Math.abs(a[0] - x), Math.abs(a[1] - y)) - Math.max(Math.abs(b[0] - x), Math.abs(b[1] - y)));
+  for (const yardAt of ground.slice(0, 12)) {
+    const built = applyAction(state, { type: 'place', building: 'yard', x: yardAt[0], y: yardAt[1] });
+    if (!built.ok) continue;
+    const fresh = built.state.map.placed.find((p): p is Placed => !!p && p.type === 'yard' && p.x === yardAt[0] && p.y === yardAt[1]);
+    if (!fresh) continue;
+    const at = spotUnder(built.state, type, fresh);
+    if (at && fits(built.state, type, at)) return { at, yard: yardAt };
   }
   return null;
+}
+
+/** The nearest free ground to a yard, within its reach, that it and no other yard would look after. */
+function spotUnder(state: GameState, type: PlacedType, yard: Placed): Point | null {
+  const spec = PLACED[type];
+  let best: Point | null = null;
+  let bestFar = Infinity;
+  const reach = PLACED.yard.radius;
+  for (let py = yard.y - reach; py <= yard.y + yard.h - 1 + reach - (spec.h - 1); py++) {
+    for (let px = yard.x - reach; px <= yard.x + yard.w - 1 + reach - (spec.w - 1); px++) {
+      const far = Math.max(Math.abs(px - yard.x), Math.abs(py - yard.y));
+      if (far >= bestFar) continue;
+      let clear = previewPlace(state, type, px, py).problem === null;
+      for (let cy = py; cy < py + spec.h && clear; cy++) for (let cx = px; cx < px + spec.w && clear; cx++) if (onStreetPlan(cx, cy)) clear = false;
+      if (!clear || yardOver(state, px, py, spec.w, spec.h)?.id !== yard.id) continue;
+      best = [px, py];
+      bestFar = far;
+    }
+  }
+  return best;
+}
+
+/** The yard that would look after something put down at a spot: the nearest whose circle it is in, as the game gives one. */
+function yardOver(state: GameState, x: number, y: number, w: number, h: number): Placed | null {
+  let best: Placed | null = null;
+  let bestGap = Infinity;
+  for (const yard of state.map.placed) {
+    if (!yard || yard.type !== 'yard') continue;
+    const gap = Math.max(Math.max(yard.x - (x + w - 1), x - (yard.x + yard.w - 1), 0), Math.max(yard.y - (y + h - 1), y - (yard.y + yard.h - 1), 0));
+    if (gap <= PLACED.yard.radius && gap < bestGap) {
+      best = yard;
+      bestGap = gap;
+    }
+  }
+  return best;
 }
 
 /** The place each pastime needs, the cheaper where there are two (DESIGN.md 83.2). */
@@ -823,7 +937,18 @@ function buildFromMenu(state: GameState, reserve: number, most: number, extras =
       }
       const spot = anySpot(current, want.type, want.x, want.y);
       if (!spot) continue;
-      const result = applyAction(current, { type: 'place', building: want.type, x: spot[0], y: spot[1] });
+      // A new yard first, where the place needs one (anySpot), when there is the money for both.
+      let ready = current;
+      if (spot.yard) {
+        if (current.money.cash - placedCost(want.type, scaleOf(current)) - placedCost('yard', scaleOf(current)) < reserve) {
+          blocked = true;
+          continue;
+        }
+        const yard = applyAction(current, { type: 'place', building: 'yard', x: spot.yard[0], y: spot.yard[1] });
+        if (!yard.ok) continue;
+        ready = yard.state;
+      }
+      const result = applyAction(ready, { type: 'place', building: want.type, x: spot.at[0], y: spot.at[1] });
       if (!result.ok) continue;
       current = result.state;
       placed = true;

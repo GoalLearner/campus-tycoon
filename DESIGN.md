@@ -9757,7 +9757,7 @@ The owner, on a screenshot of the HUD reading "Fri, Aug 21 · 9:58 AM · Year 1"
 | The founding day | Move-in week, as before (Aug 12 to 18), now from 8 AM on its first date to midnight at the end of its last, so a new campus is first seen in the morning. It runs at whatever pace its length gives: a founding day of 13 real hours is a game day of nearly two real hours. A game made off the model campus holds 8 AM until its first class arrives |
 | What follows it | The light, the lamps and the night; the campus's day (75.2: classes, class changes, meals, the gym and courts, weekends, party nights and finals); a followed student's day and "Doing now"; the Main Character's doings on the map and their page's "Doing now" (84.6); Today on campus and its View at slider (75.3, 75.4), which shows any hour of the game's day; the bell (84.8) |
 | What stays in real time | Everything that says when to come back: the countdowns ("Spring class arrives in 1 d"), build timers, notices, the football chip's "next in", the anchor hour that puts intakes and big games in the player's waking hours (4.2, 4.8), and the Main Character's story pacing (53.1) |
-| The simulation | Its rules still never read the hour: money, Happiness and the rest stay on the busiest-hour numbers. It runs exactly as before (84.12) |
+| The simulation | Its rules still never read the hour: money, Happiness and the rest stay on the busiest-hour numbers. The one change is when a game kicks off (84.4) |
 
 The map reads the game's date with the hour, so a weekend, a party night and the student's day turn over at game midnight with the clock, a moment before the next tick does.
 
@@ -9784,16 +9784,36 @@ A class change comes about every 70 real seconds and lasts about twelve. Walkers
 
 ### 84.4 Football on the game clock
 
-A game kicks off at the first tick of its Saturday, as it always has, which on the game's clock is in its first hour, by about 12:50 AM (`KICKOFF_HOUR`, 0).
+Each game kicks off at noon on its Saturday by the game's clock (`KICKOFF_HOUR`, 12): half a game day, about 14 real minutes, after that date's first tick, where it kicked off before. Decided by the main session on 2026-11-17: the owner asked for a real clock, and a kickoff at about 12:50 AM, with the first quarter in the small hours, does not read as a game day. Recorded and not taken: kickoff at the Saturday's first tick, which keeps the simulation exact to the cent.
 
 | Part | On the game's clock |
 |---|---|
-| A game | Still forty real minutes, shown a quarter at a time (10 real minutes each), so it can be watched live. On the clock that is about a day and a half: from Saturday's first hour to about 10 AM on Sunday. The first quarter is the small hours under the lights, the second Saturday's daylight, the third the evening and the fourth Sunday's small hours |
-| The turnout | An hour of real time before kickoff, as before: from about Wednesday evening on the clock, so the game is a long weekend |
-| The C3 chaos and the stadium crowd | Unchanged: they read the same ticks from kickoff to the whistle |
+| A game | Still forty real minutes, shown a quarter at a time (10 real minutes each), so it can be watched live. On the clock that is about a day and a half: Saturday noon to about 10 PM on Sunday. The first quarter is Saturday afternoon and evening, the second the night under the lights, the third Sunday morning and the fourth Sunday afternoon and evening |
+| The turnout | An hour of real time before kickoff, as before: from about Thursday morning on the clock, so a home game is a long weekend. The food places' game-day lift runs from the turnout to the whistle |
+| The whistle | Forty real minutes after kickoff, about 10 PM on Sunday. The result is said under the Saturday, as before |
+| The C3 chaos and the stadium crowd | Unchanged: they read the same window, kickoff to whistle |
 | The celebration after a home win (64.3) | From the whistle to the end of the Monday after, about half an hour of real time. It was six real hours, nearly a fortnight on the game's clock |
+| The player's waking hours (4.2, 4.8) | Every kickoff is 14 real minutes later and stays where it was in the player's day: the home games in their waking hours as before, the title game about 3 hours after the anchor, the Dec 26 bowl at about 13 hours, the Jan 18 bowl in the two hours before the anchor. The founding scrimmage keeps its real time |
+| The football chip | "Next in" counts real minutes to the kickoff, as before |
+| Traditions and the homecoming moment | Still marked at the start of the game's Saturday: they mark the day, not the kickoff |
+| A season under way | Keeps the kickoffs it was given, at its Saturdays' first ticks; the next fall's are at noon. No save version |
 
-**Kickoff at noon was built and measured, and is not on.** `KICKOFF_HOUR` 12 kicks every game off at noon, half a game day, about 14 real minutes, after its Saturday begins, and the first quarter is Saturday afternoon. It moves the simulation: a game day's lift to the food places, the turnout and the whistle all come 14 real minutes later, money half a year in differs by about 1%, and the long run's diligent player builds a different campus (10,170 students where it had 10,084) on which only 9 of 31 places to eat and play end up with a bin and a grounds crew keeping up, so the check that well-staffed places stay clean fails. The game's results themselves do not change. With 0 the long run is exactly as before. Noon is one constant away, with that check to answer first.
+**What it moves.** Football's results are the same. The turnout, the food lift and the whistle come 14 real minutes later, so a game day's earnings fall a little differently, and the long run's players build slightly different campuses (84.12).
+
+**Why the long run's grounds check failed at noon, and the fix.** The check is that a place with its bin and a yard keeping up stays above 90% clean, read on the diligent player's campus (it looks in every two hours) a day after a visit, with at least six in ten places tended. With kickoff at noon it read 9 of 31.
+
+- **Not a game rule.** No litter comes from a game day (a place drops by its users alone, 83.9). The 22 places were dirty because their yard was past what a crew can clear.
+- **The test player.** It put busy places by the lot it was asked for, with nothing to stop it loading a yard past what a full crew of six clears. On the small campus, built out to its edges by year 20, it packed 19 places (seven coffee stands, five dining halls, six gyms and a burger place) under one yard, which then asked for 33 units of work at each check against the 13.2 a full crew does. Its answer, a second yard "beside the place furthest from the first", found free ground only at the map's top edge: three yards there looked after 0, 1 and 0 places.
+- **Why a 14-minute shift showed it.** The long run's players of one seed share one reading of the social web, whichever reads it first, so the diligent player's campus follows the other three players' games. Fourteen minutes in theirs sent it down this path. Played on its own it fails the same way with kickoff at midnight. Its yard-room test was also wrong in kind: it compared work to a count of workers, so a yard counted as having room only while it needed under 6 units of work.
+- **The fix, in the test player only (`scripts/bots.ts`), the check's bar unchanged.**
+  1. It still fills a light yard first: one whose work, with one more place, stays within 6 units, under half a full crew's 13.2.
+  2. Every spot is tried before it is taken. No busy place goes where its yard would then have more litter falling at each check than nine tenths of a full crew clears, which leaves room for the fall class.
+  3. Where no spot fits, the place goes beside a new yard on free ground that would look after it. Where there is none, it is not built: a yard is never given more than a full crew can clear.
+  4. A second yard for an overfull one goes where it takes over the most work, and never where it takes over nothing.
+- **Played alone with the fix:** the diligent player has 41 places with 40 tended, none dirty through the judged day. The casual player has its 17 places on two yards, all clean; before, it had the same places and a third yard at the map's edge looking after nothing. Neither replay ran slower.
+- The test player reads how much litter falls on a yard (`falling` on the yard's status), which the game already worked out. Nothing in the game changes with it.
+
+**Catch-up.** The noon run's 959 ms was the dirty campus. Thirty days on that campus take 724 ms against 649 on the fixed one (both read while another run was going).
 
 ### 84.5 A student's day
 
@@ -9826,7 +9846,8 @@ Nothing stored a real hour, so nothing moves: the save version stays 42.
 | The hour is the fraction of the same day count that gives the date | The two can never disagree, and the date at a whole tick is exactly as it was | A separate hour clock, which drifts from the date at the calendar's knots |
 | The map runs the clock on between ticks | A tick is about 51 game minutes in the fall; without it the clock and the light would jump once a real minute | Ticks only |
 | Daylight about half the day, a night of six and a half real minutes | Mostly seen in daylight, and the night is still a night | The old table, a third in full night |
-| Kickoff stays at the first tick of its Saturday, in the clock's first hour | The simulation and the long run stay exactly as they were | Noon (`KICKOFF_HOUR` 12), built and measured: the long run moves and its grounds check fails (84.4) |
+| Kickoff at noon on its Saturday (`KICKOFF_HOUR` 12) | The owner asked for a real clock, and a game should start at a time a game starts; football's results are unchanged (84.4) | The first tick of its Saturday, the clock's first hour, which keeps the simulation exact to the cent |
+| The test player never loads a yard past nine tenths of a full crew, and never builds a yard that looks after nothing | The long run's grounds check failed because the test player overloaded a yard, not because of a game rule (84.4) | Lowering the check's bar, or reading it on another campus: not done |
 | A game stays forty real minutes | It can be watched; the chaos and the crowd need it | A game of three and a half game hours, four real minutes |
 | The bell at 8 AM, noon and 6 PM | Every game hour would be every seventy seconds | Every hour; no bell |
 | The Main Character's life keeps the real day | Story pacing stays real, as the note says; only their doings are seen on the game's clock | Their whole life on the game's day |

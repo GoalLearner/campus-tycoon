@@ -591,6 +591,8 @@ export interface YardStatus {
   /** Work its circle asks for at each check, and what its workers can do. */
   need: number;
   supply: number;
+  /** The part of `need` that falls at each check, without the backlog: what a full crew must hold for good. */
+  falling: number;
   /** Workers to hire for it to keep up. 0 when it does. It may be more than the yard can hold. */
   hire: number;
   /**
@@ -662,7 +664,7 @@ export function yardStatus(state: GameState, yard: Placed): YardStatus {
   const supply = workers * WORK_PER_WORKER;
   const hire = need > supply + 1e-9 ? Math.ceil((need - supply) / WORK_PER_WORKER - 1e-9) : 0;
   const beyond = falling > YARD_MAX_WORKERS * WORK_PER_WORKER + 1e-9;
-  return { workers, max: YARD_MAX_WORKERS, need, supply, hire, beyond, wagesPerYear: workers * WAGE_PER_YEAR * scaleOf(state) };
+  return { workers, max: YARD_MAX_WORKERS, need, supply, falling, hire, beyond, wagesPerYear: workers * WAGE_PER_YEAR * scaleOf(state) };
 }
 
 /** One line on a yard: keeping up, or how many more to hire. */
