@@ -82,7 +82,7 @@ export const DECOR: readonly DecorSpec[] = [
   { id: 'flowerStall', name: 'Flower stall', a: 'a flower stall', sprite: 'decoration.flowerStall', group: FLOWERS, home: TOWN },
 
   { id: 'globeLamp', name: 'Globe lamp', a: 'a globe lamp', sprite: 'decoration.globeLamp', group: LIGHTS, home: shelf(6, 900) },
-  { id: 'stringLights', name: 'String lights', a: 'a string of lights', sprite: 'decoration.stringLights', group: LIGHTS, home: made(8, 24, 800) },
+  { id: 'stringLights', name: 'String lights', a: 'a string of lights', sprite: 'decoration.stringLights', group: LIGHTS, home: made(3, 24, 800) },
   { id: 'lantern', name: 'Lantern', a: 'a lantern', sprite: 'decoration.lantern', group: LIGHTS, home: shelf(17, 700) },
   { id: 'tallLamp', name: 'Tall lamp', a: 'a tall lamp', sprite: 'decoration.tallLamp', group: LIGHTS, home: shelf(37, 1_500) },
 

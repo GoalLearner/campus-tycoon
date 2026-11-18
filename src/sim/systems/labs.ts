@@ -9,6 +9,7 @@ import {
   LAB_CASH_SHARE,
   LAB_FUNDING_STEP,
   LAB_HOURS,
+  LAB_LEVEL,
   LAB_READY,
   LAB_REPUTATION,
   LAB_SEAT_REACH,
@@ -70,6 +71,7 @@ export function cannotBuildLab(state: GameState, type: PlacedType): string | nul
   const name = PLACED[type].name;
   if (!hasDaily(state)) return `The ${name} comes with a campus that has goals.`;
   if (labOf(state, type)) return `The campus has its ${name} already. One lab for each field.`;
+  if (state.daily.level < LAB_LEVEL) return `The research labs open at University Level ${LAB_LEVEL}.`;
   return null;
 }
 

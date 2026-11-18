@@ -136,7 +136,7 @@ export * from './systems/staffing';
 export * from './systems/capacity';
 export * from './config/staffing';
 export { coverFor, incidentText, safetyAt } from './systems/incidents';
-export { chaosOn, chaosStepOf } from './systems/chaos';
+export { chaosOn, chaosStepOf, trusteesOrder } from './systems/chaos';
 export { meddleView, meddleOn, meddleShowing, type MeddleRow } from './systems/meddle';
 export { isSandbox, makeSandbox, SANDBOX_CASH } from './systems/sandbox';
 export { MEDDLE, type MeddleId } from './config/meddle';

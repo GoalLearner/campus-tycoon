@@ -132,3 +132,11 @@ export const FINALS_ROOM = 3;
 export const COMMENCEMENT_SHARE = 0.95;
 /** A moment that went by unmet leaves the board this long after: nothing is lost, and the next comes next year. */
 export const MOMENT_MISSED_HOURS = 24;
+
+/**
+ * [T] A Big day (DESIGN.md 85.5) always pays for what happened: this share of its full pay at the least, and the rest
+ * by how well it went, all of it for a full house, a win, every senior hoped for or Stress held.
+ */
+export const BIG_DAY_LEAST = 0.4;
+/** Finals: the share falls by this much for each point of Stress over what was asked. */
+export const BIG_DAY_FINALS_STEP = 0.1;

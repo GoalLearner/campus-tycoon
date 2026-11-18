@@ -26,6 +26,7 @@ import {
   previewPlace,
   PRANKS,
   PROBATION_HOURS,
+  probationIn,
   SAVE_VERSION,
   serialize,
   studentCard,
@@ -40,7 +41,7 @@ import { landRankGoals } from '../src/sim/systems/goals';
 import { approvalAt } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, erasByRank, withCleanUp, switchedOn } from './helpers';
 
 /**
  * Greek Row (DESIGN.md 14.1, adapted and built in section 51): chapter houses
@@ -58,6 +59,7 @@ function growth(): GameState {
   state.field.rank = 120;
   state.field.rankYear = 1;
   landRankGoals(state, []);
+  erasByRank(state);
   state.money.cash = 2_000_000_000;
   return state;
 }
@@ -180,39 +182,70 @@ describe('rush week', () => {
 });
 
 describe('a chapter’s standing', () => {
-  it('goes on Warning when its house is overfull, shows it first, and on Probation only if it stays so', () => {
-    let state = build(growth(), spot(growth(), (x, y) => !!coverFor(growth().map, 'safety', x, y)));
-    const chapter = chapters(state)[0]!;
-    expect(chapterStatus(state, chapter)).toBe('good');
-    chapter.members = chapterBeds(state) + 20;
-    let run = later(state, HOUR + MIN);
-    state = run.state;
-    expect(chapters(state)[0]!.status).toBe('warning');
-    const warned = run.log.find((entry) => entry.kind === 'greek' && entry.data?.status === 1)!;
-    expect(warned.text).toMatch(/is on Warning: its house is overfull/);
-    expect(warned.text).toMatch(/another chapter house would give them room/i);
-    expect(chapterLift(state, chapters(state)[0]!).points).toBeGreaterThan(0);
-    run = later(state, PROBATION_HOURS * HOUR);
-    state = run.state;
-    expect(chapterStatus(state, chapters(state)[0]!)).toBe('probation');
-    expect(run.log.some((entry) => entry.kind === 'greek' && entry.data?.status === 2)).toBe(true);
-    // On Probation its members feel nothing from the house.
-    expect(chapterLift(state, chapters(state)[0]!).points).toBe(0);
-    // Put right, it is in good standing at once, and the paper says so within the hour.
-    chapters(state)[0]!.members = chapterBeds(state);
-    expect(chapterStatus(state, chapters(state)[0]!)).toBe('good');
-    run = later(state, HOUR + MIN);
-    expect(run.log.some((entry) => entry.kind === 'greek' && entry.text.endsWith('is in good standing again.'))).toBe(true);
+  it('goes on Warning when its house is overfull, shows it first, and on Probation only if it stays so (switched off: greekProbationTimer)', () => {
+    switchedOn(['greekProbationTimer'], () => {
+      let state = build(growth(), spot(growth(), (x, y) => !!coverFor(growth().map, 'safety', x, y)));
+      const chapter = chapters(state)[0]!;
+      expect(chapterStatus(state, chapter)).toBe('good');
+      chapter.members = chapterBeds(state) + 20;
+      let run = later(state, HOUR + MIN);
+      state = run.state;
+      expect(chapters(state)[0]!.status).toBe('warning');
+      const warned = run.log.find((entry) => entry.kind === 'greek' && entry.data?.status === 1)!;
+      expect(warned.text).toMatch(/is on Warning: its house is overfull/);
+      expect(warned.text).toMatch(/another chapter house would give them room/i);
+      expect(chapterLift(state, chapters(state)[0]!).points).toBeGreaterThan(0);
+      run = later(state, PROBATION_HOURS * HOUR);
+      state = run.state;
+      expect(chapterStatus(state, chapters(state)[0]!)).toBe('probation');
+      expect(run.log.some((entry) => entry.kind === 'greek' && entry.data?.status === 2)).toBe(true);
+      // On Probation its members feel nothing from the house.
+      expect(chapterLift(state, chapters(state)[0]!).points).toBe(0);
+      // Put right, it is in good standing at once, and the paper says so within the hour.
+      chapters(state)[0]!.members = chapterBeds(state);
+      expect(chapterStatus(state, chapters(state)[0]!)).toBe('good');
+      run = later(state, HOUR + MIN);
+      expect(run.log.some((entry) => entry.kind === 'greek' && entry.text.endsWith('is in good standing again.'))).toBe(true);
+    });
   });
 
-  it('goes on Warning when Campus Safety does not reach its house', () => {
+  it('goes on Warning when Campus Safety does not reach its house (switched off: greekProbationTimer)', () => {
+    switchedOn(['greekProbationTimer'], () => {
+      const base = growth();
+      const state = build(base, spot(base, (x, y) => !coverFor(base.map, 'safety', x, y)));
+      expect(chapterStatus(state, chapters(state)[0]!)).toBe('warning');
+      const page = chapterPage(state, state.map.placed[chapters(state)[0]!.house]!)!;
+      // With the clock switched back on, the old name (DESIGN.md 85.6); with it off, 'Could use a hand'.
+      expect(page.standing[0]).toBe('On Warning');
+      expect(page.standing.join(' ')).toMatch(/Campus Safety does not reach the house/);
+      expect(page.standing.join(' ')).toMatch(/Probation in/);
+    });
+  });
+});
+
+describe('a chapter that could use a hand (DESIGN.md 85.6)', () => {
+  it('says what would help, with no clock, and is never put on Probation for waiting: its members keep what it gives', () => {
     const base = growth();
-    const state = build(base, spot(base, (x, y) => !coverFor(base.map, 'safety', x, y)));
-    expect(chapterStatus(state, chapters(state)[0]!)).toBe('warning');
-    const page = chapterPage(state, state.map.placed[chapters(state)[0]!.house]!)!;
-    expect(page.standing[0]).toBe('On Warning');
-    expect(page.standing.join(' ')).toMatch(/Campus Safety does not reach the house/);
-    expect(page.standing.join(' ')).toMatch(/Probation in/);
+    let state = build(base, spot(base, (x, y) => !!coverFor(base.map, 'safety', x, y)));
+    chapters(state)[0]!.members = chapterBeds(state) + 20;
+    const run = later(state, HOUR + MIN);
+    state = run.state;
+    const chapter = chapters(state)[0]!;
+    expect(chapter.status).toBe('warning');
+    const told = run.log.find((entry) => entry.kind === 'greek' && entry.data?.status === 1)!;
+    expect(told.text).toMatch(/^.+ could use a hand: its house is overfull, .+ Another chapter house would give them room\.$/);
+    expect(told.text).not.toMatch(/Warning|Probation|hours/);
+    expect(probationIn(state, chapter)).toBeNull();
+    const page = chapterPage(state, state.map.placed[chapter.house]!)!;
+    expect(page.standing[0]).toBe('Could use a hand');
+    expect(page.standing.join(' ')).not.toMatch(/Probation/);
+    // Long past the old 36 hours, and still overfull: no Probation, and the house still lifts its members.
+    const after = later(state, 4 * PROBATION_HOURS * HOUR);
+    const still = chapters(after.state)[0]!;
+    expect(still.members).toBeGreaterThan(chapterBeds(after.state));
+    expect(chapterStatus(after.state, still)).toBe('warning');
+    expect(after.log.some((entry) => entry.kind === 'greek' && entry.data?.status === 2)).toBe(false);
+    expect(chapterLift(after.state, still).points).toBeGreaterThan(0);
   });
 });
 
@@ -355,13 +388,14 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
       expect(validate(week)).toBeNull();
       const notes = upgradeNotes(24);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(17);
+      expect(notes).toHaveLength(18);
       expect(notes[0]).toMatch(/Greek Row/);
     });
   });

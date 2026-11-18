@@ -1,3 +1,4 @@
+import { off } from '../config/cleanup';
 import { dateAt } from '../calendar';
 import {
   CHAOS_FROM,
@@ -307,9 +308,19 @@ export function spiritPoints(state: GameState): number {
   return chaosOn(state) && state.clock.tick < state.chaos.spiritAt + SPIRIT.days * 24 * 60 ? SPIRIT.happiness : 0;
 }
 
-/** Points off Reputation while a trustees' letter ignored is remembered. */
+/** Points off Reputation while a trustees' letter ignored is remembered. Switched off (DESIGN.md 85.6): never. */
 export function trusteesDip(state: GameState): number {
+  if (off('trusteesDip')) return 0;
   return chaosOn(state) && state.chaos.dipUntil > state.clock.tick ? LETTER.dip : 0;
+}
+
+/**
+ * The trustees' letter as an order (DESIGN.md 85.6): what it asks and what it pays when the campus is below Rowdy.
+ * Ignoring it costs nothing, and it has no clock. null with no letter open.
+ */
+export function trusteesOrder(state: GameState): { ask: string; pays: string } | null {
+  if (!chaosOn(state) || !state.chaos.letter) return null;
+  return { ask: 'Bring the Chaos meter below Rowdy', pays: `a gift of ${dollarsShort(LETTER.reward * scaleOf(state))} from the trustees` };
 }
 
 function consequences(state: GameState, log: LogEntry[], before: number, after: number): void {
@@ -333,8 +344,8 @@ function consequences(state: GameState, log: LogEntry[], before: number, after: 
       c.letters.met += 1;
       c.letters.lastClosed = tick;
       state.money.cash += LETTER.reward * scaleOf(state);
-      log.push({ tick, kind: 'chaos', text: `The trustees write again: the campus has calmed down, below Rowdy in time. A gift of thanks, ${dollarsShort(LETTER.reward * scaleOf(state))}, is in the bank.`, data: { letter: 2 } });
-    } else if (tick >= c.letter.until) {
+      log.push({ tick, kind: 'chaos', text: `The trustees write again: the campus has calmed down, below Rowdy${off('trusteesDip') ? '' : ' in time'}. A gift of thanks, ${dollarsShort(LETTER.reward * scaleOf(state))}, is in the bank.`, data: { letter: 2 } });
+    } else if (!off('trusteesDip') && tick >= c.letter.until) {
       c.letter = null;
       c.letters.missed += 1;
       c.letters.lastClosed = tick;
@@ -346,7 +357,10 @@ function consequences(state: GameState, log: LogEntry[], before: number, after: 
     // Two Rowdy readings in a row: the trustees do not write over one wild week.
     c.letter = { from: tick, until: tick + LETTER.days * day };
     c.letters.sent += 1;
-    log.push({ tick, kind: 'chaos', text: `A letter from the trustees: the campus is ${name}. They ask that the Chaos meter be below Rowdy within ${LETTER.days} days.`, data: { letter: 1, until: c.letter.until } });
+    const ask = off('trusteesDip')
+      ? `A letter from the trustees: the campus is ${name}. With the Chaos meter below Rowdy they will send a gift of ${dollarsShort(LETTER.reward * scaleOf(state))}. It is on the orders board.`
+      : `A letter from the trustees: the campus is ${name}. They ask that the Chaos meter be below Rowdy within ${LETTER.days} days.`;
+    log.push({ tick, kind: 'chaos', text: ask, data: { letter: 1, until: c.letter.until } });
   }
   // Good chaos: a Lively campus, happy and looked after, now and then has a legendary night.
   const happiness = state.admissions?.lastSemester?.happiness ?? 0;
@@ -415,6 +429,14 @@ export function chaosView(state: GameState): { step: ChaosStep; level: number; c
   const c = state.chaos;
   const list = causes(state).slice(0, 3).map((cause) => cause.text);
   const tick = state.clock.tick;
-  const letter = c.letter ? `The trustees ask for it below Rowdy within ${Math.max(1, Math.ceil((c.letter.until - tick) / 60))} hours` : c.dipUntil > tick ? `Reputation is ${LETTER.dip} points lower for a letter from the trustees that went unanswered` : null;
+  const letter = off('trusteesDip')
+    ? c.letter
+      ? `The trustees would like it below Rowdy, and send ${dollarsShort(LETTER.reward * scaleOf(state))} when it is`
+      : null
+    : c.letter
+      ? `The trustees ask for it below Rowdy within ${Math.max(1, Math.ceil((c.letter.until - tick) / 60))} hours`
+      : c.dipUntil > tick
+        ? `Reputation is ${LETTER.dip} points lower for a letter from the trustees that went unanswered`
+        : null;
   return { step: chaosStepName(c.level), level: Math.round(c.level), causes: list.length > 0 ? list : ['Nothing much: a quiet week'], letter };
 }

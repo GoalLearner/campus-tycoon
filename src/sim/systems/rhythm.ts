@@ -1,8 +1,11 @@
+import { off } from '../config/cleanup';
 import { calendarAt, dateAt, eventsAt, formatDate, GRADUATION_TICK_IN_YEAR, spanOf, tickOfDate, yearLength } from '../calendar';
 import { expectedGraduates } from './population';
 import { HOMECOMING_SLOT, RIVALRY_SLOT, SLOTS } from '../config/football';
 import { SELL_OUT_SHARE } from '../config/orders';
 import {
+  BIG_DAY_FINALS_STEP,
+  BIG_DAY_LEAST,
   COMMENCEMENT_SHARE,
   FINALS_MEASURE_BEFORE,
   FINALS_ROOM,
@@ -184,6 +187,8 @@ function commencementTick(week: Week): number {
  * for a fair go at them.
  */
 export function setYearGoals(state: GameState, log?: LogEntry[]): void {
+  // Switched off (DESIGN.md 85.4): a second list with a deadline. Their experience and Seals went to the orders.
+  if (off('yearGoals')) return;
   if (!hasDaily(state)) return;
   const week = state.clock.week;
   const until = commencementTick(week);
@@ -226,6 +231,17 @@ export function yearProgress(state: GameState, goal: YearGoal): { value: number;
   return { value: now, done: now >= goal.target, atCommencement: true };
 }
 
+/** How far a goal for the year had come, 0 to 1, as the board drew its bar: for paying a part-done one (85.9). */
+export function yearGoalShare(state: GameState, goal: YearGoal): number {
+  const kind = kindOf(goal.kind);
+  if (!kind) return 0;
+  const at = yearProgress(state, goal);
+  if (at.done) return 1;
+  if (kind.measure.kind === 'counted') return Math.max(0, Math.min(1, at.value / Math.max(1, goal.target - goal.from)));
+  if (kind.measure.kind === 'level') return Math.max(0, Math.min(1, (at.value - goal.from) / Math.max(1, goal.target - goal.from)));
+  return Math.max(0, Math.min(1, at.value / Math.max(1, goal.target)));
+}
+
 /** What a goal pays at commencement. */
 export function yearPay(goal: YearGoal): { xp: number; seals: number } {
   return YEAR_PAY[goal.level];
@@ -233,6 +249,7 @@ export function yearPay(goal: YearGoal): { xp: number; seals: number } {
 
 /** Commencement: every goal met is paid, and the paper says how the year went. */
 function payYear(state: GameState, log: LogEntry[]): void {
+  if (off('yearGoals')) return;
   const year = state.rhythm.year;
   if (!year) return;
   let met = 0;
@@ -330,13 +347,24 @@ function openMoment(state: GameState, time: MomentTime, log: LogEntry[]): boolea
   return true;
 }
 
-/** Record how a moment went, with its line in the paper. */
-function measure(state: GameState, moment: Moment, result: number, met: boolean, line: string, log: LogEntry[]): void {
+/**
+ * Record how a moment went, with its line in the paper. A Big day (DESIGN.md 85.5) is never missed: it is done
+ * whatever happened, `share` says how well, and it pays for that. `line` is what happened; `missedLine` what the paper
+ * said of one that went by while moments could be missed.
+ */
+function measure(state: GameState, moment: Moment, result: number, met: boolean, line: string, log: LogEntry[], share = met ? 1 : 0, missedLine = line): void {
   moment.result = result;
-  moment.met = met;
   moment.measured = state.clock.tick;
   bump(state.rhythm, `${met ? 'met' : 'missed'}:${moment.kind}`);
-  log.push({ tick: state.clock.tick, kind: 'rhythm', text: met ? `${line} The order is done: claim it on the board.` : line, data: { moment: moment.id, met: met ? 1 : 0 } });
+  if (off('momentPassFail')) {
+    moment.met = true;
+    moment.share = Math.max(0, Math.min(1, share));
+    const tail = moment.share >= 1 ? 'It is done: claim it on the board.' : 'It pays for what went well: claim it on the board.';
+    log.push({ tick: state.clock.tick, kind: 'rhythm', text: `${line} ${tail}`, data: { moment: moment.id, met: 1 } });
+    return;
+  }
+  moment.met = met;
+  log.push({ tick: state.clock.tick, kind: 'rhythm', text: met ? `${line} The order is done: claim it on the board.` : missedLine, data: { moment: moment.id, met: met ? 1 : 0 } });
 }
 
 const waiting = (state: GameState, kind: MomentKind): Moment | undefined => state.rhythm.moments.find((one) => one.kind === kind && one.met === null);
@@ -394,13 +422,16 @@ export function rhythmOnGame(state: GameState, slot: number, won: boolean, home:
     if (!moment) return;
     if (moment.param === 'fill') {
       const full = seats > 0 && crowd >= seats * SELL_OUT_SHARE;
-      measure(state, moment, crowd, full, full ? `Homecoming: a full house of ${crowd.toLocaleString('en-US')}.` : `Homecoming: ${crowd.toLocaleString('en-US')} of ${seats.toLocaleString('en-US')} seats filled. There is always next year.`, log);
-    } else measure(state, moment, won ? 1 : 0, won, won ? 'Homecoming: a win for the alumni.' : 'Homecoming: a loss, but the alumni had a good day. There is always next year.', log);
+      // Paid by how full the stadium was: all of it at a sell-out (DESIGN.md 85.5).
+      const share = seats > 0 ? crowd / (seats * SELL_OUT_SHARE) : 0;
+      const seen = `Homecoming: ${crowd.toLocaleString('en-US')} of ${seats.toLocaleString('en-US')} seats filled.`;
+      measure(state, moment, crowd, full, full ? `Homecoming: a full house of ${crowd.toLocaleString('en-US')}.` : seen, log, share, `${seen} There is always next year.`);
+    } else measure(state, moment, won ? 1 : 0, won, won ? 'Homecoming: a win for the alumni.' : 'Homecoming: a loss, but the alumni had a good day.', log, won ? 1 : 0, 'Homecoming: a loss, but the alumni had a good day. There is always next year.');
   } else if (slot === RIVALRY_SLOT) {
     const moment = waiting(state, 'rivalry');
     if (!moment) return;
     const rival = teamName(state, state.football.rival);
-    measure(state, moment, won ? 1 : 0, won, won ? `The rivalry: ${rival} beaten.` : `The rivalry: ${rival} won this one. There is always next year.`, log);
+    measure(state, moment, won ? 1 : 0, won, won ? `The rivalry: ${rival} beaten.` : `The rivalry: ${rival} won this one, and the stands were loud all the same.`, log, won ? 1 : 0, `The rivalry: ${rival} won this one. There is always next year.`);
   }
 }
 
@@ -410,7 +441,8 @@ export function rhythmOnGraduation(state: GameState, seniors: number, log: LogEn
   const moment = waiting(state, 'commencement');
   if (moment) {
     const met = seniors >= moment.target;
-    measure(state, moment, seniors, met, met ? `Commencement: ${seniors.toLocaleString('en-US')} seniors graduated.` : `Commencement: ${seniors.toLocaleString('en-US')} of the ${moment.target.toLocaleString('en-US')} hoped for graduated. There is always next year.`, log);
+    const seen = `Commencement: ${seniors.toLocaleString('en-US')} of the ${moment.target.toLocaleString('en-US')} hoped for graduated.`;
+    measure(state, moment, seniors, met, met ? `Commencement: ${seniors.toLocaleString('en-US')} seniors graduated.` : seen, log, seniors / Math.max(1, moment.target), `${seen} There is always next year.`);
   }
   payYear(state, log);
 }
@@ -421,7 +453,8 @@ export function rhythmOnTimer(state: GameState, id: number, log: LogEntry[]): vo
   if (!moment || moment.kind !== 'finals') return;
   const stress = Math.round(state.term.lastStress);
   const met = stress <= moment.target;
-  measure(state, moment, stress, met, met ? `Finals week: Stress held at ${stress}.` : `Finals week: Stress reached ${stress}, over the ${moment.target} asked. There is always next term.`, log);
+  const over = `Finals week: Stress reached ${stress}, over the ${moment.target} asked.`;
+  measure(state, moment, stress, met, met ? `Finals week: Stress held at ${stress}.` : over, log, met ? 1 : 1 - (stress - moment.target) * BIG_DAY_FINALS_STEP, `${over} There is always next term.`);
 }
 
 /** A line waiting from an action is told on the next tick. */
@@ -432,10 +465,14 @@ export function tellRhythm(state: GameState, log: LogEntry[]): void {
   state.rhythm.news = [];
 }
 
-/** What a moment pays on this campus now: cash on the campus's count, out of the year's allowance. */
-export function momentPays(state: GameState, kind: MomentKind): MomentReward[] {
+/**
+ * What a moment pays on this campus now: cash on the campus's count, out of the year's allowance. A Big day pays by how
+ * well it went (`share`, DESIGN.md 85.5): `BIG_DAY_LEAST` of it at the least, all of it at the best.
+ */
+export function momentPays(state: GameState, kind: MomentKind, share = 1): MomentReward[] {
+  const part = off('momentPassFail') ? BIG_DAY_LEAST + (1 - BIG_DAY_LEAST) * Math.max(0, Math.min(1, share)) : 1;
   return MOMENTS[kind].pays
-    .map((pay): MomentReward => (pay.kind === 'cash' ? { kind: 'cash', amount: Math.min(pay.amount * scaleOf(state), orderCashLeft(state)) } : pay))
+    .map((pay): MomentReward => (pay.kind === 'cash' ? { kind: 'cash', amount: Math.min(Math.round(pay.amount * part * scaleOf(state)), orderCashLeft(state)) } : { ...pay, amount: Math.round(pay.amount * part) }))
     .filter((pay) => pay.amount > 0);
 }
 
@@ -454,7 +491,7 @@ export function claimMoment(state: GameState, id: number): { pays: MomentReward[
   const moment = rhythm.moments.find((one) => one.id === id);
   if (!moment) return 'That is not on the board.';
   if (moment.met !== true) return moment.met === false ? 'That one went by. There is always next year.' : 'That has not come yet.';
-  const pays = momentPays(state, moment.kind);
+  const pays = momentPays(state, moment.kind, moment.share ?? 1);
   const paid: MomentReward[] = [];
   for (const pay of pays) {
     if (pay.kind === 'xp') {
@@ -524,7 +561,7 @@ const LEVEL_WORD: Record<YearLevel, string> = { easy: 'Easy', medium: 'Medium', 
 
 /** The Year row of the board. null on a campus without the layer. */
 export function yearView(state: GameState, left: (ticks: number) => string): YearView | null {
-  if (!hasDaily(state)) return null;
+  if (!hasDaily(state) || off('yearGoals')) return null;
   const rhythm = state.rhythm;
   const year = rhythm.year;
   if (!year) {
@@ -579,9 +616,20 @@ export function momentViews(state: GameState, left: (ticks: number) => string): 
       else if (moment.kind === 'rivalry') ask = `Beat ${teamName(state, state.football.rival)}${moment.param === 'home' ? ' at home' : ' away'}`;
       else if (moment.kind === 'finals') ask = `Keep Stress at ${moment.target} or lower through finals`;
       else ask = `Graduate ${moment.target.toLocaleString('en-US')} seniors`;
+      const share = moment.share ?? 1;
       const when =
-        moment.met === true ? 'Done' : moment.met === false ? 'It went by. There is always next year' : moment.at > state.clock.tick ? `In ${left(moment.at - state.clock.tick)}` : 'Today';
-      return { id: moment.id, name: spec.name, ask, when, done: moment.met === true, missed: moment.met === false, pays: momentPayWords(momentPays(state, moment.kind), moment.met !== true) };
+        moment.met === true
+          ? share >= 1
+            ? 'Done'
+            : 'Done, and it pays for what went well'
+          : moment.met === false
+            ? 'It went by. There is always next year'
+            : moment.at > state.clock.tick
+              ? `In ${left(moment.at - state.clock.tick)}`
+              : 'Today';
+      // A Big day still to come pays at least its least, and all of it when it goes well.
+      const pays = moment.met === true ? momentPayWords(momentPays(state, moment.kind, share)) : momentPayWords(momentPays(state, moment.kind), true);
+      return { id: moment.id, name: spec.name, ask, when, done: moment.met === true, missed: moment.met === false, pays };
     });
 }
 

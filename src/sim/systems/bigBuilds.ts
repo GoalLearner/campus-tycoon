@@ -13,7 +13,7 @@ import { duration } from '../format';
 import { scaleOf } from '../scale';
 import { addTimer, cancelTimers } from '../timers';
 import type { BigBuilds, GameState, LogEntry, MapState, Placed, PlacedType } from '../types';
-import { eraOf } from './goals';
+import { eraAtWords, eraOf } from './goals';
 import { dailyOnPlaced } from './daily';
 
 /**
@@ -93,8 +93,7 @@ export function bigBuildsOffered(state: GameState): BigBuildSpec[] {
 
 /** The rank goal that opens an era, as "the Top 75". */
 function eraAt(era: number): string {
-  const goal = ERA_AT_RANK[era - 1];
-  return goal === undefined ? `the ${ERAS[era]} era` : `the ${ERAS[era]} era, at the Top ${RANK_GOALS[goal - 1]}`;
+  return eraAtWords(era);
 }
 
 /** Why a big build cannot be started here now, or null when it can. */

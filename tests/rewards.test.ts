@@ -37,7 +37,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { buildEntries, placedFacts, placedSummary } from '../src/ui/buildUi';
-import { DAY, freshGame, T0 } from './helpers';
+import { DAY, freshGame, T0, switchedOn } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -313,19 +313,21 @@ describe('a save that has already reached rank goals', () => {
 describe('the paper', () => {
   const facts = { minutes: 1440, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 46_000 };
 
-  it("names the building in a rank goal's headline", () => {
-    const first = ranked(170);
-    expect(edition(first.state, first.log, facts).headline).toBe("Test Enters the Top 175; Founders' Fountain Is Yours to Build");
-    // The Top 125 opens the Growth era too: the era leads, and the building is still named.
-    const start = ranked(140).state;
-    const era = structuredClone(start);
-    era.field.rank = 120;
-    const log: LogEntry[] = [];
-    landRankGoals(era, log);
-    expect(edition(era, log, facts).headline).toBe('The Growth Era Begins at Test; Campus Cinema Is Yours to Build');
-    expect(edition(era, log, facts).deck).toContain('The Campus Cinema is yours to place, free, from the Build menu.');
-    for (const line of newspaperLines()) expect(toneProblem(line), line).toBeNull();
-    expect(newspaperLines()).toContain('Bell Tower Is Yours to Build');
+  it("names the building in a rank goal's headline (switched off: erasByRank)", () => {
+    switchedOn(['erasByRank'], () => {
+      const first = ranked(170);
+      expect(edition(first.state, first.log, facts).headline).toBe("Test Enters the Top 175; Founders' Fountain Is Yours to Build");
+      // The Top 125 opens the Growth era too: the era leads, and the building is still named.
+      const start = ranked(140).state;
+      const era = structuredClone(start);
+      era.field.rank = 120;
+      const log: LogEntry[] = [];
+      landRankGoals(era, log);
+      expect(edition(era, log, facts).headline).toBe('The Growth Era Begins at Test; Campus Cinema Is Yours to Build');
+      expect(edition(era, log, facts).deck).toContain('The Campus Cinema is yours to place, free, from the Build menu.');
+      for (const line of newspaperLines()) expect(toneProblem(line), line).toBeNull();
+      expect(newspaperLines()).toContain('Bell Tower Is Yours to Build');
+    });
   });
 
   it('says which are waiting, until they are placed, and leads to the Build menu', () => {

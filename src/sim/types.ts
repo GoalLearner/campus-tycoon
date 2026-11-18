@@ -466,6 +466,8 @@ export interface Moment {
   result: number | null;
   met: boolean | null;
   measured: number | null;
+  /** A Big day (DESIGN.md 85.5): how well it went, 0 to 1, which sets what it pays. Absent before Big days: all of it. */
+  share?: number;
 }
 
 export interface Rhythm {
@@ -552,6 +554,8 @@ export interface Orders {
   note: string;
   /** Kinds of order the player dismissed, each with the tick it may be asked again: an unwanted one is not asked twice in a week. */
   rest: Record<string, number>;
+  /** The ticks new orders arrive at, earliest first: the refill after a claim or a swap (DESIGN.md 85.3). */
+  due?: number[];
   /** Cash paid by orders in one game year, for the money tables: the year, and the sum. */
   paidYear: number;
   paid: number;

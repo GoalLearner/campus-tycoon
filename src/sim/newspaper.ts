@@ -291,6 +291,11 @@ function leads(state: GameState, log: readonly LogEntry[], facts: AwayFacts): Le
         const size = entry.data?.ladder === 'size';
         const n = Number(entry.data?.count ?? 1) - 1;
         const what = era > 0 ? `The ${ERAS[era]} Era Begins at ${school}` : size ? `${school} Is Full at ${headCount(sizeGoal(state, n))} Students` : `${school} Enters the Top ${RANK_GOALS[n]}`;
+        // An era the University Level opened (DESIGN.md 85.1) is its own headline: no goal, no building with it.
+        if (entry.data?.ladder === 'era') {
+          out.push({ weight: 106, headline: what, deck: entry.text });
+          break;
+        }
         // A rank goal's headline names the building it gives (DESIGN.md section 40).
         const given = size ? undefined : rewardOf(n);
         const second = given ? rewardHeadline(given) : pickLine(state, entry.tick, size ? GREW : CLIMBED);
@@ -631,9 +636,9 @@ export function welcomeEdition(state: GameState): Edition {
   const students = enrollment(state);
   const top: TopItem[] = [];
 
-  // The first goal, on a game that has goals.
+  // The first honour, on a game that has goals (DESIGN.md 85.2).
   const goal = nextSizeGoal(state);
-  if (goal) top.push({ kind: 'news', text: `${state.school.name} has ${headCount(students)} students. The first goal is ${headCount(goal.goal)}: a full campus.` });
+  if (goal) top.push({ kind: 'news', text: `${state.school.name} has ${headCount(students)} students. A full campus of ${headCount(goal.goal)} would be its first honour.` });
 
   // The next class, and what the campus is short of to fit it.
   const next = roomPlan(state).students;

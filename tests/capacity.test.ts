@@ -81,7 +81,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { admissionsRank, pipeline } from '../src/sim/systems/selectivity';
 import { capacityView, instructionView, sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -717,6 +717,7 @@ describe('a save from version 15', () => {
     withRegistration(expected);
     withLanes(expected);
     withAmenities(expected);
+    withCleanUp(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
 
@@ -746,8 +747,8 @@ describe('a save from version 15', () => {
   it('tells an upgraded save what is new, once', () => {
     // Two of its own, and the ones versions 17 to 20 added after it (the policies, daily, orders and decor tests).
     const notes = upgradeNotes(15);
-    // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes.length).toBe(27);
+    // One more since R3: the price level (DESIGN.md 67.1). And one for the goals clean-up (DESIGN.md 85.9).
+    expect(notes.length).toBe(28);
     expect(notes[0]).toMatch(/Capacity page/);
     expect(notes[1]).toMatch(/full at 50,000 students/);
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

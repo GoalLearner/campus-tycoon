@@ -9884,3 +9884,185 @@ The rush has 125 to 147 walkers in view on both.
 **Frames at the stadium** on the slowed phone, at High, four rounds: main's game seventeen minutes in (its second quarter, about 2:30 PM on the clock) 15.7 ms; the noon kickoff's first quarter at 12:55 PM 15.8 ms; 40 to 56 walkers in view on both.
 
 **Pictures** (the page `docs/handoff/kickoff-noon.html`), the football demo's home opener: the football chip at 9:31 AM on Saturday ("Football 0-0 · next in 4 m"); the top bar and the stadium at 12:55 PM, live in the first quarter; the first quarter at 7:43 PM, at dusk. The third quarter falls on Sunday morning by the clock, so the evening light is shown in the first.
+
+## 85. Clean up the goals (the owner's new direction, stop 1, 2026-11-17)
+
+The owner's direction, approved with the plan `docs/handoff/direction-plan.html`: "Direction, final: FarmVille/Hay Day is the backbone, The Sims is the heart... The promise: 'Build the university of your dreams and watch thousands of lives unfold inside it.' No deadlines, no failure, no scenarios, no ending." The plan has six stops; this is the first. His guardrails for it, word for word:
+
+- "Nothing a player has earned is lost; old progress converts into the new system."
+- "After the cleanup, the screen shows one or two clear things worth doing at any moment. Show me a phone screenshot of the main screen before and after."
+- "Hiding is better than removing: anything cut stays in the code, switched off, so it can come back."
+- "Stop after stop 1 for me to play before starting the wishes and fears stop."
+
+Everything switched off is named in `src/sim/config/cleanup.ts` (`SWITCHED_OFF`): `orderTimers`, `pointOrders`, `dailyOrder`, `yearGoals`, `momentPassFail`, `trusteesDip`, `greekProbationTimer`, `traditionAlarm` and `erasByRank`. Setting one back to false brings it back as it was, and the tests of what each did run with it switched on (`switchedOn` in tests/helpers.ts). Not in this stop: wishes and fears, faces on orders, making things, upgrades, the first session, campus-wide wishes, skills.
+
+### 85.1 One ladder: the University Level
+
+| Part | Built |
+|---|---|
+| The eras | Open at University Levels 35 (Growth), 72 (Flagship) and 122 (Legacy), with what they opened before: the policies, Greek Row, the three Flagship buildings, the landmark and a tradition place each. The levels are where the player who looks in once a day stood when the eras opened by rank: weeks 3.7, 10.7 and 20.7. The plan guessed 32, 76 and 125 |
+| How one begins | The tick after the level is reached, with the era's 500 experience and 10 Gold Seals as before, and a line in the paper that says what it opens: "The Growth era begins at University Level 35. It opens ..." It is its own headline. Each era opened is written in the goals, so it never closes |
+| The era names | The Level page's chapters: "The Growth era · the Flagship era begins at Level 72". The paper still says "The Growth Era Begins" |
+| The Level page | Says what the next level gives, and then the first level after it that opens something: "Then Level 15 opens research labs in the Build menu." The eras and the labs are level gifts like the rest |
+| The Workshop | Its first recipe at Level 3 (it was 8) |
+| The research labs | Open at Level 15. Below it they are not in the Build menu, unless the campus has one already, which it keeps |
+| Switched off | `erasByRank`: the rank opening an era |
+
+### 85.2 Honours, off the to-do list
+
+The eight rank goals (Top 175 to Top 10) and the full campus (50,000) are honours now. They are reached and paid exactly as before: Gold Seals, experience, and a rank goal's free building. They are shown, not chased:
+
+- the Scorecard opens with an Honours block: each one reached with its year, and the next one;
+- the paper still leads with one the day it is reached.
+
+On a game with goals the Goals page folds into the Scorecard: the honours, then the school's own numbers (students against the cap, next fall's applicants, the rank as "No. 112 of 200 for academics", the era), then the year's rows when the alumni drive is on. There is no "Next goal" line. The Capacity, Policies and Traditions pages stay as they were.
+
+### 85.3 Orders: the centre, with no timers
+
+| Part | Built |
+|---|---|
+| No clock | An open order waits until it is done or swapped. Nothing runs out, and the board says nothing about time. `orderTimers` |
+| The refill | A new order arrives 2 real hours after one is claimed (`ORDER_REFILL_HOURS`), and in any place a level opens. It replaces one new order a real day and the second order for today (`dailyOrder`). The once-a-day test player finds the board full at every visit, 4 to 6 open, and finishes about three a day |
+| Swapping | Free. The new order comes 4 real hours later (`ORDER_SWAP_HOURS`), and that kind is not asked again for a week, as before. The button says Swap |
+| Places | 3 at the start, 4 at Level 5, 5 at Level 10, 6 at Level 20 |
+| Sized for a visit | The counted orders ask what a visit or two does: 8 trees, 6 collects, 4 benches, 6 quad cells, a thing or two from the Workshop, a dozen findings only while the labs make that many in a day or so, a discovery only when one is near |
+| Switched off | Every order measured at one moment, which could be missed (`pointOrders`): calmSemester, graduateClass, stayFull, noWaitlist, keepStudents, homeWin and sellOuts. Their campus-number cousins stay: more seats, Happiness, Safety & health, Food & fun, the weakest line of the Capacity page. The levels that opened them no longer promise them, and when a giver has nothing to ask, the order is another giver's, never one already on the board while another can be asked |
+| Pay | With the refill a once-a-day player finishes about twice as many orders, so each pays 0.65 of the experience it did (`ORDER_XP_SHARE`). "Reach the next level", which comes by itself and is asked often now, pays experience and no Seal. Measured over 24 weeks of the once-a-day player on the model campus, against main: Level 37, 79, 118 and 139 at weeks 4, 12, 20 and 24 (main 36, 79, 120 and 140), 87 Seals from orders (main 73 from orders and about 8 from the goals for the year) |
+
+### 85.4 Goals for the year: switched off
+
+`yearGoals`. They were a second list with a deadline. Their experience (about 230 a week) and Seals (about 0.3 a week) went into the orders' refill and pay (85.3). The code is kept.
+
+### 85.5 Big days
+
+Homecoming, the rivalry, finals week and commencement stay special orders at the top of the board, opened a day and a half or more ahead. Each now always pays for what happened, once it has come, and waits to be claimed until it is claimed. It is never "missed" and never says "There is always next year" (`momentPassFail`).
+
+| Big day | All of its pay for | Less for |
+|---|---|---|
+| Homecoming | A full stadium (95% of the seats), or a win at the rented field | The share of the seats filled |
+| The rivalry | A win | A loss |
+| Finals week | Stress at what was asked or lower | Each point over takes a tenth off |
+| Commencement | Every senior hoped for | The share who graduated |
+
+The least is 40% of the full pay (`BIG_DAY_LEAST`), so a loss or a half-full stadium still pays. The moments' share of experience and grants stays about where it was, a little higher for finals, which used to pay half the time.
+
+### 85.6 The six things that punished
+
+| # | What punished | Now | Switched off |
+|---|---|---|---|
+| 1 | The trustees' letter: 2 points off Reputation if the campus was not below Rowdy within 2 real days | The letter is an order at the top of the board: "Bring the Chaos meter below Rowdy", paying the trustees' gift when it is met. Ignoring it costs nothing, and it has no clock. A dip a save has is lifted | `trusteesDip` |
+| 2 | Greek Row's Warning turning to Probation after 36 hours | A house that is overfull or out of Campus Safety's reach "could use a hand": what would help, with no clock, and its members keep what it gives them. Hazing's own probation, a story with its own reasons, stays | `greekProbationTimer` |
+| 3 | Traditions "At risk", in a warning colour and the paper | The card says plainly what it needs: "Needs: a Late-night diner on campus · Not yet". A year not kept still costs nothing | `traditionAlarm` |
+| 4 | Orders running out | Gone (85.3) | `orderTimers` |
+| 5 | Moments passing or failing | Gone (85.5) | `momentPassFail` |
+| 6 | The goals for the year's commencement deadline | Gone (85.4) | `yearGoals` |
+
+### 85.7 The main screen: one or two clear things
+
+| Part | Built |
+|---|---|
+| The Next pill | Under the top bar, the one best thing to do now; a tap goes there. It picks, in this order: an order done and waiting to be claimed (a Big day too); today's gift; an order on the board that can be finished in this sitting; a new order not looked at yet; a building earned and waiting in the Build menu; "Start something for tomorrow at the Workshop" when a bench stands idle; what the Workshop is making and about when ("Ready tomorrow: string lights"); otherwise "Follow" the Main Character. It never shows a countdown (src/ui/nextUi.ts). A new order comes before the reward building, which the plan did not order, because a new order is often one that can be done at once |
+| Collect all | Its own button from 5 buildings ready, as before. With the Next pill, the one or two things |
+| A quieter top bar | Money, students, Happiness, the date and clock, then the chips, the Next pill and Collect all. The two demand bars (Housing beds and Academic seats), the Bottleneck tag, the "280 waiting: add..." line and the countdown under it moved to the top of the Capacity page, where they read and work as before. A campus without the orders board (the small campus) keeps them on the top bar |
+| The chips | Football, the Inbox, the orders, Quadline, the Main Character and the level stay, quieter: a small count, and no yellow or green that shouts. The gift's small dot on the level stays |
+
+### 85.8 Words
+
+"Swap" for the order's old Dismiss, and "Swapped. A new order comes in a few hours." The full campus is "the first honour", in the first paper and on the Scorecard. Nothing new explains the self-explanatory.
+
+### 85.9 Nothing earned is lost: save version 43
+
+`cleanUpGoals` (src/sim/systems/cleanup.ts), once, as a save from before is opened:
+
+- levels, experience, Gold Seals, decorations placed and stored, honours, traditions, chapters, labs and the Main Character stay as they are;
+- an era the save had by its rank is written down, so it stays open below its new level; a save whose level is past an era's level it had not reached by rank opens it on the first tick, with its line in the paper and its Seals;
+- goals for the year in progress: one met is paid in full now, one part done pays its share of the experience;
+- open orders keep their progress and lose their clocks; one measured at a moment (a semester's end, a graduation, an intake) and not done comes off the board, and a new order arrives in its place; one that counts (home wins, full houses) stays and counts on, with no clock;
+- a moment already gone by unmet is a Big day to claim, paying its least; one still to come is measured as a Big day;
+- a trustees' dip on Reputation is lifted.
+
+The upgrade note: "Goals are simpler: the University Level opens everything now, orders have no timers and a new one comes soon after you finish one, and Homecoming and the other Big days always pay. Nothing you earned is lost: the goals for the year were paid for what they had reached."
+
+| Save | What changed |
+|---|---|
+| Larp University (the version 20 fixture) | Level 5, no goals for the year in progress, nothing to pay. Its 2 open orders lose their clocks; its lab stays |
+| The mature save (version 39) | Level 24, no goals for the year in progress. 2 order clocks off; 1 measured order not done comes off and is replaced; its Homecoming waits as a Big day |
+
+### 85.10 The long run's checks
+
+| Check | Now |
+|---|---|
+| "the orders board never holds more than its places, and no order runs for less than 36 hours" | "... and no order ever lapses": nothing lapses, at most 6 open |
+| "a once-a-day player can finish most of what the board offers, and misses little" | "... and misses nothing" |
+| "all four givers are heard from ..., and nearly every kind of order comes up" | The switched-off kinds are not counted |
+| "goals for the year are set each year and paid at commencement" | "goals for the year are switched off: none is set" |
+| "a chapter goes on Probation only after a Warning" | "no chapter goes on Probation for a clock: only for hazing" |
+| The eras' weeks in the big builds' table | Read from the week each era began, not the rank goal that opened it |
+| "every policy moves the number it names, ... on a tended campus and on an untended one" | Its three campuses have every era written down, as a converted save keeps them. Eras open by level now, and a campus nobody tends never reaches the levels that open them, so its switches stayed shut and could not be thrown |
+| The test players' Parking fees and naming rights | They count what the big builds going up will cost to run, as they already did when buying one. Eras by level opened Flagship on a fall's first visit, when what a campus keeps reads high before its new faculty are hired: the casual player bought the Student Union on $15.77, gave back Parking fees as if the Union cost nothing, and could not take them again until spring. It kept $12.00 in the later weeks, at the owner's floor. Counted, it keeps $12.40 at the least, as on main. The game itself is unchanged |
+| New | "a once-a-day player always finds two or more orders open at a visit" |
+| New | "Big days always pay: every moment that came was claimed and paid" |
+| New | "nothing punishes an absent week: no Reputation lost to the trustees, no Probation from a clock, no order lapses" |
+| New | "a save from before the clean-up converts with nothing earned lost" |
+
+### 85.11 Decisions made here
+
+| Decision | Why | Alternative |
+|---|---|---|
+| Eras at Levels 35, 72 and 122 | Where the once-a-day player stood when each opened by rank, so they come when they came | The plan's guess, 32, 76 and 125 |
+| A refill 2 hours after a claim, a swap 4 hours | A once-a-day player finds the board full; a swap is free but not at once | Longer waits, which leave the board short for nobody's gain |
+| Each order 0.65 of its experience, and no Seal for "Reach the next level" | The refill doubles what a once-a-day player finishes; this holds the level pace and the Seals where they were with the goals for the year folded in | Fewer places, which the plan fixed at 3 to 6 |
+| Big days pay at least 40% | A loss still pays, more for a better day | Paying only the share, which pays nothing for a loss |
+| The Next pill puts a new order before a reward building | A new order is often something to do at once | The plan's order |
+| The trustees' letter as a card at the top of the board | It reads as an order and pays like one, with nothing to miss | A new kind of order in the board's own list |
+
+### 85.12 What it changes in earlier sections
+
+Read with this section: the eras opening by rank (38.4, 41), the orders board's clock, its one new order a day and its measured orders (42.3, 42.16 to 42.18), the goals for the year and the moments that pass or fail (44), the labs open from the start (49), traditions "At risk" (50), Greek Row's Warning to Probation (51), the trustees' letter's dip (68), the Goals page (37, 38.2), and the top bar's demand bars (8, 75).
+
+### 85.13 Measured
+
+**The long run: 118 of 118.**
+- Against kickoff-noon's (114 checks), 57 lines are word for word the same, 4 checks are renamed and 4 are new (85.10).
+- 53 lines moved, each for one of four reasons:
+  - **The refill.** About 31 orders a week finished by the casual player and 21 by the once-a-day player, against about 10 each before. That moves experience, Seals, crafts, the paper's lines and orders' cash.
+  - **Eras by level.** The big builds, traditions, chapter names and switches thrown move by a week or two.
+  - **Histories drifting** from week 1. The real figures, chaos and football each move within a tenth or two of a point.
+  - **Timing on the PC.** Every catch-up is under 1 s, at most 688 ms.
+
+**The bounds.**
+
+| Bound | Result |
+|---|---|
+| $12 to $17 kept, years 3 to 8 | Casual 13.6–15.3, once-a-day 13.9–15.3; it opens at 16.8 |
+| The same in the later weeks (9 to 44) | Casual 12.4–15.7, once-a-day 12.8–15.8 (main 12.4 and 12.8 at the least); the striver 12.2–14.3, reported only |
+| Level pace under 7.00 a week | The once-a-day player gains 5.5 to 5.6 levels a week in weeks 4 to 12 (main 5.6), and 5.1 after (main 5.4) |
+| Top 10 not before week 24 | Week 24 at the earliest, as on main |
+| Catch-up under 1 s | 673, 568, 642, 688 and 443 ms |
+
+**Pace and Seals.** These are told, not bounded.
+- At week 12 the once-a-day player is Level 75, as on main.
+- By week 44 the once-a-day player is Level 238 against 247, about 4% behind. The goals for the year paid more late on than the orders' 0.65 share gives back.
+- The twice-a-day player is Level 267 against 248, about 8% ahead, because the refill pays for a second visit. On main one new order a day held every player at the same pace.
+- Seals earned a week:
+  - Casual 16.1 and 15.5 (main 12.4 and 12.2).
+  - Once-a-day 13.0 (main 12.5 and 12.3).
+- Spending falls because the Workshop, open from Level 3, makes most of the decorations they used to buy for Seals.
+
+**Frames** on the slowed phone (4× CPU, 390 by 844 at 3×), main (4209a59) against this branch:
+- The model campus at High by the lecture halls at 11 AM, and the football demo in its second quarter.
+- In the first bench, main always ran first, and this branch came out 1.3 ms slower in every round.
+- Run the other way round, this branch came out faster.
+- Alternating the order each round:
+
+| Scene | Main | This branch |
+|---|---|---|
+| Model campus | 19.6 ms | 19.1 ms |
+| Football | 14.8 ms | 15.5 ms |
+
+The football screens are the same to the pixel, top bar included (the small campus keeps its demand bars), so the gap was the order the runs went in. The Next pill's choice takes about 6 microseconds and is made at most once a second.
+
+**Pictures.** The main screen on a phone 390 wide, before (main 4209a59) and after, at 11 AM, three of each:
+- The model campus in mid-fall.
+- Larp University (the version 20 copy) with an order done.
+- A brand-new game just after Open the gates.

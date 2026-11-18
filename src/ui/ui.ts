@@ -77,13 +77,15 @@ import {
   nextApplicants,
   studentCard,
 } from '../sim';
-import { craftsReady, decorSpec, giftReady, hasMakerspace, previewDecor, scorecard, waits as waitsNow } from '../sim';
+import { craftsReady, decorSpec, giftReady, hasMakerspace, honours, previewDecor, scorecard, waits as waitsNow } from '../sim';
 import { footballChip, footballMoney } from './footballUi';
 import { openAwayScreen, openInbox } from './deskPanels';
 import { inboxChip } from './deskUi';
 import { policiesView, policyChip } from './policyUi';
 import { collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from './levelUi';
 import { boardTop, giftCard } from './rhythmUi';
+import { nextThing, type NextGo } from './nextUi';
+import { off } from '../sim/config/cleanup';
 import { footballStat, inboxStat, policyStat, type StatChip } from './chips';
 import { ordersChip, ordersView, paidWords } from './ordersUi';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from './decorUi';
@@ -367,6 +369,8 @@ export function mountUi(root: HTMLElement): void {
   const chips = el('div', 'hud-chips');
   // Each is a number over a word, as the student count is, so that all of them hold one row on a phone 375 wide
   // (DESIGN.md 42.16). The sentence each used to carry is still what a screen reader hears.
+  // A game with the orders board keeps its chips quiet (DESIGN.md 85.7): a small count, and no colour that shouts.
+  let quietChips = false;
   const statChip = (onClick: () => void): { node: HTMLButtonElement; set: (stat: StatChip | null, said: string) => void } => {
     const node = button('', 'hud-chip stat', onClick);
     const value = el('span', 'chip-value');
@@ -380,8 +384,8 @@ export function mountUi(root: HTMLElement): void {
         setText(value, stat.value);
         setText(label, stat.label);
         node.classList.toggle('alone', stat.value === '');
-        node.classList.toggle('urgent', stat.tone === 'urgent');
-        node.classList.toggle('good', stat.tone === 'good');
+        node.classList.toggle('urgent', !quietChips && stat.tone === 'urgent');
+        node.classList.toggle('good', !quietChips && stat.tone === 'good');
         node.setAttribute('aria-label', said);
       },
     };
@@ -441,6 +445,20 @@ export function mountUi(root: HTMLElement): void {
 
   const status = el('div', 'status');
   const upcoming = el('div', 'upcoming');
+  // The demand bars, the waiting line and the countdown. On a game with the orders board they live on the Capacity page
+  // (DESIGN.md 85.7), where `renderHud` keeps them up to date as before; the state's order for seats or beds and the
+  // Next pill are how a class that will not fit reaches the player.
+  const demandBlock = el('div', 'demand-block');
+  demandBlock.append(bars, status, upcoming);
+  // The Next pill (DESIGN.md 85.7): the one best thing to do now, under the top bar. A tap goes there.
+  let nextGo: NextGo | null = null;
+  const nextPill = button('', 'next-pill', () => {
+    if (nextGo === 'orders') openOrders();
+    else if (nextGo === 'gift') openLevel();
+    else if (nextGo === 'build') openBuild();
+    else if (nextGo === 'workshop') openWorkshop();
+    else if (nextGo === 'main') openMain();
+  });
 
   // Shown when a new build has been downloaded. The player picks the moment to switch.
   const updateRow = el('div', 'update-row');
@@ -459,7 +477,7 @@ export function mountUi(root: HTMLElement): void {
   const visitText = el('span', '', '');
   const visitButton = button('Back', 'update-button', () => void (store.inSandbox ? store.switchTo('real') : store.leaveVisit()));
   visitRow.append(visitText, visitButton);
-  hud.append(top, calendar, today.node, chips, bars, status, upcoming, updateRow, visitRow);
+  hud.append(top, calendar, today.node, chips, nextPill, demandBlock, updateRow, visitRow);
 
   // -------------------------------------------------------------- toolbar --
   const chip = el('div', 'chip');
@@ -1235,6 +1253,7 @@ export function mountUi(root: HTMLElement): void {
     hud.classList.toggle('today-open', today.isOpen());
     setText(dateRest, pos.year === 0 ? '' : ` · Year ${pos.year}${sky ? ` · ${sky}` : ''}`);
     today.render(todayOf(state, { date: clockNow.date }));
+    quietChips = state.goals !== null;
     footballButton.set(footballStat(state), footballChip(state) ?? 'Football');
     inboxButton.set(inboxStat(state), inboxChip(state).text);
     const board = ordersChip(state);
@@ -1257,6 +1276,15 @@ export function mountUi(root: HTMLElement): void {
     setText(collectButton, all ?? '');
     collectButton.classList.toggle('show', all !== null);
     chips.classList.add('show');
+    // A quiet top bar on a game with the orders board (DESIGN.md 85.7): the Next pill, and the demand bars moved to the
+    // Capacity page. A campus without the board keeps them here.
+    const next = nextThing(state);
+    nextGo = next?.go ?? null;
+    setText(nextPill, next?.text ?? '');
+    nextPill.classList.toggle('show', next !== null);
+    const quiet = state.goals !== null;
+    if (quiet && demandBlock.parentElement === hud) demandBlock.remove();
+    else if (!quiet && demandBlock.parentElement !== hud) nextPill.after(demandBlock);
 
     const tight = bottleneck(state);
     for (const zone of ZONES) {
@@ -1858,17 +1886,20 @@ export function mountUi(root: HTMLElement): void {
         // Meddle (DESIGN.md 78): on a game with chaos.
         const meddling = meddleView(state);
         if (campusPage === 'meddle' && !meddling) campusPage = 'goals';
+        // On a game with goals the Goals page folds into the Scorecard, with the honours on top (DESIGN.md 85.2).
+        const folded = state.goals !== null;
+        if (folded && campusPage === 'goals') campusPage = 'scorecard';
         const scrolled = body.scrollTop;
         head.textContent = '';
         head.append(el('h1', '', size.title));
         const tabs = el('div', 'fb-tabs');
-        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'meddle' | 'scorecard', string]> = [['goals', 'Goals'], ['capacity', needs.tab]];
+        const pages: Array<['goals' | 'capacity' | 'policies' | 'traditions' | 'social' | 'meddle' | 'scorecard', string]> = folded ? [['scorecard', 'Scorecard'], ['capacity', needs.tab]] : [['goals', 'Goals'], ['capacity', needs.tab]];
         if (policies) pages.push(['policies', 'Policies']);
         if (traditions) pages.push(['traditions', 'Traditions']);
         if (web) pages.push(['social', 'Social']);
         if (meddling) pages.push(['meddle', 'Meddle']);
         // The Scorecard last: on a phone the row scrolls sideways, and the open page is brought into view.
-        if (card7) pages.push(['scorecard', 'Scorecard']);
+        if (card7 && !folded) pages.push(['scorecard', 'Scorecard']);
         for (const [id, label] of pages) {
           const tab = button(label, id === campusPage ? 'fb-tab active' : 'fb-tab', () => {
             campusPage = id;
@@ -1882,7 +1913,20 @@ export function mountUi(root: HTMLElement): void {
         if (open && typeof open.scrollIntoView === 'function') open.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
         body.textContent = '';
-        if (campusPage === 'goals') {
+        if (campusPage === 'scorecard' && folded) {
+          // The honours: reached ones with their year, and the next (DESIGN.md 85.2). Shown, not chased.
+          const shown = honours(state);
+          body.append(el('div', 'money-head', 'Honours'));
+          if (shown.reached.length === 0) body.append(el('p', 'fine', 'None yet. The first comes with the rankings in the spring.'));
+          for (const honour of shown.reached) {
+            const line = el('div', 'size-row');
+            line.append(el('span', '', honour.name), el('span', 'size-value', `Year ${honour.year}`));
+            body.append(line);
+          }
+          if (shown.next) body.append(el('p', 'fine', `The next honour: ${shown.next}.`));
+          body.append(el('div', 'money-head', 'The school'));
+        }
+        if (campusPage === 'goals' || (campusPage === 'scorecard' && folded)) {
           if (size.cap) {
             const bar = el('div', 'cause-bar size-bar');
             const fill = el('div', 'cause-fill');
@@ -1918,7 +1962,8 @@ export function mountUi(root: HTMLElement): void {
             }
           }
           body.append(el('div', 'size-goal', size.rank));
-          if (size.rankNext) body.append(el('p', 'fine', size.rankNext));
+          // How the world sees the school, with no next goal to chase on a game with honours (85.2).
+          if (size.rankNext && !folded) body.append(el('p', 'fine', size.rankNext));
           // The era, what the next one will open, and the way to what this one opened.
           if (size.era) body.append(el('div', 'size-goal', size.era));
           if (size.eraNext) body.append(el('p', 'fine', size.eraNext));
@@ -1941,11 +1986,13 @@ export function mountUi(root: HTMLElement): void {
               }),
             );
           }
-          if (size.reached.length > 0) {
+          if (size.reached.length > 0 && !folded) {
             body.append(el('div', 'money-head', 'Goals reached'));
             for (const line of size.reached) body.append(el('p', 'fine', line));
           }
-        } else if (campusPage === 'scorecard' && card7) {
+          if (folded && card7) body.append(el('div', 'money-head', 'This year'));
+        }
+        if (campusPage === 'scorecard' && card7) {
           // Seven rows, one for each stage of the spine: its number, an arrow against last year, and what limits it most.
           for (const row of card7) {
             const box = el('div', 'score-row');
@@ -1968,6 +2015,8 @@ export function mountUi(root: HTMLElement): void {
             }
             body.append(box);
           }
+        } else if (campusPage === 'scorecard' || campusPage === 'goals') {
+          // Drawn above.
         } else if (campusPage === 'meddle' && meddling) {
           drawMeddlePage(body, meddling, (id) => {
             const result = store.dispatch({ type: 'meddle', id });
@@ -2014,10 +2063,11 @@ export function mountUi(root: HTMLElement): void {
           // Traditions (DESIGN.md 50): those kept, then, while a place is open, those to choose from.
           body.append(el('p', 'fine', traditions.places));
           for (const row of traditions.chosen) {
-            const box = el('div', row.holds ? 'policy on tradition' : 'policy tradition at-risk');
+            const alarm = !row.holds && !off('traditionAlarm');
+            const box = el('div', row.holds ? 'policy on tradition' : alarm ? 'policy tradition at-risk' : 'policy tradition');
             const top = el('div', 'policy-top');
-            top.append(el('span', 'policy-name', row.name), el('span', row.holds ? 'tradition-state' : 'tradition-state risk', row.holds ? row.status : 'At risk'));
-            box.append(top, el('p', 'tradition-line', `${row.when}${row.next ? ` · ${row.next}` : ''}`), el('p', row.holds ? 'tradition-line' : 'tradition-line risk', `Needs: ${row.needs}`), el('p', 'tradition-line', row.lifts));
+            top.append(el('span', 'policy-name', row.name), el('span', alarm ? 'tradition-state risk' : 'tradition-state', row.holds ? row.status : alarm ? 'At risk' : 'Not yet'));
+            box.append(top, el('p', 'tradition-line', `${row.when}${row.next ? ` · ${row.next}` : ''}`), el('p', alarm ? 'tradition-line risk' : 'tradition-line', `Needs: ${row.needs}`), el('p', 'tradition-line', row.lifts));
             if (!row.holds) box.append(el('p', 'tradition-line', row.status));
             if (row.record) box.append(el('p', 'fine', row.record));
             body.append(box);
@@ -2039,6 +2089,8 @@ export function mountUi(root: HTMLElement): void {
             }
           }
         } else {
+          // The demand bars and the waiting line, moved here from the top bar (DESIGN.md 85.7).
+          if (folded) body.append(demandBlock);
           body.append(el('p', 'fine', needs.lead));
           for (const row of needs.rows) {
             const open = openRow === row.id;
@@ -2426,10 +2478,11 @@ export function mountUi(root: HTMLElement): void {
             box.append(claim);
           } else {
             box.append(
-              button('Dismiss', 'order-dismiss', () => {
+              // Swapping is free, and a new order comes a few hours later (DESIGN.md 85.3).
+              button(off('dailyOrder') ? 'Swap' : 'Dismiss', 'order-dismiss', () => {
                 const result = store.dispatch({ type: 'dismissOrder', id: row.id });
                 if (!result.ok) session.notify(result.error, 'error');
-                else told = 'Dismissed. A new order comes tomorrow.';
+                else told = off('dailyOrder') ? 'Swapped. A new order comes in a few hours.' : 'Dismissed. A new order comes tomorrow.';
                 draw();
               }),
             );
@@ -2613,7 +2666,9 @@ export function mountUi(root: HTMLElement): void {
           draw();
         });
         if (gift) body.append(gift);
+        if (view.chapter) body.append(el('div', 'size-goal', view.chapter));
         body.append(el('p', '', view.next));
+        if (view.opens) body.append(el('p', 'fine', view.opens));
         if (view.ready) {
           body.append(
             el('p', 'fine', view.ready.line),

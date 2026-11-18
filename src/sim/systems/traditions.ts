@@ -1,3 +1,4 @@
+import { off } from '../config/cleanup';
 import { GRADUATION_TICK_IN_YEAR, spanOf, tickOfDate, yearLength } from '../calendar';
 import { HOMECOMING_SLOT, RIVALRY_SLOT, SLOTS } from '../config/football';
 import type { PolicyEffect } from '../config/policies';
@@ -280,7 +281,8 @@ export function traditionsOnDayStart(state: GameState, log: LogEntry[]): void {
       });
     }
   }
-  for (const chosen of traditions.chosen) {
+  // "At risk" and its alarm in the paper are switched off (DESIGN.md 85.6): the card says plainly what a tradition needs.
+  for (const chosen of off('traditionAlarm') ? [] : traditions.chosen) {
     const spec = traditionSpec(chosen.id);
     if (!spec || spec.condition === 'always') continue;
     const next = nextDay(state, spec.day);

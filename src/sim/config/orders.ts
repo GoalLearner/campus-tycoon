@@ -151,7 +151,8 @@ export const ORDER_KINDS: readonly OrderKind[] = [
   // which with the levels' own keeps a free player near a wait and a half a week (42.7, and 42.17).
   { id: 'layQuads', giver: 'donors', title: 'Lay {n} cells of quad', ask: 'Green between the buildings is what visitors remember. It lifts how the campus looks.', metric: 'quads', target: { n: 6 }, hours: 36, reward: [seals(1), xp(60)], sitting: true, when: 'roomToPlant' },
   { id: 'placeReward', giver: 'donors', title: 'Place {what}', ask: 'It was earned and it is waiting in the Build menu. We would like to see it stand.', metric: 'rewardPlaced', target: { n: 1 }, hours: 36, reward: [seals(1), xp(60)], sitting: true, when: 'rewardWaiting' },
-  { id: 'levelUp', giver: 'donors', title: 'Reach University Level {n}', ask: 'A school on the move is one worth giving to.', metric: 'level', target: { add: 1 }, hours: 48, reward: [seals(1), xp(60)], always: true },
+  // It comes of itself, and with the refill it is asked often: experience alone, so the Seals stay with orders that take doing (85.3).
+  { id: 'levelUp', giver: 'donors', title: 'Reach University Level {n}', ask: 'A school on the move is one worth giving to.', metric: 'level', target: { add: 1 }, hours: 48, reward: [xp(60)], always: true },
   { id: 'homeWin', giver: 'donors', title: 'Win {n} home games', ask: 'We have seats at the stadium and we would like something to cheer.', metric: 'homeWins', target: { n: 1 }, point: 'fallEnd', reward: [seals(2), xp(100)], when: 'homeGamesAhead' },
   // A research lab's next discovery, offered only when one is due well inside the time it gives (DESIGN.md 49).
   { id: 'labDiscovery', giver: 'donors', title: 'Make a discovery', ask: 'We would love to read about the labs in the paper. Their next discovery will do.', metric: 'discoveries', target: { n: 1 }, hours: 96, reward: [seals(1), xp(80)], when: 'discoverySoon' },
@@ -204,6 +205,19 @@ export const ORDER_REST_HOURS = 7 * 24;
 
 /** Orders open at once to begin with. Levels add to it: see `LEVEL_UNLOCKS`. */
 export const ORDER_SLOTS = 3;
+
+/**
+ * [T] The refill (DESIGN.md 85.3): a new order arrives this many real hours after one is claimed, or after a level
+ * opens another place on the board, so a player who looks in once a day always finds a few open. One swapped away
+ * is replaced after `ORDER_SWAP_HOURS`: free, and not at once.
+ */
+export const ORDER_REFILL_HOURS = 2;
+export const ORDER_SWAP_HOURS = 4;
+/**
+ * [T] With the refill a player who looks in once a day finishes about twice as many orders as with one new a day, so
+ * an order pays this share of the experience it did. With the yearly goals' share moved in, the level pace holds.
+ */
+export const ORDER_XP_SHARE = 0.65;
 
 /**
  * One new order each real day. And on a day whose new order is a long one,

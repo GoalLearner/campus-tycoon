@@ -26,6 +26,7 @@ import {
   newDecor,
   newGame,
   ORDER_KINDS,
+  ORDER_XP_SHARE,
   orderViews,
   ownedAt,
   parseSave,
@@ -56,7 +57,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { captionLayout, photoFileName } from '../src/app/photo';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { DECOR_ENTRY, WORKSHOP_ENTRY, decorEntries, decorPanel, decorPlacedWords, decorPlacingLine, liftedCount, liftsNear, photoCaption, workshopPage } from '../src/ui/decorUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted, withAmenities, withCleanUp } from './helpers';
 
 /**
  * Decorations, the Workshop and the seasonal sets (DESIGN.md 42.5 and 42.6,
@@ -158,8 +159,10 @@ describe('the decorations, as data', () => {
       const what = one.home.kind === 'shelf' ? 'decoration' : 'recipe';
       expect(gifts.some((gift) => gift.kind === 'unlock' && gift.what === what && gift.id === one.id), one.id).toBe(true);
     }
-    // No level brings two new things: an order, a place on the board, a decoration or a recipe.
-    for (const [level, gifts] of Object.entries(LEVEL_UNLOCKS)) expect(gifts.length, `level ${level}`).toBe(1);
+    // No level brings two new things: an order, a place on the board, a decoration or a recipe. But for four the goals
+    // clean-up put at levels that already had one (DESIGN.md 85.1, 85.3): the first recipe at 3, the fifth place on the
+    // board at 10, the research labs at 15 and the Growth era at 35.
+    for (const [level, gifts] of Object.entries(LEVEL_UNLOCKS)) expect(gifts.length, `level ${level}`).toBe([3, 10, 15, 35].includes(Number(level)) ? 2 : 1);
     // A new thing nearly every level through the first month, and the first recipe within the first week.
     const through30 = Object.keys(LEVEL_UNLOCKS).filter((level) => Number(level) <= 31).length;
     expect(through30).toBeGreaterThanOrEqual(25);
@@ -373,8 +376,9 @@ describe('getting, placing, moving and putting away', () => {
       for (const kind of ORDER_KINDS) if (kind.giver === 'town' && kind.id !== 'plantTrees') asked.orders.rest[kind.id] = asked.clock.tick + 1e9;
       return orderViews(act(asked, { type: 'seeOrders' })).find((view) => view.id === 900)!.reward;
     };
-    expect(board(fresh())).toBe('a flower box and 60 experience');
-    expect(board(all)).toBe(`${60 + TOWN_DECOR_XP} experience`);
+    // An order pays ORDER_XP_SHARE of its experience, to the nearest 5, with the refill (DESIGN.md 85.3): 60 is 40.
+    expect(board(fresh())).toBe('a flower box and 40 experience');
+    expect(board(all)).toBe(`${Math.round(((60 + TOWN_DECOR_XP) * ORDER_XP_SHARE) / 5) * 5} experience`);
   });
 });
 
@@ -624,7 +628,8 @@ describe('the words on screen', () => {
 
   it('opens the Workshop with a line only when there is something to say', () => {
     expect(workshopPage(fresh())!.lead).toBe('');
-    expect(workshopPage(fresh(1))!.lead).toBe('The first recipe comes at Level 8.');
+    // The first recipe came at Level 8 before the goals clean-up (DESIGN.md 85.1).
+    expect(workshopPage(fresh(1))!.lead).toBe('The first recipe comes at Level 3.');
   });
 
   it('captions a photo with the school\'s name and its rank', () => {
@@ -696,12 +701,14 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
-      // Its money, its level, its Seals and its orders are what they were.
+      // Its money, its level, its Seals and its orders are what they were, but for the orders' clocks, which the goals
+      // clean-up takes off, and the orders on their way, none yet (DESIGN.md 85.9).
       expect(state.money).toEqual(file.state.money);
       expect(state.daily).toEqual(file.state.daily);
-      expect(state.orders).toEqual(file.state.orders);
+      expect(state.orders).toEqual({ ...file.state.orders, open: file.state.orders.open.map(({ until: _until, ...order }) => order), due: [] });
       expect(state.map.score).toEqual(file.state.map.score);
       // A saved one is not migrated again.
       const again = parseSave(serialize(state, file.savedAt));
@@ -721,7 +728,7 @@ describe('saves', () => {
     it('is told what is new, once', () => {
       const notes = upgradeNotes(19);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(22);
+      expect(notes).toHaveLength(23);
       expect(notes[0]).toContain('Decor');
       expect(notes[0]).toContain('Workshop');
       expect(toneProblem(notes[0]!)).toBeNull();

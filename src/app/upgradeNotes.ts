@@ -145,5 +145,8 @@ export function upgradeNotes(fromVersion: number): string[] {
   if (fromVersion < 42) {
     notes.push("Gyms, courts, the pool, the Makerspace, the Student Union, every place to eat and the study center now serve the students who use them, wherever they live. A student's card says what they use.");
   }
+  if (fromVersion < 43) {
+    notes.push('Goals are simpler: the University Level opens everything now, orders have no timers and a new one comes soon after you finish one, and Homecoming and the other Big days always pay. Nothing you earned is lost: the goals for the year were paid for what they had reached.');
+  }
   return notes;
 }

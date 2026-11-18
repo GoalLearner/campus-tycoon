@@ -94,7 +94,7 @@ export function sizeView(state: GameState): SizeView {
           ? 'Nobody is admitted until commencement brings it back under. No student is asked to leave.'
           : reached
             ? 'A full campus admits fewer of those who apply, and is ranked the higher for it.'
-            : 'A full campus is the first goal. It is counted when a class moves in.',
+            : 'A full campus is the first honour. It is counted when a class moves in.',
       percent: Math.round(100 * Math.max(0, Math.min(1, students / Math.max(1, limit)))),
     };
     // Next fall: whoever stays, and as many applicants as the cap then leaves room for.

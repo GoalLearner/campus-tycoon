@@ -1,3 +1,4 @@
+import { off } from '../sim/config/cleanup';
 import {
   cannotBuildChapter,
   chapterBeds,
@@ -41,7 +42,15 @@ export function greekEntries(state: GameState, scale: number, card: (type: Place
   return [entry];
 }
 
-export const STATUS_NAME: Record<ChapterStatus, string> = { good: 'Good standing', warning: 'On Warning', probation: 'On Probation', suspended: 'Suspended' };
+export const STATUS_NAME: Record<ChapterStatus, string> = {
+  good: 'Good standing',
+  // With Probation's clock switched off (DESIGN.md 85.6), a house in trouble could use a hand. Read when it is shown.
+  get warning(): string {
+    return off('greekProbationTimer') ? 'Could use a hand' : 'On Warning';
+  },
+  probation: 'On Probation',
+  suspended: 'Suspended',
+};
 
 /** What is wrong with a chapter, and what puts it right, in plain words. Empty for a chapter with nothing wrong. */
 export function troubleLines(state: GameState, chapter: Chapter): { wrong: string; fix: string } | null {

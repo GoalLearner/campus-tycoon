@@ -64,7 +64,7 @@ import { ticksToIntake } from '../src/sim/calendar';
 import { addTimer } from '../src/sim/timers';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { COLLECT_ALL_FROM, collectAllChip, finishConfirm, gainedWords, levelChip, levelView } from '../src/ui/levelUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp, erasByRank, switchedOn } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model' });
@@ -147,11 +147,12 @@ describe('the University Level', () => {
     expect(giftWords(levelGifts(999))).toBe('1 Gold Seal');
     expect(giftWords(levelGifts(5))).toBe('2 Gold Seals and a fourth order on the board');
     // What a level opens besides its Seals is a list: a kind of order, one more order on the board, a decoration
-    // for the Decor shelf or a Workshop recipe (tests/orders.test.ts, tests/decor.test.ts). One more is one entry.
+    // for the Decor shelf or a Workshop recipe (tests/orders.test.ts, tests/decor.test.ts), and since the goals
+    // clean-up the research labs and each era (DESIGN.md 85.1). One more is one entry.
     for (const gifts of Object.values(LEVEL_UNLOCKS)) {
       for (const gift of gifts) {
         expect(gift.kind).toBe('unlock');
-        if (gift.kind === 'unlock') expect(['order', 'slot', 'decoration', 'recipe']).toContain(gift.what);
+        if (gift.kind === 'unlock') expect(['order', 'slot', 'decoration', 'recipe', 'feature', 'era']).toContain(gift.what);
       }
     }
     expect(LEVEL_UNLOCKS[999]).toBeUndefined();
@@ -239,30 +240,32 @@ describe('the University Level', () => {
     }
   });
 
-  it('is fed by goals and eras, which bring Gold Seals as they are reached', () => {
-    const { state, log } = ranked(170, model());
-    expect(state.goals!.rank).toBe(1);
-    expect(state.daily.xp).toBe(XP_SOURCES.rankGoal.xp);
-    const levels = levelAt(XP_SOURCES.rankGoal.xp).level;
-    expect(state.daily.level).toBe(levels);
-    // Five for the goal, and one for each level its experience reached (the fifth level gives three).
-    const forLevels = Array.from({ length: levels - 1 }, (_, n) => levelGifts(n + 2)[0]!).reduce((sum, gift) => sum + (gift.kind === 'seals' ? gift.count : 0), 0);
-    expect(state.daily.seals).toBe(SEALS_RANK_GOAL + forLevels);
-    expect(log[0]!.kind).toBe('goal');
-    expect(log[0]!.text.endsWith('It brings 5 Gold Seals.')).toBe(true);
-    expect(log[1]!.kind).toBe('level');
-    expect(log).toHaveLength(2);
-    // Three goals and an era in one day.
-    const big = ranked(120, model());
-    expect(big.state.daily.xp).toBe(3 * XP_SOURCES.rankGoal.xp + XP_SOURCES.era.xp);
-    expect(big.log[0]!.text).toContain(`They bring ${3 * SEALS_RANK_GOAL + SEALS_ERA} Gold Seals. The Growth era begins.`);
-    // A full campus.
-    const full = structuredClone(model());
-    full.cohorts = [15_000, 14_500, 14_500, 14_000, 0, 0];
-    const said: LogEntry[] = [];
-    landSizeGoals(full, said);
-    expect(full.daily.xp).toBe(XP_SOURCES.sizeGoal.xp);
-    expect(said[0]!.text.endsWith(`It brings ${SEALS_SIZE_GOAL} Gold Seals.`)).toBe(true);
+  it('is fed by goals and eras, which bring Gold Seals as they are reached (switched off: erasByRank)', () => {
+    switchedOn(['erasByRank'], () => {
+      const { state, log } = ranked(170, model());
+      expect(state.goals!.rank).toBe(1);
+      expect(state.daily.xp).toBe(XP_SOURCES.rankGoal.xp);
+      const levels = levelAt(XP_SOURCES.rankGoal.xp).level;
+      expect(state.daily.level).toBe(levels);
+      // Five for the goal, and one for each level its experience reached (the fifth level gives three).
+      const forLevels = Array.from({ length: levels - 1 }, (_, n) => levelGifts(n + 2)[0]!).reduce((sum, gift) => sum + (gift.kind === 'seals' ? gift.count : 0), 0);
+      expect(state.daily.seals).toBe(SEALS_RANK_GOAL + forLevels);
+      expect(log[0]!.kind).toBe('goal');
+      expect(log[0]!.text.endsWith('It brings 5 Gold Seals.')).toBe(true);
+      expect(log[1]!.kind).toBe('level');
+      expect(log).toHaveLength(2);
+      // Three goals and an era in one day.
+      const big = ranked(120, model());
+      expect(big.state.daily.xp).toBe(3 * XP_SOURCES.rankGoal.xp + XP_SOURCES.era.xp);
+      expect(big.log[0]!.text).toContain(`They bring ${3 * SEALS_RANK_GOAL + SEALS_ERA} Gold Seals. The Growth era begins.`);
+      // A full campus.
+      const full = structuredClone(model());
+      full.cohorts = [15_000, 14_500, 14_500, 14_000, 0, 0];
+      const said: LogEntry[] = [];
+      landSizeGoals(full, said);
+      expect(full.daily.xp).toBe(XP_SOURCES.sizeGoal.xp);
+      expect(said[0]!.text.endsWith(`It brings ${SEALS_SIZE_GOAL} Gold Seals.`)).toBe(true);
+    });
   });
 });
 
@@ -522,7 +525,8 @@ describe('Gold Seals and Finish now', () => {
   });
 
   it('frees a policy held until the next class, for its price, after a confirm', () => {
-    const base = ranked(120).state;
+    // Tough grading waits for the Growth era: written down as a save from before the clean-up keeps it (DESIGN.md 85.1).
+    const base = erasByRank(ranked(120).state);
     const on = act(base, { type: 'policy', id: 'toughGrading', on: true });
     const wait = waits(on).find((one) => one.id === 'policy:toughGrading')!;
     expect(wait.name).toBe('Tough grading');
@@ -694,6 +698,7 @@ describe('a save from version 17', () => {
     withRegistration(expected);
     withLanes(expected);
     withAmenities(expected);
+    withCleanUp(expected);
     expect(state).toEqual(expected);
     expect(validate(state)).toBeNull();
     // Its money is what it was the moment before.
@@ -764,7 +769,7 @@ describe('a save from version 17', () => {
     // Its own, and the ones versions 19 and 20 added after it (tests/orders.test.ts, tests/decor.test.ts).
     const notes = upgradeNotes(17);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(24);
+    expect(notes).toHaveLength(25);
     expect(notes[0]).toContain('University Level');
     expect(toneProblem(notes[0]!)).toBeNull();
     expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

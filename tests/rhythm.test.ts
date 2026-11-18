@@ -22,6 +22,8 @@ import {
   giftView,
   MOMENT_LEAST_HOURS,
   MOMENTS,
+  BIG_DAY_LEAST,
+  rhythmOnGraduation,
   momentViews,
   newGame,
   newRhythm,
@@ -45,7 +47,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp, switchedOn } from './helpers';
 
 /**
  * The daily and seasonal rhythm (DESIGN.md 42.8, as built in section 44):
@@ -72,7 +74,7 @@ function morning(ms: number): number {
 }
 
 /** A model campus played a real week and a day, taking the gift and claiming what goes well on each morning's look. */
-const WEEK = (() => {
+function playWeek(): { state: GameState; log: LogEntry[]; gifts: number[] } {
   let state = model();
   const log: LogEntry[] = [];
   const gifts: number[] = [];
@@ -88,7 +90,8 @@ const WEEK = (() => {
     for (const row of momentViews(state, left)) if (row.done) state = act(state, { type: 'claimMoment', id: row.id });
   }
   return { state, log, gifts };
-})();
+}
+const WEEK = playWeek();
 
 describe('the day\'s gift', () => {
   it('is a card of seven boxes, and the seventh is the better gift', () => {
@@ -175,48 +178,69 @@ describe('the day\'s gift', () => {
 });
 
 describe('goals for the year', () => {
-  it('are three kinds, one easy, one medium and one a stretch, set when the fall class moves in', () => {
-    const set = WEEK.log.filter((entry) => entry.kind === 'rhythm' && entry.data?.year === 1);
-    expect(set.length).toBeGreaterThanOrEqual(1);
-    const fresh = to(model(), T0 + DAY + 12 * HOUR).state;
-    const year = fresh.rhythm.year!;
-    expect(year.goals.map((goal) => goal.level)).toEqual(['easy', 'medium', 'stretch']);
-    expect(new Set(year.goals.map((goal) => goal.kind)).size).toBe(3);
-    for (const goal of year.goals) {
-      expect(YEAR_KINDS.some((kind) => kind.id === goal.kind)).toBe(true);
-      expect(yearWords(goal)).not.toMatch(/\{n\}|undefined|NaN/);
-    }
-    // A school year is one real week: they run to commencement, more than a day and a half away.
-    expect(year.until - fresh.clock.tick).toBeGreaterThan(36 * TICKS_PER_HOUR);
+  it('are three kinds, one easy, one medium and one a stretch, set when the fall class moves in (switched off: yearGoals)', () => {
+    switchedOn(['yearGoals'], () => {
+      // The week played with them on.
+      const WEEK = playWeek();
+      const set = WEEK.log.filter((entry) => entry.kind === 'rhythm' && entry.data?.year === 1);
+      expect(set.length).toBeGreaterThanOrEqual(1);
+      const fresh = to(model(), T0 + DAY + 12 * HOUR).state;
+      const year = fresh.rhythm.year!;
+      expect(year.goals.map((goal) => goal.level)).toEqual(['easy', 'medium', 'stretch']);
+      expect(new Set(year.goals.map((goal) => goal.kind)).size).toBe(3);
+      for (const goal of year.goals) {
+        expect(YEAR_KINDS.some((kind) => kind.id === goal.kind)).toBe(true);
+        expect(yearWords(goal)).not.toMatch(/\{n\}|undefined|NaN/);
+      }
+      // A school year is one real week: they run to commencement, more than a day and a half away.
+      expect(year.until - fresh.clock.tick).toBeGreaterThan(36 * TICKS_PER_HOUR);
+    });
   });
 
-  it('are paid at commencement, each one met, and say how the year went', () => {
-    const done = WEEK.log.filter((entry) => entry.kind === 'rhythm' && entry.data?.yearDone === 1);
-    expect(done).toHaveLength(1);
-    const last = WEEK.state.rhythm.lastYear!;
-    expect(last.of).toBe(3);
-    // What was paid is what the goals met pay, and nothing is taken for those missed.
-    expect(last.xp).toBeLessThanOrEqual(YEAR_PAY.easy.xp + YEAR_PAY.medium.xp + YEAR_PAY.stretch.xp);
-    expect(WEEK.state.rhythm.tally.goalsMet ?? 0).toBe(last.met);
-    expect(done[0]!.text).toMatch(/^Goals for the year: /);
-    // The next year's goals are set with the next fall class.
-    expect(WEEK.state.rhythm.year?.year).toBe(WEEK.state.clock.week.year);
+  it('are paid at commencement, each one met, and say how the year went (switched off: yearGoals)', () => {
+    switchedOn(['yearGoals'], () => {
+      // The week played with them on.
+      const WEEK = playWeek();
+      const done = WEEK.log.filter((entry) => entry.kind === 'rhythm' && entry.data?.yearDone === 1);
+      expect(done).toHaveLength(1);
+      const last = WEEK.state.rhythm.lastYear!;
+      expect(last.of).toBe(3);
+      // What was paid is what the goals met pay, and nothing is taken for those missed.
+      expect(last.xp).toBeLessThanOrEqual(YEAR_PAY.easy.xp + YEAR_PAY.medium.xp + YEAR_PAY.stretch.xp);
+      expect(WEEK.state.rhythm.tally.goalsMet ?? 0).toBe(last.met);
+      expect(done[0]!.text).toMatch(/^Goals for the year: /);
+      // The next year's goals are set with the next fall class.
+      expect(WEEK.state.rhythm.year?.year).toBe(WEEK.state.clock.week.year);
+    });
   });
 
-  it('show on the board as a Year row with progress, and between commencement and move-in say how last year went', () => {
-    const fresh = to(model(), T0 + DAY + 12 * HOUR).state;
-    const view = yearView(fresh, left)!;
-    expect(view.rows).toHaveLength(3);
-    for (const row of view.rows!) {
-      expect(row.share).toBeGreaterThanOrEqual(0);
-      expect(row.share).toBeLessThanOrEqual(1);
-      expect(toneProblem(`${row.words} ${row.progress} ${row.pays}`)).toBeNull();
-    }
-    expect(view.note).toMatch(/^Paid at commencement, in /);
-    const summer = structuredClone(fresh);
-    summer.rhythm.year = null;
-    summer.rhythm.lastYear = { year: 1, met: 2, of: 3, xp: 400, seals: 1 };
-    expect(yearView(summer, left)).toEqual({ rows: null, note: 'Last year: 2 of 3 goals met. Three new ones come with the fall class.' });
+  it('show on the board as a Year row with progress, and between commencement and move-in say how last year went (switched off: yearGoals)', () => {
+    switchedOn(['yearGoals'], () => {
+      const fresh = to(model(), T0 + DAY + 12 * HOUR).state;
+      const view = yearView(fresh, left)!;
+      expect(view.rows).toHaveLength(3);
+      for (const row of view.rows!) {
+        expect(row.share).toBeGreaterThanOrEqual(0);
+        expect(row.share).toBeLessThanOrEqual(1);
+        expect(toneProblem(`${row.words} ${row.progress} ${row.pays}`)).toBeNull();
+      }
+      expect(view.note).toMatch(/^Paid at commencement, in /);
+      const summer = structuredClone(fresh);
+      summer.rhythm.year = null;
+      summer.rhythm.lastYear = { year: 1, met: 2, of: 3, xp: 400, seals: 1 };
+      expect(yearView(summer, left)).toEqual({ rows: null, note: 'Last year: 2 of 3 goals met. Three new ones come with the fall class.' });
+    });
+  });
+});
+
+describe('goals for the year, switched off (DESIGN.md 85.4)', () => {
+  it('are none: none set with the fall class, no Year row on the board, nothing paid at commencement', () => {
+    expect(WEEK.log.some((entry) => entry.kind === 'rhythm' && (entry.data?.year !== undefined || entry.data?.yearDone !== undefined))).toBe(false);
+    expect(WEEK.state.rhythm.year).toBeNull();
+    expect(WEEK.state.rhythm.lastYear).toBeNull();
+    expect(WEEK.state.rhythm.tally.goalsMet).toBeUndefined();
+    expect(yearView(WEEK.state, left)).toBeNull();
+    expect(yearView(to(model(), T0 + DAY + 12 * HOUR).state, left)).toBeNull();
   });
 });
 
@@ -279,6 +303,39 @@ describe('moments of the calendar', () => {
   });
 });
 
+describe('Big days (DESIGN.md 85.5)', () => {
+  /** The model campus with its first commencement on the board, not yet come. */
+  const waiting = (() => {
+    let state = model();
+    for (let n = 0; n < 40 && !state.rhythm.moments.some((one) => one.kind === 'commencement' && one.met === null); n++) state = to(state, state.clock.lastSimulatedAt + 6 * HOUR).state;
+    return state;
+  })();
+
+  it('are always claimed once they come, and pay from BIG_DAY_LEAST of it to all of it by how the day went', () => {
+    expect(BIG_DAY_LEAST).toBe(0.4);
+    const moment = waiting.rhythm.moments.find((one) => one.kind === 'commencement' && one.met === null)!;
+    expect(applyAction(waiting, { type: 'claimMoment', id: moment.id })).toMatchObject({ ok: false, error: 'That has not come yet.' });
+    const paidFor = (seniors: number): number => {
+      const state = structuredClone(waiting);
+      const log: LogEntry[] = [];
+      rhythmOnGraduation(state, seniors, log);
+      expect(state.rhythm.moments.find((one) => one.id === moment.id)!.met).toBe(true);
+      expect(log.some((entry) => /There is always next year/.test(entry.text))).toBe(false);
+      expect(momentViews(state, left).find((row) => row.id === moment.id)).toMatchObject({ done: true, missed: false });
+      const claimed = applyAction(state, { type: 'claimMoment', id: moment.id });
+      if (!claimed.ok) throw new Error(claimed.error);
+      return claimed.paid!.find((pay) => pay.kind === 'xp')!.amount;
+    };
+    const full = MOMENTS.commencement.pays.find((pay) => pay.kind === 'xp')!.amount;
+    expect(paidFor(moment.target)).toBe(full);
+    expect(paidFor(0)).toBe(Math.round(full * BIG_DAY_LEAST));
+    const half = paidFor(Math.round(moment.target / 2));
+    expect(half).toBeGreaterThan(Math.round(full * BIG_DAY_LEAST));
+    expect(half).toBeLessThan(full);
+    expect(paidFor(Math.round(moment.target * 0.9))).toBeGreaterThan(half);
+  });
+});
+
 describe('the paper and the phone', () => {
   it('put how a moment went and how the year went near the top, and the rest in the back pages', () => {
     const rhythm = WEEK.log.filter((entry) => entry.kind === 'rhythm');
@@ -322,7 +379,7 @@ describe('saves', () => {
     const text = readFileSync(new URL('./fixtures/save-v20-model.json', import.meta.url), 'utf8');
     const file = JSON.parse(text) as { savedAt: number; state: GameState & { version: number } };
 
-    it('comes through with nothing else moved: the owner\'s own kind of game, with a fresh card and no goals yet', () => {
+    it('comes through with nothing else moved: the owner\'s own kind of game, with a fresh card and no goals yet (switched off: yearGoals)', () => {
       expect(file.state.version).toBe(20);
       expect(file.state.rhythm).toBeUndefined();
       const loaded = parseSave(text);
@@ -348,15 +405,18 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Its first look gives the first box, and the next start of a day sets the year's goals.
       expect(giftReady(state)).toBe(true);
-      const day = to(state, file.savedAt + DAY).state;
-      expect(day.rhythm.year?.goals).toHaveLength(3);
+      switchedOn('yearGoals', () => {
+        const day = to(state, file.savedAt + DAY).state;
+        expect(day.rhythm.year?.goals).toHaveLength(3);
+      });
       const notes = upgradeNotes(20);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(21);
+      expect(notes).toHaveLength(22);
       expect(notes[0]).toMatch(/gift each day/);
     });
 

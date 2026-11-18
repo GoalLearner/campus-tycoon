@@ -24,7 +24,7 @@ import { budget } from '../src/sim/systems/budget';
 import { landRankGoals } from '../src/sim/systems/goals';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp, erasByRank } from './helpers';
 
 /**
  * The story system (DESIGN.md 53.3 to 53.6, as built in section 58): arcs and
@@ -181,6 +181,8 @@ describe('the storyteller', () => {
     flagship.field.rank = 70;
     flagship.field.rankYear = 1;
     landRankGoals(flagship, []);
+    // Written down as a save from before the goals clean-up keeps it: the University Level opens eras now (DESIGN.md 85.1).
+    erasByRank(flagship);
     const on = applyAction(flagship, { type: 'policy', id: 'campusJobs', on: true });
     if (!on.ok) throw new Error(on.error);
     expect(oddsRead(on.state, on.state.story.mc!, 'campus.jobs')).toBe(1);
@@ -214,6 +216,7 @@ describe('the storyteller', () => {
     flagship.field.rank = 70;
     flagship.field.rankYear = 1;
     landRankGoals(flagship, []);
+    erasByRank(flagship);
     const on = applyAction(flagship, { type: 'policy', id: 'needScholarships', on: true });
     if (!on.ok) throw new Error(on.error);
     const line = budget(on.state).groups.flatMap((group) => group.lines).find((one) => one.id === 'policy.needScholarships')!;
@@ -264,11 +267,12 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(28);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(13);
+      expect(notes).toHaveLength(14);
       expect(notes[0]).toMatch(/stor/i);
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(newStory().arcs).toEqual([]);

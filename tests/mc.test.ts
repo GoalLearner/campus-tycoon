@@ -25,7 +25,7 @@ import {
 import { edition } from '../src/sim/newspaper';
 import { mcView } from '../src/ui/mcUi';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp } from './helpers';
 
 /**
  * The Main Character (DESIGN.md 53.2, as built in section 57): chosen from a
@@ -276,11 +276,12 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const notes = upgradeNotes(27);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(14);
+      expect(notes).toHaveLength(15);
       expect(notes[0]).toMatch(/main character/);
       expect(toneProblem(notes[0]!)).toBeNull();
     });

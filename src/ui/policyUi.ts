@@ -38,11 +38,11 @@ export function policiesView(state: GameState): PoliciesView | null {
   return { rows, next: eraNextLine(state) };
 }
 
-/** "The Flagship era, at the Top 75, opens two more policies: ..." or '' when no era is left or the next opens nothing. */
+/** "The Flagship era, at University Level 75, opens two more policies: ..." or '' when no era is left or the next opens nothing. */
 export function eraNextLine(state: GameState): string {
   const next = nextEra(state);
   if (!next || next.opens === '') return '';
-  return `The ${next.name} era, at the Top ${next.top}, opens ${next.opens}.`;
+  return `The ${next.name} era, at University Level ${next.level}, opens ${next.opens}.`;
 }
 
 /** The chip under the top bar: nothing until the Growth era, then "Policies", with how many are on. */
