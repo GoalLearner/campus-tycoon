@@ -9887,7 +9887,7 @@ The rush has 125 to 147 walkers in view on both.
 
 ## 85. Clean up the goals (the owner's new direction, stop 1, 2026-11-17)
 
-The owner's direction, approved with the plan `docs/handoff/direction-plan.html`: "Direction, final: FarmVille/Hay Day is the backbone, The Sims is the heart... The promise: 'Build the university of your dreams and watch thousands of lives unfold inside it.' No deadlines, no failure, no scenarios, no ending." The plan has six stops; this is the first. His guardrails for it, word for word:
+The owner's direction, approved with the plan `docs/handoff/direction-plan.html`: "Direction, final: FarmVille/Hay Day is the backbone, The Sims is the heart... The promise: 'Build the university of your dreams and watch thousands of lives unfold inside it.' No deadlines, no failure, no scenarios, no ending." The plan has six stops; this is the first. The owner's guardrails for it, word for word:
 
 - "Nothing a player has earned is lost; old progress converts into the new system."
 - "After the cleanup, the screen shows one or two clear things worth doing at any moment. Show me a phone screenshot of the main screen before and after."
