@@ -1,4 +1,4 @@
-import { dateAt, dayRead, weatherAt, type GameState } from '../sim';
+import { dateAt, dayRead, weatherAt, type GameDate, type GameState } from '../sim';
 import { IN_TERM_FROM } from '../sim/config/season';
 import { partiesOn } from '../sim/systems/parties';
 import { seasonCurve } from '../sim/systems/season';
@@ -41,8 +41,9 @@ export function dayFactsOf(kind: string, weekend: boolean, partyNight: boolean):
 }
 
 /** The kind of day it is on a campus now (`weekend` and `weather` for the dev page's held ones). */
-export function todayOf(state: GameState, over: { weekend?: boolean; weather?: string } = {}): DayFacts {
-  const date = dateAt(state.clock);
+export function todayOf(state: GameState, over: { weekend?: boolean; weather?: string; date?: GameDate } = {}): DayFacts {
+  // The map passes the date on its clock, which turns over at game midnight a moment before the next tick (DESIGN.md 84).
+  const date = over.date ?? dateAt(state.clock);
   const weekend = over.weekend ?? (date.weekday === 0 || date.weekday === 6);
   const sky = over.weather ?? weatherAt(state.seed, state.clock);
   const party = date.weekday >= 4 && date.weekday <= 6 && sky === 'clear' && seasonCurve(state.clock) >= IN_TERM_FROM && partiesOn(state);

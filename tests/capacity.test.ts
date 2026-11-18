@@ -528,7 +528,7 @@ describe('the Capacity page', () => {
     const status = Object.fromEntries(capacity(state).needs.map((one) => [one.id, one.status]));
     expect(status).toMatchObject({ beds: 'ok', seats: 'tight', faculty: 'ok', dining: 'ok', recreation: 'tight', parking: 'ok', workers: 'ok', staff: 'ok' });
     // The model campus has no track and no tennis or volleyball court, and the row says so (DESIGN.md 83.2).
-    expect(need(state, 'recreation').consequence).toMatch(/^No track, volleyball court and tennis court: (1 in \d+ students|\d+% of students) would use one\.$/);
+    expect(need(state, 'recreation').consequence).toMatch(/^No track, volleyball court or tennis court: (1 in \d+ students|\d+% of students) would use one\.$/);
     // A row that is doing nothing says nothing. One that is says what it lowers.
     for (const one of capacity(state).needs) expect(one.consequence === '', one.id).toBe(one.status === 'ok');
     // Crowded classes on a campus with room for every student: zoning Academic lots is the fix, and it says how many.

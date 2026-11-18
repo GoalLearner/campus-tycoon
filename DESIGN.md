@@ -2462,6 +2462,8 @@ One hook is ready for it, built with Life and sound on 2026-11-12 (33.9): the ma
 
 ### 28.1 Time of day
 
+**Replaced by 84 (2026-11-17):** the hour is now the game's own clock, read from the calendar with the date.
+
 | Decision | Why |
 |---|---|
 | Time of day follows the player's real local clock, in four periods with smooth changes between them: morning, afternoon, evening and night. The in-game date keeps advancing with the game's own time | A game day passes in about half a real hour, which is too fast for a day and a night |
@@ -9009,6 +9011,8 @@ The owner, word for word: "Make time of day visible. The light and walker schedu
 
 ### 75.1 The clock, and how the two times read together
 
+**Replaced by 84 (2026-11-17):** the hour is the game's own, and the date and the hour turn over together at game midnight. What follows is how it was.
+
 The HUD's small print reads the date, then the hour: "Thu, Oct 8 · 10:55 AM · Year 1". The date is the game's own, which runs a year to a real week (a game day is about 28 real minutes); the hour is the player's own clock, which the light, the lamps and the crowd have followed since 28.1. They read together as "what day it is at your school, and what time it is where you are": the campus looks like your hour on the game's day. So a weekday of term at 10:55 on your phone is a class change; the game's Saturday at 10:55 is a slow weekend morning; and as the game's day turns over while you watch, the same hour can move from a Friday to a Saturday. The hour is written as the device writes it, "10:55 AM" on a 12-hour phone and "10:55" on a 24-hour one, as its settings say (`src/app/clockText.ts`); the times on a followed student's day follow it too. The clock is the button for Today on campus: drawn as small print, it is a 44-point target.
 
 ### 75.2 The campus's day
@@ -9737,3 +9741,113 @@ Version 42. The migration works out again who goes to which place to play and ea
 **Seen in the game**, on the model campus at Thanksgiving: the Build menu's Recreation and Food cards with no reach in them; the Capacity page's Recreation row, Tight, naming the track and the tennis and volleyball courts; and a student's card with its Uses row, "The gym, the pool and field games · eats at the dining hall · wants a tennis court". At 375 and 530 wide, nothing wider than the screen.
 
 **Tested:** `tests/play.test.ts` (rewritten): what students do for fun, their own and the same every time, at the real shares; the lift of what they use wherever they live, and nothing for what they do not; a pool anywhere lifting every swimmer; room, those turned away missing it, and a second place of the kind anywhere letting them in; who goes where, the nearest most and on from a full place; the card's Uses words; the save note. `tests/food.test.ts`: every place to eat feeding the whole campus and letting a dorm grow from anywhere; variety for every student; takings shared by use; the study center by need and room. `tests/capacity.test.ts`, `tests/placed.test.ts`, `tests/bigBuilds.test.ts`, `tests/students.test.ts`, `tests/grounds.test.ts` and the save tests of every version from 15 on (version 42's resharing, one more upgrade note).
+
+## 84. The game's own clock (the owner's play note, 2026-11-17)
+
+The owner, on a screenshot of the HUD reading "Fri, Aug 21 · 9:58 AM · Year 1" at 9:57 on his phone: "Also the time is just my time. There needs to be a real in game functional clock that represents the time for those in the simulation". It is his decision, and it replaces 28.1 and 75.1, where the hour followed the player's own clock. Built on the branch `game-clock`.
+
+### 84.1 The clock
+
+| Part | Built |
+|---|---|
+| Where the hour comes from | The same calendar that gives the date (`src/sim/calendar.ts`): each moment is a whole game day and how far past it, so the date is the whole day and the hour its fraction. They agree, and turn over together at game midnight |
+| How fast | A game year is a real week, so the hour runs at the calendar's own pace: a game day is about 28 real minutes in the fall (a game hour about 70 real seconds), 25 in the spring, 17 in the summer, and about 110 in graduation week, which is a real day for nearly a fortnight of dates. Every game year begins at midnight on Aug 19 |
+| Exact | It is worked out from the game's ticks, so catch-up, saves and tests stay exact, and a device clock or time-zone change no longer moves the light. Between two ticks the map runs it on through the real minute to the next one, so it never jumps a game hour at a time, and it never shows a tick the game has not run. The date at a whole tick is worked out exactly as before |
+| How it is written | As the device writes times, "9:58 AM" on a 12-hour phone and "9:58" on a 24-hour one (`clockText.ts`). In the fall the minute moves on about once a second |
+| The founding day | Move-in week, as before (Aug 12 to 18), now from 8 AM on its first date to midnight at the end of its last, so a new campus is first seen in the morning. It runs at whatever pace its length gives: a founding day of 13 real hours is a game day of nearly two real hours. A game made off the model campus holds 8 AM until its first class arrives |
+| What follows it | The light, the lamps and the night; the campus's day (75.2: classes, class changes, meals, the gym and courts, weekends, party nights and finals); a followed student's day and "Doing now"; the Main Character's doings on the map and their page's "Doing now" (84.6); Today on campus and its View at slider (75.3, 75.4), which shows any hour of the game's day; the bell (84.8) |
+| What stays in real time | Everything that says when to come back: the countdowns ("Spring class arrives in 1 d"), build timers, notices, the football chip's "next in", the anchor hour that puts intakes and big games in the player's waking hours (4.2, 4.8), and the Main Character's story pacing (53.1) |
+| The simulation | Its rules still never read the hour: money, Happiness and the rest stay on the busiest-hour numbers. It runs exactly as before (84.12) |
+
+The map reads the game's date with the hour, so a weekend, a party night and the student's day turn over at game midnight with the clock, a moment before the next tick does.
+
+### 84.2 Day and night in 28 minutes
+
+The campus is mostly seen in daylight. The clock reads the true hour; only the light is shaped:
+
+| Stretch of the game day | Light | Real minutes in the fall |
+|---|---|---|
+| 8 AM to 5:30 PM | Plain daylight | About 11 |
+| 5:30 PM to 10:30 PM | Dusk: gold, then violet, then night, with the lamps coming on from 6:30 to 7:30 PM | About 6 |
+| 10:30 PM to 4 AM | Full night | About 6.5 |
+| 4 AM to 8 AM | Dawn, the lamps going off from 5 to 6 AM | About 5 |
+
+Light enough to read as day, 6 AM to 6:15 PM, is about half of each game day, some 14.5 real minutes of the 28. The old table kept a third of the day in full night, nine real minutes of each 28. No step of the light takes less than about a minute of real time.
+
+### 84.3 Crowds that swell, never strobe
+
+A class change comes about every 70 real seconds and lasts about twelve. Walkers keep their real walking speeds: those already walking finish and go in at doors, as before (75.2). What the eye sees is tuned so a change reads as a campus day sped up:
+
+- How full the paths should be follows the hour over a few real seconds, rising over about 2.5 and falling over about 4, so a change swells out of the lecture halls and dorms and ebbs back into the doors.
+- The thinning as a class starts stays a few a second (75.2), so the paths empty over ten seconds or so. Nobody pops in or out of view (69.2).
+- A first look, or a look back after a few seconds away, shows the hour's crowd as it is.
+
+### 84.4 Football on the game clock
+
+A game kicks off at the first tick of its Saturday, as it always has, which on the game's clock is in its first hour, by about 12:50 AM (`KICKOFF_HOUR`, 0).
+
+| Part | On the game's clock |
+|---|---|
+| A game | Still forty real minutes, shown a quarter at a time (10 real minutes each), so it can be watched live. On the clock that is about a day and a half: from Saturday's first hour to about 10 AM on Sunday. The first quarter is the small hours under the lights, the second Saturday's daylight, the third the evening and the fourth Sunday's small hours |
+| The turnout | An hour of real time before kickoff, as before: from about Wednesday evening on the clock, so the game is a long weekend |
+| The C3 chaos and the stadium crowd | Unchanged: they read the same ticks from kickoff to the whistle |
+| The celebration after a home win (64.3) | From the whistle to the end of the Monday after, about half an hour of real time. It was six real hours, nearly a fortnight on the game's clock |
+
+**Kickoff at noon was built and measured, and is not on.** `KICKOFF_HOUR` 12 kicks every game off at noon, half a game day, about 14 real minutes, after its Saturday begins, and the first quarter is Saturday afternoon. It moves the simulation: a game day's lift to the food places, the turnout and the whistle all come 14 real minutes later, money half a year in differs by about 1%, and the long run's diligent player builds a different campus (10,170 students where it had 10,084) on which only 9 of 31 places to eat and play end up with a bin and a grounds crew keeping up, so the check that well-staffed places stay clean fails. The game's results themselves do not change. With 0 the long run is exactly as before. Noon is one constant away, with that check to answer first.
+
+### 84.5 A student's day
+
+A regular's day (63.9) is now one day of the game's clock: watching one for half an hour shows a whole day, waking, classes, lunch, the gym and home.
+
+- The day is the game's date, so a new day comes at each game midnight; before, it was a real day of 24 hours. Their classes (R4a, R4b) are at those times on the game's clock.
+- Until they wake they are still in the night before, so a party or a late night of study runs on past midnight.
+- What turns over once a day turns over once a game day: the one random moment of a day ("Dropped their books in front of..."), office hours by the game's week, and a gym phase that lasts about three and a half months of the game (105 game days).
+
+### 84.6 The Main Character
+
+What the player sees them doing follows the game's clock: on the map they walk their own day, as any followed student does, and their page's first line says what that day has them doing now. Their needs, their day's plan, their story and their grades keep the player's real day (53.1), so key moments still come two or three a real day. Moving their whole life onto a 28-minute day would change all of that pacing, which this note does not ask for.
+
+### 84.7 Today on campus and the HUD
+
+The clock button reads the game's hour and opens Today on campus, which shows the game's day: its curve, what is happening now and what comes next, all in game time. The View at slider shows any hour of that day, and the dashed line on the curve is the game's clock. Nothing on them says "your time". The countdowns beside them stay in real time.
+
+### 84.8 The bell
+
+The bell rang on every hour of the player's clock (33.6). On the game's clock that would be every seventy seconds, so it rings at three hours of the game's day: 8 AM for the first classes, noon, and 6 PM, three times in each 28 real minutes. It follows the game's clock whatever hour the View at slider shows. The rest of the soundscape follows the light.
+
+### 84.9 The save
+
+Nothing stored a real hour, so nothing moves: the save version stays 42.
+
+### 84.10 Decisions made here
+
+| Decision | Why | Alternative |
+|---|---|---|
+| The hour is the fraction of the same day count that gives the date | The two can never disagree, and the date at a whole tick is exactly as it was | A separate hour clock, which drifts from the date at the calendar's knots |
+| The map runs the clock on between ticks | A tick is about 51 game minutes in the fall; without it the clock and the light would jump once a real minute | Ticks only |
+| Daylight about half the day, a night of six and a half real minutes | Mostly seen in daylight, and the night is still a night | The old table, a third in full night |
+| Kickoff stays at the first tick of its Saturday, in the clock's first hour | The simulation and the long run stay exactly as they were | Noon (`KICKOFF_HOUR` 12), built and measured: the long run moves and its grounds check fails (84.4) |
+| A game stays forty real minutes | It can be watched; the chaos and the crowd need it | A game of three and a half game hours, four real minutes |
+| The bell at 8 AM, noon and 6 PM | Every game hour would be every seventy seconds | Every hour; no bell |
+| The Main Character's life keeps the real day | Story pacing stays real, as the note says; only their doings are seen on the game's clock | Their whole life on the game's day |
+| The founding day opens at 8 AM | A new campus is seen in the morning | Midnight on Aug 12: on a long founding day, twenty real minutes or more of night first |
+
+### 84.11 What it replaces
+
+28.1 (the hour follows the player's real local clock), 75.1 (the hour is the player's own, read together with the game's date), and in 75.4 "your own clock" and "your own hour": closing the strip now puts the game's clock back. 33.6's bell on every hour is 84.8. 63.9's day is a game day (84.5).
+
+### 84.12 The long run, frames and pictures
+
+**Long run: all 114 checks pass in 2,058 s, and its log is amenities-by-use's line for line** (83.12): every figure the same, only the times differ. Catch-up 642 ms with 514 buildings, 602 ms untended, 440 and 549 ms on the model campus. The run with kickoff at noon passed 113: the grounds check in 84.4 failed, money moved by 0.1 to 0.2 points of every $100, and the Top 10 week and the level pace held.
+
+**Frames** on the slowed phone (four times slower, 390 by 844 at three times, GPU), the model campus at High by the lecture halls, against main, four rounds:
+
+| Scene | Main | The game's clock |
+|---|---|---|
+| A class change mid-rush, both clocks at 10:51 AM | 24.6 ms | 23.9 ms |
+| Night, 11 PM | 17.9 ms | 18.7 ms |
+| Each running its own clock (main the PC's afternoon, here the game's) | 20.5 ms | 17.5 ms |
+
+The rush has 125 to 147 walkers in view on both.
+
+**Pictures** (the page `docs/handoff/game-clock.html`): the top bar at 9:30 AM, 7:15 PM and 11:30 PM of Thu, Oct 8; Today on campus at 10:51 AM ("Class change: classes start at 11 AM"); one student's card at 10:15 AM ("Studying before class", then coffee and two classes) and at 7:30 PM of the same game day ("Dinner with Arjun and Vivian"); a class change at High.

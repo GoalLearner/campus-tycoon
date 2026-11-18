@@ -4,9 +4,9 @@ import { fitOnMap } from './propSize';
 import { swayAt } from '../app/feelingShow';
 import { findStudent, type Stander } from '../app/activityPeople';
 import { CROWD_STEPS } from '../app/crowd';
-import { shownHour, type DayPeriod } from '../app/daylight';
+import { shownHour, shownMoment, type DayPeriod } from '../app/daylight';
 import { feelingOf } from '../app/emotion';
-import { itemAt, regularDay, type Where } from '../app/regularDay';
+import { doingAt, type Where } from '../app/regularDay';
 import { chooseLawnKind, LAWN_POSE, LAWN_SIZE, lawnWords, partySize, STROLL_SHARE, type LawnGroup, type LawnKind, type LawnPose } from '../app/lawnLife';
 import type { Weather } from '../app/life';
 import { idIn, refIn, type WebView } from '../app/socialView';
@@ -496,7 +496,7 @@ export class Lawns {
     const card = lead ? studentCard(state, lead) : null;
     if (lead && card) {
       const hour = shownHour();
-      plan = itemAt(regularDay(web, state, lead, card), hour)?.where ?? null;
+      plan = doingAt(web, state, lead, card, shownMoment())?.where ?? null;
       const emotion = feelingOf(web, state, lead, card, hour).emotion;
       mood = emotion === 'happy' || emotion === 'excited' || emotion === 'flirty' ? 'up' : emotion === 'sad' || emotion === 'lonely' ? 'down' : emotion === 'tense' ? 'tense' : null;
     }

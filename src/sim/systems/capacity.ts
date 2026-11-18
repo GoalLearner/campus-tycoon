@@ -175,9 +175,9 @@ function shareWords(share: number): string {
   return share >= 0.095 && one <= 10 ? `1 in ${one}` : `${Math.max(1, Math.round(share * 100))}%`;
 }
 
-/** A list in words: "a, b and c". */
-function listed(items: readonly string[]): string {
-  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+/** A list in words: "a, b and c", or "a, b or c" for things the campus has none of ("No track, b or c"). */
+function listed(items: readonly string[], joiner: 'and' | 'or' = 'and'): string {
+  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${joiner} ${items[items.length - 1]}`;
 }
 
 /** The busiest building of a family, when it is over what it holds. */
@@ -237,7 +237,7 @@ function recreationRow(state: GameState, growth: number): Need {
   }
   if (missing.length > 0) {
     const share = shareWords(campus.lacking);
-    parts.push(`No ${listed(missing.map((activity) => PASTIME_WORDS[activity].place.replace(/^an? /, '')))}: ${share.startsWith('1 in') ? `${share} students` : `${share} of students`} would use one.`);
+    parts.push(`No ${listed(missing.map((activity) => PASTIME_WORDS[activity].place.replace(/^an? /, '')), 'or')}: ${share.startsWith('1 in') ? `${share} students` : `${share} of students`} would use one.`);
   }
   if (parts.length === 0 && status === 'tight') parts.push('Nearly full at the busiest hour. A few more students and some will be turned away.');
   return {

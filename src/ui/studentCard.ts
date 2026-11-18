@@ -1,11 +1,11 @@
 import { courseHistory, gpaWords, termOver } from '../sim/systems/registration';
 import { stayingWords } from '../app/activityPeople';
 import { canLookInside, homeActivity, homeName } from '../app/room';
-import { currentDaylight, shownHour, type DayPeriod } from '../app/daylight';
+import { currentDaylight, shownHour, shownMoment, type DayPeriod } from '../app/daylight';
 import { session } from '../app/session';
 import { partnerWord, peopleOf, possessive, relationshipWords, type Person } from '../app/socialView';
 import { feelingOf } from '../app/emotion';
-import { clockWords, itemAt, regularDay, type DayItem } from '../app/regularDay';
+import { clockWords, itemAt, studentDayAt, type DayItem } from '../app/regularDay';
 import { firstNamesOf, happenedTo, idIn, mainPeopleOf, refIn } from '../app/socialView';
 import { studentFriends, type StudentFriends } from '../sim/systems/friends';
 import { BULLIED_TIE } from '../sim/config/bullying';
@@ -583,8 +583,9 @@ export function mountStudentCard(): { node: HTMLElement; strip: HTMLElement; ren
   function regularToday(state: GameState, ref: StudentRef, card: StudentCard): { day: DayItem[]; now: DayItem | null } | null {
     const why = regularWhy(state, ref);
     if (why !== 'followed' && why !== 'named') return null;
-    const day = regularDay(socialWeb.view, state, ref, card);
-    return { day, now: itemAt(day, shownHour()) };
+    // Their own day on the game's clock: until they wake, the night before (DESIGN.md 84).
+    const { day, hour } = studentDayAt(socialWeb.view, state, ref, card, shownMoment());
+    return { day, now: itemAt(day, hour) };
   }
 
   function showDay(state: GameState, ref: StudentRef, today: { day: DayItem[]; now: DayItem | null } | null): void {

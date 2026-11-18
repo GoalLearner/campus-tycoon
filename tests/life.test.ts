@@ -295,12 +295,13 @@ describe('the soundscape follows what is on screen', () => {
     }
   });
 
-  it('the bell chimes when the hour changes, and never on a hidden page or at the start', () => {
-    expect(bellDue(13, 14, false)).toBe(true);
-    expect(bellDue(23, 0, false)).toBe(true);
-    expect(bellDue(14, 14, false)).toBe(false);
-    expect(bellDue(13, 14, true)).toBe(false);
-    expect(bellDue(null, 14, false)).toBe(false);
+  it('the bell chimes at its hours of the game day, and never on a hidden page or at the start', () => {
+    expect(bellDue(11, 12, false)).toBe(true);
+    expect(bellDue(7.9, 8, false)).toBe(true);
+    expect(bellDue(13, 14, false)).toBe(false);
+    expect(bellDue(12, 12, false)).toBe(false);
+    expect(bellDue(11, 12, true)).toBe(false);
+    expect(bellDue(null, 12, false)).toBe(false);
   });
 
   it('both volumes start low, music the lower, and each stays between off and full', () => {

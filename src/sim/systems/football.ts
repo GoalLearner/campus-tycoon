@@ -4,7 +4,7 @@ import { dailyOnHomeGame } from './daily';
 import { ordersOnHomeGame } from './orders';
 import { rhythmOnGame } from './rhythm';
 import { traditionsOnGame } from './traditions';
-import { calendarAt, dateAt, tickOfDate } from '../calendar';
+import { calendarAt, dateAt, tickOfMoment } from '../calendar';
 import {
   ATHLETICS_OPERATIONS,
   ATHLETICS_STAFF,
@@ -41,6 +41,7 @@ import {
   FUNDING_FULL,
   GAME_DAY_BEFORE_TICKS,
   GAME_TICKS,
+  KICKOFF_HOUR,
   HOME_EDGE,
   HOME_GAMES_PER_YEAR,
   HOMECOMING_SLOT,
@@ -238,13 +239,13 @@ export function hasSeason(state: GameState): boolean {
   return state.clock.week.year >= state.football.firstYear;
 }
 
-/** The tick a slot's game kicks off this year: the first tick of its Saturday. */
+/** The tick a slot's game kicks off this year: its Saturday at the kickoff hour of the game's clock (DESIGN.md 84.4). */
 export function slotKick(state: GameState, slot: number): number {
   const week = state.clock.week;
-  if (slot === 10) return tickOfDate(week, TITLE_DATE);
-  if (slot === 11) return tickOfDate(week, BOWL_DATE);
-  if (slot === 12) return tickOfDate(week, TOP_BOWL_DATE);
-  return tickOfDate(week, SLOTS[slot]!.date);
+  if (slot === 10) return tickOfMoment(week, TITLE_DATE, KICKOFF_HOUR);
+  if (slot === 11) return tickOfMoment(week, BOWL_DATE, KICKOFF_HOUR);
+  if (slot === 12) return tickOfMoment(week, TOP_BOWL_DATE, KICKOFF_HOUR);
+  return tickOfMoment(week, SLOTS[slot]!.date, KICKOFF_HOUR);
 }
 
 /** True when the player's team is at home for a slot in a year. The rivalry is at home in odd years. */

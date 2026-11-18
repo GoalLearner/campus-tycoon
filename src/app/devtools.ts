@@ -737,7 +737,7 @@ export function installDevTools(): void {
   // &hour=22 shows the light, lamps and crowds of that hour, whatever the clock says.
   const hour = Number(params.get('hour') ?? NaN);
   if (Number.isFinite(hour)) forceHour(hour);
-  // &clockat=23.5 sets the player's own clock to that hour, so the View at slider can be shown from it (DESIGN.md 75.4).
+  // &clockat=23.5 sets the game's clock to that hour, so the View at slider can be shown from it (DESIGN.md 75.4, 84).
   const clockat = Number(params.get('clockat') ?? NaN);
   if (Number.isFinite(clockat)) forceClock(clockat);
   // &clock24 and &clock12 write times on that clock whatever the device keeps (DESIGN.md 75.1).
