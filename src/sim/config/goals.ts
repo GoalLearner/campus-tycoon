@@ -35,6 +35,13 @@ export const ERAS: readonly string[] = ['Arrival', 'Growth', 'Flagship', 'Legacy
 export const ERA_AT_RANK: readonly number[] = [3, 5, 7];
 
 /**
+ * [T] The University Level that opens each later era (DESIGN.md 85.1): one ladder. Chosen so the eras come when they
+ * came by rank for the player who looks in once a day: the levels it stood at when Growth (week 3.7), Flagship (week
+ * 10.7) and Legacy (week 20.7) opened by rank. The era names are the Level page's chapters now.
+ */
+export const ERA_AT_LEVEL: readonly number[] = [35, 72, 122];
+
+/**
  * [T] The school's reach: the fall applicants a model campus draws before
  * its four causes are counted. A head count, so it follows the campus scale.
  */

@@ -1,11 +1,12 @@
-import { ENROLLMENT_CAP, ERA_AT_RANK, ERAS, GOAL_SCALE, RANK_GOALS, SIZE_GOALS, SIZE_GOALS_ONCE } from '../config/goals';
+import { ENROLLMENT_CAP, ERA_AT_LEVEL, ERA_AT_RANK, ERAS, GOAL_SCALE, RANK_GOALS, SIZE_GOALS, SIZE_GOALS_ONCE } from '../config/goals';
+import { off } from '../config/cleanup';
 import { PLACED, RANK_REWARDS } from '../config/placed';
 import { POLICIES } from '../config/policies';
 import { headCount } from '../format';
 import { scaleOf } from '../scale';
 import { enrollment } from '../selectors';
 import type { GameState, Goals, LogEntry, PlacedType } from '../types';
-import { dailyOnGoals } from './daily';
+import { dailyOnGoals, hasDaily } from './daily';
 import { bigBuildsOpening } from './bigBuilds';
 
 /**
@@ -53,11 +54,15 @@ export function sizeGoal(state: GameState, n: number): number {
   return Math.round(((SIZE_GOALS_ONCE[n] ?? 0) * scaleOf(state)) / GOAL_SCALE);
 }
 
-/** The era a set of goals has opened: 0 is the start. The rank opens one, and one already opened is never closed. */
+/**
+ * The era a set of goals has opened: 0 is the start. The University Level opens one now (DESIGN.md 85.1), and each one
+ * opened is kept in `reached`, so one already opened is never closed: one a save opened by its rank stays open. While
+ * eras opened by rank was on, the rank opened one.
+ */
 export function eraOf(goals: Goals | null): number {
   if (!goals) return 0;
   let era = 0;
-  for (let n = 0; n < ERA_AT_RANK.length; n++) if (goals.rank >= ERA_AT_RANK[n]!) era = n + 1;
+  if (!off('erasByRank')) for (let n = 0; n < ERA_AT_RANK.length; n++) if (goals.rank >= ERA_AT_RANK[n]!) era = n + 1;
   for (const entry of goals.reached) if (entry.ladder === 'era' && entry.n > era) era = entry.n;
   return era;
 }
@@ -106,13 +111,48 @@ export function eraOpens(era: number): string {
   return `${builds ? `${builds}; and ${policies}` : policies}${greek}`;
 }
 
-/** The next era this game has not reached, with the rank that opens it and what it will open. null when there is none left, or on a game with no eras. */
-export function nextEra(state: GameState): { era: number; name: string; top: number; opens: string } | null {
+/**
+ * The next era this game has not reached, with the University Level that opens it and what it will open. null when
+ * there is none left, or on a game with no eras.
+ */
+export function nextEra(state: GameState): { era: number; name: string; level: number; opens: string } | null {
   if (!state.goals) return null;
   const era = eraOf(state.goals) + 1;
-  const at = ERA_AT_RANK[era - 1];
+  const at = ERA_AT_LEVEL[era - 1];
   if (at === undefined || ERAS[era] === undefined) return null;
-  return { era, name: ERAS[era]!, top: RANK_GOALS[at - 1]!, opens: eraOpens(era) };
+  return { era, name: ERAS[era]!, level: at, opens: eraOpens(era) };
+}
+
+/** "the Growth era, at University Level 30": where an era comes, for a line that says something waits for it. */
+export function eraAtWords(era: number): string {
+  const at = ERA_AT_LEVEL[era - 1];
+  return at === undefined ? `the ${ERAS[era]} era` : `the ${ERAS[era]} era, at University Level ${at}`;
+}
+
+/**
+ * Each tick on a game with goals (DESIGN.md 85.1): every era whose University Level the campus has reached begins, with
+ * its experience, its Gold Seals and a line in the paper that says what it opens. A level reached in an action opens
+ * its era on the next tick.
+ */
+export function openErasByLevel(state: GameState, log: LogEntry[]): void {
+  const goals = state.goals;
+  if (!goals || !off('erasByRank') || !hasDaily(state)) return;
+  const was = eraOf(goals);
+  let era = was;
+  while (era < ERA_AT_LEVEL.length && state.daily.level >= ERA_AT_LEVEL[era]!) era += 1;
+  if (era <= was) return;
+  const year = Math.max(1, state.clock.week.year);
+  for (let n = was + 1; n <= era; n++) goals.reached.push({ ladder: 'era', n, year });
+  const after: LogEntry[] = [];
+  const sealsGiven = dailyOnGoals(state, 'rank', 0, era - was, after);
+  let text = '';
+  for (let n = was + 1; n <= era; n++) {
+    const opens = eraOpens(n);
+    text += `${text ? ' ' : ''}The ${ERAS[n]} era begins at University Level ${ERA_AT_LEVEL[n - 1]}.${opens ? ` It opens ${opens}.` : ''}`;
+  }
+  if (sealsGiven > 0) text += ` It brings ${sealsGiven} Gold Seals.`;
+  log.push({ tick: state.clock.tick, kind: 'goal', text, data: { keep: 1, ladder: 'era', era } });
+  log.push(...after);
 }
 
 // ---------------------------------------------------- a building for a goal --
@@ -208,6 +248,23 @@ export function landRankGoals(state: GameState, log: LogEntry[]): void {
   let count = goals.rank;
   while (count < RANK_GOALS.length && rank <= RANK_GOALS[count]!) count += 1;
   land(state, log, 'rank', count);
+}
+
+/**
+ * The honours (DESIGN.md 85.2): the rank goals and the full campus, reached and paid as they always were, shown on the
+ * Scorecard and not chased. Those reached, newest first, with the year, and the next one, or null when none is left.
+ */
+export function honours(state: GameState): { reached: Array<{ name: string; year: number }>; next: string | null } {
+  const goals = state.goals;
+  if (!goals) return { reached: [], next: null };
+  const reached = [...goals.reached]
+    .filter((entry) => entry.ladder !== 'era')
+    .reverse()
+    .map((entry) => ({ name: entry.ladder === 'size' ? `A full campus: ${headCount(sizeGoal(state, entry.n))} students` : `The Top ${RANK_GOALS[entry.n]}`, year: entry.year }));
+  const rank = nextRankGoal(state);
+  const size = nextSizeGoal(state);
+  const next = rank !== null ? `the Top ${rank}` : size ? `a full campus, ${headCount(size.goal)} students` : null;
+  return { reached, next };
 }
 
 /** The goals reached, newest first, as the Size panel lists them: "Year 3 · 55,000 students". */

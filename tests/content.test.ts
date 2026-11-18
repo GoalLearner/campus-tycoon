@@ -51,7 +51,7 @@ import { seasonCurve, stressRead } from '../src/sim/systems/season';
 import { campusLevels } from '../src/sim/systems/happiness';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { chapterPage } from '../src/ui/greekUi';
-import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, erasByRank, withCleanUp } from './helpers';
 
 /**
  * Real-life college content (DESIGN.md 52, as built in section 55): parties
@@ -67,6 +67,7 @@ function growth(): GameState {
   state.field.rank = 120;
   state.field.rankYear = 1;
   landRankGoals(state, []);
+  erasByRank(state);
   state.money.cash = 2_000_000_000;
   return state;
 }
@@ -182,6 +183,7 @@ describe('parties', () => {
     const flagship = structuredClone(state);
     flagship.field.rank = 70;
     landRankGoals(flagship, []);
+    erasByRank(flagship);
     const taught = flip(flagship, 'alcoholEducation');
     expect(lateNights(taught).stress).toBeCloseTo(lateNights(state).stress / 2, 0);
     expect(lateNights(taught).by).toEqual(['Alcohol education']);
@@ -453,13 +455,14 @@ describe('saves', () => {
     withRegistration(expected);
     withLanes(expected);
     withAmenities(expected);
+    withCleanUp(expected);
     expect(loaded.state).toEqual(expected);
     expect(validate(loaded.state)).toBeNull();
     const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
     expect(validate(week)).toBeNull();
     const notes = upgradeNotes(25);
     // One more since R3: the price level (DESIGN.md 67.1).
-    expect(notes).toHaveLength(16);
+    expect(notes).toHaveLength(17);
     expect(notes[0]).toMatch(/parties/i);
     expect(toneProblem(notes[0]!)).toBeNull();
   });

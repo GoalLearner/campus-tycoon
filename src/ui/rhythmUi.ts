@@ -1,6 +1,6 @@
 import { sound } from '../app/sound';
 import { store } from '../app/store';
-import { decorSprite, dollarsShort, duration, giftView, momentViews, yearView, type GameState, type MomentRow, type YearView } from '../sim';
+import { decorSprite, dollarsShort, duration, giftView, momentViews, trusteesOrder, yearView, type GameState, type MomentRow, type YearView } from '../sim';
 import { drawSprite, loadAtlas } from './atlas';
 
 /**
@@ -146,6 +146,13 @@ export function boardTop(state: GameState, claim: (row: MomentRow, box: HTMLElem
       take.addEventListener('click', () => claim(row, box));
       box.append(take);
     }
+    out.push(box);
+  }
+  // The trustees' letter, as an order that pays when it is met (DESIGN.md 85.6). It has no clock.
+  const letter = trusteesOrder(state);
+  if (letter) {
+    const box = el('div', 'order moment');
+    box.append(el('span', 'order-from', 'The trustees'), el('span', 'order-title', letter.ask), el('span', 'order-pays', `Pays ${letter.pays}`));
     out.push(box);
   }
   return out;

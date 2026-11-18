@@ -417,8 +417,11 @@ function setPolicies(state: GameState, style: Style): GameState {
   if (open.length === 0) return state;
   const phase = calendarAt(state.clock).phase;
   if (phase !== 'fall' && phase !== 'spring') return state;
-  const kept = keeps(state);
   const income = budget(state).incomeTotal;
+  // What the big builds going up will cost to run is counted here as it is when buying them (bigBuildsWanted): the
+  // Money panel's player who just bought one does not give back the money for Happiness as if it cost nothing. Eras
+  // by level (DESIGN.md 85.1) opened Flagship on a fall's first visit, read high before its faculty were hired.
+  const kept = keeps(state) - upkeepComing(state, income).share;
   const stress = state.term.lastAverage;
   const safety = campusHappiness(state).causes.find((cause) => cause.id === 'safety')?.level ?? 1;
   // Full: within a few in a hundred of the cap, in term. A campus that full turns applicants away each fall.

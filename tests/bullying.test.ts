@@ -6,7 +6,7 @@ import { friendsEffectsOf, studentFriends, type Ties } from '../src/sim/systems/
 import { TRAIT, traitOf } from '../src/sim/systems/identity';
 import { bullyingTimes } from '../src/sim/systems/policies';
 import { catchUp, newWeb, webWeekOf, type Web } from '../src/sim/systems/web';
-import { DAY, T0 } from './helpers';
+import { DAY, T0, erasByRank } from './helpers';
 
 /**
  * Picking on someone, stop 7 (DESIGN.md 63.11): from who students are; joined in, stood up against, reported; felt
@@ -106,6 +106,7 @@ describe('picking on someone', () => {
   it('is less with the anti-bullying program: half as often started, twice as often reported, and it costs money', () => {
     const growth = structuredClone(MODEL) as GameState;
     growth.goals = { size: 1, rank: 3, reached: [], rewards: 0 };
+    erasByRank(growth);
     const on = applyAction(growth, { type: 'policy', id: 'antiBullying', on: true });
     expect(on.ok).toBe(true);
     const program = on.ok ? on.state : growth;

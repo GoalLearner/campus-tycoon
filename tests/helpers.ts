@@ -1,9 +1,41 @@
 import { reshareAmenities } from '../src/sim/save';
 import { newChaos } from '../src/sim/systems/chaos';
+import { cleanUpGoals } from '../src/sim/systems/cleanup';
 import { paintWalks } from '../src/sim/systems/walkLanes';
 import { seedStreams } from '../src/sim/rng';
 import { advance, newGame, TICK_MS, type GameState, type LogEntry } from '../src/sim';
 import { calendarAt } from '../src/sim/calendar';
+import { ERA_AT_RANK } from '../src/sim/config/goals';
+import { SWITCHED_OFF, type SwitchedOff } from '../src/sim/config/cleanup';
+
+/**
+ * The eras a rank opened before the goals clean-up (DESIGN.md 85.1), written down as a save from before keeps them. For
+ * a test that reaches an era by its rank, as it was written. The University Level opens them in play now.
+ */
+export function erasByRank<T extends GameState>(state: T): T {
+  const goals = state.goals;
+  if (!goals) return state;
+  let era = 0;
+  for (let n = 0; n < ERA_AT_RANK.length; n++) if (goals.rank >= ERA_AT_RANK[n]!) era = n + 1;
+  const have = new Set(goals.reached.filter((entry) => entry.ladder === 'era').map((entry) => entry.n));
+  for (let n = 1; n <= era; n++) if (!have.has(n)) goals.reached.push({ ladder: 'era', n, year: Math.max(1, state.clock.week.year) });
+  return state;
+}
+
+/**
+ * Run with things the goals clean-up switched off switched back on (DESIGN.md 85): for the tests of what they did, which
+ * show the code kept still works. Each is put back as it was afterwards.
+ */
+export function switchedOn<T>(what: SwitchedOff | readonly SwitchedOff[], run: () => T): T {
+  const list = typeof what === 'string' ? [what] : what;
+  const was = list.map((one) => SWITCHED_OFF[one]);
+  for (const one of list) SWITCHED_OFF[one] = false;
+  try {
+    return run();
+  } finally {
+    list.forEach((one, n) => (SWITCHED_OFF[one] = was[n]!));
+  }
+}
 
 /** A fixed moment to start every test from: 2026-11-11 12:00 UTC. */
 export const T0 = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -145,6 +177,11 @@ export function sixClassYears(state: GameState): void {
 export function withChaos(state: GameState): void {
   if (!state.chaos) state.chaos = newChaos();
   if (typeof state.rng.chaos !== 'number') state.rng.chaos = seedStreams(state.seed).chaos;
+}
+
+/** What version 43 does to an older save (DESIGN.md 85.9): the goals clean-up, with nothing earned lost. */
+export function withCleanUp(state: GameState): void {
+  cleanUpGoals(state);
 }
 
 /** What version 40 adds to an older save (DESIGN.md 80): registration's records, none yet. */

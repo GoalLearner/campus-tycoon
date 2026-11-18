@@ -10,8 +10,10 @@ import {
   edition,
   enrollment,
   ENROLLMENT_CAP,
+  ERA_AT_LEVEL,
   ERA_AT_RANK,
   eraOf,
+  eraOpens,
   ERAS,
   fallApplicants,
   fallClassDraw,
@@ -20,8 +22,10 @@ import {
   landRankGoals,
   landSizeGoals,
   marketingCost,
+  momentViews,
   newGame,
   nextSizeGoal,
+  orderSlots,
   openingStanding,
   OPENING_RANK,
   parseSave,
@@ -31,12 +35,14 @@ import {
   REACH,
   SAVE_VERSION,
   scaleOf,
+  SEALS_ERA,
   serialize,
   SIZE_GOALS,
   SIZE_GOALS_ONCE,
   sizeGoal,
   tuitionRate,
   validate,
+  XP_SOURCES,
   type GameState,
   type LogEntry,
 } from '../src/sim';
@@ -50,7 +56,7 @@ import { marketingLift } from '../src/sim/systems/budget';
 import { athleticLift } from '../src/sim/systems/football';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { sizeView } from '../src/ui/sizeUi';
-import { DAY, freshGame, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp, switchedOn } from './helpers';
 
 const WEEK = 7 * DAY;
 const model = (scale?: number, seed = 35): GameState => newGame({ seed, name: 'Test University', now: T0, campus: 'model', ...(scale ? { scale } : {}) });
@@ -92,20 +98,22 @@ describe('the goals a game has', () => {
     expect(small.log.some((entry) => entry.kind === 'goal')).toBe(false);
   });
 
-  it('open an era by the rank alone, in order, and never close one a save has already opened', () => {
-    const goals = { size: 0, rank: 0, reached: [], rewards: 0 };
-    expect(eraOf(goals)).toBe(0);
-    // A full campus opens no era. The rank does.
-    expect(eraOf({ ...goals, size: 1 })).toBe(0);
-    expect(eraOf({ ...goals, rank: 2 })).toBe(0);
-    expect(eraOf({ ...goals, rank: 3 })).toBe(1);
-    expect(eraOf({ ...goals, size: 1, rank: 5 })).toBe(2);
-    expect(eraOf({ ...goals, rank: 7 })).toBe(3);
-    expect(eraOf(null)).toBe(0);
-    // A save from before the cap that reached 66,000 students opened Flagship by its size. It stays open.
-    const before = { size: 4, rank: 1, rewards: 0, reached: [{ ladder: 'size' as const, n: 3, year: 5 }, { ladder: 'era' as const, n: 1, year: 3 }, { ladder: 'era' as const, n: 2, year: 5 }] };
-    expect(eraOf(before)).toBe(2);
-    expect(eraOf({ ...before, rank: 7 })).toBe(3);
+  it('open an era by the rank alone, in order, and never close one a save has already opened (switched off: erasByRank)', () => {
+    switchedOn(['erasByRank'], () => {
+      const goals = { size: 0, rank: 0, reached: [], rewards: 0 };
+      expect(eraOf(goals)).toBe(0);
+      // A full campus opens no era. The rank does.
+      expect(eraOf({ ...goals, size: 1 })).toBe(0);
+      expect(eraOf({ ...goals, rank: 2 })).toBe(0);
+      expect(eraOf({ ...goals, rank: 3 })).toBe(1);
+      expect(eraOf({ ...goals, size: 1, rank: 5 })).toBe(2);
+      expect(eraOf({ ...goals, rank: 7 })).toBe(3);
+      expect(eraOf(null)).toBe(0);
+      // A save from before the cap that reached 66,000 students opened Flagship by its size. It stays open.
+      const before = { size: 4, rank: 1, rewards: 0, reached: [{ ladder: 'size' as const, n: 3, year: 5 }, { ladder: 'era' as const, n: 1, year: 3 }, { ladder: 'era' as const, n: 2, year: 5 }] };
+      expect(eraOf(before)).toBe(2);
+      expect(eraOf({ ...before, rank: 7 })).toBe(3);
+    });
   });
 });
 
@@ -211,7 +219,8 @@ describe('the academic rank on a game with goals', () => {
     state.field.rank = 120;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
-    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. They bring 25 Gold Seals. The Growth era begins. It opens the Policies page, with seven switches: Reading days before finals, Tough grading, Freshmen live on campus, Free student section, Dry campus, Party registration and Anti-bullying program; and Greek Row, with chapter houses in the Build menu.");
+    // The rank opens no era now, so no era's Seals or words with it: the University Level opens them (DESIGN.md 85.1).
+    expect(log[0]!.text).toBe("Test University is No. 120 of 200 for academics. The goals of the Top 175, Top 150 and Top 125 are reached. They are kept for good. Founders' Fountain, the Campus Post Office and the Campus Cinema are yours to place, free, from the Build menu. They bring 15 Gold Seals.");
     state.field.rank = 190;
     landRankGoals(state, log);
     expect(state.goals!.rank).toBe(3);
@@ -329,7 +338,8 @@ describe('the Goals page on a game with goals', () => {
   it('shows the students against the cap, applicants that add up to the student, and who gets a place', () => {
     const view = sizeView(model());
     expect(view.title).toBe('46,000 students');
-    expect(view.cap).toEqual({ line: '4,000 places open of 50,000', note: 'A full campus is the first goal. It is counted when a class moves in.', percent: 92 });
+    // An honour now, not a goal to chase (DESIGN.md 85.2, 85.8).
+    expect(view.cap).toEqual({ line: '4,000 places open of 50,000', note: 'A full campus is the first honour. It is counted when a class moves in.', percent: 92 });
     // Next fall as an admissions office counts it (DESIGN.md 70): about four in five admitted, a fifth of those come.
     // The fall class with its transfers is a little more than the room the seniors leave, so it fills the campus.
     expect(view.places).toBeNull();
@@ -384,13 +394,102 @@ describe('a goal in the paper', () => {
     expect(paper.days.some((day) => day.lines.includes(goal.text))).toBe(true);
   });
 
-  it('gives an era its own headline', () => {
+  it('gives an era its own headline (switched off: erasByRank)', () => {
+    switchedOn(['erasByRank'], () => {
+      const state = structuredClone(model());
+      state.field.rank = 120;
+      const log: LogEntry[] = [];
+      landRankGoals(state, log);
+      const paper = edition(state, log, { minutes: 1440, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 46_000 });
+      expect(paper.headline).toMatch(/^The Growth Era Begins at Test; /);
+    });
+  });
+});
+
+describe('the eras, by University Level (DESIGN.md 85.1)', () => {
+  it("open at Levels 35, 72 and 122 on the next tick, with a line, an era's experience and Seals, and never close", () => {
+    expect(ERA_AT_LEVEL).toEqual([35, 72, 122]);
+    // The rank opens none now.
+    const ranked = structuredClone(model());
+    ranked.field.rank = 20;
+    landRankGoals(ranked, []);
+    expect(eraOf(ranked.goals)).toBe(0);
     const state = structuredClone(model());
-    state.field.rank = 120;
-    const log: LogEntry[] = [];
-    landRankGoals(state, log);
-    const paper = edition(state, log, { minutes: 1440, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 46_000 });
-    expect(paper.headline).toMatch(/^The Growth Era Begins at Test; /);
+    state.daily.level = ERA_AT_LEVEL[0]! - 1;
+    expect(advance(state, T0, T0 + HOUR).log.some((entry) => entry.data?.ladder === 'era')).toBe(false);
+    state.daily.level = ERA_AT_LEVEL[0]!;
+    const run = advance(state, T0, T0 + HOUR);
+    const began = run.log.filter((entry) => entry.kind === 'goal' && entry.data?.ladder === 'era');
+    expect(began).toHaveLength(1);
+    expect(began[0]!.data).toEqual({ keep: 1, ladder: 'era', era: 1 });
+    expect(began[0]!.text).toBe(`The Growth era begins at University Level 35. It opens ${eraOpens(1)}. It brings ${SEALS_ERA} Gold Seals.`);
+    expect(run.state.daily.seals).toBeGreaterThanOrEqual(state.daily.seals + SEALS_ERA);
+    expect(run.state.daily.xp).toBeGreaterThanOrEqual(state.daily.xp + XP_SOURCES.era.xp);
+    expect(eraOf(run.state.goals)).toBe(1);
+    expect(applyAction(run.state, { type: 'policy', id: 'toughGrading', on: true }).ok).toBe(true);
+    // Its own headline, with nothing after it.
+    expect(edition(run.state, began, { minutes: 60, cashBefore: 1, cashAfter: 1, studentsBefore: 46_000, studentsAfter: 46_000 }).headline).toBe('The Growth Era Begins at Test');
+    // Written in the goals, so it stays open: through a save, and with nothing said again.
+    expect(run.state.goals!.reached.filter((entry) => entry.ladder === 'era')).toEqual([{ ladder: 'era', n: 1, year: 1 }]);
+    const loaded = parseSave(serialize(run.state, T0 + HOUR));
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(eraOf(loaded.state.goals)).toBe(1);
+    expect(advance(loaded.state, T0 + HOUR, T0 + 2 * HOUR).log.some((entry) => entry.data?.ladder === 'era')).toBe(false);
+    // A level past two at once opens both, in one line.
+    const far = structuredClone(model());
+    far.daily.level = ERA_AT_LEVEL[1]!;
+    const both = advance(far, T0, T0 + HOUR).log.filter((entry) => entry.data?.ladder === 'era');
+    expect(both).toHaveLength(1);
+    expect(both[0]!.data?.era).toBe(2);
+    expect(both[0]!.text).toContain('The Growth era begins at University Level 35.');
+    expect(both[0]!.text).toContain(`The Flagship era begins at University Level 72. It opens ${eraOpens(2)}.`);
+    expect(both[0]!.text.endsWith(`It brings ${2 * SEALS_ERA} Gold Seals.`)).toBe(true);
+  });
+});
+
+describe('a save from version 42 (DESIGN.md 85.9)', () => {
+  // The once-a-day test player's campus twelve real days in, before the goals clean-up: scripts/make-mature-fixture.ts
+  // with DAYS 12, run at save version 42. Its goals for the year are part done, finals went by unmet, and an order has
+  // a clock.
+  const text = readFileSync(new URL('./fixtures/save-v42-mature-model.json', import.meta.url), 'utf8');
+  const file = JSON.parse(text) as { v: number; savedAt: number; state: GameState };
+
+  it('comes through with nothing earned lost: level, experience, Seals, decorations, what is placed and the honours', () => {
+    const was = file.state;
+    expect(file.v).toBe(42);
+    expect(was.rhythm.year?.goals).toHaveLength(3);
+    expect(was.rhythm.moments.some((moment) => moment.met === false)).toBe(true);
+    expect(was.orders.open.some((order) => order.until !== undefined)).toBe(true);
+    const loaded = parseSave(text);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(loaded.migratedFrom).toBe(42);
+    const state = loaded.state;
+    expect(validate(state)).toBeNull();
+    // Nothing earned is less, and the goals for the year paid for what they had reached.
+    expect(state.daily.level).toBeGreaterThanOrEqual(was.daily.level);
+    expect(state.daily.xp).toBeGreaterThan(was.daily.xp);
+    expect(state.daily.seals).toBeGreaterThanOrEqual(was.daily.seals);
+    expect(state.decor).toEqual(was.decor);
+    expect(state.map.placed).toEqual(was.map.placed);
+    expect(state.goals).toEqual(was.goals);
+    expect(state.traditions).toEqual(was.traditions);
+    expect(state.labs).toEqual(was.labs);
+    expect(state.money.cash).toBe(was.money.cash);
+    // What was switched off is off: no goals for the year, no clocks, and the moment gone by a Big day to claim.
+    expect(state.rhythm.year).toBeNull();
+    expect(state.orders.open.every((order) => order.until === undefined)).toBe(true);
+    const gone = was.rhythm.moments.find((moment) => moment.met === false)!;
+    expect(momentViews(state, () => '').find((row) => row.id === gone.id)).toMatchObject({ done: true, missed: false });
+    expect(applyAction(state, { type: 'claimMoment', id: gone.id }).ok).toBe(true);
+    // It plays on, and the board fills.
+    const day = advance(state, file.savedAt, file.savedAt + DAY).state;
+    expect(validate(day)).toBeNull();
+    expect(day.orders.open).toHaveLength(orderSlots(day));
+    // Saved again it is a save of today, and loads as it was.
+    const again = parseSave(serialize(state, file.savedAt));
+    if (!again.ok) throw new Error(again.reason);
+    expect(again.migratedFrom).toBeNull();
+    expect(again.state).toEqual(state);
   });
 });
 
@@ -466,6 +565,7 @@ describe('the main street', () => {
     withRegistration(expected);
     withLanes(expected);
     withAmenities(expected);
+    withCleanUp(expected);
     expect(loaded.state).toEqual(expected);
     expect(validate(advance(loaded.state, loaded.state.clock.lastSimulatedAt, loaded.state.clock.lastSimulatedAt + WEEK).state)).toBeNull();
   });

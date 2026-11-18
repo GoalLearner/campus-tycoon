@@ -137,6 +137,11 @@ import {
   type PlacedType,
 } from '../src/sim';
 import { removePlaced } from '../src/sim/systems/placed';
+import { off } from '../src/sim/config/cleanup';
+import { ERA_AT_LEVEL } from '../src/sim/config/goals';
+import { cleanUpGoals } from '../src/sim/systems/cleanup';
+import { trusteesDip } from '../src/sim/systems/chaos';
+import { migrate as migrateSave } from '../src/sim/save';
 import { botOptions, takeTurn, type Style } from './bots';
 
 /**
@@ -336,6 +341,10 @@ interface Seen {
   orderOver: number;
   orderShort: number;
   orderMostOpen: number;
+  /** The fewest orders open at a visit, after the first real day (DESIGN.md 85.3). */
+  orderLeastOpen: number;
+  /** The week each era began, by its number: 0 for not yet. */
+  eraWeeks: number[];
   orderLines: number;
   /** Goals whose headline was not in the paper of the visit after they were reached. */
   goalsUnsaid: number;
@@ -431,6 +440,8 @@ const newSeen = (): Seen => ({
   orderOver: 0,
   orderShort: 0,
   orderMostOpen: 0,
+  orderLeastOpen: Infinity,
+  eraWeeks: [0, 0, 0, 0],
   orderLines: 0,
   goalsUnsaid: 0,
   mostStudents: 0,
@@ -539,6 +550,9 @@ function look(seen: Seen, state: GameState, log: LogEntry[]): void {
     const week = Math.floor((entry.tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
     const weeks = entry.data?.ladder === 'size' ? seen.sizeWeeks : seen.rankWeeks;
     for (let n = Number(entry.data?.from ?? 0); n < Number(entry.data?.count ?? 0); n++) weeks[n] = week;
+    // An era begins: by the University Level now (DESIGN.md 85.1), with its own line; by a rank goal before.
+    const era = Number(entry.data?.era ?? -1);
+    if (era > 0 && seen.eraWeeks[era] === 0) seen.eraWeeks[era] = week;
   }
   seen.deskMost = Math.max(seen.deskMost, state.inbox.open.length);
   seen.mostStudents = Math.max(seen.mostStudents, enrollment(state));
@@ -634,6 +648,7 @@ function play(style: Style, seed: number, years: number, campus: 'small' | 'mode
     seen.orderLooks += 1;
     if (has) seen.orderLooksWith += 1;
     seen.orderMostOpen = Math.max(seen.orderMostOpen, views.length);
+    if (day >= 1) seen.orderLeastOpen = Math.min(seen.orderLeastOpen, views.length);
     if (views.length > orderSlots(looked.state)) seen.orderOver += 1;
     for (const order of looked.state.orders.open) if (order.seen !== undefined && order.until !== undefined && order.until - order.seen < ORDER_LEAST_HOURS * TICKS_PER_HOUR) seen.orderShort += 1;
     tone(seen, [looked.state.orders.note, ...views.flatMap((view) => [view.from, view.title, view.ask, view.progress, view.reward])].filter((line) => line !== ''));
@@ -811,6 +826,24 @@ function sameJson(a: unknown, b: unknown): boolean {
 
 function assertLayerZero(runs: Run[]): void {
   console.log('\nLAYER 0 ASSERTIONS');
+  // Save version 43, the goals clean-up (DESIGN.md 85.9): a v42 save converts with nothing earned lost.
+  {
+    const file = JSON.parse(readFileSync(resolve('tests/fixtures/save-v42-mature-model.json'), 'utf8')) as { v: number; state: Record<string, unknown> };
+    const state = migrateSave(file.state, file.v, 42) as unknown as GameState;
+    const placed = (s: GameState): number => s.map.placed.filter(Boolean).length;
+    const stored = (s: GameState): number => Object.values(s.decor.stored).reduce((sum, n) => sum + n, 0);
+    const before = { level: state.daily.level, xp: state.daily.xp, seals: state.daily.seals, placed: placed(state), stored: stored(state), honours: state.goals!.reached.filter((entry) => entry.ladder !== 'era').length, era: state.goals!.reached.filter((entry) => entry.ladder === 'era').length, chapters: state.greek.chapters.length, main: state.story.mc?.name ?? '', traditions: state.traditions.chosen.length };
+    const report = cleanUpGoals(state);
+    const after = { level: state.daily.level, xp: state.daily.xp, seals: state.daily.seals, placed: placed(state), stored: stored(state), honours: state.goals!.reached.filter((entry) => entry.ladder !== 'era').length, era: state.goals!.reached.filter((entry) => entry.ladder === 'era').length, chapters: state.greek.chapters.length, main: state.story.mc?.name ?? '', traditions: state.traditions.chosen.length };
+    const whole = parseSave(JSON.stringify(file));
+    const ok =
+      after.level >= before.level && after.xp >= before.xp && after.seals >= before.seals && after.placed === before.placed && after.stored === before.stored && after.honours === before.honours && after.era >= before.era && after.chapters === before.chapters && after.main === before.main && after.traditions === before.traditions && whole.ok;
+    check(
+      'a save from before the clean-up converts with nothing earned lost',
+      ok,
+      `a mature save at version 42: level ${before.level} to ${after.level}, ${before.seals} to ${after.seals} Gold Seals, ${after.placed} things placed and ${after.stored} stored as before, ${after.honours} honours, ${after.chapters} chapters; ${report.timersCleared} order clocks taken off, ${report.measuredDropped} measured orders replaced, ${report.yearMet + report.yearPart} goals for the year paid`,
+    );
+  }
   const casual = runs.find((r) => r.style === 'casual')!;
   const absent = runs.find((r) => r.style === 'absent')!;
   const optimizer = runs.find((r) => r.style === 'optimizer')!;
@@ -1621,10 +1654,11 @@ function assertModelCampus(seed: number): void {
     for (const kind of ORDER_KINDS) row(`${kind.giver} ${kind.id}`, (run) => ['seen', 'claimed', 'dismissed', 'missed'].map((what) => tally(run, `${what}:${kind.id}`)).join('/'));
     console.log('');
 
+    // No timers (DESIGN.md 85.3): this read "no order runs for less than 36 hours" while orders had a clock.
     check(
-      'the orders board never holds more than its places, and no order runs for less than 36 hours from when it is first seen',
-      runs.every((run) => run.seen.orderLooks > 0 && run.seen.orderOver === 0 && run.seen.orderShort === 0 && run.seen.orderMostOpen <= 5),
-      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLooks} looks, at most ${run.seen.orderMostOpen} open, ${run.seen.orderOver} over, ${run.seen.orderShort} too short`).join('; '),
+      'the orders board never holds more than its places, and no order ever lapses',
+      runs.every((run) => run.seen.orderLooks > 0 && run.seen.orderOver === 0 && run.seen.orderShort === 0 && run.seen.orderMostOpen <= 6 && tally(run, 'missed') === 0),
+      runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderLooks} looks, at most ${run.seen.orderMostOpen} open, ${run.seen.orderOver} over, ${tally(run, 'missed')} lapsed`).join('; '),
     );
     check(
       'on every real day a player looks in, the board has an order that can be finished in one sitting, or one finished and waiting to be claimed',
@@ -1632,15 +1666,23 @@ function assertModelCampus(seed: number): void {
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.orderDaysWith} of ${run.seen.orderDays} days, and ${run.seen.orderLooksWith} of ${run.seen.orderLooks} visits (a later visit the same day finds it already done)`).join('; '),
     );
     const dailies = of('daily');
+    // It read "misses little" while orders could run out (85.3).
     check(
-      'a once-a-day player can finish most of what the board offers, and misses little',
-      dailies.every((run) => finished(run) >= 0.6 && tally(run, 'missed') <= 0.08 * tally(run, 'offered')) && runs.every((run) => finished(run) >= 0.5),
+      'a once-a-day player can finish most of what the board offers, and misses nothing',
+      dailies.every((run) => finished(run) >= 0.6 && tally(run, 'missed') === 0) && runs.every((run) => finished(run) >= 0.5),
       runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'offered')} offered, ${tally(run, 'claimed')} claimed (${Math.round(100 * finished(run))}%), ${tally(run, 'dismissed')} dismissed, ${tally(run, 'missed')} missed`).join('; '),
+    );
+    // The refill (85.3): a player who looks in once a day always finds a few orders open, and can finish two or three.
+    check(
+      'a once-a-day player always finds two or more orders open at a visit',
+      dailies.every((run) => run.seen.orderLeastOpen >= 2),
+      dailies.map((run) => `${run.style} ${run.seed}: at least ${run.seen.orderLeastOpen} open at every visit after the first day, ${(tally(run, 'claimed') / PACE_WEEKS).toFixed(1)} finished a week`).join('; '),
     );
     // Every giver is heard from, and every kind of order that this campus can be asked comes up for somebody.
     const givers = Object.keys(GIVERS);
     const heard = runs.every((run) => givers.every((giver) => ORDER_KINDS.some((kind) => kind.giver === giver && tally(run, `claimed:${kind.id}`) > 0)));
-    const unseen = ORDER_KINDS.filter((kind) => runs.every((run) => tally(run, `seen:${kind.id}`) === 0)).map((kind) => kind.id);
+    // Kinds measured at a moment are switched off (85.3), and are not counted here.
+    const unseen = ORDER_KINDS.filter((kind) => !(kind.point && off('pointOrders')) && runs.every((run) => tally(run, `seen:${kind.id}`) === 0)).map((kind) => kind.id);
     check(
       'all four givers are heard from on every campus, and nearly every kind of order comes up',
       heard && unseen.length <= 3,
@@ -1665,7 +1707,7 @@ function assertModelCampus(seed: number): void {
   // number, against the same campus with it taken away.
   {
     const weekAt = (tick: number): number => Math.floor((tick - FIRST_INTAKE_TICK) / TICKS_PER_YEAR) + 1;
-    const eraWeek = (run: Run, era: number): number => run.seen.rankWeeks[[0, 2, 4, 6][era]!] ?? 0;
+    const eraWeek = (run: Run, era: number): number => (off('erasByRank') ? run.seen.eraWeeks[era]! : run.seen.rankWeeks[[0, 2, 4, 6][era]!] ?? 0);
     const without = (run: Run, type: PlacedType): GameState => {
       const copy = structuredClone(run.final);
       const placed = bigBuildOf(copy, type);
@@ -1905,8 +1947,9 @@ function assertModelCampus(seed: number): void {
       runs.map((run) => `${run.style} ${run.seed}: ${run.final.greek.used.join(', ')}`).join('; '),
     );
     check(
-      'rush week comes each fall once a chapter stands, and a chapter goes on Probation only after a Warning',
-      runs.every((run) => first(run) === 0 || run.seen.greekRush.length >= PACE_WEEKS - first(run) - 1) && runs.every((run) => run.seen.greekProbations <= run.seen.greekWarnings),
+      // The Warning's 36-hour clock is switched off (85.6): a chapter goes on Probation for hazing only.
+      'rush week comes each fall once a chapter stands, and no chapter goes on Probation for a clock: only for hazing',
+      runs.every((run) => first(run) === 0 || run.seen.greekRush.length >= PACE_WEEKS - first(run) - 1) && runs.every((run) => (off('greekProbationTimer') ? run.seen.greekProbations === 0 : run.seen.greekProbations <= run.seen.greekWarnings)),
       runs.map((run) => `${run.style} ${run.seed}: ${run.seen.greekRush.length} rush weeks from week ${first(run)}, ${run.seen.greekWarnings} warnings, ${run.seen.greekProbations} probations`).join('; '),
     );
   }
@@ -2044,10 +2087,20 @@ function assertModelCampus(seed: number): void {
       runs.every((run) => tally(run, 'gifts') >= days - 1 && tally(run, 'gifts') <= days + 1 && Math.abs(tally(run, 'cards') - Math.floor(tally(run, 'gifts') / 7)) <= 1),
       runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'gifts')} gifts in ${days} days, ${tally(run, 'cards')} cards`).join('; '),
     );
+    // Switched off (85.4): the check that they were set each year becomes the check that none is.
     check(
-      'goals for the year are set each year and paid at commencement, and one missed costs nothing',
-      runs.every((run) => tally(run, 'yearsSet') >= PACE_WEEKS - 1 && tally(run, 'goalsMet') <= tally(run, 'goalsSet') && tally(run, 'goalsSet') === 3 * tally(run, 'yearsSet')),
+      off('yearGoals') ? 'goals for the year are switched off: none is set, and nothing waits for commencement' : 'goals for the year are set each year and paid at commencement, and one missed costs nothing',
+      off('yearGoals')
+        ? runs.every((run) => tally(run, 'yearsSet') === 0 && run.final.rhythm.year === null)
+        : runs.every((run) => tally(run, 'yearsSet') >= PACE_WEEKS - 1 && tally(run, 'goalsMet') <= tally(run, 'goalsSet') && tally(run, 'goalsSet') === 3 * tally(run, 'yearsSet')),
       runs.map((run) => `${run.style} ${run.seed}: ${tally(run, 'yearsSet')} years, ${tally(run, 'goalsMet')} of ${tally(run, 'goalsSet')} goals met`).join('; '),
+    );
+    // Big days (85.5): every one that came was claimed and paid, whatever happened.
+    const measured = (run: Run, kind: string): number => tally(run, `met:${kind}`) + tally(run, `missed:${kind}`);
+    check(
+      'Big days always pay: every moment that came was claimed and paid, a loss or a half-full stadium too',
+      runs.every((run) => kinds.every((kind) => tally(run, `claimed:${kind}`) >= measured(run, kind) - 1) && tally(run, 'momentPaid:xp') > 0),
+      runs.map((run) => `${run.style} ${run.seed}: ${kinds.map((kind) => `${kind} ${tally(run, `claimed:${kind}`)} of ${measured(run, kind)}`).join(', ')}; ${tally(run, 'momentPaid:xp')} experience`).join('; '),
     );
     check(
       'every moment of the calendar opens a day and a half or more before it comes, and comes round every year',
@@ -2191,6 +2244,9 @@ function assertModelCampus(seed: number): void {
     const eras = (state: GameState): GameState => {
       const next = advance(structuredClone(state), state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 1.5 * DAY_MS).state;
       next.goals!.rank = RANK_GOALS.length;
+      // Every era open, written down as a converted save keeps them (DESIGN.md 85.2): eras open by level now, and a
+      // campus nobody tends is far below the level of the last.
+      for (let n = 1; n <= ERA_AT_LEVEL.length; n++) if (!next.goals!.reached.some((entry) => entry.ladder === 'era' && entry.n === n)) next.goals!.reached.push({ ladder: 'era', n, year: Math.max(1, next.clock.week.year) });
       next.policies = { on: [], locked: [], news: [] };
       return next;
     };
@@ -2635,6 +2691,30 @@ function assertModelCampus(seed: number): void {
       }
       return { levels, state };
     };
+    // Nothing punishes an absent week (DESIGN.md 85.6): a campus left Pandemonium by its player, and a once-a-day
+    // player's campus with its chapters, each left alone for a real week.
+    {
+      let rowdy = chaosDays('pandemonium', 2, null, 0).state;
+      let greek = structuredClone((runs.find((run) => run.style === 'daily') ?? runs[0]!).final);
+      const lettersMissed = rowdy.chaos.letters.missed;
+      let dipMost = 0;
+      let clockProbations = 0;
+      let lapsed = 0;
+      for (let day = 0; day < 7; day++) {
+        const a = advance(rowdy, rowdy.clock.lastSimulatedAt, rowdy.clock.lastSimulatedAt + DAY_MS);
+        rowdy = a.state;
+        dipMost = Math.max(dipMost, trusteesDip(rowdy));
+        const b = advance(greek, greek.clock.lastSimulatedAt, greek.clock.lastSimulatedAt + DAY_MS);
+        greek = b.state;
+        clockProbations += b.log.filter((entry) => entry.kind === 'greek' && entry.data?.status === 2 && entry.data?.hazing !== 1).length;
+        lapsed += [...a.log, ...b.log].filter((entry) => entry.kind === 'order' && /ran out/i.test(entry.text)).length;
+      }
+      check(
+        'nothing punishes an absent week: no Reputation lost to the trustees, no Probation from a clock, no order lapses',
+        dipMost === 0 && rowdy.chaos.letters.missed === lettersMissed && clockProbations === 0 && lapsed === 0,
+        `a Pandemonium campus left a week: ${rowdy.chaos.letters.sent} letters, ${rowdy.chaos.letters.missed - lettersMissed} missed, Reputation ${dipMost} points lower at the most; a campus with ${chapters(greek).length} chapters left a week: ${clockProbations} probations from a clock; ${lapsed} orders lapsed`,
+      );
+    }
     const wild = chaosDays('pandemonium', 2, 'serene', 2);
     const most = Math.max(...wild.levels.filter((one) => one.style === 'pandemonium').map((one) => one.level));
     const calmFrom = wild.levels.findIndex((one) => one.style === 'serene');

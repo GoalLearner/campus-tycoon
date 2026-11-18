@@ -26,6 +26,7 @@ import { newBigBuilds } from './systems/bigBuilds';
 import { newLabs } from './systems/labs';
 import { newTraditions } from './systems/traditions';
 import { newGreek } from './systems/greek';
+import { cleanUpGoals } from './systems/cleanup';
 import { newAlumni, openingPool } from './systems/alumni';
 import { newStory } from './systems/mc';
 import { calendarAt } from './calendar';
@@ -39,7 +40,7 @@ import type { Cell, Field, GameState, MapState, Placed } from './types';
  * is the app's business, not the sim's. See DESIGN.md section 17.5.
  */
 
-export const SAVE_VERSION = 42;
+export const SAVE_VERSION = 43;
 
 export interface SaveFile {
   v: number;
@@ -504,6 +505,13 @@ export const MIGRATIONS: Record<number, Migration> = {
   // place to play and eat, the nearer the more, is worked out again; the rest of the map's care is as it was.
   41: (state) => {
     reshareAmenities(state.map as unknown as MapState);
+    return state;
+  },
+  // Version 43: the goals clean-up (DESIGN.md 85). Nothing earned is lost: eras opened by rank are written down, the
+  // goals for the year are paid for what they had reached, orders lose their clocks, a moment that went by is a Big
+  // day to claim, and a trustees' dip is lifted.
+  42: (state) => {
+    cleanUpGoals(state as unknown as GameState);
     return state;
   },
 };

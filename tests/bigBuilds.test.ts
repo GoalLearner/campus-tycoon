@@ -47,7 +47,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, erasByRank, withCleanUp } from './helpers';
 
 /**
  * The big builds of the eras (DESIGN.md 41.3, 41.4, as built in section 45):
@@ -63,6 +63,7 @@ function ranked(rank: number, seed = 35): GameState {
   state.field.rank = rank;
   state.field.rankYear = 1;
   landRankGoals(state, []);
+  erasByRank(state);
   state.money.cash = 2_000_000_000;
   return state;
 }
@@ -106,13 +107,13 @@ describe('what the eras open', () => {
     const small = freshGame();
     expect(bigBuildsOffered(small)).toEqual([]);
     expect(applyAction(small, { type: 'place', building: 'studentUnion', x: 2, y: 2 }).ok).toBe(false);
-    // Before its era, one is refused with the rank that opens it.
+    // Before its era, one is refused with the University Level that opens it (DESIGN.md 85.1).
     const early = ranked(120);
     early.money.cash = 2_000_000_000;
     const [x, y] = spotFor(early, 'studentUnion');
     const refused = applyAction(early, { type: 'place', building: 'studentUnion', x, y });
     expect(refused.ok).toBe(false);
-    if (!refused.ok) expect(refused.error).toBe('Student Union comes with the Flagship era, at the Top 75.');
+    if (!refused.ok) expect(refused.error).toBe('Student Union comes with the Flagship era, at University Level 72.');
   });
 
   it('is said when the era begins, and on the Goals page ahead of it', () => {
@@ -327,6 +328,7 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       // It plays on.
@@ -334,7 +336,7 @@ describe('saves', () => {
       expect(validate(day)).toBeNull();
       const notes = upgradeNotes(21);
       // And R3's price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(20);
+      expect(notes).toHaveLength(21);
       expect(notes[0]).toMatch(/big builds/);
     });
   });

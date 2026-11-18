@@ -9,7 +9,7 @@ import { classYearOf, firstNameOf, socialProfile } from '../src/sim/systems/stud
 import { TRAIT, traitOf } from '../src/sim/systems/identity';
 import { nextGreekDay } from '../src/sim/systems/greek';
 import { catchUp, decodeWeb, encodeWeb, HAPPENING_FIELDS, idOf, newWeb, webWeekOf, type Web } from '../src/sim/systems/web';
-import { DAY, MIN, T0, olderWebRecord } from './helpers';
+import { DAY, MIN, T0, olderWebRecord, erasByRank } from './helpers';
 
 /**
  * Quadline, the campus app (DESIGN.md 63.13, social stop 9): posts made as the web lives each game week, from what
@@ -155,6 +155,8 @@ describe('posts', () => {
     state.field.rank = 120;
     state.field.rankYear = 1;
     landRankGoals(state, []);
+    // Greek Row waits for the Growth era: written down as a save from before the goals clean-up keeps it (DESIGN.md 85.1).
+    erasByRank(state);
     state.money.cash = 2_000_000_000;
     for (let built = 0; built < 3; built++) {
       let at: [number, number] | null = null;

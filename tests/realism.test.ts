@@ -22,7 +22,7 @@ import { namedRegulars } from '../src/sim/systems/regulars';
 import { catchUp, idOf, newWeb, tiesOf, webWeekOf } from '../src/sim/systems/web';
 import { edition } from '../src/sim/newspaper';
 import { toneProblem } from '../src/sim/config/tone';
-import { DAY, painted, T0, withAmenities } from './helpers';
+import { DAY, painted, T0, withAmenities, withCleanUp, sixClassYears, withChaos, withRegistration } from './helpers';
 
 /**
  * The realism pass, R1 (DESIGN.md 65): the numbers match. Who stays, who finishes and when, and why the others leave,
@@ -176,7 +176,13 @@ describe('a save from version 30', () => {
     // again (DESIGN.md 83.5).
     const upgraded = painted(old);
     withAmenities(upgraded);
-    const { cohorts: _d, offCampus: _e, version: _f, rng: was_rng, ...was } = upgraded;
+    // Version 43's goals clean-up (DESIGN.md 85.9) pays the goals for the year by what they had reached, read from the
+    // campus as the versions before it leave it: with its six class years, its Chaos meter and its records.
+    sixClassYears(upgraded);
+    withChaos(upgraded);
+    withRegistration(upgraded);
+    withCleanUp(upgraded);
+    const { cohorts: _d, offCampus: _e, version: _f, chaos: _j, registration: _k, rng: { chaos: _l, ...was_rng }, ...was } = upgraded;
     expect(rest).toEqual(was);
     expect(rng).toEqual(was_rng);
   });

@@ -9,9 +9,12 @@ import {
   ORDER_KINDS,
   ORDER_LEAST_HOURS,
   ORDER_MARKS_KEPT,
+  ORDER_REFILL_HOURS,
   ORDER_REST_HOURS,
   ORDER_SECOND_FOR_TODAY,
   ORDER_SLOTS,
+  ORDER_SWAP_HOURS,
+  ORDER_XP_SHARE,
   ORDER_UPKEEP_KEPT,
   ROW_ADVISOR,
   ROW_UNIT,
@@ -24,6 +27,7 @@ import {
   type OrderWhen,
 } from '../config/orders';
 import { TOWN_DECOR_XP } from '../config/decor';
+import { off } from '../config/cleanup';
 import { PLACED } from '../config/placed';
 import { FIRST_INTAKE_TICK, TICKS_PER_HOUR, TICKS_PER_YEAR } from '../config/time';
 import { labRate, labsOnMap } from './labs';
@@ -48,9 +52,10 @@ import { hoodWalks, ownedAt } from './town';
  * The orders board (DESIGN.md 42.3, as built in 42.16).
  *
  * An order is offered as a stub: who gives it, and a number from the game's
- * seeded stream. That is all that happens on a tick, once a real day. What
- * it asks for is chosen from that number the first time the player sees it,
- * and its clock starts then, so nothing runs out while they are away.
+ * seeded stream. That is all that happens on a tick: a short while after one
+ * is claimed (the refill, DESIGN.md 85.3). What it asks for is chosen from
+ * that number the first time the player sees it. It has no clock: it waits
+ * until it is done, or swapped for another.
  *
  * How far along an order is, is read from the campus when somebody asks:
  * the board, the button, a claim. Nothing here walks the lots on a tick.
@@ -63,7 +68,7 @@ import { hoodWalks, ownedAt } from './town';
  */
 
 export function newOrders(): Orders {
-  return { open: [], nextId: 1, tally: {}, marks: [], news: [], note: '', rest: {}, paidYear: 0, paid: 0 };
+  return { open: [], nextId: 1, tally: {}, marks: [], news: [], note: '', rest: {}, paidYear: 0, paid: 0, due: [] };
 }
 
 const kindOf = (id: string | undefined): OrderKind | undefined => ORDER_KINDS.find((kind) => kind.id === id);
@@ -206,6 +211,8 @@ const MARK_OF: Partial<Record<OrderMetric, { what: string; less?: true }>> = {
 
 /** Whether a kind's own condition holds on this campus now. */
 function eligible(state: GameState, kind: OrderKind, seen: Look): boolean {
+  // One measured at a point of the calendar can be missed: switched off (DESIGN.md 85.3). Its campus-number cousins stay.
+  if (kind.point && off('pointOrders')) return false;
   const when: OrderWhen | undefined = kind.when;
   switch (when) {
     case undefined:
@@ -347,11 +354,34 @@ export function firstOrders(state: GameState): void {
   while (state.orders.open.length < orderSlots(state)) offer(state);
 }
 
-/** Once a real day: one new order, if the board has room. It gets a line in the paper. */
+/** Once a real day: one new order, if the board has room. It gets a line in the paper. Switched off for the refill (85.3). */
 export function offerDaily(state: GameState, log: LogEntry[]): void {
+  if (off('dailyOrder')) return;
   if (!hasDaily(state) || state.orders.open.length >= orderSlots(state)) return;
   const order = offer(state);
   log.push({ tick: state.clock.tick, kind: 'order', text: `A new order from ${giverName(state, order.giver, true)} is on the board.`, data: { id: order.id, new: 1 } });
+}
+
+/**
+ * The refill (DESIGN.md 85.3), each tick: every place on the board that is empty and has no order on its way gets one,
+ * due `ORDER_REFILL_HOURS` from now, and each order whose hour has come arrives, with a line in the paper. A place a
+ * level opens is filled the same way.
+ */
+export function offerDue(state: GameState, log: LogEntry[]): void {
+  if (!hasDaily(state) || !off('dailyOrder')) return;
+  const orders = state.orders;
+  const due = (orders.due ??= []);
+  const tick = state.clock.tick;
+  const slots = orderSlots(state);
+  while (orders.open.length + due.length < slots) due.push(tick + ORDER_REFILL_HOURS * TICKS_PER_HOUR);
+  if (due.length === 0 || due[0]! > tick) return;
+  due.sort((a, b) => a - b);
+  while (due.length > 0 && due[0]! <= tick) {
+    due.shift();
+    if (orders.open.length >= slots) continue;
+    const order = offer(state);
+    log.push({ tick, kind: 'order', text: `A new order from ${giverName(state, order.giver, true)} is on the board.`, data: { id: order.id, new: 1 } });
+  }
 }
 
 /** A line waiting from an action is told on the next tick: an order claimed. */
@@ -396,7 +426,9 @@ function chooseKind(state: GameState, order: Order, seen: Look, today = false): 
   // Nothing of this giver's can be asked: the kind each giver falls back on, then anybody's.
   if (pool.length === 0) pool = ORDER_KINDS.filter((kind) => kind.giver === order.giver && kind.always && !taken.has(kind.id) && canAsk(state, kind, seen));
   if (pool.length === 0) pool = ORDER_KINDS.filter((kind) => kind.always && !taken.has(kind.id) && canAsk(state, kind, seen));
-  if (pool.length === 0) pool = ORDER_KINDS.filter((kind) => kind.always);
+  // The last of all: one that can always be offered, and not one already on the board while another is free.
+  if (pool.length === 0) pool = ORDER_KINDS.filter((kind) => kind.always && !(kind.point && off('pointOrders')) && !taken.has(kind.id));
+  if (pool.length === 0) pool = ORDER_KINDS.filter((kind) => kind.always && !(kind.point && off('pointOrders')));
   return pool[order.roll % pool.length]!;
 }
 
@@ -419,8 +451,11 @@ function begin(state: GameState, order: Order, seen: Look, today = false): void 
     if (gift) order.gift = gift;
   }
   ordersCountRaw(state.orders, `seen:${kind.id}`);
-  const least = ORDER_LEAST_HOURS * TICKS_PER_HOUR;
-  order.until = kind.point ? nextPoint(state, kind.point, tick + least) : tick + Math.max(ORDER_LEAST_HOURS, kind.hours ?? ORDER_LEAST_HOURS) * TICKS_PER_HOUR;
+  // No clock (DESIGN.md 85.3): it waits until it is done or swapped.
+  if (!off('orderTimers')) {
+    const least = ORDER_LEAST_HOURS * TICKS_PER_HOUR;
+    order.until = kind.point ? nextPoint(state, kind.point, tick + least) : tick + Math.max(ORDER_LEAST_HOURS, kind.hours ?? ORDER_LEAST_HOURS) * TICKS_PER_HOUR;
+  }
   const t = kind.target;
   if (kind.metric === 'rowOk') {
     order.param = kind.when === 'parkingNotOk' ? 'parking' : (weakestRow(state, seen)?.id ?? 'beds');
@@ -484,7 +519,7 @@ function statusOf(state: GameState, order: Order, seen: Look): OrderStatus {
   const target = order.target ?? 1;
   if (!kind || order.seen === undefined) return { value: 0, target, done: false, missed: false, share: 0 };
   if (order.done !== undefined) return { value: target, target, done: true, missed: false, share: 1 };
-  const late = state.clock.tick > (order.until ?? Infinity);
+  const late = !off('orderTimers') && state.clock.tick > (order.until ?? Infinity);
   if (MARKED.has(kind.metric)) {
     const how = MARK_OF[kind.metric]!;
     const mark = state.orders.marks.find((one) => one.what === how.what && one.at > order.seen!);
@@ -532,6 +567,8 @@ export function orderRewards(state: GameState, order: Order): OrderReward[] {
       else xp += TOWN_DECOR_XP;
     } else out.push(reward);
   }
+  // With the refill a player finishes about twice as many orders, so each pays this share of what it did (85.3).
+  if (off('dailyOrder')) xp = Math.round((xp * ORDER_XP_SHARE) / 5) * 5;
   if (xp > 0) out.push({ kind: 'xp', amount: xp });
   return out.filter((reward) => reward.amount > 0);
 }
@@ -617,7 +654,7 @@ export function orderViews(state: GameState): OrderView[] {
       ask: kind.ask,
       progress,
       share: status.share,
-      left: status.done ? '' : `${duration(ticksLeft)} left`,
+      left: status.done || order.until === undefined ? '' : `${duration(ticksLeft)} left`,
       reward: rewardWords(orderRewards(state, order)),
       done: status.done,
       season: isSeason(kind),
@@ -678,7 +715,7 @@ export function seeOrders(state: GameState): void {
   }
   // Something for today: the day's new order was a long one, or time ran out on one and left a place, and nothing
   // else here can be finished in one sitting. Each can happen once a day at most, so looking again brings no more.
-  if (ORDER_SECOND_FOR_TODAY && (begun > 0 || ranOut.length > 0) && orders.open.length < orderSlots(state) && !sittingOpen(state) && sittingToAsk(state, seen)) {
+  if (ORDER_SECOND_FOR_TODAY && !off('dailyOrder') && (begun > 0 || ranOut.length > 0) && orders.open.length < orderSlots(state) && !sittingOpen(state) && sittingToAsk(state, seen)) {
     const second = offer(state);
     begin(state, second, seen, true);
     ordersCountRaw(orders, 'second');
@@ -723,7 +760,10 @@ export function claimOrder(state: GameState, id: number): { rewards: OrderReward
   return { rewards, title: view.title };
 }
 
-/** Dismiss an order that is not wanted. It is free, and its place is filled the next day. A finished one is claimed, not dismissed. */
+/**
+ * Swap an order that is not wanted. It is free, and a new one comes `ORDER_SWAP_HOURS` later (DESIGN.md 85.3). A
+ * finished one is claimed, not swapped.
+ */
 export function dismissOrder(state: GameState, id: number): string | null {
   const orders = state.orders;
   const order = orders.open.find((one) => one.id === id);
@@ -736,7 +776,21 @@ export function dismissOrder(state: GameState, id: number): string | null {
     // Not wanted: that kind is not asked again for a week.
     orders.rest[order.kind] = state.clock.tick + ORDER_REST_HOURS * TICKS_PER_HOUR;
   }
+  if (off('dailyOrder')) (orders.due ??= []).push(state.clock.tick + ORDER_SWAP_HOURS * TICKS_PER_HOUR);
   return null;
+}
+
+/**
+ * Save version 43 (DESIGN.md 85.9): take off the board every order measured at a moment of the calendar that is not
+ * done. They are switched off; a new order comes in each place. One done stays, to be claimed. Returns how many.
+ */
+export function dropMeasuredOrders(state: GameState): number {
+  const before = state.orders.open.length;
+  state.orders.open = state.orders.open.filter((order) => {
+    const kind = kindOf(order.kind);
+    return !kind || !MARKED.has(kind.metric) || order.done !== undefined;
+  });
+  return before - state.orders.open.length;
 }
 
 /** The most a school year of orders can pay in cash on this campus, however the board is played. For the money tables. */

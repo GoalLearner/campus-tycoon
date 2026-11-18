@@ -1,3 +1,5 @@
+import { ERA_AT_LEVEL, ERAS } from './goals';
+import { LAB_LEVEL } from './labs';
 import { CRAFT_XP, DECOR } from './decor';
 import { TICKS_PER_HOUR } from './time';
 import type { PlacedFamily } from './placed';
@@ -69,7 +71,7 @@ export const LEVEL_MOST_BEFORE_21 = 800;
  * of order comes with a later stop: each is one more kind here, and one more
  * entry in `LEVEL_UNLOCKS`.
  */
-export type LevelGift = { kind: 'seals'; count: number } | { kind: 'unlock'; what: 'decoration' | 'recipe' | 'order' | 'slot'; id: string; name: string };
+export type LevelGift = { kind: 'seals'; count: number } | { kind: 'unlock'; what: 'decoration' | 'recipe' | 'order' | 'slot' | 'era' | 'feature'; id: string; name: string };
 
 /**
  * Gold Seals for every level reached, and for every fifth level. The fifth gave 3 until the daily rhythm (DESIGN.md
@@ -92,12 +94,13 @@ const ORDER_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
   3: [order('safer', 'orders about Safety & health')],
   4: [order('fedAndBusy', 'orders about Food & fun')],
   5: [slot('a fourth order on the board')],
+  10: [slot('a fifth order on the board')],
   7: [order('benches', 'orders about benches')],
   9: [order('cleaner', 'orders about litter')],
   11: [order('homeWin', 'orders about home wins')],
   13: [order('sellOuts', 'orders about a full stadium')],
   16: [order('keepStudents', 'orders about students who stay')],
-  20: [slot('a fifth order on the board')],
+  20: [slot('a sixth order on the board')],
   23: [order('noWaitlist', 'orders about the waitlist')],
   26: [order('parkingOk', 'orders about parking')],
 };
@@ -111,6 +114,9 @@ const ORDER_UNLOCKS: Readonly<Record<number, readonly LevelGift[]>> = {
 function unlocks(): Record<number, LevelGift[]> {
   const out: Record<number, LevelGift[]> = {};
   for (const [level, gifts] of Object.entries(ORDER_UNLOCKS)) out[Number(level)] = [...gifts];
+  // One ladder (DESIGN.md 85.1): the research labs, and each later era, which the paper says in full when it begins.
+  (out[LAB_LEVEL] ??= []).push({ kind: 'unlock', what: 'feature', id: 'labs', name: 'research labs in the Build menu' });
+  ERA_AT_LEVEL.forEach((level, n) => (out[level] ??= []).push({ kind: 'unlock', what: 'era', id: String(n + 1), name: `the ${ERAS[n + 1]} era` }));
   for (const spec of DECOR) {
     if (spec.home.kind === 'shelf') (out[spec.home.level] ??= []).push({ kind: 'unlock', what: 'decoration', id: spec.id, name: `${spec.a} for the Decor shelf` });
     else if (spec.home.kind === 'workshop') (out[spec.home.level] ??= []).push({ kind: 'unlock', what: 'recipe', id: spec.id, name: `the Workshop's recipe for ${spec.a}` });

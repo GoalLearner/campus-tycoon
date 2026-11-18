@@ -280,7 +280,9 @@ describe('what the player is told', () => {
   it('tells a player with an older save, once', () => {
     expect(upgradeNotes(9).some((note) => /hold so many students at once/.test(note))).toBe(true);
     expect(upgradeNotes(41).some((note) => /students who use them, wherever they live/.test(note))).toBe(true);
-    expect(upgradeNotes(42)).toEqual([]);
+    expect(upgradeNotes(42)).toHaveLength(1);
+    expect(upgradeNotes(42)[0]).toMatch(/University Level opens everything/);
+    expect(upgradeNotes(43)).toEqual([]);
   });
 });
 

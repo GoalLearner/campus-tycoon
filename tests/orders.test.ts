@@ -19,8 +19,11 @@ import {
   ORDER_CASH_YEAR,
   ORDER_KINDS,
   ORDER_LEAST_HOURS,
+  ORDER_REFILL_HOURS,
   ORDER_REST_HOURS,
   ORDER_SLOTS,
+  ORDER_SWAP_HOURS,
+  ORDER_XP_SHARE,
   ORDER_UPKEEP_KEPT,
   orderCashCeiling,
   orderCashLeft,
@@ -51,7 +54,7 @@ import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
 import { footballStat, inboxStat, policyStat, shortLeft } from '../src/ui/chips';
 import { ordersChip, ordersView, paidWords } from '../src/ui/ordersUi';
-import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted, withAmenities } from './helpers';
+import { advanceInSteps, DAY, freshGame, HOUR, MIN, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, painted, withAmenities, withCleanUp, switchedOn } from './helpers';
 
 /**
  * The orders board (DESIGN.md 42.3, as built from 42.16). Things to do, where
@@ -158,7 +161,9 @@ describe('the kinds of order, as data', () => {
     expect(pays('town', 'xp')).toBe(true);
     expect(ORDER_KINDS.filter((kind) => kind.giver === 'town' && kind.reward.some((reward) => reward.kind === 'decor')).length).toBeGreaterThanOrEqual(4);
     for (const kind of ORDER_KINDS) if (kind.giver !== 'town') expect(kind.reward.some((reward) => reward.kind === 'decor')).toBe(false);
-    expect(pays('donors', 'seals')).toBe(true);
+    // Every donors' order pays Seals but reaching a level, which comes of itself and pays experience alone (DESIGN.md 85.3).
+    expect(ORDER_KINDS.filter((kind) => kind.giver === 'donors' && kind.id !== 'levelUp').every((kind) => kind.reward.some((reward) => reward.kind === 'seals'))).toBe(true);
+    expect(kindOf('levelUp').reward).toEqual([{ kind: 'xp', amount: 60 }]);
     // Cash comes from the state alone, and Seals from donors alone.
     for (const kind of ORDER_KINDS) {
       if (kind.giver !== 'state') expect(kind.reward.some((reward) => reward.kind === 'cash')).toBe(false);
@@ -179,10 +184,11 @@ describe('the kinds of order, as data', () => {
     expect(all).toContain('Stress');
   });
 
-  it('opens some kinds, and two more places, by level', () => {
+  it('opens some kinds, and three more places, by level', () => {
     const opened = Object.values(LEVEL_UNLOCKS).flat();
     const slots = opened.filter((gift) => gift.kind === 'unlock' && gift.what === 'slot');
-    expect(slots).toHaveLength(2);
+    // A place at 10 as well as 5 and 20, with the refill (DESIGN.md 85.3).
+    expect(slots).toHaveLength(3);
     const kinds = opened.filter((gift) => gift.kind === 'unlock' && gift.what === 'order');
     expect(kinds.length).toBeGreaterThanOrEqual(6);
     for (const gift of kinds) if (gift.kind === 'unlock') expect(ORDER_KINDS.some((kind) => kind.id === gift.id), gift.id).toBe(true);
@@ -194,14 +200,16 @@ describe('the kinds of order, as data', () => {
       return orderSlots(state);
     };
     expect(at(1)).toBe(3);
-    const [fourth, fifth] = Object.entries(LEVEL_UNLOCKS)
+    const [fourth, fifth, sixth] = Object.entries(LEVEL_UNLOCKS)
       .filter(([, gifts]) => gifts.some((gift) => gift.kind === 'unlock' && gift.what === 'slot'))
       .map(([level]) => Number(level));
     expect(at(fourth! - 1)).toBe(3);
     expect(at(fourth!)).toBe(4);
     expect(at(fifth! - 1)).toBe(4);
     expect(at(fifth!)).toBe(5);
-    expect(at(500)).toBe(5);
+    expect(at(sixth! - 1)).toBe(5);
+    expect(at(sixth!)).toBe(6);
+    expect(at(500)).toBe(6);
   });
 
   it('asks only what a level has opened', () => {
@@ -235,13 +243,14 @@ describe('the kinds of order, as data', () => {
       const seen = act(state, { type: 'seeOrders' });
       expect(seen.orders.open).toHaveLength(1);
       expect(seen.orders.open[0]!.kind).toBe('testLawn');
-      expect(view(seen, 900)).toMatchObject({ from: 'The class of year one', title: 'Lay 2 cells of quad by the gate', ask: 'We met on a lawn like that.', progress: '0 of 2', reward: '55 experience', sitting: true });
+      // An order pays ORDER_XP_SHARE of its experience, to the nearest 5, with the refill (DESIGN.md 85.3): 55 is 35.
+      expect(view(seen, 900)).toMatchObject({ from: 'The class of year one', title: 'Lay 2 cells of quad by the gate', ask: 'We met on a lawn like that.', progress: '0 of 2', reward: '35 experience', sitting: true });
       const laid = act(seen, { type: 'paint', tool: 'quad', cells: bare(seen, 2) });
       expect(view(laid, 900).done).toBe(true);
       const xp = laid.daily.xp;
       const claimed = act(laid, { type: 'claimOrder', id: 900 });
-      expect(claimed.daily.xp).toBe(xp + 55);
-      expect(claimed.orders.news[0]).toBe('Order done for the class of year one: Lay 2 cells of quad by the gate. It paid 55 experience.');
+      expect(claimed.daily.xp).toBe(xp + 35);
+      expect(claimed.orders.news[0]).toBe('Order done for the class of year one: Lay 2 cells of quad by the gate. It paid 35 experience.');
     } finally {
       kinds.pop();
       delete givers.alumni;
@@ -299,137 +308,216 @@ describe('the board', () => {
     expect(small.orders).toEqual(newOrders());
   });
 
-  it('starts an order when it is first seen: what it asks, and its clock', () => {
-    const waited = later(fresh(), 3 * DAY);
-    expect(waited.orders.open.every((order) => order.seen === undefined)).toBe(true);
-    const seen = act(waited, { type: 'seeOrders' });
-    const tick = seen.clock.tick;
-    expect(seen.orders.open.length).toBeGreaterThanOrEqual(3);
-    expect(new Set(seen.orders.open.map((order) => order.kind)).size).toBe(seen.orders.open.length);
-    for (const order of seen.orders.open) {
-      const kind = kindOf(order.kind);
-      expect(kind).toBeDefined();
-      expect(order.seen).toBe(tick);
-      // No window is under 36 hours, counted from the first look and not from the offer.
-      expect(order.until! - tick).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
-      if (kind.hours !== undefined) expect(order.until! - tick).toBe(kind.hours * TICKS_PER_HOUR);
-      expect(order.target).toBeGreaterThan(0);
-    }
-    // A second look changes nothing.
-    const again = act(later(seen, HOUR), { type: 'seeOrders' });
-    expect(again.orders.open.map((order) => [order.id, order.kind, order.seen, order.until, order.target])).toEqual(seen.orders.open.map((order) => [order.id, order.kind, order.seen, order.until, order.target]));
-    for (const one of orderViews(seen)) {
-      expect(one.fresh).toBe(false);
-      expect(one.title).not.toMatch(/[{}]/);
-      expect(one.reward).not.toBe('');
-      expect(one.left).toMatch(/ left$/);
-      expect(toneProblem(one.title), one.title).toBeNull();
-    }
+  it('starts an order when it is first seen: what it asks, and its clock (switched off: orderTimers)', () => {
+    switchedOn(['orderTimers'], () => {
+      const waited = later(fresh(), 3 * DAY);
+      expect(waited.orders.open.every((order) => order.seen === undefined)).toBe(true);
+      const seen = act(waited, { type: 'seeOrders' });
+      const tick = seen.clock.tick;
+      expect(seen.orders.open.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(seen.orders.open.map((order) => order.kind)).size).toBe(seen.orders.open.length);
+      for (const order of seen.orders.open) {
+        const kind = kindOf(order.kind);
+        expect(kind).toBeDefined();
+        expect(order.seen).toBe(tick);
+        // No window is under 36 hours, counted from the first look and not from the offer.
+        expect(order.until! - tick).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
+        if (kind.hours !== undefined) expect(order.until! - tick).toBe(kind.hours * TICKS_PER_HOUR);
+        expect(order.target).toBeGreaterThan(0);
+      }
+      // A second look changes nothing.
+      const again = act(later(seen, HOUR), { type: 'seeOrders' });
+      expect(again.orders.open.map((order) => [order.id, order.kind, order.seen, order.until, order.target])).toEqual(seen.orders.open.map((order) => [order.id, order.kind, order.seen, order.until, order.target]));
+      for (const one of orderViews(seen)) {
+        expect(one.fresh).toBe(false);
+        expect(one.title).not.toMatch(/[{}]/);
+        expect(one.reward).not.toBe('');
+        expect(one.left).toMatch(/ left$/);
+        expect(toneProblem(one.title), one.title).toBeNull();
+      }
+    });
   });
 
-  it('lets nothing run out unseen, however long the player is away', () => {
-    const away = advance(fresh(), T0, T0 + 30 * DAY);
-    // The campus levels a little by itself in a month, and a level opened a fourth place: one more order came for it.
-    expect(orderSlots(away.state)).toBe(4);
-    expect(away.state.orders.open).toHaveLength(4);
-    expect(away.state.orders.open.every((order) => order.seen === undefined && order.kind === undefined)).toBe(true);
-    expect(away.state.orders.tally.missed).toBeUndefined();
-    // A full board takes no new order: one line in a month, for the one the new place let in.
-    expect(away.log.filter((entry) => entry.kind === 'order')).toHaveLength(1);
-    const seen = act(away.state, { type: 'seeOrders' });
-    expect(seen.orders.note).toBe('');
-    for (const order of seen.orders.open) expect(order.until! - seen.clock.tick).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
+  it('lets nothing run out unseen, however long the player is away (switched off: orderTimers)', () => {
+    switchedOn(['orderTimers'], () => {
+      const away = advance(fresh(), T0, T0 + 30 * DAY);
+      // The campus levels a little by itself in a month, past 5 and 10, and each opened a place (a place at 10 since
+      // DESIGN.md 85.3): one more order came for each.
+      expect(orderSlots(away.state)).toBe(5);
+      expect(away.state.orders.open).toHaveLength(5);
+      expect(away.state.orders.open.every((order) => order.seen === undefined && order.kind === undefined)).toBe(true);
+      expect(away.state.orders.tally.missed).toBeUndefined();
+      // A full board takes no new order: two lines in a month, for the two the new places let in.
+      expect(away.log.filter((entry) => entry.kind === 'order')).toHaveLength(2);
+      const seen = act(away.state, { type: 'seeOrders' });
+      expect(seen.orders.note).toBe('');
+      for (const order of seen.orders.open) expect(order.until! - seen.clock.tick).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
+    });
   });
 
-  it('brings one new order each real day while there is room, with a line in the paper', () => {
-    let state = act(fresh(), { type: 'seeOrders' });
-    const gone = state.orders.open[0]!;
-    state = act(state, { type: 'dismissOrder', id: gone.id });
-    const left = state.orders.open.length;
-    const day = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + DAY);
-    const lines = day.log.filter((entry) => entry.kind === 'order');
-    expect(lines).toHaveLength(1);
-    expect(lines[0]!.text).toMatch(/^A new order from .+ is on the board\.$/);
-    expect(lines[0]!.data).toMatchObject({ new: 1 });
-    expect(day.state.orders.open).toHaveLength(left + 1);
-    expect(day.state.orders.open[day.state.orders.open.length - 1]!.seen).toBeUndefined();
-    // One a day, and never more than the board has places for.
-    let many = fresh();
-    many.orders.open = [];
-    for (let n = 1; n <= 6; n++) {
-      many = later(many, DAY);
-      expect(many.orders.open).toHaveLength(Math.min(n, orderSlots(many)));
-    }
-    expect(many.orders.open.length).toBe(orderSlots(many));
+  it('brings one new order each real day while there is room, with a line in the paper (switched off: dailyOrder)', () => {
+    switchedOn(['dailyOrder'], () => {
+      let state = act(fresh(), { type: 'seeOrders' });
+      const gone = state.orders.open[0]!;
+      state = act(state, { type: 'dismissOrder', id: gone.id });
+      const left = state.orders.open.length;
+      const day = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + DAY);
+      const lines = day.log.filter((entry) => entry.kind === 'order');
+      expect(lines).toHaveLength(1);
+      expect(lines[0]!.text).toMatch(/^A new order from .+ is on the board\.$/);
+      expect(lines[0]!.data).toMatchObject({ new: 1 });
+      expect(day.state.orders.open).toHaveLength(left + 1);
+      expect(day.state.orders.open[day.state.orders.open.length - 1]!.seen).toBeUndefined();
+      // One a day, and never more than the board has places for.
+      let many = fresh();
+      many.orders.open = [];
+      for (let n = 1; n <= 6; n++) {
+        many = later(many, DAY);
+        expect(many.orders.open).toHaveLength(Math.min(n, orderSlots(many)));
+      }
+      expect(many.orders.open.length).toBe(orderSlots(many));
+    });
   });
 
-  it('always has an order that can be finished in one sitting', () => {
-    // On a new board, whatever the numbers drawn.
+  it('always has an order that can be finished in one sitting (switched off: pointOrders)', () => {
+    switchedOn(['pointOrders'], () => {
+      // On a new board, whatever the numbers drawn.
+      for (let roll = 0; roll < 30; roll++) {
+        const state = fresh();
+        state.orders.open.forEach((order, n) => (order.roll = roll * 13 + n));
+        const seen = act(state, { type: 'seeOrders' });
+        expect(orderViews(seen).some((one) => one.sitting && !one.done), `roll ${roll}`).toBe(true);
+        expect(seen.orders.open.length).toBeLessThanOrEqual(orderSlots(seen));
+      }
+      // The order that fills the last place of a full board is one, when no other is.
+      const full = asked('graduateClass').state;
+      full.daily.level = 1;
+      full.orders.open = full.orders.open.filter((order) => order.id === 900);
+      full.orders.open.push({ ...full.orders.open[0]!, id: 901, kind: 'levelUp', giver: 'donors', target: 99, from: 1 });
+      full.orders.open.push(stub(full, 902, 'state', 3));
+      full.orders.rest = {};
+      full.orders.tally = {};
+      const filled = act(full, { type: 'seeOrders' });
+      expect(filled.orders.open).toHaveLength(3);
+      expect(kindOf(filled.orders.open.find((order) => order.id === 902)!.kind).sitting).toBe(true);
+      expect(filled.orders.tally.second).toBeUndefined();
+    });
+  });
+
+  it('brings a second order for today when the day\'s new one is a long one (switched off: dailyOrder, pointOrders)', () => {
+    switchedOn(['dailyOrder', 'pointOrders'], () => {
+      // A board with one long order on it and room: the day's new order is long too, so one for a sitting comes with it.
+      const { state } = asked('graduateClass');
+      const second = state.orders.open.find((order) => order.id !== 900)!;
+      expect(state.orders.open).toHaveLength(2);
+      expect(state.orders.tally.second).toBe(1);
+      expect(kindOf(second.kind).sitting).toBe(true);
+      expect(second.seen).toBe(state.clock.tick);
+      // It is an order like any other: no second comes while it is open, or when the player only looks again.
+      const again = act(state, { type: 'seeOrders' });
+      expect(again.orders.open).toHaveLength(2);
+      expect(again.orders.tally.second).toBe(1);
+      // With one for a sitting already open, the day's new order comes alone.
+      const { state: sitting } = asked('plantTrees');
+      expect(sitting.orders.open).toHaveLength(1);
+      expect(sitting.orders.tally.second).toBeUndefined();
+      sitting.orders.open.push(stub(sitting, 905, 'state', 1));
+      sitting.orders.rest.moreSeats = sitting.clock.tick + FAR;
+      const next = act(sitting, { type: 'seeOrders' });
+      expect(next.orders.open).toHaveLength(2);
+      expect(kindOf(next.orders.open.find((order) => order.id === 905)!.kind).sitting).toBeUndefined();
+      expect(next.orders.tally.second).toBeUndefined();
+    });
+  });
+
+  it('brings one for today when time runs out on the only order that could be finished in a sitting (switched off: orderTimers, dailyOrder, pointOrders)', () => {
+    switchedOn(['orderTimers', 'dailyOrder', 'pointOrders'], () => {
+      // A long order, and one for a sitting whose time has passed with nothing done.
+      const { state } = asked('graduateClass');
+      const short = state.orders.open.find((order) => order.id !== 900)!;
+      expect(kindOf(short.kind!).sitting).toBe(true);
+      expect(status(state, short.id).done).toBe(false);
+      short.until = state.clock.tick - 1;
+      const seconds = state.orders.tally.second ?? 0;
+      const seen = act(state, { type: 'seeOrders' });
+      // The one that ran out is off the board with a kind word, and another for a sitting has its place.
+      expect(seen.orders.note).toMatch(/^Time ran out on /);
+      expect(seen.orders.tally.missed).toBe(1);
+      expect(seen.orders.tally.second).toBe(seconds + 1);
+      expect(seen.orders.open).toHaveLength(2);
+      expect(seen.orders.open.some((order) => order.id === short.id)).toBe(false);
+      expect(orderViews(seen).some((one) => one.sitting && !one.done)).toBe(true);
+      // Looking again brings no more.
+      const again = act(seen, { type: 'seeOrders' });
+      expect(again.orders.open).toHaveLength(2);
+      expect(again.orders.tally.second).toBe(seconds + 1);
+    });
+  });
+});
+
+describe('the refill, with no clock (DESIGN.md 85.3)', () => {
+  it('lets an order wait, unfinished, however long it takes: no clock, nothing lapses', () => {
+    const { state, order } = asked('plantTrees');
+    expect(order.until).toBeUndefined();
+    for (const one of orderViews(state)) expect(one.left).toBe('');
+    const months = act(later(state, 60 * DAY), { type: 'seeOrders' });
+    expect(months.orders.open.some((one) => one.id === order.id)).toBe(true);
+    expect(status(months, order.id)).toMatchObject({ done: false, missed: false });
+    expect(months.orders.note).toBe('');
+    expect(months.orders.tally.missed).toBeUndefined();
+    const planted = act(months, { type: 'paint', tool: 'tree', cells: bare(months, 8) });
+    expect(view(planted, order.id).done).toBe(true);
+  });
+
+  it('fills a place ORDER_REFILL_HOURS after an order is claimed, and ORDER_SWAP_HOURS after one is swapped', () => {
+    expect([ORDER_REFILL_HOURS, ORDER_SWAP_HOURS]).toEqual([2, 4]);
+    const { state, order } = asked('plantTrees');
+    // A full board: the order asked for and five not yet seen.
+    state.orders.open.push(...(['state', 'advisors', 'town', 'donors', 'state'] as const).map((giver, n) => stub(state, 901 + n, giver, n)));
+    state.orders.due = [];
+    expect(state.orders.open).toHaveLength(orderSlots(state));
+    const count = (from: GameState, hours: number): { open: number; lines: number } => {
+      const run = advance(from, from.clock.lastSimulatedAt, from.clock.lastSimulatedAt + hours * HOUR);
+      return { open: run.state.orders.open.length, lines: run.log.filter((entry) => entry.kind === 'order' && entry.data?.new === 1).length };
+    };
+    const claimed = act(act(state, { type: 'paint', tool: 'tree', cells: bare(state, 8) }), { type: 'claimOrder', id: order.id });
+    expect(claimed.orders.open).toHaveLength(5);
+    expect(count(claimed, ORDER_REFILL_HOURS - 0.25)).toEqual({ open: 5, lines: 0 });
+    expect(count(claimed, ORDER_REFILL_HOURS + 0.25)).toEqual({ open: 6, lines: 1 });
+    // Swapped: free, and its place is filled later than a claimed one's.
+    const swapped = act(state, { type: 'dismissOrder', id: 901 });
+    expect(swapped.money.cash).toBe(state.money.cash);
+    expect(count(swapped, ORDER_SWAP_HOURS - 0.25)).toEqual({ open: 5, lines: 0 });
+    expect(count(swapped, ORDER_SWAP_HOURS + 0.25)).toEqual({ open: 6, lines: 1 });
+  });
+
+  it('has three places, a fourth at Level 5, a fifth at 10 and a sixth at 20, and fills a new one by the refill', () => {
+    const at = (level: number): number => {
+      const state = fresh();
+      state.daily.level = level;
+      return orderSlots(state);
+    };
+    expect([1, 4, 5, 9, 10, 19, 20, 100].map(at)).toEqual([3, 3, 4, 4, 5, 5, 6, 6]);
+    const up = fresh();
+    up.daily.level = 10;
+    expect(later(up, ORDER_REFILL_HOURS * HOUR + 15 * MIN).orders.open).toHaveLength(5);
+  });
+
+  it('never asks for a kind measured at a moment of the calendar, not even as the last resort', () => {
+    const points = ORDER_KINDS.filter((kind) => kind.point).map((kind) => kind.id);
+    expect(points.sort()).toEqual(['calmSemester', 'graduateClass', 'homeWin', 'keepStudents', 'noWaitlist', 'sellOuts', 'stayFull']);
     for (let roll = 0; roll < 30; roll++) {
       const state = fresh();
-      state.orders.open.forEach((order, n) => (order.roll = roll * 13 + n));
-      const seen = act(state, { type: 'seeOrders' });
-      expect(orderViews(seen).some((one) => one.sitting && !one.done), `roll ${roll}`).toBe(true);
-      expect(seen.orders.open.length).toBeLessThanOrEqual(orderSlots(seen));
+      state.daily.level = 60;
+      state.orders.open = (['advisors', 'state', 'town', 'donors'] as const).map((giver, n) => stub(state, 60 + n, giver, roll * 7 + n));
+      for (const one of act(state, { type: 'seeOrders' }).orders.open) expect(points, one.kind).not.toContain(one.kind);
     }
-    // The order that fills the last place of a full board is one, when no other is.
-    const full = asked('graduateClass').state;
-    full.daily.level = 1;
-    full.orders.open = full.orders.open.filter((order) => order.id === 900);
-    full.orders.open.push({ ...full.orders.open[0]!, id: 901, kind: 'levelUp', giver: 'donors', target: 99, from: 1 });
-    full.orders.open.push(stub(full, 902, 'state', 3));
-    full.orders.rest = {};
-    full.orders.tally = {};
-    const filled = act(full, { type: 'seeOrders' });
-    expect(filled.orders.open).toHaveLength(3);
-    expect(kindOf(filled.orders.open.find((order) => order.id === 902)!.kind).sitting).toBe(true);
-    expect(filled.orders.tally.second).toBeUndefined();
-  });
-
-  it('brings a second order for today when the day\'s new one is a long one', () => {
-    // A board with one long order on it and room: the day's new order is long too, so one for a sitting comes with it.
-    const { state } = asked('graduateClass');
-    const second = state.orders.open.find((order) => order.id !== 900)!;
-    expect(state.orders.open).toHaveLength(2);
-    expect(state.orders.tally.second).toBe(1);
-    expect(kindOf(second.kind).sitting).toBe(true);
-    expect(second.seen).toBe(state.clock.tick);
-    // It is an order like any other: no second comes while it is open, or when the player only looks again.
-    const again = act(state, { type: 'seeOrders' });
-    expect(again.orders.open).toHaveLength(2);
-    expect(again.orders.tally.second).toBe(1);
-    // With one for a sitting already open, the day's new order comes alone.
-    const { state: sitting } = asked('plantTrees');
-    expect(sitting.orders.open).toHaveLength(1);
-    expect(sitting.orders.tally.second).toBeUndefined();
-    sitting.orders.open.push(stub(sitting, 905, 'state', 1));
-    sitting.orders.rest.moreSeats = sitting.clock.tick + FAR;
-    const next = act(sitting, { type: 'seeOrders' });
-    expect(next.orders.open).toHaveLength(2);
-    expect(kindOf(next.orders.open.find((order) => order.id === 905)!.kind).sitting).toBeUndefined();
-    expect(next.orders.tally.second).toBeUndefined();
-  });
-
-  it('brings one for today when time runs out on the only order that could be finished in a sitting', () => {
-    // A long order, and one for a sitting whose time has passed with nothing done.
-    const { state } = asked('graduateClass');
-    const short = state.orders.open.find((order) => order.id !== 900)!;
-    expect(kindOf(short.kind!).sitting).toBe(true);
-    expect(status(state, short.id).done).toBe(false);
-    short.until = state.clock.tick - 1;
-    const seconds = state.orders.tally.second ?? 0;
-    const seen = act(state, { type: 'seeOrders' });
-    // The one that ran out is off the board with a kind word, and another for a sitting has its place.
-    expect(seen.orders.note).toMatch(/^Time ran out on /);
-    expect(seen.orders.tally.missed).toBe(1);
-    expect(seen.orders.tally.second).toBe(seconds + 1);
-    expect(seen.orders.open).toHaveLength(2);
-    expect(seen.orders.open.some((order) => order.id === short.id)).toBe(false);
-    expect(orderViews(seen).some((one) => one.sitting && !one.done)).toBe(true);
-    // Looking again brings no more.
-    const again = act(seen, { type: 'seeOrders' });
-    expect(again.orders.open).toHaveLength(2);
-    expect(again.orders.tally.second).toBe(seconds + 1);
+    // Every kind resting: the board still asks, and for none of them.
+    const tired = fresh();
+    tired.daily.level = 60;
+    for (const kind of ORDER_KINDS) tired.orders.rest[kind.id] = tired.clock.tick + FAR;
+    tired.orders.open = (['advisors', 'state', 'town'] as const).map((giver, n) => stub(tired, 70 + n, giver, n));
+    for (const one of act(tired, { type: 'seeOrders' }).orders.open) expect(points, one.kind).not.toContain(one.kind);
   });
 });
 
@@ -495,7 +583,8 @@ describe('an order', () => {
   it('counts what is done from the moment it is first seen', () => {
     const before = act(fresh(), { type: 'paint', tool: 'tree', cells: bare(BASE, 3) });
     const { state, order } = asked('plantTrees', before);
-    expect(view(state, order.id)).toMatchObject({ from: 'The town', title: 'Plant 8 trees', progress: '0 of 8', done: false, reward: 'a flower box and 60 experience', sitting: true, season: false });
+    // Its 60 experience is paid at ORDER_XP_SHARE, to the nearest 5, with the refill (DESIGN.md 85.3).
+    expect(view(state, order.id)).toMatchObject({ from: 'The town', title: 'Plant 8 trees', progress: '0 of 8', done: false, reward: 'a flower box and 40 experience', sitting: true, season: false });
     const some = act(state, { type: 'paint', tool: 'tree', cells: bare(state, 3) });
     expect(view(some, order.id)).toMatchObject({ progress: '3 of 8', done: false });
     expect(view(some, order.id).share).toBeCloseTo(3 / 8);
@@ -511,23 +600,24 @@ describe('an order', () => {
     const xp = done.daily.xp;
     const result = applyAction(done, { type: 'claimOrder', id: order.id });
     if (!result.ok) throw new Error(result.error);
+    // 60 experience at ORDER_XP_SHARE, to the nearest 5, with the refill (DESIGN.md 85.3).
     expect(result.paid).toEqual([
       { kind: 'decor', amount: 1, id: 'flowerBox' },
-      { kind: 'xp', amount: 60 },
+      { kind: 'xp', amount: 40 },
     ]);
-    expect(paidWords(result.paid!)).toBe('+a flower box and 60 experience');
+    expect(paidWords(result.paid!)).toBe('+a flower box and 40 experience');
     const claimed = result.state;
-    expect(claimed.daily.xp).toBe(xp + 60);
+    expect(claimed.daily.xp).toBe(xp + 40);
     // The decoration is in storage, to be placed for nothing.
     expect(claimed.decor.stored.flowerBox).toBe(1);
     expect(claimed.orders.open.some((one) => one.id === order.id)).toBe(false);
-    expect(claimed.orders.tally).toMatchObject({ claimed: 1, 'claimed:plantTrees': 1, xp: 60, decor: 1 });
+    expect(claimed.orders.tally).toMatchObject({ claimed: 1, 'claimed:plantTrees': 1, xp: 40, decor: 1 });
     expect(applyAction(claimed, { type: 'claimOrder', id: order.id })).toMatchObject({ ok: false, error: 'That order is not on the board.' });
     const told = advance(claimed, claimed.clock.lastSimulatedAt, claimed.clock.lastSimulatedAt + MIN);
     const lines = told.log.filter((entry) => entry.kind === 'order' && entry.data?.done === 1);
-    expect(lines.map((entry) => entry.text)).toEqual(['Order done for the town: Plant 8 trees. It paid a flower box and 60 experience.']);
+    expect(lines.map((entry) => entry.text)).toEqual(['Order done for the town: Plant 8 trees. It paid a flower box and 40 experience.']);
     expect(told.state.orders.news).toEqual([]);
-    expect(awayLines(told.log, facts(told.state)).map((line) => line.text)).toContain('Order done for the town: Plant 8 trees. It paid a flower box and 60 experience.');
+    expect(awayLines(told.log, facts(told.state)).map((line) => line.text)).toContain('Order done for the town: Plant 8 trees. It paid a flower box and 40 experience.');
     expect(advance(told.state, told.state.clock.lastSimulatedAt, told.state.clock.lastSimulatedAt + MIN).log.filter((entry) => entry.kind === 'order')).toEqual([]);
   });
 
@@ -552,150 +642,162 @@ describe('an order', () => {
     expect(shown.progress).toMatch(/^Now [\d,]+$/);
   });
 
-  it('measures a season order once, at its point of the calendar', () => {
-    const { state, order } = asked('graduateClass');
-    expect(kindOf(order.kind).point).toBe('graduation');
-    const shown = view(state, order.id);
-    expect(shown).toMatchObject({ from: 'The state', progress: 'Measured at graduation', season: true, sitting: false, done: false });
-    expect(shown.title).toMatch(/^Graduate [\d,]+ seniors this spring$/);
-    expect(order.target! % 100).toBe(0);
-    expect(order.target!).toBeLessThanOrEqual(state.cohorts[3]);
-    expect(order.until! - order.seen!).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
-    // A mark left before it was seen does not count.
-    const old = structuredClone(state);
-    old.orders.marks.push({ at: order.seen! - 5, what: 'graduation', value: order.target! + 500 });
-    expect(status(old, order.id).done).toBe(false);
-    // Enough seniors at the graduation after: done. Too few: it ends there, and costs nothing.
-    const on = later(state, HOUR);
-    const good = structuredClone(on);
-    ordersMark(good, 'graduation', order.target!);
-    expect(status(good, order.id)).toMatchObject({ done: true, missed: false });
-    const short = structuredClone(on);
-    ordersMark(short, 'graduation', order.target! - 1);
-    expect(status(short, order.id)).toMatchObject({ done: false, missed: true });
-    // For Stress, less is the better number.
-    const calm = asked('calmSemester');
-    const after = later(calm.state, HOUR);
-    const under = structuredClone(after);
-    ordersMark(under, 'semesterStress', calm.order.target!);
-    expect(status(under, calm.order.id).done).toBe(true);
-    const over = structuredClone(after);
-    ordersMark(over, 'semesterStress', calm.order.target! + 1);
-    expect(status(over, calm.order.id)).toMatchObject({ done: false, missed: true });
+  it('measures a season order once, at its point of the calendar (switched off: pointOrders, orderTimers)', () => {
+    switchedOn(['pointOrders', 'orderTimers'], () => {
+      const { state, order } = asked('graduateClass');
+      expect(kindOf(order.kind).point).toBe('graduation');
+      const shown = view(state, order.id);
+      expect(shown).toMatchObject({ from: 'The state', progress: 'Measured at graduation', season: true, sitting: false, done: false });
+      expect(shown.title).toMatch(/^Graduate [\d,]+ seniors this spring$/);
+      expect(order.target! % 100).toBe(0);
+      expect(order.target!).toBeLessThanOrEqual(state.cohorts[3]);
+      expect(order.until! - order.seen!).toBeGreaterThanOrEqual(ORDER_LEAST_HOURS * TICKS_PER_HOUR);
+      // A mark left before it was seen does not count.
+      const old = structuredClone(state);
+      old.orders.marks.push({ at: order.seen! - 5, what: 'graduation', value: order.target! + 500 });
+      expect(status(old, order.id).done).toBe(false);
+      // Enough seniors at the graduation after: done. Too few: it ends there, and costs nothing.
+      const on = later(state, HOUR);
+      const good = structuredClone(on);
+      ordersMark(good, 'graduation', order.target!);
+      expect(status(good, order.id)).toMatchObject({ done: true, missed: false });
+      const short = structuredClone(on);
+      ordersMark(short, 'graduation', order.target! - 1);
+      expect(status(short, order.id)).toMatchObject({ done: false, missed: true });
+      // For Stress, less is the better number.
+      const calm = asked('calmSemester');
+      const after = later(calm.state, HOUR);
+      const under = structuredClone(after);
+      ordersMark(under, 'semesterStress', calm.order.target!);
+      expect(status(under, calm.order.id).done).toBe(true);
+      const over = structuredClone(after);
+      ordersMark(over, 'semesterStress', calm.order.target! + 1);
+      expect(status(over, calm.order.id)).toMatchObject({ done: false, missed: true });
+    });
   });
 
-  it('really is measured by the calendar: a graduation leaves its mark', () => {
-    const { state, order } = asked('graduateClass');
-    const year = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 8 * DAY).state;
-    const mark = year.orders.marks.find((one) => one.what === 'graduation' && one.at > order.seen!);
-    expect(mark).toBeDefined();
-    expect(mark!.value).toBeGreaterThan(0);
-    for (const what of ['intakeClean', 'fallFull', 'semesterStress', 'semesterLeft']) expect(year.orders.marks.some((one) => one.what === what), what).toBe(true);
-    expect(status(year, order.id).done || status(year, order.id).missed).toBe(true);
+  it('really is measured by the calendar: a graduation leaves its mark (switched off: pointOrders)', () => {
+    switchedOn(['pointOrders'], () => {
+      const { state, order } = asked('graduateClass');
+      const year = advance(state, state.clock.lastSimulatedAt, state.clock.lastSimulatedAt + 8 * DAY).state;
+      const mark = year.orders.marks.find((one) => one.what === 'graduation' && one.at > order.seen!);
+      expect(mark).toBeDefined();
+      expect(mark!.value).toBeGreaterThan(0);
+      for (const what of ['intakeClean', 'fallFull', 'semesterStress', 'semesterLeft']) expect(year.orders.marks.some((one) => one.what === what), what).toBe(true);
+      expect(status(year, order.id).done || status(year, order.id).missed).toBe(true);
+    });
   });
 
-  it('waits to be claimed for as long as it takes, once it is finished', () => {
-    const { state, order } = asked('plantTrees');
-    const done = act(act(state, { type: 'paint', tool: 'tree', cells: bare(state, 8) }), { type: 'seeOrders' });
-    expect(done.orders.open.find((one) => one.id === order.id)!.done).toBe(done.clock.tick);
-    const months = act(later(done, 60 * DAY), { type: 'seeOrders' });
-    expect(months.clock.tick).toBeGreaterThan(order.until!);
-    expect(view(months, order.id)).toMatchObject({ done: true, progress: 'Done' });
-    expect(months.orders.note).toBe('');
-    expect(applyAction(months, { type: 'dismissOrder', id: order.id })).toMatchObject({ ok: false, error: 'That order is finished. Claim it.' });
-    const claimed = act(months, { type: 'claimOrder', id: order.id });
-    expect(claimed.daily.xp).toBe(months.daily.xp + 60);
+  it('waits to be claimed for as long as it takes, once it is finished (switched off: orderTimers, dailyOrder)', () => {
+    switchedOn(['orderTimers', 'dailyOrder'], () => {
+      const { state, order } = asked('plantTrees');
+      const done = act(act(state, { type: 'paint', tool: 'tree', cells: bare(state, 8) }), { type: 'seeOrders' });
+      expect(done.orders.open.find((one) => one.id === order.id)!.done).toBe(done.clock.tick);
+      const months = act(later(done, 60 * DAY), { type: 'seeOrders' });
+      expect(months.clock.tick).toBeGreaterThan(order.until!);
+      expect(view(months, order.id)).toMatchObject({ done: true, progress: 'Done' });
+      expect(months.orders.note).toBe('');
+      expect(applyAction(months, { type: 'dismissOrder', id: order.id })).toMatchObject({ ok: false, error: 'That order is finished. Claim it.' });
+      const claimed = act(months, { type: 'claimOrder', id: order.id });
+      expect(claimed.daily.xp).toBe(months.daily.xp + 60);
+    });
   });
 
-  it('costs nothing when it is missed, and says so kindly', () => {
-    const { state, order } = asked('plantTrees');
-    const late = later(state, 3 * DAY);
-    expect(late.clock.tick).toBeGreaterThan(order.until!);
-    // Until the player looks, it is still there.
-    expect(late.orders.open.some((one) => one.id === order.id)).toBe(true);
-    const looked = act(late, { type: 'seeOrders' });
-    expect(looked.orders.open.some((one) => one.id === order.id)).toBe(false);
-    expect(looked.orders.note).toBe('Time ran out on "Plant 8 trees". Nothing is lost, and a new order comes tomorrow.');
-    expect(toneProblem(looked.orders.note)).toBeNull();
-    expect(ordersView(looked)!.note).toBe(looked.orders.note);
-    expect(looked.orders.tally).toMatchObject({ missed: 1, 'missed:plantTrees': 1 });
-    expect(looked.money.cash).toBe(late.money.cash);
-    expect(looked.daily).toEqual(late.daily);
-    expect(looked.cohorts).toEqual(late.cohorts);
-    // The note is said once.
-    expect(act(looked, { type: 'seeOrders' }).orders.note).toBe('');
-    // Finished a little late still counts, if the number is there when the player looks.
-    const planted = act(late, { type: 'paint', tool: 'tree', cells: bare(late, 8) });
-    const kind = act(planted, { type: 'seeOrders' });
-    expect(view(kind, order.id).done).toBe(true);
+  it('costs nothing when it is missed, and says so kindly (switched off: orderTimers, dailyOrder)', () => {
+    switchedOn(['orderTimers', 'dailyOrder'], () => {
+      const { state, order } = asked('plantTrees');
+      const late = later(state, 3 * DAY);
+      expect(late.clock.tick).toBeGreaterThan(order.until!);
+      // Until the player looks, it is still there.
+      expect(late.orders.open.some((one) => one.id === order.id)).toBe(true);
+      const looked = act(late, { type: 'seeOrders' });
+      expect(looked.orders.open.some((one) => one.id === order.id)).toBe(false);
+      expect(looked.orders.note).toBe('Time ran out on "Plant 8 trees". Nothing is lost, and a new order comes tomorrow.');
+      expect(toneProblem(looked.orders.note)).toBeNull();
+      expect(ordersView(looked)!.note).toBe(looked.orders.note);
+      expect(looked.orders.tally).toMatchObject({ missed: 1, 'missed:plantTrees': 1 });
+      expect(looked.money.cash).toBe(late.money.cash);
+      expect(looked.daily).toEqual(late.daily);
+      expect(looked.cohorts).toEqual(late.cohorts);
+      // The note is said once.
+      expect(act(looked, { type: 'seeOrders' }).orders.note).toBe('');
+      // Finished a little late still counts, if the number is there when the player looks.
+      const planted = act(late, { type: 'paint', tool: 'tree', cells: bare(late, 8) });
+      const kind = act(planted, { type: 'seeOrders' });
+      expect(view(kind, order.id).done).toBe(true);
+    });
   });
 
-  it('is dismissed free, is replaced the next day, and that kind then rests a week', () => {
-    const { state, order } = asked('plantTrees');
-    const cash = state.money.cash;
-    const gone = act(state, { type: 'dismissOrder', id: order.id });
-    expect(gone.orders.open.some((one) => one.id === order.id)).toBe(false);
-    expect(gone.money.cash).toBe(cash);
-    expect(gone.daily).toEqual(state.daily);
-    expect(gone.orders.tally).toMatchObject({ dismissed: 1, 'dismissed:plantTrees': 1 });
-    expect(gone.orders.rest.plantTrees).toBe(gone.clock.tick + ORDER_REST_HOURS * TICKS_PER_HOUR);
-    expect(ORDER_REST_HOURS).toBe(7 * 24);
-    expect(applyAction(gone, { type: 'dismissOrder', id: order.id })).toMatchObject({ ok: false });
-    // The town asks for something else meanwhile, and may ask for trees again after the week.
-    const rested = structuredClone(gone);
-    rested.orders.rest = { plantTrees: gone.orders.rest.plantTrees! };
-    for (let roll = 0; roll < 12; roll++) {
-      const soon = structuredClone(rested);
-      soon.orders.open = [stub(soon, 950, 'town', roll)];
-      expect(act(soon, { type: 'seeOrders' }).orders.open.find((one) => one.id === 950)!.kind).not.toBe('plantTrees');
-    }
-    const next = later(gone, DAY);
-    expect(next.orders.open.length).toBe(gone.orders.open.length + 1);
-    // An order not yet seen can be dismissed too.
-    const unseen = fresh();
-    const first = unseen.orders.open[0]!.id;
-    expect(act(unseen, { type: 'dismissOrder', id: first }).orders.open).toHaveLength(2);
+  it('is dismissed free, is replaced the next day, and that kind then rests a week (switched off: dailyOrder)', () => {
+    switchedOn(['dailyOrder'], () => {
+      const { state, order } = asked('plantTrees');
+      const cash = state.money.cash;
+      const gone = act(state, { type: 'dismissOrder', id: order.id });
+      expect(gone.orders.open.some((one) => one.id === order.id)).toBe(false);
+      expect(gone.money.cash).toBe(cash);
+      expect(gone.daily).toEqual(state.daily);
+      expect(gone.orders.tally).toMatchObject({ dismissed: 1, 'dismissed:plantTrees': 1 });
+      expect(gone.orders.rest.plantTrees).toBe(gone.clock.tick + ORDER_REST_HOURS * TICKS_PER_HOUR);
+      expect(ORDER_REST_HOURS).toBe(7 * 24);
+      expect(applyAction(gone, { type: 'dismissOrder', id: order.id })).toMatchObject({ ok: false });
+      // The town asks for something else meanwhile, and may ask for trees again after the week.
+      const rested = structuredClone(gone);
+      rested.orders.rest = { plantTrees: gone.orders.rest.plantTrees! };
+      for (let roll = 0; roll < 12; roll++) {
+        const soon = structuredClone(rested);
+        soon.orders.open = [stub(soon, 950, 'town', roll)];
+        expect(act(soon, { type: 'seeOrders' }).orders.open.find((one) => one.id === 950)!.kind).not.toBe('plantTrees');
+      }
+      const next = later(gone, DAY);
+      expect(next.orders.open.length).toBe(gone.orders.open.length + 1);
+      // An order not yet seen can be dismissed too.
+      const unseen = fresh();
+      const first = unseen.orders.open[0]!.id;
+      expect(act(unseen, { type: 'dismissOrder', id: first }).orders.open).toHaveLength(2);
+    });
   });
 
-  it('pays a grant on the campus\'s own count, and no more in a year than the cap', () => {
-    const { state, order } = asked('graduateClass');
-    const scale = scaleOf(state);
-    const kind = kindOf('graduateClass');
-    const grant = kind.reward.find((reward) => reward.kind === 'cash')!.amount * scale;
-    const cap = ORDER_CASH_YEAR * scale;
-    expect(orderCashCeiling(state)).toBe(cap);
-    expect(orderCashLeft(state)).toBe(cap);
-    expect(grant).toBeLessThan(cap);
-    const on = later(state, HOUR);
-    ordersMark(on, 'graduation', order.target!);
-    const live = on.orders.open.find((one) => one.id === order.id)!;
-    expect(orderRewards(on, live)).toEqual([
-      { kind: 'cash', amount: grant },
-      { kind: 'xp', amount: 100 },
-    ]);
-    expect(view(on, order.id).reward).toBe(rewardWords(orderRewards(on, live)));
-    expect(view(on, order.id).reward).toMatch(/^\$[\d,.]+[KM]? and 100 experience$/);
-    const claimed = act(on, { type: 'claimOrder', id: order.id });
-    expect(claimed.money.cash).toBe(on.money.cash + grant);
-    expect(claimed.orders.paid).toBe(grant);
-    expect(orderCashLeft(claimed)).toBe(cap - grant);
-    // Near the cap it pays what is left. At the cap it pays its experience alone. A new year starts it again.
-    const near = structuredClone(on);
-    near.orders.paidYear = Math.max(1, near.clock.week.year);
-    near.orders.paid = cap - 1000;
-    expect(orderRewards(near, near.orders.open.find((one) => one.id === order.id)!)[0]).toEqual({ kind: 'cash', amount: 1000 });
-    const less = act(near, { type: 'claimOrder', id: order.id });
-    expect(less.money.cash).toBe(near.money.cash + 1000);
-    expect(less.orders.paid).toBe(cap);
-    const spent = structuredClone(on);
-    spent.orders.paidYear = Math.max(1, spent.clock.week.year);
-    spent.orders.paid = cap;
-    expect(view(spent, order.id).reward).toBe('100 experience');
-    expect(act(spent, { type: 'claimOrder', id: order.id }).money.cash).toBe(spent.money.cash);
-    spent.orders.paidYear -= 1;
-    expect(orderCashLeft(spent)).toBe(cap);
-    // The whole cap is a sliver of what a campus takes in.
-    expect((100 * cap) / on.money.incomePerYear).toBeLessThan(0.1);
+  it('pays a grant on the campus\'s own count, and no more in a year than the cap (switched off: pointOrders, dailyOrder)', () => {
+    switchedOn(['pointOrders', 'dailyOrder'], () => {
+      const { state, order } = asked('graduateClass');
+      const scale = scaleOf(state);
+      const kind = kindOf('graduateClass');
+      const grant = kind.reward.find((reward) => reward.kind === 'cash')!.amount * scale;
+      const cap = ORDER_CASH_YEAR * scale;
+      expect(orderCashCeiling(state)).toBe(cap);
+      expect(orderCashLeft(state)).toBe(cap);
+      expect(grant).toBeLessThan(cap);
+      const on = later(state, HOUR);
+      ordersMark(on, 'graduation', order.target!);
+      const live = on.orders.open.find((one) => one.id === order.id)!;
+      expect(orderRewards(on, live)).toEqual([
+        { kind: 'cash', amount: grant },
+        { kind: 'xp', amount: 100 },
+      ]);
+      expect(view(on, order.id).reward).toBe(rewardWords(orderRewards(on, live)));
+      expect(view(on, order.id).reward).toMatch(/^\$[\d,.]+[KM]? and 100 experience$/);
+      const claimed = act(on, { type: 'claimOrder', id: order.id });
+      expect(claimed.money.cash).toBe(on.money.cash + grant);
+      expect(claimed.orders.paid).toBe(grant);
+      expect(orderCashLeft(claimed)).toBe(cap - grant);
+      // Near the cap it pays what is left. At the cap it pays its experience alone. A new year starts it again.
+      const near = structuredClone(on);
+      near.orders.paidYear = Math.max(1, near.clock.week.year);
+      near.orders.paid = cap - 1000;
+      expect(orderRewards(near, near.orders.open.find((one) => one.id === order.id)!)[0]).toEqual({ kind: 'cash', amount: 1000 });
+      const less = act(near, { type: 'claimOrder', id: order.id });
+      expect(less.money.cash).toBe(near.money.cash + 1000);
+      expect(less.orders.paid).toBe(cap);
+      const spent = structuredClone(on);
+      spent.orders.paidYear = Math.max(1, spent.clock.week.year);
+      spent.orders.paid = cap;
+      expect(view(spent, order.id).reward).toBe('100 experience');
+      expect(act(spent, { type: 'claimOrder', id: order.id }).money.cash).toBe(spent.money.cash);
+      spent.orders.paidYear -= 1;
+      expect(orderCashLeft(spent)).toBe(cap);
+      // The whole cap is a sliver of what a campus takes in.
+      expect((100 * cap) / on.money.incomePerYear).toBeLessThan(0.1);
+    });
   });
 
   it('pays Gold Seals from the donors, who are the game\'s own made-up family', () => {
@@ -837,6 +939,7 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(state).toEqual(expected);
       expect(validate(state)).toBeNull();
       // Money, students and Happiness are to the cent what they were.
@@ -860,7 +963,7 @@ describe('saves', () => {
       // Its own, and the one version 20 added after it (tests/decor.test.ts).
       const notes = upgradeNotes(18);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(23);
+      expect(notes).toHaveLength(24);
       expect(notes[0]).toContain('orders board');
       expect(toneProblem(notes[0]!)).toBeNull();
       expect(upgradeNotes(SAVE_VERSION)).toEqual([]);

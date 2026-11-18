@@ -31,7 +31,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp, switchedOn } from './helpers';
 
 /**
  * Traditions (DESIGN.md 14.2, adapted and built in section 50): places that
@@ -154,19 +154,21 @@ describe('a tradition’s day', () => {
     }
   });
 
-  it('is said to be at risk once, a day or two before, so it can be put right in time', () => {
-    const state = choose(noDiner(begun()), 'midnightBreakfast');
-    expect(conditionHolds(state, 'lateDiner')).toBe(false);
-    const next = nextDay(state, 'springFinals')!;
-    const near = later(state, (next.at - state.clock.tick - 40 * 60) * 60_000);
-    const risk = near.log.filter((entry) => entry.kind === 'tradition' && entry.data?.atRisk === 1);
-    expect(risk).toHaveLength(1);
-    expect(risk[0]!.text).toMatch(/^The Midnight Breakfast is at risk: it needs a Late-night diner on campus\. Its day is in /);
-    // Put right in time: a diner, and it is kept on its day.
-    const fixed = place(near.state, 'diner');
-    const day = toItsDay(fixed, 'midnightBreakfast');
-    expect(day.state.traditions.chosen[0]!.kept).toBe(1);
-    expect(day.log.filter((entry) => entry.data?.atRisk === 1)).toHaveLength(0);
+  it('is said to be at risk once, a day or two before, so it can be put right in time (switched off: traditionAlarm)', () => {
+    switchedOn(['traditionAlarm'], () => {
+      const state = choose(noDiner(begun()), 'midnightBreakfast');
+      expect(conditionHolds(state, 'lateDiner')).toBe(false);
+      const next = nextDay(state, 'springFinals')!;
+      const near = later(state, (next.at - state.clock.tick - 40 * 60) * 60_000);
+      const risk = near.log.filter((entry) => entry.kind === 'tradition' && entry.data?.atRisk === 1);
+      expect(risk).toHaveLength(1);
+      expect(risk[0]!.text).toMatch(/^The Midnight Breakfast is at risk: it needs a Late-night diner on campus\. Its day is in /);
+      // Put right in time: a diner, and it is kept on its day.
+      const fixed = place(near.state, 'diner');
+      const day = toItsDay(fixed, 'midnightBreakfast');
+      expect(day.state.traditions.chosen[0]!.kept).toBe(1);
+      expect(day.log.filter((entry) => entry.data?.atRisk === 1)).toHaveLength(0);
+    });
   });
 
   it('holds the trophy for a rivalry won, and counts the trophy every year, won or lost', () => {
@@ -251,6 +253,7 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
       const week = advance(loaded.state, file.savedAt, file.savedAt + 7 * DAY).state;
@@ -258,7 +261,7 @@ describe('saves', () => {
       expect(traditionSlots(week)).toBe(1);
       const notes = upgradeNotes(23);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(18);
+      expect(notes).toHaveLength(19);
       expect(notes[0]).toMatch(/traditions/);
       expect(HOUR).toBe(3_600_000);
     });

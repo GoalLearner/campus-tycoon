@@ -88,6 +88,8 @@ export const LABS: readonly LabSpec[] = [
 
 /** Findings a lab makes in an hour at a rate of one: about six a day. */
 export const FINDINGS_PER_HOUR = 0.25;
+/** The University Level the research labs open at (DESIGN.md 85.1). A lab a save already has is kept. */
+export const LAB_LEVEL = 15;
 /** A lab holds this many hours' worth and no more, as every building that fills (42.4). Nothing spoils. */
 export const LAB_HOURS = 36;
 /** Its marker shows once it holds this many. */

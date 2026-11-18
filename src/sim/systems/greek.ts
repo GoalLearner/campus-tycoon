@@ -1,3 +1,4 @@
+import { off } from '../config/cleanup';
 import { tickOfDate, yearLength } from '../calendar';
 import type { CalDate } from '../config/academicCalendar';
 import {
@@ -48,7 +49,7 @@ import { addTimer, cancelTimers } from '../timers';
 import type { Chapter, ChapterEvent, ChapterStatus, GameState, Greek, LogEntry, Placed, PlacedType, Week } from '../types';
 import { hasDaily } from './daily';
 import { noiseAt } from './football';
-import { eraOf } from './goals';
+import { eraAtWords, eraOf } from './goals';
 import { coverFor } from './incidents';
 import { offCampusNow } from './town';
 
@@ -103,7 +104,7 @@ export function greekOpen(state: GameState): boolean {
 /** Why a chapter house cannot be built now, or null when it can. */
 export function cannotBuildChapter(state: GameState): string | null {
   if (!hasDaily(state) || !state.greek) return 'Greek Row comes with a campus that has goals.';
-  if (eraOf(state.goals) < 1) return 'Greek Row opens with the Growth era.';
+  if (eraOf(state.goals) < 1) return `Greek Row opens with ${eraAtWords(1)}.`;
   if (chapters(state).length >= GREEK_HOUSES_MOST) return `${GREEK_HOUSES_MOST} chapters is the most a campus has.`;
   return null;
 }
@@ -198,12 +199,15 @@ export function chapterStatus(state: GameState, chapter: Chapter): ChapterStatus
   if (chapter.suspendedUntil > tick) return 'suspended';
   if (chapter.probationUntil > tick) return 'probation';
   if (!troubled(chapterTrouble(state, chapter))) return 'good';
-  if (chapter.since >= 0 && state.clock.tick - chapter.since >= PROBATION_HOURS * TICKS_PER_HOUR) return 'probation';
+  // Warning to Probation after 36 hours is switched off (DESIGN.md 85.6): a house in trouble shows what would help,
+  // with no clock, and its members keep what it gives them.
+  if (!off('greekProbationTimer') && chapter.since >= 0 && state.clock.tick - chapter.since >= PROBATION_HOURS * TICKS_PER_HOUR) return 'probation';
   return 'warning';
 }
 
 /** Ticks until a chapter on Warning goes on Probation, or null when it is not on Warning. */
 export function probationIn(state: GameState, chapter: Chapter): number | null {
+  if (off('greekProbationTimer')) return null;
   if (chapterStatus(state, chapter) !== 'warning') return null;
   const from = chapter.since >= 0 ? chapter.since : state.clock.tick;
   return Math.max(0, from + PROBATION_HOURS * TICKS_PER_HOUR - state.clock.tick);
@@ -527,7 +531,14 @@ export function stepGreek(state: GameState, log: LogEntry[]): void {
       continue;
     }
     if (now === 'warning') {
-      log.push({ tick, kind: 'greek', text: `${chapter.name} is on Warning: ${troubleWords(state, chapter, trouble)}. ${fixWords(trouble)} Left as it is for ${PROBATION_HOURS} hours, it goes on Probation.`, data });
+      log.push({
+        tick,
+        kind: 'greek',
+        text: off('greekProbationTimer')
+          ? `${chapter.name} could use a hand: ${troubleWords(state, chapter, trouble)}. ${fixWords(trouble)}`
+          : `${chapter.name} is on Warning: ${troubleWords(state, chapter, trouble)}. ${fixWords(trouble)} Left as it is for ${PROBATION_HOURS} hours, it goes on Probation.`,
+        data,
+      });
     } else if (now === 'probation') {
       log.push({ tick, kind: 'greek', text: `${chapter.name} is on Probation: ${troubleWords(state, chapter, trouble)}. Its members lose what the house gives them until it is put right. ${fixWords(trouble)}`, data });
     } else if (was !== 'good') {

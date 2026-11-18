@@ -8,7 +8,9 @@ import {
   labRate,
   labReputation,
   LABS,
+  LAB_LEVEL,
   LAB_SEAT_REACH,
+  labsOnMap,
   nextDiscoveryIn,
   PLACED,
   placedCost,
@@ -26,6 +28,8 @@ import type { BuildEntry } from './buildMenu';
 /** The labs' cards, under Academics: one for each field. A field whose lab stands says so and cannot be bought again. */
 export function labEntries(state: GameState, scale: number, card: (type: Placed['type']) => BuildEntry): BuildEntry[] {
   if (!hasDaily(state)) return [];
+  // Hidden until the level that opens them (DESIGN.md 85.1), unless the campus has one already.
+  if (state.daily.level < LAB_LEVEL && labsOnMap(state).length === 0) return [];
   return LABS.map((spec) => {
     const entry = card(spec.type);
     if (labOf(state, spec.type)) entry.locked = 'On the campus. One lab for each field';

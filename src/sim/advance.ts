@@ -1,6 +1,7 @@
 import { tellPolicies } from './systems/policies';
 import { tellDaily } from './systems/daily';
-import { offerDaily, tellOrders } from './systems/orders';
+import { openErasByLevel } from './systems/goals';
+import { offerDaily, offerDue, tellOrders } from './systems/orders';
 import { decorOnDayStart, onCraftDone } from './systems/decor';
 import { rhythmOnDayStart, rhythmOnFallIntake, rhythmOnTimer, tellRhythm } from './systems/rhythm';
 import { bigBuildDone, tellBigBuilds } from './systems/bigBuilds';
@@ -104,8 +105,12 @@ function tick(state: GameState, log: LogEntry[]): void {
   tellPolicies(state, log);
   // And a level reached by collecting gets its line (DESIGN.md 42.2).
   tellDaily(state, log);
+  // One ladder (DESIGN.md 85.1): the eras open by University Level.
+  openErasByLevel(state, log);
   // And an order claimed gets its line (DESIGN.md 42.16).
   tellOrders(state, log);
+  // The refill (DESIGN.md 85.3): an order arrives a short while after a place on the board is left empty.
+  offerDue(state, log);
   tellRhythm(state, log);
   tellBigBuilds(state, log);
   tellTraditions(state, log);

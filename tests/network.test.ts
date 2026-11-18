@@ -7,7 +7,7 @@ import { dormName } from '../src/sim/systems/people';
 import { classYearOf, socialProfile } from '../src/sim/systems/students';
 import { TIGHT_FROM, TIGHT_SHOWN, tightKnit } from '../src/app/tightKnit';
 import { catchUp, idOf, newWeb, place, refAt, webWeekOf } from '../src/sim/systems/web';
-import { DAY, MIN, T0 } from './helpers';
+import { DAY, MIN, T0, erasByRank } from './helpers';
 
 /** A partner's label on the network: dating, or girlfriend, boyfriend or partner, long-time or not (DESIGN.md 69.3). */
 const PARTNER = /^(dating|(long-time )?(girlfriend|boyfriend|partner))$/;
@@ -139,6 +139,8 @@ describe('chapters on the web', () => {
     state.field.rank = 120;
     state.field.rankYear = 1;
     landRankGoals(state, []);
+    // Greek Row waits for the Growth era: written down as a save from before the goals clean-up keeps it (DESIGN.md 85.1).
+    erasByRank(state);
     state.money.cash = 2_000_000_000;
     for (let built = 0; built < 3; built++) {
       let at: [number, number] | null = null;

@@ -1,3 +1,4 @@
+import { LAB_LEVEL } from '../src/sim/config/labs';
 import { newGreek } from '../src/sim/systems/greek';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -46,7 +47,7 @@ import {
 } from '../src/sim';
 import { newStory } from '../src/sim/systems/mc';
 import { upgradeNotes } from '../src/app/upgradeNotes';
-import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities } from './helpers';
+import { DAY, freshGame, HOUR, T0, webMetaFor, sixClassYears, withChaos, withRegistration, withLanes, withAmenities, withCleanUp } from './helpers';
 
 /**
  * The research labs (DESIGN.md 42.6, as built in section 49): one for each
@@ -58,6 +59,8 @@ const MODEL = advance(newGame({ seed: 35, name: 'Larp University', now: T0, camp
 const model = (): GameState => {
   const state = structuredClone(MODEL);
   state.money.cash = 2_000_000_000;
+  // The research labs open at University Level 15 (DESIGN.md 85.1).
+  state.daily.level = Math.max(state.daily.level, LAB_LEVEL);
   return state;
 };
 
@@ -299,16 +302,21 @@ describe('saves', () => {
       withRegistration(expected);
       withLanes(expected);
       withAmenities(expected);
+      withCleanUp(expected);
       expect(loaded.state).toEqual(expected);
       expect(validate(loaded.state)).toBeNull();
-      // It plays on, and can build a lab.
+      // It plays on, and can build a lab once it reaches the University Level that opens them (DESIGN.md 85.1).
       const day = advance(loaded.state, file.savedAt, file.savedAt + DAY).state;
       expect(validate(day)).toBeNull();
       day.money.cash = 2_000_000_000;
+      expect(day.daily.level).toBeLessThan(LAB_LEVEL);
+      const [x, y] = spotFor(day, 'labHealth');
+      expect(applyAction(day, { type: 'place', building: 'labHealth', x, y })).toMatchObject({ ok: false, error: `The research labs open at University Level ${LAB_LEVEL}.` });
+      day.daily.level = LAB_LEVEL;
       expect(labOf(build(day, 'labHealth'), 'labHealth')).not.toBeNull();
       const notes = upgradeNotes(22);
       // One more since R3: the price level (DESIGN.md 67.1).
-      expect(notes).toHaveLength(19);
+      expect(notes).toHaveLength(20);
       expect(notes[0]).toMatch(/research labs/);
       expect(notes[1]).toMatch(/traditions/);
     });

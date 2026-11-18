@@ -1,3 +1,5 @@
+import { ORDER_KINDS } from '../config/orders';
+import { off } from '../config/cleanup';
 import { goingUp, hurryBigBuild } from './bigBuilds';
 import { collectLab, labHolds, labsOnMap } from './labs';
 import { decorSpec, hurryCraft } from './decor';
@@ -95,7 +97,9 @@ export function levelAt(xp: number): { level: number; into: number; need: number
 /** What reaching a level gives: its Seals, more at every fifth, and whatever the list of unlocks has for it. */
 export function levelGifts(level: number): LevelGift[] {
   const seals = level % 5 === 0 ? SEALS_FIFTH_LEVEL : SEALS_PER_LEVEL;
-  return [{ kind: 'seals', count: seals }, ...(LEVEL_UNLOCKS[level] ?? [])];
+  // A kind of order measured at a moment is switched off (DESIGN.md 85.3): its level does not promise it.
+  const asked = (gift: LevelGift): boolean => !(gift.kind === 'unlock' && gift.what === 'order' && off('pointOrders') && !!ORDER_KINDS.find((kind) => kind.id === gift.id)?.point);
+  return [{ kind: 'seals', count: seals }, ...(LEVEL_UNLOCKS[level] ?? []).filter(asked)];
 }
 
 const seals = (n: number): string => `${n} Gold ${n === 1 ? 'Seal' : 'Seals'}`;

@@ -33,7 +33,7 @@ import { markRatesDirty } from './systems/money';
 import { INSTRUCTION_RATIOS } from './config/staffing';
 import { instructionStep, planStaff } from './systems/staffing';
 import { RANK_GOALS } from './config/goals';
-import { eraOf, rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
+import { eraAtWords, eraOf, rewardGoal, rewardsEarned, rewardsWaiting } from './systems/goals';
 import { ERA_AT_RANK, ERAS } from './config/goals';
 import { policyLocked, policyOn, policySpec } from './systems/policies';
 import { collectOne, collectReady, dailyOnCleared, dailyOnPlaced, finishNow, hasDaily } from './systems/daily';
@@ -578,7 +578,7 @@ function setPolicy(state: GameState, id: string, on: boolean): ActionResult {
   const spec = policySpec(id);
   if (!spec) return { ok: false, state, error: 'There is no such policy.' };
   if (!state.goals || eraOf(state.goals) < spec.era) {
-    return { ok: false, state, error: `${spec.name} opens with the ${ERAS[spec.era]} era, at the Top ${RANK_GOALS[ERA_AT_RANK[spec.era - 1]! - 1]}.` };
+    return { ok: false, state, error: `${spec.name} opens with ${eraAtWords(spec.era)}.` };
   }
   // Greek Row's two open with the first chapter house (DESIGN.md 51); one already on can always be turned off.
   if (spec.greek && on && !policyOn(state, id) && chapters(state).length === 0) return { ok: false, state, error: `${spec.name} opens with the first chapter house.` };

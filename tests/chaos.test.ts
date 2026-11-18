@@ -6,13 +6,13 @@ import { CHAOS_LINES, PROTEST_LINES } from '../src/sim/config/chaosLines';
 import { MAX_ACTIVE_INCIDENTS } from '../src/sim/config/incidents';
 import { WEB_WEEK_TICKS } from '../src/sim/config/web';
 import { HARD_LINES } from '../src/sim/config/hardLines';
-import { chaosOn, chaosReach, chaosStepName, chaosStepOf, chaosView, causes, newChaos, spawnChaos, spiritPoints, stepChaos, trusteesDip } from '../src/sim/systems/chaos';
+import { chaosOn, chaosReach, chaosStepName, chaosStepOf, chaosView, causes, newChaos, spawnChaos, spiritPoints, stepChaos, trusteesDip, trusteesOrder } from '../src/sim/systems/chaos';
 import { academicInputs } from '../src/sim/systems/field';
 import { safetyAt } from '../src/sim/systems/incidents';
 import { scorecard } from '../src/sim/systems/scorecard';
 import { edition } from '../src/sim/newspaper';
 import { seedStreams } from '../src/sim/rng';
-import { DAY, T0 } from './helpers';
+import { DAY, T0, switchedOn } from './helpers';
 
 /** The chaos sandbox, stop C1 (DESIGN.md 68). */
 
@@ -119,27 +119,59 @@ describe('the Chaos meter, C1', () => {
     expect(chaosReach(state)).toBeCloseTo(-CHAOS_REACH_MOST, 9);
   });
 
-  it('pays a small reward when the trustees are answered, and takes a little off Reputation when they are not', () => {
-    const asked = model(3);
-    asked.chaos.level = 80;
-    asked.chaos.letter = { from: asked.clock.tick, until: asked.clock.tick + LETTER.days * 1440 };
-    // Answered: the meter is below Rowdy at the next reading.
-    const met = structuredClone(asked);
-    met.chaos.level = 10;
-    const cash = met.money.cash;
-    const answered = nextWeek(met);
+  it('pays a small reward when the trustees are answered, and takes a little off Reputation when they are not (switched off: trusteesDip)', () => {
+    switchedOn(['trusteesDip'], () => {
+      const asked = model(3);
+      asked.chaos.level = 80;
+      asked.chaos.letter = { from: asked.clock.tick, until: asked.clock.tick + LETTER.days * 1440 };
+      // Answered: the meter is below Rowdy at the next reading.
+      const met = structuredClone(asked);
+      met.chaos.level = 10;
+      const cash = met.money.cash;
+      const answered = nextWeek(met);
+      expect(answered.state.chaos.letter).toBeNull();
+      expect(answered.state.chaos.letters.met).toBe(asked.chaos.letters.met + 1);
+      expect(answered.state.money.cash).toBeGreaterThan(cash);
+      // Ignored: past its day and still Rowdy.
+      const missed = structuredClone(asked);
+      missed.chaos.letter = { from: missed.clock.tick - 3000, until: missed.clock.tick };
+      missed.chaos.tally = { dustUp: 60, shouting: 20, prank: 20, graffiti: 20, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
+      const ignored = nextWeek(missed).state;
+      expect(ignored.chaos.letters.missed).toBe(asked.chaos.letters.missed + 1);
+      expect(trusteesDip(ignored)).toBe(LETTER.dip);
+      const reputation = academicInputs(ignored).find((input) => input.id === 'reputation')!;
+      if (reputation.level !== null) expect(reputation.detail).toMatch(/trustees/);
+    });
+  });
+
+  it('asks by a letter with no clock: Rowdy for weeks past its old day costs no Reputation, and calmer it pays (DESIGN.md 85.6)', () => {
+    const rowdy = { dustUp: 60, shouting: 20, prank: 20, graffiti: 20, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
+    let state = model(3);
+    const letters = { ...state.chaos.letters };
+    state.chaos.level = 80;
+    state.chaos.letter = { from: state.clock.tick - 3000, until: state.clock.tick };
+    expect(trusteesOrder(state)).toEqual({ ask: 'Bring the Chaos meter below Rowdy', pays: expect.stringMatching(/^a gift of \$[\d.,]+[KM]? from the trustees$/) });
+    for (let week = 0; week < 4; week++) {
+      state.chaos.tally = { ...rowdy };
+      state = nextWeek(state).state;
+      expect(chaosStepOf(state.chaos.level)).toBeGreaterThanOrEqual(ROWDY);
+      expect(state.chaos.letter).not.toBeNull();
+      expect(trusteesDip(state)).toBe(0);
+    }
+    expect(state.chaos.letters.missed).toBe(letters.missed);
+    const reputation = academicInputs(state).find((input) => input.id === 'reputation')!;
+    if (reputation.level !== null) expect(reputation.detail).not.toMatch(/trustees/);
+    expect(chaosView(state)!.letter).toMatch(/^The trustees would like it below Rowdy, and send \$/);
+    // Calmer at last: the trustees' gift, as before.
+    const calm = structuredClone(state);
+    calm.chaos.level = 10;
+    calm.chaos.tally = { ...rowdy, dustUp: 0, shouting: 0, prank: 0, graffiti: 0 };
+    const answered = nextWeek(calm);
     expect(answered.state.chaos.letter).toBeNull();
-    expect(answered.state.chaos.letters.met).toBe(asked.chaos.letters.met + 1);
-    expect(answered.state.money.cash).toBeGreaterThan(cash);
-    // Ignored: past its day and still Rowdy.
-    const missed = structuredClone(asked);
-    missed.chaos.letter = { from: missed.clock.tick - 3000, until: missed.clock.tick };
-    missed.chaos.tally = { dustUp: 60, shouting: 20, prank: 20, graffiti: 20, protest: 0, party: 0, goalposts: 0, street: 0, mascot: 0 };
-    const ignored = nextWeek(missed).state;
-    expect(ignored.chaos.letters.missed).toBe(asked.chaos.letters.missed + 1);
-    expect(trusteesDip(ignored)).toBe(LETTER.dip);
-    const reputation = academicInputs(ignored).find((input) => input.id === 'reputation')!;
-    if (reputation.level !== null) expect(reputation.detail).toMatch(/trustees/);
+    expect(trusteesOrder(answered.state)).toBeNull();
+    expect(answered.state.chaos.letters.met).toBe(letters.met + 1);
+    expect(answered.state.money.cash).toBeGreaterThan(calm.money.cash);
+    expect(answered.log.find((entry) => entry.data?.letter === 2)!.text).toMatch(/^The trustees write again: the campus has calmed down, below Rowdy\. A gift of thanks/);
   });
 
   it('gives a legendary night now and then to a Lively campus that is happy and looked after: spirit, then it fades', () => {
